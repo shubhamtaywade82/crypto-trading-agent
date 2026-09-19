@@ -1,10 +1,11 @@
-import { USDMClient } from 'binance';
+import { USDMClient, WebsocketClient } from 'binance';
 import { config } from '../config.js';
 import { PaperEngine } from './paperEngine.js';
 import type { Candle, Position } from '../types.js';
 
 export class BinanceService {
   private futures: USDMClient;
+  private ws: WebsocketClient | null = null;
   private paper: PaperEngine;
 
   constructor() {
@@ -13,6 +14,24 @@ export class BinanceService {
       api_secret: config.binance.apiSecret,
     });
     this.paper = new PaperEngine();
+  }
+
+  startRealtimeStream(symbols: string[], onTick: (symbol: string, price: number) => void): () => void {
+    const silent = { silly: () => {}, verbose: () => {}, info: () => {}, warning: () => {}, error: () => {} };
+    this.ws = new WebsocketClient({ beautify: false }, silent as any);
+    this.ws.on('message', (data: any) => {
+      if (data?.e === 'trade' && data.s && data.p) {
+        const price = Number(data.p);
+        if (price > 0) onTick(data.s, price);
+      }
+    });
+    for (const sym of symbols) {
+      this.ws.subscribeTrades(sym, 'usdm');
+    }
+    return () => {
+      this.ws?.closeAll();
+      this.ws = null;
+    };
   }
 
   async getKlines(symbol: string, interval = '15m', limit = 200): Promise<Candle[]> {

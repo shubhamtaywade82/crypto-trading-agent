@@ -22,15 +22,62 @@ export class Orchestrator extends EventEmitter {
   private executor = new ExecutorAgent(this.binance);
   private advisor = new OllamaAdvisor();
   private timer: NodeJS.Timeout | null = null;
+  private livePrices: Record<string, number> = {};
+  private liveTickers: Record<string, MarketPriceInfo> = {};
+  private stopWs: (() => void) | null = null;
+  private pendingTickFlush = false;
 
   start() {
     this.log('SYSTEM', `Orchestrator started in ${config.mode.toUpperCase()} mode`, 'info');
     this.loop();
     this.timer = setInterval(() => this.loop(), 8000);
+    this.stopWs = this.binance.startRealtimeStream(config.symbols, (sym, price) => {
+      this.handleRealtimeTick(sym, price);
+    });
   }
 
   stop() {
     if (this.timer) clearInterval(this.timer);
+    if (this.stopWs) {
+      this.stopWs();
+      this.stopWs = null;
+    }
+  }
+
+  private handleRealtimeTick(sym: string, price: number): void {
+    this.livePrices[sym] = price;
+    const short = sym.replace('USDT', '');
+    const current = this.liveTickers[short] ?? this.liveTickers[sym];
+    if (current) {
+      current.price = price;
+      this.liveTickers[short] = current;
+      this.liveTickers[sym] = current;
+    } else {
+      const info: MarketPriceInfo = { price, changePct: 0 };
+      this.liveTickers[short] = info;
+      this.liveTickers[sym] = info;
+    }
+
+    if (this.pendingTickFlush) return;
+    this.pendingTickFlush = true;
+    setTimeout(async () => {
+      this.pendingTickFlush = false;
+      await this.flushRealtimeTick();
+    }, 60);
+  }
+
+  private async flushRealtimeTick(): Promise<void> {
+    this.binance.markAll(this.livePrices);
+    const account = await this.binance.getAccount();
+    const positions = await this.binance.getPositions();
+    this.emit('state', {
+      equity: account.equity,
+      marginUsed: account.marginUsed,
+      positions,
+      upnl: positions.reduce((s, p) => s + p.upnl, 0),
+      spotPrices: { ...this.liveTickers },
+      serverTime: Date.now(),
+    });
   }
 
   async closePosition(pos: Position) {
@@ -114,7 +161,10 @@ export class Orchestrator extends EventEmitter {
     strategyMetrics: StrategyMetrics;
   }> {
     const market = await this.binance.getMarketOverview(config.symbols);
-    this.binance.markAll(market.marks);
+    for (const [sym, p] of Object.entries(market.marks)) {
+      if (!this.livePrices[sym]) this.livePrices[sym] = p;
+    }
+    this.binance.markAll(this.livePrices);
     const account = await this.binance.getAccount();
     const positions = await this.binance.getPositions();
     const strategyMetrics = this.computeStrategyMetrics(market);
@@ -123,7 +173,7 @@ export class Orchestrator extends EventEmitter {
       candles: market.candles,
       funding: market.funding,
       marks: market.marks,
-      spot: Object.fromEntries(Object.entries(market.tickers).map(([k, v]) => [k, v.price])),
+      spot: this.livePrices,
       tickers: market.tickers,
       strategyMetrics,
       equity: account.equity,
@@ -181,16 +231,17 @@ export class Orchestrator extends EventEmitter {
       const short = sym.replace('USDT', '');
       const candles = ctx.candles[sym] ?? [];
       const spark = sparkline(candles.map((c: Candle) => c.close), 12);
+      const currentPrice = this.livePrices[sym] ?? t.price;
       const info: MarketPriceInfo = {
-        price: t.price,
+        price: currentPrice,
         changePct: t.changePct,
         high24h: t.high24h,
         low24h: t.low24h,
         volumeQuote: t.volumeQuote,
         sparkline: spark,
       };
-      spotPrices[short] = info;
-      spotPrices[sym] = info;
+      this.liveTickers[short] = info;
+      this.liveTickers[sym] = info;
     }
 
     this.emit('state', {
@@ -200,7 +251,7 @@ export class Orchestrator extends EventEmitter {
       positions,
       upnl: positions.reduce((s, p) => s + p.upnl, 0),
       funding: ctx.funding,
-      spotPrices,
+      spotPrices: { ...this.liveTickers },
       strategyMetrics: ctx.strategyMetrics,
       serverTime: Date.now(),
     } satisfies Partial<AppState>);

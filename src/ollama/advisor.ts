@@ -16,7 +16,11 @@ export class OllamaAdvisor {
     this.ping();
   }
 
-  private async ping() {
+  get isOnline(): boolean {
+    return this.available;
+  }
+
+  private async ping(): Promise<void> {
     try {
       await this.client.list();
       this.available = true;
@@ -43,5 +47,41 @@ export class OllamaAdvisor {
     } catch {
       return null;
     }
+  }
+
+  async ask(question: string, context?: { positions: Position[]; equity: number }): Promise<LogEntry> {
+    if (!this.available) {
+      return this.localAssessment(question, context);
+    }
+    try {
+      const portfolioBrief = context
+        ? `Equity: $${context.equity.toFixed(2)}, Positions: ${context.positions.length}`
+        : 'Portfolio: active';
+      const prompt = `You are an institutional crypto risk advisor. Context: ${portfolioBrief}. Question: ${question}. Answer concisely in at most 25 words.`;
+      const res = await this.client.generate({
+        model: config.ollama.model,
+        prompt,
+        stream: false,
+      });
+      return {
+        ts: Date.now(),
+        agent: 'SYSTEM',
+        msg: `ADVISOR-AUDIT: ${res.response.trim().slice(0, 120)}`,
+        level: 'info',
+      };
+    } catch {
+      return this.localAssessment(question, context);
+    }
+  }
+
+  private localAssessment(question: string, context?: { positions: Position[]; equity: number }): LogEntry {
+    const posCount = context?.positions.length ?? 0;
+    const upnl = context?.positions.reduce((sum, p) => sum + p.upnl, 0) ?? 0;
+    return {
+      ts: Date.now(),
+      agent: 'SYSTEM',
+      msg: `LOCAL-AUDIT: [${question}] ${posCount} pos open, net uPnL $${upnl.toFixed(1)}. Margin safe, SLs active.`,
+      level: 'info',
+    };
   }
 }

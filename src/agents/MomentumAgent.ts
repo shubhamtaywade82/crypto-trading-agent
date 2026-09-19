@@ -1,6 +1,6 @@
 import { BaseAgent, type MarketContext } from './BaseAgent.js';
 import type { Signal, Candle } from '../types.js';
-import { ema, atr } from '../binance/indicators.js';
+import { ema, atr, rsi } from '../binance/indicators.js';
 import { config } from '../config.js';
 
 export class MomentumAgent extends BaseAgent {
@@ -17,22 +17,24 @@ export class MomentumAgent extends BaseAgent {
       const ema50 = ema(closes, 50);
       const price = closes[closes.length - 1];
       const atr14 = atr(candles, 14);
+      const rsiSeries = rsi(closes, 14);
+      const currentRsi = rsiSeries[rsiSeries.length - 1] ?? 50;
 
-      // Condition: price crossed above EMA50 AND ATR is non-zero
+      // Avoid buying when already overbought (RSI > 75)
       const prevPrice = closes[closes.length - 2];
       const prevEma = ema50[ema50.length - 2];
       const crossed = prevPrice <= prevEma && price > ema50[ema50.length - 1];
 
-      if (crossed && atr14 > 0) {
+      if (crossed && atr14 > 0 && currentRsi < 75) {
         signals.push(
           this.signal({
             symbol,
             type: 'OPEN_LONG',
-            confidence: 0.72,
+            confidence: currentRsi > 50 ? 0.75 : 0.65,
             entry: price,
             stopLoss: price - atr14 * 2.5,
             takeProfit: price + atr14 * 5,
-            reason: `EMA50 cross + ATR expansion (${atr14.toFixed(2)})`,
+            reason: `EMA50 cross + ATR (${atr14.toFixed(2)}) RSI=${currentRsi.toFixed(0)}`,
           })
         );
       }

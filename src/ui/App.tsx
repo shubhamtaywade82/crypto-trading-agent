@@ -54,6 +54,15 @@ export default function App() {
     if (key.downArrow) setSelPos((s) => Math.min(Math.max(0, positions.length - 1), s + 1));
     if (input === 'c' && positions[selPos]) orchestrator.closePosition(positions[selPos]);
     if (input === 'x') orchestrator.cancelAll();
+    if (input === 'a' || input === 'i') orchestrator.askAdvisor();
+    if (input === '?') {
+      pushLog({
+        ts: Date.now(),
+        agent: 'SYSTEM',
+        msg: 'COMMANDS: ↑↓ select pos │ c close pos │ x cancel all │ a advisor audit │ s stop',
+        level: 'info',
+      });
+    }
     if (input === 's') process.exit(0);
   });
 

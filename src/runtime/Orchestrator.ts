@@ -51,6 +51,13 @@ export class Orchestrator extends EventEmitter {
     }
   }
 
+  async askAdvisor(question = 'Assess current portfolio risk and position exposures'): Promise<void> {
+    const account = await this.binance.getAccount();
+    const positions = await this.binance.getPositions();
+    const entry = await this.advisor.ask(question, { positions, equity: account.equity });
+    this.emit('log', entry);
+  }
+
   private async loop() {
     try {
       this.emit('sync', true);

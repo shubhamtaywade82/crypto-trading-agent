@@ -255,7 +255,7 @@ export function renderFooterLines(isSyncing: boolean, mode: string, width: numbe
   const innerW = width - 2;
   const spinner = isSyncing ? chalk.yellow('⠋') : chalk.yellow('⠴');
   const l1 = ' ' + spinner + chalk.gray(' orchestrator │ 5 agents autonomous │ eval 8s │ api weight ') + chalk.white('247/1200') + chalk.gray(' │ ws ') + chalk.green('●fstream ●spot') + chalk.gray(' │ mode ') + chalk.yellow.bold(mode.toUpperCase()) + chalk.gray(' │ venue BINANCE');
-  const l2 = ' ' + chalk.gray('╰─ ↑↓nav ←→panel cclose-pos xcancel ppause rresume sstop-all ?help');
+  const l2 = ' ' + chalk.gray('╰─ ↑↓nav cclose-pos xcancel aadvisor-audit sstop-all ?help');
   return [chalk.cyan('│') + padLine(l1, innerW) + chalk.cyan('│'), chalk.cyan('│') + padLine(l2, innerW) + chalk.cyan('│'), chalk.cyan('╰' + '─'.repeat(innerW) + '╯')];
 }
 

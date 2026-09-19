@@ -1,3 +1,5 @@
+import * as fs from 'node:fs';
+import * as path from 'node:path';
 import type { Position } from '../types.js';
 
 interface PaperPosition extends Position {
@@ -120,6 +122,49 @@ export class PaperEngine {
   private equity = 100_000;
   private startEquity = 100_000;
   private lastPrices: Record<string, number> = {};
+  private filePath = path.resolve('data/paper-state.json');
+  private saveTimer: NodeJS.Timeout | null = null;
+
+  constructor() {
+    this.loadState();
+  }
+
+  private loadState(): void {
+    try {
+      if (!fs.existsSync(this.filePath)) return;
+      const raw = fs.readFileSync(this.filePath, 'utf-8');
+      const data = JSON.parse(raw);
+      if (Array.isArray(data.positions) && typeof data.equity === 'number') {
+        this.positions = data.positions;
+        this.equity = data.equity;
+        this.startEquity = data.startEquity ?? data.equity;
+      }
+    } catch {
+      // Best-effort load; fallback to initial paper positions on parse error
+    }
+  }
+
+  private persist(): void {
+    if (this.saveTimer) return;
+    this.saveTimer = setTimeout(() => {
+      this.saveTimer = null;
+      try {
+        fs.mkdirSync(path.dirname(this.filePath), { recursive: true });
+        const tmp = `${this.filePath}.tmp`;
+        const payload = JSON.stringify({
+          version: 1,
+          savedAt: Date.now(),
+          equity: this.equity,
+          startEquity: this.startEquity,
+          positions: this.positions,
+        }, null, 2);
+        fs.writeFileSync(tmp, payload, 'utf-8');
+        fs.renameSync(tmp, this.filePath);
+      } catch {
+        // Disk write failures should never interrupt active trading
+      }
+    }, 250);
+  }
 
   getAccount() {
     const marginUsed = this.positions.reduce(
@@ -145,14 +190,45 @@ export class PaperEngine {
   }): { orderId: number; status: string } {
     const side = params.side === 'BUY' ? 'LONG' : 'SHORT';
     const mark = params.entryPrice || this.lastPrices[params.symbol] || params.stopLoss || 0;
-    const pos: PaperPosition = {
+
+    if (params.reduceOnly) {
+      this.settleReduceOnly(params.symbol, params.qty, mark);
+    } else {
+      this.positions.push(this.createPosition(params, side, mark));
+    }
+    this.persist();
+    return { orderId: Date.now(), status: 'FILLED' };
+  }
+
+  private settleReduceOnly(symbol: string, qty: number, mark: number): void {
+    const idx = this.positions.findIndex((p) => p.symbol === symbol);
+    if (idx < 0) return;
+    const closed = this.positions[idx];
+    const direction = closed.side === 'LONG' ? 1 : -1;
+    const closeQty = Math.min(closed.qty, qty);
+    const pnl = (mark - closed.entry) * closeQty * direction;
+    this.equity += pnl;
+    this.startEquity += pnl;
+    if (closed.qty <= qty) {
+      this.positions.splice(idx, 1);
+    } else {
+      closed.qty -= qty;
+    }
+  }
+
+  private createPosition(
+    params: { symbol: string; leverage: number; stopLoss?: number; takeProfit?: number },
+    side: 'LONG' | 'SHORT',
+    mark: number
+  ): PaperPosition {
+    return {
       id: `${params.symbol}_${Date.now()}`,
       orderId: String(Date.now()),
       symbol: params.symbol,
       side,
       strategy: 'EXECUTOR-ε',
       entry: mark,
-      qty: params.qty,
+      qty: (params as any).qty,
       mark,
       upnl: 0,
       upnlPct: 0,
@@ -164,14 +240,11 @@ export class PaperEngine {
       serverSl: params.stopLoss ? String(params.stopLoss) : '—',
       serverTp: params.takeProfit ? String(params.takeProfit) : 'trail',
     };
-    if (!params.reduceOnly) {
-      this.positions.push(pos);
-    }
-    return { orderId: Date.now(), status: 'FILLED' };
   }
 
   cancelAll(_symbol: string) {
     this.positions = [];
+    this.persist();
   }
 
   markAll(prices: Record<string, number>) {
@@ -195,5 +268,6 @@ export class PaperEngine {
       pos.upnlPct = pos.entry ? ((mark - pos.entry) / pos.entry) * 100 * direction : 0;
     }
     this.equity = this.startEquity + this.positions.reduce((sum, pos) => sum + pos.upnl, 0);
+    this.persist();
   }
 }

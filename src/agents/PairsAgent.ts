@@ -34,11 +34,15 @@ export class PairsAgent extends BaseAgent {
 
       const z = zscore(this.history[key], 30);
       if (Math.abs(z) > 2.0) {
+        const isLong = z < 0;
         signals.push(
           this.signal({
             symbol: key,
-            type: z < 0 ? 'OPEN_LONG' : 'OPEN_SHORT',
+            type: isLong ? 'OPEN_LONG' : 'OPEN_SHORT',
             confidence: Math.min(0.95, 0.7 + Math.abs(z) / 10),
+            entry: ratio,
+            stopLoss: isLong ? ratio * 0.97 : ratio * 1.03,
+            takeProfit: isLong ? ratio * 1.05 : ratio * 0.95,
             reason: `z-score ${z.toFixed(2)} (entry threshold ±2.0)`,
           })
         );

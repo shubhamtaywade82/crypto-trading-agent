@@ -44,18 +44,32 @@ export class RiskAgent extends BaseAgent {
 
     const positionSizeUsdt = riskBudget / slDistancePct;
     const cappedSize = Math.min(positionSizeUsdt, maxNotional);
-    const leverage = Math.min(cappedSize / (riskBudget / slDistancePct), config.risk.maxLeverage);
+    return this.checkBuffer(signal, ctx, cappedSize, slDistancePct);
+  }
 
-    return this.checkBuffer(signal, ctx, cappedSize, leverage);
+  private calculateDynamicLeverage(
+    confidence: number,
+    slDistancePct: number,
+    atrBuffer: number
+  ): number {
+    const minLev = config.risk.minLeverage;
+    const maxLev = config.risk.maxLeverage;
+    const confFactor = Math.max(0, Math.min(1, (confidence - 0.5) / 0.5));
+    const slFactor = Math.max(0, Math.min(1, 0.03 / Math.max(0.008, slDistancePct)));
+    const bufferFactor = Math.max(0, Math.min(1, (atrBuffer - 1.5) / 2));
+    const score = 0.5 * confFactor + 0.3 * slFactor + 0.2 * bufferFactor;
+    const raw = minLev + score * (maxLev - minLev);
+    return Math.round(Math.max(minLev, Math.min(maxLev, raw)));
   }
 
   private checkBuffer(
     signal: Signal,
     ctx: MarketContext,
     cappedSize: number,
-    leverage: number
+    slDistancePct: number
   ): RiskDecision {
-    const candles = ctx.candles[signal.symbol];
+    const baseSymbol = signal.symbol.split('/')[0];
+    const candles = ctx.candles[signal.symbol] ?? ctx.candles[baseSymbol] ?? ctx.candles[`${baseSymbol}USDT`];
     if (!candles?.length) {
       return this.reject('insufficient candle history');
     }
@@ -65,18 +79,20 @@ export class RiskAgent extends BaseAgent {
       return this.reject('invalid ATR calculation');
     }
 
-    const buffer = Math.abs(signal.entry! - signal.stopLoss!) / atr14;
+    const atrDist = signal.symbol.includes('/') ? (signal.entry! * 0.015) : atr14;
+    const buffer = Math.abs(signal.entry! - signal.stopLoss!) / atrDist;
     if (buffer < config.risk.minLiqBufferAtr) {
       return this.reject(`liq buffer ${buffer.toFixed(1)}x ATR < ${config.risk.minLiqBufferAtr}x`);
     }
 
+    const leverage = this.calculateDynamicLeverage(signal.confidence, slDistancePct, buffer);
     return {
       approved: true,
       positionSizeUsdt: cappedSize,
       leverage,
       marginType: 'ISOLATED',
       liqBufferAtr: buffer,
-      reason: `size=$${cappedSize.toFixed(0)} lev=${leverage.toFixed(1)}x buffer=${buffer.toFixed(1)}xATR`,
+      reason: `size=$${cappedSize.toFixed(0)} lev=${leverage}x buffer=${buffer.toFixed(1)}xATR`,
     };
   }
 

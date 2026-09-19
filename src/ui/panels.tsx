@@ -182,8 +182,8 @@ export function renderCol4Lines(p: CockpitProps, width = 30, rowCount = 29): str
     padLine(`   ${chalk.gray('Sharpe     ')}${chalk.green('2.84')}`, width),
     padLine(` ${chalk.gray('─'.repeat(Math.max(10, width - 2)))}`, width),
     padLine(` ${chalk.cyan.bold('POSITION ACTIONS')}`, width),
-    padLine(`   ${chalk.yellow('▸Close ETH SPOT+SHORT')}`, width),
-    padLine(`    ${chalk.gray('Close SOL SPOT+SHORT')}`, width),
+    padLine(`   ${chalk.yellow('▸Close ETH/USDT SHORT')}`, width),
+    padLine(`    ${chalk.gray('Close SOL/USDT SHORT')}`, width),
     padLine(`    ${chalk.gray('Close BTC/ETH pairs')}`, width),
   ];
   while (rows.length < rowCount) rows.push(' '.repeat(width));
@@ -195,7 +195,7 @@ export function renderCockpitTable(cols: [string[], string[], string[], string[]
   const [w1, w2, w3, w4] = widths;
   const bar = (l: string, m: string, r: string) => chalk.cyan(l + '─'.repeat(w1) + m + '─'.repeat(w2) + m + '─'.repeat(w3) + m + '─'.repeat(w4) + r);
   const title = chalk.cyan('│') + padLine(' ' + chalk.cyan.bold('AGENT FLEET (5 active)'), w1) +
-    chalk.cyan('│') + padLine(' ' + chalk.cyan.bold('BINANCE USDT-M + SPOT (hedge leg)'), w2) +
+    chalk.cyan('│') + padLine(' ' + chalk.cyan.bold('BINANCE USDT-M PERPETUAL FUTURES'), w2) +
     chalk.cyan('│') + padLine(' ' + chalk.cyan.bold(`POSITIONS (${w3 > 35 ? '6 open' : 'open'})`), w3) +
     chalk.cyan('│') + padLine(' ' + chalk.cyan.bold('RISK & ACCOUNT'), w4) + chalk.cyan('│');
   const rows = [bar('┌', '┬', '┐'), title, bar('├', '┼', '┤')];
@@ -217,9 +217,9 @@ function boxLines(title: string, content: string[], width: number): string[] {
 }
 
 export function renderDetailLines(p: Position | undefined, width: number = 128): string[] {
-  const pos = p ?? { symbol: 'ETH/USDT', side: 'SHORT' as const, posType: 'SPOT+SHORT', strategy: 'FUNDING-ARB-α' as const, entry: 2630.0, qty: 2.0, mark: 2626.2, upnl: 7.6, upnlPct: 0.14, leverage: 1 };
+  const pos = p ?? { symbol: 'ETH/USDT', side: 'SHORT' as const, posType: 'PERP-SHORT', strategy: 'FUNDING-ARB-α' as const, entry: 2630.0, qty: 2.0, mark: 2626.2, upnl: 7.6, upnlPct: 0.14, leverage: 5 };
   const l1 = ' ' + chalk.yellow.bold(`${pos.symbol} ${pos.posType ?? pos.side}`) + ' · ' + chalk.cyan(pos.strategy) + chalk.gray(' │ entry ') + chalk.white(`$${pos.entry.toLocaleString()}`) + chalk.gray(' │ size ') + chalk.white(pos.qty.toFixed(1)) + chalk.gray(' │ mark ') + chalk.white(`$${pos.mark.toLocaleString()}`) + chalk.gray(' │ uPnL ') + chalk.green(`+$${pos.upnl.toFixed(2)} (+${pos.upnlPct.toFixed(2)}%)`) + chalk.gray(' │ lev ') + chalk.yellow(`${pos.leverage}x ISOLATED`);
-  const l2 = ' ' + chalk.gray('liq dist ') + chalk.cyan('-∞ (hedged)') + chalk.gray(' │ server SL ') + chalk.white('— (STOP_MARKET)') + chalk.gray(' │ server TP ') + chalk.white('fund') + chalk.gray(' │ maint margin ') + chalk.green('OK ✓') + chalk.gray(' │ liq buffer ') + chalk.green('>2x ATR ✓');
+  const l2 = ' ' + chalk.gray('liq dist ') + chalk.cyan('18.2%') + chalk.gray(' │ server SL ') + chalk.white('2750 (STOP_MARKET)') + chalk.gray(' │ server TP ') + chalk.white('fund') + chalk.gray(' │ maint margin ') + chalk.green('OK ✓') + chalk.gray(' │ liq buffer ') + chalk.green('>2x ATR ✓');
   return boxLines('POSITION DETAIL (selected)', [l1, l2], width);
 }
 
@@ -239,7 +239,7 @@ export function renderLogLines(logs: LogEntry[], maxRows: number = 10, width: nu
     const timeStr = l ? new Date(l.ts).toISOString().slice(11, 19) : '07:39:05';
     const agent = l ? l.agent : 'MANUAL';
     const lvlColor = !l ? chalk.white : l.level === 'error' ? chalk.red : l.level === 'warn' ? chalk.yellow : l.level === 'success' ? chalk.green : chalk.white;
-    const msg = l ? l.msg : 'Close ETH/USDT SPOT+SHORT → market close via Binance API';
+    const msg = l ? l.msg : 'Close ETH/USDT SHORT → market close via Binance USDM Futures';
     content.push(' ' + chalk.gray(timeStr) + ' ' + chalk.yellow.bold(agent.padEnd(12)) + ' ' + chalk.gray('├─ ') + lvlColor(msg));
   }
   return boxLines('AGENT REASONING LOG (autonomous · server-side SL/TP · isolated margin)', content, width);
@@ -254,7 +254,7 @@ export function renderPerfLines(width: number = 128): string[] {
 export function renderFooterLines(isSyncing: boolean, mode: string, width: number = 128): string[] {
   const innerW = width - 2;
   const spinner = isSyncing ? chalk.yellow('⠋') : chalk.yellow('⠴');
-  const l1 = ' ' + spinner + chalk.gray(' orchestrator │ 5 agents autonomous │ eval 8s │ api weight ') + chalk.white('247/1200') + chalk.gray(' │ ws ') + chalk.green('●fstream ●spot') + chalk.gray(' │ mode ') + chalk.yellow.bold(mode.toUpperCase()) + chalk.gray(' │ venue BINANCE');
+  const l1 = ' ' + spinner + chalk.gray(' orchestrator │ 5 agents autonomous │ eval 8s │ api weight ') + chalk.white('247/1200') + chalk.gray(' │ ws ') + chalk.green('●usdm-fstream') + chalk.gray(' │ mode ') + chalk.yellow.bold(mode.toUpperCase()) + chalk.gray(' │ venue BINANCE FUTURES');
   const l2 = ' ' + chalk.gray('╰─ ↑↓nav cclose-pos xcancel aadvisor-audit sstop-all ?help');
   return [chalk.cyan('│') + padLine(l1, innerW) + chalk.cyan('│'), chalk.cyan('│') + padLine(l2, innerW) + chalk.cyan('│'), chalk.cyan('╰' + '─'.repeat(innerW) + '╯')];
 }

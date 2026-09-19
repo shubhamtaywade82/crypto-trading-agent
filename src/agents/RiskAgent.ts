@@ -21,15 +21,16 @@ export class RiskAgent extends BaseAgent {
     const maxNotional = equity * (config.risk.maxExposurePct / 100);
     const riskBudget = equity * (config.risk.riskPerTradePct / 100);
 
-    // Delta-neutral hedges bypass directional risk calculation
+    // Funding harvest positions in futures
     if (signal.type === 'OPEN_HEDGE') {
+      const leverage = config.risk.minLeverage;
       return {
         approved: true,
         positionSizeUsdt: Math.min(signal.notionalUsdt ?? riskBudget, maxNotional),
-        leverage: 1,
+        leverage,
         marginType: 'ISOLATED',
         liqBufferAtr: Infinity,
-        reason: 'delta-neutral hedge',
+        reason: `funding harvest ${leverage}x isolated`,
       };
     }
 

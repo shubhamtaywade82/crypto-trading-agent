@@ -3,7 +3,7 @@ import type { Signal } from '../types.js';
 
 export class FundingArbAgent extends BaseAgent {
   readonly id = 'FUNDING-ARB-α' as const;
-  readonly strategy = 'funding_rate_cash_carry';
+  readonly strategy = 'funding_rate_harvest';
   private readonly APR_THRESHOLD = 0.15; // 15% annualized return threshold
 
   protected async analyze(ctx: MarketContext): Promise<Signal[]> {

@@ -1,19 +1,14 @@
-import { USDMClient, MainClient } from 'binance';
+import { USDMClient } from 'binance';
 import { config } from '../config.js';
 import { PaperEngine } from './paperEngine.js';
 import type { Candle, Position } from '../types.js';
 
 export class BinanceService {
   private futures: USDMClient;
-  private spot: MainClient;
   private paper: PaperEngine;
 
   constructor() {
     this.futures = new USDMClient({
-      api_key: config.binance.apiKey,
-      api_secret: config.binance.apiSecret,
-    });
-    this.spot = new MainClient({
       api_key: config.binance.apiKey,
       api_secret: config.binance.apiSecret,
     });
@@ -42,11 +37,6 @@ export class BinanceService {
       markPrice: Number(single.markPrice),
       fundingRate: Number(single.lastFundingRate),
     };
-  }
-
-  async getSpotPrice(symbol: string): Promise<number> {
-    const res = await this.spot.getAvgPrice({ symbol });
-    return Number(res.price);
   }
 
   async getMarketOverview(symbols: string[]) {

@@ -49,7 +49,7 @@ export interface Position {
   liqDistancePct: number | null;
   serverSl: string;
   serverTp: string;
-  posType?: string; // e.g. 'SPOT+SHORT' | 'LONG/SHORT' | 'LONG'
+  posType?: string; // e.g. 'PERP-SHORT' | 'LONG/SHORT' | 'LONG'
 }
 
 export interface LogEntry {

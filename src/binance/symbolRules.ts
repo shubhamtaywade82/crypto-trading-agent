@@ -5,6 +5,8 @@ export interface SymbolRules {
   quantityPrecision: number;
   tickSize: number;
   stepSize: number;
+  minQty: number;
+  minNotional: number;
 }
 
 // Used until exchange info loads, and for symbols it does not list
@@ -13,6 +15,8 @@ const DEFAULT_RULES: SymbolRules = {
   quantityPrecision: 3,
   tickSize: 0.01,
   stepSize: 0.001,
+  minQty: 0,
+  minNotional: 0,
 };
 
 // Absorbs float error such as 0.3 / 0.1 = 2.9999999999999996 before flooring to a step
@@ -32,11 +36,14 @@ export function getSymbolRules(symbol: string): SymbolRules {
 export function rulesFromExchangeInfo(info: FuturesSymbolExchangeInfo): SymbolRules {
   const priceFilter = info.filters.find((f) => f.filterType === 'PRICE_FILTER');
   const lotFilter = info.filters.find((f) => f.filterType === 'LOT_SIZE');
+  const notionalFilter = info.filters.find((f) => f.filterType === 'MIN_NOTIONAL');
   return {
     pricePrecision: info.pricePrecision,
     quantityPrecision: info.quantityPrecision,
     tickSize: Number(priceFilter && 'tickSize' in priceFilter ? priceFilter.tickSize : 10 ** -info.pricePrecision),
     stepSize: Number(lotFilter && 'stepSize' in lotFilter ? lotFilter.stepSize : 10 ** -info.quantityPrecision),
+    minQty: Number(lotFilter && 'minQty' in lotFilter ? lotFilter.minQty : 0),
+    minNotional: Number(notionalFilter && 'notional' in notionalFilter ? notionalFilter.notional : 0),
   };
 }
 

@@ -8,13 +8,16 @@ export interface VetoVerdict {
 }
 
 const VETO_TIMEOUT_MS = 5000;
+const PING_INTERVAL_MS = 60_000;
 
 /** Parses the model's JSON reply; anything unusable proceeds, because deterministic code owns the entry. */
 export function parseVerdict(text: string): VetoVerdict {
   try {
     const parsed = JSON.parse(text);
     const reason = String(parsed.reason ?? '');
-    return parsed.verdict === 'VETO' ? { verdict: 'VETO', reason } : { verdict: 'PROCEED', reason };
+    if (parsed.verdict === 'VETO') return { verdict: 'VETO', reason };
+    if (parsed.verdict === 'PROCEED') return { verdict: 'PROCEED', reason };
+    return { verdict: 'PROCEED', reason: `advisor sent an unknown verdict "${parsed.verdict}"` };
   } catch {
     return { verdict: 'PROCEED', reason: 'advisor sent an unparseable reply' };
   }
@@ -33,11 +36,10 @@ function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
  * but can never originate one; when Ollama is offline, slow or malformed, the entry proceeds.
  */
 export class OllamaAdvisor {
-  private client: Ollama;
   private available = false;
+  private lastPingAt = 0;
 
-  constructor() {
-    this.client = new Ollama({ host: config.ollama.host });
+  constructor(private client: Pick<Ollama, 'list' | 'generate'> = new Ollama({ host: config.ollama.host })) {
     this.ping();
   }
 
@@ -46,8 +48,9 @@ export class OllamaAdvisor {
   }
 
   private async ping(): Promise<void> {
+    this.lastPingAt = Date.now();
     try {
-      await this.client.list();
+      await withTimeout(this.client.list(), VETO_TIMEOUT_MS);
       this.available = true;
     } catch {
       this.available = false;
@@ -55,6 +58,8 @@ export class OllamaAdvisor {
   }
 
   async veto(snapshot: VetoSnapshot): Promise<VetoVerdict> {
+    // Ollama often starts after the bot; without a re-ping the veto stays disabled until restart.
+    if (!this.available && Date.now() - this.lastPingAt >= PING_INTERVAL_MS) await this.ping();
     if (!this.available) return { verdict: 'PROCEED', reason: 'advisor offline' };
     const prompt = `You review a proposed crypto futures entry. Snapshot: ${JSON.stringify(snapshot)}. ` +
       'Reply with JSON only: {"verdict":"PROCEED"|"VETO","reason":"<max 15 words>"}. ' +

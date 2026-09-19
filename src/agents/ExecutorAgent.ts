@@ -2,7 +2,12 @@ import { BaseAgent, type MarketContext } from './BaseAgent.js';
 import type { Signal, RiskDecision, LogEntry } from '../types.js';
 import type { BinanceService } from '../binance/client.js';
 import { config } from '../config.js';
-import { formatPrice, formatQty, roundPrice, roundQty } from '../binance/symbolRules.js';
+import { formatPrice, formatQty, getSymbolRules, roundPrice, roundQty } from '../binance/symbolRules.js';
+
+interface SizedOrder {
+  side: 'BUY' | 'SELL';
+  qty: number;
+}
 
 export class ExecutorAgent extends BaseAgent {
   readonly id = 'EXECUTOR-ε' as const;
@@ -18,21 +23,8 @@ export class ExecutorAgent extends BaseAgent {
 
   async execute(signal: Signal, risk: RiskDecision): Promise<LogEntry> {
     try {
-      if (!config.symbols.includes(signal.symbol)) {
-        throw new Error(`${signal.symbol} is not a tradable symbol (expected one of ${config.symbols.join(',')})`);
-      }
-      // OPEN_HEDGE carries only a USDT notional, so size it off the live mark
-      const entryPrice = signal.entry ?? (await this.binance.getPremiumIndex(signal.symbol)).markPrice;
-      const qty = roundQty(signal.symbol, risk.positionSizeUsdt / entryPrice);
-      if (qty <= 0) {
-        throw new Error(`${risk.positionSizeUsdt.toFixed(2)} USDT is below one lot of ${signal.symbol} at ${entryPrice}`);
-      }
-      const round = (price?: number) => (price === undefined ? undefined : roundPrice(signal.symbol, price));
-      // Funding harvest earns by shorting the perp when funding is positive
-      const isShort = signal.type === 'OPEN_SHORT' || signal.type === 'OPEN_HEDGE';
-      const side = isShort ? 'SELL' : 'BUY';
-
-      const stopLoss = round(signal.stopLoss);
+      const { side, qty } = await this.buildOrder(signal, risk);
+      const stopLoss = roundOptionalPrice(signal.symbol, signal.stopLoss);
       const res = await this.binance.openFuturesPosition({
         symbol: signal.symbol,
         side,
@@ -40,23 +32,44 @@ export class ExecutorAgent extends BaseAgent {
         leverage: risk.leverage,
         strategy: signal.agent,
         stopLoss,
-        takeProfit: round(signal.takeProfit),
-        entryPrice: round(signal.entry),
+        takeProfit: roundOptionalPrice(signal.symbol, signal.takeProfit),
+        entryPrice: roundOptionalPrice(signal.symbol, signal.entry),
       });
-
-      return {
-        ts: Date.now(),
-        agent: this.id,
-        msg: `FILLED ${side} ${signal.symbol} qty=${formatQty(signal.symbol, qty)} orderId=${res.orderId} SL=${stopLoss === undefined ? '—' : formatPrice(signal.symbol, stopLoss)} server-side ✓`,
-        level: 'success',
-      };
+      return this.log(`FILLED ${side} ${signal.symbol} qty=${formatQty(signal.symbol, qty)} orderId=${res.orderId} SL=${stopLoss === undefined ? '—' : formatPrice(signal.symbol, stopLoss)} server-side ✓`, 'success');
     } catch (err: any) {
-      return {
-        ts: Date.now(),
-        agent: this.id,
-        msg: `EXECUTION FAILED: ${err.message}`,
-        level: 'error',
-      };
+      return this.log(`EXECUTION FAILED: ${err.message}`, 'error');
     }
   }
+
+  private log(msg: string, level: LogEntry['level']): LogEntry {
+    return { ts: Date.now(), agent: this.id, msg, level };
+  }
+
+  /** Validates the symbol, sizes the order to the lot step and enforces the exchange minimums; throws if it cannot be placed. */
+  private async buildOrder(signal: Signal, risk: RiskDecision): Promise<SizedOrder> {
+    const { symbol } = signal;
+    if (!config.symbols.includes(symbol)) {
+      throw new Error(`${symbol} is not a tradable symbol (expected one of ${config.symbols.join(',')})`);
+    }
+    // OPEN_HEDGE carries only a USDT notional, so size it off the live mark
+    const entryPrice = signal.entry ?? (await this.binance.getPremiumIndex(symbol)).markPrice;
+    const qty = roundQty(symbol, risk.positionSizeUsdt / entryPrice);
+    if (qty <= 0) {
+      throw new Error(`${risk.positionSizeUsdt.toFixed(2)} USDT is below one lot of ${symbol} at ${entryPrice}`);
+    }
+    const { minQty, minNotional } = getSymbolRules(symbol);
+    if (qty < minQty) {
+      throw new Error(`qty ${formatQty(symbol, qty)} is below the minimum quantity ${minQty} for ${symbol}`);
+    }
+    if (qty * entryPrice < minNotional) {
+      throw new Error(`notional ${(qty * entryPrice).toFixed(2)} USDT is below the minimum notional ${minNotional} for ${symbol}`);
+    }
+    // Funding harvest earns by shorting the perp when funding is positive
+    const isShort = signal.type === 'OPEN_SHORT' || signal.type === 'OPEN_HEDGE';
+    return { side: isShort ? 'SELL' : 'BUY', qty };
+  }
+}
+
+function roundOptionalPrice(symbol: string, price?: number): number | undefined {
+  return price === undefined ? undefined : roundPrice(symbol, price);
 }

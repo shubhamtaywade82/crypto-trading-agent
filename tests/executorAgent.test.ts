@@ -23,7 +23,7 @@ function stubService() {
 }
 
 test('should round quantity down to the step and prices to the tick', async () => {
-  setSymbolRules(symbol, { pricePrecision: 2, quantityPrecision: 1, tickSize: 0.05, stepSize: 0.1 });
+  setSymbolRules(symbol, { pricePrecision: 2, quantityPrecision: 1, tickSize: 0.05, stepSize: 0.1, minQty: 0, minNotional: 0 });
   const { captured, executor } = stubService();
   const log = await executor.execute(signal({ entry: 100.03, stopLoss: 94.02, takeProfit: 112.49 }), risk);
   assert.equal(log.level, 'success');
@@ -34,7 +34,7 @@ test('should round quantity down to the step and prices to the tick', async () =
 });
 
 test('should size a funding hedge off the live mark and short it', async () => {
-  setSymbolRules(symbol, { pricePrecision: 2, quantityPrecision: 3, tickSize: 0.01, stepSize: 0.001 });
+  setSymbolRules(symbol, { pricePrecision: 2, quantityPrecision: 3, tickSize: 0.01, stepSize: 0.001, minQty: 0, minNotional: 0 });
   const { captured, executor } = stubService();
   await executor.execute(signal({ type: 'OPEN_HEDGE', agent: 'FUNDING-ARB-α' }), risk);
   assert.equal(captured[0].side, 'SELL');
@@ -49,9 +49,27 @@ test('should refuse symbols outside config.symbols', async () => {
 });
 
 test('should refuse an order smaller than one lot', async () => {
-  setSymbolRules(symbol, { pricePrecision: 2, quantityPrecision: 0, tickSize: 0.01, stepSize: 1 });
+  setSymbolRules(symbol, { pricePrecision: 2, quantityPrecision: 0, tickSize: 0.01, stepSize: 1, minQty: 0, minNotional: 0 });
   const { captured, executor } = stubService();
   const log = await executor.execute(signal({ entry: 5000 }), risk);
   assert.equal(log.level, 'error');
+  assert.equal(captured.length, 0);
+});
+
+test('should refuse an order below the symbol minimum quantity', async () => {
+  setSymbolRules(symbol, { pricePrecision: 2, quantityPrecision: 3, tickSize: 0.01, stepSize: 0.001, minQty: 20, minNotional: 0 });
+  const { captured, executor } = stubService();
+  const log = await executor.execute(signal({ entry: 100 }), risk); // 1000 USDT / 100 = qty 10
+  assert.equal(log.level, 'error');
+  assert.match(log.msg, /minimum quantity/);
+  assert.equal(captured.length, 0);
+});
+
+test('should refuse an order below the symbol minimum notional', async () => {
+  setSymbolRules(symbol, { pricePrecision: 2, quantityPrecision: 3, tickSize: 0.01, stepSize: 0.001, minQty: 0, minNotional: 5000 });
+  const { captured, executor } = stubService();
+  const log = await executor.execute(signal({ entry: 100 }), risk); // notional 1000
+  assert.equal(log.level, 'error');
+  assert.match(log.msg, /minimum notional/);
   assert.equal(captured.length, 0);
 });

@@ -37,10 +37,11 @@ export class Orchestrator extends EventEmitter {
     const dropped = this.binance.dropUnlistedPositions(config.symbols);
     if (dropped.length) this.log('SYSTEM', `Dropped ${dropped.length} saved position(s) outside SYMBOLS: ${dropped.join(', ')}`, 'warn');
     if (config.mode === 'live') this.log('SYSTEM', `${this.adaptive.id} disabled: dynamic exits are paper-only`, 'warn');
+    const runLoop = () => this.loop().catch((err: Error) => this.log('SYSTEM', `Loop crashed: ${err.message}`, 'error'));
     this.binance.loadSymbolRules(config.symbols)
       .catch((err: Error) => this.log('SYSTEM', `Symbol precision load failed (${err.message}); using 2dp defaults`, 'warn'))
-      .finally(() => this.loop());
-    this.timer = setInterval(() => this.loop(), 8000);
+      .finally(runLoop);
+    this.timer = setInterval(runLoop, 8000);
     this.stopWs = this.binance.startRealtimeStream(config.symbols, (sym, price) => {
       this.handleRealtimeTick(sym, price);
     });
@@ -123,7 +124,7 @@ export class Orchestrator extends EventEmitter {
       const signals = await this.collectSignals(ctx);
       await this.processSignals(signals, ctx);
       // Fresh read: the ctx snapshot predates the awaited veto/execution, and updateStops matches by symbol+strategy only
-      this.trailStops(await this.binance.getPositions());
+      if (config.mode === 'paper') this.trailStops(await this.binance.getPositions());
       await this.consultAdvisor(signals, ctx.positions ?? []);
       await this.emitState(ctx);
     } catch (err: any) {

@@ -8,7 +8,8 @@ export interface StopLevels {
 
 export type TrailState = Pick<AdaptiveSuperTrendBar, 'superTrend' | 'regime' | 'assignedAtr'>;
 
-// Extend the TP once price is within this many assigned ATRs of it, by TP_EXTENSION_ATR
+// Extend the TP once price is within this many assigned ATRs of it, by TP_EXTENSION_ATR.
+// The LOW-regime cap reuses it as hysteresis so tick noise cannot re-tighten the TP every loop
 const TP_TRIGGER_ATR = 0.5;
 const TP_EXTENSION_ATR = 1;
 
@@ -40,7 +41,7 @@ export function nextStops(position: Position, state: TrailState): StopLevels | n
 
   if (state.regime === 'LOW' && (mark - entry) * direction > 0) {
     const cap = mark + direction * TP_ATR_MULTIPLE.LOW * atr;
-    takeProfit = direction === 1 ? Math.min(takeProfit, cap) : Math.max(takeProfit, cap);
+    if ((takeProfit - cap) * direction > TP_TRIGGER_ATR * atr) takeProfit = cap;
   }
 
   return stopLoss === currentStop && takeProfit === currentTarget ? null : { stopLoss, takeProfit };

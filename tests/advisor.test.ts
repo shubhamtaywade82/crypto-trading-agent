@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
-import { test } from 'node:test';
-import { parseVerdict } from '../src/ollama/advisor.js';
+import { mock, test } from 'node:test';
+import { OllamaAdvisor, parseVerdict } from '../src/ollama/advisor.js';
 
 test('should return VETO with the model reason', () => {
   assert.deepEqual(parseVerdict('{"verdict":"VETO","reason":"extended entry"}'), { verdict: 'VETO', reason: 'extended entry' });
@@ -14,4 +14,28 @@ test('should proceed when the reply is not JSON or has an unknown verdict', () =
   assert.equal(parseVerdict('sure, go ahead').verdict, 'PROCEED');
   assert.ok(parseVerdict('sure, go ahead').reason.startsWith('advisor'));
   assert.equal(parseVerdict('{"verdict":"MAYBE"}').verdict, 'PROCEED');
+});
+
+const snapshot = { symbol: 'BTCUSDT', side: 'LONG' as const, regime: 'HIGH' as const, distanceFromLineAtr: 1, rsi: 55, fundingRate: 0.0001, entry: 100, stopLoss: 95, takeProfit: 112 };
+
+test('should flag an unknown verdict as a fail-open reason', () => {
+  const result = parseVerdict('{"verdict":"MAYBE"}');
+  assert.equal(result.verdict, 'PROCEED');
+  assert.match(result.reason, /^advisor sent an unknown verdict/);
+});
+
+test('should re-ping an offline advisor after the interval and then use the model', async () => {
+  mock.timers.enable({ apis: ['Date'], now: 0 });
+  let online = false;
+  const client = {
+    list: async () => { if (!online) throw new Error('down'); return {} as never; },
+    generate: async () => ({ response: '{"verdict":"VETO","reason":"extended"}' }) as never,
+  };
+  const advisor = new OllamaAdvisor(client);
+  await new Promise((resolve) => setImmediate(resolve)); // constructor ping settles offline
+  assert.equal((await advisor.veto(snapshot)).reason, 'advisor offline');
+  online = true;
+  mock.timers.setTime(61_000);
+  assert.equal((await advisor.veto(snapshot)).verdict, 'VETO');
+  mock.timers.reset();
 });

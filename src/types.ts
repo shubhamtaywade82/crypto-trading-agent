@@ -54,6 +54,20 @@ export interface Position {
   posType?: string; // e.g. 'PERP-SHORT' | 'LONG/SHORT' | 'LONG'
 }
 
+export type ExitReason = 'CLOSE' | 'FLIP' | 'STOP LOSS' | 'TAKE PROFIT' | 'LIQUIDATED';
+
+export interface TradeRecord {
+  symbol: string;
+  strategy: AgentId;
+  side: Side;
+  entry: number;
+  exit: number;
+  qty: number;
+  pnl: number;
+  reason: ExitReason;
+  closedAt: number;
+}
+
 /** What the LLM sees when asked to veto an entry; all numbers come from deterministic code. */
 export interface VetoSnapshot {
   symbol: string;

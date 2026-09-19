@@ -10,9 +10,9 @@ const symbol = config.symbols[0];
 const BAR_MS = 15 * 60_000;
 
 // 120 flat bars then a steady climb: constant true range 2, so the bullish flip lands on bar 126
-function candles(count: number): Candle[] {
+function candles(count: number, flatBars = 120): Candle[] {
   return Array.from({ length: count }, (_, i) => {
-    const close = i < 120 ? 100 : 100 + (i - 119);
+    const close = i < flatBars ? 100 : 100 + (i - flatBars + 1);
     return { openTime: i * BAR_MS, open: close, high: close + 1, low: close - 1, close, volume: 1 };
   });
 }
@@ -82,4 +82,14 @@ test('should trail an open position with rounded stops and skip unchanged ones',
   const [update] = instance.stopUpdates([position]);
   assert.equal(update.stopLoss, Math.round(state.superTrend * 100) / 100);
   assert.deepEqual(instance.stopUpdates([{ ...position, serverSl: String(update.stopLoss) }]), []);
+});
+
+test('should skip an alt flip when the BTC state is older than the alt candle', async () => {
+  const instance = agent();
+  // Loop 1: BTC flips bullish on closed bar 126; ETH stays flat (no flip)
+  await instance.run({ ...twoSymbolContext(candles(128)), candles: { BTCUSDT: candles(128), ETHUSDT: candles(128, 500) } });
+  // Loop 2: BTC data is missing; ETH flips bullish on closed bar 127 (flat until bar 121)
+  const later = twoSymbolContext(candles(128));
+  later.candles = { ETHUSDT: candles(129, 121) };
+  assert.deepEqual(await instance.run(later), []);
 });

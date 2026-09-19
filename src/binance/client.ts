@@ -8,6 +8,18 @@ import type { AgentId, Candle, Position } from '../types.js';
 const KLINE_INTERVAL = '15m';
 const KLINE_LIMIT = 300;
 
+type OpenPositionParams = {
+  symbol: string;
+  side: 'BUY' | 'SELL';
+  qty: number;
+  leverage: number;
+  strategy: AgentId;
+  stopLoss?: number;
+  takeProfit?: number;
+  reduceOnly?: boolean;
+  entryPrice?: number;
+};
+
 export class BinanceService {
   private futures: USDMClient;
   private ws: WebsocketClient | null = null;
@@ -79,32 +91,41 @@ export class BinanceService {
       this.futures.getMarkPrice(),
       ...symbols.map((s) => this.getKlines(s, KLINE_INTERVAL, KLINE_LIMIT)),
     ]);
+    const candles: Record<string, Candle[]> = {};
+    symbols.forEach((s, i) => { candles[s] = rawKlines[i]; });
+    return {
+      tickers: this.pickTickers(rawTickers as any[], symSet),
+      ...this.pickMarks(rawMarks as any[], symSet),
+      candles,
+    };
+  }
+
+  private pickTickers(rawTickers: any[], symSet: Set<string>) {
     const tickers: Record<string, { price: number; changePct: number; high24h: number; low24h: number; volumeQuote: number }> = {};
+    for (const t of rawTickers) {
+      if (!symSet.has(t.symbol)) continue;
+      tickers[t.symbol] = {
+        price: Number(t.lastPrice),
+        changePct: Number(t.priceChangePercent),
+        high24h: Number(t.highPrice),
+        low24h: Number(t.lowPrice),
+        volumeQuote: Number(t.quoteVolume),
+      };
+    }
+    return tickers;
+  }
+
+  private pickMarks(rawMarks: any[], symSet: Set<string>) {
     const marks: Record<string, number> = {};
     const funding: Record<string, number> = {};
     let nextFundingTime = 0;
-
-    for (const t of (rawTickers as any[])) {
-      if (symSet.has(t.symbol)) {
-        tickers[t.symbol] = {
-          price: Number(t.lastPrice),
-          changePct: Number(t.priceChangePercent),
-          high24h: Number(t.highPrice),
-          low24h: Number(t.lowPrice),
-          volumeQuote: Number(t.quoteVolume),
-        };
-      }
+    for (const m of rawMarks) {
+      if (!symSet.has(m.symbol)) continue;
+      marks[m.symbol] = Number(m.markPrice);
+      funding[m.symbol] = Number(m.lastFundingRate);
+      if (m.nextFundingTime) nextFundingTime = Number(m.nextFundingTime);
     }
-    for (const m of (rawMarks as any[])) {
-      if (symSet.has(m.symbol)) {
-        marks[m.symbol] = Number(m.markPrice);
-        funding[m.symbol] = Number(m.lastFundingRate);
-        if (m.nextFundingTime) nextFundingTime = Number(m.nextFundingTime);
-      }
-    }
-    const candles: Record<string, Candle[]> = {};
-    symbols.forEach((s, i) => { candles[s] = rawKlines[i]; });
-    return { tickers, funding, marks, nextFundingTime, candles };
+    return { marks, funding, nextFundingTime };
   }
 
 
@@ -125,20 +146,13 @@ export class BinanceService {
       .map((p: any) => this.mapPosition(p));
   }
 
-  async openFuturesPosition(params: {
-    symbol: string;
-    side: 'BUY' | 'SELL';
-    qty: number;
-    leverage: number;
-    strategy: AgentId;
-    stopLoss?: number;
-    takeProfit?: number;
-    reduceOnly?: boolean;
-    entryPrice?: number;
-  }): Promise<{ orderId: number | string; status: string }> {
+  async openFuturesPosition(params: OpenPositionParams): Promise<{ orderId: number | string; status: string }> {
     if (!(params.qty > 0)) throw new Error(`Refusing ${params.side} ${params.symbol} with non-positive quantity ${params.qty}`);
     if (config.mode === 'paper') return this.paper.openPosition(params);
+    return this.submitLiveOrder(params);
+  }
 
+  private async submitLiveOrder(params: OpenPositionParams): Promise<{ orderId: number | string; status: string }> {
     await this.futures.setLeverage({ symbol: params.symbol, leverage: params.leverage });
     try {
       await this.futures.setMarginType({ symbol: params.symbol, marginType: 'ISOLATED' });

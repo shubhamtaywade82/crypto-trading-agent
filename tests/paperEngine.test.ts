@@ -106,3 +106,31 @@ test('should drop saved positions outside the tradable symbols', () => {
   assert.deepEqual(engine.dropUnlistedSymbols(['BTCUSDT']), ['BTCUSDTETHUSDT']);
   assert.deepEqual(engine.getPositions().map((p) => p.symbol), ['BTCUSDT']);
 });
+
+test('should journal every realized close with its reason and pnl', () => {
+  const engine = freshEngine();
+  engine.openPosition({ ...base, side: 'BUY', qty: 2, entryPrice: 100, stopLoss: 90, takeProfit: 130 });
+  engine.openPosition({ ...base, side: 'SELL', qty: 1, entryPrice: 110, reduceOnly: true }); // partial manual close
+  engine.markAll({ BTCUSDT: 131 }); // take profit on the remaining 1
+  const [manual, tp] = engine.getTrades();
+  assert.deepEqual({ reason: manual.reason, qty: manual.qty, exit: manual.exit, pnl: manual.pnl }, { reason: 'CLOSE', qty: 1, exit: 110, pnl: 10 });
+  assert.deepEqual({ reason: tp.reason, qty: tp.qty, exit: tp.exit, pnl: tp.pnl }, { reason: 'TAKE PROFIT', qty: 1, exit: 130, pnl: 30 });
+  assert.equal(engine.getAccount().initialEquity, 100_000);
+});
+
+test('should mark the close half of a flip as FLIP', () => {
+  const engine = freshEngine();
+  engine.openPosition({ ...base, side: 'BUY', qty: 1, entryPrice: 100 });
+  engine.openPosition({ ...base, side: 'SELL', qty: 1, entryPrice: 90 });
+  assert.equal(engine.getTrades()[0].reason, 'FLIP');
+  assert.equal(engine.getTrades()[0].pnl, -10);
+});
+
+test('should persist the journal across restarts', async () => {
+  const file = path.join(mkdtempSync(path.join(tmpdir(), 'paper-')), 'state.json');
+  const first = new PaperEngine(file);
+  first.openPosition({ ...base, side: 'BUY', qty: 1, entryPrice: 100 });
+  first.openPosition({ ...base, side: 'SELL', qty: 1, entryPrice: 105, reduceOnly: true });
+  await new Promise((resolve) => setTimeout(resolve, 400)); // debounced persist
+  assert.equal(new PaperEngine(file).getTrades().length, 1);
+});

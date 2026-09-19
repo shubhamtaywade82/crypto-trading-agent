@@ -57,3 +57,9 @@ test('should be idempotent: applying the result and calling again changes nothin
 test('should skip positions whose stops are not numeric', () => {
   assert.equal(nextStops(longPosition({ serverSl: '—' }), medium(97)), null);
 });
+
+test('should not re-tighten the LOW cap for a change smaller than half an ATR', () => {
+  const state: TrailState = { superTrend: 90, regime: 'LOW', assignedAtr: 2 };
+  // cap = 105 + 2*2 = 109; TP 109.5 is only 0.5 above it (<= 0.5 ATR = 1)
+  assert.equal(nextStops(longPosition({ serverTp: '109.5' }), state), null);
+});

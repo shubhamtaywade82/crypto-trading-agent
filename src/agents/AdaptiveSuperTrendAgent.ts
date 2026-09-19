@@ -56,14 +56,15 @@ export class AdaptiveSuperTrendAgent extends BaseAgent {
     this.lastHandledOpenTime.set(symbol, lastClosed.openTime);
     // LOW-volatility flips are mostly chop
     if (!bar.trendShift || bar.regime === 'LOW') return null;
-    if (!this.agreesWithAnchor(symbol, bar.trendShift)) return null;
+    if (!this.agreesWithAnchor(symbol, bar.trendShift, lastClosed.openTime)) return null;
     return this.entrySignal(symbol, bar, mark);
   }
 
-  private agreesWithAnchor(symbol: string, direction: TrendDirection): boolean {
+  private agreesWithAnchor(symbol: string, direction: TrendDirection, candleOpenTime: number): boolean {
     if (symbol === ANCHOR_SYMBOL || !config.symbols.includes(ANCHOR_SYMBOL)) return true;
-    // Unknown anchor state also blocks: no BTC read means no alt entry
-    return this.latest.get(ANCHOR_SYMBOL)?.direction === direction;
+    const anchor = this.latest.get(ANCHOR_SYMBOL);
+    // Unknown or older-than-the-alt anchor state also blocks: a stale BTC read must not approve a fresh alt flip
+    return !!anchor && anchor.candle.openTime >= candleOpenTime && anchor.direction === direction;
   }
 
   private entrySignal(symbol: string, bar: AdaptiveSuperTrendBar, mark: number): Signal | null {

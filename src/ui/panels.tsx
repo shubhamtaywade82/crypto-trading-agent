@@ -6,22 +6,12 @@ import stringWidth from 'string-width';
 import type { AgentState, Position, LogEntry, MarketPriceInfo, StrategyMetrics } from '../types.js';
 
 export interface CockpitProps {
-  mode: string;
-  time: string;
-  equity: number;
-  upnl: number;
-  marginUsed: number;
-  positions: Position[];
-  selPos: number;
-  agents: AgentState[];
-  logs: LogEntry[];
-  spotPrices?: Record<string, MarketPriceInfo>;
-  fundingRate?: number;
-  strategyMetrics?: StrategyMetrics;
-  isSyncing: boolean;
-  totalWidth?: number;
-  totalHeight?: number;
+  mode: string; time: string; equity: number; upnl: number; marginUsed: number;
+  positions: Position[]; selPos: number; agents: AgentState[]; logs: LogEntry[];
+  spotPrices?: Record<string, MarketPriceInfo>; fundingRate?: number;
+  strategyMetrics?: StrategyMetrics; isSyncing: boolean; totalWidth?: number; totalHeight?: number;
 }
+
 
 export function padLine(str: string, width: number): string {
   const sw = stringWidth(str);
@@ -94,16 +84,24 @@ function fmtRange(low?: number, high?: number): string {
   return `${f(low)} - ${f(high)}`;
 }
 
-function renderAssetRow(sym: string, info: MarketPriceInfo | undefined, width: number): string[] {
+function renderAssetRow(sym: string, info: MarketPriceInfo | undefined, width: number, isWide: boolean): string[] {
   const p = info?.price ?? (sym === 'BTC' ? 81070 : sym === 'ETH' ? 2626 : sym === 'SOL' ? 111.6 : 8.54);
   const chg = info?.changePct ?? 0;
-  const pStr = p >= 1000 ? `$${p.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : `$${p.toFixed(2)}`;
-  const sign = chg >= 0 ? '+' : '';
-  const chgColor = chg >= 0 ? chalk.green : chalk.red;
-  const spark = info?.sparkline ? chgColor(info.sparkline) : '';
+  const pStr = (p >= 1000 ? `$${p.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : `$${p.toFixed(2)}`).padStart(11);
+  const chgCol = chg >= 0 ? chalk.green : chalk.red;
+  const chgStr = chgCol(((chg >= 0 ? '+' : '') + chg.toFixed(2) + '%').padStart(8));
+  const spark = info?.sparkline ? chgCol(info.sparkline) : '';
 
-  const l1 = ' ' + chalk.yellow.bold(sym.padEnd(4)) + chalk.white(` ${pStr.padEnd(10)} `) + chgColor(`${sign}${chg.toFixed(2)}%`.padEnd(8)) + ' ' + spark;
-  const l2 = '   ' + chalk.gray('24h ') + chalk.white(fmtRange(info?.low24h, info?.high24h)) + chalk.gray(' │ Vol ') + chalk.cyan(fmtVol(info?.volumeQuote));
+  if (isWide) {
+    const range = fmtRange(info?.low24h, info?.high24h).padEnd(19);
+    const vol = fmtVol(info?.volumeQuote).padStart(10);
+    const l = ` ${chalk.yellow.bold(sym.padEnd(5))} ${chalk.white(pStr)}  ${chgStr}  ${chalk.gray('│ ')}${chalk.white(range)} ${chalk.gray('│ ')}${chalk.cyan(vol)}  ${chalk.gray('│ ')}${spark}`;
+    return [padLine(l, width)];
+  }
+  const range = (info?.low24h && info?.high24h ? (info.low24h >= 1000 ? `$${(info.low24h / 1000).toFixed(1)}k-$${(info.high24h / 1000).toFixed(1)}k` : `$${info.low24h.toFixed(2)}-$${info.high24h.toFixed(2)}`) : '—').padEnd(15);
+  const vol = ('Vol ' + fmtVol(info?.volumeQuote)).padStart(11);
+  const l1 = ` ${chalk.yellow.bold(sym.padEnd(4))} ${chalk.white(pStr.trim().padStart(9))} ${chgStr} ${chalk.gray('│ ')}${spark}`;
+  const l2 = `   ${chalk.gray('24h')} ${chalk.white(range)} ${chalk.gray('│ ')}${chalk.cyan(vol)}`;
   return [padLine(l1, width), padLine(l2, width)];
 }
 
@@ -117,17 +115,24 @@ export function renderCol2Lines(
   const cd = metrics?.nextFundingCountdown ?? '7h58m';
   const totalVol = (spotPrices?.BTC?.volumeQuote ?? 15.8e9) + (spotPrices?.ETH?.volumeQuote ?? 4.2e9) + (spotPrices?.SOL?.volumeQuote ?? 1.8e9) + (spotPrices?.AVAX?.volumeQuote ?? 240e6);
   const syms = ['BTC', 'ETH', 'SOL', 'AVAX'] as const;
+  const isWide = width >= 72;
 
   const rows: string[] = [
     padLine(` ${chalk.gray('USDM Funding 8h: ')}${chalk.green(`+${fund}%`)}${chalk.gray(' │ settle in ')}${chalk.cyan.bold(cd)}`, width),
     padLine(` ${chalk.gray('─'.repeat(Math.max(10, width - 2)))}`, width),
-    ...syms.flatMap((s) => renderAssetRow(s, spotPrices?.[s], width)),
+  ];
+  if (isWide) {
+    rows.push(padLine(` ${chalk.gray('ASSET'.padEnd(5))} ${chalk.gray('PRICE'.padStart(11))}  ${chalk.gray('24h CHG'.padStart(8))}  ${chalk.gray('│ 24h RANGE'.padEnd(21))} ${chalk.gray('│ 24h VOLUME'.padStart(12))}  ${chalk.gray('│ 15m TREND')}`, width));
+    rows.push(padLine(` ${chalk.gray('─'.repeat(Math.max(10, width - 2)))}`, width));
+  }
+  rows.push(...syms.flatMap((s) => renderAssetRow(s, spotPrices?.[s], width, isWide)));
+  rows.push(
     padLine(` ${chalk.gray('─'.repeat(Math.max(10, width - 2)))}`, width),
     padLine(` ${chalk.cyan.bold('MARKET REGIME & VOLATILITY')}`, width),
-    padLine(`   ${chalk.gray('Turnover  ')}${chalk.white(`${fmtVol(totalVol)} 24h futures vol`)}`, width),
-    padLine(`   ${chalk.gray('Momentum  ')}${chalk.green('BULLISH')} ${chalk.gray('(all 4 above EMA50)')}`, width),
-    padLine(`   ${chalk.gray('Carry     ')}${chalk.green('POSITIVE')} ${chalk.gray('(+10.95% APR avg)')}`, width),
-  ];
+    padLine(`   ${chalk.gray('Turnover  ')}${chalk.gray('│ ')}${chalk.white(`${fmtVol(totalVol)} 24h futures vol`)}`, width),
+    padLine(`   ${chalk.gray('Momentum  ')}${chalk.gray('│ ')}${chalk.green('BULLISH')} ${chalk.gray('(all 4 above EMA50)')}`, width),
+    padLine(`   ${chalk.gray('Carry     ')}${chalk.gray('│ ')}${chalk.green('POSITIVE')} ${chalk.gray('(+10.95% APR avg)')}`, width),
+  );
   while (rows.length < rowCount) rows.push(' '.repeat(width));
   return rows.slice(0, rowCount);
 }

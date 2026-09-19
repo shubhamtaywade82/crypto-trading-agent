@@ -1,7 +1,12 @@
 import { USDMClient, WebsocketClient } from 'binance';
 import { config } from '../config.js';
 import { PaperEngine } from './paperEngine.js';
+import { roundPrice, roundQty, rulesFromExchangeInfo, setSymbolRules } from './symbolRules.js';
 import type { AgentId, Candle, Position } from '../types.js';
+
+// 300 closed 15m candles cover the adaptive SuperTrend's ATR warm-up (10) + K-Means window (100) with margin
+const KLINE_INTERVAL = '15m';
+const KLINE_LIMIT = 300;
 
 export class BinanceService {
   private futures: USDMClient;
@@ -34,6 +39,14 @@ export class BinanceService {
     };
   }
 
+  /** Loads per-symbol price/quantity precision so orders and the UI use each contract's own decimals. */
+  async loadSymbolRules(symbols: string[]): Promise<void> {
+    const info = await this.futures.getExchangeInfo();
+    for (const entry of info.symbols) {
+      if (symbols.includes(entry.symbol)) setSymbolRules(entry.symbol, rulesFromExchangeInfo(entry));
+    }
+  }
+
   async getKlines(symbol: string, interval = '15m', limit = 200): Promise<Candle[]> {
     const rawKlines = await this.futures.getKlines({
       symbol,
@@ -41,6 +54,7 @@ export class BinanceService {
       limit,
     });
     return (rawKlines as any[]).map((k: any[]) => ({
+      openTime: Number(k[0]),
       open: Number(k[1]),
       high: Number(k[2]),
       low: Number(k[3]),
@@ -63,7 +77,7 @@ export class BinanceService {
     const [rawTickers, rawMarks, ...rawKlines] = await Promise.all([
       this.futures.get24hrChangeStatistics(),
       this.futures.getMarkPrice(),
-      ...symbols.map((s) => this.getKlines(s, '15m', 60)),
+      ...symbols.map((s) => this.getKlines(s, KLINE_INTERVAL, KLINE_LIMIT)),
     ]);
     const tickers: Record<string, { price: number; changePct: number; high24h: number; low24h: number; volumeQuote: number }> = {};
     const marks: Record<string, number> = {};
@@ -122,6 +136,7 @@ export class BinanceService {
     reduceOnly?: boolean;
     entryPrice?: number;
   }): Promise<{ orderId: number | string; status: string }> {
+    if (!(params.qty > 0)) throw new Error(`Refusing ${params.side} ${params.symbol} with non-positive quantity ${params.qty}`);
     if (config.mode === 'paper') return this.paper.openPosition(params);
 
     await this.futures.setLeverage({ symbol: params.symbol, leverage: params.leverage });
@@ -135,7 +150,7 @@ export class BinanceService {
       symbol: params.symbol,
       side: params.side,
       type: 'MARKET',
-      quantity: Number(params.qty.toFixed(6)),
+      quantity: roundQty(params.symbol, params.qty),
       reduceOnly: params.reduceOnly ? 'true' : 'false',
     });
 
@@ -161,6 +176,17 @@ export class BinanceService {
     await this.cancelAll(pos.symbol);
   }
 
+  /** Paper only: live mode keeps exchange-side protection orders (netting per symbol is unresolved). */
+  updateStops(symbol: string, strategy: AgentId, stopLoss: number, takeProfit: number): void {
+    if (config.mode !== 'paper') throw new Error('Dynamic stop updates are paper-only');
+    this.paper.updateStops(symbol, strategy, stopLoss, takeProfit);
+  }
+
+  /** Paper only: purges saved positions for symbols that are no longer tradable; returns the dropped symbols. */
+  dropUnlistedPositions(symbols: string[]): string[] {
+    return config.mode === 'paper' ? this.paper.dropUnlistedSymbols(symbols) : [];
+  }
+
   /** Paper only: marks to market and returns log lines for SL/TP/liquidation exits. */
   markAll(prices: Record<string, number>): string[] {
     return config.mode === 'paper' ? this.paper.markAll(prices) : [];
@@ -178,7 +204,7 @@ export class BinanceService {
         symbol: params.symbol,
         side: exitSide,
         type: 'STOP_MARKET',
-        stopPrice: Number(params.stopLoss.toFixed(2)),
+        stopPrice: roundPrice(params.symbol, params.stopLoss),
         closePosition: 'true',
       });
     }
@@ -187,7 +213,7 @@ export class BinanceService {
         symbol: params.symbol,
         side: exitSide,
         type: 'TAKE_PROFIT_MARKET',
-        stopPrice: Number(params.takeProfit.toFixed(2)),
+        stopPrice: roundPrice(params.symbol, params.takeProfit),
         closePosition: 'true',
       });
     }

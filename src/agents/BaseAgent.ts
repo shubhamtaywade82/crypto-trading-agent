@@ -11,8 +11,13 @@ export interface MarketContext {
   positions?: Position[];
 }
 
+// Momentum re-fires every 8s tick while the forming 15m candle stays across EMA50
+export const DEFAULT_COOLDOWN_MS = 15 * 60_000;
+
 export abstract class BaseAgent extends EventEmitter {
   abstract readonly id: string;
+  /** Minimum gap between fills for one symbol; agents that dedupe per candle themselves set 0. */
+  readonly cooldownMs: number = DEFAULT_COOLDOWN_MS;
   abstract readonly strategy: string;
   status: 'RUNNING' | 'PAUSED' | 'WATCHING' = 'RUNNING';
 

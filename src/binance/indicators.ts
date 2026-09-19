@@ -37,6 +37,15 @@ export function zscore(values: number[], period = 30): number {
   return standardDeviation === 0 ? 0 : (values[values.length - 1] - mean) / standardDeviation;
 }
 
+/** Z-score of the latest A/B close ratio over the trailing `period` candles; 0 until enough history. */
+export function pairZScore(candlesA: Candle[], candlesB: Candle[], period = 30): number {
+  const length = Math.min(candlesA.length, candlesB.length);
+  if (length < period) return 0;
+  const ratios: number[] = [];
+  for (let i = length - period; i < length; i++) ratios.push(candlesA[i].close / candlesB[i].close);
+  return zscore(ratios, period);
+}
+
 export function sparkline(values: number[], len = 12): string {
   if (!values.length) return '';
   const slice = values.slice(-len);

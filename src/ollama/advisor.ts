@@ -1,11 +1,36 @@
 import { Ollama } from 'ollama';
 import { config } from '../config.js';
-import type { Position, LogEntry } from '../types.js';
+import type { Position, LogEntry, VetoSnapshot } from '../types.js';
+
+export interface VetoVerdict {
+  verdict: 'PROCEED' | 'VETO';
+  reason: string;
+}
+
+const VETO_TIMEOUT_MS = 5000;
+
+/** Parses the model's JSON reply; anything unusable proceeds, because deterministic code owns the entry. */
+export function parseVerdict(text: string): VetoVerdict {
+  try {
+    const parsed = JSON.parse(text);
+    const reason = String(parsed.reason ?? '');
+    return parsed.verdict === 'VETO' ? { verdict: 'VETO', reason } : { verdict: 'PROCEED', reason };
+  } catch {
+    return { verdict: 'PROCEED', reason: 'advisor sent an unparseable reply' };
+  }
+}
+
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(`timed out after ${ms}ms`)), ms);
+    promise.then(resolve, reject).finally(() => clearTimeout(timer));
+  });
+}
 
 /**
- * LLM advisory layer via Ollama.
- * Non-blocking: enriches logs with narrative context.
- * NEVER makes trading decisions — deterministic agents own execution.
+ * LLM layer via Ollama.
+ * advise/ask enrich logs only. veto() may block an entry the deterministic agents proposed,
+ * but can never originate one; when Ollama is offline, slow or malformed, the entry proceeds.
  */
 export class OllamaAdvisor {
   private client: Ollama;
@@ -26,6 +51,22 @@ export class OllamaAdvisor {
       this.available = true;
     } catch {
       this.available = false;
+    }
+  }
+
+  async veto(snapshot: VetoSnapshot): Promise<VetoVerdict> {
+    if (!this.available) return { verdict: 'PROCEED', reason: 'advisor offline' };
+    const prompt = `You review a proposed crypto futures entry. Snapshot: ${JSON.stringify(snapshot)}. ` +
+      'Reply with JSON only: {"verdict":"PROCEED"|"VETO","reason":"<max 15 words>"}. ' +
+      'VETO only for a concrete reason such as an overextended entry or crowded funding.';
+    try {
+      const res = await withTimeout(
+        this.client.generate({ model: config.ollama.model, prompt, format: 'json', stream: false }),
+        VETO_TIMEOUT_MS,
+      );
+      return parseVerdict(res.response);
+    } catch (err) {
+      return { verdict: 'PROCEED', reason: `advisor error: ${(err as Error).message}` };
     }
   }
 

@@ -1,24 +1,26 @@
 import { EventEmitter } from 'node:events';
 import type { Signal, LogEntry, AppState, Position, StrategyMetrics, MarketPriceInfo, Candle } from '../types.js';
-import type { MarketContext } from '../agents/BaseAgent.js';
+import { DEFAULT_COOLDOWN_MS, type BaseAgent, type MarketContext } from '../agents/BaseAgent.js';
 import { BinanceService } from '../binance/client.js';
 import { FundingArbAgent } from '../agents/FundingArbAgent.js';
 import { MomentumAgent } from '../agents/MomentumAgent.js';
+import { AdaptiveSuperTrendAgent } from '../agents/AdaptiveSuperTrendAgent.js';
 import { RiskAgent } from '../agents/RiskAgent.js';
 import { ExecutorAgent } from '../agents/ExecutorAgent.js';
 import { OllamaAdvisor } from '../ollama/advisor.js';
-import { atr, zscore, sparkline } from '../binance/indicators.js';
+import { atr, pairZScore, sparkline } from '../binance/indicators.js';
+import { formatPrice } from '../binance/symbolRules.js';
 import { config } from '../config.js';
-
-// Momentum re-fires every 8s tick while the forming 15m candle stays across EMA50
-const SIGNAL_COOLDOWN_MS = 15 * 60_000;
 
 export class Orchestrator extends EventEmitter {
   private binance = new BinanceService();
-  private agents = [
+  private adaptive = new AdaptiveSuperTrendAgent(this.binance);
+  private agents: BaseAgent[] = [
     new FundingArbAgent(this.binance),
     // PairsAgent disabled: it signals a BTC/ETH ratio, which is not an exchange symbol; re-enable once it emits two legs
     new MomentumAgent(this.binance),
+    // Live one-way mode nets opposite same-symbol positions, so per-strategy dynamic stops are paper-only for now
+    ...(config.mode === 'paper' ? [this.adaptive] : []),
   ];
   private risk = new RiskAgent(this.binance);
   private executor = new ExecutorAgent(this.binance);
@@ -32,7 +34,12 @@ export class Orchestrator extends EventEmitter {
 
   start() {
     this.log('SYSTEM', `Orchestrator started in ${config.mode.toUpperCase()} mode`, 'info');
-    this.loop();
+    const dropped = this.binance.dropUnlistedPositions(config.symbols);
+    if (dropped.length) this.log('SYSTEM', `Dropped ${dropped.length} saved position(s) outside SYMBOLS: ${dropped.join(', ')}`, 'warn');
+    if (config.mode === 'live') this.log('SYSTEM', `${this.adaptive.id} disabled: dynamic exits are paper-only`, 'warn');
+    this.binance.loadSymbolRules(config.symbols)
+      .catch((err: Error) => this.log('SYSTEM', `Symbol precision load failed (${err.message}); using 2dp defaults`, 'warn'))
+      .finally(() => this.loop());
     this.timer = setInterval(() => this.loop(), 8000);
     this.stopWs = this.binance.startRealtimeStream(config.symbols, (sym, price) => {
       this.handleRealtimeTick(sym, price);
@@ -115,6 +122,8 @@ export class Orchestrator extends EventEmitter {
 
       const signals = await this.collectSignals(ctx);
       await this.processSignals(signals, ctx);
+      // Fresh read: the ctx snapshot predates the awaited veto/execution, and updateStops matches by symbol+strategy only
+      this.trailStops(await this.binance.getPositions());
       await this.consultAdvisor(signals, ctx.positions ?? []);
       await this.emitState(ctx);
     } catch (err: any) {
@@ -138,17 +147,42 @@ export class Orchestrator extends EventEmitter {
 
   private async processSignals(signals: Signal[], ctx: MarketContext): Promise<void> {
     for (const signal of signals) {
-      const cooldownKey = `${signal.symbol}:${signal.agent}`;
-      if (Date.now() - (this.lastFilledAt.get(cooldownKey) ?? 0) < SIGNAL_COOLDOWN_MS) continue;
+      if (this.isCoolingDown(signal)) continue;
 
       const decision = this.risk.gate(signal, ctx);
-      if (decision.approved) {
-        const log = await this.executor.execute(signal, decision);
-        this.log(log.agent, log.msg, log.level);
-        if (log.level === 'success') this.lastFilledAt.set(cooldownKey, Date.now());
-      } else {
+      if (!decision.approved) {
         this.log('RISK-MGR-δ', `REJECTED ${signal.symbol}: ${decision.reason}`, 'warn');
+        continue;
       }
+      if (await this.isVetoed(signal, ctx)) continue;
+
+      const log = await this.executor.execute(signal, decision);
+      this.log(log.agent, log.msg, log.level);
+      if (log.level === 'success') this.lastFilledAt.set(`${signal.symbol}:${signal.agent}`, Date.now());
+    }
+  }
+
+  private isCoolingDown(signal: Signal): boolean {
+    const cooldownMs = this.agents.find((a) => a.id === signal.agent)?.cooldownMs ?? DEFAULT_COOLDOWN_MS;
+    const lastFill = this.lastFilledAt.get(`${signal.symbol}:${signal.agent}`) ?? 0;
+    return Date.now() - lastFill < cooldownMs;
+  }
+
+  private async isVetoed(signal: Signal, ctx: MarketContext): Promise<boolean> {
+    const snapshot = this.adaptive.vetoSnapshot(signal, ctx);
+    if (!snapshot) return false;
+    const { verdict, reason } = await this.advisor.veto(snapshot);
+    if (verdict === 'VETO') this.log(signal.agent, `VETOED ${signal.type} ${signal.symbol}: ${reason}`, 'warn');
+    if (verdict === 'PROCEED' && reason.startsWith('advisor')) this.log(signal.agent, `veto skipped for ${signal.symbol}: ${reason}`, 'warn');
+    return verdict === 'VETO';
+  }
+
+  private trailStops(positions: Position[]): void {
+    // Must stay synchronous: an await between reading positions and applying stops would reopen the stale-snapshot race
+    for (const update of this.adaptive.stopUpdates(positions)) {
+      this.binance.updateStops(update.symbol, update.strategy, update.stopLoss, update.takeProfit);
+      const { symbol, stopLoss, takeProfit } = update;
+      this.log(update.strategy, `TRAIL ${symbol} SL ${formatPrice(symbol, stopLoss)} TP ${formatPrice(symbol, takeProfit)}`, 'info');
     }
   }
 
@@ -172,9 +206,8 @@ export class Orchestrator extends EventEmitter {
     strategyMetrics: StrategyMetrics;
   }> {
     const market = await this.binance.getMarketOverview(config.symbols);
-    for (const [sym, p] of Object.entries(market.marks)) {
-      if (!this.livePrices[sym]) this.livePrices[sym] = p;
-    }
+    // REST marks refresh every loop so SL/TP still trigger if the websocket stalls; ticks override in between
+    Object.assign(this.livePrices, market.marks);
     this.logExits(this.binance.markAll(this.livePrices));
     const account = await this.binance.getAccount();
     const positions = await this.binance.getPositions();
@@ -214,21 +247,11 @@ export class Orchestrator extends EventEmitter {
       fundingSolRate: solFund,
       fundingSolApr: solFund * 3 * 365 * 100,
       nextFundingCountdown: `${hours}h${mins}m`,
-      zscoreBtcEth: this.calcPairZScore(btcCandles, ethCandles),
-      zscoreSolAvax: this.calcPairZScore(solCandles, avaxCandles),
+      zscoreBtcEth: pairZScore(btcCandles, ethCandles),
+      zscoreSolAvax: pairZScore(solCandles, avaxCandles),
       btcAtr: btcCandles.length ? atr(btcCandles, 14) : 0,
       avaxAtr: avaxCandles.length ? atr(avaxCandles, 14) : 0,
     };
-  }
-
-  private calcPairZScore(cA: Candle[], cB: Candle[]): number {
-    const len = Math.min(cA.length, cB.length);
-    if (len < 30) return 0;
-    const ratios: number[] = [];
-    for (let i = len - 30; i < len; i++) {
-      ratios.push(cA[i].close / cB[i].close);
-    }
-    return zscore(ratios, 30);
   }
 
   private async emitState(ctx: MarketContext & {

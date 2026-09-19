@@ -124,6 +124,7 @@ export const useStore = create<Store>((set) => ({
     { id: 'PAIRS-TRD-β', status: 'PAUSED', strategy: 'stat_pairs_zscore', positions: 2, winRate: 71.4, pnl: 12840, progress: 68 },
     { id: 'MOMENTUM-γ', status: 'RUNNING', strategy: 'atr_vol_momentum', positions: 2, winRate: 64.8, pnl: 6210, progress: 54 },
     { id: 'RISK-MGR-δ', status: 'WATCHING', strategy: 'liq_guard_isolated', positions: 0, winRate: 100, pnl: 0, progress: 42 },
+    { id: 'ADAPTIVE-ST-ζ', status: config.mode === 'paper' ? 'RUNNING' : 'PAUSED', strategy: 'ml_adaptive_supertrend', positions: 0, winRate: 0, pnl: 0, progress: 0 },
     { id: 'EXECUTOR-ε', status: 'RUNNING', strategy: 'binance_router', positions: 0, winRate: 100, pnl: 0, progress: 95 },
   ],
   logs: [

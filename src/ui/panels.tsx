@@ -4,6 +4,10 @@ import chalk from 'chalk';
 import cliTruncate from 'cli-truncate';
 import stringWidth from 'string-width';
 import type { AgentState, Position, LogEntry, MarketPriceInfo, StrategyMetrics } from '../types.js';
+import { formatPrice, formatQty } from '../binance/symbolRules.js';
+
+// Prices and quantities use each symbol's own precision; every other figure is 2dp
+const usd = (n: number) => n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 export interface CockpitProps {
   mode: string; time: string; equity: number; upnl: number; marginUsed: number;
@@ -47,20 +51,20 @@ export function renderHeaderLines(mode: string, time: string, width: number = 12
 }
 
 export function renderCol1Lines(p: CockpitProps, width = 40, rowCount = 29): string[] {
-  const marginPct = ((p.marginUsed / (p.equity || 1)) * 100).toFixed(1);
+  const marginPct = ((p.marginUsed / (p.equity || 1)) * 100).toFixed(2);
   const rows: string[] = [
-    padLine(' ' + chalk.gray('Equity  ') + chalk.white.bold(`$${p.equity.toLocaleString('en-US', { minimumFractionDigits: 2 })}`) + chalk.gray(' (paper)'), width),
+    padLine(' ' + chalk.gray('Equity  ') + chalk.white.bold(`$${usd(p.equity)}`) + chalk.gray(' (paper)'), width),
     padLine(' ' + chalk.green('+$27,766 (+27.77% total)'), width),
     padLine(' ' + chalk.gray('uPnL    ') + chalk.green.bold(`+$${p.upnl.toFixed(2)}`), width),
-    padLine(' ' + chalk.gray('Margin  ') + chalk.white(`$${p.marginUsed.toLocaleString()}`) + chalk.gray(` (${marginPct}% used)`), width),
-    padLine(' ' + chalk.gray('Free    ') + chalk.white(`$${Math.max(0, p.equity - p.marginUsed).toLocaleString()}`), width),
+    padLine(' ' + chalk.gray('Margin  ') + chalk.white(`$${usd(p.marginUsed)}`) + chalk.gray(` (${marginPct}% used)`), width),
+    padLine(' ' + chalk.gray('Free    ') + chalk.white(`$${usd(Math.max(0, p.equity - p.marginUsed))}`), width),
     padLine(' ' + chalk.gray('Lev cap 3x │ Mode ') + chalk.yellow('ISOLATED'), width),
   ];
   const isCompact = (rowCount - rows.length) < 20;
-  for (const a of p.agents.slice(0, 5)) {
+  for (const a of p.agents.slice(0, 6)) {
     const icon = a.status === 'RUNNING' ? chalk.green('●') : chalk.yellow('◐');
     const bar = Math.max(0, Math.min(12, Math.floor(a.progress / 8.3)));
-    rows.push(padLine(`  ${icon} ${chalk.cyan.bold(a.id)} ${chalk.green(a.status)}${isCompact ? ` ${chalk.green(`+$${(a.pnl / 1000).toFixed(1)}k`)}` : ''}`, width));
+    rows.push(padLine(`  ${icon} ${chalk.cyan.bold(a.id)} ${chalk.green(a.status)}${isCompact ? ` ${chalk.green(`+$${(a.pnl / 1000).toFixed(2)}k`)}` : ''}`, width));
     if (!isCompact) {
       rows.push(padLine(`   ${chalk.gray(a.strategy)}`, width));
       rows.push(padLine(`   ${chalk.gray(`pos ${a.positions} win ${a.winRate}% pnl `)}${chalk.green(`+$${(a.pnl / 1000).toFixed(2)}k`)}`, width));
@@ -74,31 +78,31 @@ export function renderCol1Lines(p: CockpitProps, width = 40, rowCount = 29): str
 function fmtVol(v?: number): string {
   if (!v) return '$0';
   if (v >= 1e9) return '$' + (v / 1e9).toFixed(2) + 'B';
-  if (v >= 1e6) return '$' + (v / 1e6).toFixed(1) + 'M';
-  return '$' + (v / 1e3).toFixed(0) + 'K';
+  if (v >= 1e6) return '$' + (v / 1e6).toFixed(2) + 'M';
+  return '$' + (v / 1e3).toFixed(2) + 'K';
 }
 
-function fmtRange(low?: number, high?: number): string {
+function fmtRange(symbol: string, low?: number, high?: number): string {
   if (!low || !high) return '—';
-  const f = (n: number) => n >= 1000 ? '$' + (n / 1000).toFixed(1) + 'k' : '$' + n.toFixed(2);
-  return `${f(low)} - ${f(high)}`;
+  return `$${formatPrice(symbol, low)} - $${formatPrice(symbol, high)}`;
 }
 
 function renderAssetRow(sym: string, info: MarketPriceInfo | undefined, width: number, isWide: boolean): string[] {
   const p = info?.price ?? (sym === 'BTC' ? 81070 : sym === 'ETH' ? 2626 : sym === 'SOL' ? 111.6 : 8.54);
   const chg = info?.changePct ?? 0;
-  const pStr = (p >= 1000 ? `$${p.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : `$${p.toFixed(2)}`).padStart(11);
+  const pair = `${sym}USDT`;
+  const pStr = `$${formatPrice(pair, p)}`.padStart(11);
   const chgCol = chg >= 0 ? chalk.green : chalk.red;
   const chgStr = chgCol(((chg >= 0 ? '+' : '') + chg.toFixed(2) + '%').padStart(8));
   const spark = info?.sparkline ? chgCol(info.sparkline) : '';
 
   if (isWide) {
-    const range = fmtRange(info?.low24h, info?.high24h).padEnd(19);
+    const range = fmtRange(pair, info?.low24h, info?.high24h).padEnd(23);
     const vol = fmtVol(info?.volumeQuote).padStart(10);
     const l = ` ${chalk.yellow.bold(sym.padEnd(5))} ${chalk.white(pStr)}  ${chgStr}  ${chalk.gray('│ ')}${chalk.white(range)} ${chalk.gray('│ ')}${chalk.cyan(vol)}  ${chalk.gray('│ ')}${spark}`;
     return [padLine(l, width)];
   }
-  const range = (info?.low24h && info?.high24h ? (info.low24h >= 1000 ? `$${(info.low24h / 1000).toFixed(1)}k-$${(info.high24h / 1000).toFixed(1)}k` : `$${info.low24h.toFixed(2)}-$${info.high24h.toFixed(2)}`) : '—').padEnd(15);
+  const range = fmtRange(pair, info?.low24h, info?.high24h).padEnd(15);
   const vol = ('Vol ' + fmtVol(info?.volumeQuote)).padStart(11);
   const l1 = ` ${chalk.yellow.bold(sym.padEnd(4))} ${chalk.white(pStr.trim().padStart(9))} ${chgStr} ${chalk.gray('│ ')}${spark}`;
   const l2 = `   ${chalk.gray('24h')} ${chalk.white(range)} ${chalk.gray('│ ')}${chalk.cyan(vol)}`;
@@ -115,14 +119,14 @@ export function renderCol2Lines(
   const cd = metrics?.nextFundingCountdown ?? '7h58m';
   const totalVol = (spotPrices?.BTC?.volumeQuote ?? 15.8e9) + (spotPrices?.ETH?.volumeQuote ?? 4.2e9) + (spotPrices?.SOL?.volumeQuote ?? 1.8e9) + (spotPrices?.AVAX?.volumeQuote ?? 240e6);
   const syms = ['BTC', 'ETH', 'SOL', 'AVAX'] as const;
-  const isWide = width >= 72;
+  const isWide = width >= 76;
 
   const rows: string[] = [
     padLine(` ${chalk.gray('USDM Funding 8h: ')}${chalk.green(`+${fund}%`)}${chalk.gray(' │ settle in ')}${chalk.cyan.bold(cd)}`, width),
     padLine(` ${chalk.gray('─'.repeat(Math.max(10, width - 2)))}`, width),
   ];
   if (isWide) {
-    rows.push(padLine(` ${chalk.gray('ASSET'.padEnd(5))} ${chalk.gray('PRICE'.padStart(11))}  ${chalk.gray('24h CHG'.padStart(8))}  ${chalk.gray('│ 24h RANGE'.padEnd(21))} ${chalk.gray('│ 24h VOLUME'.padStart(12))}  ${chalk.gray('│ 15m TREND')}`, width));
+    rows.push(padLine(` ${chalk.gray('ASSET'.padEnd(5))} ${chalk.gray('PRICE'.padStart(11))}  ${chalk.gray('24h CHG'.padStart(8))}  ${chalk.gray('│ 24h RANGE'.padEnd(25))} ${chalk.gray('│ 24h VOLUME'.padStart(12))}  ${chalk.gray('│ 15m TREND')}`, width));
     rows.push(padLine(` ${chalk.gray('─'.repeat(Math.max(10, width - 2)))}`, width));
   }
   rows.push(...syms.flatMap((s) => renderAssetRow(s, spotPrices?.[s], width, isWide)));
@@ -147,9 +151,9 @@ export function renderCol3Lines(p: CockpitProps, width = 34, rowCount = 29): str
     const type = chalk.gray((pos.posType ?? pos.side).padEnd(11));
     const sign = pos.upnl >= 0 ? '+' : '';
     const pnlCol = pos.upnl >= 0 ? chalk.green : chalk.red;
-    const pnlStr = pnlCol(`${sign}$${pos.upnl.toFixed(0)}`);
+    const pnlStr = pnlCol(`${sign}$${pos.upnl.toFixed(2)}`);
     const line = isWide
-      ? ` ${cur} ${sym} ${type} ${chalk.gray('e ')}${chalk.white(pos.entry.toFixed(1).padEnd(7))} ${chalk.gray('sz ')}${chalk.white(pos.qty.toFixed(1))} ${pnlStr}`
+      ? ` ${cur} ${sym} ${type} ${chalk.gray('e ')}${chalk.white(formatPrice(pos.symbol, pos.entry).padEnd(7))} ${chalk.gray('sz ')}${chalk.white(formatQty(pos.symbol, pos.qty))} ${pnlStr}`
       : ` ${cur} ${sym} ${type} ${pnlStr}`;
     rows.push(padLine(line, width));
   }
@@ -166,12 +170,12 @@ export function renderCol3Lines(p: CockpitProps, width = 34, rowCount = 29): str
 }
 
 export function renderCol4Lines(p: CockpitProps, width = 30, rowCount = 29): string[] {
-  const marginPct = ((p.marginUsed / (p.equity || 1)) * 100).toFixed(1);
+  const marginPct = ((p.marginUsed / (p.equity || 1)) * 100).toFixed(2);
   const rows: string[] = [
     padLine(` ${chalk.cyan.bold('ACCOUNT & MARGIN')}`, width),
     padLine(`   ${chalk.gray('Unrealized ')}${chalk.green.bold(`+$${p.upnl.toFixed(2)}`)}`, width),
-    padLine(`   ${chalk.gray('Margin     ')}${chalk.white(`$${p.marginUsed.toLocaleString()}`)}${chalk.gray(` (${marginPct}%)`)}`, width),
-    padLine(`   ${chalk.gray('Free       ')}${chalk.white(`$${Math.max(0, p.equity - p.marginUsed).toLocaleString()}`)}`, width),
+    padLine(`   ${chalk.gray('Margin     ')}${chalk.white(`$${usd(p.marginUsed)}`)}${chalk.gray(` (${marginPct}%)`)}`, width),
+    padLine(`   ${chalk.gray('Free       ')}${chalk.white(`$${usd(Math.max(0, p.equity - p.marginUsed))}`)}`, width),
     padLine(` ${chalk.gray('─'.repeat(Math.max(10, width - 2)))}`, width),
     padLine(` ${chalk.cyan.bold('RISK-MGR-δ METRICS')}`, width),
     padLine(`   ${chalk.gray('VaR(95%)   ')}${chalk.red('-$1,842 1.8%')}`, width),
@@ -218,7 +222,7 @@ function boxLines(title: string, content: string[], width: number): string[] {
 
 export function renderDetailLines(p: Position | undefined, width: number = 128): string[] {
   const pos = p ?? { symbol: 'ETH/USDT', side: 'SHORT' as const, posType: 'PERP-SHORT', strategy: 'FUNDING-ARB-α' as const, entry: 2630.0, qty: 2.0, mark: 2626.2, upnl: 7.6, upnlPct: 0.14, leverage: 5 };
-  const l1 = ' ' + chalk.yellow.bold(`${pos.symbol} ${pos.posType ?? pos.side}`) + ' · ' + chalk.cyan(pos.strategy) + chalk.gray(' │ entry ') + chalk.white(`$${pos.entry.toLocaleString()}`) + chalk.gray(' │ size ') + chalk.white(pos.qty.toFixed(1)) + chalk.gray(' │ mark ') + chalk.white(`$${pos.mark.toLocaleString()}`) + chalk.gray(' │ uPnL ') + chalk.green(`+$${pos.upnl.toFixed(2)} (+${pos.upnlPct.toFixed(2)}%)`) + chalk.gray(' │ lev ') + chalk.yellow(`${pos.leverage}x ISOLATED`);
+  const l1 = ' ' + chalk.yellow.bold(`${pos.symbol} ${pos.posType ?? pos.side}`) + ' · ' + chalk.cyan(pos.strategy) + chalk.gray(' │ entry ') + chalk.white(`$${formatPrice(pos.symbol, pos.entry)}`) + chalk.gray(' │ size ') + chalk.white(formatQty(pos.symbol, pos.qty)) + chalk.gray(' │ mark ') + chalk.white(`$${formatPrice(pos.symbol, pos.mark)}`) + chalk.gray(' │ uPnL ') + chalk.green(`+$${pos.upnl.toFixed(2)} (+${pos.upnlPct.toFixed(2)}%)`) + chalk.gray(' │ lev ') + chalk.yellow(`${pos.leverage}x ISOLATED`);
   const l2 = ' ' + chalk.gray('liq dist ') + chalk.cyan('18.2%') + chalk.gray(' │ server SL ') + chalk.white('2750 (STOP_MARKET)') + chalk.gray(' │ server TP ') + chalk.white('fund') + chalk.gray(' │ maint margin ') + chalk.green('OK ✓') + chalk.gray(' │ liq buffer ') + chalk.green('>2x ATR ✓');
   return boxLines('POSITION DETAIL (selected)', [l1, l2], width);
 }

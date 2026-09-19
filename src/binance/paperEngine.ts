@@ -1,6 +1,7 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import type { AgentId, Position, Side } from '../types.js';
+import { formatPrice } from './symbolRules.js';
 
 interface PaperPosition extends Position {
   orderId: string;
@@ -53,7 +54,8 @@ function findExit(pos: PaperPosition): { price: number; reason: string } | null 
     return { price: liqPrice, reason: 'LIQUIDATED' };
   }
   if (stopLoss > 0 && (pos.mark - stopLoss) * direction <= 0) {
-    return { price: stopLoss, reason: 'STOP LOSS' };
+    // A stop already breached fills at the market: filling at the stop level would credit a phantom gain
+    return { price: pos.mark, reason: 'STOP LOSS' };
   }
   if (takeProfit > 0 && (pos.mark - takeProfit) * direction >= 0) {
     return { price: takeProfit, reason: 'TAKE PROFIT' };
@@ -67,10 +69,9 @@ export class PaperEngine {
   // Wallet balance: starting cash plus realized PnL (name kept for saved-state compatibility)
   private startEquity = 100_000;
   private lastPrices: Record<string, number> = {};
-  private filePath = path.resolve('data/paper-state.json');
   private saveTimer: NodeJS.Timeout | null = null;
 
-  constructor() {
+  constructor(private readonly filePath = path.resolve('data/paper-state.json')) {
     this.loadState();
   }
 
@@ -123,7 +124,7 @@ export class PaperEngine {
     return [...this.positions];
   }
 
-  /** Fills at market: opens, scales into, nets against, or (reduceOnly) closes the symbol+strategy position. */
+  /** Fills at market: opens, scales into, or flips the symbol+strategy position; reduceOnly only shrinks it. */
   openPosition(params: FillParams): { orderId: number; status: string } {
     const existing = this.positions.find(
       (p) => p.symbol === params.symbol && p.strategy === params.strategy
@@ -139,8 +140,9 @@ export class PaperEngine {
     } else if (existing.side === side) {
       this.scaleIn(existing, params, price);
     } else {
-      const remainder = this.reduce(existing, params.qty, price);
-      if (remainder > 0) this.positions.push(this.createPosition(params, side, price, remainder));
+      // An opposite entry is a full reversal: netting by qty could silently drop the new side when it is the smaller order
+      this.reduce(existing, existing.qty, price);
+      this.positions.push(this.createPosition(params, side, price, params.qty));
     }
     this.syncEquity();
     this.persist();
@@ -178,6 +180,7 @@ export class PaperEngine {
       entry: price,
       qty,
       mark: price,
+      initialRisk: params.stopLoss ? Math.abs(price - params.stopLoss) : undefined,
       upnl: 0,
       upnlPct: 0,
       leverage: params.leverage,
@@ -188,6 +191,25 @@ export class PaperEngine {
     };
     refreshMetrics(pos);
     return pos;
+  }
+
+  /** Replaces SL/TP on the symbol+strategy position; the next markAll triggers on them. */
+  updateStops(symbol: string, strategy: AgentId, stopLoss: number, takeProfit: number): void {
+    const pos = this.positions.find((p) => p.symbol === symbol && p.strategy === strategy);
+    if (!pos) return;
+    pos.serverSl = String(stopLoss);
+    pos.serverTp = String(takeProfit);
+    this.persist();
+  }
+
+  /** Removes saved positions whose symbol is not tradable; they never had a price, so no PnL is booked. */
+  dropUnlistedSymbols(symbols: string[]): string[] {
+    const dropped = this.positions.filter((p) => !symbols.includes(p.symbol)).map((p) => p.symbol);
+    if (dropped.length === 0) return dropped;
+    this.positions = this.positions.filter((p) => symbols.includes(p.symbol));
+    this.syncEquity();
+    this.persist();
+    return dropped;
   }
 
   private syncEquity(): void {
@@ -211,7 +233,7 @@ export class PaperEngine {
       const before = this.startEquity;
       this.reduce(pos, pos.qty, exit.price);
       const pnl = this.startEquity - before;
-      exits.push(`${exit.reason} ${pos.symbol} ${pos.side} @ ${exit.price.toFixed(2)} pnl=${pnl.toFixed(2)}`);
+      exits.push(`${exit.reason} ${pos.symbol} ${pos.side} @ ${formatPrice(pos.symbol, exit.price)} pnl=${pnl.toFixed(2)}`);
     }
     this.syncEquity();
     this.persist();

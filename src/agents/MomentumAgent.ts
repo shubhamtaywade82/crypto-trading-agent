@@ -3,6 +3,9 @@ import type { Signal, Candle } from '../types.js';
 import { ema, atr, rsi } from '../binance/indicators.js';
 import { config } from '../config.js';
 
+// The EMA seeds on its first value, so a longer history would shift the crossover points
+const MOMENTUM_WINDOW = 60;
+
 export class MomentumAgent extends BaseAgent {
   readonly id = 'MOMENTUM-γ' as const;
   readonly strategy = 'atr_volatility_momentum';
@@ -10,7 +13,7 @@ export class MomentumAgent extends BaseAgent {
   protected async analyze(ctx: MarketContext): Promise<Signal[]> {
     const signals: Signal[] = [];
     for (const symbol of config.symbols) {
-      const candles = ctx.candles[symbol];
+      const candles = ctx.candles[symbol]?.slice(-MOMENTUM_WINDOW);
       if (!candles || candles.length < 60) continue;
 
       const closes = candles.map((c: Candle) => c.close);

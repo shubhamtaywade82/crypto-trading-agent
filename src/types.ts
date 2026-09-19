@@ -1,9 +1,10 @@
 export type Side = 'LONG' | 'SHORT';
 export type Mode = 'paper' | 'live';
-export type AgentId = 'FUNDING-ARB-α' | 'PAIRS-TRD-β' | 'MOMENTUM-γ' | 'RISK-MGR-δ' | 'EXECUTOR-ε';
+export type AgentId = 'FUNDING-ARB-α' | 'PAIRS-TRD-β' | 'MOMENTUM-γ' | 'RISK-MGR-δ' | 'EXECUTOR-ε' | 'ADAPTIVE-ST-ζ';
 export type SignalType = 'OPEN_LONG' | 'OPEN_SHORT' | 'OPEN_HEDGE' | 'CLOSE' | 'MONITOR' | 'ALERT';
 
 export interface Candle {
+  openTime: number;
   open: number;
   high: number;
   low: number;
@@ -49,7 +50,21 @@ export interface Position {
   liqDistancePct: number | null;
   serverSl: string;
   serverTp: string;
+  initialRisk?: number; // |entry - first SL| in price units; the 1R used for breakeven trailing
   posType?: string; // e.g. 'PERP-SHORT' | 'LONG/SHORT' | 'LONG'
+}
+
+/** What the LLM sees when asked to veto an entry; all numbers come from deterministic code. */
+export interface VetoSnapshot {
+  symbol: string;
+  side: Side;
+  regime: 'HIGH' | 'MEDIUM' | 'LOW';
+  distanceFromLineAtr: number;
+  rsi: number;
+  fundingRate: number;
+  entry: number;
+  stopLoss: number;
+  takeProfit: number;
 }
 
 export interface LogEntry {

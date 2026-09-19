@@ -1,6 +1,7 @@
 import { BaseAgent, type MarketContext } from './BaseAgent.js';
 import type { Signal, RiskDecision, LogEntry } from '../types.js';
 import type { BinanceService } from '../binance/client.js';
+import { config } from '../config.js';
 
 export class ExecutorAgent extends BaseAgent {
   readonly id = 'EXECUTOR-ε' as const;
@@ -16,15 +17,22 @@ export class ExecutorAgent extends BaseAgent {
 
   async execute(signal: Signal, risk: RiskDecision): Promise<LogEntry> {
     try {
-      const entryPrice = signal.entry ?? 1;
-      const qty = risk.positionSizeUsdt / (entryPrice || 1);
-      const side = signal.type === 'OPEN_SHORT' ? 'SELL' : 'BUY';
+      if (!config.symbols.includes(signal.symbol)) {
+        throw new Error(`${signal.symbol} is not a tradable symbol (expected one of ${config.symbols.join(',')})`);
+      }
+      // OPEN_HEDGE carries only a USDT notional, so size it off the live mark
+      const entryPrice = signal.entry ?? (await this.binance.getPremiumIndex(signal.symbol)).markPrice;
+      const qty = risk.positionSizeUsdt / entryPrice;
+      // Funding harvest earns by shorting the perp when funding is positive
+      const isShort = signal.type === 'OPEN_SHORT' || signal.type === 'OPEN_HEDGE';
+      const side = isShort ? 'SELL' : 'BUY';
 
       const res = await this.binance.openFuturesPosition({
-        symbol: signal.symbol.replace('/', ''),
+        symbol: signal.symbol,
         side,
         qty,
         leverage: risk.leverage,
+        strategy: signal.agent,
         stopLoss: signal.stopLoss,
         takeProfit: signal.takeProfit,
         entryPrice: signal.entry,

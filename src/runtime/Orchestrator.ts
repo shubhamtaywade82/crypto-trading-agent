@@ -3,7 +3,6 @@ import type { Signal, LogEntry, AppState, Position, StrategyMetrics, MarketPrice
 import type { MarketContext } from '../agents/BaseAgent.js';
 import { BinanceService } from '../binance/client.js';
 import { FundingArbAgent } from '../agents/FundingArbAgent.js';
-import { PairsAgent } from '../agents/PairsAgent.js';
 import { MomentumAgent } from '../agents/MomentumAgent.js';
 import { RiskAgent } from '../agents/RiskAgent.js';
 import { ExecutorAgent } from '../agents/ExecutorAgent.js';
@@ -11,11 +10,14 @@ import { OllamaAdvisor } from '../ollama/advisor.js';
 import { atr, zscore, sparkline } from '../binance/indicators.js';
 import { config } from '../config.js';
 
+// Momentum re-fires every 8s tick while the forming 15m candle stays across EMA50
+const SIGNAL_COOLDOWN_MS = 15 * 60_000;
+
 export class Orchestrator extends EventEmitter {
   private binance = new BinanceService();
   private agents = [
     new FundingArbAgent(this.binance),
-    new PairsAgent(this.binance),
+    // PairsAgent disabled: it signals a BTC/ETH ratio, which is not an exchange symbol; re-enable once it emits two legs
     new MomentumAgent(this.binance),
   ];
   private risk = new RiskAgent(this.binance);
@@ -26,6 +28,7 @@ export class Orchestrator extends EventEmitter {
   private liveTickers: Record<string, MarketPriceInfo> = {};
   private stopWs: (() => void) | null = null;
   private pendingTickFlush = false;
+  private lastFilledAt = new Map<string, number>();
 
   start() {
     this.log('SYSTEM', `Orchestrator started in ${config.mode.toUpperCase()} mode`, 'info');
@@ -67,7 +70,7 @@ export class Orchestrator extends EventEmitter {
   }
 
   private async flushRealtimeTick(): Promise<void> {
-    this.binance.markAll(this.livePrices);
+    this.logExits(this.binance.markAll(this.livePrices));
     const account = await this.binance.getAccount();
     const positions = await this.binance.getPositions();
     this.emit('state', {
@@ -135,14 +138,22 @@ export class Orchestrator extends EventEmitter {
 
   private async processSignals(signals: Signal[], ctx: MarketContext): Promise<void> {
     for (const signal of signals) {
+      const cooldownKey = `${signal.symbol}:${signal.agent}`;
+      if (Date.now() - (this.lastFilledAt.get(cooldownKey) ?? 0) < SIGNAL_COOLDOWN_MS) continue;
+
       const decision = this.risk.gate(signal, ctx);
       if (decision.approved) {
         const log = await this.executor.execute(signal, decision);
         this.log(log.agent, log.msg, log.level);
+        if (log.level === 'success') this.lastFilledAt.set(cooldownKey, Date.now());
       } else {
         this.log('RISK-MGR-δ', `REJECTED ${signal.symbol}: ${decision.reason}`, 'warn');
       }
     }
+  }
+
+  private logExits(exits: string[]): void {
+    for (const msg of exits) this.log('SYSTEM', msg, 'warn');
   }
 
   private async consultAdvisor(signals: Signal[], positions: Position[]): Promise<void> {
@@ -164,7 +175,7 @@ export class Orchestrator extends EventEmitter {
     for (const [sym, p] of Object.entries(market.marks)) {
       if (!this.livePrices[sym]) this.livePrices[sym] = p;
     }
-    this.binance.markAll(this.livePrices);
+    this.logExits(this.binance.markAll(this.livePrices));
     const account = await this.binance.getAccount();
     const positions = await this.binance.getPositions();
     const strategyMetrics = this.computeStrategyMetrics(market);

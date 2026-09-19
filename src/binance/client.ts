@@ -1,7 +1,7 @@
 import { USDMClient, WebsocketClient } from 'binance';
 import { config } from '../config.js';
 import { PaperEngine } from './paperEngine.js';
-import type { Candle, Position } from '../types.js';
+import type { AgentId, Candle, Position } from '../types.js';
 
 export class BinanceService {
   private futures: USDMClient;
@@ -116,6 +116,7 @@ export class BinanceService {
     side: 'BUY' | 'SELL';
     qty: number;
     leverage: number;
+    strategy: AgentId;
     stopLoss?: number;
     takeProfit?: number;
     reduceOnly?: boolean;
@@ -143,7 +144,8 @@ export class BinanceService {
   }
 
   async cancelAll(symbol: string): Promise<void> {
-    if (config.mode === 'paper') return this.paper.cancelAll(symbol);
+    // Paper fills are instant, so there are never pending orders to cancel
+    if (config.mode === 'paper') return;
     await this.futures.cancelAllOpenOrders({ symbol });
   }
 
@@ -153,15 +155,15 @@ export class BinanceService {
       side: pos.side === 'LONG' ? 'SELL' : 'BUY',
       qty: pos.qty,
       leverage: pos.leverage,
+      strategy: pos.strategy,
       reduceOnly: true,
     });
     await this.cancelAll(pos.symbol);
   }
 
-  markAll(prices: Record<string, number>): void {
-    if (config.mode === 'paper') {
-      this.paper.markAll(prices);
-    }
+  /** Paper only: marks to market and returns log lines for SL/TP/liquidation exits. */
+  markAll(prices: Record<string, number>): string[] {
+    return config.mode === 'paper' ? this.paper.markAll(prices) : [];
   }
 
   private async placeServerProtectionOrders(params: {

@@ -83,7 +83,7 @@ export default function App() {
     logs,
     spotPrices,
     fundingRate: funding['ETHUSDT'],
-    strategyMetrics,
+    strategyMetrics: strategyMetrics ?? undefined,
     isSyncing,
     totalWidth: cols,
     totalHeight: rows,

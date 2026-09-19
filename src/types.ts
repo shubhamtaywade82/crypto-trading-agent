@@ -88,14 +88,15 @@ export interface LogEntry {
   level: 'info' | 'success' | 'warn' | 'error';
 }
 
+export type WsStatus = 'connected' | 'reconnecting' | 'down';
+
 export interface AgentState {
   id: AgentId;
   status: 'RUNNING' | 'PAUSED' | 'WATCHING';
   strategy: string;
   positions: number;
-  winRate: number;
+  winRate: number | null;
   pnl: number;
-  progress: number;
 }
 
 export interface MarketPriceInfo {
@@ -107,21 +108,29 @@ export interface MarketPriceInfo {
   sparkline?: string;
 }
 
+export interface FundingInfo { rate: number; apr: number } // apr in % (rate × 3 × 365 × 100)
+
+export interface AdaptiveInfo {
+  direction: 'BULLISH' | 'BEARISH';
+  regime: 'HIGH' | 'MEDIUM' | 'LOW';
+  superTrend: number;
+  distanceAtr: number;
+}
+
 export interface StrategyMetrics {
-  fundingEthRate?: number;
-  fundingEthApr?: number;
-  fundingSolRate?: number;
-  fundingSolApr?: number;
-  nextFundingCountdown?: string;
-  zscoreBtcEth?: number;
-  zscoreSolAvax?: number;
-  btcAtr?: number;
-  avaxAtr?: number;
+  fundingBySymbol: Record<string, FundingInfo>;
+  nextFundingCountdown: string | null;
+  estNextFundingUsd: number;
+  zscoreBtcEth: number | null;
+  atrBySymbol: Record<string, number>;
+  adaptive: Record<string, AdaptiveInfo>;
+  momentumAboveEma50: { up: number; total: number };
 }
 
 export interface AppState {
   mode: Mode;
   equity: number;
+  initialEquity: number;
   upnl: number;
   marginUsed: number;
   positions: Position[];
@@ -130,19 +139,20 @@ export interface AppState {
   funding: Record<string, number>;
   serverTime: number;
   spotPrices?: Record<string, MarketPriceInfo>;
-  strategyMetrics?: StrategyMetrics;
-  todayDecisions?: number;
-  todayExecuted?: number;
-  todayMonitored?: number;
-  successRate?: number;
-  totalPnl?: number;
-  sharpe?: number;
-  maxDd?: number;
-  liqEvents?: number;
-  apiWeight?: number;
-  var95?: number;
-  exposurePct?: number;
-  liqBufferAtr?: number;
-  corrBtcEth?: number;
+  strategyMetrics: StrategyMetrics | null;
+  totalPnl: number;
+  totalPnlPct: number;
+  successRate: number | null;
+  sharpe: number | null;
+  maxDd: number;
+  var95: number | null;
+  liqEvents: number;
+  sessionDecisions: number;
+  sessionExecuted: number;
+  sessionMonitored: number;
+  apiWeight: number;
+  wsStatus: WsStatus;
+  exposurePct: number;
+  minLiqDistancePct: number | null;
+  corrBtcEth: number | null;
 }
-

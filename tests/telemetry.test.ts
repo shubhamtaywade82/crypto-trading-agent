@@ -1,0 +1,61 @@
+import assert from 'node:assert/strict';
+import { test } from 'node:test';
+import type { Candle, Position, TradeRecord } from '../src/types.js';
+import { buildTelemetry, type TelemetryInput } from '../src/runtime/telemetry.js';
+
+const closes = (values: number[]): Candle[] => values.map((c, i) => ({ openTime: i, open: c, high: c + 1, low: c - 1, close: c, volume: 1 }));
+const position = (over: Partial<Position>): Position => ({
+  id: 'p', symbol: 'ETHUSDT', side: 'SHORT', strategy: 'FUNDING-ARB-α', entry: 100, qty: 10, mark: 100, upnl: 5, upnlPct: 0.5,
+  leverage: 5, marginType: 'ISOLATED', liqDistancePct: 18.5, serverSl: '—', serverTp: 'fund', ...over,
+});
+const trade = (pnl: number, strategy: TradeRecord['strategy']): TradeRecord =>
+  ({ symbol: 'ETHUSDT', strategy, side: 'LONG', entry: 1, exit: 1, qty: 1, pnl, reason: 'CLOSE', closedAt: 1 });
+
+function input(over: Partial<TelemetryInput> = {}): TelemetryInput {
+  return {
+    account: { equity: 100_100, marginUsed: 200, initialEquity: 100_000 },
+    positions: [position({}), position({ symbol: 'BTCUSDT', strategy: 'ADAPTIVE-ST-ζ', side: 'LONG', liqDistancePct: 9.5, qty: 1, mark: 1000, upnl: 0 })],
+    trades: [trade(100, 'ADAPTIVE-ST-ζ'), trade(-40, 'ADAPTIVE-ST-ζ')],
+    candles: { BTCUSDT: closes(Array.from({ length: 60 }, (_, i) => 100 + i)), ETHUSDT: closes(Array.from({ length: 60 }, (_, i) => 50 + i / 2)) },
+    funding: { BTCUSDT: 0.0001, ETHUSDT: 0.0002 },
+    nextFundingTime: 3 * 3_600_000 + 25 * 60_000, now: 0,
+    adaptive: {},
+    agents: [{ id: 'FUNDING-ARB-α', status: 'RUNNING', strategy: 'funding_rate_harvest' }, { id: 'ADAPTIVE-ST-ζ', status: 'RUNNING', strategy: 'ml_adaptive_supertrend' }],
+    counters: { decisions: 7, executed: 3, monitored: 4 }, apiWeight: 12, wsStatus: 'connected', ...over,
+  };
+}
+
+test('should derive account, risk and counter fields from real inputs', () => {
+  const t = buildTelemetry(input());
+  assert.equal(t.totalPnl, 100);
+  assert.equal(t.initialEquity, 100_000);
+  assert.equal(t.successRate, 50);
+  assert.equal(t.minLiqDistancePct, 9.5);
+  assert.equal(t.exposurePct, ((10 * 100 + 1 * 1000) / 100_100) * 100);
+  assert.deepEqual([t.sessionDecisions, t.sessionExecuted, t.sessionMonitored, t.apiWeight, t.wsStatus], [7, 3, 4, 12, 'connected']);
+  assert.ok(Math.abs(t.corrBtcEth! - 1) < 1e-9); // both series are linear
+});
+
+test('should build per-agent state from positions and the journal', () => {
+  const [funding, adaptive] = buildTelemetry(input()).agents;
+  assert.deepEqual({ p: funding.positions, w: funding.winRate, pnl: funding.pnl }, { p: 1, w: null, pnl: 5 });
+  assert.deepEqual({ p: adaptive.positions, w: adaptive.winRate, pnl: adaptive.pnl }, { p: 1, w: 50, pnl: 60 });
+});
+
+test('should compute funding APR, countdown and the funding estimate', () => {
+  const m = buildTelemetry(input()).strategyMetrics!;
+  assert.ok(Math.abs(m.fundingBySymbol.BTCUSDT.apr - 0.0001 * 3 * 365 * 100) < 1e-9);
+  assert.equal(m.nextFundingCountdown, '3h25m');
+  assert.ok(Math.abs(m.estNextFundingUsd - 10 * 100 * 0.0002) < 1e-9); // short earns positive funding
+  assert.deepEqual(m.momentumAboveEma50, { up: 2, total: 2 });
+});
+
+test('should return nulls instead of demo values when data is missing', () => {
+  const t = buildTelemetry(input({ candles: {}, funding: {}, nextFundingTime: 0, positions: [], trades: [] }));
+  assert.equal(t.corrBtcEth, null);
+  assert.equal(t.minLiqDistancePct, null);
+  assert.equal(t.successRate, null);
+  assert.equal(t.strategyMetrics!.nextFundingCountdown, null);
+  assert.equal(t.strategyMetrics!.zscoreBtcEth, null);
+  assert.deepEqual(t.strategyMetrics!.fundingBySymbol, {});
+});

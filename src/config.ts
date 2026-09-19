@@ -17,6 +17,8 @@ const EnvSchema = z.object({
   SYMBOLS: z.string().default('BTCUSDT,ETHUSDT,SOLUSDT,AVAXUSDT'),
 });
 
+export const LOOP_INTERVAL_MS = 8000;
+
 const env = EnvSchema.parse(process.env);
 
 export const config = {

@@ -2,7 +2,7 @@ import { USDMClient, WebsocketClient } from 'binance';
 import { config } from '../config.js';
 import { PaperEngine } from './paperEngine.js';
 import { roundPrice, roundQty, rulesFromExchangeInfo, setSymbolRules } from './symbolRules.js';
-import type { AgentId, Candle, Position } from '../types.js';
+import type { AgentId, Candle, Position, TradeRecord, WsStatus } from '../types.js';
 
 // 300 closed 15m candles cover the adaptive SuperTrend's ATR warm-up (10) + K-Means window (100) with margin
 const KLINE_INTERVAL = '15m';
@@ -23,7 +23,9 @@ type OpenPositionParams = {
 export class BinanceService {
   private futures: USDMClient;
   private ws: WebsocketClient | null = null;
+  private wsStatus: WsStatus = 'down';
   private paper: PaperEngine;
+  private liveStartEquity: number | null = null;
 
   constructor() {
     this.futures = new USDMClient({
@@ -36,6 +38,10 @@ export class BinanceService {
   startRealtimeStream(symbols: string[], onTick: (symbol: string, price: number) => void): () => void {
     const silent = { silly: () => {}, verbose: () => {}, info: () => {}, warning: () => {}, error: () => {} };
     this.ws = new WebsocketClient({ beautify: false }, silent as any);
+    this.ws.on('open', () => { this.wsStatus = 'connected'; });
+    this.ws.on('reconnected', () => { this.wsStatus = 'connected'; });
+    this.ws.on('reconnecting', () => { this.wsStatus = 'reconnecting'; });
+    this.ws.on('close', () => { this.wsStatus = 'down'; });
     this.ws.on('message', (data: any) => {
       if (data?.e === 'trade' && data.s && data.p) {
         const price = Number(data.p);
@@ -48,7 +54,17 @@ export class BinanceService {
     return () => {
       this.ws?.closeAll();
       this.ws = null;
+      this.wsStatus = 'down';
     };
+  }
+
+  getWsStatus(): WsStatus {
+    return this.wsStatus;
+  }
+
+  /** Used request weight over the last minute; 0 until the first REST response carries the header. */
+  getApiWeight(): number {
+    return this.futures.getRateLimitStates()['x-mbx-used-weight-1m'] ?? 0;
   }
 
   /** Loads per-symbol price/quantity precision so orders and the UI use each contract's own decimals. */
@@ -129,13 +145,18 @@ export class BinanceService {
   }
 
 
-  async getAccount(): Promise<{ equity: number; marginUsed: number }> {
+  async getAccount(): Promise<{ equity: number; marginUsed: number; initialEquity: number }> {
     if (config.mode === 'paper') return this.paper.getAccount();
     const info = await this.futures.getAccountInformation();
-    return {
-      equity: Number(info.totalWalletBalance),
-      marginUsed: Number(info.totalInitialMargin),
-    };
+    const equity = Number(info.totalWalletBalance);
+    // The exchange keeps no PnL baseline, so live PnL is measured from the first balance this session saw
+    this.liveStartEquity ??= equity;
+    return { equity, marginUsed: Number(info.totalInitialMargin), initialEquity: this.liveStartEquity };
+  }
+
+  /** Paper-engine journal; live mode has no local journal, so it is empty. */
+  getTrades(): TradeRecord[] {
+    return config.mode === 'paper' ? this.paper.getTrades() : [];
   }
 
   async getPositions(): Promise<Position[]> {

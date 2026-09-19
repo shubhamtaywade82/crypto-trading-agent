@@ -63,13 +63,11 @@ export function renderCol1Lines(p: CockpitProps, width = 40, rowCount = 29): str
   const isCompact = (rowCount - rows.length) < 20;
   for (const a of p.agents.slice(0, 6)) {
     const icon = a.status === 'RUNNING' ? chalk.green('●') : chalk.yellow('◐');
-    const bar = Math.max(0, Math.min(12, Math.floor(a.progress / 8.3)));
     rows.push(padLine(`  ${icon} ${chalk.cyan.bold(a.id)} ${chalk.green(a.status)}${isCompact ? ` ${chalk.green(`+$${(a.pnl / 1000).toFixed(2)}k`)}` : ''}`, width));
     if (!isCompact) {
       rows.push(padLine(`   ${chalk.gray(a.strategy)}`, width));
-      rows.push(padLine(`   ${chalk.gray(`pos ${a.positions} win ${a.winRate}% pnl `)}${chalk.green(`+$${(a.pnl / 1000).toFixed(2)}k`)}`, width));
+      rows.push(padLine(`   ${chalk.gray(`pos ${a.positions} win ${a.winRate === null ? '—' : `${a.winRate}%`} pnl `)}${chalk.green(`+$${(a.pnl / 1000).toFixed(2)}k`)}`, width));
     }
-    rows.push(padLine(`   ${chalk.cyan('█'.repeat(bar) + '░'.repeat(12 - bar))} ${chalk.gray(`${a.progress}%`)}`, width));
   }
   while (rows.length < rowCount) rows.push(' '.repeat(width));
   return rows.slice(0, rowCount);
@@ -115,14 +113,14 @@ export function renderCol2Lines(
   width: number = 52,
   rowCount: number = 29
 ): string[] {
-  const fund = ((metrics?.fundingEthRate ?? 0.0001) * 100).toFixed(4);
+  const fund = '—';
   const cd = metrics?.nextFundingCountdown ?? '7h58m';
   const totalVol = (spotPrices?.BTC?.volumeQuote ?? 15.8e9) + (spotPrices?.ETH?.volumeQuote ?? 4.2e9) + (spotPrices?.SOL?.volumeQuote ?? 1.8e9) + (spotPrices?.AVAX?.volumeQuote ?? 240e6);
   const syms = ['BTC', 'ETH', 'SOL', 'AVAX'] as const;
   const isWide = width >= 76;
 
   const rows: string[] = [
-    padLine(` ${chalk.gray('USDM Funding 8h: ')}${chalk.green(`+${fund}%`)}${chalk.gray(' │ settle in ')}${chalk.cyan.bold(cd)}`, width),
+    padLine(` ${chalk.gray('USDM Funding 8h: ')}${chalk.green(fund)}${chalk.gray(' │ settle in ')}${chalk.cyan.bold(cd)}`, width),
     padLine(` ${chalk.gray('─'.repeat(Math.max(10, width - 2)))}`, width),
   ];
   if (isWide) {
@@ -228,11 +226,10 @@ export function renderDetailLines(p: Position | undefined, width: number = 128):
 }
 
 export function renderMetricsLines(m?: StrategyMetrics, width: number = 128): string[] {
-  const fRate = (r?: number) => ((r ?? 0.0001) * 100).toFixed(4);
-  const zFmt = (z?: number) => { const s = (z ?? 0).toFixed(2); return (z ?? 0) < 0 ? chalk.yellow(s.padStart(5)) : chalk.green(s.padStart(5)); };
-  const sm1 = ' ' + chalk.cyan.bold('FUNDING-ARB    ') + chalk.gray('│ ETH ') + chalk.green(`+${fRate(m?.fundingEthRate)}% (${(m?.fundingEthApr ?? 10.95).toFixed(1)}% APR)`) + '     ' + chalk.gray('│ SOL ') + chalk.green(`+${fRate(m?.fundingSolRate)}% (${(m?.fundingSolApr ?? 10.95).toFixed(1)}% APR)`) + '     ' + chalk.gray(`│ next ${m?.nextFundingCountdown ?? '7h58m'} est `) + chalk.green('+$127.40');
-  const sm2 = ' ' + chalk.cyan.bold('PAIRS-TRD      ') + chalk.gray('│ BTC/ETH z ') + zFmt(m?.zscoreBtcEth ?? -0.74) + chalk.gray(' (gate ±2.0)   │ SOL/AVAX z ') + zFmt(m?.zscoreSolAvax ?? -1.38) + chalk.gray(' (gate ±2.0)  │ exit z=0 SL |z|>3.5');
-  const sm3 = ' ' + chalk.cyan.bold('MOMENTUM       ') + chalk.gray('│ BTC ATR ') + chalk.white(Math.round(m?.btcAtr ?? 107).toLocaleString()) + chalk.gray(' (') + chalk.green('1.8x ✓') + chalk.gray(')       │ AVAX ATR ') + chalk.white((m?.avaxAtr ?? 0.07).toFixed(2)) + chalk.gray(' (') + chalk.green('2.1x ✓') + chalk.gray(')       │ trail 2.5*ATR EMA50 15m');
+  const zFmt = (z?: number | null) => { const s = (z ?? 0).toFixed(2); return (z ?? 0) < 0 ? chalk.yellow(s.padStart(5)) : chalk.green(s.padStart(5)); };
+  const sm1 = ' ' + chalk.cyan.bold('FUNDING-ARB    ') + chalk.gray(`│ funding —     │ next ${m?.nextFundingCountdown ?? '—'}`);
+  const sm2 = ' ' + chalk.cyan.bold('PAIRS-TRD      ') + chalk.gray('│ BTC/ETH z ') + zFmt(m?.zscoreBtcEth) + chalk.gray(' (gate ±2.0)  │ exit z=0 SL |z|>3.5');
+  const sm3 = ' ' + chalk.cyan.bold('MOMENTUM       ') + chalk.gray('│ ATR —       │ trail 2.5*ATR EMA50 15m');
   return boxLines('STRATEGY METRICS (live agent telemetry · binance-only)', [sm1, sm2, sm3], width);
 }
 

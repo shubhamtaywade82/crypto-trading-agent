@@ -97,26 +97,78 @@ test('pushMarkPrices posts the raw prices map', async () => {
   assert.deepEqual(calls[0].body, { prices: { BTCUSDT: 65000, ETHUSDT: 3200 } });
 });
 
-test('pushFundingEvent posts symbol, rate and optional mark price', async () => {
+test('pushFundingEvent posts symbol, rate, optional mark price, and funding_time (idempotency key — #10)', async () => {
   const calls: Call[] = [];
   const client = new PaperExchangeClient('http://localhost:3000', 'ACC-1', fakeFetch(202, { accepted: true }, calls));
 
-  await client.pushFundingEvent('BTCUSDT', 0.0003, 65000);
+  await client.pushFundingEvent('BTCUSDT', 0.0003, 65000, '2026-09-20T08:00:00.000Z');
 
-  assert.deepEqual(calls[0].body, { symbol: 'BTCUSDT', funding_rate: 0.0003, mark_price: 65000 });
+  assert.deepEqual(calls[0].body, {
+    symbol: 'BTCUSDT',
+    funding_rate: 0.0003,
+    mark_price: 65000,
+    funding_time: '2026-09-20T08:00:00.000Z',
+  });
 });
 
-test('throws with the response body when the broker rejects the request', async () => {
+test('pushFundingEvent omits funding_time when not supplied (backwards-compatible)', async () => {
   const calls: Call[] = [];
-  const client = new PaperExchangeClient(
-    'http://localhost:3000',
-    'ACC-1',
-    async () => ({ ok: false, status: 422, json: async () => ({}), text: async () => 'Insufficient margin' } as Response),
-  );
-  void calls;
+  const client = new PaperExchangeClient('http://localhost:3000', 'ACC-1', fakeFetch(202, { accepted: true }, calls));
+
+  await client.pushFundingEvent('BTCUSDT', 0.0003);
+
+  assert.deepEqual(calls[0].body, { symbol: 'BTCUSDT', funding_rate: 0.0003, mark_price: undefined, funding_time: undefined });
+});
+
+test('retries 5xx errors up to 3 times with exponential backoff (#7)', async () => {
+  let calls = 0;
+  const client = new PaperExchangeClient('http://localhost:3000', 'ACC-1', async () => {
+    calls += 1;
+    if (calls < 3) return { ok: false, status: 502, json: async () => ({}), text: async () => 'Bad gateway' } as Response;
+    return { ok: true, status: 200, json: async () => ({ id: 1, status: 'filled' }), text: async () => '' } as Response;
+  });
+
+  const result = await client.submitOrder({ symbol: 'BTCUSDT', side: 'buy', quantity: 1, leverage: 1, executionPrice: 100, clientOrderId: 'x' });
+
+  assert.equal(calls, 3);
+  assert.deepEqual(result, { orderId: 1, status: 'filled' });
+});
+
+test('does NOT retry 4xx errors — surfaces immediately as PaperExchangeHttpError (#7)', async () => {
+  let calls = 0;
+  const client = new PaperExchangeClient('http://localhost:3000', 'ACC-1', async () => {
+    calls += 1;
+    return { ok: false, status: 422, json: async () => ({}), text: async () => 'Insufficient margin' } as Response;
+  });
 
   await assert.rejects(
     client.submitOrder({ symbol: 'BTCUSDT', side: 'buy', quantity: 1, leverage: 1, executionPrice: 100, clientOrderId: 'x' }),
     /422.*Insufficient margin/s,
   );
+  assert.equal(calls, 1);
+});
+
+test('submitProtectionOrder posts stop_loss with trigger_price (#1)', async () => {
+  const calls: Call[] = [];
+  const client = new PaperExchangeClient('http://localhost:3000', 'ACC-1', fakeFetch(201, { id: 43, status: 'open' }, calls));
+
+  await client.submitProtectionOrder({
+    symbol: 'BTCUSDT', side: 'sell', quantity: 0.1, triggerPrice: 59000, executionPrice: 60000, clientOrderId: 'entry-1-SL',
+  });
+
+  assert.equal(calls[0].body.order.order_type, 'stop_loss');
+  assert.equal(calls[0].body.order.trigger_price, 59000);
+  assert.equal(calls[0].body.order.client_order_id, 'entry-1-SL');
+});
+
+test('submitProtectionOrder posts bounded with price (#1)', async () => {
+  const calls: Call[] = [];
+  const client = new PaperExchangeClient('http://localhost:3000', 'ACC-1', fakeFetch(201, { id: 44, status: 'open' }, calls));
+
+  await client.submitProtectionOrder({
+    symbol: 'BTCUSDT', side: 'sell', quantity: 0.1, price: 65000, executionPrice: 60000, clientOrderId: 'entry-1-TP',
+  });
+
+  assert.equal(calls[0].body.order.order_type, 'bounded');
+  assert.equal(calls[0].body.order.price, 65000);
 });

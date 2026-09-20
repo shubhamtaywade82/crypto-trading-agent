@@ -256,4 +256,34 @@ export class PaperEngine {
     this.persist();
     return exits;
   }
+
+  /**
+   * Synchronous flush — writes the current state to disk immediately. The
+   * default `persist()` is debounced by 250ms so a tight loop of fills
+   * doesn't write on every tick; on shutdown, that debounce can drop the
+   * last state if SIGTERM arrives in the 250ms window. Issue #5: callers
+   * should invoke this from a SIGINT/SIGTERM hook.
+   */
+  flushSync(): void {
+    if (this.saveTimer) {
+      clearTimeout(this.saveTimer);
+      this.saveTimer = null;
+    }
+    try {
+      fs.mkdirSync(path.dirname(this.filePath), { recursive: true });
+      const tmp = `${this.filePath}.tmp`;
+      const payload = JSON.stringify({
+        version: 1,
+        savedAt: Date.now(),
+        equity: this.equity,
+        startEquity: this.startEquity,
+        positions: this.positions,
+        closedTrades: this.trades,
+      }, null, 2);
+      fs.writeFileSync(tmp, payload, 'utf-8');
+      fs.renameSync(tmp, this.filePath);
+    } catch {
+      // Disk write failures should never interrupt shutdown
+    }
+  }
 }

@@ -199,10 +199,10 @@ export class BinanceService {
 
   private async submitRemoteOrder(params: OpenPositionParams): Promise<{ orderId: number | string; status: string }> {
     const executionPrice = params.entryPrice ?? (await this.getPremiumIndex(params.symbol)).markPrice;
-    // Unique per call — a retried submission from the caller should get a
-    // fresh id (this agent decides idempotency at the signal-cooldown
-    // level, not per HTTP call), while the broker still guards against a
-    // duplicate network retry of this exact request.
+    // Issue #3: clientOrderId encodes symbol+strategy+timestamp+nonce so the
+    // broker can attribute fills to a strategy even though paper_exchange's
+    // positions table has no strategy column (issue #3 on the broker side
+    // tracks this as a follow-up migration).
     const clientOrderId = `${params.symbol}-${params.strategy}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     const result = await this.remotePaper!.submitOrder({
       symbol: params.symbol,
@@ -212,7 +212,52 @@ export class BinanceService {
       executionPrice,
       clientOrderId,
     });
+
+    // Issue #1: previously SL/TP were silently dropped in remote-paper mode.
+    // Now submit them as separate bounded/stop_loss orders so exits fire
+    // server-side even when this agent is offline. Best-effort: a failure
+    // here logs but doesn't fail the entry (the position is already open).
+    if (!params.reduceOnly) {
+      this.placeRemoteProtectionOrders(params, clientOrderId, executionPrice).catch((err: Error) => {
+        console.error(`[paper_exchange] protection orders failed for ${params.symbol}: ${err.message}`);
+      });
+    }
+
     return { orderId: result.orderId, status: result.status.toUpperCase() };
+  }
+
+  /**
+   * Submits SL (stop_loss) and TP (bounded) orders to the remote broker.
+   * Naming convention: the SL/TP orders' clientOrderId derives from the
+   * entry order's id so the agent can correlate them later — `<entry>-SL`
+   * and `<entry>-TP`. The broker's OrderValidator accepts both kinds.
+   */
+  private async placeRemoteProtectionOrders(
+    params: OpenPositionParams,
+    entryClientOrderId: string,
+    executionPrice: number,
+  ): Promise<void> {
+    const exitSide = params.side === 'BUY' ? 'sell' : 'buy';
+    if (params.stopLoss) {
+      await this.remotePaper!.submitProtectionOrder({
+        symbol: params.symbol,
+        side: exitSide,
+        quantity: params.qty,
+        triggerPrice: params.stopLoss,
+        executionPrice,
+        clientOrderId: `${entryClientOrderId}-SL`,
+      });
+    }
+    if (params.takeProfit) {
+      await this.remotePaper!.submitProtectionOrder({
+        symbol: params.symbol,
+        side: exitSide,
+        quantity: params.qty,
+        price: params.takeProfit,
+        executionPrice,
+        clientOrderId: `${entryClientOrderId}-TP`,
+      });
+    }
   }
 
   private async submitLiveOrder(params: OpenPositionParams): Promise<{ orderId: number | string; status: string }> {
@@ -239,6 +284,17 @@ export class BinanceService {
     // Paper fills are instant, so there are never pending orders to cancel
     if (config.mode === 'paper') return;
     await this.futures.cancelAllOpenOrders({ symbol });
+  }
+
+  /**
+   * Issue #5: synchronous flush of the local PaperEngine's debounced state.
+   * No-op in live or remote-paper mode. Called from Orchestrator.flushOnShutdown()
+   * on SIGINT/SIGTERM so the 250ms debounce timer can't drop the last state.
+   */
+  flushPaperEngine(): void {
+    if (config.mode === 'paper' && !this.remotePaper) {
+      this.paper.flushSync();
+    }
   }
 
   async closePosition(pos: Position): Promise<void> {
@@ -297,16 +353,18 @@ export class BinanceService {
 
   /**
    * Reports a perpetual futures funding settlement to the remote broker
-   * (no-op for local paper and live modes). Not wired into the run loop:
-   * calling this on a fixed interval would double-charge funding, since the
-   * broker books a new ledger entry on every call. A caller must only
-   * invoke this once per actual Binance funding boundary (00:00/08:00/16:00
-   * UTC) — e.g. by watching `nextFundingTime` from `getMarketOverview` for
-   * the transition into a new period.
+   * (no-op for local paper and live modes). Idempotent when `fundingTime`
+   * is supplied — the broker dedupes on (paper_position_id, funding_time).
+   * Orchestrator calls this once per actual Binance funding boundary.
    */
-  async pushFundingEvent(symbol: string, fundingRate: number, markPrice?: number): Promise<void> {
+  async pushFundingEvent(
+    symbol: string,
+    fundingRate: number,
+    markPrice?: number,
+    fundingTime?: string | number,
+  ): Promise<void> {
     if (config.mode !== 'paper' || !this.remotePaper) return;
-    await this.remotePaper.pushFundingEvent(symbol, fundingRate, markPrice);
+    await this.remotePaper.pushFundingEvent(symbol, fundingRate, markPrice, fundingTime);
   }
 
   private mapRemotePosition(p: PaperExchangePosition): Position {

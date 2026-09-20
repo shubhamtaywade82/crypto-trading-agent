@@ -47,6 +47,9 @@ export class Orchestrator extends EventEmitter {
   private pendingTickFlush = false;
   private lastFilledAt = new Map<string, number>();
   private counters: SessionCounters = { decisions: 0, executed: 0, monitored: 0 };
+  // Issue #2: tracks the last funding boundary the agent pushed to the broker
+  // so funding settles exactly once per actual Binance funding boundary.
+  private lastPushedFundingTime = 0;
 
   start() {
     this.log('SYSTEM', `Orchestrator started in ${config.mode.toUpperCase()} mode`, 'info');
@@ -70,6 +73,19 @@ export class Orchestrator extends EventEmitter {
     if (this.stopWs) {
       this.stopWs();
       this.stopWs = null;
+    }
+  }
+
+  /**
+   * Issue #5: synchronously flush the local PaperEngine's state to disk
+   * before the process exits. The default `persist()` is debounced by
+   * 250ms so a tight loop of fills doesn't write on every tick; on
+   * shutdown, that debounce can drop the last state. No-op in live mode
+   * or remote-paper mode (the broker owns persistence in those cases).
+   */
+  flushOnShutdown(): void {
+    if (config.mode === 'paper' && !config.paperExchange) {
+      this.binance.flushPaperEngine();
     }
   }
 
@@ -139,6 +155,14 @@ export class Orchestrator extends EventEmitter {
       this.emit('sync', true);
       const ctx = await this.gatherContext();
 
+      // Issue #2: detect funding boundary crossing and push funding events
+      // to the remote broker exactly once per boundary. The broker dedupes
+      // on (paper_position_id, funding_time), so passing `fundingTime`
+      // makes the call idempotent against HTTP retries.
+      if (config.mode === 'paper' && config.paperExchange && ctx.nextFundingTime > 0) {
+        await this.maybePushFunding(ctx);
+      }
+
       const signals = await this.collectSignals(ctx);
       await this.processSignals(signals, ctx);
       // Fresh read: the ctx snapshot predates the awaited veto/execution, and updateStops matches by symbol+strategy only
@@ -149,6 +173,45 @@ export class Orchestrator extends EventEmitter {
       this.log('SYSTEM', `Loop error: ${err.message}`, 'error');
     } finally {
       this.emit('sync', false);
+    }
+  }
+
+  /**
+   * Pushes funding events for every symbol when Binance's funding boundary
+   * has crossed since the last push. Binance USD-M settles funding every 8
+   * hours at 00:00/08:00/16:00 UTC. The `nextFundingTime` from
+   * getMarketOverview decreases as the boundary approaches, then jumps
+   * forward by 8h the moment it crosses. We detect that jump and push
+   * using the *previous* nextFundingTime as the settlement timestamp.
+   *
+   * Idempotent: the broker dedupes on (paper_position_id, funding_time).
+   */
+  private async maybePushFunding(ctx: CycleContext): Promise<void> {
+    const now = Date.now();
+    // nextFundingTime is the NEXT boundary; if it just jumped (now < it but
+    // it advanced past lastPushedFundingTime+1h), the PREVIOUS boundary
+    // just settled. We push with the boundary timestamp that just passed.
+    if (this.lastPushedFundingTime === 0) {
+      // First loop after startup: don't push historical funding, just record.
+      this.lastPushedFundingTime = ctx.nextFundingTime;
+      return;
+    }
+    if (ctx.nextFundingTime === this.lastPushedFundingTime) return; // no boundary crossed
+
+    // Boundary crossed — settle funding for every symbol with a non-zero funding rate.
+    const settledAt = this.lastPushedFundingTime;
+    this.lastPushedFundingTime = ctx.nextFundingTime;
+    const fundingTimeIso = new Date(settledAt).toISOString();
+    for (const symbol of config.symbols) {
+      const rate = ctx.funding[symbol];
+      if (rate === undefined) continue;
+      const mark = ctx.marks[symbol];
+      try {
+        await this.binance.pushFundingEvent(symbol, rate, mark, fundingTimeIso);
+        this.log('SYSTEM', `Funding settled for ${symbol} rate=${rate.toExponential(4)} mark=${mark?.toFixed(2) ?? 'n/a'} @ ${fundingTimeIso}`, 'info');
+      } catch (err: any) {
+        this.log('SYSTEM', `Funding push failed for ${symbol}: ${err.message}`, 'error');
+      }
     }
   }
 

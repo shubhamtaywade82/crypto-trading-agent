@@ -55,9 +55,18 @@ export default function App() {
       setLocalTime(formatLocalTime(now));
     }, 1000);
 
+    // Issue #5: synchronously flush the local PaperEngine's debounced state
+    // on SIGINT/SIGTERM before the process exits, so the 250ms debounce
+    // timer can't drop the last state.
+    const flush = () => orchestrator.flushOnShutdown();
+    process.on('SIGINT', flush);
+    process.on('SIGTERM', flush);
+
     return () => {
       orchestrator.stop();
       clearInterval(clockTimer);
+      process.off('SIGINT', flush);
+      process.off('SIGTERM', flush);
     };
   }, [orchestrator, set, pushLog]);
 

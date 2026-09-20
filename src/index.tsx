@@ -21,4 +21,8 @@ process.on('SIGINT', () => {
   cleanup();
   process.exit(0);
 });
+process.on('SIGTERM', () => {
+  cleanup();
+  process.exit(0);
+});
 process.on('exit', cleanup);

@@ -10,17 +10,17 @@ test('should proceed on an explicit PROCEED', () => {
   assert.equal(parseVerdict('{"verdict":"PROCEED","reason":"clean"}').verdict, 'PROCEED');
 });
 
-test('should proceed when the reply is not JSON or has an unknown verdict', () => {
-  assert.equal(parseVerdict('sure, go ahead').verdict, 'PROCEED');
+test('should VETO when the reply is not JSON or has an unknown verdict (fail-closed, issue #6)', () => {
+  assert.equal(parseVerdict('sure, go ahead').verdict, 'VETO');
   assert.ok(parseVerdict('sure, go ahead').reason.startsWith('advisor'));
-  assert.equal(parseVerdict('{"verdict":"MAYBE"}').verdict, 'PROCEED');
+  assert.equal(parseVerdict('{"verdict":"MAYBE"}').verdict, 'VETO');
 });
 
 const snapshot = { symbol: 'BTCUSDT', side: 'LONG' as const, regime: 'HIGH' as const, distanceFromLineAtr: 1, rsi: 55, fundingRate: 0.0001, entry: 100, stopLoss: 95, takeProfit: 112 };
 
-test('should flag an unknown verdict as a fail-open reason', () => {
+test('should flag an unknown verdict as a fail-closed VETO (issue #6)', () => {
   const result = parseVerdict('{"verdict":"MAYBE"}');
-  assert.equal(result.verdict, 'PROCEED');
+  assert.equal(result.verdict, 'VETO');
   assert.match(result.reason, /^advisor sent an unknown verdict/);
 });
 

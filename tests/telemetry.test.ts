@@ -20,8 +20,11 @@ function input(over: Partial<TelemetryInput> = {}): TelemetryInput {
     funding: { BTCUSDT: 0.0001, ETHUSDT: 0.0002 },
     nextFundingTime: 3 * 3_600_000 + 25 * 60_000, now: 0,
     adaptive: {},
-    agents: [{ id: 'FUNDING-ARB-α', status: 'RUNNING', strategy: 'funding_rate_harvest' }, { id: 'ADAPTIVE-ST-ζ', status: 'RUNNING', strategy: 'ml_adaptive_supertrend' }],
-    counters: { decisions: 7, executed: 3, monitored: 4 }, apiWeight: 12, wsStatus: 'connected', ...over,
+    agents: [
+      { id: 'FUNDING-ARB-α', status: 'RUNNING', strategy: 'funding_rate_harvest' }, { id: 'ADAPTIVE-ST-ζ', status: 'RUNNING', strategy: 'ml_adaptive_supertrend' },
+      { id: 'EXECUTOR-ε', status: 'RUNNING', strategy: 'binance_order_routing' },
+    ],
+    counters: { decisions: 7, executed: 3, monitored: 4 }, apiWeight: 12, wsStatus: 'connected', attributable: true, ...over,
   };
 }
 
@@ -46,7 +49,7 @@ test('should compute funding APR, countdown and the funding estimate', () => {
   const m = buildTelemetry(input()).strategyMetrics!;
   assert.ok(Math.abs(m.fundingBySymbol.BTCUSDT.apr - 0.0001 * 3 * 365 * 100) < 1e-9);
   assert.equal(m.nextFundingCountdown, '3h25m');
-  assert.ok(Math.abs(m.estNextFundingUsd - 10 * 100 * 0.0002) < 1e-9); // short earns positive funding
+  assert.ok(Math.abs(m.estNextFundingUsd! - 10 * 100 * 0.0002) < 1e-9); // short earns positive funding
   assert.deepEqual(m.momentumAboveEma50, { up: 2, total: 2 });
 });
 
@@ -58,4 +61,21 @@ test('should return nulls instead of demo values when data is missing', () => {
   assert.equal(t.strategyMetrics!.nextFundingCountdown, null);
   assert.equal(t.strategyMetrics!.zscoreBtcEth, null);
   assert.deepEqual(t.strategyMetrics!.fundingBySymbol, {});
+});
+
+test('should report unattributable live figures as null and give every position to the executor', () => {
+  const live = [position({ strategy: 'EXECUTOR-ε', upnl: 5 }), position({ symbol: 'BTCUSDT', strategy: 'EXECUTOR-ε', upnl: -2 })];
+  const t = buildTelemetry(input({ attributable: false, positions: live }));
+  const [funding, adaptive, executor] = t.agents;
+  assert.deepEqual([funding.positions, funding.pnl, adaptive.positions, adaptive.pnl], [null, null, null, null]);
+  assert.deepEqual([executor.positions, executor.pnl], [2, 3]);
+  assert.equal(t.strategyMetrics!.estNextFundingUsd, null);
+  assert.equal(t.liqEvents, null);
+});
+
+test('should keep per-strategy attribution and a liquidation count in paper mode', () => {
+  const t = buildTelemetry(input());
+  assert.equal(t.liqEvents, 0);
+  assert.equal(t.agents[2].positions, 0);
+  assert.equal(t.agents[2].pnl, 0);
 });

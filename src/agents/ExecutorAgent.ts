@@ -2,7 +2,7 @@ import { BaseAgent, type MarketContext } from './BaseAgent.js';
 import type { Signal, RiskDecision, LogEntry } from '../types.js';
 import type { BinanceService } from '../binance/client.js';
 import { config } from '../config.js';
-import { formatPrice, formatQty, getSymbolRules, roundPrice, roundQty } from '../binance/symbolRules.js';
+import { formatPrice, formatQty, getSymbolRules, roundPrice, roundQty, STEP_EPSILON } from '../binance/symbolRules.js';
 
 interface SizedOrder {
   side: 'BUY' | 'SELL';
@@ -58,10 +58,10 @@ export class ExecutorAgent extends BaseAgent {
       throw new Error(`${risk.positionSizeUsdt.toFixed(2)} USDT is below one lot of ${symbol} at ${entryPrice}`);
     }
     const { minQty, minNotional } = getSymbolRules(symbol);
-    if (qty < minQty) {
+    if (qty + STEP_EPSILON < minQty) {
       throw new Error(`qty ${formatQty(symbol, qty)} is below the minimum quantity ${minQty} for ${symbol}`);
     }
-    if (qty * entryPrice < minNotional) {
+    if (qty * entryPrice + STEP_EPSILON < minNotional) {
       throw new Error(`notional ${(qty * entryPrice).toFixed(2)} USDT is below the minimum notional ${minNotional} for ${symbol}`);
     }
     // Funding harvest earns by shorting the perp when funding is positive

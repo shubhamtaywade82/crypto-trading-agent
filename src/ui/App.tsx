@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Box, Text, useInput, useStdout } from 'ink';
 import { Orchestrator } from '../runtime/Orchestrator.js';
 import { useStore } from '../store.js';
-import { renderCockpit, ResizeWarning } from './panels.js';
+import { clampSelection, MIN_COLS, MIN_ROWS, renderCockpit, ResizeWarning } from './panels.js';
 
 export default function App() {
   const { stdout } = useStdout();
@@ -29,9 +29,17 @@ export default function App() {
   const [time, setTime] = useState(() => new Date().toISOString().slice(11, 19));
   const [selPos, setSelPos] = useState(0);
 
-  const { mode, equity, upnl, marginUsed, positions, logs, agents, spotPrices, funding, strategyMetrics } = useStore();
+  const state = useStore();
+  const { positions } = state;
   const set = useStore((s) => s.set);
   const pushLog = useStore((s) => s.pushLog);
+  // One clamped value drives the key handler, the highlight and the action list, so 'c' always closes the row shown as selected
+  const selectedIndex = clampSelection(selPos, positions.length);
+  const selectedPosition = positions[selectedIndex];
+
+  useEffect(() => {
+    setSelPos((s) => clampSelection(s, positions.length));
+  }, [positions.length]);
 
   useEffect(() => {
     orchestrator.on('state', (state) => set(state));
@@ -50,9 +58,9 @@ export default function App() {
   }, [orchestrator, set, pushLog]);
 
   useInput((input, key) => {
-    if (key.upArrow) setSelPos((s) => Math.max(0, s - 1));
-    if (key.downArrow) setSelPos((s) => Math.min(Math.max(0, positions.length - 1), s + 1));
-    if (input === 'c' && positions[selPos]) orchestrator.closePosition(positions[selPos]);
+    if (key.upArrow) setSelPos(clampSelection(selectedIndex - 1, positions.length));
+    if (key.downArrow) setSelPos(clampSelection(selectedIndex + 1, positions.length));
+    if (input === 'c' && selectedPosition) orchestrator.closePosition(selectedPosition);
     if (input === 'x') orchestrator.cancelAll();
     if (input === 'a' || input === 'i') orchestrator.askAdvisor();
     if (input === '?') {
@@ -67,27 +75,11 @@ export default function App() {
   });
 
   const { cols, rows } = terminalSize;
-  if (cols < 80 || rows < 40) {
+  if (cols < MIN_COLS || rows < MIN_ROWS) {
     return <ResizeWarning cols={cols} rows={rows} />;
   }
 
-  const cockpitLines = renderCockpit({
-    mode,
-    time,
-    equity,
-    upnl,
-    marginUsed,
-    positions,
-    selPos,
-    agents,
-    logs,
-    spotPrices,
-    fundingRate: funding['ETHUSDT'],
-    strategyMetrics: strategyMetrics ?? undefined,
-    isSyncing,
-    totalWidth: cols,
-    totalHeight: rows,
-  });
+  const cockpitLines = renderCockpit({ ...state, time, selPos: selectedIndex, isSyncing, totalWidth: cols, totalHeight: rows });
 
   return (
     <Box flexDirection="column" width={cols}>

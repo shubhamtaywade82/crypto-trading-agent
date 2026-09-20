@@ -20,7 +20,7 @@ const DEFAULT_RULES: SymbolRules = {
 };
 
 // Absorbs float error such as 0.3 / 0.1 = 2.9999999999999996 before flooring to a step
-const STEP_EPSILON = 1e-9;
+export const STEP_EPSILON = 1e-9;
 
 const rulesBySymbol = new Map<string, SymbolRules>();
 

@@ -42,6 +42,8 @@ export class BinanceService {
     this.ws.on('reconnected', () => { this.wsStatus = 'connected'; });
     this.ws.on('reconnecting', () => { this.wsStatus = 'reconnecting'; });
     this.ws.on('close', () => { this.wsStatus = 'down'; });
+    // An EventEmitter throws on an unlistened 'error' event, which would kill the process
+    this.ws.on('error', () => { this.wsStatus = 'down'; });
     this.ws.on('message', (data: any) => {
       if (data?.e === 'trade' && data.s && data.p) {
         const price = Number(data.p);

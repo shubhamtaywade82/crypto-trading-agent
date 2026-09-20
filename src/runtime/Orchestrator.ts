@@ -84,9 +84,9 @@ export class Orchestrator extends EventEmitter {
 
     if (this.pendingTickFlush) return;
     this.pendingTickFlush = true;
-    setTimeout(async () => {
+    setTimeout(() => {
       this.pendingTickFlush = false;
-      await this.flushRealtimeTick();
+      this.flushRealtimeTick().catch((err: Error) => this.log('SYSTEM', `Tick flush failed: ${err.message}`, 'error'));
     }, 60);
   }
 
@@ -253,6 +253,7 @@ export class Orchestrator extends EventEmitter {
       candles: ctx.candles, funding: ctx.funding, nextFundingTime: ctx.nextFundingTime,
       agents: this.agentRuntimes(), counters: this.counters,
       apiWeight: this.binance.getApiWeight(), wsStatus: this.binance.getWsStatus(), now: Date.now(),
+      attributable: config.mode === 'paper',
     });
   }
 

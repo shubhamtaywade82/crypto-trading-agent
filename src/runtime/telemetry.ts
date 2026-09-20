@@ -12,12 +12,14 @@ export interface TelemetryInput {
   adaptive: Record<string, AdaptiveSuperTrendBar | undefined>;
   agents: AgentRuntime[]; counters: SessionCounters;
   apiWeight: number; wsStatus: WsStatus; now: number;
+  attributable: boolean; // live positions are all tagged EXECUTOR-ε, so per-strategy figures cannot be measured
 }
 export type Telemetry = Pick<AppState, 'initialEquity' | 'totalPnl' | 'totalPnlPct' | 'successRate' | 'sharpe' | 'maxDd' | 'var95' | 'liqEvents' | 'sessionDecisions' | 'sessionExecuted' | 'sessionMonitored' | 'apiWeight' | 'wsStatus' | 'exposurePct' | 'minLiqDistancePct' | 'corrBtcEth' | 'agents' | 'strategyMetrics'>;
 
 const BTC = 'BTCUSDT';
 const ETH = 'ETHUSDT';
 const FUNDING_AGENT: AgentId = 'FUNDING-ARB-α';
+const EXECUTOR_AGENT: AgentId = 'EXECUTOR-ε';
 const FUNDINGS_PER_DAY = 3;
 const DAYS_PER_YEAR = 365;
 const MIN_PAIR_CANDLES = 30;
@@ -46,13 +48,17 @@ function corrBtcEth(candles: Record<string, Candle[]>): number | null {
   return correlation(simpleReturns(closesOf(candles[BTC])), simpleReturns(closesOf(candles[ETH])));
 }
 
-function buildAgents(runtimes: AgentRuntime[], positions: Position[], byStrategy: Record<string, StrategyPerformance>): AgentState[] {
+function agentPositionFigures(id: AgentId, positions: Position[], attributable: boolean, closedPnl: number): { positions: number | null; pnl: number | null } {
+  if (!attributable && id !== EXECUTOR_AGENT) return { positions: null, pnl: null };
+  const open = attributable ? positions.filter((p) => p.strategy === id) : positions;
+  return { positions: open.length, pnl: closedPnl + open.reduce((sum, p) => sum + p.upnl, 0) };
+}
+
+function buildAgents(runtimes: AgentRuntime[], input: TelemetryInput, byStrategy: Record<string, StrategyPerformance>): AgentState[] {
   return runtimes.map((runtime) => {
-    const open = positions.filter((p) => p.strategy === runtime.id);
     const stats = byStrategy[runtime.id];
-    const unrealized = open.reduce((sum, p) => sum + p.upnl, 0);
     const winRate = stats && stats.closed > 0 ? (stats.wins / stats.closed) * 100 : null;
-    return { ...runtime, positions: open.length, winRate, pnl: (stats?.pnl ?? 0) + unrealized };
+    return { ...runtime, ...agentPositionFigures(runtime.id, input.positions, input.attributable, stats?.pnl ?? 0), winRate };
   });
 }
 
@@ -117,7 +123,7 @@ function buildStrategyMetrics(input: TelemetryInput): StrategyMetrics {
   return {
     fundingBySymbol: fundingBySymbol(input.funding),
     nextFundingCountdown: fundingCountdown(input.nextFundingTime, input.now),
-    estNextFundingUsd: estNextFundingUsd(input.positions, input.funding),
+    estNextFundingUsd: input.attributable ? estNextFundingUsd(input.positions, input.funding) : null,
     zscoreBtcEth: zscoreBtcEth(input.candles),
     atrBySymbol: atrBySymbol(input.candles),
     adaptive: adaptiveBySymbol(input.adaptive),
@@ -137,7 +143,7 @@ export function buildTelemetry(input: TelemetryInput): Telemetry {
     sharpe: perf.sharpe,
     maxDd: perf.maxDrawdownPct,
     var95: perf.var95,
-    liqEvents: perf.liquidations,
+    liqEvents: input.attributable ? perf.liquidations : null,
     sessionDecisions: input.counters.decisions,
     sessionExecuted: input.counters.executed,
     sessionMonitored: input.counters.monitored,
@@ -146,7 +152,7 @@ export function buildTelemetry(input: TelemetryInput): Telemetry {
     exposurePct: exposurePct(input.positions, equity),
     minLiqDistancePct: minLiqDistancePct(input.positions),
     corrBtcEth: corrBtcEth(input.candles),
-    agents: buildAgents(input.agents, input.positions, perf.byStrategy),
+    agents: buildAgents(input.agents, input, perf.byStrategy),
     strategyMetrics: buildStrategyMetrics(input),
   };
 }

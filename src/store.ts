@@ -10,8 +10,8 @@ interface Store extends AppState {
 
 export const useStore = create<Store>((set) => ({
   mode: config.mode,
-  equity: 100_000,
-  initialEquity: 100_000,
+  equity: 0,
+  initialEquity: 0,
   upnl: 0,
   marginUsed: 0,
   positions: [],
@@ -26,7 +26,7 @@ export const useStore = create<Store>((set) => ({
   sharpe: null,
   maxDd: 0,
   var95: null,
-  liqEvents: 0,
+  liqEvents: null,
   sessionDecisions: 0,
   sessionExecuted: 0,
   sessionMonitored: 0,

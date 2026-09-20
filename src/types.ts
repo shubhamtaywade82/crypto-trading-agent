@@ -94,9 +94,9 @@ export interface AgentState {
   id: AgentId;
   status: 'RUNNING' | 'PAUSED' | 'WATCHING';
   strategy: string;
-  positions: number;
+  positions: number | null; // null when live mode cannot attribute positions to a strategy
   winRate: number | null;
-  pnl: number;
+  pnl: number | null;
 }
 
 export interface MarketPriceInfo {
@@ -120,7 +120,7 @@ export interface AdaptiveInfo {
 export interface StrategyMetrics {
   fundingBySymbol: Record<string, FundingInfo>;
   nextFundingCountdown: string | null;
-  estNextFundingUsd: number;
+  estNextFundingUsd: number | null;
   zscoreBtcEth: number | null;
   atrBySymbol: Record<string, number>;
   adaptive: Record<string, AdaptiveInfo>;
@@ -146,7 +146,7 @@ export interface AppState {
   sharpe: number | null;
   maxDd: number;
   var95: number | null;
-  liqEvents: number;
+  liqEvents: number | null;
   sessionDecisions: number;
   sessionExecuted: number;
   sessionMonitored: number;

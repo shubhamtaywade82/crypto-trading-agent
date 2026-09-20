@@ -73,3 +73,19 @@ test('should refuse an order below the symbol minimum notional', async () => {
   assert.match(log.msg, /minimum notional/);
   assert.equal(captured.length, 0);
 });
+
+test('should accept an order exactly at the minimum quantity', async () => {
+  setSymbolRules(symbol, { pricePrecision: 2, quantityPrecision: 3, tickSize: 0.01, stepSize: 0.001, minQty: 10, minNotional: 0 });
+  const { captured, executor } = stubService();
+  const log = await executor.execute(signal({ entry: 100 }), risk); // 1000 USDT / 100 = qty 10
+  assert.equal(log.level, 'success');
+  assert.equal(captured.length, 1);
+});
+
+test('should accept an order exactly at the minimum notional despite float error', async () => {
+  setSymbolRules(symbol, { pricePrecision: 2, quantityPrecision: 3, tickSize: 0.01, stepSize: 0.001, minQty: 0, minNotional: 29 });
+  const { captured, executor } = stubService();
+  const log = await executor.execute(signal({ entry: 100 }), { ...risk, positionSizeUsdt: 29 }); // qty 0.29, and 0.29 * 100 = 28.999999999999996
+  assert.equal(log.level, 'success');
+  assert.equal(captured.length, 1);
+});

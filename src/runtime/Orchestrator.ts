@@ -31,8 +31,11 @@ export class Orchestrator extends EventEmitter {
     new FundingArbAgent(this.binance),
     // PairsAgent disabled: it signals a BTC/ETH ratio, which is not an exchange symbol; re-enable once it emits two legs
     new MomentumAgent(this.binance),
-    // Live one-way mode nets opposite same-symbol positions, so per-strategy dynamic stops are paper-only for now
-    ...(config.mode === 'paper' ? [this.adaptive] : []),
+    // Live one-way mode nets opposite same-symbol positions, and a remote
+    // paper_exchange broker's positions carry no per-strategy attribution
+    // either — per-strategy dynamic stops only work against the local
+    // in-memory paper engine.
+    ...(config.mode === 'paper' && !config.paperExchange ? [this.adaptive] : []),
   ];
   private risk = new RiskAgent(this.binance);
   private executor = new ExecutorAgent(this.binance);
@@ -50,6 +53,8 @@ export class Orchestrator extends EventEmitter {
     const dropped = this.binance.dropUnlistedPositions(config.symbols);
     if (dropped.length) this.log('SYSTEM', `Dropped ${dropped.length} saved position(s) outside SYMBOLS: ${dropped.join(', ')}`, 'warn');
     if (config.mode === 'live') this.log('SYSTEM', `${this.adaptive.id} disabled: dynamic exits are paper-only`, 'warn');
+    if (config.mode === 'paper' && config.paperExchange) this.log('SYSTEM', `${this.adaptive.id} disabled: dynamic exits are not supported against a remote paper_exchange broker`, 'warn');
+    if (config.mode === 'paper' && config.paperExchange) this.log('SYSTEM', `Paper trading routed through ${config.paperExchange.url} (account ${config.paperExchange.accountId})`, 'info');
     const runLoop = () => this.loop().catch((err: Error) => this.log('SYSTEM', `Loop crashed: ${err.message}`, 'error'));
     this.binance.loadSymbolRules(config.symbols)
       .catch((err: Error) => this.log('SYSTEM', `Symbol precision load failed (${err.message}); using 2dp defaults`, 'warn'))

@@ -1,6 +1,7 @@
 import { USDMClient, WebsocketClient } from 'binance';
 import { config } from '../config.js';
 import { PaperEngine } from './paperEngine.js';
+import { PaperExchangeClient, type PaperExchangePosition } from './paperExchangeClient.js';
 import { roundPrice, roundQty, rulesFromExchangeInfo, setSymbolRules } from './symbolRules.js';
 import type { AgentId, Candle, Position, TradeRecord, WsStatus } from '../types.js';
 
@@ -25,6 +26,8 @@ export class BinanceService {
   private ws: WebsocketClient | null = null;
   private wsStatus: WsStatus = 'down';
   private paper: PaperEngine;
+  /** Non-null only in PAPER mode with PAPER_EXCHANGE_URL set — routes account/positions/orders to the Rails broker instead of `paper`. */
+  private remotePaper: PaperExchangeClient | null;
   private liveStartEquity: number | null = null;
 
   constructor() {
@@ -33,6 +36,9 @@ export class BinanceService {
       api_secret: config.binance.apiSecret,
     });
     this.paper = new PaperEngine();
+    this.remotePaper = config.paperExchange
+      ? new PaperExchangeClient(config.paperExchange.url, config.paperExchange.accountId)
+      : null;
   }
 
   startRealtimeStream(symbols: string[], onTick: (symbol: string, price: number) => void): () => void {
@@ -148,7 +154,13 @@ export class BinanceService {
 
 
   async getAccount(): Promise<{ equity: number; marginUsed: number; initialEquity: number }> {
-    if (config.mode === 'paper') return this.paper.getAccount();
+    if (config.mode === 'paper') {
+      if (this.remotePaper) {
+        const snapshot = await this.remotePaper.getAccount();
+        return { equity: snapshot.equity, marginUsed: snapshot.lockedMargin, initialEquity: snapshot.margin };
+      }
+      return this.paper.getAccount();
+    }
     const info = await this.futures.getAccountInformation();
     const equity = Number(info.totalWalletBalance);
     // The exchange keeps no PnL baseline, so live PnL is measured from the first balance this session saw
@@ -156,13 +168,20 @@ export class BinanceService {
     return { equity, marginUsed: Number(info.totalInitialMargin), initialEquity: this.liveStartEquity };
   }
 
-  /** Paper-engine journal; live mode has no local journal, so it is empty. */
+  /**
+   * Paper-engine journal; empty for live mode (no local journal) and for
+   * remote-paper mode (paper_exchange's ledger isn't shaped like a
+   * per-strategy trade journal — this is a known gap, not an oversight).
+   */
   getTrades(): TradeRecord[] {
-    return config.mode === 'paper' ? this.paper.getTrades() : [];
+    return config.mode === 'paper' && !this.remotePaper ? this.paper.getTrades() : [];
   }
 
   async getPositions(): Promise<Position[]> {
-    if (config.mode === 'paper') return this.paper.getPositions();
+    if (config.mode === 'paper') {
+      if (this.remotePaper) return (await this.remotePaper.getPositions()).map((p) => this.mapRemotePosition(p));
+      return this.paper.getPositions();
+    }
     const info = await this.futures.getAccountInformation();
     return (info.positions as any[])
       .filter((p: any) => Number(p.positionAmt) !== 0)
@@ -171,8 +190,29 @@ export class BinanceService {
 
   async openFuturesPosition(params: OpenPositionParams): Promise<{ orderId: number | string; status: string }> {
     if (!(params.qty > 0)) throw new Error(`Refusing ${params.side} ${params.symbol} with non-positive quantity ${params.qty}`);
-    if (config.mode === 'paper') return this.paper.openPosition(params);
+    if (config.mode === 'paper') {
+      if (this.remotePaper) return this.submitRemoteOrder(params);
+      return this.paper.openPosition(params);
+    }
     return this.submitLiveOrder(params);
+  }
+
+  private async submitRemoteOrder(params: OpenPositionParams): Promise<{ orderId: number | string; status: string }> {
+    const executionPrice = params.entryPrice ?? (await this.getPremiumIndex(params.symbol)).markPrice;
+    // Unique per call — a retried submission from the caller should get a
+    // fresh id (this agent decides idempotency at the signal-cooldown
+    // level, not per HTTP call), while the broker still guards against a
+    // duplicate network retry of this exact request.
+    const clientOrderId = `${params.symbol}-${params.strategy}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const result = await this.remotePaper!.submitOrder({
+      symbol: params.symbol,
+      side: params.side.toLowerCase() as 'buy' | 'sell',
+      quantity: params.qty,
+      leverage: params.leverage,
+      executionPrice,
+      clientOrderId,
+    });
+    return { orderId: result.orderId, status: result.status.toUpperCase() };
   }
 
   private async submitLiveOrder(params: OpenPositionParams): Promise<{ orderId: number | string; status: string }> {
@@ -213,20 +253,83 @@ export class BinanceService {
     await this.cancelAll(pos.symbol);
   }
 
-  /** Paper only: live mode keeps exchange-side protection orders (netting per symbol is unresolved). */
+  /**
+   * Paper only: live mode keeps exchange-side protection orders (netting per
+   * symbol is unresolved). Remote-paper mode doesn't support this yet —
+   * paper_exchange's positions carry no per-strategy attribution (same gap
+   * live Binance has), so a dynamic per-strategy stop can't be matched to
+   * one of its positions. Orchestrator disables AdaptiveSuperTrendAgent
+   * (the only caller) whenever a remote broker is configured, so this
+   * should never actually be reached in that mode — the guard is here so a
+   * future caller fails loudly instead of silently doing nothing.
+   */
   updateStops(symbol: string, strategy: AgentId, stopLoss: number, takeProfit: number): void {
     if (config.mode !== 'paper') throw new Error('Dynamic stop updates are paper-only');
+    if (this.remotePaper) throw new Error('Dynamic stop updates are not supported against a remote paper_exchange broker');
     this.paper.updateStops(symbol, strategy, stopLoss, takeProfit);
   }
 
-  /** Paper only: purges saved positions for symbols that are no longer tradable; returns the dropped symbols. */
+  /** Paper only: purges saved positions for symbols that are no longer tradable; returns the dropped symbols. Not meaningful for a remote broker, which isn't scoped to this process's SYMBOLS list. */
   dropUnlistedPositions(symbols: string[]): string[] {
-    return config.mode === 'paper' ? this.paper.dropUnlistedSymbols(symbols) : [];
+    if (config.mode !== 'paper' || this.remotePaper) return [];
+    return this.paper.dropUnlistedSymbols(symbols);
   }
 
-  /** Paper only: marks to market and returns log lines for SL/TP/liquidation exits. */
+  /**
+   * Paper only: marks to market and returns log lines for SL/TP/liquidation
+   * exits. Against a remote broker, exit detection happens server-side and
+   * asynchronously (Risk::LiquidationEngine reacts to the pushed prices, off
+   * this call), so there is nothing to report inline — this pushes the
+   * prices in the background (fire-and-forget: a failed push logs and is
+   * retried on the next call, never blocks or throws into this synchronous
+   * call site) and always returns immediately.
+   */
   markAll(prices: Record<string, number>): string[] {
-    return config.mode === 'paper' ? this.paper.markAll(prices) : [];
+    if (config.mode !== 'paper') return [];
+    if (this.remotePaper) {
+      this.remotePaper
+        .pushMarkPrices(prices)
+        .catch((err: Error) => console.error(`[paper_exchange] mark price push failed: ${err.message}`));
+      return [];
+    }
+    return this.paper.markAll(prices);
+  }
+
+  /**
+   * Reports a perpetual futures funding settlement to the remote broker
+   * (no-op for local paper and live modes). Not wired into the run loop:
+   * calling this on a fixed interval would double-charge funding, since the
+   * broker books a new ledger entry on every call. A caller must only
+   * invoke this once per actual Binance funding boundary (00:00/08:00/16:00
+   * UTC) — e.g. by watching `nextFundingTime` from `getMarketOverview` for
+   * the transition into a new period.
+   */
+  async pushFundingEvent(symbol: string, fundingRate: number, markPrice?: number): Promise<void> {
+    if (config.mode !== 'paper' || !this.remotePaper) return;
+    await this.remotePaper.pushFundingEvent(symbol, fundingRate, markPrice);
+  }
+
+  private mapRemotePosition(p: PaperExchangePosition): Position {
+    const side: Position['side'] = p.side === 'long' ? 'LONG' : 'SHORT';
+    const liq = p.liquidationPrice;
+    return {
+      id: `${p.symbol}_${side}`,
+      symbol: p.symbol,
+      side,
+      // paper_exchange positions carry no per-strategy attribution — same
+      // limitation as live Binance positions (see mapPosition below).
+      strategy: 'EXECUTOR-ε',
+      entry: p.averagePrice,
+      qty: p.netQuantity,
+      mark: p.currentPrice,
+      upnl: p.unrealizedPnl,
+      upnlPct: p.averagePrice ? ((p.currentPrice - p.averagePrice) / p.averagePrice) * 100 * (side === 'LONG' ? 1 : -1) : 0,
+      leverage: p.leverage,
+      marginType: p.marginType === 'isolated' ? 'ISOLATED' : 'CROSS',
+      liqDistancePct: liq !== null && liq > 0 ? Math.abs((liq - p.currentPrice) / p.currentPrice) * 100 : null,
+      serverSl: 'server',
+      serverTp: 'server',
+    };
   }
 
   private async placeServerProtectionOrders(params: {

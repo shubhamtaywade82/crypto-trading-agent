@@ -15,6 +15,11 @@ const EnvSchema = z.object({
   MAX_DRAWDOWN_PCT: z.coerce.number().default(5),
   MIN_LIQ_BUFFER_ATR: z.coerce.number().default(2),
   SYMBOLS: z.string().default('BTCUSDT,ETHUSDT,SOLUSDT,AVAXUSDT'),
+  // When set, PAPER mode routes account/positions/orders through the
+  // paper_exchange Rails broker over HTTP instead of the local in-memory
+  // PaperEngine. Unset by default — zero behavior change unless configured.
+  PAPER_EXCHANGE_URL: z.string().optional(),
+  PAPER_EXCHANGE_ACCOUNT_ID: z.string().default('default'),
 });
 
 export const LOOP_INTERVAL_MS = 8000;
@@ -34,6 +39,11 @@ export const config = {
     minLiqBufferAtr: env.MIN_LIQ_BUFFER_ATR,
   },
   symbols: env.SYMBOLS.split(',').map(s => s.trim()),
+  // Non-null only when PAPER mode should be backed by the remote
+  // paper_exchange broker instead of the local PaperEngine.
+  paperExchange: env.PAPER_EXCHANGE_URL
+    ? { url: env.PAPER_EXCHANGE_URL.replace(/\/+$/, ''), accountId: env.PAPER_EXCHANGE_ACCOUNT_ID }
+    : null,
 } as const;
 
 if (config.mode === 'live' && (!config.binance.apiKey || !config.binance.apiSecret)) {

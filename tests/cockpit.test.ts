@@ -194,6 +194,16 @@ test('should keep every line within the width and the height for any size at or 
   }
 });
 
+test('should close the footer box: top border, two content rows, bottom border', () => {
+  for (const [totalWidth, totalHeight] of SIZES) {
+    const lines = renderCockpit({ ...worstCaseProps(), totalWidth, totalHeight }).map(strip);
+    const footer = lines.slice(-4);
+    assert.deepEqual(footer.map((line) => line[0]), ['╭', '│', '│', '╰']);
+    assert.ok(footer[1].includes('orchestrator'));
+    for (const line of footer) assert.equal(stringWidth(line), totalWidth);
+  }
+});
+
 // Ink clears the whole terminal on every frame once the output is as tall as the screen, so it must stay strictly shorter
 test('should render strictly fewer lines than the terminal has rows for every height at or above the minimum', () => {
   for (const width of [MIN_COLS, 200]) {

@@ -17,9 +17,9 @@ const COL_FLOORS = { c1: 37, c2: 46, c3: 36, c4: 36 };
 const BORDER_COLS = 5;
 export const MIN_COLS = COL_FLOORS.c1 + COL_FLOORS.c2 + COL_FLOORS.c3 + COL_FLOORS.c4 + BORDER_COLS;
 
-// Chrome outside the table and log bodies is 31 rows (header 3, table frame 4, detail 6, metrics 8, log frame 4, perf 3, footer 3); the 32nd keeps the output shorter than the
+// Chrome outside the table and log bodies is 32 rows (header 3, table frame 4, detail 6, metrics 8, log frame 4, perf 3, footer 4); the 33rd keeps the output shorter than the
 // terminal, because Ink clears the whole screen on every frame once the output is as tall as the terminal
-const FIXED_ROWS = 32;
+const FIXED_ROWS = 33;
 const MIN_TABLE_ROWS = 18; // the full six-agent fleet in compact form, which is also taller than the whole risk column
 const MIN_LOG_ROWS = 2;
 const MAX_TABLE_ROWS = 32;

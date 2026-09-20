@@ -10,7 +10,7 @@ type StoreFields = 'mode' | 'equity' | 'upnl' | 'marginUsed' | 'positions' | 'ag
   | 'successRate' | 'sharpe' | 'maxDd' | 'var95' | 'liqEvents' | 'sessionDecisions' | 'sessionExecuted' | 'sessionMonitored' | 'apiWeight' | 'wsStatus'
   | 'exposurePct' | 'minLiqDistancePct' | 'corrBtcEth' | 'funding' | 'strategyMetrics';
 
-export type CockpitProps = Pick<AppState, StoreFields> & { time: string; selPos: number; isSyncing: boolean; totalWidth?: number; totalHeight?: number };
+export type CockpitProps = Pick<AppState, StoreFields> & { time: string; localTime?: string; selPos: number; isSyncing: boolean; totalWidth?: number; totalHeight?: number };
 
 // Each floor is the widest realistic content of its column, so nothing is ellipsized at MIN_COLS; c1 fits `pos 12 win 100.00% pnl -$12,345.67`
 const COL_FLOORS = { c1: 37, c2: 46, c3: 36, c4: 36 };

@@ -4,6 +4,7 @@ import { setSymbolRules } from '../src/binance/symbolRules.js';
 import { config } from '../src/config.js';
 import stringWidth from 'string-width';
 import { useStore } from '../src/store.js';
+import { formatLocalTime } from '../src/ui/format.js';
 import { clampSelection, MIN_COLS, MIN_ROWS, renderCockpit, type CockpitProps } from '../src/ui/panels.js';
 import type { AgentId, AgentState, Position, StrategyMetrics } from '../src/types.js';
 
@@ -278,3 +279,13 @@ test('should clamp the selection into the list and to nothing when it is empty',
   assert.equal(clampSelection(0, 0), 0);
   assert.equal(clampSelection(4, 0), 0);
 });
+
+test('should display both UTC and local timezone time in header when available', () => {
+  const text = render(baseProps({ time: '08:36:06', localTime: '14:06:06 IST' }));
+  assert.ok(text.includes('08:36:06 UTC │ 14:06:06 IST'));
+  const fallback = render(baseProps({ time: '08:36:06', localTime: '08:36:06 UTC' }));
+  assert.ok(fallback.includes('08:36:06 UTC') && !fallback.includes('08:36:06 UTC │'));
+  assert.match(formatLocalTime(new Date(2026, 8, 20, 14, 6, 6)), /^14:06:06(\s+[A-Za-z0-9+-:]+)?$/);
+});
+
+

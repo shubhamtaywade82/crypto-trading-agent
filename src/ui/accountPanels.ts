@@ -35,9 +35,10 @@ export function renderHeaderLines(p: CockpitProps, width: number = 128): string[
   const innerW = width - 2;
   const tag = p.mode === 'paper' ? chalk.yellow.bold('◉ PAPER') : chalk.green.bold('● LIVE');
   const left = ' ' + chalk.green.bold('⬡ INKUI AGENT TRADE') + chalk.gray(' v2.4.1 ') + tag + '  ' + chalk.cyan.bold('◆ BINANCE FUTURES');
-  const right = chalk.gray(`${p.time} UTC `) + chalk.green(`●${runningCount(p.agents)} ag `) + chalk.cyan('●auto');
+  const timeDisplay = p.localTime && p.localTime !== `${p.time} UTC` ? `${p.time} UTC │ ${p.localTime}` : `${p.time} UTC`;
+  const right = chalk.gray(`${timeDisplay} `) + chalk.green(`●${runningCount(p.agents)} ag `) + chalk.cyan('●auto');
   const midSpace = Math.max(0, innerW - stringWidth(left) - stringWidth(right));
-  return [chalk.cyan('╭' + rule('─', innerW) + '╮'), chalk.cyan('│') + left + rule(' ', midSpace) + right + chalk.cyan('│'), chalk.cyan('╰' + rule('─', innerW) + '╯')];
+  return [chalk.cyan('╭' + rule('─', innerW) + '╮'), chalk.cyan('│') + padLine(left + rule(' ', midSpace) + right, innerW) + chalk.cyan('│'), chalk.cyan('╰' + rule('─', innerW) + '╯')];
 }
 
 function winBar(winRate: number | null): string {

@@ -3,6 +3,7 @@ import { Box, Text, useInput, useStdout } from 'ink';
 import { Orchestrator } from '../runtime/Orchestrator.js';
 import { useStore } from '../store.js';
 import { clampSelection, MIN_COLS, MIN_ROWS, renderCockpit, ResizeWarning } from './panels.js';
+import { formatLocalTime } from './format.js';
 
 export default function App() {
   const { stdout } = useStdout();
@@ -27,6 +28,7 @@ export default function App() {
   const [orchestrator] = useState(() => new Orchestrator());
   const [isSyncing, setIsSyncing] = useState(false);
   const [time, setTime] = useState(() => new Date().toISOString().slice(11, 19));
+  const [localTime, setLocalTime] = useState(() => formatLocalTime());
   const [selPos, setSelPos] = useState(0);
 
   const state = useStore();
@@ -48,7 +50,9 @@ export default function App() {
     orchestrator.start();
 
     const clockTimer = setInterval(() => {
-      setTime(new Date().toISOString().slice(11, 19));
+      const now = new Date();
+      setTime(now.toISOString().slice(11, 19));
+      setLocalTime(formatLocalTime(now));
     }, 1000);
 
     return () => {
@@ -79,7 +83,7 @@ export default function App() {
     return <ResizeWarning cols={cols} rows={rows} />;
   }
 
-  const cockpitLines = renderCockpit({ ...state, time, selPos: selectedIndex, isSyncing, totalWidth: cols, totalHeight: rows });
+  const cockpitLines = renderCockpit({ ...state, time, localTime, selPos: selectedIndex, isSyncing, totalWidth: cols, totalHeight: rows });
 
   return (
     <Box flexDirection="column" width={cols}>

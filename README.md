@@ -10,7 +10,7 @@ built on Ink. Routes orders to either a local in-memory paper engine, a remote
 ## Modes
 
 | `MODE` | Backend | SL/TP/trailing exits | Per-strategy attribution |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | `paper` (default, no `PAPER_EXCHANGE_URL`) | Local in-memory `PaperEngine` | Agent-side, checked on every price tick | Yes (positions keyed by `symbol+strategy`) |
 | `paper` + `PAPER_EXCHANGE_URL` | Remote `paper_exchange` Rails broker via `RemoteBroker` | Agent-side reduce-only market orders (the broker never evaluates resting orders and has no price feed). Liquidation, fees and funding are exchange-side | Yes: one account, a symbol is owned by the strategy that opened it |
 | `live` | Live Binance | Exchange-side STOP_MARKET / TAKE_PROFIT_MARKET | No — Binance positions are per-symbol |
@@ -41,11 +41,11 @@ necessarily what's in `.env.example` — they were inconsistent before issue #9
 was fixed.
 
 | Variable | Default | Purpose |
-|---|---|---|
+| --- | --- | --- |
 | `MODE` | `paper` | `paper` or `live` |
 | `BINANCE_API_KEY` / `BINANCE_API_SECRET` | (empty) | Required for `MODE=live` |
 | `OLLAMA_HOST` | `http://127.0.0.1:11434` | Ollama daemon URL |
-| `OLLAMA_MODEL` | `llama3.1:8b` | Model used for veto/advise/ask |
+| `OLLAMA_MODEL` | `gemma4:31b` | Model used for veto/advise/ask |
 | `MIN_LEVERAGE` | `5` | Floor for the dynamic-leverage calculation |
 | `MAX_LEVERAGE` | `10` | Ceiling for the dynamic-leverage calculation |
 | `MAX_EXPOSURE_PCT` | `80` | Cap on notional as a % of equity |
@@ -146,49 +146,59 @@ src/
 ## Known gaps (cross-referenced to GitHub issues)
 
 ### #1 — SL/TP in remote-paper mode
+
 **Superseded.** Server-side stop orders are gone: the broker never re-evaluates resting orders and has no price
 feed. Exits are agent-side reduce-only market orders (see "Paper trading on paper_exchange"), so nothing exits
 while the agent is offline.
 
 ### #2 — Funding not wired into run loop
+
 **Fixed.** `RemoteBroker.observeFunding` detects when Binance's `nextFundingTime` jumps forward (the next
 boundary moves by 8h) and pushes one funding event per symbol with the boundary timestamp. The broker dedupes on
 `(paper_position_id, funding_time)`. A failed push is logged and not retried.
 
 ### #3 — Per-strategy attribution lost in remote/live
+
 **Fixed for remote paper** by the ownership rule (a symbol belongs to the strategy that opened it; the sidecar
 records it). Live Binance positions are still per-symbol.
 
 ### #4 — AdaptiveSuperTrendAgent disabled in remote-paper/live
+
 **Fixed for remote paper.** Its stop updates are persisted in the sidecar only for positions it owns. It stays
 disabled in live mode (`Orchestrator.start()` logs why).
 
 ### #5 — Paper engine 250ms debounce can drop last state on crash
+
 **Fixed.** `PaperEngine.flushSync()` writes the state synchronously, and
 `Orchestrator.flushOnShutdown()` is wired to SIGINT/SIGTERM in `App.tsx`.
 
 ### #6 — Ollama advisor was fail-open on parse errors
+
 **Fixed.** `parseVerdict` now returns `VETO` on unparseable replies and on
 unknown verdict strings — fail-closed for hard errors. Offline and network
 errors still fail-open (PROCEED) because deterministic code owns the entry
 decision; the veto is a belt-and-braces check.
 
 ### #7 — paperExchangeClient threw on non-204 with no retry
+
 **Fixed.** 5xx errors and network errors retry up to 2 times with exponential
 backoff (250ms, 500ms) and end as `VenueUnavailableError`. 4xx errors surface
 immediately as `OrderRejectedError` (retrying a client error is wrong).
 
 ### #10 — MAX_DRAWDOWN_PCT was display-only
+
 **Fixed.** `RiskAgent.isDrawdownBreached` tracks session-peak equity and
 rejects all OPEN signals once drawdown exceeds the limit. Closes
 (reduceOnly + opposite-side exits) still pass — reducing exposure is the
 correct response to a drawdown breach.
 
 ### #11 — PairsAgent disabled
+
 **Documented in code** (`Orchestrator.agents`). It signals a BTC/ETH ratio,
 which is not an exchange symbol; re-enable once it emits two legs.
 
 ### #12 — getTrades() returns [] in remote-paper mode
+
 **Fixed.** The trade journal lives in the sidecar (`data/remote-state.json`); the agent computes its own
 statistics from it instead of the exchange's `/api/performance`.
 

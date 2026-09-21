@@ -7,7 +7,7 @@ export const EnvSchema = z.object({
   BINANCE_API_KEY: z.string().default(''),
   BINANCE_API_SECRET: z.string().default(''),
   OLLAMA_HOST: z.string().default('http://127.0.0.1:11434'),
-  OLLAMA_MODEL: z.string().default('llama3.1:8b'),
+  OLLAMA_MODEL: z.string().default('gemma4:31b'),
   MIN_LEVERAGE: z.coerce.number().default(5),
   MAX_LEVERAGE: z.coerce.number().default(10),
   MAX_EXPOSURE_PCT: z.coerce.number().default(80),

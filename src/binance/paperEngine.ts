@@ -2,6 +2,8 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import type { AgentId, ExitReason, Position, Side, TradeRecord } from '../types.js';
 import { formatPrice } from './symbolRules.js';
+import { OwnershipError } from './remoteOrders.js';
+import { directionOf, findStopExit } from './stopRules.js';
 
 interface PaperPosition extends Position {
   orderId: string;
@@ -25,10 +27,6 @@ const MAX_TRADES = 1000;
 // Binance's lowest-tier maintenance margin rate; real tiers rise with notional
 const MAINTENANCE_MARGIN_RATE = 0.005;
 
-function directionOf(side: Side): 1 | -1 {
-  return side === 'LONG' ? 1 : -1;
-}
-
 /** Isolated-margin liquidation price; null when a 1x long cannot be liquidated. */
 function liquidationPrice(side: Side, entry: number, leverage: number): number | null {
   if (side === 'LONG' && leverage <= 1) return null;
@@ -49,19 +47,13 @@ function refreshMetrics(pos: PaperPosition): void {
 function findExit(pos: PaperPosition): { price: number; reason: ExitReason } | null {
   const direction = directionOf(pos.side);
   const liqPrice = liquidationPrice(pos.side, pos.entry, pos.leverage);
-  // Non-numeric labels ('—', 'trail', 'fund') parse to NaN and never trigger
-  const stopLoss = Number(pos.serverSl);
-  const takeProfit = Number(pos.serverTp);
 
   if (liqPrice !== null && (pos.mark - liqPrice) * direction <= 0) {
     return { price: liqPrice, reason: 'LIQUIDATED' };
   }
-  if (stopLoss > 0 && (pos.mark - stopLoss) * direction <= 0) {
-    // A stop already breached fills at the market: filling at the stop level would credit a phantom gain
-    return { price: pos.mark, reason: 'STOP LOSS' };
-  }
-  if (takeProfit > 0 && (pos.mark - takeProfit) * direction >= 0) {
-    return { price: takeProfit, reason: 'TAKE PROFIT' };
+  const stopExit = findStopExit(pos);
+  if (stopExit) {
+    return stopExit;
   }
   return null;
 }
@@ -144,6 +136,7 @@ export class PaperEngine {
     if (!price) throw new Error(`Paper fill rejected for ${params.symbol}: no price available`);
 
     const side: Side = params.side === 'BUY' ? 'LONG' : 'SHORT';
+    if (!params.reduceOnly) this.assertSymbolNotHeldByOther(params);
     if (params.reduceOnly) {
       if (existing) this.reduce(existing, params.qty, price, 'CLOSE');
     } else if (!existing) {
@@ -158,6 +151,12 @@ export class PaperEngine {
     this.syncEquity();
     this.persist();
     return { orderId: Date.now(), status: 'FILLED' };
+  }
+
+  /** One strategy per symbol, the same rule the remote broker enforces (real exchanges net a symbol into one position). */
+  private assertSymbolNotHeldByOther(params: FillParams): void {
+    const holder = this.positions.find((p) => p.symbol === params.symbol && p.strategy !== params.strategy);
+    if (holder) throw new OwnershipError(`${params.symbol} is held by ${holder.strategy}; ${params.strategy} may not trade it`);
   }
 
   /** Books realized PnL on up to qty of pos and journals it; returns the unfilled remainder. */
@@ -255,5 +254,35 @@ export class PaperEngine {
     this.syncEquity();
     this.persist();
     return exits;
+  }
+
+  /**
+   * Synchronous flush — writes the current state to disk immediately. The
+   * default `persist()` is debounced by 250ms so a tight loop of fills
+   * doesn't write on every tick; on shutdown, that debounce can drop the
+   * last state if SIGTERM arrives in the 250ms window. Issue #5: callers
+   * should invoke this from a SIGINT/SIGTERM hook.
+   */
+  flushSync(): void {
+    if (this.saveTimer) {
+      clearTimeout(this.saveTimer);
+      this.saveTimer = null;
+    }
+    try {
+      fs.mkdirSync(path.dirname(this.filePath), { recursive: true });
+      const tmp = `${this.filePath}.tmp`;
+      const payload = JSON.stringify({
+        version: 1,
+        savedAt: Date.now(),
+        equity: this.equity,
+        startEquity: this.startEquity,
+        positions: this.positions,
+        closedTrades: this.trades,
+      }, null, 2);
+      fs.writeFileSync(tmp, payload, 'utf-8');
+      fs.renameSync(tmp, this.filePath);
+    } catch {
+      // Disk write failures should never interrupt shutdown
+    }
   }
 }

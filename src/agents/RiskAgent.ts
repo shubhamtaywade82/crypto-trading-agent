@@ -21,6 +21,15 @@ export class RiskAgent extends BaseAgent {
     const maxNotional = equity * (config.risk.maxExposurePct / 100);
     const riskBudget = equity * (config.risk.riskPerTradePct / 100);
 
+    // Issue #10: MAX_DRAWDOWN_PCT was previously a display-only metric.
+    // Now it's a kill-switch — once drawdown exceeds the limit, no new OPEN
+    // signals are approved until the account recovers. Closes (reduceOnly
+    // and opposite-side exits) still pass through, since reducing exposure
+    // is the correct response to a drawdown breach.
+    if (this.isDrawdownBreached(ctx)) {
+      return this.reject(`drawdown kill-switch: current drawdown exceeds ${config.risk.maxDrawdownPct}%`);
+    }
+
     // Funding harvest positions in futures
     if (signal.type === 'OPEN_HEDGE') {
       const leverage = config.risk.minLeverage;
@@ -46,6 +55,26 @@ export class RiskAgent extends BaseAgent {
     const positionSizeUsdt = riskBudget / slDistancePct;
     const cappedSize = Math.min(positionSizeUsdt, maxNotional);
     return this.checkBuffer(signal, ctx, cappedSize, slDistancePct);
+  }
+
+  /**
+   * Drawdown kill-switch (issue #10). Compares current equity against the
+   * peak equity observed this session; if the drawdown from peak exceeds
+   * MAX_DRAWDOWN_PCT, all OPEN signals are rejected until the account
+   * recovers. Closes still pass — reducing exposure is correct here.
+   *
+   * ponytail: tracks the peak in-process. A restart resets the peak, so a
+   * process crash mid-drawdown is the one blind spot — for a paper broker
+   * this is acceptable; for live trading the peak should live in the
+   * broker's ledger (see paper_exchange issue #19 for the per-strategy
+   * metadata migration that would close this gap).
+   */
+  private peakEquity = 0;
+  private isDrawdownBreached(ctx: MarketContext): boolean {
+    if (ctx.equity <= 0) return true;
+    this.peakEquity = Math.max(this.peakEquity, ctx.equity);
+    const drawdownPct = ((this.peakEquity - ctx.equity) / this.peakEquity) * 100;
+    return drawdownPct > config.risk.maxDrawdownPct;
   }
 
   private calculateDynamicLeverage(

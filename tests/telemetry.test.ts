@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import type { Candle, Position, TradeRecord } from '../src/types.js';
-import { buildTelemetry, type TelemetryInput } from '../src/runtime/telemetry.js';
+import { buildTelemetry, singleFlight, venueInfo, type TelemetryInput } from '../src/runtime/telemetry.js';
+import type { VenueStatus } from '../src/binance/remoteBroker.js';
 
 const closes = (values: number[]): Candle[] => values.map((c, i) => ({ openTime: i, open: c, high: c + 1, low: c - 1, close: c, volume: 1 }));
 const position = (over: Partial<Position>): Position => ({
@@ -78,4 +79,36 @@ test('should keep per-strategy attribution and a liquidation count in paper mode
   assert.equal(t.liqEvents, 0);
   assert.equal(t.agents[2].positions, 0);
   assert.equal(t.agents[2].pnl, 0);
+});
+
+const remote = (state: VenueStatus['state']): VenueStatus => ({ name: 'paper_exchange', accountId: 'crypto-agent', state, lastError: null, lastSyncAt: 0 });
+
+test('should label the venue from the broker status, and fall back to the local engine or live Binance', () => {
+  assert.deepEqual(venueInfo(remote('degraded'), 'paper'), { name: 'paper_exchange (crypto-agent)', state: 'degraded' });
+  assert.deepEqual(venueInfo(remote('down'), 'paper'), { name: 'paper_exchange (crypto-agent)', state: 'down' });
+  assert.deepEqual(venueInfo(null, 'paper'), { name: 'local paper engine', state: 'local' });
+  assert.deepEqual(venueInfo(null, 'live'), { name: 'BINANCE FUTURES', state: 'local' });
+});
+
+test('should skip a call while the previous one is still running and run again once it settled', async () => {
+  let release = () => {};
+  let started = 0;
+  const guarded = singleFlight(() => { started += 1; return new Promise<void>((resolve) => { release = resolve; }); });
+  const first = guarded();
+  await guarded();
+  assert.equal(started, 1);
+  release();
+  await first;
+  const second = guarded();
+  assert.equal(started, 2);
+  release();
+  await second;
+});
+
+test('should release the guard when the task throws', async () => {
+  let started = 0;
+  const guarded = singleFlight(async () => { started += 1; throw new Error('boom'); });
+  await assert.rejects(guarded());
+  await assert.rejects(guarded());
+  assert.equal(started, 2);
 });

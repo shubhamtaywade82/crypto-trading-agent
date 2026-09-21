@@ -10,16 +10,35 @@ export interface VetoVerdict {
 const VETO_TIMEOUT_MS = 5000;
 const PING_INTERVAL_MS = 60_000;
 
-/** Parses the model's JSON reply; anything unusable proceeds, because deterministic code owns the entry. */
+/**
+ * LLM layer via Ollama.
+ * advise/ask enrich logs only. veto() may block an entry the deterministic agents proposed.
+ *
+ * Fail-open policy (intentional and bounded):
+ *   - Ollama offline (no process, host unreachable): PROCEED — deterministic
+ *     code owns the entry decision, the veto is a belt-and-braces check.
+ *   - Ollama online but returned a malformed/unparseable reply: VETO with
+ *     reason 'advisor sent an unparseable reply'. Issue #6: previously this
+ *     was fail-open (PROCEED), which let an entry through when the safety
+ *     layer had failed in a way the operator should investigate. If the
+ *     model says something unparseable, the safest action is to refuse until
+ *     an operator sees the log and re-runs with a healthier Ollama.
+ *   - Network error mid-request (timeout, connection reset): PROCEED with
+ *     reason 'advisor error: <message>'. Same as offline — the broker
+ *     didn't say no, deterministic code owns the entry.
+ */
 export function parseVerdict(text: string): VetoVerdict {
   try {
     const parsed = JSON.parse(text);
     const reason = String(parsed.reason ?? '');
     if (parsed.verdict === 'VETO') return { verdict: 'VETO', reason };
     if (parsed.verdict === 'PROCEED') return { verdict: 'PROCEED', reason };
-    return { verdict: 'PROCEED', reason: `advisor sent an unknown verdict "${parsed.verdict}"` };
+    // Unknown verdict string — model said something, but not what we asked.
+    // Fail-closed: refuse until the operator checks Ollama.
+    return { verdict: 'VETO', reason: `advisor sent an unknown verdict "${parsed.verdict}"` };
   } catch {
-    return { verdict: 'PROCEED', reason: 'advisor sent an unparseable reply' };
+    // Unparseable reply — fail-closed for the same reason.
+    return { verdict: 'VETO', reason: 'advisor sent an unparseable reply' };
   }
 }
 

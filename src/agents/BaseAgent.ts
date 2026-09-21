@@ -1,6 +1,7 @@
 import { EventEmitter } from 'node:events';
-import type { Signal, Position } from '../types.js';
+import type { Signal, Position, LogEntry } from '../types.js';
 import type { BinanceService } from '../binance/client.js';
+import type { VenueState } from '../binance/remoteBroker.js';
 
 export interface MarketContext {
   candles: Record<string, any[]>;
@@ -13,6 +14,13 @@ export interface MarketContext {
 
 // Momentum re-fires every 8s tick while the forming 15m candle stays across EMA50
 export const DEFAULT_COOLDOWN_MS = 15 * 60_000;
+
+/**
+ * A refusal starts the cooldown like a fill does: a refused signal that keeps firing must not warn again on every loop.
+ * Not while the venue is failing: an outage refusal would otherwise blackhole the signal for the whole cooldown after recovery.
+ */
+export const startsCooldown = (level: LogEntry['level'], venueState?: VenueState): boolean =>
+  level === 'success' || (level === 'warn' && (venueState === undefined || venueState === 'connected'));
 
 export abstract class BaseAgent extends EventEmitter {
   abstract readonly id: string;

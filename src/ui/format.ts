@@ -67,3 +67,40 @@ export function wrapTokens(tokens: string[], width: number): string[] {
   if (current !== '') lines.push(current);
   return lines;
 }
+
+// Resolves a short alphabetic timezone abbreviation or falls back to offset
+function localTzAbbr(date: Date): string {
+  try {
+    const shortName = new Intl.DateTimeFormat(undefined, { timeZoneName: 'short' })
+      .formatToParts(date)
+      .find((p) => p.type === 'timeZoneName')?.value;
+
+    if (shortName && /^[A-Z]{2,5}$/.test(shortName)) return shortName;
+
+    const longName = new Intl.DateTimeFormat(undefined, { timeZoneName: 'long' })
+      .formatToParts(date)
+      .find((p) => p.type === 'timeZoneName')?.value;
+
+    if (longName) {
+      const letters = longName.replace(/[^A-Za-z\s]/g, '').split(/\s+/).map((w) => w[0]).join('').toUpperCase();
+      if (letters.length >= 2 && letters.length <= 5) return letters;
+    }
+
+    if (shortName) return shortName;
+  } catch {}
+
+  const offset = -date.getTimezoneOffset();
+  const sign = offset >= 0 ? '+' : '-';
+  const abs = Math.abs(offset);
+  const h = String(Math.floor(abs / 60)).padStart(2, '0');
+  const m = String(abs % 60).padStart(2, '0');
+  return `UTC${sign}${h}:${m}`;
+}
+
+export function formatLocalTime(date: Date = new Date()): string {
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const time = `${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
+  const tz = localTzAbbr(date);
+  return tz ? `${time} ${tz}` : time;
+}
+

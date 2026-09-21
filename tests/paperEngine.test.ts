@@ -72,10 +72,10 @@ test('should close the existing position and open the full opposite size on a fl
   near(engine.getAccount().equity, 100_020);
 });
 
-test('should keep strategies separate and close only the requested one', () => {
+test('should keep strategies on separate symbols and close only the requested one', () => {
   const engine = freshEngine();
   engine.openPosition({ ...base, side: 'BUY', qty: 1, entryPrice: 100 });
-  engine.openPosition({ ...base, strategy: 'ADAPTIVE-ST-ζ', side: 'SELL', qty: 1, entryPrice: 100 });
+  engine.openPosition({ ...base, symbol: 'ETHUSDT', strategy: 'ADAPTIVE-ST-ζ', side: 'SELL', qty: 1, entryPrice: 100 });
   assert.equal(engine.getPositions().length, 2);
   engine.openPosition({ ...base, side: 'SELL', qty: 1, entryPrice: 100, reduceOnly: true });
   assert.deepEqual(engine.getPositions().map((p) => p.strategy), ['ADAPTIVE-ST-ζ']);

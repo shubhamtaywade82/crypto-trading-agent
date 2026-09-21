@@ -152,6 +152,7 @@ export interface AppState {
   sessionMonitored: number;
   apiWeight: number;
   wsStatus: WsStatus;
+  venue: { name: string; state: 'connected' | 'degraded' | 'down' | 'local' };
   exposurePct: number;
   minLiqDistancePct: number | null;
   corrBtcEth: number | null;

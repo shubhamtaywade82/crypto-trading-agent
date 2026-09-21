@@ -38,75 +38,141 @@ export interface SubmitOrderParams {
   side: 'buy' | 'sell';
   quantity: number;
   leverage: number;
+  /** Defaults to 'isolated' so one losing position cannot drain the whole wallet. */
   marginType?: 'cross' | 'isolated';
+  /** Broker rejects the order unless it shrinks an existing position, so an exit can never open a new one. */
+  reduceOnly?: boolean;
   /** Reference price this fill executes near — the broker has no price of its own for crypto. */
   executionPrice: number;
   /** Idempotency key: a retried submission with the same id replays the original order. */
   clientOrderId: string;
 }
 
-export interface SubmitProtectionOrderParams {
-  symbol: string;
-  /** Side of the protection order (opposite of the position it protects). */
-  side: 'buy' | 'sell';
-  quantity: number;
-  /** Bounded order: fills if the book is marketable at `price`. */
-  price?: number;
-  /** Stop-loss order: triggers when the book crosses `triggerPrice`. */
-  triggerPrice?: number;
-  /** Reference price so the broker seeds its book (it has no price of its own for crypto). */
-  executionPrice: number;
-  /** Idempotency key. */
-  clientOrderId: string;
-}
-
 export interface SubmitOrderResult {
   orderId: number;
   status: string;
+  /** Present when the broker reports it; the journal prefers it over the requested quantity. */
+  filledQuantity?: number;
 }
 
-type Fetch = typeof fetch;
+export interface ExchangeRiskEvent {
+  id: number;
+  eventType: string;
+  details: Record<string, unknown>;
+  createdAt: string;
+}
 
-export class PaperExchangeClient {
+export interface ExchangeApi {
+  /** Null when the broker has no account for this id yet. */
+  getAccount(): Promise<PaperExchangeAccountSnapshot | null>;
+  createAccount(margin: number): Promise<void>;
+  getPositions(): Promise<PaperExchangePosition[]>;
+  submitOrder(params: SubmitOrderParams): Promise<SubmitOrderResult>;
+  findOrder(clientOrderId: string): Promise<SubmitOrderResult | null>;
+  getRiskEvents(): Promise<ExchangeRiskEvent[]>;
+  pushMarkPrices(prices: Record<string, number>): Promise<void>;
+  pushFundingEvent(symbol: string, fundingRate: number, markPrice: number, fundingTime: number): Promise<void>;
+}
+
+/** The broker could not be reached or kept failing (network, timeout, 5xx) — the request may or may not have been applied. */
+export class VenueUnavailableError extends Error {
+  constructor(message: string, options?: { cause?: unknown }) {
+    super(message, options);
+    this.name = 'VenueUnavailableError';
+  }
+}
+
+/** The broker understood the request and refused it (4xx); retrying the same request cannot succeed. */
+export class OrderRejectedError extends Error {
+  constructor(message: string, readonly status: number, readonly body: string) {
+    super(message);
+    this.name = 'OrderRejectedError';
+  }
+}
+
+export interface PaperExchangeClientOptions {
+  fetchImpl?: typeof fetch;
+  timeoutMs?: number;
+  /** Extra attempts after the first one. */
+  retries?: number;
+  /** First backoff delay; doubles on every further retry. */
+  backoffMs?: number;
+}
+
+type Raw = Record<string, unknown>;
+
+function toAccount(raw: Raw): PaperExchangeAccountSnapshot {
+  return {
+    accountId: String(raw.account_id),
+    currency: String(raw.currency),
+    margin: Number(raw.margin),
+    availableBalance: Number(raw.available_balance),
+    lockedMargin: Number(raw.locked_margin),
+    equity: Number(raw.equity),
+    unrealizedPnl: Number(raw.unrealized_pnl),
+    realizedPnl: Number(raw.realized_pnl),
+    positionsCount: Number(raw.positions_count),
+  };
+}
+
+function toPosition(p: Raw): PaperExchangePosition {
+  return {
+    id: Number(p.id),
+    symbol: String(p.symbol),
+    side: p.side as 'long' | 'short',
+    netQuantity: Number(p.net_quantity),
+    averagePrice: Number(p.average_price),
+    currentPrice: Number(p.current_price),
+    leverage: Number(p.leverage),
+    marginType: p.margin_type as 'cross' | 'isolated',
+    liquidationPrice: p.liquidation_price === null || p.liquidation_price === undefined ? null : Number(p.liquidation_price),
+    unrealizedPnl: Number(p.unrealized_pnl),
+  };
+}
+
+function toOrderResult(raw: Raw): SubmitOrderResult {
+  const filled = raw.filled_quantity === null || raw.filled_quantity === undefined ? NaN : Number(raw.filled_quantity);
+  return { orderId: Number(raw.id), status: String(raw.status), ...(Number.isFinite(filled) ? { filledQuantity: filled } : {}) };
+}
+
+export class PaperExchangeClient implements ExchangeApi {
+  private readonly fetchImpl: typeof fetch;
+  private readonly timeoutMs: number;
+  private readonly retries: number;
+  private readonly backoffMs: number;
+
   constructor(
     private readonly baseUrl: string,
     private readonly accountId: string,
-    private readonly fetchImpl: Fetch = fetch,
-  ) {}
+    opts: PaperExchangeClientOptions = {},
+  ) {
+    this.fetchImpl = opts.fetchImpl ?? fetch;
+    this.timeoutMs = opts.timeoutMs ?? 5000;
+    this.retries = opts.retries ?? 2;
+    this.backoffMs = opts.backoffMs ?? 250;
+  }
 
-  async getAccount(): Promise<PaperExchangeAccountSnapshot> {
-    const raw = await this.request<Record<string, unknown>>('GET', '/api/account');
-    return {
-      accountId: String(raw.account_id),
-      currency: String(raw.currency),
-      margin: Number(raw.margin),
-      availableBalance: Number(raw.available_balance),
-      lockedMargin: Number(raw.locked_margin),
-      equity: Number(raw.equity),
-      unrealizedPnl: Number(raw.unrealized_pnl),
-      realizedPnl: Number(raw.realized_pnl),
-      positionsCount: Number(raw.positions_count),
-    };
+  async getAccount(): Promise<PaperExchangeAccountSnapshot | null> {
+    try {
+      return toAccount(await this.request<Raw>('GET', '/api/account'));
+    } catch (err) {
+      if (err instanceof OrderRejectedError && err.status === 404) return null;
+      throw err;
+    }
+  }
+
+  async createAccount(margin: number): Promise<void> {
+    await this.request('POST', `/api/account/reset?margin=${margin}`);
   }
 
   async getPositions(): Promise<PaperExchangePosition[]> {
-    const raw = await this.request<Array<Record<string, unknown>>>('GET', '/api/positions');
-    return raw.map((p) => ({
-      id: Number(p.id),
-      symbol: String(p.symbol),
-      side: p.side as 'long' | 'short',
-      netQuantity: Number(p.net_quantity),
-      averagePrice: Number(p.average_price),
-      currentPrice: Number(p.current_price),
-      leverage: Number(p.leverage),
-      marginType: p.margin_type as 'cross' | 'isolated',
-      liquidationPrice: p.liquidation_price === null || p.liquidation_price === undefined ? null : Number(p.liquidation_price),
-      unrealizedPnl: Number(p.unrealized_pnl),
-    }));
+    const raw = await this.request<Raw[]>('GET', '/api/positions');
+    // The broker keeps a row with net_quantity 0 after a position is closed.
+    return raw.map(toPosition).filter((p) => p.netQuantity > 0);
   }
 
   async submitOrder(params: SubmitOrderParams): Promise<SubmitOrderResult> {
-    const raw = await this.request<Record<string, unknown>>('POST', '/api/orders', {
+    const raw = await this.request<Raw>('POST', '/api/orders', {
       order: {
         symbol: params.symbol,
         side: params.side,
@@ -114,45 +180,30 @@ export class PaperExchangeClient {
         order_type: 'market',
         instrument_type: 'CRYPTO_PERPETUAL',
         leverage: params.leverage,
-        margin_type: params.marginType ?? 'cross',
+        margin_type: params.marginType ?? 'isolated',
         execution_price: params.executionPrice,
         client_order_id: params.clientOrderId,
+        ...(params.reduceOnly ? { reduce_only: true } : {}),
       },
     });
-    return { orderId: Number(raw.id), status: String(raw.status) };
+    return toOrderResult(raw);
   }
 
-  /**
-   * Submits a SL (stop_loss) or TP (bounded) order to the remote broker so
-   * exits fire server-side even when this agent is offline. The broker has no
-   * market-data feed of its own for crypto, so `executionPrice` seeds its book
-   * with the current mark — the bounded/stop_loss order then triggers against
-   * the next mark-price push from this agent's own feed.
-   *
-   * Issue #1: previously SL/TP were silently dropped in remote-paper mode.
-   */
-  async submitProtectionOrder(params: SubmitProtectionOrderParams): Promise<SubmitOrderResult> {
-    const orderType = params.triggerPrice !== undefined ? 'stop_loss' : 'bounded';
-    const raw = await this.request<Record<string, unknown>>('POST', '/api/orders', {
-      order: {
-        symbol: params.symbol,
-        side: params.side,
-        quantity: params.quantity,
-        order_type: orderType,
-        instrument_type: 'CRYPTO_PERPETUAL',
-        leverage: 1,
-        margin_type: 'cross',
-        price: params.price,
-        trigger_price: params.triggerPrice,
-        execution_price: params.executionPrice,
-        client_order_id: params.clientOrderId,
-      },
-    });
-    return { orderId: Number(raw.id), status: String(raw.status) };
+  /** Recovers the outcome of a submission whose response was lost; the broker lists only its latest 200 orders. */
+  async findOrder(clientOrderId: string): Promise<SubmitOrderResult | null> {
+    const orders = await this.request<Raw[]>('GET', '/api/orders');
+    const match = orders.find((o) => o.client_order_id === clientOrderId);
+    return match ? toOrderResult(match) : null;
   }
 
-  async cancelOrder(orderId: number | string): Promise<void> {
-    await this.request('DELETE', `/api/orders/${orderId}`);
+  async getRiskEvents(): Promise<ExchangeRiskEvent[]> {
+    const raw = await this.request<Raw[]>('GET', '/api/risk_events');
+    return raw.map((e) => ({
+      id: Number(e.id),
+      eventType: String(e.event_type),
+      details: (e.details ?? {}) as Record<string, unknown>,
+      createdAt: String(e.created_at),
+    }));
   }
 
   /** Bulk mark-price push — drives the broker's liquidation checks. Safe to call repeatedly (idempotent per symbol). */
@@ -160,75 +211,51 @@ export class PaperExchangeClient {
     await this.request('POST', '/api/mark_prices', { prices });
   }
 
-  /**
-   * Reports a funding settlement so the broker posts the fee against open
-   * leveraged positions on `symbol`. Idempotent when `fundingTime` is
-   * supplied — the broker dedupes on (paper_position_id, funding_time).
-   * Callers MUST pass `fundingTime` (Binance's funding settlement
-   * timestamp) so an HTTP retry doesn't double-charge funding.
-   */
-  async pushFundingEvent(
-    symbol: string,
-    fundingRate: number,
-    markPrice?: number,
-    fundingTime?: string | number,
-  ): Promise<void> {
+  /** The broker dedupes funding on (position, funding_time), which is what makes the retry in `request` safe. */
+  async pushFundingEvent(symbol: string, fundingRate: number, markPrice: number, fundingTime: number): Promise<void> {
     await this.request('POST', '/api/funding_events', {
       symbol,
       funding_rate: fundingRate,
       mark_price: markPrice,
-      funding_time: fundingTime,
+      // The broker stores a datetime column; a bare epoch number would not parse and would silently disable the dedupe.
+      funding_time: new Date(fundingTime).toISOString(),
     });
   }
 
+  /** Retries only VenueUnavailableError. POSTs are safe to repeat because each carries a client_order_id or funding_time the broker dedupes. */
   private async request<T>(method: string, path: string, body?: unknown): Promise<T> {
-    // Retries: 5xx and network errors get up to 2 retries with exponential
-    // backoff (250ms, 750ms). 4xx errors are client-side (bad request,
-    // unauthorized, insufficient margin) and never retried — surfacing them
-    // immediately is correct. Issue #7: previously any non-2xx threw with no
-    // retry, so a transient 502 from the broker lost the order entirely.
-    const maxAttempts = 3;
-    let lastErr: Error | null = null;
-    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    let lastFailure: VenueUnavailableError | undefined;
+    for (let attempt = 0; attempt <= this.retries; attempt++) {
+      if (attempt > 0) await sleep(this.backoffMs * 2 ** (attempt - 1));
       try {
-        const res = await this.fetchImpl(`${this.baseUrl}${path}`, {
-          method,
-          headers: { 'Content-Type': 'application/json', 'X-Account-Id': this.accountId },
-          body: body === undefined ? undefined : JSON.stringify(body),
-        });
-        if (res.ok) {
-          if (res.status === 204) return undefined as T;
-          return (await res.json()) as T;
-        }
-        const text = await res.text().catch(() => '');
-        // 4xx: client error — surface immediately, no retry.
-        if (res.status >= 400 && res.status < 500) {
-          throw new PaperExchangeHttpError(res.status, method, path, text);
-        }
-        // 5xx: server error — retry with backoff.
-        lastErr = new PaperExchangeHttpError(res.status, method, path, text);
+        return await this.send<T>(method, path, body);
       } catch (err) {
-        if (err instanceof PaperExchangeHttpError) throw err;
-        // Network error (DNS, connection refused, etc.) — retry.
-        lastErr = err as Error;
-      }
-      if (attempt < maxAttempts - 1) {
-        await sleep(250 * Math.pow(3, attempt));
+        if (!(err instanceof VenueUnavailableError)) throw err;
+        lastFailure = err;
       }
     }
-    throw lastErr ?? new Error(`paper_exchange ${method} ${path} failed after ${maxAttempts} attempts`);
+    throw lastFailure;
   }
-}
 
-export class PaperExchangeHttpError extends Error {
-  constructor(
-    readonly status: number,
-    readonly method: string,
-    readonly path: string,
-    readonly body: string,
-  ) {
-    super(`paper_exchange ${method} ${path} -> ${status}: ${body}`);
-    this.name = 'PaperExchangeHttpError';
+  private async send<T>(method: string, path: string, body?: unknown): Promise<T> {
+    let status: number;
+    let text: string;
+    try {
+      const res = await this.fetchImpl(`${this.baseUrl}${path}`, {
+        method,
+        headers: { 'Content-Type': 'application/json', 'X-Account-Id': this.accountId },
+        body: body === undefined ? undefined : JSON.stringify(body),
+        signal: AbortSignal.timeout(this.timeoutMs),
+      });
+      status = res.status;
+      text = await res.text();
+    } catch (err) {
+      throw new VenueUnavailableError(`paper_exchange ${method} ${path} unreachable: ${(err as Error).message}`, { cause: err });
+    }
+    if (status >= 200 && status < 300) return (text ? JSON.parse(text) : undefined) as T;
+    const message = `paper_exchange ${method} ${path} -> ${status}: ${text}`;
+    if (status >= 500) throw new VenueUnavailableError(message);
+    throw new OrderRejectedError(message, status, text);
   }
 }
 

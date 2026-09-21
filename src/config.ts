@@ -2,7 +2,7 @@ import 'dotenv/config';
 import { z } from 'zod';
 import type { Mode } from './types.js';
 
-const EnvSchema = z.object({
+export const EnvSchema = z.object({
   MODE: z.enum(['paper', 'live']).default('paper'),
   BINANCE_API_KEY: z.string().default(''),
   BINANCE_API_SECRET: z.string().default(''),
@@ -19,7 +19,15 @@ const EnvSchema = z.object({
   // paper_exchange Rails broker over HTTP instead of the local in-memory
   // PaperEngine. Unset by default — zero behavior change unless configured.
   PAPER_EXCHANGE_URL: z.string().optional(),
-  PAPER_EXCHANGE_ACCOUNT_ID: z.string().default('default'),
+  // No default: a silent shared account id would make two setups trade on each other's account.
+  PAPER_EXCHANGE_ACCOUNT_ID: z.string().trim().optional(),
+}).superRefine((env, ctx) => {
+  if (env.MODE !== 'paper' || !env.PAPER_EXCHANGE_URL || env.PAPER_EXCHANGE_ACCOUNT_ID) return;
+  ctx.addIssue({
+    code: z.ZodIssueCode.custom,
+    path: ['PAPER_EXCHANGE_ACCOUNT_ID'],
+    message: 'PAPER_EXCHANGE_ACCOUNT_ID must be set explicitly when PAPER_EXCHANGE_URL is set (there is no default account)',
+  });
 });
 
 export const LOOP_INTERVAL_MS = 8000;
@@ -41,7 +49,7 @@ export const config = {
   symbols: env.SYMBOLS.split(',').map(s => s.trim()),
   // Non-null only when PAPER mode should be backed by the remote
   // paper_exchange broker instead of the local PaperEngine.
-  paperExchange: env.PAPER_EXCHANGE_URL
+  paperExchange: env.PAPER_EXCHANGE_URL && env.PAPER_EXCHANGE_ACCOUNT_ID
     ? { url: env.PAPER_EXCHANGE_URL.replace(/\/+$/, ''), accountId: env.PAPER_EXCHANGE_ACCOUNT_ID }
     : null,
 } as const;

@@ -14,6 +14,7 @@ const MEDIUM_CORRELATION = 0.5;
 const MAX_ACTION_ROWS = 3;
 const MAX_FLEET_AGENTS = 6;
 const WS_COLOR: Record<WsStatus, (text: string) => string> = { connected: chalk.green, reconnecting: chalk.yellow, down: chalk.red };
+const VENUE_COLOR = { connected: chalk.green, degraded: chalk.yellow, down: chalk.red };
 
 const separator = (width: number) => padLine(` ${chalk.gray(rule('─', Math.max(10, width - 2)))}`, width);
 const blank = (width: number) => rule(' ', width);
@@ -60,7 +61,8 @@ function equityRows(p: CockpitProps, width: number): string[] {
   const equity = since ? chalk.white.bold(`$${usd(p.equity)}`) : chalk.gray('—');
   const basis = p.mode === 'live' ? 'session' : 'total'; // live has no history, so its baseline is the first balance this process saw
   const change = since ? pnlColor(since.usd)(`${signedUsd(since.usd)} (${signedDp(since.pct)}% ${basis})`) : chalk.gray('—');
-  return [padLine(' ' + chalk.gray('Equity  ') + equity + chalk.gray(` (${p.mode})`), width), padLine(' ' + change, width)];
+  const stale = p.venue.state === 'degraded' || p.venue.state === 'down' ? chalk.red(' stale') : ''; // a failing venue means these figures are the last ones it gave
+  return [padLine(' ' + chalk.gray('Equity  ') + equity + chalk.gray(` (${p.mode})`) + stale, width), padLine(' ' + change, width)];
 }
 
 export function renderCol1Lines(p: CockpitProps, width = 40, rowCount = 29): string[] {
@@ -166,12 +168,16 @@ export function renderPerfLines(p: CockpitProps, width: number = 128): string[] 
   return [chalk.yellow('╔' + rule('═', innerW) + '╗'), chalk.yellow('║') + padLine(text, innerW) + chalk.yellow('║'), chalk.yellow('╚' + rule('═', innerW) + '╝')];
 }
 
+function venueLabel({ name, state }: CockpitProps['venue']): string {
+  return chalk.gray(` │ venue ${name}`) + (state === 'local' ? '' : ' ' + VENUE_COLOR[state](`●${state}`));
+}
+
 export function renderFooterLines(p: CockpitProps, width: number = 128): string[] {
   const innerW = width - 2;
   const spinner = p.isSyncing ? chalk.yellow('⠋') : chalk.yellow('⠴');
   const orchestrator = ` │ ${runningCount(p.agents)} agents autonomous │ eval ${LOOP_INTERVAL_MS / 1000}s │ api weight `;
   const l1 = ' ' + spinner + chalk.gray(' orchestrator' + orchestrator) + chalk.white(`${p.apiWeight}/${API_WEIGHT_LIMIT}`) + chalk.gray(' │ ws ') + WS_COLOR[p.wsStatus](`●${p.wsStatus}`)
-    + chalk.gray(' │ mode ') + chalk.yellow.bold(p.mode.toUpperCase()) + chalk.gray(' │ venue BINANCE FUTURES');
+    + chalk.gray(' │ mode ') + chalk.yellow.bold(p.mode.toUpperCase()) + venueLabel(p.venue);
   const l2 = ' ' + chalk.gray('╰─ ↑↓nav cclose-pos xcancel aadvisor-audit sstop-all ?help');
   return [chalk.cyan('╭' + rule('─', innerW) + '╮'), chalk.cyan('│') + padLine(l1, innerW) + chalk.cyan('│'), chalk.cyan('│') + padLine(l2, innerW) + chalk.cyan('│'), chalk.cyan('╰' + rule('─', innerW) + '╯')];
 }

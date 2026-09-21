@@ -32,6 +32,7 @@ export const useStore = create<Store>((set) => ({
   sessionMonitored: 0,
   apiWeight: 0,
   wsStatus: 'down',
+  venue: { name: '—', state: 'down' },
   exposurePct: 0,
   minLiqDistancePct: null,
   corrBtcEth: null,

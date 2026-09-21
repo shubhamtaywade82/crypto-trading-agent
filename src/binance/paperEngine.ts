@@ -2,6 +2,7 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import type { AgentId, ExitReason, Position, Side, TradeRecord } from '../types.js';
 import { formatPrice } from './symbolRules.js';
+import { directionOf, findStopExit } from './stopRules.js';
 
 interface PaperPosition extends Position {
   orderId: string;
@@ -25,10 +26,6 @@ const MAX_TRADES = 1000;
 // Binance's lowest-tier maintenance margin rate; real tiers rise with notional
 const MAINTENANCE_MARGIN_RATE = 0.005;
 
-function directionOf(side: Side): 1 | -1 {
-  return side === 'LONG' ? 1 : -1;
-}
-
 /** Isolated-margin liquidation price; null when a 1x long cannot be liquidated. */
 function liquidationPrice(side: Side, entry: number, leverage: number): number | null {
   if (side === 'LONG' && leverage <= 1) return null;
@@ -49,19 +46,13 @@ function refreshMetrics(pos: PaperPosition): void {
 function findExit(pos: PaperPosition): { price: number; reason: ExitReason } | null {
   const direction = directionOf(pos.side);
   const liqPrice = liquidationPrice(pos.side, pos.entry, pos.leverage);
-  // Non-numeric labels ('—', 'trail', 'fund') parse to NaN and never trigger
-  const stopLoss = Number(pos.serverSl);
-  const takeProfit = Number(pos.serverTp);
 
   if (liqPrice !== null && (pos.mark - liqPrice) * direction <= 0) {
     return { price: liqPrice, reason: 'LIQUIDATED' };
   }
-  if (stopLoss > 0 && (pos.mark - stopLoss) * direction <= 0) {
-    // A stop already breached fills at the market: filling at the stop level would credit a phantom gain
-    return { price: pos.mark, reason: 'STOP LOSS' };
-  }
-  if (takeProfit > 0 && (pos.mark - takeProfit) * direction >= 0) {
-    return { price: takeProfit, reason: 'TAKE PROFIT' };
+  const stopExit = findStopExit(pos);
+  if (stopExit) {
+    return stopExit;
   }
   return null;
 }

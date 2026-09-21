@@ -1,7 +1,8 @@
 import type { AdaptiveSuperTrendBar } from '../binance/adaptiveSuperTrend.js';
 import { atr, ema, pairZScore } from '../binance/indicators.js';
 import { correlation, simpleReturns, summarizePerformance, type StrategyPerformance } from '../binance/performance.js';
-import type { AdaptiveInfo, AgentId, AgentState, AppState, Candle, FundingInfo, Position, StrategyMetrics, TradeRecord, WsStatus } from '../types.js';
+import type { VenueStatus } from '../binance/remoteBroker.js';
+import type { AdaptiveInfo, AgentId, AgentState, AppState, Candle, FundingInfo, Mode, Position, StrategyMetrics, TradeRecord, WsStatus } from '../types.js';
 
 export interface AgentRuntime { id: AgentId; status: 'RUNNING' | 'PAUSED' | 'WATCHING'; strategy: string }
 export interface SessionCounters { decisions: number; executed: number; monitored: number }
@@ -154,5 +155,36 @@ export function buildTelemetry(input: TelemetryInput): Telemetry {
     corrBtcEth: corrBtcEth(input.candles),
     agents: buildAgents(input.agents, input, perf.byStrategy),
     strategyMetrics: buildStrategyMetrics(input),
+  };
+}
+
+const FLEET_ORDER: AgentId[] = ['FUNDING-ARB-α', 'PAIRS-TRD-β', 'MOMENTUM-γ', 'ADAPTIVE-ST-ζ', 'RISK-MGR-δ', 'EXECUTOR-ε'];
+// Pairs is disabled (see the agents list), so it is shown as paused rather than omitted from the fleet
+const PAIRS_RUNTIME: AgentRuntime = { id: 'PAIRS-TRD-β', status: 'PAUSED', strategy: 'stat_pairs_zscore' };
+const ADAPTIVE_DISABLED_RUNTIME: AgentRuntime = { id: 'ADAPTIVE-ST-ζ', status: 'PAUSED', strategy: 'ml_adaptive_supertrend' };
+
+/** The running agents plus the disabled ones shown as paused, in cockpit order. */
+export function fleetRuntimes(running: AgentRuntime[], isAdaptiveEnabled: boolean): AgentRuntime[] {
+  const disabled = isAdaptiveEnabled ? [PAIRS_RUNTIME] : [PAIRS_RUNTIME, ADAPTIVE_DISABLED_RUNTIME];
+  return [...running, ...disabled].sort((a, b) => FLEET_ORDER.indexOf(a.id) - FLEET_ORDER.indexOf(b.id));
+}
+
+/** The venue the cockpit names: the remote broker with its live state, else the local paper engine or live Binance. */
+export function venueInfo(status: VenueStatus | null, mode: Mode): AppState['venue'] {
+  if (status) return { name: `${status.name} (${status.accountId})`, state: status.state };
+  return { name: mode === 'live' ? 'BINANCE FUTURES' : 'local paper engine', state: 'local' };
+}
+
+/** Skips a call while the previous one is still running: a slow venue must not let two loops act on the same signals. */
+export function singleFlight(task: () => Promise<void>): () => Promise<void> {
+  let isRunning = false;
+  return async () => {
+    if (isRunning) return;
+    isRunning = true;
+    try {
+      await task();
+    } finally {
+      isRunning = false;
+    }
   };
 }

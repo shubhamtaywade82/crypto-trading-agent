@@ -1,6 +1,7 @@
 import { BaseAgent, type MarketContext } from './BaseAgent.js';
-import type { Signal, RiskDecision, LogEntry } from '../types.js';
+import type { Signal, RiskDecision, LogEntry, Mode } from '../types.js';
 import type { BinanceService } from '../binance/client.js';
+import { isRefusal } from '../binance/remoteOrders.js';
 import { config } from '../config.js';
 import { formatPrice, formatQty, getSymbolRules, roundPrice, roundQty, STEP_EPSILON } from '../binance/symbolRules.js';
 
@@ -35,8 +36,9 @@ export class ExecutorAgent extends BaseAgent {
         takeProfit: roundOptionalPrice(signal.symbol, signal.takeProfit),
         entryPrice: roundOptionalPrice(signal.symbol, signal.entry),
       });
-      return this.log(`FILLED ${side} ${signal.symbol} qty=${formatQty(signal.symbol, qty)} orderId=${res.orderId} SL=${stopLoss === undefined ? '—' : formatPrice(signal.symbol, stopLoss)} server-side ✓`, 'success');
+      return this.log(`FILLED ${side} ${signal.symbol} qty=${formatQty(signal.symbol, qty)} orderId=${res.orderId} SL=${stopLoss === undefined ? '—' : formatPrice(signal.symbol, stopLoss)} ${stopPlacement(config.mode)}`, 'success');
     } catch (err: any) {
+      if (isRefusal(err)) return this.log(`EXECUTION REFUSED: ${err.message}`, 'warn');
       return this.log(`EXECUTION FAILED: ${err.message}`, 'error');
     }
   }
@@ -73,3 +75,6 @@ export class ExecutorAgent extends BaseAgent {
 function roundOptionalPrice(symbol: string, price?: number): number | undefined {
   return price === undefined ? undefined : roundPrice(symbol, price);
 }
+
+/** Paper exits are decided by the agent (the broker never evaluates resting orders); only live rests a stop on the exchange. */
+export const stopPlacement = (mode: Mode): string => (mode === 'live' ? 'server-side ✓' : 'agent-side');

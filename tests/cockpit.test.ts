@@ -16,7 +16,7 @@ export function baseProps(overrides: Partial<CockpitProps> = {}): CockpitProps {
     agents: [], logs: [], spotPrices: {}, isSyncing: false, totalWidth: 160, totalHeight: 58,
     initialEquity: 100_000, totalPnl: 0, totalPnlPct: 0, successRate: null, sharpe: null, maxDd: 0, var95: null,
     liqEvents: 0, sessionDecisions: 0, sessionExecuted: 0, sessionMonitored: 0, apiWeight: 0, wsStatus: 'down',
-    exposurePct: 0, minLiqDistancePct: null, corrBtcEth: null, funding: {}, strategyMetrics: null, ...overrides,
+    exposurePct: 0, minLiqDistancePct: null, corrBtcEth: null, funding: {}, strategyMetrics: null, venue: { name: 'local paper engine', state: 'local' }, ...overrides,
   } as CockpitProps;
 }
 
@@ -128,11 +128,19 @@ test('should render real log rows and leave the rest blank', () => {
   assert.ok(!text.includes('MANUAL'));
 });
 
-test('should show the websocket status and evaluation interval in the footer', () => {
+const REMOTE_NAME = 'paper_exchange (crypto-agent)';
+const at = (venue: CockpitProps['venue'], mode: CockpitProps['mode'] = 'paper') => render(baseProps({ venue, mode }));
+
+test('should show websocket, evaluation interval and venue in the footer, and mark the equity stale whenever the venue is degraded or down', () => {
   const text = render(realisticProps());
-  assert.ok(text.includes('ws ●connected'));
-  assert.ok(text.includes('eval 8s'));
-  assert.ok(text.includes('venue BINANCE FUTURES'));
+  assert.ok(text.includes('ws ●connected') && text.includes('eval 8s'));
+  for (const state of ['connected', 'degraded', 'down'] as const) {
+    const remote = at({ name: REMOTE_NAME, state });
+    assert.ok(remote.includes(`mode PAPER │ venue ${REMOTE_NAME} ●${state}`) && remote.includes('(paper) stale') === (state !== 'connected'), state);
+  }
+  const [local, live] = [at({ name: 'local paper engine', state: 'local' }), at({ name: 'BINANCE FUTURES', state: 'local' }, 'live')];
+  assert.ok(local.includes('mode PAPER │ venue local paper engine') && live.includes('mode LIVE │ venue BINANCE FUTURES'));
+  assert.ok(!local.includes('stale') && !live.includes('stale') && !local.includes('●local') && !live.includes('●local'));
 });
 
 const FLEET: AgentId[] = ['FUNDING-ARB-α', 'PAIRS-TRD-β', 'MOMENTUM-γ', 'ADAPTIVE-ST-ζ', 'RISK-MGR-δ', 'EXECUTOR-ε'];
@@ -169,18 +177,20 @@ export function worstCaseProps(): CockpitProps {
   const spotPrices = perSymbol((price) => ({ price, changePct: -12.34, low24h: price * 0.99, high24h: price * 1.01, volumeQuote: 12.34e9, sparkline: '▁▂▃▄▅▆▇█▇▆▅▄' }), (symbol) => symbol.replace('USDT', ''));
   return baseProps({
     equity: 101_994.6, initialEquity: 100_000, upnl: -234.56, marginUsed: 1_994.6, positions: worstCasePositions(), agents, spotPrices, strategyMetrics: worstCaseMetrics(), funding: {},
-    successRate: 100, sharpe: -12.34, maxDd: -3.21, var95: -1234.56, exposurePct: 24.9, minLiqDistancePct: 12.34, corrBtcEth: -0.84,
+    successRate: 100, sharpe: -12.34, venue: { name: REMOTE_NAME, state: 'connected' }, maxDd: -3.21, var95: -1234.56, exposurePct: 24.9, minLiqDistancePct: 12.34, corrBtcEth: -0.84,
     sessionDecisions: 1234, sessionExecuted: 123, sessionMonitored: 1111, apiWeight: 2399, wsStatus: 'reconnecting', liqEvents: 12,
   });
 }
 
 const SIZES: [number, number][] = [[MIN_COLS, MIN_ROWS], [200, 58]];
 
-test('should truncate nothing and show every signed uPnL at the minimum and a wide size', () => {
+test('should truncate nothing and show every signed uPnL at the minimum and a wide size, connected or down', () => {
   for (const [totalWidth, totalHeight] of SIZES) {
-    const text = render({ ...worstCaseProps(), totalWidth, totalHeight });
-    assert.ok(!text.includes('…'), `ellipsis at ${totalWidth}x${totalHeight}`);
-    for (const upnl of WORST_UPNL) assert.ok(text.includes(upnl), `${upnl} missing at ${totalWidth}x${totalHeight}`);
+    for (const state of ['connected', 'down'] as const) {
+      const text = render({ ...worstCaseProps(), venue: { name: REMOTE_NAME, state }, totalWidth, totalHeight });
+      assert.ok(!text.includes('…') && text.includes(`●${state}`), `ellipsis or venue missing at ${totalWidth}x${totalHeight} ${state}`);
+      for (const upnl of WORST_UPNL) assert.ok(text.includes(upnl), `${upnl} missing at ${totalWidth}x${totalHeight}`);
+    }
   }
 });
 
@@ -243,6 +253,7 @@ test('should render the store seed as an empty account, not a fabricated balance
   assert.ok(!text.includes('100,000'));
   assert.ok(text.includes('Equity  —'));
   assert.ok(text.includes('liq events —'));
+  assert.ok(text.includes('venue — ●down') && text.includes('Equity  — (paper) stale'));
 });
 
 test('should derive total PnL from equity so the two lines never disagree', () => {
@@ -287,5 +298,3 @@ test('should display both UTC and local timezone time in header when available',
   assert.ok(fallback.includes('08:36:06 UTC') && !fallback.includes('08:36:06 UTC │'));
   assert.match(formatLocalTime(new Date(2026, 8, 20, 14, 6, 6)), /^14:06:06(\s+[A-Za-z0-9+-:]+)?$/);
 });
-
-

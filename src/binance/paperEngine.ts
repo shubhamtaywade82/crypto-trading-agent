@@ -2,6 +2,7 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import type { AgentId, ExitReason, Position, Side, TradeRecord } from '../types.js';
 import { formatPrice } from './symbolRules.js';
+import { OwnershipError } from './remoteOrders.js';
 import { directionOf, findStopExit } from './stopRules.js';
 
 interface PaperPosition extends Position {
@@ -135,6 +136,7 @@ export class PaperEngine {
     if (!price) throw new Error(`Paper fill rejected for ${params.symbol}: no price available`);
 
     const side: Side = params.side === 'BUY' ? 'LONG' : 'SHORT';
+    if (!params.reduceOnly) this.assertSymbolNotHeldByOther(params);
     if (params.reduceOnly) {
       if (existing) this.reduce(existing, params.qty, price, 'CLOSE');
     } else if (!existing) {
@@ -149,6 +151,12 @@ export class PaperEngine {
     this.syncEquity();
     this.persist();
     return { orderId: Date.now(), status: 'FILLED' };
+  }
+
+  /** One strategy per symbol, the same rule the remote broker enforces (real exchanges net a symbol into one position). */
+  private assertSymbolNotHeldByOther(params: FillParams): void {
+    const holder = this.positions.find((p) => p.symbol === params.symbol && p.strategy !== params.strategy);
+    if (holder) throw new OwnershipError(`${params.symbol} is held by ${holder.strategy}; ${params.strategy} may not trade it`);
   }
 
   /** Books realized PnL on up to qty of pos and journals it; returns the unfilled remainder. */

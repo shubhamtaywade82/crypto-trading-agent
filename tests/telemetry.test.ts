@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import type { Candle, Position, TradeRecord } from '../src/types.js';
-import { buildTelemetry, singleFlight, venueInfo, type TelemetryInput } from '../src/runtime/telemetry.js';
+import { buildTelemetry, fleetRuntimes, singleFlight, venueInfo, type TelemetryInput } from '../src/runtime/telemetry.js';
 import type { VenueStatus } from '../src/binance/remoteBroker.js';
 
 const closes = (values: number[]): Candle[] => values.map((c, i) => ({ openTime: i, open: c, high: c + 1, low: c - 1, close: c, volume: 1 }));
@@ -79,6 +79,17 @@ test('should keep per-strategy attribution and a liquidation count in paper mode
   assert.equal(t.liqEvents, 0);
   assert.equal(t.agents[2].positions, 0);
   assert.equal(t.agents[2].pnl, 0);
+});
+
+test('should carry the risk agent note into its fleet entry and leave the other agents without one', () => {
+  const running = [
+    { id: 'RISK-MGR-δ' as const, status: 'WATCHING' as const, strategy: 'liquidation_guard_isolated', note: 'HALTED' },
+    { id: 'EXECUTOR-ε' as const, status: 'RUNNING' as const, strategy: 'binance_order_routing', note: undefined },
+  ];
+  const agents = buildTelemetry(input({ agents: fleetRuntimes(running, true) })).agents;
+  assert.equal(agents.find((a) => a.id === 'RISK-MGR-δ')?.note, 'HALTED');
+  assert.equal(agents.find((a) => a.id === 'EXECUTOR-ε')?.note, undefined);
+  assert.equal(agents.find((a) => a.id === 'PAIRS-TRD-β')?.note, undefined);
 });
 
 const remote = (state: VenueStatus['state']): VenueStatus => ({ name: 'paper_exchange', accountId: 'crypto-agent', state, lastError: null, lastSyncAt: 0 });

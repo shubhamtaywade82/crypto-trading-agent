@@ -66,6 +66,7 @@ export interface TradeRecord {
   pnl: number;
   reason: ExitReason;
   closedAt: number;
+  initialRisk?: number; // the position's 1R in price units, so an exit can be shown as an R multiple
 }
 
 /** What the LLM sees when asked to veto an entry; all numbers come from deterministic code. */
@@ -97,6 +98,7 @@ export interface AgentState {
   positions: number | null; // null when live mode cannot attribute positions to a strategy
   winRate: number | null;
   pnl: number | null;
+  note?: string; // short status suffix for the fleet row, e.g. the risk circuit state; absent when nothing is worth flagging
 }
 
 export interface MarketPriceInfo {

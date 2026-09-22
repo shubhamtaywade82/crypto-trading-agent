@@ -167,6 +167,7 @@ export class PaperEngine {
     this.trades.push({
       symbol: pos.symbol, strategy: pos.strategy, side: pos.side, entry: pos.entry,
       exit: price, qty: closeQty, pnl, reason, closedAt: Date.now(),
+      ...(pos.initialRisk === undefined ? {} : { initialRisk: pos.initialRisk }),
     });
     if (this.trades.length > MAX_TRADES) this.trades.shift();
     pos.qty -= closeQty;

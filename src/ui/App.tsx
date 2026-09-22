@@ -75,12 +75,13 @@ export default function App() {
     if (key.downArrow) setSelPos(clampSelection(selectedIndex + 1, positions.length));
     if (input === 'c' && selectedPosition) orchestrator.closePosition(selectedPosition);
     if (input === 'x') orchestrator.cancelAll();
+    if (input === 'k') orchestrator.toggleKillSwitch();
     if (input === 'a' || input === 'i') orchestrator.askAdvisor();
     if (input === '?') {
       pushLog({
         ts: Date.now(),
         agent: 'SYSTEM',
-        msg: 'COMMANDS: ↑↓ select pos │ c close pos │ x cancel all │ a advisor audit │ s stop',
+        msg: 'COMMANDS: ↑↓ select pos │ c close pos │ x cancel all │ k kill-switch │ a advisor audit │ s stop',
         level: 'info',
       });
     }

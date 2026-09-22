@@ -91,6 +91,18 @@ test('should compute gross pnl by direction when building a closed trade', () =>
   assert.deepEqual(closedTrade({ ...closed, side: 'LONG' }, 110, 'CLOSE', 7), { ...trade(7), qty: 2, pnl: 20, reason: 'CLOSE' });
 });
 
+test('should carry the initial risk into the closed trade only when it is known', () => {
+  const closed = { symbol: 'BTCUSDT', owner: 'MOMENTUM-γ' as const, side: 'LONG' as const, entry: 100, qty: 2 };
+  assert.equal(closedTrade({ ...closed, initialRisk: 10 }, 110, 'CLOSE', 7).initialRisk, 10);
+  assert.equal('initialRisk' in closedTrade(closed, 110, 'CLOSE', 7), false);
+});
+
+test('should keep initialRisk on a journaled trade across a reload', () => {
+  const file = tempFile();
+  new RemoteStore(file, 'acct').recordClose({ ...trade(3), initialRisk: 10 });
+  assert.equal(new RemoteStore(file, 'acct').trades()[0].initialRisk, 10);
+});
+
 test('should queue a notice naming both account ids before a sidecar of another account is overwritten', (t) => {
   const file = tempFile();
   new RemoteStore(file, 'acct-a').setMeta('BTCUSDT', meta);

@@ -134,3 +134,19 @@ test('should persist the journal across restarts', async () => {
   await new Promise((resolve) => setTimeout(resolve, 400)); // debounced persist
   assert.equal(new PaperEngine(file).getTrades().length, 1);
 });
+
+test('should journal the position initial risk on every exit so the R multiple can be shown', () => {
+  const engine = freshEngine();
+  engine.openPosition({ ...base, side: 'BUY', qty: 1, entryPrice: 100, stopLoss: 90, takeProfit: 130 });
+  engine.markAll({ BTCUSDT: 131 });
+  engine.openPosition({ ...base, side: 'SELL', qty: 1, entryPrice: 100, stopLoss: 105 });
+  engine.openPosition({ ...base, side: 'BUY', qty: 1, entryPrice: 100, stopLoss: 96 });
+  assert.deepEqual(engine.getTrades().map((t) => [t.reason, t.initialRisk]), [['TAKE PROFIT', 10], ['FLIP', 5]]);
+});
+
+test('should leave initialRisk off a trade whose position had no stop', () => {
+  const engine = freshEngine();
+  engine.openPosition({ ...base, side: 'BUY', qty: 1, entryPrice: 100 });
+  engine.openPosition({ ...base, side: 'SELL', qty: 1, entryPrice: 101, reduceOnly: true });
+  assert.equal('initialRisk' in engine.getTrades()[0], false);
+});

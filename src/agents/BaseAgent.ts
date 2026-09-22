@@ -2,6 +2,8 @@ import { EventEmitter } from 'node:events';
 import type { Signal, Position, LogEntry } from '../types.js';
 import type { BinanceService } from '../binance/client.js';
 import type { VenueState } from '../binance/remoteBroker.js';
+import type { PerformanceSnapshot } from '../risk/performanceEngine.js';
+import type { CircuitState } from '../risk/riskConfig.js';
 
 export interface MarketContext {
   candles: Record<string, any[]>;
@@ -10,6 +12,8 @@ export interface MarketContext {
   spot: Record<string, number>;
   equity: number;
   positions?: Position[];
+  /** Built by the Orchestrator only when RISK_ENGINE is on; the risk engine fails closed without it. */
+  performance?: { circuit: CircuitState; snapshot: PerformanceSnapshot };
 }
 
 // Momentum re-fires every 8s tick while the forming 15m candle stays across EMA50

@@ -73,8 +73,8 @@ test('liquidity engine detects a sell-side sweep through a prior swing low', () 
     { ...makeCandle(6, 12), high: 13, low: 10.5 },
     { ...makeCandle(7, 12.5), high: 13.5, low: 11 },
     { ...makeCandle(8, 12), high: 13, low: 10.5 },
-    { ...makeCandle(9, 10.8), high: 12, low: 8.7 },
-    { ...makeCandle(10, 11.5), high: 12.5, low: 10.5 },
+    { ...makeCandle(9, 10.8), high: 12, low: 9.5 },
+    { ...makeCandle(10, 11.5), high: 12.5, low: 8.0 },
   ];
 
   const structure = analyzeStructure('15m', candles, 1.5, 1);
@@ -95,7 +95,7 @@ test('MarketStateBuilder produces a deterministic read-only snapshot from closed
 
   assert.equal(state1.version, 1);
   assert.equal(state1.symbol, 'BTCUSDT');
-  assert.ok(state1.timeframes['15m'].candleCount === 299);
+  assert.equal(state1.timeframes['15m'].candleCount, 299);
   assert.ok(state1.timeframes['1h'].candleCount > 50);
   assert.ok(state1.timeframes['1h'].adx14 !== null);
   assert.ok(state1.timeframes['15m'].vwap !== null);

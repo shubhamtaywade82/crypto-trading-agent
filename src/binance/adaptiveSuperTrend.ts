@@ -1,6 +1,7 @@
 // TypeScript port of AlgoAlpha's "Machine Learning Adaptive SuperTrend" (Pine, MPL-2.0).
 // SuperTrend bands use the K-Means volatility centroid instead of the raw ATR.
 import type { Candle } from '../types.js';
+import { wilderAtr } from './indicators.js';
 
 export type Regime = 'HIGH' | 'MEDIUM' | 'LOW';
 export type TrendDirection = 'BULLISH' | 'BEARISH';
@@ -34,19 +35,7 @@ export const TP_ATR_MULTIPLE: Record<Regime, number> = { LOW: 2, MEDIUM: 3, HIGH
 // Order is the tie priority: an equidistant value joins the higher-volatility cluster
 const REGIMES: Regime[] = ['HIGH', 'MEDIUM', 'LOW'];
 
-/** Wilder-smoothed ATR (Pine ta.atr); NaN until `period` true ranges exist. */
-export function wilderAtr(candles: Candle[], period: number): number[] {
-  const atr = new Array<number>(candles.length).fill(NaN);
-  let trSum = 0;
-  candles.forEach((c, i) => {
-    const previousClose = i > 0 ? candles[i - 1].close : c.close;
-    const trueRange = Math.max(c.high - c.low, Math.abs(c.high - previousClose), Math.abs(c.low - previousClose));
-    if (i < period) trSum += trueRange;
-    if (i === period - 1) atr[i] = trSum / period;
-    if (i >= period) atr[i] = (atr[i - 1] * (period - 1) + trueRange) / period;
-  });
-  return atr;
-}
+export { wilderAtr };
 
 export function nearestRegime(value: number, centroids: Centroids): Regime {
   let best: Regime = 'HIGH';

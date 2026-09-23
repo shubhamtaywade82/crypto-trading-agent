@@ -165,16 +165,39 @@ async function runWithConcurrency(tasks: Task[], limit: number): Promise<void> {
   await Promise.all(Array.from({ length: Math.min(limit, tasks.length) }, () => worker()));
 }
 
+class RequestLimiter {
+  private active = 0;
+  private readonly queue: (() => void)[] = [];
+
+  constructor(private readonly limit: number) {}
+
+  async run<T>(task: () => Promise<T>): Promise<T> {
+    while (this.active >= this.limit) {
+      await new Promise<void>((resolve) => this.queue.push(resolve));
+    }
+    this.active++;
+    try {
+      return await task();
+    } finally {
+      this.active--;
+      this.queue.shift()?.();
+    }
+  }
+}
+
 export class MarketDataService {
   private readonly client: FuturesMarketClient;
   private readonly options: MarketDataServiceOptions;
+  private readonly limiter: RequestLimiter;
   private readonly candles = new Map<string, CacheEntry<Candle[]>>();
   private readonly derivative = new Map<string, CacheEntry<DerivativesSnapshot | null>>();
   private readonly inFlight = new Map<string, Promise<void>>();
+  private readonly failureBackoff = new Map<string, number>();
 
   constructor(client: FuturesMarketClient, options: MarketDataServiceOptions = DEFAULT_MARKET_DATA_OPTIONS) {
     this.client = client;
     this.options = options;
+    this.limiter = new RequestLimiter(options.maxConcurrency);
   }
 
   async snapshot(symbols: string[], now = Date.now()): Promise<Record<string, MarketDataSnapshot>> {
@@ -194,7 +217,11 @@ export class MarketDataService {
       }
     }
 
+    const inFlightPromises = Array.from(this.inFlight.values());
     await runWithConcurrency(tasks, this.options.maxConcurrency);
+    if (inFlightPromises.length > 0) {
+      await Promise.allSettled(inFlightPromises);
+    }
 
     const snapshots: Record<string, MarketDataSnapshot> = {};
     for (const symbol of symbols) {
@@ -221,6 +248,8 @@ export class MarketDataService {
   }
 
   private needsRefresh(key: string, ttlMs: number, now: number): boolean {
+    const backoffUntil = this.failureBackoff.get(key) ?? 0;
+    if (now < backoffUntil) return false;
     const cachedAt = this.candles.get(key)?.fetchedAt ?? this.derivative.get(key)?.fetchedAt ?? 0;
     return now - cachedAt >= ttlMs && !this.inFlight.has(key);
   }
@@ -231,15 +260,21 @@ export class MarketDataService {
     if (existing) return existing;
 
     const promise = (async () => {
-      const raw = await this.requestLimiter.run(() => this.client.getKlines({
-        symbol,
-        interval: timeframe,
-        limit: this.options.klineLimit,
-      }));
-      this.candles.set(key, {
-        fetchedAt: now,
-        value: parseCandles(raw as any[], timeframe, now, this.options.klineLimit),
-      });
+      try {
+        const raw = await this.limiter.run(() => this.client.getKlines({
+          symbol,
+          interval: timeframe,
+          limit: this.options.klineLimit,
+        }));
+        this.candles.set(key, {
+          fetchedAt: now,
+          value: parseCandles(raw as any[], timeframe, now, this.options.klineLimit),
+        });
+        this.failureBackoff.delete(key);
+      } catch (err) {
+        this.failureBackoff.set(key, now + 10_000);
+        throw err;
+      }
     })().finally(() => this.inFlight.delete(key));
 
     this.inFlight.set(key, promise);
@@ -263,20 +298,20 @@ export class MarketDataService {
         book,
         basisHistory,
       ] = await Promise.allSettled([
-        this.client.getOpenInterest({ symbol }),
-        this.client.getOpenInterestStatistics({ symbol, period, limit: this.options.historyLimit }),
-        this.client.getGlobalLongShortAccountRatio({ symbol, period, limit: this.options.historyLimit }),
-        this.client.getTopTradersLongShortAccountRatio({ symbol, period, limit: this.options.historyLimit }),
-        this.client.getTopTradersLongShortPositionRatio({ symbol, period, limit: this.options.historyLimit }),
-        this.client.getTakerBuySellVolume({ symbol, period, limit: this.options.historyLimit }),
-        this.client.getOrderBook({ symbol, limit: this.options.orderBookDepth }),
+        this.limiter.run(() => this.client.getOpenInterest({ symbol })),
+        this.limiter.run(() => this.client.getOpenInterestStatistics({ symbol, period, limit: this.options.historyLimit })),
+        this.limiter.run(() => this.client.getGlobalLongShortAccountRatio({ symbol, period, limit: this.options.historyLimit })),
+        this.limiter.run(() => this.client.getTopTradersLongShortAccountRatio({ symbol, period, limit: this.options.historyLimit })),
+        this.limiter.run(() => this.client.getTopTradersLongShortPositionRatio({ symbol, period, limit: this.options.historyLimit })),
+        this.limiter.run(() => this.client.getTakerBuySellVolume({ symbol, period, limit: this.options.historyLimit })),
+        this.limiter.run(() => this.client.getOrderBook({ symbol, limit: this.options.orderBookDepth as 5 | 10 | 20 | 50 | 100 | 500 | 1000 | 5000 })),
         this.options.basisEnabled
-          ? this.client.getBasis({
+          ? this.limiter.run(() => this.client.getBasis({
               pair: symbol.replace(/USDT$/, ''),
               contractType: 'PERPETUAL',
               period,
               limit: this.options.historyLimit,
-            })
+            }))
           : Promise.resolve([]),
       ]);
 

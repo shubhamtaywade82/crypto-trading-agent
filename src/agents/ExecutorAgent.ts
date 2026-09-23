@@ -67,7 +67,7 @@ export class ExecutorAgent extends BaseAgent {
       throw new Error(`notional ${(qty * entryPrice).toFixed(2)} USDT is below the minimum notional ${minNotional} for ${symbol}`);
     }
     // Funding harvest earns by shorting the perp when funding is positive
-    const isShort = signal.type === 'OPEN_SHORT' || signal.type === 'OPEN_HEDGE';
+    const isShort = signal.type === 'OPEN_SHORT' || signal.type === 'OPEN_HEDGE' || signal.type === 'OPEN_FUNDING_SHORT';
     return { side: isShort ? 'SELL' : 'BUY', qty };
   }
 }

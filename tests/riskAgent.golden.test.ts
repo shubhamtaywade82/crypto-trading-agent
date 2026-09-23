@@ -34,6 +34,7 @@ const cases: Case[] = [
   { name: 'missing stop', signal: signal({ stopLoss: undefined }), ctx: context(), expected: rejected('missing entry/SL') },
   { name: 'stop equal to entry', signal: signal({ stopLoss: 100 }), ctx: context(), expected: rejected('stop loss matches entry') },
   { name: 'hedge with notional', signal: signal({ type: 'OPEN_HEDGE', agent: 'FUNDING-ARB-α', entry: undefined, stopLoss: undefined, notionalUsdt: 5_000 }), ctx: context(), expected: decision(5_000, 5, Infinity, 'funding harvest 5x isolated') },
+  { name: 'funding short with notional', signal: signal({ type: 'OPEN_FUNDING_SHORT', agent: 'FUNDING-ARB-α', entry: undefined, stopLoss: undefined, notionalUsdt: 5_000 }), ctx: context(), expected: decision(5_000, 5, Infinity, 'funding harvest 5x isolated') },
   { name: 'hedge without notional falls back to the risk budget', signal: signal({ type: 'OPEN_HEDGE', agent: 'FUNDING-ARB-α', entry: undefined, stopLoss: undefined }), ctx: context(), expected: decision(1_000, 5, Infinity, 'funding harvest 5x isolated') },
   { name: 'hedge above the exposure limit is capped', signal: signal({ type: 'OPEN_HEDGE', agent: 'FUNDING-ARB-α', entry: undefined, stopLoss: undefined, notionalUsdt: 90_000 }), ctx: context(), expected: decision(80_000, 5, Infinity, 'funding harvest 5x isolated') },
   { name: 'long with a stop above entry is still approved', signal: signal({ stopLoss: 104 }), ctx: context(), expected: decision(25_000, 8, 2.6666666666666665, 'size=$25000 lev=8x buffer=2.7xATR') },

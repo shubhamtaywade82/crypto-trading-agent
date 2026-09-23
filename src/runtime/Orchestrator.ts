@@ -5,6 +5,9 @@ import { BinanceService } from '../binance/client.js';
 import { FundingArbAgent } from '../agents/FundingArbAgent.js';
 import { MomentumAgent } from '../agents/MomentumAgent.js';
 import { AdaptiveSuperTrendAgent } from '../agents/AdaptiveSuperTrendAgent.js';
+import { StructureTrendAgent } from '../agents/StructureTrendAgent.js';
+import { MeanReversionAgent } from '../agents/MeanReversionAgent.js';
+import { CrowdingAgent } from '../agents/CrowdingAgent.js';
 import { RiskAgent } from '../agents/RiskAgent.js';
 import { ExecutorAgent } from '../agents/ExecutorAgent.js';
 import { OllamaAdvisor } from '../ollama/advisor.js';
@@ -17,6 +20,8 @@ import { announceStartup, buildOps, refreshPortfolio, RiskOps, toggleKillSwitch 
 import { config, LOOP_INTERVAL_MS } from '../config.js';
 import type { AdaptiveSuperTrendBar } from '../binance/adaptiveSuperTrend.js';
 import { MarketStateBuilder } from '../market/MarketStateBuilder.js';
+import { fuseSignals } from '../decision/SignalFusion.js';
+import { evaluateExecutionQuality } from '../execution/ExecutionQuality.js';
 
 type CycleContext = MarketContext & {
   tickers: Record<string, { price: number; changePct: number; high24h?: number; low24h?: number; volumeQuote?: number }>;
@@ -27,10 +32,14 @@ export class Orchestrator extends EventEmitter {
   private binance = new BinanceService();
   private marketStateBuilder = new MarketStateBuilder();
   private adaptive = new AdaptiveSuperTrendAgent(this.binance);
+  private structureTrend = new StructureTrendAgent(this.binance);
+  private meanRevert = new MeanReversionAgent(this.binance);
+  private crowding = new CrowdingAgent(this.binance);
   private agents: BaseAgent[] = [
     new FundingArbAgent(this.binance),
     new MomentumAgent(this.binance),
     ...(config.mode === 'paper' ? [this.adaptive] : []),
+    ...(config.marketStateV1 === 'on' ? [this.structureTrend, this.meanRevert, this.crowding] : []),
   ];
   private killSwitch = new KillSwitch();
   private risk = new RiskAgent(this.binance, { killSwitch: this.killSwitch });
@@ -59,20 +68,12 @@ export class Orchestrator extends EventEmitter {
     const runLoop = singleFlight(() => this.loop().catch((err: Error) => this.log('SYSTEM', `Loop crashed: ${err.message}`, 'error')));
     this.binance.loadSymbolRules(config.symbols)
       .catch((err: Error) => this.log('SYSTEM', `Symbol precision load failed (${err.message}); using 2dp defaults`, 'warn'))
-      .then(() => this.initVenue())
-      .finally(runLoop);
+      .then(() => this.initVenue()).finally(runLoop);
     this.timer = setInterval(runLoop, LOOP_INTERVAL_MS);
     this.stopWs = this.binance.startRealtimeStream(config.symbols, (sym, price) => this.handleRealtimeTick(sym, price));
     this.hooks.start(this.binance);
   }
-
-  stop() {
-    if (this.timer) clearInterval(this.timer);
-    this.stopWs?.();
-    this.stopWs = null;
-    this.hooks.stop();
-  }
-
+  stop() { if (this.timer) clearInterval(this.timer); this.stopWs?.(); this.stopWs = null; this.hooks.stop(); }
   flushOnShutdown(): void { this.binance.flushPaperEngine(); }
   toggleKillSwitch(): void { flipKillSwitch(this.killSwitch, this.hooks, (message) => this.log('SYSTEM', message, 'warn')); }
 
@@ -81,16 +82,9 @@ export class Orchestrator extends EventEmitter {
     this.putTicker(sym, { ...(this.liveTickers[sym] ?? { changePct: 0 }), price });
     if (this.pendingTickFlush) return;
     this.pendingTickFlush = true;
-    setTimeout(() => {
-      this.pendingTickFlush = false;
-      this.flushRealtimeTick().catch((err: unknown) => this.logFailure('Tick flush failed', err));
-    }, 60);
+    setTimeout(() => { this.pendingTickFlush = false; this.flushRealtimeTick().catch((err: unknown) => this.logFailure('Tick flush failed', err)); }, 60);
   }
-
-  private putTicker(sym: string, info: MarketPriceInfo): void {
-    this.liveTickers[sym.replace('USDT', '')] = info;
-    this.liveTickers[sym] = info;
-  }
+  private putTicker(sym: string, info: MarketPriceInfo): void { this.liveTickers[sym.replace('USDT', '')] = this.liveTickers[sym] = info; }
 
   private async flushRealtimeTick(): Promise<void> {
     this.logExits();
@@ -99,19 +93,13 @@ export class Orchestrator extends EventEmitter {
     const account = await this.binance.getAccount();
     this.emit('state', { ...accountFields(account, positions), spotPrices: { ...this.liveTickers }, serverTime: Date.now() });
   }
-
   async closePosition(pos: Position) {
     this.log('SYSTEM', `Manual close ${pos.symbol} ${pos.side}`, 'warn');
     await this.binance.closePosition(pos).catch((err: unknown) => this.logFailure(`Close ${pos.symbol} failed`, err));
   }
-
-  async cancelAll() {
-    for (const sym of config.symbols) await this.binance.cancelAll(sym);
-    this.log('SYSTEM', 'All pending orders cancelled', 'warn');
-  }
-
+  async cancelAll() { for (const sym of config.symbols) await this.binance.cancelAll(sym); this.log('SYSTEM', 'All pending orders cancelled', 'warn'); }
   pauseAgent(id: string) {
-    const agent = [...this.agents, this.risk, this.executor].find(a => a.id === id);
+    const agent = [...this.agents, this.risk, this.executor].find((a) => a.id === id);
     if (!agent) return;
     agent.status = agent.status === 'PAUSED' ? 'RUNNING' : 'PAUSED';
     this.log('SYSTEM', `${id} ${agent.status}`, 'info');
@@ -152,15 +140,9 @@ export class Orchestrator extends EventEmitter {
     if (!this.binance.hasVenueData()) await this.initVenue();
     return this.binance.hasVenueData();
   }
-
   private async initVenue(): Promise<void> {
-    try {
-      await this.binance.initVenue();
-      this.lastInitError = null;
-    } catch (err) {
-      if (errorText(err) !== this.lastInitError) this.log('SYSTEM', `Venue init failed: ${errorText(err)}`, 'error');
-      this.lastInitError = errorText(err);
-    }
+    try { await this.binance.initVenue(); this.lastInitError = null; }
+    catch (err) { if (errorText(err) !== this.lastInitError) this.log('SYSTEM', `Venue init failed: ${errorText(err)}`, 'error'); this.lastInitError = errorText(err); }
   }
 
   private noteVenue(): void {
@@ -173,13 +155,22 @@ export class Orchestrator extends EventEmitter {
   }
 
   private async collectSignals(ctx: MarketContext): Promise<Signal[]> {
-    const signals: Signal[] = [];
+    const raw: Signal[] = [];
     for (const agent of this.agents) {
       const out = await agent.run(ctx);
-      signals.push(...out);
+      raw.push(...out);
       for (const s of out) this.log(s.agent, `${s.symbol}: ${s.reason} (conf ${(s.confidence * 100).toFixed(0)}%)`, 'info');
     }
-    return signals;
+    // New multi-strategy agents participate in signal fusion; legacy agents bypass it.
+    const FUSION_AGENTS = new Set<string>(['STRUCTURE-TREND-η', 'MEAN-REVERT-θ', 'CROWDING-ι']);
+    const legacy = raw.filter((s) => !FUSION_AGENTS.has(s.agent));
+    const candidates = raw.filter((s) => FUSION_AGENTS.has(s.agent));
+    if (candidates.length === 0) return legacy;
+    const states = ctx.marketState ?? {};
+    const intents = fuseSignals(candidates, states);
+    const fused = intents.flatMap(({ symbol, sourceAgent }) => candidates.filter((s) => s.symbol === symbol && s.agent === sourceAgent));
+    if (candidates.length !== fused.length) this.log('SYSTEM', `SignalFusion: ${candidates.length - fused.length} candidate(s) filtered by conflict resolution`, 'info');
+    return [...legacy, ...fused];
   }
 
   private async processSignals(signals: Signal[], ctx: MarketContext): Promise<void> {
@@ -196,6 +187,9 @@ export class Orchestrator extends EventEmitter {
         continue;
       }
       if (await this.isVetoed(signal, ctx)) { this.counters.monitored += 1; continue; }
+      const derivatives = ctx.marketDataV2?.[signal.symbol]?.derivatives ?? null;
+      const eq = evaluateExecutionQuality({ symbol: signal.symbol, side: signal.type.includes('SHORT') ? 'SHORT' : 'LONG', sourceAgent: signal.agent, evidenceScore: Math.round(signal.confidence * 100), entry: signal.entry ?? 0, stopLoss: signal.stopLoss ?? 0, takeProfit: signal.takeProfit ?? 0, reasons: [signal.reason] }, derivatives, decision.positionSizeUsdt);
+      if (!eq.approved) { this.log(signal.agent, `EQ BLOCK ${signal.symbol}: ${eq.reason}`, 'warn'); this.counters.monitored += 1; continue; }
       const log = await this.executor.execute(signal, decision);
       this.log(log.agent, log.msg, log.level);
       this.hooks.onOrder(signal, decision, log, ctx);
@@ -231,11 +225,9 @@ export class Orchestrator extends EventEmitter {
     for (const line of this.binance.markAll(this.livePrices)) this.log('SYSTEM', line, 'warn');
     this.hooks.onExit(this.binance.getTrades());
   }
-
   private logFailure(what: string, err: unknown): void {
     this.log('SYSTEM', `${what}: ${errorText(err)}`, isRefusal(err) ? 'warn' : 'error');
   }
-
   private async consultAdvisor(signals: Signal[], positions: Position[]): Promise<void> {
     if (signals.length === 0) return;
     const advice = await this.advisor.advise(positions, signals.map((s) => s.reason));
@@ -250,8 +242,7 @@ export class Orchestrator extends EventEmitter {
     const account = await this.binance.getAccount();
     const marketState = config.marketStateV1 === 'on'
       ? this.marketStateBuilder.buildAll(config.symbols.map((symbol) => ({
-          symbol,
-          candles: market.candles[symbol] ?? [],
+          symbol, candles: market.candles[symbol] ?? [],
           candlesByTimeframe: market.marketDataV2?.[symbol]?.candles,
           derivatives: market.marketDataV2?.[symbol]?.derivatives,
           mark: market.marks[symbol] ?? this.livePrices[symbol] ?? 0,
@@ -272,8 +263,7 @@ export class Orchestrator extends EventEmitter {
     const adaptive: Record<string, AdaptiveSuperTrendBar | undefined> = Object.fromEntries(config.symbols.map((s) => [s, this.adaptive.stateFor(s)]));
     const running = [...this.agents, this.risk, this.executor].map(({ id, status, strategy }) => ({ id: id as AgentId, status, strategy, note: id === this.risk.id ? this.ops.note : undefined }));
     return buildTelemetry({
-      account, positions, adaptive,
-      trades: this.binance.getTrades(),
+      account, positions, adaptive, trades: this.binance.getTrades(),
       candles: ctx.candles, funding: ctx.funding, nextFundingTime: ctx.nextFundingTime,
       agents: fleetRuntimes(running, this.agents.includes(this.adaptive)), counters: this.counters,
       apiWeight: this.binance.getApiWeight(), wsStatus: this.binance.getWsStatus(), now: Date.now(),
@@ -293,12 +283,8 @@ export class Orchestrator extends EventEmitter {
     const account = await this.binance.getAccount();
     this.refreshLiveTickers(ctx);
     this.emit('state', {
-      mode: config.mode,
-      ...accountFields(account, positions),
-      funding: ctx.funding,
-      spotPrices: { ...this.liveTickers },
-      ...this.telemetryFor(ctx, account, positions),
-      serverTime: Date.now(),
+      mode: config.mode, ...accountFields(account, positions), funding: ctx.funding,
+      spotPrices: { ...this.liveTickers }, ...this.telemetryFor(ctx, account, positions), serverTime: Date.now(),
     });
   }
 

@@ -7,6 +7,7 @@ export interface SymbolRules {
   stepSize: number;
   minQty: number;
   minNotional: number;
+  fundingIntervalHours?: number;
 }
 
 // Used until exchange info loads, and for symbols it does not list
@@ -37,7 +38,7 @@ export function rulesFromExchangeInfo(info: FuturesSymbolExchangeInfo): SymbolRu
   const priceFilter = info.filters.find((f) => f.filterType === 'PRICE_FILTER');
   const lotFilter = info.filters.find((f) => f.filterType === 'LOT_SIZE');
   const notionalFilter = info.filters.find((f) => f.filterType === 'MIN_NOTIONAL');
-  return {
+  const rules: SymbolRules = {
     pricePrecision: info.pricePrecision,
     quantityPrecision: info.quantityPrecision,
     tickSize: Number(priceFilter && 'tickSize' in priceFilter ? priceFilter.tickSize : 10 ** -info.pricePrecision),
@@ -45,6 +46,10 @@ export function rulesFromExchangeInfo(info: FuturesSymbolExchangeInfo): SymbolRu
     minQty: Number(lotFilter && 'minQty' in lotFilter ? lotFilter.minQty : 0),
     minNotional: Number(notionalFilter && 'notional' in notionalFilter ? notionalFilter.notional : 0),
   };
+  if (typeof (info as any).fundingIntervalHours === 'number') {
+    rules.fundingIntervalHours = (info as any).fundingIntervalHours;
+  }
+  return rules;
 }
 
 /** Nearest valid tick for the symbol; the exchange rejects prices off the tick grid. */

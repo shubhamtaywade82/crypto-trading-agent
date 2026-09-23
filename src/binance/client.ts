@@ -14,15 +14,8 @@ const KLINE_INTERVAL = '15m';
 const KLINE_LIMIT = 300;
 
 type OpenPositionParams = {
-  symbol: string;
-  side: 'BUY' | 'SELL';
-  qty: number;
-  leverage: number;
-  strategy: AgentId;
-  stopLoss?: number;
-  takeProfit?: number;
-  reduceOnly?: boolean;
-  entryPrice?: number;
+  symbol: string; side: 'BUY' | 'SELL'; qty: number; leverage: number;
+  strategy: AgentId; stopLoss?: number; takeProfit?: number; reduceOnly?: boolean; entryPrice?: number;
 };
 
 const REMOTE_STATE_FILE = 'data/remote-state.json';
@@ -60,23 +53,17 @@ export class BinanceService {
   startRealtimeStream(symbols: string[], onTick: (symbol: string, price: number) => void): () => void {
     const silent = { silly: () => {}, verbose: () => {}, info: () => {}, warning: () => {}, error: () => {} };
     this.ws = new WebsocketClient({ beautify: false }, silent as any);
-    this.ws.on('open', () => { this.wsStatus = 'connected'; });
-    this.ws.on('reconnected', () => { this.wsStatus = 'connected'; });
-    this.ws.on('reconnecting', () => { this.wsStatus = 'reconnecting'; });
-    this.ws.on('close', () => { this.wsStatus = 'down'; });
-    this.ws.on('error', () => { this.wsStatus = 'down'; });
-    this.ws.on('message', (data: any) => {
-      if (data?.e === 'trade' && data.s && data.p) {
-        const price = Number(data.p);
-        if (price > 0) onTick(data.s, price);
-      }
+    const setStatus = (s: WsStatus) => { this.wsStatus = s; };
+    this.ws.on('open', () => setStatus('connected'));
+    this.ws.on('reconnected', () => setStatus('connected'));
+    this.ws.on('reconnecting', () => setStatus('reconnecting'));
+    this.ws.on('close', () => setStatus('down'));
+    this.ws.on('error', () => setStatus('down'));
+    this.ws.on('message', (d: any) => {
+      if (d?.e === 'trade' && d.s && Number(d.p) > 0) onTick(d.s, Number(d.p));
     });
     for (const sym of symbols) this.ws.subscribeTrades(sym, 'usdm');
-    return () => {
-      this.ws?.closeAll();
-      this.ws = null;
-      this.wsStatus = 'down';
-    };
+    return () => { this.ws?.closeAll(); this.ws = null; this.wsStatus = 'down'; };
   }
 
   getWsStatus(): WsStatus {
@@ -154,8 +141,7 @@ export class BinanceService {
   }
 
   private pickMarks(rawMarks: any[], symSet: Set<string>) {
-    const marks: Record<string, number> = {};
-    const funding: Record<string, number> = {};
+    const marks: Record<string, number> = {}, funding: Record<string, number> = {};
     let nextFundingTime = 0;
     for (const m of rawMarks.filter((raw) => symSet.has(raw.symbol))) {
       marks[m.symbol] = Number(m.markPrice);
@@ -206,9 +192,7 @@ export class BinanceService {
     await this.futures.setMarginType({ symbol: params.symbol, marginType: 'ISOLATED' }).catch(() => undefined);
 
     const order = await this.futures.submitNewOrder({
-      symbol: params.symbol,
-      side: params.side,
-      type: 'MARKET',
+      symbol: params.symbol, side: params.side, type: 'MARKET',
       quantity: roundQty(params.symbol, params.qty),
       reduceOnly: params.reduceOnly ? 'true' : 'false',
     });
@@ -229,12 +213,8 @@ export class BinanceService {
   async closePosition(pos: Position): Promise<void> {
     if (this.broker) return this.broker.close(pos, 'CLOSE');
     await this.openFuturesPosition({
-      symbol: pos.symbol,
-      side: pos.side === 'LONG' ? 'SELL' : 'BUY',
-      qty: pos.qty,
-      leverage: pos.leverage,
-      strategy: pos.strategy,
-      reduceOnly: true,
+      symbol: pos.symbol, side: pos.side === 'LONG' ? 'SELL' : 'BUY',
+      qty: pos.qty, leverage: pos.leverage, strategy: pos.strategy, reduceOnly: true,
     });
     await this.cancelAll(pos.symbol);
   }
@@ -272,31 +252,46 @@ export class BinanceService {
   }
 
   private async placeServerProtectionOrders(params: OpenPositionParams): Promise<void> {
-    const { symbol } = params;
-    const exitSide = params.side === 'BUY' ? 'SELL' : 'BUY';
-    const levels = [{ type: 'STOP_MARKET', price: params.stopLoss }, { type: 'TAKE_PROFIT_MARKET', price: params.takeProfit }] as const;
+    const { symbol, side, qty, stopLoss, takeProfit } = params;
+    const exitSide = side === 'BUY' ? 'SELL' : 'BUY';
+    const levels = [{ type: 'STOP_MARKET', price: stopLoss }, { type: 'TAKE_PROFIT_MARKET', price: takeProfit }] as const;
     for (const { type, price } of levels) {
       if (!price) continue;
-      await this.futures.submitNewOrder({ symbol, side: exitSide, type, stopPrice: roundPrice(symbol, price), closePosition: 'true' });
+      await this.placeProtectionWithRetry(symbol, exitSide, type, price, qty);
+    }
+  }
+
+  private async placeProtectionWithRetry(
+    symbol: string,
+    side: 'BUY' | 'SELL',
+    type: 'STOP_MARKET' | 'TAKE_PROFIT_MARKET',
+    price: number,
+    qty: number
+  ): Promise<void> {
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        await this.futures.submitNewOrder({ symbol, side, type, stopPrice: roundPrice(symbol, price), closePosition: 'true' });
+        return;
+      } catch (err: any) {
+        if (attempt === 2) {
+          // Emergency close: never leave a filled live position without stop-loss protection
+          if (type === 'STOP_MARKET') {
+            await this.futures.submitNewOrder({ symbol, side, type: 'MARKET', quantity: roundQty(symbol, qty), reduceOnly: 'true' }).catch(() => undefined);
+          }
+          throw new Error(`Protection order failed (${type} for ${symbol}): ${err.message}`);
+        }
+      }
     }
   }
 
   private mapPosition(p: any): Position {
-    const qty = Math.abs(Number(p.positionAmt));
-    const side = Number(p.positionAmt) > 0 ? 'LONG' : 'SHORT';
-    const entry = Number(p.entryPrice);
-    const mark = Number(p.markPrice);
-    const liqPrice = Number(p.liquidationPrice);
+    const qty = Math.abs(Number(p.positionAmt)), side = Number(p.positionAmt) > 0 ? 'LONG' : 'SHORT';
+    const entry = Number(p.entryPrice), mark = Number(p.markPrice), liqPrice = Number(p.liquidationPrice);
     return {
-      id: `${p.symbol}_${side}`,
-      symbol: p.symbol,
-      side,
-      strategy: 'EXECUTOR-ε',
-      entry, qty, mark,
-      upnl: Number(p.unRealizedProfit),
+      id: `${p.symbol}_${side}`, symbol: p.symbol, side, strategy: 'EXECUTOR-ε',
+      entry, qty, mark, upnl: Number(p.unRealizedProfit),
       upnlPct: entry ? ((mark - entry) / entry) * 100 : 0,
-      leverage: Number(p.leverage),
-      marginType: p.marginType === 'isolated' ? 'ISOLATED' : 'CROSS',
+      leverage: Number(p.leverage), marginType: p.marginType === 'isolated' ? 'ISOLATED' : 'CROSS',
       liqDistancePct: liqPrice > 0 ? Math.abs((liqPrice - mark) / mark) * 100 : null,
       serverSl: 'server', serverTp: 'server',
     };

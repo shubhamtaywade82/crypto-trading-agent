@@ -11,7 +11,8 @@ test('Wilder ATR uses an SMA seed and recursive smoothing', () => {
   const candles = Array.from({ length: 14 }, (_, i) => candle(i, 10, 11, 9, 10));
   candles.push(candle(14, 10, 13, 9, 10));
   const series = wilderAtr(candles, 14);
-  assert.ok(Number.isNaN(series[13]));
+  assert.ok(Number.isNaN(series[12]));
+  assert.equal(series[13], 2);
   assert.ok(Math.abs(series[14] - (30 / 14)) < 1e-12);
 });
 

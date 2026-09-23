@@ -1,7 +1,16 @@
 export type Side = 'LONG' | 'SHORT';
 export type Mode = 'paper' | 'live';
-export type AgentId = 'FUNDING-ARB-α' | 'PAIRS-TRD-β' | 'MOMENTUM-γ' | 'RISK-MGR-δ' | 'EXECUTOR-ε' | 'ADAPTIVE-ST-ζ';
-export type SignalType = 'OPEN_LONG' | 'OPEN_SHORT' | 'OPEN_HEDGE' | 'CLOSE' | 'MONITOR' | 'ALERT';
+export type AgentId =
+  | 'FUNDING-ARB-α'
+  | 'PAIRS-TRD-β'
+  | 'MOMENTUM-γ'
+  | 'RISK-MGR-δ'
+  | 'EXECUTOR-ε'
+  | 'ADAPTIVE-ST-ζ'
+  | 'STRUCTURE-TREND-η'
+  | 'MEAN-REVERT-θ'
+  | 'CROWDING-ι';
+export type SignalType = 'OPEN_LONG' | 'OPEN_SHORT' | 'OPEN_HEDGE' | 'OPEN_FUNDING_SHORT' | 'CLOSE' | 'MONITOR' | 'ALERT';
 
 export interface Candle {
   openTime: number;

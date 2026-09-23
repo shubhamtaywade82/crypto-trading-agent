@@ -78,6 +78,8 @@ export function classifyRegime(
   let regime: MarketRegime = 'TRANSITION';
   if (trendDirection === 'BULLISH' && (adx14 ?? 0) >= 25) regime = 'TREND_UP';
   else if (trendDirection === 'BEARISH' && (adx14 ?? 0) >= 25) regime = 'TREND_DOWN';
+  else if (volatilityPercentile !== null && volatilityPercentile >= 85) regime = 'HIGH_VOL';
+  else if (volatilityPercentile !== null && volatilityPercentile <= 15) regime = 'LOW_VOL';
   else if ((adx14 ?? 0) <= 20) regime = 'RANGE';
 
   return {

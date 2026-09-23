@@ -1,6 +1,7 @@
 import type { Candle } from '../types.js';
 import { detectLiquidity } from './LiquidityEngine.js';
 import { classifyRegime, buildTimeframeState } from './RegimeEngine.js';
+import { calculateCrowding } from './CrowdingEngine.js';
 import { analyzeStructure } from './StructureEngine.js';
 import { closedCandles, resampleCandles } from './TimeframeEngine.js';
 import { detectCauseZone } from './ZoneEngine.js';
@@ -84,11 +85,13 @@ export class MarketStateBuilder {
     const cached = this.cache.get(input.symbol);
 
     if (cached && latestClosedTime === cached.generatedAt) {
+      const derivatives = input.derivatives ?? cached.derivatives ?? null;
       return {
         ...cached,
         mark: input.mark,
         fundingRate: input.fundingRate,
-        derivatives: input.derivatives ?? cached.derivatives ?? null,
+        derivatives,
+        crowding: calculateCrowding(derivatives, input.fundingRate),
       };
     }
 
@@ -111,6 +114,7 @@ export class MarketStateBuilder {
       ...detectCauseZone('15m', tf15, ltfStructure.lastBreak, timeframes['15m'].atr14 ?? 0),
     ];
 
+    const derivatives = input.derivatives ?? null;
     const state: MarketState = {
       version: 1,
       symbol: input.symbol,
@@ -125,7 +129,8 @@ export class MarketStateBuilder {
       zones,
       pricing: rangePricing(tf1h),
       meanReversion: meanReversion(tf15),
-      derivatives: input.derivatives ?? null,
+      derivatives,
+      crowding: calculateCrowding(derivatives, input.fundingRate),
     };
 
     this.cache.set(input.symbol, state);

@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { EventEmitter } from 'node:events';
 import type { Signal, Position, LogEntry } from '../types.js';
 import type { BinanceService } from '../binance/client.js';
@@ -41,12 +42,19 @@ export abstract class BaseAgent extends EventEmitter {
 
   protected abstract analyze(ctx: MarketContext): Promise<Signal[]>;
 
-  protected signal(partial: Omit<Signal, 'id' | 'ts' | 'agent'>): Signal {
+  protected signal(partial: Omit<Signal, 'id' | 'agent' | 'ts'> & { id?: string; ts?: number }): Signal {
+    const ts = partial.ts ?? Date.now();
+    const id =
+      partial.id ??
+      createHash('sha256')
+        .update(`${partial.symbol}:${this.strategy}:${partial.type}:${ts}`)
+        .digest('hex')
+        .slice(0, 12);
     return {
       ...partial,
-      id: Math.random().toString(36).slice(2, 9),
+      id,
       agent: this.id as any,
-      ts: Date.now(),
+      ts,
     };
   }
 }

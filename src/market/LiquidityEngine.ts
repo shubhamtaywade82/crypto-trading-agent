@@ -1,5 +1,5 @@
 import type { Candle } from '../types.js';
-import type { LiquidityPool, LiquidityState, StructureState, Timeframe } from './types.js';
+import type { LiquidityPool, LiquiditySweep, LiquidityState, StructureState, Timeframe } from './types.js';
 
 export function detectLiquidity(
   timeframe: Timeframe,
@@ -76,8 +76,8 @@ export function detectLiquidity(
 
   const latest = candles.at(-1);
   const latestPrevious = candles.at(-2);
-  const latestSweeps = latest && latestPrevious
-    ? pools.flatMap((pool) => {
+  const latestSweeps: LiquiditySweep[] = latest && latestPrevious
+    ? pools.flatMap((pool): LiquiditySweep[] => {
         const bullishSweep = latest.low < pool.price - pool.tolerance && latest.close > pool.price;
         const bearishSweep = latest.high > pool.price + pool.tolerance && latest.close < pool.price;
         if (bullishSweep) {

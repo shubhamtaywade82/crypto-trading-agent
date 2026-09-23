@@ -44,6 +44,14 @@ test('should size a funding hedge off the live mark and short it', async () => {
   assert.equal(captured[0].qty, 4);
 });
 
+test('should size OPEN_FUNDING_SHORT off the live mark and short it', async () => {
+  setSymbolRules(symbol, { pricePrecision: 2, quantityPrecision: 3, tickSize: 0.01, stepSize: 0.001, minQty: 0, minNotional: 0 });
+  const { captured, executor } = stubService();
+  await executor.execute(signal({ type: 'OPEN_FUNDING_SHORT', agent: 'FUNDING-ARB-α' }), risk);
+  assert.equal(captured[0].side, 'SELL');
+  assert.equal(captured[0].qty, 4);
+});
+
 test('should refuse symbols outside config.symbols', async () => {
   const { captured, executor } = stubService();
   const log = await executor.execute(signal({ symbol: 'BTCUSDTETHUSDT', entry: 30 }), risk);

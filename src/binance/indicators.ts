@@ -24,43 +24,27 @@ function trueRangeSeries(candles: Candle[]): number[] {
   return ranges;
 }
 
-/**
- * Legacy ATR retained for backwards compatibility. New market-state/risk
- * features should use Wilder ATR for consistency with Binance/TradingView.
- */
+/** Canonical Wilder ATR (Pine ta.atr); returns the latest smoothed value. */
 export function atr(candles: Candle[], period = 14): number {
-  if (candles.length < period + 1) return 0;
-  const trueRanges: number[] = [];
-  for (let i = 1; i < candles.length; i++) {
-    const current = candles[i];
-    const previous = candles[i - 1];
-    trueRanges.push(
-      Math.max(
-        current.high - current.low,
-        Math.abs(current.high - previous.close),
-        Math.abs(current.low - previous.close)
-      )
-    );
-  }
-  const periodWindow = trueRanges.slice(-period);
-  return periodWindow.reduce((sum, value) => sum + value, 0) / period;
+  const series = wilderAtr(candles, period);
+  const val = series.at(-1);
+  return val !== undefined && Number.isFinite(val) ? val : 0;
 }
 
-/** Wilder ATR series with the conventional SMA seed. */
+/** Wilder ATR series (Pine ta.atr) with the conventional SMA seed at index period - 1. */
 export function wilderAtr(candles: Candle[], period = 14): number[] {
-  const result = new Array<number>(candles.length).fill(NaN);
-  if (period <= 0 || candles.length <= period) return result;
-
-  const tr = trueRangeSeries(candles);
-  let seed = 0;
-  for (let i = 1; i <= period; i++) seed += tr[i];
-  result[period] = seed / period;
-
-  for (let i = period + 1; i < candles.length; i++) {
-    result[i] = ((result[i - 1] * (period - 1)) + tr[i]) / period;
+  const atrSeries = new Array<number>(candles.length).fill(NaN);
+  if (period <= 0 || candles.length < period) return atrSeries;
+  let trSum = 0;
+  for (let i = 0; i < candles.length; i++) {
+    const c = candles[i];
+    const prevClose = i > 0 ? candles[i - 1].close : c.close;
+    const tr = Math.max(c.high - c.low, Math.abs(c.high - prevClose), Math.abs(c.low - prevClose));
+    if (i < period) trSum += tr;
+    if (i === period - 1) atrSeries[i] = trSum / period;
+    if (i >= period) atrSeries[i] = (atrSeries[i - 1] * (period - 1) + tr) / period;
   }
-
-  return result;
+  return atrSeries;
 }
 
 export function zscore(values: number[], period = 30): number {

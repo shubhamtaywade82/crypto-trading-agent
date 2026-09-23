@@ -2,7 +2,7 @@ import type { Candle } from '../types.js';
 import type { DerivativesSnapshot, NativeTimeframe } from './MarketDataTypes.js';
 
 export type Timeframe = '15m' | '1h' | '4h';
-export type MarketRegime = 'TREND_UP' | 'TREND_DOWN' | 'RANGE' | 'TRANSITION';
+export type MarketRegime = 'TREND_UP' | 'TREND_DOWN' | 'RANGE' | 'HIGH_VOL' | 'LOW_VOL' | 'TRANSITION';
 export type TrendDirection = 'BULLISH' | 'BEARISH' | 'NEUTRAL';
 export type VolatilityRegime = 'LOW' | 'MEDIUM' | 'HIGH';
 
@@ -141,6 +141,15 @@ export interface MarketState {
   pricing: RangePricing;
   meanReversion: MeanReversionState;
   derivatives?: DerivativesSnapshot | null;
+  crowding?: CrowdingSnapshot | null;
+}
+
+export interface CrowdingSnapshot {
+  fundingPercentile: number | null;
+  topTraderVsGlobalBias: number | null;
+  positioningExtreme: 'LONG_CROWDED' | 'SHORT_CROWDED' | 'BALANCED';
+  takerAggressionRatio: number | null;
+  openInterestExpansion: boolean;
 }
 
 export interface MarketStateInput {

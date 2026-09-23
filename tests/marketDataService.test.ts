@@ -38,8 +38,8 @@ function fakeClient(state: { calls: Record<string, number>; active: number; maxA
 
   return {
     async getKlines({ interval }: { interval: string }) {
-      if (state.rejectKline && interval === '1m') throw new Error('kline unavailable');
       await tick('kline:' + interval);
+      if (state.rejectKline && interval === '1m') throw new Error('kline unavailable');
       const ms = ({ '1m': 60_000, '5m': 300_000, '15m': 900_000, '1h': 3_600_000, '4h': 14_400_000 } as Record<string, number>)[interval];
       return rawKlines(ms);
     },

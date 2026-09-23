@@ -9,39 +9,53 @@ const MOMENTUM_WINDOW = 60;
 export class MomentumAgent extends BaseAgent {
   readonly id = 'MOMENTUM-γ' as const;
   readonly strategy = 'atr_volatility_momentum';
+  private lastHandledOpenTime = new Map<string, number>();
 
   protected async analyze(ctx: MarketContext): Promise<Signal[]> {
     const signals: Signal[] = [];
     for (const symbol of config.symbols) {
-      const candles = ctx.candles[symbol]?.slice(-MOMENTUM_WINDOW);
-      if (!candles || candles.length < 60) continue;
-
-      const closes = candles.map((c: Candle) => c.close);
-      const ema50 = ema(closes, 50);
-      const price = closes[closes.length - 1];
-      const atr14 = atr(candles, 14);
-      const rsiSeries = rsi(closes, 14);
-      const currentRsi = rsiSeries[rsiSeries.length - 1] ?? 50;
-
-      // Avoid buying when already overbought (RSI > 75)
-      const prevPrice = closes[closes.length - 2];
-      const prevEma = ema50[ema50.length - 2];
-      const crossed = prevPrice <= prevEma && price > ema50[ema50.length - 1];
-
-      if (crossed && atr14 > 0 && currentRsi < 75) {
-        signals.push(
-          this.signal({
-            symbol,
-            type: 'OPEN_LONG',
-            confidence: currentRsi > 50 ? 0.75 : 0.65,
-            entry: price,
-            stopLoss: price - atr14 * 2.5,
-            takeProfit: price + atr14 * 5,
-            reason: `EMA50 cross + ATR (${atr14.toFixed(2)}) RSI=${currentRsi.toFixed(0)}`,
-          })
-        );
-      }
+      const signal = this.evaluateSymbol(symbol, ctx);
+      if (signal) signals.push(signal);
     }
     return signals;
+  }
+
+  private evaluateSymbol(symbol: string, ctx: MarketContext): Signal | null {
+    const state = ctx.marketState?.[symbol];
+    if (state && (state.regime.regime !== 'TREND_UP' || state.htfStructure.trend !== 'BULLISH')) {
+      return null;
+    }
+
+    const raw = ctx.candles[symbol] ?? [];
+    const closed = raw.slice(0, -1);
+    const lastClosed = closed.at(-1);
+    if (!lastClosed || this.lastHandledOpenTime.get(symbol) === lastClosed.openTime) return null;
+
+    const candles = closed.slice(-MOMENTUM_WINDOW);
+    if (candles.length < MOMENTUM_WINDOW) return null;
+
+    const closes = candles.map((c: Candle) => c.close);
+    const ema50 = ema(closes, 50);
+    const price = lastClosed.close;
+    const atr14 = atr(candles, 14);
+    const currentRsi = rsi(closes, 14).at(-1) ?? 50;
+
+    const prevPrice = closes[closes.length - 2];
+    const prevEma = ema50[ema50.length - 2];
+    const crossed = prevPrice <= prevEma && price > ema50[ema50.length - 1];
+
+    this.lastHandledOpenTime.set(symbol, lastClosed.openTime);
+    if (!crossed || atr14 <= 0 || currentRsi >= 75) return null;
+
+    return this.signal({
+      symbol,
+      type: 'OPEN_LONG',
+      confidence: currentRsi > 50 ? 0.75 : 0.65,
+      entry: price,
+      stopLoss: price - atr14 * 2.5,
+      takeProfit: price + atr14 * 5,
+      reason: `EMA50 cross + ATR (${atr14.toFixed(2)}) RSI=${currentRsi.toFixed(0)}`,
+      ts: lastClosed.openTime,
+    });
   }
 }

@@ -94,7 +94,7 @@ export class RiskAgent extends BaseAgent {
       return this.reject(`drawdown kill-switch: current drawdown exceeds ${config.risk.maxDrawdownPct}%`);
     }
 
-    if (signal.type === 'OPEN_HEDGE') return this.gateHedge(signal, ctx, riskBudget, maxNotional);
+    if (signal.type === 'OPEN_HEDGE' || signal.type === 'OPEN_FUNDING_SHORT') return this.gateHedge(signal, ctx, riskBudget, maxNotional);
 
     if (!signal.stopLoss || !signal.entry) {
       return this.reject('missing entry/SL');

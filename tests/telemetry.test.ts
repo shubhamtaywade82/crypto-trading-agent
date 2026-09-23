@@ -123,3 +123,33 @@ test('should release the guard when the task throws', async () => {
   await assert.rejects(guarded());
   assert.equal(started, 2);
 });
+
+test('should build marketIntel summary when marketStates are provided', () => {
+  const fakeMs: any = {
+    symbol: 'BTCUSDT',
+    fundingRate: 0.0001,
+    regime: { regime: 'TREND_UP', trendDirection: 'BULLISH', volatility: 'LOW', volatilityPercentile: 20 },
+    htfStructure: { trend: 'BULLISH' },
+    ltfStructure: { trend: 'BULLISH' },
+    pricing: { premium: false, discount: true, positionPct: 25 },
+    liquidity: { ltf: { latestSweeps: [{ direction: 'SELL_SIDE', level: 49500 }] } },
+    crowding: { fundingPercentile: 65, positioningExtreme: 'BALANCED', openInterestExpansion: true },
+    derivatives: { spreadBps: 1.5 },
+  };
+  const t = buildTelemetry(input({ marketStates: { BTCUSDT: fakeMs } }));
+  assert.ok(t.marketIntel?.BTCUSDT);
+  const intel = t.marketIntel.BTCUSDT;
+  assert.equal(intel.regime, 'TREND_UP');
+  assert.equal(intel.htfTrend, 'BULLISH');
+  assert.equal(intel.discount, true);
+  assert.equal(intel.spreadBps, 1.5);
+  assert.equal(intel.strategyStatus.Structure, 'READY');
+  assert.equal(intel.strategyStatus.MeanRev, 'BLOCKED');
+});
+
+test('should pass edgeMultiplier through to agent state', () => {
+  const running = [{ id: 'MOMENTUM-γ' as const, status: 'RUNNING' as const, strategy: 'test', edgeMultiplier: 1.15 }];
+  const t = buildTelemetry(input({ agents: running }));
+  assert.equal(t.agents[0].edgeMultiplier, 1.15);
+});
+

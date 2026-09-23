@@ -5,7 +5,7 @@ import type { VenueStatus } from '../binance/remoteBroker.js';
 import type { AdaptiveInfo, AgentId, AgentState, AppState, Candle, FundingInfo, MarketIntelSummary, Mode, Position, StrategyMetrics, TradeRecord, WsStatus } from '../types.js';
 import type { MarketState } from '../market/types.js';
 
-export interface AgentRuntime { id: AgentId; status: 'RUNNING' | 'PAUSED' | 'WATCHING'; strategy: string; note?: string }
+export interface AgentRuntime { id: AgentId; status: 'RUNNING' | 'PAUSED' | 'WATCHING'; strategy: string; note?: string; edgeMultiplier?: number }
 export interface SessionCounters { decisions: number; executed: number; monitored: number }
 export interface TelemetryInput {
   account: { equity: number; marginUsed: number; initialEquity: number };
@@ -197,7 +197,11 @@ export function buildTelemetry(input: TelemetryInput): Telemetry {
   };
 }
 
-const FLEET_ORDER: AgentId[] = ['FUNDING-ARB-α', 'PAIRS-TRD-β', 'MOMENTUM-γ', 'ADAPTIVE-ST-ζ', 'RISK-MGR-δ', 'EXECUTOR-ε'];
+const FLEET_ORDER: AgentId[] = [
+  'FUNDING-ARB-α', 'PAIRS-TRD-β', 'MOMENTUM-γ', 'ADAPTIVE-ST-ζ',
+  'STRUCTURE-TREND-η', 'MEAN-REVERT-θ', 'CROWDING-ι',
+  'RISK-MGR-δ', 'EXECUTOR-ε',
+];
 // Pairs is disabled (see the agents list), so it is shown as paused rather than omitted from the fleet
 const PAIRS_RUNTIME: AgentRuntime = { id: 'PAIRS-TRD-β', status: 'PAUSED', strategy: 'stat_pairs_zscore' };
 const ADAPTIVE_DISABLED_RUNTIME: AgentRuntime = { id: 'ADAPTIVE-ST-ζ', status: 'PAUSED', strategy: 'ml_adaptive_supertrend' };

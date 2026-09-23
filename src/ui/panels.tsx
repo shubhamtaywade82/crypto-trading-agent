@@ -8,7 +8,7 @@ import { renderCol2Lines, renderMetricsLines, renderDetailLines, renderLogLines 
 
 type StoreFields = 'mode' | 'equity' | 'upnl' | 'marginUsed' | 'positions' | 'agents' | 'logs' | 'spotPrices' | 'initialEquity' | 'totalPnl' | 'totalPnlPct'
   | 'successRate' | 'sharpe' | 'maxDd' | 'var95' | 'liqEvents' | 'sessionDecisions' | 'sessionExecuted' | 'sessionMonitored' | 'apiWeight' | 'wsStatus'
-  | 'venue' | 'exposurePct' | 'minLiqDistancePct' | 'corrBtcEth' | 'funding' | 'strategyMetrics';
+  | 'venue' | 'exposurePct' | 'minLiqDistancePct' | 'corrBtcEth' | 'funding' | 'strategyMetrics' | 'marketIntel';
 
 export type CockpitProps = Pick<AppState, StoreFields> & { time: string; localTime?: string; selPos: number; isSyncing: boolean; totalWidth?: number; totalHeight?: number };
 

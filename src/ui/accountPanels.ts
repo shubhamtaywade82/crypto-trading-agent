@@ -12,7 +12,7 @@ const AGENT_BLOCK_ROWS = 4;
 const HIGH_CORRELATION = 0.8;
 const MEDIUM_CORRELATION = 0.5;
 const MAX_ACTION_ROWS = 3;
-const MAX_FLEET_AGENTS = 6;
+const MAX_FLEET_AGENTS = 10;
 const WS_COLOR: Record<WsStatus, (text: string) => string> = { connected: chalk.green, reconnecting: chalk.yellow, down: chalk.red };
 const VENUE_COLOR = { connected: chalk.green, degraded: chalk.yellow, down: chalk.red };
 
@@ -56,7 +56,8 @@ function noteSuffix(note: string | undefined, room: number): string {
 function agentRows(a: AgentState, isFull: boolean, width: number): string[] {
   const isRunning = a.status === 'RUNNING';
   const win = orDash(a.winRate, (rate) => `${dp(rate)}%`);
-  const title = `  ${isRunning ? chalk.green('●') : chalk.yellow('◐')} ${chalk.cyan.bold(a.id)} ${isRunning ? chalk.green(a.status) : chalk.yellow(a.status)}`;
+  const mult = a.edgeMultiplier ? ` ${chalk.magenta(`×${a.edgeMultiplier.toFixed(2)}`)}` : '';
+  const title = `  ${isRunning ? chalk.green('●') : chalk.yellow('◐')} ${chalk.cyan.bold(a.id)} ${isRunning ? chalk.green(a.status) : chalk.yellow(a.status)}${mult}`;
   const head = padLine(title + noteSuffix(a.note, width - stringWidth(title)), width);
   const stats = padLine(`   ${chalk.gray(`pos ${a.positions ?? '—'} win ${win} pnl `)}${coloredPnl(a.pnl)}`, width);
   if (!isFull) return [head, stats];

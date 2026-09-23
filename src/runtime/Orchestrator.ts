@@ -258,7 +258,10 @@ export class Orchestrator extends EventEmitter {
 
   private telemetryFor(ctx: CycleContext, account: TelemetryInput['account'], positions: Position[]): Telemetry {
     const adaptive: Record<string, AdaptiveSuperTrendBar | undefined> = Object.fromEntries(config.symbols.map((s) => [s, this.adaptive.stateFor(s)]));
-    const running = [...this.agents, this.risk, this.executor].map(({ id, status, strategy }) => ({ id: id as AgentId, status, strategy, note: id === this.risk.id ? this.ops.note : undefined }));
+    const running = [...this.agents, this.risk, this.executor].map(({ id, status, strategy }) => {
+      const mult = confidenceMultiplier(id as any, this.ledger);
+      return { id: id as AgentId, status, strategy, note: id === this.risk.id ? this.ops.note : undefined, edgeMultiplier: mult !== 1 ? mult : undefined };
+    });
     return buildTelemetry({
       account, positions, adaptive, trades: this.binance.getTrades(),
       candles: ctx.candles, funding: ctx.funding, nextFundingTime: ctx.nextFundingTime,

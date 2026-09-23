@@ -36,6 +36,7 @@ export const useStore = create<Store>((set) => ({
   exposurePct: 0,
   minLiqDistancePct: null,
   corrBtcEth: null,
+  marketIntel: undefined,
   serverTime: Date.now(),
   set: (partial) => set((state) => ({ ...state, ...partial })),
   pushLog: (entry) => set((state) => ({ logs: [entry, ...state.logs].slice(0, 50) })),

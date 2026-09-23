@@ -67,6 +67,24 @@ function trendRows(adaptive: Record<string, AdaptiveInfo>, width: number, mode: 
   return wrapTokens(tokens, width - 15).map((line, i) => padLine(`   ${chalk.gray(i === 0 ? 'Trend     │ ' : '          │ ')}${line}`, width));
 }
 
+function intelRows(intel: Record<string, import('../types.js').MarketIntelSummary> | undefined, width: number): string[] {
+  if (!intel || Object.keys(intel).length === 0) return [];
+  const label = (text: string) => chalk.gray(`${text.padEnd(10)}│ `);
+  const struct = Object.entries(intel).map(([sym, s]) => {
+    const loc = s.discount ? chalk.green('disc') : s.premium ? chalk.red('prem') : chalk.gray('eq');
+    const t = s.htfTrend === 'BULLISH' ? chalk.green('▲') : s.htfTrend === 'BEARISH' ? chalk.red('▼') : chalk.gray('■');
+    return `${chalk.white(shortName(sym))} ${t}${loc}`;
+  });
+  const crowd = Object.entries(intel).map(([sym, s]) => {
+    const c = s.crowding === 'LONG_CROWDED' ? chalk.red('LC') : s.crowding === 'SHORT_CROWDED' ? chalk.green('SC') : chalk.gray('BL');
+    return `${chalk.white(shortName(sym))} ${c}`;
+  });
+  return [
+    padLine(`   ${label('SMC Struct')}${struct.join(' ')}`, width),
+    padLine(`   ${label('Crowding')}${crowd.join(' ')}`, width),
+  ];
+}
+
 function regimeRows(p: CockpitProps, width: number): string[] {
   const volumes = config.symbols.map((symbol) => p.spotPrices?.[shortName(symbol)]?.volumeQuote).filter((v): v is number => v !== undefined);
   const turnover = volumes.length === 0 ? '—' : `${fmtVol(volumes.reduce((sum, v) => sum + v, 0))} 24h futures vol`;
@@ -78,6 +96,7 @@ function regimeRows(p: CockpitProps, width: number): string[] {
     padLine(`   ${label('Momentum')}${metrics ? momentumLabel(metrics.momentumAboveEma50) : chalk.gray('—')}`, width),
     padLine(`   ${label('Carry')}${carryLabel(metrics)}`, width),
     ...trendRows(metrics?.adaptive ?? {}, width, p.mode),
+    ...intelRows(p.marketIntel, width),
   ];
 }
 

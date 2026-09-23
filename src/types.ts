@@ -108,6 +108,7 @@ export interface AgentState {
   winRate: number | null;
   pnl: number | null;
   note?: string; // short status suffix for the fleet row, e.g. the risk circuit state; absent when nothing is worth flagging
+  edgeMultiplier?: number; // learning multiplier (e.g. 1.15x) from historical edge
 }
 
 export interface MarketPriceInfo {

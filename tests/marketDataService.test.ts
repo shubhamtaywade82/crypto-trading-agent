@@ -27,7 +27,7 @@ function options(overrides: Partial<MarketDataServiceOptions> = {}): MarketDataS
   };
 }
 
-function fakeClient(state: { calls: Record<string, number>; active: number; maxActive: number; rejectBook?: boolean }) {
+function fakeClient(state: { calls: Record<string, number>; active: number; maxActive: number; rejectBook?: boolean; rejectKline?: boolean }) {
   const tick = async (name: string) => {
     state.calls[name] = (state.calls[name] ?? 0) + 1;
     state.active += 1;
@@ -38,6 +38,7 @@ function fakeClient(state: { calls: Record<string, number>; active: number; maxA
 
   return {
     async getKlines({ interval }: { interval: string }) {
+      if (state.rejectKline && interval === '1m') throw new Error('kline unavailable');
       await tick('kline:' + interval);
       const ms = ({ '1m': 60_000, '5m': 300_000, '15m': 900_000, '1h': 3_600_000, '4h': 14_400_000 } as Record<string, number>)[interval];
       return rawKlines(ms);
@@ -84,7 +85,7 @@ function fakeClient(state: { calls: Record<string, number>; active: number; maxA
 test('parseCandles excludes the currently forming candle', () => {
   const raw = [
     [NOW - 120_000, 100, 101, 99, 100, 1],
-    [NOW - 60_000, 100, 102, 98, 101, 2],
+    [NOW - 30_000, 100, 102, 98, 101, 2],
   ];
   const parsed = parseCandles(raw, '1m', NOW, 10);
   assert.equal(parsed.length, 1);
@@ -143,4 +144,34 @@ test('basis remains disabled unless explicitly enabled', async () => {
   const next = (await enabled.snapshot(['ETHUSDT'], NOW)).ETHUSDT;
   assert.equal(next.derivatives?.basisPct, 0.05);
   assert.equal(state.calls.basis, 1);
+});
+
+
+test('concurrent snapshots share in-flight requests', async () => {
+  const state = { calls: {} as Record<string, number>, active: 0, maxActive: 0 };
+  const service = new MarketDataService(fakeClient(state) as any, options());
+
+  await Promise.all([
+    service.snapshot(['BTCUSDT'], NOW),
+    service.snapshot(['BTCUSDT'], NOW),
+  ]);
+
+  assert.equal(state.calls['kline:1m'], 1);
+  assert.equal(state.calls.oi, 1);
+});
+
+test('failed kline refreshes receive a bounded retry backoff', async () => {
+  const state = { calls: {} as Record<string, number>, active: 0, maxActive: 0, rejectKline: true };
+  const service = new MarketDataService(fakeClient(state) as any, options());
+
+  await service.snapshot(['BTCUSDT'], NOW);
+  const first = state.calls['kline:1m'] ?? 0;
+
+  await service.snapshot(['BTCUSDT'], NOW + 5_000);
+  const second = state.calls['kline:1m'] ?? 0;
+  assert.equal(second, first);
+
+  await service.snapshot(['BTCUSDT'], NOW + 15_000);
+  const third = state.calls['kline:1m'] ?? 0;
+  assert.equal(third, first + 1);
 });

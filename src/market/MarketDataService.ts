@@ -231,11 +231,11 @@ export class MarketDataService {
     if (existing) return existing;
 
     const promise = (async () => {
-      const raw = await this.client.getKlines({
+      const raw = await this.requestLimiter.run(() => this.client.getKlines({
         symbol,
         interval: timeframe,
         limit: this.options.klineLimit,
-      });
+      }));
       this.candles.set(key, {
         fetchedAt: now,
         value: parseCandles(raw as any[], timeframe, now, this.options.klineLimit),

@@ -22,34 +22,28 @@ test('should not need an account id for local paper or live mode', () => {
   assert.ok(EnvSchema.safeParse({ MODE: 'live', PAPER_EXCHANGE_URL: URL }).success);
 });
 
-test('should default market-data-v2 off and keep existing ops flags off', () => {
+test('should keep ops flags off by default and expose tuning defaults', () => {
   const env = EnvSchema.parse({});
-  assert.equal(env.MARKET_DATA_V2, 'off');
   assert.equal(env.MARKET_DATA_DERIVATIVES_PERIOD, '1h');
-  assert.equal(env.MARKET_DATA_BASIS, 'off');
   assert.equal(env.MARKET_DATA_MAX_CONCURRENCY, 4);
   assert.equal(env.MARKET_DATA_KLINE_LIMIT, 300);
   assert.equal(env.AUDIT, 'off');
   assert.equal(env.ALERTS, 'off');
 });
 
-test('should accept market-data-v2 tuning values and reject invalid values', () => {
+test('should accept market-data tuning values and reject invalid values', () => {
   const env = EnvSchema.parse({
-    MARKET_DATA_V2: 'on',
     MARKET_DATA_1M_TTL_MS: '20000',
     MARKET_DATA_HISTORY_LIMIT: '50',
     MARKET_DATA_ORDERBOOK_DEPTH: '25',
     MARKET_DATA_MAX_CONCURRENCY: '6',
     MARKET_DATA_DERIVATIVES_PERIOD: '5m',
-    MARKET_DATA_BASIS: 'on',
   });
-  assert.equal(env.MARKET_DATA_V2, 'on');
   assert.equal(env.MARKET_DATA_1M_TTL_MS, 20000);
   assert.equal(env.MARKET_DATA_HISTORY_LIMIT, 50);
   assert.equal(env.MARKET_DATA_ORDERBOOK_DEPTH, 25);
   assert.equal(env.MARKET_DATA_MAX_CONCURRENCY, 6);
   assert.equal(env.MARKET_DATA_DERIVATIVES_PERIOD, '5m');
-  assert.equal(env.MARKET_DATA_BASIS, 'on');
   assert.ok(!EnvSchema.safeParse({ MARKET_DATA_MAX_CONCURRENCY: '0' }).success);
   assert.ok(!EnvSchema.safeParse({ MARKET_DATA_ORDERBOOK_DEPTH: '101' }).success);
 });

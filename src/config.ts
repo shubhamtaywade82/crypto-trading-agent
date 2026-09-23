@@ -28,10 +28,7 @@ export const EnvSchema = z.object({
   TAKER_FEE_RATE: z.coerce.number().nonnegative().default(0.0004),
   SLIPPAGE_BUFFER_RATE: z.coerce.number().nonnegative().default(0.0002),
   RISK_ENGINE: z.enum(['off', 'on']).default('off'),
-  MARKET_STATE_V1: z.enum(['off', 'on']).default('on'),
 
-  // Market Data V2 is deliberately off until its public-data load is validated.
-  MARKET_DATA_V2: z.enum(['off', 'on']).default('off'),
   MARKET_DATA_1M_TTL_MS: timeframeTtl(15_000),
   MARKET_DATA_5M_TTL_MS: timeframeTtl(60_000),
   MARKET_DATA_15M_TTL_MS: timeframeTtl(60_000),
@@ -43,7 +40,6 @@ export const EnvSchema = z.object({
   MARKET_DATA_ORDERBOOK_DEPTH: z.coerce.number().int().min(5).max(100).default(20),
   MARKET_DATA_MAX_CONCURRENCY: z.coerce.number().int().min(1).max(16).default(4),
   MARKET_DATA_DERIVATIVES_PERIOD: z.enum(['5m', '15m', '30m', '1h', '2h', '4h', '6h', '12h', '1d']).default('1h'),
-  MARKET_DATA_BASIS: z.enum(['off', 'on']).default('off'),
 
   AUDIT: z.enum(['off', 'on']).default('off'),
   ALERTS: z.enum(['off', 'on']).default('off'),
@@ -100,9 +96,8 @@ export const config = {
   ollama: { host: env.OLLAMA_HOST, model: env.OLLAMA_MODEL },
   risk: riskFromEnv(env),
   riskEngine: env.RISK_ENGINE,
-  marketStateV1: env.MARKET_STATE_V1,
   marketDataV2: {
-    enabled: env.MARKET_DATA_V2 === 'on',
+    enabled: true,
     candleTtlMs: {
       '1m': env.MARKET_DATA_1M_TTL_MS,
       '5m': env.MARKET_DATA_5M_TTL_MS,
@@ -116,7 +111,7 @@ export const config = {
     orderBookDepth: env.MARKET_DATA_ORDERBOOK_DEPTH,
     maxConcurrency: env.MARKET_DATA_MAX_CONCURRENCY,
     derivativesPeriod: env.MARKET_DATA_DERIVATIVES_PERIOD,
-    basisEnabled: env.MARKET_DATA_BASIS === 'on',
+    basisEnabled: true,
   },
   audit: env.AUDIT,
   alerts: env.ALERTS,

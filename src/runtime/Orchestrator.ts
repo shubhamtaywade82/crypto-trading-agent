@@ -39,7 +39,7 @@ export class Orchestrator extends EventEmitter {
     new FundingArbAgent(this.binance),
     new MomentumAgent(this.binance),
     ...(config.mode === 'paper' ? [this.adaptive] : []),
-    ...(config.marketStateV1 === 'on' ? [this.structureTrend, this.meanRevert, this.crowding] : []),
+    this.structureTrend, this.meanRevert, this.crowding,
   ];
   private killSwitch = new KillSwitch();
   private risk = new RiskAgent(this.binance, { killSwitch: this.killSwitch });
@@ -240,15 +240,13 @@ export class Orchestrator extends EventEmitter {
     this.logExits();
     const positions = await this.binance.getPositions();
     const account = await this.binance.getAccount();
-    const marketState = config.marketStateV1 === 'on'
-      ? this.marketStateBuilder.buildAll(config.symbols.map((symbol) => ({
-          symbol, candles: market.candles[symbol] ?? [],
-          candlesByTimeframe: market.marketDataV2?.[symbol]?.candles,
-          derivatives: market.marketDataV2?.[symbol]?.derivatives,
-          mark: market.marks[symbol] ?? this.livePrices[symbol] ?? 0,
-          fundingRate: market.funding[symbol] ?? 0,
-        })))
-      : undefined;
+    const marketState = this.marketStateBuilder.buildAll(config.symbols.map((symbol) => ({
+      symbol, candles: market.candles[symbol] ?? [],
+      candlesByTimeframe: market.marketDataV2?.[symbol]?.candles,
+      derivatives: market.marketDataV2?.[symbol]?.derivatives,
+      mark: market.marks[symbol] ?? this.livePrices[symbol] ?? 0,
+      fundingRate: market.funding[symbol] ?? 0,
+    })));
     return {
       ...market,
       spot: this.livePrices,

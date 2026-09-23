@@ -10,6 +10,24 @@ export function ema(values: number[], period: number): number[] {
   return result;
 }
 
+function trueRangeSeries(candles: Candle[]): number[] {
+  const ranges: number[] = new Array(candles.length).fill(NaN);
+  for (let i = 1; i < candles.length; i++) {
+    const current = candles[i];
+    const previous = candles[i - 1];
+    ranges[i] = Math.max(
+      current.high - current.low,
+      Math.abs(current.high - previous.close),
+      Math.abs(current.low - previous.close),
+    );
+  }
+  return ranges;
+}
+
+/**
+ * Legacy ATR retained for backwards compatibility. New market-state/risk
+ * features should use Wilder ATR for consistency with Binance/TradingView.
+ */
 export function atr(candles: Candle[], period = 14): number {
   if (candles.length < period + 1) return 0;
   const trueRanges: number[] = [];
@@ -28,6 +46,23 @@ export function atr(candles: Candle[], period = 14): number {
   return periodWindow.reduce((sum, value) => sum + value, 0) / period;
 }
 
+/** Wilder ATR series with the conventional SMA seed. */
+export function wilderAtr(candles: Candle[], period = 14): number[] {
+  const result = new Array<number>(candles.length).fill(NaN);
+  if (period <= 0 || candles.length <= period) return result;
+
+  const tr = trueRangeSeries(candles);
+  let seed = 0;
+  for (let i = 1; i <= period; i++) seed += tr[i];
+  result[period] = seed / period;
+
+  for (let i = period + 1; i < candles.length; i++) {
+    result[i] = ((result[i - 1] * (period - 1)) + tr[i]) / period;
+  }
+
+  return result;
+}
+
 export function zscore(values: number[], period = 30): number {
   if (values.length < period) return 0;
   const slice = values.slice(-period);
@@ -37,7 +72,7 @@ export function zscore(values: number[], period = 30): number {
   return standardDeviation === 0 ? 0 : (values[values.length - 1] - mean) / standardDeviation;
 }
 
-/** Z-score of the latest A/B close ratio over the trailing `period` candles; 0 until enough history. */
+/** Z-score of the latest A/B close ratio over the trailing period. */
 export function pairZScore(candlesA: Candle[], candlesB: Candle[], period = 30): number {
   const length = Math.min(candlesA.length, candlesB.length);
   if (length < period) return 0;
@@ -125,3 +160,99 @@ export function macd(values: number[], fast = 12, slow = 26, signalPeriod = 9): 
   return { macd: macdLine, signal, histogram };
 }
 
+/** Wilder ADX series. Values remain NaN until the first complete ADX seed exists. */
+export function adx(candles: Candle[], period = 14): number[] {
+  const result = new Array<number>(candles.length).fill(NaN);
+  if (period <= 0 || candles.length < period * 2) return result;
+
+  const tr = trueRangeSeries(candles);
+  const plusDm = new Array<number>(candles.length).fill(0);
+  const minusDm = new Array<number>(candles.length).fill(0);
+
+  for (let i = 1; i < candles.length; i++) {
+    const upMove = candles[i].high - candles[i - 1].high;
+    const downMove = candles[i - 1].low - candles[i].low;
+    plusDm[i] = upMove > downMove && upMove > 0 ? upMove : 0;
+    minusDm[i] = downMove > upMove && downMove > 0 ? downMove : 0;
+  }
+
+  let smTr = 0;
+  let smPlus = 0;
+  let smMinus = 0;
+  for (let i = 1; i <= period; i++) {
+    smTr += tr[i];
+    smPlus += plusDm[i];
+    smMinus += minusDm[i];
+  }
+
+  const dx = new Array<number>(candles.length).fill(NaN);
+
+  const setDx = (index: number): number => {
+    const plusDi = smTr === 0 ? 0 : (100 * smPlus) / smTr;
+    const minusDi = smTr === 0 ? 0 : (100 * smMinus) / smTr;
+    const denominator = plusDi + minusDi;
+    const value = denominator === 0 ? 0 : (100 * Math.abs(plusDi - minusDi)) / denominator;
+    dx[index] = value;
+    return value;
+  };
+
+  setDx(period);
+
+  for (let i = period + 1; i < candles.length; i++) {
+    smTr = smTr - smTr / period + tr[i];
+    smPlus = smPlus - smPlus / period + plusDm[i];
+    smMinus = smMinus - smMinus / period + minusDm[i];
+    setDx(i);
+  }
+
+  const firstAdxIndex = period * 2 - 1;
+  if (firstAdxIndex >= candles.length) return result;
+
+  let seed = 0;
+  for (let i = period; i <= firstAdxIndex; i++) seed += dx[i];
+  result[firstAdxIndex] = seed / period;
+
+  for (let i = firstAdxIndex + 1; i < candles.length; i++) {
+    result[i] = ((result[i - 1] * (period - 1)) + dx[i]) / period;
+  }
+
+  return result;
+}
+
+/** Percentile rank of a value within the finite values of an indicator series. */
+export function atrPercentile(series: number[], value: number): number {
+  const valid = series.filter(Number.isFinite);
+  if (!valid.length || !Number.isFinite(value)) return 0;
+  const atOrBelow = valid.filter((candidate) => candidate <= value).length;
+  return (atOrBelow / valid.length) * 100;
+}
+
+/** Percentage slope of an EMA over a recent lookback. */
+export function emaSlopePct(values: number[], period = 20, lookback = 5): number | null {
+  if (period <= 0 || lookback <= 0 || values.length < period + lookback) return null;
+  const series = ema(values, period);
+  const current = series.at(-1)!;
+  const previous = series.at(-1 - lookback)!;
+  if (previous === 0) return null;
+  return ((current - previous) / Math.abs(previous)) * 100;
+}
+
+/** Rolling volume-weighted average price using typical price and candle volume. */
+export function vwap(candles: Candle[], period = 96): number[] {
+  const result = new Array<number>(candles.length).fill(NaN);
+  if (candles.length === 0 || period <= 0) return result;
+
+  for (let i = period - 1; i < candles.length; i++) {
+    let pv = 0;
+    let volume = 0;
+    for (let j = i - period + 1; j <= i; j++) {
+      const candle = candles[j];
+      const typical = (candle.high + candle.low + candle.close) / 3;
+      pv += typical * candle.volume;
+      volume += candle.volume;
+    }
+    result[i] = volume > 0 ? pv / volume : candles[i].close;
+  }
+
+  return result;
+}

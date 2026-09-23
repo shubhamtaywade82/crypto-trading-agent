@@ -49,16 +49,16 @@ export class Orchestrator extends EventEmitter {
   private lastInitError: string | null = null;
 
   start() {
-    this.log('SYSTEM', \`Orchestrator started in \${config.mode.toUpperCase()} mode\`, 'info');
+    this.log('SYSTEM', `Orchestrator started in ${config.mode.toUpperCase()} mode`, 'info');
     announceStartup({ killSwitch: this.killSwitch, hooks: this.hooks, warn: (message) => this.log('SYSTEM', message, 'warn') });
     const dropped = this.binance.dropUnlistedPositions(config.symbols);
-    if (dropped.length) this.log('SYSTEM', \`Dropped \${dropped.length} saved position(s) outside SYMBOLS: \${dropped.join(', ')}\`, 'warn');
-    if (config.mode === 'live') this.log('SYSTEM', \`\${this.adaptive.id} disabled: dynamic exits are paper-only\`, 'warn');
+    if (dropped.length) this.log('SYSTEM', `Dropped ${dropped.length} saved position(s) outside SYMBOLS: ${dropped.join(', ')}`, 'warn');
+    if (config.mode === 'live') this.log('SYSTEM', `${this.adaptive.id} disabled: dynamic exits are paper-only`, 'warn');
     const remote = config.mode === 'paper' ? config.paperExchange : null;
-    if (remote) this.log('SYSTEM', \`Paper trading routed through \${remote.url} (account \${remote.accountId})\`, 'info');
-    const runLoop = singleFlight(() => this.loop().catch((err: Error) => this.log('SYSTEM', \`Loop crashed: \${err.message}\`, 'error')));
+    if (remote) this.log('SYSTEM', `Paper trading routed through ${remote.url} (account ${remote.accountId})`, 'info');
+    const runLoop = singleFlight(() => this.loop().catch((err: Error) => this.log('SYSTEM', `Loop crashed: ${err.message}`, 'error')));
     this.binance.loadSymbolRules(config.symbols)
-      .catch((err: Error) => this.log('SYSTEM', \`Symbol precision load failed (\${err.message}); using 2dp defaults\`, 'warn'))
+      .catch((err: Error) => this.log('SYSTEM', `Symbol precision load failed (${err.message}); using 2dp defaults`, 'warn'))
       .then(() => this.initVenue())
       .finally(runLoop);
     this.timer = setInterval(runLoop, LOOP_INTERVAL_MS);
@@ -101,8 +101,8 @@ export class Orchestrator extends EventEmitter {
   }
 
   async closePosition(pos: Position) {
-    this.log('SYSTEM', \`Manual close \${pos.symbol} \${pos.side}\`, 'warn');
-    await this.binance.closePosition(pos).catch((err: unknown) => this.logFailure(\`Close \${pos.symbol} failed\`, err));
+    this.log('SYSTEM', `Manual close ${pos.symbol} ${pos.side}`, 'warn');
+    await this.binance.closePosition(pos).catch((err: unknown) => this.logFailure(`Close ${pos.symbol} failed`, err));
   }
 
   async cancelAll() {
@@ -114,7 +114,7 @@ export class Orchestrator extends EventEmitter {
     const agent = [...this.agents, this.risk, this.executor].find(a => a.id === id);
     if (!agent) return;
     agent.status = agent.status === 'PAUSED' ? 'RUNNING' : 'PAUSED';
-    this.log('SYSTEM', \`\${id} \${agent.status}\`, 'info');
+    this.log('SYSTEM', `${id} ${agent.status}`, 'info');
   }
 
   async askAdvisor(question = 'Assess current portfolio risk and position exposures'): Promise<void> {
@@ -158,7 +158,7 @@ export class Orchestrator extends EventEmitter {
       await this.binance.initVenue();
       this.lastInitError = null;
     } catch (err) {
-      if (errorText(err) !== this.lastInitError) this.log('SYSTEM', \`Venue init failed: \${errorText(err)}\`, 'error');
+      if (errorText(err) !== this.lastInitError) this.log('SYSTEM', `Venue init failed: ${errorText(err)}`, 'error');
       this.lastInitError = errorText(err);
     }
   }
@@ -169,7 +169,7 @@ export class Orchestrator extends EventEmitter {
     this.hooks.onVenueState(venue, this.binance.getWsStatus());
     if (venue === null || venue.state === this.lastVenueState) return;
     this.lastVenueState = venue.state;
-    this.log('SYSTEM', \`\${venue.name} \${venue.state}\${venue.lastError ? \`: \${venue.lastError}\` : ''}\`, venue.state === 'connected' ? 'info' : 'warn');
+    this.log('SYSTEM', `${venue.name} ${venue.state}${venue.lastError ? `: ${venue.lastError}` : ''}`, venue.state === 'connected' ? 'info' : 'warn');
   }
 
   private async collectSignals(ctx: MarketContext): Promise<Signal[]> {
@@ -177,7 +177,7 @@ export class Orchestrator extends EventEmitter {
     for (const agent of this.agents) {
       const out = await agent.run(ctx);
       signals.push(...out);
-      for (const s of out) this.log(s.agent, \`\${s.symbol}: \${s.reason} (conf \${(s.confidence * 100).toFixed(0)}%)\`, 'info');
+      for (const s of out) this.log(s.agent, `${s.symbol}: ${s.reason} (conf ${(s.confidence * 100).toFixed(0)}%)`, 'info');
     }
     return signals;
   }
@@ -190,7 +190,7 @@ export class Orchestrator extends EventEmitter {
       const decision = this.risk.gate(signal, ctx);
       this.hooks.onGate(signal, decision);
       if (!decision.approved) {
-        this.log('RISK-MGR-δ', \`REJECTED \${signal.symbol}: \${decision.reason}\`, 'warn');
+        this.log('RISK-MGR-δ', `REJECTED ${signal.symbol}: ${decision.reason}`, 'warn');
         this.hooks.onRefusal(signal, decision.reason);
         this.counters.monitored += 1;
         continue;
@@ -200,14 +200,14 @@ export class Orchestrator extends EventEmitter {
       this.log(log.agent, log.msg, log.level);
       this.hooks.onOrder(signal, decision, log, ctx);
       if (log.level === 'warn') this.counters.monitored += 1;
-      if (startsCooldown(log.level, this.binance.getVenueStatus()?.state)) this.cooldownStartedAt.set(\`\${signal.symbol}:\${signal.agent}\`, Date.now());
+      if (startsCooldown(log.level, this.binance.getVenueStatus()?.state)) this.cooldownStartedAt.set(`${signal.symbol}:${signal.agent}`, Date.now());
       if (log.level === 'success') { this.counters.executed += 1; ctx = await refreshPortfolio(ctx, this.binance); }
     }
   }
 
   private isCoolingDown(signal: Signal): boolean {
     const cooldownMs = this.agents.find((a) => a.id === signal.agent)?.cooldownMs ?? DEFAULT_COOLDOWN_MS;
-    const startedAt = this.cooldownStartedAt.get(\`\${signal.symbol}:\${signal.agent}\`) ?? 0;
+    const startedAt = this.cooldownStartedAt.get(`${signal.symbol}:${signal.agent}`) ?? 0;
     return Date.now() - startedAt < cooldownMs;
   }
 
@@ -215,15 +215,15 @@ export class Orchestrator extends EventEmitter {
     const snapshot = this.adaptive.vetoSnapshot(signal, ctx);
     if (!snapshot) return false;
     const { verdict, reason } = await this.advisor.veto(snapshot);
-    if (verdict === 'VETO') { this.log(signal.agent, \`VETOED \${signal.type} \${signal.symbol}: \${reason}\`, 'warn'); this.hooks.onVeto(signal, reason); }
-    if (verdict === 'PROCEED' && reason.startsWith('advisor')) this.log(signal.agent, \`veto skipped for \${signal.symbol}: \${reason}\`, 'warn');
+    if (verdict === 'VETO') { this.log(signal.agent, `VETOED ${signal.type} ${signal.symbol}: ${reason}`, 'warn'); this.hooks.onVeto(signal, reason); }
+    if (verdict === 'PROCEED' && reason.startsWith('advisor')) this.log(signal.agent, `veto skipped for ${signal.symbol}: ${reason}`, 'warn');
     return verdict === 'VETO';
   }
 
   private trailStops(positions: Position[]): void {
     for (const { symbol, strategy, stopLoss, takeProfit } of this.adaptive.stopUpdates(positions)) {
       this.binance.updateStops(symbol, strategy, stopLoss, takeProfit);
-      this.log(strategy, \`TRAIL \${symbol} SL \${formatPrice(symbol, stopLoss)} TP \${formatPrice(symbol, takeProfit)}\`, 'info');
+      this.log(strategy, `TRAIL ${symbol} SL ${formatPrice(symbol, stopLoss)} TP ${formatPrice(symbol, takeProfit)}`, 'info');
     }
   }
 
@@ -233,7 +233,7 @@ export class Orchestrator extends EventEmitter {
   }
 
   private logFailure(what: string, err: unknown): void {
-    this.log('SYSTEM', \`\${what}: \${errorText(err)}\`, isRefusal(err) ? 'warn' : 'error');
+    this.log('SYSTEM', `${what}: ${errorText(err)}`, isRefusal(err) ? 'warn' : 'error');
   }
 
   private async consultAdvisor(signals: Signal[], positions: Position[]): Promise<void> {

@@ -192,7 +192,7 @@ export class BinanceService {
   }
 
   async openFuturesPosition(params: OpenPositionParams): Promise<{ orderId: number | string; status: string }> {
-    if (!(params.qty > 0)) throw new Error(\`Refusing \${params.side} \${params.symbol} with non-positive quantity \${params.qty}\`);
+    if (!(params.qty > 0)) throw new Error(`Refusing ${params.side} ${params.symbol} with non-positive quantity ${params.qty}`);
     if (this.broker) {
       const entryPrice = params.entryPrice ?? (await this.getPremiumIndex(params.symbol)).markPrice;
       return this.broker.open({ ...params, entryPrice });
@@ -288,7 +288,7 @@ export class BinanceService {
     const mark = Number(p.markPrice);
     const liqPrice = Number(p.liquidationPrice);
     return {
-      id: \`\${p.symbol}_\${side}\`,
+      id: `${p.symbol}_${side}`,
       symbol: p.symbol,
       side,
       strategy: 'EXECUTOR-ε',

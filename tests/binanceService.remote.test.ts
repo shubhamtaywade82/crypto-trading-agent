@@ -194,3 +194,16 @@ test('should hand adoption and dropped-entry notices to markAll once instead of 
   assert.deepEqual(service.markAll({}), []);
   assert.equal(warn.mock.calls.length, 0);
 });
+
+test('should journal the strategy initial risk on a stop-loss exit and on an off-agent close', async () => {
+  const { fake, broker, service } = await setup();
+  await service.openFuturesPosition(BTC_LONG);
+  service.markAll({ BTCUSDT: 63_900 });
+  await broker.idle();
+  assert.equal(service.getTrades()[0].initialRisk, 1_000);
+
+  await service.openFuturesPosition({ ...BTC_LONG, entryPrice: 65_000 });
+  await fake.injectExternalOrder({ symbol: 'BTCUSDT', side: 'sell', quantity: 0.1, executionPrice: 66_000, leverage: 5 });
+  await service.getPositions();
+  assert.deepEqual(service.getTrades().map((t) => [t.reason, t.initialRisk]), [['STOP LOSS', 1_000], ['CLOSE', 1_000]]);
+});

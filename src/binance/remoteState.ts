@@ -32,12 +32,14 @@ export interface ClosedPosition {
   side: Side;
   entry: number;
   qty: number;
+  initialRisk?: number;
 }
 
 /** Journal record with gross pnl (fees and funding live in the wallet, not in per-trade records). */
 export function closedTrade(closed: ClosedPosition, exit: number, reason: ExitReason, closedAt: number): TradeRecord {
   const pnl = (exit - closed.entry) * closed.qty * directionOf(closed.side);
-  return { symbol: closed.symbol, strategy: closed.owner, side: closed.side, entry: closed.entry, exit, qty: closed.qty, pnl, reason, closedAt };
+  const risk = closed.initialRisk === undefined ? {} : { initialRisk: closed.initialRisk };
+  return { symbol: closed.symbol, strategy: closed.owner, side: closed.side, entry: closed.entry, exit, qty: closed.qty, pnl, reason, closedAt, ...risk };
 }
 
 export interface RemoteStateFile {

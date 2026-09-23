@@ -233,8 +233,9 @@ export class RemoteExits {
   }
 
   private closedFrom(position: PaperExchangePosition): ClosedPosition {
-    const owner = this.host.store.getMeta(position.symbol)?.owner ?? EXTERNAL_OWNER;
-    return { symbol: position.symbol, owner, side: sideOf(position), entry: position.averagePrice, qty: position.netQuantity };
+    const meta = this.host.store.getMeta(position.symbol);
+    const initialRisk = meta?.initialRisk ?? undefined;
+    return { symbol: position.symbol, owner: meta?.owner ?? EXTERNAL_OWNER, side: sideOf(position), entry: position.averagePrice, qty: position.netQuantity, initialRisk };
   }
 
   private async dropAlreadyFlat(job: ExitJob): Promise<void> {

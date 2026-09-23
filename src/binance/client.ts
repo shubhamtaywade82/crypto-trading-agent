@@ -26,7 +26,7 @@ type OpenPositionParams = {
 
 const REMOTE_STATE_FILE = 'data/remote-state.json';
 // Same starting equity as the local paper engine, so both paper venues share a baseline
-const REMOTE_INITIAL_MARGIN = 100_000;
+const REMOTE_INITIAL_MARGIN = 1_150;
 
 /** Non-null only in PAPER mode with PAPER_EXCHANGE_URL set. */
 function remoteBrokerFromConfig(): RemoteBroker | null {

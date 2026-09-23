@@ -10,8 +10,10 @@ import { ExecutorAgent } from '../agents/ExecutorAgent.js';
 import { OllamaAdvisor } from '../ollama/advisor.js';
 import { errorText, isRefusal } from '../binance/remoteOrders.js';
 import { sparkline } from '../binance/indicators.js';
-import { buildTelemetry, fleetRuntimes, singleFlight, venueInfo, type SessionCounters, type Telemetry, type TelemetryInput } from './telemetry.js';
+import { accountFields, buildTelemetry, fleetRuntimes, singleFlight, venueInfo, type SessionCounters, type Telemetry, type TelemetryInput } from './telemetry.js';
 import { formatPrice } from '../binance/symbolRules.js';
+import { KillSwitch } from '../ops/killSwitch.js';
+import { announceStartup, buildOps, refreshPortfolio, RiskOps, toggleKillSwitch as flipKillSwitch } from './opsHooks.js';
 import { config, LOOP_INTERVAL_MS } from '../config.js';
 import type { AdaptiveSuperTrendBar } from '../binance/adaptiveSuperTrend.js';
 
@@ -19,10 +21,6 @@ type CycleContext = MarketContext & {
   tickers: Record<string, { price: number; changePct: number; high24h?: number; low24h?: number; volumeQuote?: number }>;
   nextFundingTime: number;
 };
-
-function accountFields(account: TelemetryInput['account'], positions: Position[]) {
-  return { equity: account.equity, marginUsed: account.marginUsed, positions, upnl: positions.reduce((sum, p) => sum + p.upnl, 0) };
-}
 
 export class Orchestrator extends EventEmitter {
   private binance = new BinanceService();
@@ -34,7 +32,10 @@ export class Orchestrator extends EventEmitter {
     // Live one-way mode nets opposite same-symbol positions, so per-strategy dynamic stops are paper-only
     ...(config.mode === 'paper' ? [this.adaptive] : []),
   ];
-  private risk = new RiskAgent(this.binance);
+  private killSwitch = new KillSwitch();
+  private risk = new RiskAgent(this.binance, { killSwitch: this.killSwitch });
+  private hooks = buildOps({ log: (line) => this.log('SYSTEM', line, 'info'), seedTrades: this.binance.getTrades() });
+  private ops = new RiskOps((message) => this.log('SYSTEM', message, 'warn'), { killSwitch: this.killSwitch, onCircuit: (from, to, snapshot) => this.hooks.onCircuit(from, to, snapshot) });
   private executor = new ExecutorAgent(this.binance);
   private advisor = new OllamaAdvisor();
   private timer: NodeJS.Timeout | null = null;
@@ -49,6 +50,7 @@ export class Orchestrator extends EventEmitter {
 
   start() {
     this.log('SYSTEM', `Orchestrator started in ${config.mode.toUpperCase()} mode`, 'info');
+    announceStartup({ killSwitch: this.killSwitch, hooks: this.hooks, warn: (message) => this.log('SYSTEM', message, 'warn') });
     const dropped = this.binance.dropUnlistedPositions(config.symbols);
     if (dropped.length) this.log('SYSTEM', `Dropped ${dropped.length} saved position(s) outside SYMBOLS: ${dropped.join(', ')}`, 'warn');
     if (config.mode === 'live') this.log('SYSTEM', `${this.adaptive.id} disabled: dynamic exits are paper-only`, 'warn');
@@ -61,20 +63,22 @@ export class Orchestrator extends EventEmitter {
       .finally(runLoop);
     this.timer = setInterval(runLoop, LOOP_INTERVAL_MS);
     this.stopWs = this.binance.startRealtimeStream(config.symbols, (sym, price) => this.handleRealtimeTick(sym, price));
+    this.hooks.start(this.binance);
   }
 
   stop() {
     if (this.timer) clearInterval(this.timer);
     this.stopWs?.();
     this.stopWs = null;
+    this.hooks.stop();
   }
 
   flushOnShutdown(): void { this.binance.flushPaperEngine(); }
+  toggleKillSwitch(): void { flipKillSwitch(this.killSwitch, this.hooks, (message) => this.log('SYSTEM', message, 'warn')); }
 
   private handleRealtimeTick(sym: string, price: number): void {
     this.livePrices[sym] = price;
-    const current = this.liveTickers[sym] ?? { price, changePct: 0 };
-    this.putTicker(sym, { ...current, price });
+    this.putTicker(sym, { ...(this.liveTickers[sym] ?? { changePct: 0 }), price });
     if (this.pendingTickFlush) return;
     this.pendingTickFlush = true;
     setTimeout(() => {
@@ -89,7 +93,7 @@ export class Orchestrator extends EventEmitter {
   }
 
   private async flushRealtimeTick(): Promise<void> {
-    this.logAll(this.binance.markAll(this.livePrices), 'warn');
+    this.logExits();
     if (!this.binance.hasVenueData()) return;
     // Cached read: this runs on every price tick, and a remote venue must not be polled that often
     const positions = await this.binance.getPositions(false);
@@ -128,6 +132,7 @@ export class Orchestrator extends EventEmitter {
       if (await this.isVenueReady()) await this.runCycle();
     } catch (err) {
       this.logFailure('Loop error', err);
+      if (!isRefusal(err)) this.hooks.onLoopCrash(err);
     } finally {
       this.noteVenue();
       this.emit('sync', false);
@@ -166,6 +171,7 @@ export class Orchestrator extends EventEmitter {
   private noteVenue(): void {
     const venue = this.binance.getVenueStatus();
     this.emit('state', { venue: venueInfo(venue, config.mode) } satisfies Partial<AppState>);
+    this.hooks.onVenueState(venue, this.binance.getWsStatus());
     if (venue === null || venue.state === this.lastVenueState) return;
     this.lastVenueState = venue.state;
     this.log('SYSTEM', `${venue.name} ${venue.state}${venue.lastError ? `: ${venue.lastError}` : ''}`, venue.state === 'connected' ? 'info' : 'warn');
@@ -185,18 +191,22 @@ export class Orchestrator extends EventEmitter {
     for (const signal of signals) {
       if (this.isCoolingDown(signal)) { this.counters.monitored += 1; continue; }
       this.counters.decisions += 1;
+      this.hooks.onSignal(signal);
       const decision = this.risk.gate(signal, ctx);
+      this.hooks.onGate(signal, decision);
       if (!decision.approved) {
         this.log('RISK-MGR-δ', `REJECTED ${signal.symbol}: ${decision.reason}`, 'warn');
+        this.hooks.onRefusal(signal, decision.reason);
         this.counters.monitored += 1;
         continue;
       }
       if (await this.isVetoed(signal, ctx)) { this.counters.monitored += 1; continue; }
       const log = await this.executor.execute(signal, decision);
       this.log(log.agent, log.msg, log.level);
+      this.hooks.onOrder(signal, decision, log, ctx);
       if (log.level === 'warn') this.counters.monitored += 1;
       if (startsCooldown(log.level, this.binance.getVenueStatus()?.state)) this.cooldownStartedAt.set(`${signal.symbol}:${signal.agent}`, Date.now());
-      if (log.level === 'success') this.counters.executed += 1;
+      if (log.level === 'success') { this.counters.executed += 1; ctx = await refreshPortfolio(ctx, this.binance); }
     }
   }
 
@@ -210,7 +220,7 @@ export class Orchestrator extends EventEmitter {
     const snapshot = this.adaptive.vetoSnapshot(signal, ctx);
     if (!snapshot) return false;
     const { verdict, reason } = await this.advisor.veto(snapshot);
-    if (verdict === 'VETO') this.log(signal.agent, `VETOED ${signal.type} ${signal.symbol}: ${reason}`, 'warn');
+    if (verdict === 'VETO') { this.log(signal.agent, `VETOED ${signal.type} ${signal.symbol}: ${reason}`, 'warn'); this.hooks.onVeto(signal, reason); }
     if (verdict === 'PROCEED' && reason.startsWith('advisor')) this.log(signal.agent, `veto skipped for ${signal.symbol}: ${reason}`, 'warn');
     return verdict === 'VETO';
   }
@@ -223,8 +233,10 @@ export class Orchestrator extends EventEmitter {
     }
   }
 
-  private logAll(lines: string[], level: LogEntry['level']): void {
-    for (const line of lines) this.log('SYSTEM', line, level);
+  /** The exit lines are for the operator; the audit trail and alerts come from the journal, which also holds exits that log nothing. */
+  private logExits(): void {
+    for (const line of this.binance.markAll(this.livePrices)) this.log('SYSTEM', line, 'warn');
+    this.hooks.onExit(this.binance.getTrades());
   }
 
   private logFailure(what: string, err: unknown): void {
@@ -241,16 +253,16 @@ export class Orchestrator extends EventEmitter {
     const market = await this.binance.getMarketOverview(config.symbols);
     // REST marks refresh every loop so SL/TP still trigger if the websocket stalls; ticks override in between
     Object.assign(this.livePrices, market.marks);
-    this.logAll(this.binance.markAll(this.livePrices), 'warn');
+    this.logExits();
     // Positions first: in remote mode this syncs the venue, and the account must be read from the same snapshot
     const positions = await this.binance.getPositions();
     const account = await this.binance.getAccount();
-    return { ...market, spot: this.livePrices, equity: account.equity, positions };
+    return { ...market, spot: this.livePrices, equity: account.equity, positions, performance: this.ops.build(this.binance.getTrades(), account) };
   }
 
   private telemetryFor(ctx: CycleContext, account: TelemetryInput['account'], positions: Position[]): Telemetry {
     const adaptive: Record<string, AdaptiveSuperTrendBar | undefined> = Object.fromEntries(config.symbols.map((s) => [s, this.adaptive.stateFor(s)]));
-    const running = [...this.agents, this.risk, this.executor].map(({ id, status, strategy }) => ({ id: id as AgentId, status, strategy }));
+    const running = [...this.agents, this.risk, this.executor].map(({ id, status, strategy }) => ({ id: id as AgentId, status, strategy, note: id === this.risk.id ? this.ops.note : undefined }));
     return buildTelemetry({
       account, positions, adaptive,
       trades: this.binance.getTrades(),

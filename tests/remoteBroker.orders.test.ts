@@ -120,7 +120,7 @@ test('should flip for the owner: full reduce-only close journaled FLIP, then a n
   assert.deepEqual([close.reduceOnly, close.side, close.quantity], [true, 'sell', 0.1]);
   assert.deepEqual([reopen.reduceOnly, reopen.side, reopen.quantity], [undefined, 'sell', 0.05]);
   assert.deepEqual(broker.getTrades(), [
-    { symbol: 'BTCUSDT', strategy: 'MOMENTUM-γ', side: 'LONG', entry: 65_000, exit: 66_000, qty: 0.1, pnl: 100, reason: 'FLIP', closedAt: NOW },
+    { symbol: 'BTCUSDT', strategy: 'MOMENTUM-γ', side: 'LONG', entry: 65_000, exit: 66_000, qty: 0.1, pnl: 100, reason: 'FLIP', closedAt: NOW, initialRisk: 1_000 },
   ]);
   const [row] = fake.allRows();
   assert.deepEqual([row.side, row.netQuantity, row.averagePrice], ['short', 0.05, 66_000]);

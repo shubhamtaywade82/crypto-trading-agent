@@ -4,7 +4,7 @@ import { correlation, simpleReturns, summarizePerformance, type StrategyPerforma
 import type { VenueStatus } from '../binance/remoteBroker.js';
 import type { AdaptiveInfo, AgentId, AgentState, AppState, Candle, FundingInfo, Mode, Position, StrategyMetrics, TradeRecord, WsStatus } from '../types.js';
 
-export interface AgentRuntime { id: AgentId; status: 'RUNNING' | 'PAUSED' | 'WATCHING'; strategy: string }
+export interface AgentRuntime { id: AgentId; status: 'RUNNING' | 'PAUSED' | 'WATCHING'; strategy: string; note?: string }
 export interface SessionCounters { decisions: number; executed: number; monitored: number }
 export interface TelemetryInput {
   account: { equity: number; marginUsed: number; initialEquity: number };
@@ -15,6 +15,10 @@ export interface TelemetryInput {
   apiWeight: number; wsStatus: WsStatus; now: number;
   attributable: boolean; // live positions are all tagged EXECUTOR-ε, so per-strategy figures cannot be measured
 }
+export function accountFields(account: TelemetryInput['account'], positions: Position[]) {
+  return { equity: account.equity, marginUsed: account.marginUsed, positions, upnl: positions.reduce((sum, p) => sum + p.upnl, 0) };
+}
+
 export type Telemetry = Pick<AppState, 'initialEquity' | 'totalPnl' | 'totalPnlPct' | 'successRate' | 'sharpe' | 'maxDd' | 'var95' | 'liqEvents' | 'sessionDecisions' | 'sessionExecuted' | 'sessionMonitored' | 'apiWeight' | 'wsStatus' | 'exposurePct' | 'minLiqDistancePct' | 'corrBtcEth' | 'agents' | 'strategyMetrics'>;
 
 const BTC = 'BTCUSDT';

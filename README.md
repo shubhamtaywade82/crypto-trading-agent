@@ -53,6 +53,7 @@ was fixed.
 | `MAX_DRAWDOWN_PCT` | `5` | **Kill-switch** (issue #10): once drawdown from session peak exceeds this, all OPEN signals are rejected until recovery |
 | `MIN_LIQ_BUFFER_ATR` | `2` | Minimum SL distance as a multiple of ATR(14) |
 | `SYMBOLS` | `BTCUSDT,ETHUSDT,SOLUSDT,AVAXUSDT` | Universe |
+| `AUDIT` / `ALERTS` | `off` | Audit trail and Telegram alerts, see [Ops](#ops-audit-trail-telegram-alerts-kill-switch) |
 | `PAPER_EXCHANGE_URL` | (unset) | When set in `paper` mode, routes through the remote Rails broker (`http://127.0.0.1:3100`) |
 | `PAPER_EXCHANGE_ACCOUNT_ID` | (none) | Account for the remote broker; **required** when `PAPER_EXCHANGE_URL` is set in `paper` mode (startup fails without it); `.env.example` suggests `crypto-agent` |
 
@@ -105,6 +106,58 @@ PASS/FAIL/SKIPPED line per scenario with the agent and exchange numbers it compa
 
 ---
 
+## Ops: audit trail, Telegram alerts, kill-switch
+
+Everything here is off by default and isolated from trading: an audit, alert or Telegram failure is swallowed
+before it reaches the loop, and sends are fire-and-forget, so trading never waits on Telegram. With a flag off its
+hook does nothing: no file is written, no request is made, no timer is started.
+
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `AUDIT` | `off` | `on` appends one JSON line per decision step to `EVENTS_PATH` |
+| `ALERTS` | `off` | `on` sends Telegram cards (and starts the daily digest timer) |
+| `EVENTS_PATH` | `data/events.jsonl` | Audit trail; rotated to `<file>.1` at 5 MB |
+| `NOTIFICATIONS_PATH` | `data/notifications.json` | Optional subscription JSON (missing or invalid means every class on) |
+| `TELEGRAM_CHAT_ID` | (unset) | Destination chat, required to send |
+| `TELEGRAM_BOT_TOKEN` | (unset) | Shared bot, used when a channel has no bot of its own |
+| `TELEGRAM_TRADING_BOT_TOKEN` | (unset) | Bot for TRADE and SIGNAL cards |
+| `TELEGRAM_ALERTBOT_BOT_TOKEN` | (unset) | Bot for SYSTEM and digest cards |
+| `TELEGRAM_DRY_RUN` | (unset) | `1` writes each card to the cockpit log (`[telegram dry-run] ...`) instead of sending; works without tokens |
+
+**Enable it:** set `AUDIT=on` and/or `ALERTS=on` in `.env`. For alerts, add `TELEGRAM_CHAT_ID` plus a bot token
+(`TELEGRAM_BOT_TOKEN`, or the two per-channel tokens). Try it first with `TELEGRAM_DRY_RUN=1`. Tokens are never
+logged. The audit trail and the alerts are independent of `RISK_ENGINE`.
+
+**Audit trail.** Each signal keeps one `decisionId` (the signal's `id`) from `signal` through `gate`, `veto`,
+`order`, `exit` and `journal`; refusals are `refusal` events with the same id. System events (`venue`, `circuit`,
+`crash`, `killswitch`, `digest`) carry none. Exits are detected from the closed-trade journal, so a stop, a
+liquidation or an off-agent close is reported even when the loop logged nothing. A position opened before a restart
+has no `decisionId` on its exit.
+
+**What each alert covers** (a card is audible unless its severity is below IMPORTANT):
+
+| Class | Cards | Severity |
+| --- | --- | --- |
+| TRADE (trading bot) | position opened, scale-in, flip; exit with reason, gross PnL and R (R needs the position's initial stop) | fill: SIGNAL; exit: IMPORTANT; liquidation: CRITICAL |
+| SIGNAL (trading bot) | entry accepted; entry refused (risk gate or executor); entry vetoed by the advisor | accepted: SIGNAL; refused/vetoed: WATCH (silent) |
+| SYSTEM (alert bot) | venue degraded / down / recovered, websocket drop after it was up, loop crash, circuit-breaker change, kill-switch on/off | down, crash, HALTED/EMERGENCY, kill-switch: CRITICAL; others IMPORTANT (websocket reconnecting: WATCH) |
+| RESEARCH (alert bot) | daily digest at 00:05 UTC for the previous UTC day: PnL, trades, win rate, profit factor, best/worst, drawdown, refusals by reason, per-strategy results (gross realized PnL; a dash where a ratio is undefined) | WATCH (silent) |
+
+Repeats are dropped by fingerprint: a refused signal for the same symbol, agent and reason at most once per 15
+minutes, and the same system alert at most once per 5 minutes. Optional `NOTIFICATIONS_PATH` JSON turns classes,
+symbols or a minimum severity off, for example `{"notifications": {"signal": false, "minSeverity": "IMPORTANT"}}`
+(SYSTEM CRITICAL alerts are never suppressed).
+
+**Kill-switch.** Press `k` in the cockpit to halt new entries: every OPEN is refused with `kill-switch: manual`,
+whatever `RISK_ENGINE` says, and the risk row of the fleet panel shows `KILL-SWITCH`. Exits, stops and manual closes
+are never affected. Press `k` again to resume. The state is saved to `data/kill-switch.json`, so a restart does not
+resume trading by itself (press `k` or delete the file to clear it). A circuit-breaker HALTED/EMERGENCY (with
+`RISK_ENGINE=on`) refuses entries on its own and is announced as a SYSTEM alert; it does not touch the kill-switch.
+
+With `MODE=live` the venue keeps no per-strategy trade journal, so `RISK_ENGINE=on` cannot see realized losses there: the daily-loss and loss-streak limits stay inactive (only drawdown applies) and a warning is logged at start.
+
+---
+
 ## Architecture
 
 ```
@@ -132,8 +185,10 @@ src/
     performance.ts           # win rate / max drawdown / Sharpe
   ollama/
     advisor.ts               # veto / advise / ask (fail-closed on parse errors — #6)
+  ops/                       # audit trail, alerts, Telegram sender, cards, kill-switch, hooks
   runtime/
     Orchestrator.ts          # main loop, state emit
+    opsHooks.ts              # circuit/performance ops, hook wiring from the flags, daily digest timer
     telemetry.ts             # builds the cockpit state snapshot
   ui/                        # Ink TUI
   config.ts                  # zod-validated env config

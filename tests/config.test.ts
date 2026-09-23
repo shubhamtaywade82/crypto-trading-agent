@@ -21,3 +21,14 @@ test('should not need an account id for local paper or live mode', () => {
   assert.ok(EnvSchema.safeParse({}).success);
   assert.ok(EnvSchema.safeParse({ MODE: 'live', PAPER_EXCHANGE_URL: URL }).success);
 });
+
+test('should default the ops flags off and the ops files under data/', () => {
+  const env = EnvSchema.parse({});
+  assert.deepEqual([env.AUDIT, env.ALERTS, env.EVENTS_PATH, env.NOTIFICATIONS_PATH], ['off', 'off', 'data/events.jsonl', 'data/notifications.json']);
+});
+
+test('should accept on/off ops flags, reject anything else, and treat a blank path as unset', () => {
+  assert.deepEqual([EnvSchema.parse({ AUDIT: 'on', ALERTS: 'on', EVENTS_PATH: ' /tmp/e.jsonl ' }).AUDIT, EnvSchema.parse({ EVENTS_PATH: ' /tmp/e.jsonl ' }).EVENTS_PATH], ['on', '/tmp/e.jsonl']);
+  assert.ok(!EnvSchema.safeParse({ ALERTS: 'yes' }).success);
+  assert.equal(EnvSchema.parse({ NOTIFICATIONS_PATH: '  ' }).NOTIFICATIONS_PATH, 'data/notifications.json');
+});

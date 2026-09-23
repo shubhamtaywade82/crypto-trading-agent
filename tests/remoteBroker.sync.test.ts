@@ -138,7 +138,7 @@ test('should journal CLOSE at the last local mark and drop the sidecar when a po
   await broker.sync();
 
   assert.deepEqual(broker.getTrades(), [
-    { symbol: 'BTCUSDT', strategy: 'MOMENTUM-γ', side: 'LONG', entry: 65_000, exit: 65_500, qty: 0.1, pnl: 50, reason: 'CLOSE', closedAt: NOW },
+    { symbol: 'BTCUSDT', strategy: 'MOMENTUM-γ', side: 'LONG', entry: 65_000, exit: 65_500, qty: 0.1, pnl: 50, reason: 'CLOSE', closedAt: NOW, initialRisk: 1_000 },
   ]);
   assert.equal(broker.getPositions().length, 0);
   assert.equal(store.getMeta('BTCUSDT'), undefined);
@@ -269,7 +269,7 @@ test('should journal CLOSE from lastSeen when a fresh process finds the position
   const broker = brokerFor(fake, store);
   await broker.init();
   assert.deepEqual(broker.getTrades(), [
-    { symbol: 'BTCUSDT', strategy: 'MOMENTUM-γ', side: 'LONG', entry: 65_000, exit: 65_500, qty: 0.1, pnl: 50, reason: 'CLOSE', closedAt: NOW },
+    { symbol: 'BTCUSDT', strategy: 'MOMENTUM-γ', side: 'LONG', entry: 65_000, exit: 65_500, qty: 0.1, pnl: 50, reason: 'CLOSE', closedAt: NOW, initialRisk: 1_000 },
   ]);
   assert.equal(store.getMeta('BTCUSDT'), undefined);
 });

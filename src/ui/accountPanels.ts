@@ -47,10 +47,17 @@ function winBar(winRate: number | null): string {
   return chalk.green('█'.repeat(filled)) + chalk.gray('░'.repeat(WIN_BAR_CELLS - filled));
 }
 
+// Sliced rather than cli-truncated: a truncation ellipsis is exactly what the column floors are sized to avoid; the status word is never cut
+function noteSuffix(note: string | undefined, room: number): string {
+  const fitting = (note ?? '').slice(0, Math.max(0, room - 1));
+  return fitting === '' ? '' : ' ' + chalk.yellow(fitting);
+}
+
 function agentRows(a: AgentState, isFull: boolean, width: number): string[] {
   const isRunning = a.status === 'RUNNING';
   const win = orDash(a.winRate, (rate) => `${dp(rate)}%`);
-  const head = padLine(`  ${isRunning ? chalk.green('●') : chalk.yellow('◐')} ${chalk.cyan.bold(a.id)} ${isRunning ? chalk.green(a.status) : chalk.yellow(a.status)}`, width);
+  const title = `  ${isRunning ? chalk.green('●') : chalk.yellow('◐')} ${chalk.cyan.bold(a.id)} ${isRunning ? chalk.green(a.status) : chalk.yellow(a.status)}`;
+  const head = padLine(title + noteSuffix(a.note, width - stringWidth(title)), width);
   const stats = padLine(`   ${chalk.gray(`pos ${a.positions ?? '—'} win ${win} pnl `)}${coloredPnl(a.pnl)}`, width);
   if (!isFull) return [head, stats];
   return [head, padLine(`   ${chalk.gray(a.strategy)}`, width), stats, padLine(`   ${winBar(a.winRate)} ${chalk.white(win)}`, width)];

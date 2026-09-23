@@ -167,4 +167,24 @@ export interface AppState {
   exposurePct: number;
   minLiqDistancePct: number | null;
   corrBtcEth: number | null;
+  marketIntel?: Record<string, MarketIntelSummary>;
+}
+
+/** Flat, display-ready summary of per-symbol market intelligence for the cockpit. */
+export interface MarketIntelSummary {
+  regime: string;
+  htfTrend: string;
+  ltfTrend: string;
+  volatility: string;
+  volatilityPct: number | null;
+  premium: boolean;
+  discount: boolean;
+  positionPct: number;
+  fundingApr: number | null;
+  fundingPct: number | null;
+  openInterestExpansion: boolean | null;
+  crowding: string | null;
+  spreadBps: number | null;
+  lastSweep: string | null;
+  strategyStatus: Record<string, 'READY' | 'BLOCKED'>;
 }

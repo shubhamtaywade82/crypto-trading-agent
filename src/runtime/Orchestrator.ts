@@ -22,6 +22,7 @@ import type { AdaptiveSuperTrendBar } from '../binance/adaptiveSuperTrend.js';
 import { MarketStateBuilder } from '../market/MarketStateBuilder.js';
 import { fuseSignals } from '../decision/SignalFusion.js';
 import { evaluateExecutionQuality } from '../execution/ExecutionQuality.js';
+import { applyRouter } from '../decision/StrategyRouter.js';
 import { AgentLedger } from '../learning/AgentLedger.js';
 import { confidenceMultiplier } from '../learning/ConfidenceAdjuster.js';
 import { TradeOutcomeRecorder } from '../learning/TradeOutcomeRecorder.js';
@@ -171,12 +172,15 @@ export class Orchestrator extends EventEmitter {
         this.log(s.agent, `${s.symbol}: ${s.reason} (conf ${(adjusted.confidence * 100).toFixed(0)}%${mult !== 1 ? ` adj×${mult.toFixed(2)}` : ''})`, 'info');
       }
     }
+    // Regime routing: block strategies in markets they are not designed for
+    const states = ctx.marketState ?? {};
+    const { passed, vetoed } = applyRouter(raw, states);
+    for (const v of vetoed) this.log(v.agent as any, `ROUTED OUT ${v.symbol}: ${v.agent} not allowed in ${v.regime}`, 'info');
     // New multi-strategy agents participate in signal fusion; legacy agents bypass it.
     const FUSION_AGENTS = new Set<string>(['STRUCTURE-TREND-η', 'MEAN-REVERT-θ', 'CROWDING-ι']);
-    const legacy = raw.filter((s) => !FUSION_AGENTS.has(s.agent));
-    const candidates = raw.filter((s) => FUSION_AGENTS.has(s.agent));
+    const legacy = passed.filter((s) => !FUSION_AGENTS.has(s.agent));
+    const candidates = passed.filter((s) => FUSION_AGENTS.has(s.agent));
     if (candidates.length === 0) return legacy;
-    const states = ctx.marketState ?? {};
     const intents = fuseSignals(candidates, states);
     const fused = intents.flatMap(({ symbol, sourceAgent }) => candidates.filter((s) => s.symbol === symbol && s.agent === sourceAgent));
     if (candidates.length !== fused.length) this.log('SYSTEM', `SignalFusion: ${candidates.length - fused.length} candidate(s) filtered by conflict resolution`, 'info');
@@ -241,8 +245,7 @@ export class Orchestrator extends EventEmitter {
     const market = await this.binance.getMarketOverview(config.symbols);
     Object.assign(this.livePrices, market.marks);
     this.logExits();
-    const positions = await this.binance.getPositions();
-    const account = await this.binance.getAccount();
+    const [positions, account] = await Promise.all([this.binance.getPositions(), this.binance.getAccount()]);
     const marketState = this.marketStateBuilder.buildAll(config.symbols.map((symbol) => ({
       symbol, candles: market.candles[symbol] ?? [],
       candlesByTimeframe: market.marketDataV2?.[symbol]?.candles,
@@ -250,14 +253,7 @@ export class Orchestrator extends EventEmitter {
       mark: market.marks[symbol] ?? this.livePrices[symbol] ?? 0,
       fundingRate: market.funding[symbol] ?? 0,
     })));
-    return {
-      ...market,
-      spot: this.livePrices,
-      equity: account.equity,
-      positions,
-      marketState,
-      performance: this.ops.build(this.binance.getTrades(), account),
-    };
+    return { ...market, spot: this.livePrices, equity: account.equity, positions, marketState, performance: this.ops.build(this.binance.getTrades(), account) };
   }
 
   private telemetryFor(ctx: CycleContext, account: TelemetryInput['account'], positions: Position[]): Telemetry {
@@ -268,7 +264,7 @@ export class Orchestrator extends EventEmitter {
       candles: ctx.candles, funding: ctx.funding, nextFundingTime: ctx.nextFundingTime,
       agents: fleetRuntimes(running, this.agents.includes(this.adaptive)), counters: this.counters,
       apiWeight: this.binance.getApiWeight(), wsStatus: this.binance.getWsStatus(), now: Date.now(),
-      attributable: config.mode !== 'live',
+      attributable: config.mode !== 'live', marketStates: ctx.marketState,
     });
   }
 
@@ -280,8 +276,7 @@ export class Orchestrator extends EventEmitter {
   }
 
   private async emitState(ctx: CycleContext): Promise<void> {
-    const positions = await this.binance.getPositions(false);
-    const account = await this.binance.getAccount();
+    const [positions, account] = await Promise.all([this.binance.getPositions(false), this.binance.getAccount()]);
     this.refreshLiveTickers(ctx);
     this.emit('state', {
       mode: config.mode, ...accountFields(account, positions), funding: ctx.funding,
@@ -289,11 +284,8 @@ export class Orchestrator extends EventEmitter {
     });
   }
 
-  private log(agent: any, msg: string, level: LogEntry['level']) {
-    this.emit('log', { ts: Date.now(), agent, msg, level } satisfies LogEntry);
-  }
+  private log(agent: any, msg: string, level: LogEntry['level']) { this.emit('log', { ts: Date.now(), agent, msg, level } satisfies LogEntry); }
   private logGrade(g: import('../learning/TradeOutcomeRecorder.js').GradedTrade): void {
-    const rStr = `${g.rMultiple > 0 ? '+' : ''}${g.rMultiple}R`;
-    this.log(g.trade.strategy, `GRADE ${g.grade} ${g.trade.symbol} ${rStr} — ${g.commentary}`, g.trade.pnl >= 0 ? 'success' : 'warn');
+    this.log(g.trade.strategy, `GRADE ${g.grade} ${g.trade.symbol} ${g.rMultiple > 0 ? '+' : ''}${g.rMultiple}R — ${g.commentary}`, g.trade.pnl >= 0 ? 'success' : 'warn');
   }
 }

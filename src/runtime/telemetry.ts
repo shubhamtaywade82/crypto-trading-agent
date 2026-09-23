@@ -2,7 +2,8 @@ import type { AdaptiveSuperTrendBar } from '../binance/adaptiveSuperTrend.js';
 import { atr, ema, pairZScore } from '../binance/indicators.js';
 import { correlation, simpleReturns, summarizePerformance, type StrategyPerformance } from '../binance/performance.js';
 import type { VenueStatus } from '../binance/remoteBroker.js';
-import type { AdaptiveInfo, AgentId, AgentState, AppState, Candle, FundingInfo, Mode, Position, StrategyMetrics, TradeRecord, WsStatus } from '../types.js';
+import type { AdaptiveInfo, AgentId, AgentState, AppState, Candle, FundingInfo, MarketIntelSummary, Mode, Position, StrategyMetrics, TradeRecord, WsStatus } from '../types.js';
+import type { MarketState } from '../market/types.js';
 
 export interface AgentRuntime { id: AgentId; status: 'RUNNING' | 'PAUSED' | 'WATCHING'; strategy: string; note?: string }
 export interface SessionCounters { decisions: number; executed: number; monitored: number }
@@ -14,12 +15,13 @@ export interface TelemetryInput {
   agents: AgentRuntime[]; counters: SessionCounters;
   apiWeight: number; wsStatus: WsStatus; now: number;
   attributable: boolean; // live positions are all tagged EXECUTOR-ε, so per-strategy figures cannot be measured
+  marketStates?: Record<string, MarketState>;
 }
 export function accountFields(account: TelemetryInput['account'], positions: Position[]) {
   return { equity: account.equity, marginUsed: account.marginUsed, positions, upnl: positions.reduce((sum, p) => sum + p.upnl, 0) };
 }
 
-export type Telemetry = Pick<AppState, 'initialEquity' | 'totalPnl' | 'totalPnlPct' | 'successRate' | 'sharpe' | 'maxDd' | 'var95' | 'liqEvents' | 'sessionDecisions' | 'sessionExecuted' | 'sessionMonitored' | 'apiWeight' | 'wsStatus' | 'exposurePct' | 'minLiqDistancePct' | 'corrBtcEth' | 'agents' | 'strategyMetrics'>;
+export type Telemetry = Pick<AppState, 'initialEquity' | 'totalPnl' | 'totalPnlPct' | 'successRate' | 'sharpe' | 'maxDd' | 'var95' | 'liqEvents' | 'sessionDecisions' | 'sessionExecuted' | 'sessionMonitored' | 'apiWeight' | 'wsStatus' | 'exposurePct' | 'minLiqDistancePct' | 'corrBtcEth' | 'agents' | 'strategyMetrics' | 'marketIntel'>;
 
 const BTC = 'BTCUSDT';
 const ETH = 'ETHUSDT';
@@ -136,6 +138,38 @@ function buildStrategyMetrics(input: TelemetryInput): StrategyMetrics {
   };
 }
 
+const FUNDINGS_PER_YEAR = 3 * 365 * 100; // rate → APR %
+
+function intelForSymbol(ms: MarketState): MarketIntelSummary {
+  const sweep = ms.liquidity.ltf.latestSweeps[0];
+  return {
+    regime: ms.regime.regime,
+    htfTrend: ms.htfStructure.trend,
+    ltfTrend: ms.ltfStructure.trend,
+    volatility: ms.regime.volatility,
+    volatilityPct: ms.regime.volatilityPercentile,
+    premium: ms.pricing.premium,
+    discount: ms.pricing.discount,
+    positionPct: Math.round(ms.pricing.positionPct),
+    fundingApr: ms.fundingRate !== 0 ? Number((ms.fundingRate * FUNDINGS_PER_YEAR).toFixed(2)) : null,
+    fundingPct: ms.crowding?.fundingPercentile ?? null,
+    openInterestExpansion: ms.crowding?.openInterestExpansion ?? null,
+    crowding: ms.crowding?.positioningExtreme ?? null,
+    spreadBps: ms.derivatives?.spreadBps ?? null,
+    lastSweep: sweep ? `${sweep.direction} @ ${sweep.level.toFixed(0)}` : null,
+    strategyStatus: {
+      'Structure': ms.regime.regime === 'TREND_UP' || ms.regime.regime === 'TREND_DOWN' ? 'READY' : 'BLOCKED',
+      'MeanRev': ms.regime.regime === 'RANGE' || ms.regime.regime === 'LOW_VOL' ? 'READY' : 'BLOCKED',
+      'Contrarian': ms.crowding?.positioningExtreme !== 'BALANCED' ? 'READY' : 'BLOCKED',
+    },
+  };
+}
+
+function buildMarketIntel(states?: Record<string, MarketState>): Record<string, MarketIntelSummary> | undefined {
+  if (!states || Object.keys(states).length === 0) return undefined;
+  return Object.fromEntries(Object.entries(states).map(([sym, ms]) => [sym, intelForSymbol(ms)]));
+}
+
 /** Derives every cockpit figure from real account, journal, candle and funding data; pure, no I/O. */
 export function buildTelemetry(input: TelemetryInput): Telemetry {
   const { equity, initialEquity } = input.account;
@@ -159,6 +193,7 @@ export function buildTelemetry(input: TelemetryInput): Telemetry {
     corrBtcEth: corrBtcEth(input.candles),
     agents: buildAgents(input.agents, input, perf.byStrategy),
     strategyMetrics: buildStrategyMetrics(input),
+    marketIntel: buildMarketIntel(input.marketStates),
   };
 }
 

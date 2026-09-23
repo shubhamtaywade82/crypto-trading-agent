@@ -29,6 +29,7 @@ export const EnvSchema = z.object({
   TAKER_FEE_RATE: z.coerce.number().nonnegative().default(0.0004),
   SLIPPAGE_BUFFER_RATE: z.coerce.number().nonnegative().default(0.0002),
   RISK_ENGINE: z.enum(['off', 'on']).default('off'),
+  MARKET_STATE_V1: z.enum(['off', 'on']).default('on'),
   AUDIT: z.enum(['off', 'on']).default('off'),
   ALERTS: z.enum(['off', 'on']).default('off'),
   EVENTS_PATH: pathWithDefault('data/events.jsonl'),
@@ -63,7 +64,7 @@ type Env = z.infer<typeof EnvSchema>;
 
 const parseSymbols = (raw: string): string[] => raw.split(',').map(s => s.trim());
 
-/** Resolves `config.risk`, defaulting the unset caps from the existing exposure and symbol settings. */
+/** Resolves config.risk, defaulting the unset caps from the existing exposure and symbol settings. */
 export function riskFromEnv(env: Env) {
   return {
     minLeverage: env.MIN_LEVERAGE,
@@ -92,6 +93,8 @@ export const config = {
   risk: riskFromEnv(env),
   // 'off' keeps today's RiskAgent behaviour; 'on' routes sizing and vetoes through src/risk.
   riskEngine: env.RISK_ENGINE,
+  // Read-only in this phase: builds MarketState and makes it available to strategies without changing execution.
+  marketStateV1: env.MARKET_STATE_V1,
   // Both default off: 'on' writes the JSONL audit trail / sends Telegram cards (TELEGRAM_* env vars, see README).
   audit: env.AUDIT,
   alerts: env.ALERTS,

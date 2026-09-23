@@ -16,6 +16,7 @@ import { KillSwitch } from '../ops/killSwitch.js';
 import { announceStartup, buildOps, refreshPortfolio, RiskOps, toggleKillSwitch as flipKillSwitch } from './opsHooks.js';
 import { config, LOOP_INTERVAL_MS } from '../config.js';
 import type { AdaptiveSuperTrendBar } from '../binance/adaptiveSuperTrend.js';
+import { MarketStateBuilder } from '../market/MarketStateBuilder.js';
 
 type CycleContext = MarketContext & {
   tickers: Record<string, { price: number; changePct: number; high24h?: number; low24h?: number; volumeQuote?: number }>;
@@ -24,6 +25,7 @@ type CycleContext = MarketContext & {
 
 export class Orchestrator extends EventEmitter {
   private binance = new BinanceService();
+  private marketStateBuilder = new MarketStateBuilder();
   private adaptive = new AdaptiveSuperTrendAgent(this.binance);
   private agents: BaseAgent[] = [
     new FundingArbAgent(this.binance),
@@ -257,7 +259,22 @@ export class Orchestrator extends EventEmitter {
     // Positions first: in remote mode this syncs the venue, and the account must be read from the same snapshot
     const positions = await this.binance.getPositions();
     const account = await this.binance.getAccount();
-    return { ...market, spot: this.livePrices, equity: account.equity, positions, performance: this.ops.build(this.binance.getTrades(), account) };
+    const marketState = config.marketStateV1 === 'on'
+      ? this.marketStateBuilder.buildAll(config.symbols.map((symbol) => ({
+          symbol,
+          candles: market.candles[symbol] ?? [],
+          mark: market.marks[symbol] ?? this.livePrices[symbol] ?? 0,
+          fundingRate: market.funding[symbol] ?? 0,
+        })))
+      : undefined;
+    return {
+      ...market,
+      spot: this.livePrices,
+      equity: account.equity,
+      positions,
+      marketState,
+      performance: this.ops.build(this.binance.getTrades(), account),
+    };
   }
 
   private telemetryFor(ctx: CycleContext, account: TelemetryInput['account'], positions: Position[]): Telemetry {

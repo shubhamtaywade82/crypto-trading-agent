@@ -1,4 +1,3 @@
-import { atrPercentile } from '../binance/indicators.js';
 import type { Candle } from '../types.js';
 import { detectLiquidity } from './LiquidityEngine.js';
 import { classifyRegime, buildTimeframeState } from './RegimeEngine.js';
@@ -45,9 +44,6 @@ function meanReversion(candles: Candle[]): MeanReversionState {
 
   const bands = bollinger(closes, period, 2);
   const meanValue = bands.middle.at(-1);
-  const standard = bands.upper.at(-1) !== undefined && meanValue !== undefined
-    ? Math.abs(bands.upper.at(-1)! - meanValue) / 2
-    : null;
   const recent = closes.slice(-period);
   const mean = recent.reduce((sum, value) => sum + value, 0) / recent.length;
   const latest = closes.at(-1)!;
@@ -64,21 +60,37 @@ function meanReversion(candles: Candle[]): MeanReversionState {
   };
 }
 
+function nativeOrResampled(
+  native: Partial<Record<'1m' | '5m' | '15m' | '1h' | '4h', Candle[]>> | undefined,
+  timeframe: Timeframe,
+  fallback15m: Candle[],
+): Candle[] {
+  const provided = native?.[timeframe];
+  if (provided && provided.length > 0) return provided;
+  return timeframe === '15m'
+    ? fallback15m
+    : resampleCandles(fallback15m, timeframe);
+}
+
 export class MarketStateBuilder {
   private cache = new Map<string, MarketState>();
 
   build(input: MarketStateInput): MarketState {
-    const closed = closedCandles(input.candles);
-    const latestClosedTime = closed.at(-1)?.openTime ?? 0;
+    const fallback15m = closedCandles(input.candles);
+    const tf15 = nativeOrResampled(input.candlesByTimeframe, '15m', fallback15m);
+    const tf1h = nativeOrResampled(input.candlesByTimeframe, '1h', fallback15m);
+    const tf4h = nativeOrResampled(input.candlesByTimeframe, '4h', fallback15m);
+    const latestClosedTime = tf15.at(-1)?.openTime ?? 0;
     const cached = this.cache.get(input.symbol);
 
-    if (cached && latestClosedTime === Number(cached.generatedAt)) {
-      return { ...cached, generatedAt: latestClosedTime, mark: input.mark, fundingRate: input.fundingRate };
+    if (cached && latestClosedTime === cached.generatedAt) {
+      return {
+        ...cached,
+        mark: input.mark,
+        fundingRate: input.fundingRate,
+        derivatives: input.derivatives ?? cached.derivatives ?? null,
+      };
     }
-
-    const tf15 = closed;
-    const tf1h = resampleCandles(tf15, '1h');
-    const tf4h = resampleCandles(tf15, '4h');
 
     const timeframes = {
       '15m': buildTimeframeState('15m', tf15),
@@ -113,6 +125,7 @@ export class MarketStateBuilder {
       zones,
       pricing: rangePricing(tf1h),
       meanReversion: meanReversion(tf15),
+      derivatives: input.derivatives ?? null,
     };
 
     this.cache.set(input.symbol, state);

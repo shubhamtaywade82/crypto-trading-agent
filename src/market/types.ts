@@ -1,4 +1,5 @@
 import type { Candle } from '../types.js';
+import type { DerivativesSnapshot, NativeTimeframe } from './MarketDataTypes.js';
 
 export type Timeframe = '15m' | '1h' | '4h';
 export type MarketRegime = 'TREND_UP' | 'TREND_DOWN' | 'RANGE' | 'TRANSITION';
@@ -139,11 +140,14 @@ export interface MarketState {
   zones: PriceZone[];
   pricing: RangePricing;
   meanReversion: MeanReversionState;
+  derivatives?: DerivativesSnapshot | null;
 }
 
 export interface MarketStateInput {
   symbol: string;
   candles: Candle[];
+  candlesByTimeframe?: Partial<Record<NativeTimeframe, Candle[]>>;
   mark: number;
   fundingRate: number;
+  derivatives?: DerivativesSnapshot | null;
 }

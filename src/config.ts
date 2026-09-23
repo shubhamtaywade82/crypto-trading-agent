@@ -2,8 +2,9 @@ import 'dotenv/config';
 import { z } from 'zod';
 import type { Mode } from './types.js';
 
-// A blank variable (a placeholder left in .env) must not turn into a file named ''
 const pathWithDefault = (fallback: string) => z.string().default(fallback).transform((raw) => raw.trim() || fallback);
+
+const timeframeTtl = (fallback: number) => z.coerce.number().int().positive().default(fallback);
 
 export const EnvSchema = z.object({
   MODE: z.enum(['paper', 'live']).default('paper'),
@@ -18,36 +19,44 @@ export const EnvSchema = z.object({
   MAX_DRAWDOWN_PCT: z.coerce.number().default(5),
   MIN_LIQ_BUFFER_ATR: z.coerce.number().default(2),
   SYMBOLS: z.string().default('BTCUSDT,ETHUSDT,SOLUSDT,AVAXUSDT'),
-  // Zero would trip the circuit breaker on the first tick, so the loss limits must be positive.
   MAX_DAILY_LOSS_PCT: z.coerce.number().positive().default(3),
   MAX_LOSS_STREAK: z.coerce.number().int().positive().default(4),
   MAX_CONCURRENT_POSITIONS: z.coerce.number().int().positive().optional(),
   MAX_SYMBOL_EXPOSURE_PCT: z.coerce.number().positive().optional(),
   MAX_CORRELATED_EXPOSURE_PCT: z.coerce.number().positive().optional(),
-  // 0 disables the reward:risk check (Adaptive strategy's R:R is below 1).
   MIN_RR: z.coerce.number().nonnegative().default(0),
   TAKER_FEE_RATE: z.coerce.number().nonnegative().default(0.0004),
   SLIPPAGE_BUFFER_RATE: z.coerce.number().nonnegative().default(0.0002),
   RISK_ENGINE: z.enum(['off', 'on']).default('off'),
   MARKET_STATE_V1: z.enum(['off', 'on']).default('on'),
+
+  // Market Data V2 is deliberately off until its public-data load is validated.
+  MARKET_DATA_V2: z.enum(['off', 'on']).default('off'),
+  MARKET_DATA_1M_TTL_MS: timeframeTtl(15_000),
+  MARKET_DATA_5M_TTL_MS: timeframeTtl(60_000),
+  MARKET_DATA_15M_TTL_MS: timeframeTtl(60_000),
+  MARKET_DATA_1H_TTL_MS: timeframeTtl(300_000),
+  MARKET_DATA_4H_TTL_MS: timeframeTtl(900_000),
+  MARKET_DATA_DERIVATIVES_TTL_MS: timeframeTtl(60_000),
+  MARKET_DATA_KLINE_LIMIT: z.coerce.number().int().min(50).max(1000).default(300),
+  MARKET_DATA_HISTORY_LIMIT: z.coerce.number().int().min(2).max(500).default(30),
+  MARKET_DATA_ORDERBOOK_DEPTH: z.coerce.number().int().min(5).max(100).default(20),
+  MARKET_DATA_MAX_CONCURRENCY: z.coerce.number().int().min(1).max(16).default(4),
+  MARKET_DATA_DERIVATIVES_PERIOD: z.enum(['5m', '15m', '30m', '1h', '2h', '4h', '6h', '12h', '1d']).default('1h'),
+  MARKET_DATA_BASIS: z.enum(['off', 'on']).default('off'),
+
   AUDIT: z.enum(['off', 'on']).default('off'),
   ALERTS: z.enum(['off', 'on']).default('off'),
   EVENTS_PATH: pathWithDefault('data/events.jsonl'),
   NOTIFICATIONS_PATH: pathWithDefault('data/notifications.json'),
-  // When set, PAPER mode routes account/positions/orders through the
-  // paper_exchange Rails broker over HTTP instead of the local in-memory
-  // PaperEngine. Unset by default — zero behavior change unless configured.
   PAPER_EXCHANGE_URL: z.string().optional(),
-  // No default: a silent shared account id would make two setups trade on each other's account.
   PAPER_EXCHANGE_ACCOUNT_ID: z.string().trim().optional(),
   COINDCX_API_KEY: z.string().default(''),
   COINDCX_API_SECRET: z.string().default(''),
-  // Routes through the SDK's own paper engine (no real orders) until explicitly turned off.
   COINDCX_PAPER_MODE: z.enum(['off', 'on']).default('on'),
   COINDCX_QUOTE_PREFERENCE: z.enum(['auto', 'USDT', 'INR']).default('auto'),
   COINDCX_MAX_ORDER_NOTIONAL: z.coerce.number().positive().optional(),
   COINDCX_MAX_ORDER_QUANTITY: z.coerce.number().positive().optional(),
-  // Same realistic bankroll as the two paper venues (see src/binance/paperEngine.ts).
   COINDCX_INITIAL_BALANCE: z.coerce.number().positive().default(1_150),
 }).superRefine((env, ctx) => {
   if (env.MODE !== 'paper' || !env.PAPER_EXCHANGE_URL || env.PAPER_EXCHANGE_ACCOUNT_ID) return;
@@ -64,7 +73,6 @@ type Env = z.infer<typeof EnvSchema>;
 
 const parseSymbols = (raw: string): string[] => raw.split(',').map(s => s.trim());
 
-/** Resolves config.risk, defaulting the unset caps from the existing exposure and symbol settings. */
 export function riskFromEnv(env: Env) {
   return {
     minLeverage: env.MIN_LEVERAGE,
@@ -91,18 +99,30 @@ export const config = {
   binance: { apiKey: env.BINANCE_API_KEY, apiSecret: env.BINANCE_API_SECRET },
   ollama: { host: env.OLLAMA_HOST, model: env.OLLAMA_MODEL },
   risk: riskFromEnv(env),
-  // 'off' keeps today's RiskAgent behaviour; 'on' routes sizing and vetoes through src/risk.
   riskEngine: env.RISK_ENGINE,
-  // Read-only in this phase: builds MarketState and makes it available to strategies without changing execution.
   marketStateV1: env.MARKET_STATE_V1,
-  // Both default off: 'on' writes the JSONL audit trail / sends Telegram cards (TELEGRAM_* env vars, see README).
+  marketDataV2: {
+    enabled: env.MARKET_DATA_V2 === 'on',
+    candleTtlMs: {
+      '1m': env.MARKET_DATA_1M_TTL_MS,
+      '5m': env.MARKET_DATA_5M_TTL_MS,
+      '15m': env.MARKET_DATA_15M_TTL_MS,
+      '1h': env.MARKET_DATA_1H_TTL_MS,
+      '4h': env.MARKET_DATA_4H_TTL_MS,
+    },
+    derivativesTtlMs: env.MARKET_DATA_DERIVATIVES_TTL_MS,
+    klineLimit: env.MARKET_DATA_KLINE_LIMIT,
+    historyLimit: env.MARKET_DATA_HISTORY_LIMIT,
+    orderBookDepth: env.MARKET_DATA_ORDERBOOK_DEPTH,
+    maxConcurrency: env.MARKET_DATA_MAX_CONCURRENCY,
+    derivativesPeriod: env.MARKET_DATA_DERIVATIVES_PERIOD,
+    basisEnabled: env.MARKET_DATA_BASIS === 'on',
+  },
   audit: env.AUDIT,
   alerts: env.ALERTS,
   eventsPath: env.EVENTS_PATH,
   notificationsPath: env.NOTIFICATIONS_PATH,
   symbols: parseSymbols(env.SYMBOLS),
-  // Non-null only when PAPER mode should be backed by the remote
-  // paper_exchange broker instead of the local PaperEngine.
   paperExchange: env.PAPER_EXCHANGE_URL && env.PAPER_EXCHANGE_ACCOUNT_ID
     ? { url: env.PAPER_EXCHANGE_URL.replace(/\/+$/, ''), accountId: env.PAPER_EXCHANGE_ACCOUNT_ID }
     : null,
@@ -120,7 +140,6 @@ export const config = {
 if (config.mode === 'live' && (!config.binance.apiKey || !config.binance.apiSecret)) {
   throw new Error('LIVE mode requires BINANCE_API_KEY and BINANCE_API_SECRET');
 }
-// CoinDCX is the only live execution path (see the 2026-09-22 design doc) — no silent fallback to raw Binance orders.
 if (config.mode === 'live' && (!config.coindcx?.apiKey || !config.coindcx.apiSecret)) {
   throw new Error('LIVE mode requires COINDCX_API_KEY and COINDCX_API_SECRET');
 }

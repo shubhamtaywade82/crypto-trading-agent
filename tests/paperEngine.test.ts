@@ -30,11 +30,11 @@ test('should book realized PnL at the TP level and remove the position', () => {
   const engine = freshEngine();
   engine.openPosition({ ...base, side: 'BUY', qty: 4, entryPrice: 115, stopLoss: 90, takeProfit: 130 });
   engine.markAll({ BTCUSDT: 125 });
-  near(engine.getAccount().equity, 100_040);
+  near(engine.getAccount().equity, 1_190);
   const exits = engine.markAll({ BTCUSDT: 131 });
   assert.match(exits[0], /TAKE PROFIT/);
   assert.equal(engine.getPositions().length, 0);
-  near(engine.getAccount().equity, 100_060);
+  near(engine.getAccount().equity, 1_210);
 });
 
 test('should fill a breached stop at the market, not at the stop level', () => {
@@ -42,7 +42,7 @@ test('should fill a breached stop at the market, not at the stop level', () => {
   engine.openPosition({ ...base, side: 'SELL', qty: 2, entryPrice: 100, stopLoss: 105, takeProfit: 90 });
   const exits = engine.markAll({ BTCUSDT: 106 });
   assert.match(exits[0], /STOP LOSS/);
-  near(engine.getAccount().equity, 100_000 - 12);
+  near(engine.getAccount().equity, 1_150 - 12);
 });
 
 test('should liquidate a 10x long at entry * (1 - 0.1 + 0.005)', () => {
@@ -51,7 +51,7 @@ test('should liquidate a 10x long at entry * (1 - 0.1 + 0.005)', () => {
   near(engine.getPositions()[0].liqDistancePct!, 9.5);
   const exits = engine.markAll({ BTCUSDT: 90 });
   assert.match(exits[0], /LIQUIDATED/);
-  near(engine.getAccount().equity, 100_000 - 9.5);
+  near(engine.getAccount().equity, 1_150 - 9.5);
 });
 
 test('should close the existing position and open the full opposite size on a flip', () => {
@@ -63,13 +63,13 @@ test('should close the existing position and open the full opposite size on a fl
   assert.equal(positions[0].side, 'SHORT');
   near(positions[0].qty, 1);
   near(positions[0].entry, 110);
-  near(engine.getAccount().equity, 100_020);
+  near(engine.getAccount().equity, 1_170);
   engine.openPosition({ ...base, side: 'BUY', qty: 3, entryPrice: 110 });
   positions = engine.getPositions();
   assert.equal(positions.length, 1);
   assert.equal(positions[0].side, 'LONG');
   near(positions[0].qty, 3);
-  near(engine.getAccount().equity, 100_020);
+  near(engine.getAccount().equity, 1_170);
 });
 
 test('should keep strategies on separate symbols and close only the requested one', () => {
@@ -115,7 +115,7 @@ test('should journal every realized close with its reason and pnl', () => {
   const [manual, tp] = engine.getTrades();
   assert.deepEqual({ reason: manual.reason, qty: manual.qty, exit: manual.exit, pnl: manual.pnl }, { reason: 'CLOSE', qty: 1, exit: 110, pnl: 10 });
   assert.deepEqual({ reason: tp.reason, qty: tp.qty, exit: tp.exit, pnl: tp.pnl }, { reason: 'TAKE PROFIT', qty: 1, exit: 130, pnl: 30 });
-  assert.equal(engine.getAccount().initialEquity, 100_000);
+  assert.equal(engine.getAccount().initialEquity, 1_150);
 });
 
 test('should mark the close half of a flip as FLIP', () => {

@@ -39,6 +39,15 @@ export const EnvSchema = z.object({
   PAPER_EXCHANGE_URL: z.string().optional(),
   // No default: a silent shared account id would make two setups trade on each other's account.
   PAPER_EXCHANGE_ACCOUNT_ID: z.string().trim().optional(),
+  COINDCX_API_KEY: z.string().default(''),
+  COINDCX_API_SECRET: z.string().default(''),
+  // Routes through the SDK's own paper engine (no real orders) until explicitly turned off.
+  COINDCX_PAPER_MODE: z.enum(['off', 'on']).default('on'),
+  COINDCX_QUOTE_PREFERENCE: z.enum(['auto', 'USDT', 'INR']).default('auto'),
+  COINDCX_MAX_ORDER_NOTIONAL: z.coerce.number().positive().optional(),
+  COINDCX_MAX_ORDER_QUANTITY: z.coerce.number().positive().optional(),
+  // Same realistic bankroll as the two paper venues (see src/binance/paperEngine.ts).
+  COINDCX_INITIAL_BALANCE: z.coerce.number().positive().default(1_150),
 }).superRefine((env, ctx) => {
   if (env.MODE !== 'paper' || !env.PAPER_EXCHANGE_URL || env.PAPER_EXCHANGE_ACCOUNT_ID) return;
   ctx.addIssue({
@@ -94,8 +103,21 @@ export const config = {
   paperExchange: env.PAPER_EXCHANGE_URL && env.PAPER_EXCHANGE_ACCOUNT_ID
     ? { url: env.PAPER_EXCHANGE_URL.replace(/\/+$/, ''), accountId: env.PAPER_EXCHANGE_ACCOUNT_ID }
     : null,
+  coindcx: env.MODE === 'live' ? {
+    apiKey: env.COINDCX_API_KEY,
+    apiSecret: env.COINDCX_API_SECRET,
+    paperMode: env.COINDCX_PAPER_MODE === 'on',
+    quotePreference: env.COINDCX_QUOTE_PREFERENCE,
+    maxOrderNotional: env.COINDCX_MAX_ORDER_NOTIONAL,
+    maxOrderQuantity: env.COINDCX_MAX_ORDER_QUANTITY,
+    initialBalance: env.COINDCX_INITIAL_BALANCE,
+  } : null,
 } as const;
 
 if (config.mode === 'live' && (!config.binance.apiKey || !config.binance.apiSecret)) {
   throw new Error('LIVE mode requires BINANCE_API_KEY and BINANCE_API_SECRET');
+}
+// CoinDCX is the only live execution path (see the 2026-09-22 design doc) — no silent fallback to raw Binance orders.
+if (config.mode === 'live' && (!config.coindcx?.apiKey || !config.coindcx.apiSecret)) {
+  throw new Error('LIVE mode requires COINDCX_API_KEY and COINDCX_API_SECRET');
 }

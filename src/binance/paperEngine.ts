@@ -21,7 +21,8 @@ interface FillParams {
   entryPrice?: number;
 }
 
-const INITIAL_EQUITY = 100_000;
+// A realistic retail bankroll (~₹1,00,000), not the unrealistic 100k USDT default
+const INITIAL_EQUITY = 1_150;
 const MAX_TRADES = 1000;
 
 // Binance's lowest-tier maintenance margin rate; real tiers rise with notional

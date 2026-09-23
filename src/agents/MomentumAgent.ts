@@ -13,6 +13,7 @@ export class MomentumAgent extends BaseAgent {
   protected async analyze(ctx: MarketContext): Promise<Signal[]> {
     const signals: Signal[] = [];
     for (const symbol of config.symbols) {
+      if ((ctx.positions ?? []).some((p) => p.symbol === symbol)) continue;
       const candles = ctx.candles[symbol]?.slice(-MOMENTUM_WINDOW);
       if (!candles || candles.length < 60) continue;
 

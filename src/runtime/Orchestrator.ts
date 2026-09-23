@@ -17,19 +17,14 @@ import { announceStartup, buildOps, refreshPortfolio, RiskOps, toggleKillSwitch 
 import { config, LOOP_INTERVAL_MS } from '../config.js';
 import type { AdaptiveSuperTrendBar } from '../binance/adaptiveSuperTrend.js';
 
-type CycleContext = MarketContext & {
-  tickers: Record<string, { price: number; changePct: number; high24h?: number; low24h?: number; volumeQuote?: number }>;
-  nextFundingTime: number;
-};
+type CycleContext = MarketContext & { tickers: Record<string, MarketPriceInfo>; nextFundingTime: number };
 
 export class Orchestrator extends EventEmitter {
   private binance = new BinanceService();
   private adaptive = new AdaptiveSuperTrendAgent(this.binance);
   private agents: BaseAgent[] = [
     new FundingArbAgent(this.binance),
-    // PairsAgent disabled: it signals a BTC/ETH ratio, which is not an exchange symbol; re-enable once it emits two legs
     new MomentumAgent(this.binance),
-    // Live one-way mode nets opposite same-symbol positions, so per-strategy dynamic stops are paper-only
     ...(config.mode === 'paper' ? [this.adaptive] : []),
   ];
   private killSwitch = new KillSwitch();
@@ -54,13 +49,11 @@ export class Orchestrator extends EventEmitter {
     const dropped = this.binance.dropUnlistedPositions(config.symbols);
     if (dropped.length) this.log('SYSTEM', `Dropped ${dropped.length} saved position(s) outside SYMBOLS: ${dropped.join(', ')}`, 'warn');
     if (config.mode === 'live') this.log('SYSTEM', `${this.adaptive.id} disabled: dynamic exits are paper-only`, 'warn');
-    const remote = config.mode === 'paper' ? config.paperExchange : null;
-    if (remote) this.log('SYSTEM', `Paper trading routed through ${remote.url} (account ${remote.accountId})`, 'info');
+    if (config.mode === 'paper' && config.paperExchange) this.log('SYSTEM', `Paper trading routed through ${config.paperExchange.url} (account ${config.paperExchange.accountId})`, 'info');
     const runLoop = singleFlight(() => this.loop().catch((err: Error) => this.log('SYSTEM', `Loop crashed: ${err.message}`, 'error')));
     this.binance.loadSymbolRules(config.symbols)
       .catch((err: Error) => this.log('SYSTEM', `Symbol precision load failed (${err.message}); using 2dp defaults`, 'warn'))
-      .then(() => this.initVenue())
-      .finally(runLoop);
+      .then(() => this.initVenue()).finally(runLoop);
     this.timer = setInterval(runLoop, LOOP_INTERVAL_MS);
     this.stopWs = this.binance.startRealtimeStream(config.symbols, (sym, price) => this.handleRealtimeTick(sym, price));
     this.hooks.start(this.binance);
@@ -84,21 +77,19 @@ export class Orchestrator extends EventEmitter {
     setTimeout(() => {
       this.pendingTickFlush = false;
       this.flushRealtimeTick().catch((err: unknown) => this.logFailure('Tick flush failed', err));
-    }, 60);
+    }, 250);
   }
 
   private putTicker(sym: string, info: MarketPriceInfo): void {
-    this.liveTickers[sym.replace('USDT', '')] = info;
-    this.liveTickers[sym] = info;
+    this.liveTickers[sym.replace('USDT', '')] = this.liveTickers[sym] = info;
   }
 
   private async flushRealtimeTick(): Promise<void> {
     this.logExits();
-    if (!this.binance.hasVenueData()) return;
-    // Cached read: this runs on every price tick, and a remote venue must not be polled that often
+    if (config.mode !== 'paper' && !this.binance.hasVenueData()) return;
     const positions = await this.binance.getPositions(false);
     const account = await this.binance.getAccount();
-    this.emit('state', { ...accountFields(account, positions), spotPrices: { ...this.liveTickers }, serverTime: Date.now() });
+    this.emit('state', { ...accountFields(account, positions), spotPrices: { ...this.liveTickers }, wsStatus: this.binance.getWsStatus(), serverTime: Date.now() });
   }
 
   async closePosition(pos: Position) {
@@ -112,10 +103,8 @@ export class Orchestrator extends EventEmitter {
   }
 
   pauseAgent(id: string) {
-    const agent = [...this.agents, this.risk, this.executor].find(a => a.id === id);
-    if (!agent) return;
-    agent.status = agent.status === 'PAUSED' ? 'RUNNING' : 'PAUSED';
-    this.log('SYSTEM', `${id} ${agent.status}`, 'info');
+    const a = [...this.agents, this.risk, this.executor].find(x => x.id === id);
+    if (a) { a.status = a.status === 'PAUSED' ? 'RUNNING' : 'PAUSED'; this.log('SYSTEM', `${id} ${a.status}`, 'info'); }
   }
 
   async askAdvisor(question = 'Assess current portfolio risk and position exposures'): Promise<void> {
@@ -141,6 +130,7 @@ export class Orchestrator extends EventEmitter {
 
   private async runCycle(): Promise<void> {
     const ctx = await this.gatherContext();
+    await this.guardEmergencyDrawdown(ctx);
     for (const { message, isFailure } of await this.binance.settleFunding(ctx)) this.log('SYSTEM', message, isFailure ? 'error' : 'info');
     const signals = await this.collectSignals(ctx);
     await this.processSignals(signals, ctx);
@@ -150,10 +140,20 @@ export class Orchestrator extends EventEmitter {
     await this.emitState(ctx);
   }
 
-  /** Without account data there is nothing to trade against: retry the venue setup and skip the cycle. */
+  private async guardEmergencyDrawdown(ctx: CycleContext): Promise<void> {
+    const maxLoss = ctx.equity * (config.risk.maxDrawdownPct / 100);
+    for (const pos of ctx.positions ?? []) {
+      if (pos.upnl < 0 && Math.abs(pos.upnl) >= maxLoss) {
+        this.log('SYSTEM', `EMERGENCY CLOSE ${pos.symbol}: loss $${Math.abs(pos.upnl).toFixed(2)} exceeds ${config.risk.maxDrawdownPct}% drawdown`, 'error');
+        await this.binance.closePosition(pos).catch((err: unknown) => this.logFailure(`Emergency close ${pos.symbol} failed`, err));
+      }
+    }
+  }
+
+  /** Retries venue init if missing; falls back to local paper engine in paper mode so trading continues. */
   private async isVenueReady(): Promise<boolean> {
     if (!this.binance.hasVenueData()) await this.initVenue();
-    return this.binance.hasVenueData();
+    return config.mode === 'paper' || this.binance.hasVenueData();
   }
 
   /** Logged once per distinct failure: the loop retries this every cycle while the venue is down. */
@@ -170,7 +170,7 @@ export class Orchestrator extends EventEmitter {
   /** Runs after every loop, including one that failed before emitting state, so the cockpit never keeps a stale venue state. */
   private noteVenue(): void {
     const venue = this.binance.getVenueStatus();
-    this.emit('state', { venue: venueInfo(venue, config.mode) } satisfies Partial<AppState>);
+    this.emit('state', { venue: venueInfo(venue, config.mode), wsStatus: this.binance.getWsStatus() } satisfies Partial<AppState>);
     this.hooks.onVenueState(venue, this.binance.getWsStatus());
     if (venue === null || venue.state === this.lastVenueState) return;
     this.lastVenueState = venue.state;
@@ -211,9 +211,8 @@ export class Orchestrator extends EventEmitter {
   }
 
   private isCoolingDown(signal: Signal): boolean {
-    const cooldownMs = this.agents.find((a) => a.id === signal.agent)?.cooldownMs ?? DEFAULT_COOLDOWN_MS;
-    const startedAt = this.cooldownStartedAt.get(`${signal.symbol}:${signal.agent}`) ?? 0;
-    return Date.now() - startedAt < cooldownMs;
+    const cooldown = this.agents.find((a) => a.id === signal.agent)?.cooldownMs ?? DEFAULT_COOLDOWN_MS;
+    return Date.now() - (this.cooldownStartedAt.get(`${signal.symbol}:${signal.agent}`) ?? 0) < cooldown;
   }
 
   private async isVetoed(signal: Signal, ctx: MarketContext): Promise<boolean> {
@@ -244,7 +243,7 @@ export class Orchestrator extends EventEmitter {
   }
 
   private async consultAdvisor(signals: Signal[], positions: Position[]): Promise<void> {
-    if (signals.length === 0) return;
+    if (!signals.length) return;
     const advice = await this.advisor.advise(positions, signals.map((s) => s.reason));
     if (advice) this.log(advice.agent, advice.msg, advice.level);
   }

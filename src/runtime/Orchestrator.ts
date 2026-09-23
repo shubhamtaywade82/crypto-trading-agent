@@ -22,6 +22,9 @@ import type { AdaptiveSuperTrendBar } from '../binance/adaptiveSuperTrend.js';
 import { MarketStateBuilder } from '../market/MarketStateBuilder.js';
 import { fuseSignals } from '../decision/SignalFusion.js';
 import { evaluateExecutionQuality } from '../execution/ExecutionQuality.js';
+import { AgentLedger } from '../learning/AgentLedger.js';
+import { confidenceMultiplier } from '../learning/ConfidenceAdjuster.js';
+import { TradeOutcomeRecorder } from '../learning/TradeOutcomeRecorder.js';
 
 type CycleContext = MarketContext & {
   tickers: Record<string, { price: number; changePct: number; high24h?: number; low24h?: number; volumeQuote?: number }>;
@@ -56,6 +59,8 @@ export class Orchestrator extends EventEmitter {
   private counters: SessionCounters = { decisions: 0, executed: 0, monitored: 0 };
   private lastVenueState: string | null = null;
   private lastInitError: string | null = null;
+  private ledger = new AgentLedger('data/agent-ledger.json');
+  private recorder = new TradeOutcomeRecorder(this.ledger);
 
   start() {
     this.log('SYSTEM', `Orchestrator started in ${config.mode.toUpperCase()} mode`, 'info');
@@ -129,6 +134,7 @@ export class Orchestrator extends EventEmitter {
   private async runCycle(): Promise<void> {
     const ctx = await this.gatherContext();
     for (const { message, isFailure } of await this.binance.settleFunding(ctx)) this.log('SYSTEM', message, isFailure ? 'error' : 'info');
+    for (const g of this.recorder.process(this.binance.getTrades())) this.logGrade(g);
     const signals = await this.collectSignals(ctx);
     await this.processSignals(signals, ctx);
     if (config.mode === 'paper') this.trailStops(await this.binance.getPositions());
@@ -158,8 +164,12 @@ export class Orchestrator extends EventEmitter {
     const raw: Signal[] = [];
     for (const agent of this.agents) {
       const out = await agent.run(ctx);
-      raw.push(...out);
-      for (const s of out) this.log(s.agent, `${s.symbol}: ${s.reason} (conf ${(s.confidence * 100).toFixed(0)}%)`, 'info');
+      const mult = confidenceMultiplier(agent.id as any, this.ledger);
+      for (const s of out) {
+        const adjusted = { ...s, confidence: Math.min(1, s.confidence * mult) };
+        raw.push(adjusted);
+        this.log(s.agent, `${s.symbol}: ${s.reason} (conf ${(adjusted.confidence * 100).toFixed(0)}%${mult !== 1 ? ` adj×${mult.toFixed(2)}` : ''})`, 'info');
+      }
     }
     // New multi-strategy agents participate in signal fusion; legacy agents bypass it.
     const FUSION_AGENTS = new Set<string>(['STRUCTURE-TREND-η', 'MEAN-REVERT-θ', 'CROWDING-ι']);
@@ -213,21 +223,14 @@ export class Orchestrator extends EventEmitter {
     if (verdict === 'PROCEED' && reason.startsWith('advisor')) this.log(signal.agent, `veto skipped for ${signal.symbol}: ${reason}`, 'warn');
     return verdict === 'VETO';
   }
-
   private trailStops(positions: Position[]): void {
     for (const { symbol, strategy, stopLoss, takeProfit } of this.adaptive.stopUpdates(positions)) {
       this.binance.updateStops(symbol, strategy, stopLoss, takeProfit);
       this.log(strategy, `TRAIL ${symbol} SL ${formatPrice(symbol, stopLoss)} TP ${formatPrice(symbol, takeProfit)}`, 'info');
     }
   }
-
-  private logExits(): void {
-    for (const line of this.binance.markAll(this.livePrices)) this.log('SYSTEM', line, 'warn');
-    this.hooks.onExit(this.binance.getTrades());
-  }
-  private logFailure(what: string, err: unknown): void {
-    this.log('SYSTEM', `${what}: ${errorText(err)}`, isRefusal(err) ? 'warn' : 'error');
-  }
+  private logExits(): void { for (const line of this.binance.markAll(this.livePrices)) this.log('SYSTEM', line, 'warn'); this.hooks.onExit(this.binance.getTrades()); }
+  private logFailure(what: string, err: unknown): void { this.log('SYSTEM', `${what}: ${errorText(err)}`, isRefusal(err) ? 'warn' : 'error'); }
   private async consultAdvisor(signals: Signal[], positions: Position[]): Promise<void> {
     if (signals.length === 0) return;
     const advice = await this.advisor.advise(positions, signals.map((s) => s.reason));
@@ -288,5 +291,9 @@ export class Orchestrator extends EventEmitter {
 
   private log(agent: any, msg: string, level: LogEntry['level']) {
     this.emit('log', { ts: Date.now(), agent, msg, level } satisfies LogEntry);
+  }
+  private logGrade(g: import('../learning/TradeOutcomeRecorder.js').GradedTrade): void {
+    const rStr = `${g.rMultiple > 0 ? '+' : ''}${g.rMultiple}R`;
+    this.log(g.trade.strategy, `GRADE ${g.grade} ${g.trade.symbol} ${rStr} — ${g.commentary}`, g.trade.pnl >= 0 ? 'success' : 'warn');
   }
 }

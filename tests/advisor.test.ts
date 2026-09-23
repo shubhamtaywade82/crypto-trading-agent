@@ -39,3 +39,28 @@ test('should re-ping an offline advisor after the interval and then use the mode
   assert.equal((await advisor.veto(snapshot)).verdict, 'VETO');
   mock.timers.reset();
 });
+
+test('should failover to second client if first client generate throws', async () => {
+  let firstCalled = false;
+  let secondCalled = false;
+  const failingClient = {
+    list: async () => ({}) as never,
+    generate: async () => { firstCalled = true; throw new Error('429 rate limited'); },
+  };
+  const workingClient = {
+    list: async () => ({}) as never,
+    generate: async () => { secondCalled = true; return { response: '{"verdict":"PROCEED","reason":"all good"}' } as never; },
+  };
+
+  // Instantiate advisor and inject mock clients into pool
+  const advisor = new OllamaAdvisor(failingClient);
+  await new Promise((resolve) => setImmediate(resolve));
+  (advisor as any).clients = [failingClient, workingClient];
+  const verdict = await advisor.veto(snapshot);
+
+  assert.equal(firstCalled, true);
+  assert.equal(secondCalled, true);
+  assert.equal(verdict.verdict, 'PROCEED');
+  assert.equal(verdict.reason, 'all good');
+});
+

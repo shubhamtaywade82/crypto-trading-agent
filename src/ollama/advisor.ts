@@ -57,8 +57,19 @@ function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
 export class OllamaAdvisor {
   private available = false;
   private lastPingAt = 0;
+  private clients: Array<Pick<Ollama, 'list' | 'generate'>> = [];
+  private keyIndex = 0;
 
-  constructor(private client: Pick<Ollama, 'list' | 'generate'> = new Ollama({ host: config.ollama.host })) {
+  constructor(clientOverride?: Pick<Ollama, 'list' | 'generate'>) {
+    if (clientOverride) {
+      this.clients = [clientOverride];
+    } else if (config.ollama.apiKeys.length > 0) {
+      this.clients = config.ollama.apiKeys.map(
+        (key) => new Ollama({ host: config.ollama.host, headers: { Authorization: `Bearer ${key}` } })
+      );
+    } else {
+      this.clients = [new Ollama({ host: config.ollama.host })];
+    }
     this.ping();
   }
 
@@ -66,14 +77,34 @@ export class OllamaAdvisor {
     return this.available;
   }
 
+  private async executeGenerate(request: Parameters<Ollama['generate']>[0]): Promise<Awaited<ReturnType<Ollama['generate']>>> {
+    let lastErr: Error | null = null;
+    const count = this.clients.length;
+    for (let attempt = 0; attempt < count; attempt++) {
+      const idx = (this.keyIndex + attempt) % count;
+      try {
+        const res = await withTimeout(this.clients[idx].generate(request), VETO_TIMEOUT_MS);
+        this.keyIndex = (idx + 1) % count;
+        return res;
+      } catch (err: any) {
+        lastErr = err;
+      }
+    }
+    throw lastErr ?? new Error('All Ollama clients failed');
+  }
+
   private async ping(): Promise<void> {
     this.lastPingAt = Date.now();
-    try {
-      await withTimeout(this.client.list(), VETO_TIMEOUT_MS);
-      this.available = true;
-    } catch {
-      this.available = false;
+    for (const client of this.clients) {
+      try {
+        await withTimeout(client.list(), VETO_TIMEOUT_MS);
+        this.available = true;
+        return;
+      } catch {
+        // try next key if one is unreachable or rate limited
+      }
     }
+    this.available = false;
   }
 
   async veto(snapshot: VetoSnapshot): Promise<VetoVerdict> {
@@ -84,10 +115,7 @@ export class OllamaAdvisor {
       'Reply with JSON only: {"verdict":"PROCEED"|"VETO","reason":"<max 15 words>"}. ' +
       'VETO only for a concrete reason such as an overextended entry or crowded funding.';
     try {
-      const res = await withTimeout(
-        this.client.generate({ model: config.ollama.model, prompt, format: 'json', stream: false }),
-        VETO_TIMEOUT_MS,
-      );
+      const res = await this.executeGenerate({ model: config.ollama.model, prompt, format: 'json', stream: false });
       return parseVerdict(res.response);
     } catch (err) {
       return { verdict: 'PROCEED', reason: `advisor error: ${(err as Error).message}` };
@@ -98,11 +126,7 @@ export class OllamaAdvisor {
     if (!this.available) return null;
     try {
       const prompt = `You are a crypto futures risk analyst. Portfolio: ${JSON.stringify(positions.slice(0, 3))}. Recent signals: ${signals.slice(-5).join('; ')}. Provide ONE sentence risk assessment, max 20 words.`;
-      const res = await this.client.generate({
-        model: config.ollama.model,
-        prompt,
-        stream: false,
-      });
+      const res = await this.executeGenerate({ model: config.ollama.model, prompt, stream: false });
       return {
         ts: Date.now(),
         agent: 'SYSTEM',
@@ -123,11 +147,7 @@ export class OllamaAdvisor {
         ? `Equity: $${context.equity.toFixed(2)}, Positions: ${context.positions.length}`
         : 'Portfolio: active';
       const prompt = `You are an institutional crypto risk advisor. Context: ${portfolioBrief}. Question: ${question}. Answer concisely in at most 25 words.`;
-      const res = await this.client.generate({
-        model: config.ollama.model,
-        prompt,
-        stream: false,
-      });
+      const res = await this.executeGenerate({ model: config.ollama.model, prompt, stream: false });
       return {
         ts: Date.now(),
         agent: 'SYSTEM',

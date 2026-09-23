@@ -12,6 +12,11 @@ export const EnvSchema = z.object({
   BINANCE_API_SECRET: z.string().default(''),
   OLLAMA_HOST: z.string().default('http://127.0.0.1:11434'),
   OLLAMA_MODEL: z.string().default('gemma4:31b'),
+  OLLAMA_API_KEY_1: z.string().optional(),
+  OLLAMA_API_KEY_2: z.string().optional(),
+  OLLAMA_API_KEY_3: z.string().optional(),
+  OLLAMA_API_KEY_4: z.string().optional(),
+  OLLAMA_API_KEY_5: z.string().optional(),
   MIN_LEVERAGE: z.coerce.number().default(5),
   MAX_LEVERAGE: z.coerce.number().default(10),
   MAX_EXPOSURE_PCT: z.coerce.number().default(80),
@@ -93,7 +98,17 @@ const env = EnvSchema.parse(process.env);
 export const config = {
   mode: env.MODE as Mode,
   binance: { apiKey: env.BINANCE_API_KEY, apiSecret: env.BINANCE_API_SECRET },
-  ollama: { host: env.OLLAMA_HOST, model: env.OLLAMA_MODEL },
+  ollama: {
+    host: env.OLLAMA_HOST,
+    model: env.OLLAMA_MODEL,
+    apiKeys: [
+      env.OLLAMA_API_KEY_1,
+      env.OLLAMA_API_KEY_2,
+      env.OLLAMA_API_KEY_3,
+      env.OLLAMA_API_KEY_4,
+      env.OLLAMA_API_KEY_5,
+    ].map((k) => k?.trim()).filter((k): k is string => Boolean(k)),
+  },
   risk: riskFromEnv(env),
   riskEngine: env.RISK_ENGINE,
   marketDataV2: {

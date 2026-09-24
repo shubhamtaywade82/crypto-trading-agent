@@ -22,9 +22,6 @@ export class MeanReversionAgent extends BaseAgent {
 
   private evaluateSymbol(symbol: string, state: MarketState): Signal | null {
     if (this.lastHandledTime.get(symbol) === state.generatedAt) return null;
-    // Mean reversion strictly trades non-trending range regimes to avoid fading breakouts
-    const isRange = state.regime.regime === 'RANGE' || (state.regime.adx14 !== null && state.regime.adx14 < 20);
-    if (!isRange) return null;
 
     const mr = state.meanReversion;
     const atr = state.timeframes['15m'].atr14 ?? 0;

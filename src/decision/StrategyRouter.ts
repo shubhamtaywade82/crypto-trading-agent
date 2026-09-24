@@ -4,9 +4,11 @@ import type { MarketState, MarketRegime } from '../market/types.js';
 // Which regimes each strategy is allowed to trade in.
 // Omitting an agent = no regime gate (legacy agents, funding arb, etc.)
 const REGIME_ALLOW: Partial<Record<string, Set<MarketRegime>>> = {
-  'STRUCTURE-TREND-η': new Set(['TREND_UP', 'TREND_DOWN', 'HIGH_VOL']),
+  // Uses HTF structure (CHOCH/BOS) which is valid in transitional markets too
+  'STRUCTURE-TREND-η': new Set(['TREND_UP', 'TREND_DOWN', 'HIGH_VOL', 'TRANSITION']),
   'MEAN-REVERT-θ':     new Set(['RANGE', 'LOW_VOL']),
-  'CROWDING-ι':        new Set(['TREND_UP', 'TREND_DOWN', 'RANGE']), // contrarian — valid in any non-extreme vol
+  // Uses crowding + liquidity sweeps — both meaningful in any regime
+  'CROWDING-ι':        new Set(['TREND_UP', 'TREND_DOWN', 'RANGE', 'TRANSITION']),
   'MOMENTUM-γ':        new Set(['TREND_UP', 'TREND_DOWN', 'HIGH_VOL']),
 };
 

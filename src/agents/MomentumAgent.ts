@@ -21,11 +21,6 @@ export class MomentumAgent extends BaseAgent {
   }
 
   private evaluateSymbol(symbol: string, ctx: MarketContext): Signal | null {
-    const state = ctx.marketState?.[symbol];
-    if (state && (state.regime.regime !== 'TREND_UP' || state.htfStructure.trend !== 'BULLISH')) {
-      return null;
-    }
-
     const raw = ctx.candles[symbol] ?? [];
     const closed = raw.slice(0, -1);
     const lastClosed = closed.at(-1);

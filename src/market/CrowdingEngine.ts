@@ -4,14 +4,17 @@ import type { CrowdingSnapshot } from './types.js';
 function deriveExtreme(
   globalLs: number | null,
   topTraderLs: number | null,
-  fundingRate: number
+  fundingRate: number,
+  takerRatio: number | null,
 ): CrowdingSnapshot['positioningExtreme'] {
-  // Extreme long crowding: high long/short ratio accompanied by elevated positive funding
-  if ((globalLs !== null && globalLs >= 2.0 && fundingRate > 0.0003) || (topTraderLs !== null && topTraderLs >= 2.5)) {
+  // Long crowding: top traders significantly skewed long, or global + positive funding
+  const takerBuyHeavy = takerRatio !== null && takerRatio > 1.4;
+  const takerSellHeavy = takerRatio !== null && takerRatio < 0.7;
+  if ((topTraderLs !== null && topTraderLs >= 1.7) || (globalLs !== null && globalLs >= 1.5 && fundingRate > 0.0001) || takerBuyHeavy) {
     return 'LONG_CROWDED';
   }
-  // Extreme short crowding: low long/short ratio accompanied by negative funding
-  if ((globalLs !== null && globalLs <= 0.6 && fundingRate < -0.0003) || (topTraderLs !== null && topTraderLs <= 0.45)) {
+  // Short crowding: top traders heavily short, or global + negative funding
+  if ((topTraderLs !== null && topTraderLs <= 0.6) || (globalLs !== null && globalLs <= 0.7 && fundingRate < -0.0001) || takerSellHeavy) {
     return 'SHORT_CROWDED';
   }
   return 'BALANCED';

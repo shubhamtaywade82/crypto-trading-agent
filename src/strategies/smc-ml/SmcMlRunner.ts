@@ -28,6 +28,7 @@ export class SmcMlRunner {
   private readonly runtime: SmcMlRuntime;
   private readonly options: Required<SmcMlRunnerOptions>;
   private readonly active = new Map<string, Promise<void>>();
+  private userStreamRestarting = false;
 
   constructor(
     private readonly client: BinanceClient,
@@ -54,6 +55,20 @@ export class SmcMlRunner {
       this.client.futures.wsUser.on('ACCOUNT_UPDATE', (event: unknown) => {
         this.runtime.handleAccountUpdate(event);
       });
+      this.client.futures.wsUser.on('listenKeyExpired', () => {
+        if (this.userStreamRestarting) return;
+        this.userStreamRestarting = true;
+        void this.client.startUserStream()
+          .catch((error) => {
+            console.error(JSON.stringify({
+              event: 'smc.user_stream_restart_failed',
+              error: error instanceof Error ? error.message : String(error),
+            }));
+          })
+          .finally(() => {
+            this.userStreamRestarting = false;
+          });
+      });
       await this.client.startUserStream();
     }
 
@@ -75,7 +90,7 @@ export class SmcMlRunner {
         if (this.active.has(key)) return;
         const promise = this.runtime.onMarkPrice(symbol, market.markPrice)
           .catch((error) => {
-            console.error('[smc-ml-lifecycle]', symbol, error);
+            console.error(JSON.stringify({ event: 'smc.lifecycle_error', symbol, error: error instanceof Error ? error.message : String(error) }));
           })
           .finally(() => this.active.delete(key))
           .then(() => undefined);

@@ -11,6 +11,7 @@ on:
       - "src/config.ts"
       - "tests/smc-ml.test.ts"
       - "tests/smc-ml-lifecycle.test.ts"
+      - "tests/smc-ml-lifecycle-coordinator.test.ts"
       - "package.json"
       - ".github/workflows/smc-ml.yml"
 
@@ -56,7 +57,9 @@ jobs:
           src/strategies/smc-ml/SmcMlRuntime.ts
           src/strategies/smc-ml/SmcMlRunner.ts
           src/strategies/smc-ml/SmcTradeLifecycle.ts
+          src/strategies/smc-ml/SmcTradeLifecycleCoordinator.ts
+          src/strategies/smc-ml/SmcBinanceLifecycleExchange.ts
           src/strategies/smc-ml/index.ts
 
       - name: Run SMC ML tests
-        run: npx tsx --test tests/smc-ml.test.ts tests/smc-ml-lifecycle.test.ts
+        run: npx tsx --test tests/smc-ml.test.ts tests/smc-ml-lifecycle.test.ts tests/smc-ml-lifecycle-coordinator.test.ts

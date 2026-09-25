@@ -79,7 +79,6 @@ export class Orchestrator extends EventEmitter {
   stop() { if (this.timer) clearInterval(this.timer); this.stopWs?.(); this.stopWs = null; this.hooks.stop(); }
   flushOnShutdown(): void { this.binance.flushPaperEngine(); }
   toggleKillSwitch(): void { flipKillSwitch(this.killSwitch, this.hooks, (message) => this.log('SYSTEM', message, 'warn')); }
-
   private handleRealtimeTick(sym: string, price: number): void {
     this.livePrices[sym] = price;
     this.putTicker(sym, { ...(this.liveTickers[sym] ?? { changePct: 0 }), price });
@@ -91,7 +90,6 @@ export class Orchestrator extends EventEmitter {
     }, 60);
   }
   private putTicker(sym: string, info: MarketPriceInfo): void { this.liveTickers[sym.replace('USDT', '')] = this.liveTickers[sym] = info; }
-
   private async flushRealtimeTick(): Promise<void> {
     this.logExits();
     if (config.mode !== 'paper' && !this.binance.hasVenueData()) return;
@@ -110,7 +108,6 @@ export class Orchestrator extends EventEmitter {
     agent.status = agent.status === 'PAUSED' ? 'RUNNING' : 'PAUSED';
     this.log('SYSTEM', `${id} ${agent.status}`, 'info');
   }
-
   async askAdvisor(question = 'Assess current portfolio risk and position exposures'): Promise<void> {
     if (!this.binance.hasVenueData()) return this.log('SYSTEM', 'Advisor unavailable: the venue has not returned account data yet', 'warn');
     const positions = await this.binance.getPositions(false);
@@ -118,7 +115,6 @@ export class Orchestrator extends EventEmitter {
     const entry = await this.advisor.ask(question, { positions, equity: account.equity });
     this.emit('log', entry);
   }
-
   private async loop() {
     try {
       this.emit('sync', true);
@@ -143,7 +139,6 @@ export class Orchestrator extends EventEmitter {
     await this.consultAdvisor(signals, ctx.positions ?? []);
     await this.emitState(ctx);
   }
-
   private async guardEmergencyDrawdown(ctx: CycleContext): Promise<void> {
     const maxLoss = ctx.equity * (config.risk.maxDrawdownPct / 100);
     for (const pos of ctx.positions ?? []) {
@@ -161,7 +156,6 @@ export class Orchestrator extends EventEmitter {
     try { await this.binance.initVenue(); this.lastInitError = null; }
     catch (err) { if (errorText(err) !== this.lastInitError) this.log('SYSTEM', `Venue init failed: ${errorText(err)}`, 'error'); this.lastInitError = errorText(err); }
   }
-
   private noteVenue(): void {
     const venue = this.binance.getVenueStatus();
     this.emit('state', { venue: venueInfo(venue, config.mode), wsStatus: this.binance.getWsStatus() } satisfies Partial<AppState>);

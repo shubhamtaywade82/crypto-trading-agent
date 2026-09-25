@@ -173,6 +173,87 @@ function logit(p: number): number {
   return Math.log(q / (1 - q));
 }
 
+
+export interface CausalCalibrationObservation {
+  signalIndex: number;
+  formulaProbability: number | null;
+  resolvedIndex: number | null;
+  outcome: 0 | 1 | null;
+}
+
+export class CausalBayesianCalibration {
+  private readonly pending: Array<{
+    resolvedIndex: number;
+    modelProbability: number;
+    formulaProbability: number;
+    outcome: 0 | 1;
+  }> = [];
+
+  constructor(
+    private readonly calibration: BayesianLogisticCalibration = new BayesianLogisticCalibration(),
+  ) {}
+
+  observe(
+    signalIndex: number,
+    formulaProbability: number | null,
+    resolvedIndex: number | null,
+    outcome: 0 | 1 | null,
+  ): number | null {
+    this.flush(signalIndex);
+
+    const modelProbability = this.calibration.predict(formulaProbability);
+    if (
+      modelProbability !== null &&
+      formulaProbability !== null &&
+      outcome !== null &&
+      resolvedIndex !== null
+    ) {
+      if (resolvedIndex <= signalIndex) {
+        this.calibration.score(modelProbability, formulaProbability, outcome);
+      } else {
+        this.pending.push({
+          resolvedIndex,
+          modelProbability,
+          formulaProbability,
+          outcome,
+        });
+      }
+    }
+
+    return modelProbability;
+  }
+
+  finalize(): void {
+    this.flush(Number.MAX_SAFE_INTEGER);
+  }
+
+  predict(formulaProbability: number | null): number | null {
+    return this.calibration.predict(formulaProbability);
+  }
+
+  summary() {
+    return this.calibration.summary();
+  }
+
+  private flush(signalIndex: number): void {
+    if (this.pending.length === 0) return;
+
+    this.pending.sort((a, b) => a.resolvedIndex - b.resolvedIndex);
+    let consumed = 0;
+    for (const observation of this.pending) {
+      if (observation.resolvedIndex > signalIndex) break;
+      this.calibration.score(
+        observation.modelProbability,
+        observation.formulaProbability,
+        observation.outcome,
+      );
+      consumed += 1;
+    }
+
+    if (consumed > 0) this.pending.splice(0, consumed);
+  }
+}
+
 export function twoProportionZ(
   nA: number,
   hitA: number,

@@ -231,3 +231,78 @@ test('fresh structure breaks can produce a market execution candidate', () => {
   });
   assert.ok(candidates.some((candidate) => candidate.entrySource === 'MARKET'));
 });
+
+import { applySmcPortfolioSafety } from '../src/strategies/smc-ml/SmcMlRuntime.js';
+
+test('portfolio safety does not force an exit from a no-trade confluence', () => {
+  const decision = applySmcPortfolioSafety('LONG', {
+    direction: 'SHORT',
+    score: -0.8,
+    frameScores: [],
+    agreement: 1,
+    reasons: [],
+    noTradeReasons: ['fewer than three analysed timeframes'],
+  });
+
+  assert.equal(decision, null);
+});
+
+test('portfolio safety forces an exit only for admissible opposite confluence', () => {
+  const decision = applySmcPortfolioSafety('LONG', {
+    direction: 'SHORT',
+    score: -0.8,
+    frameScores: [],
+    agreement: 0.75,
+    reasons: ['4h: BOS bearish'],
+    noTradeReasons: [],
+  });
+
+  assert.deepEqual(decision, {
+    action: 'EXIT',
+    side: 'LONG',
+    entrySource: null,
+    reason: 'deterministic portfolio policy: MTF confluence is opposite to the open position',
+  });
+});
+
+test('execution candidates reject a long stop above the entry price', () => {
+  const malformed = frameWithBreak(90);
+  malformed.latestBreak!.protectedSwing = 103;
+
+  const candidates = buildExecutionCandidates({ '1h': malformed }, 'LONG', 100, {
+    retestWindow: 20,
+  });
+
+  assert.equal(candidates.length, 0);
+});
+
+test('execution candidates reject a short stop below the entry price', () => {
+  const malformed = frame('1h', 'SHORT');
+  malformed.candleCount = 100;
+  malformed.latestBreak = {
+    direction: -1,
+    type: 'BOS',
+    index: 90,
+    time: 90,
+    level: 101,
+    breakClose: 100,
+    protectedSwing: 97,
+    protectedSwingIndex: 85,
+    riskUnit: 3,
+    retestFormulaProbability: 0.6,
+    retestProbability: 0.6,
+    retestEntryPrice: null,
+    retestOutcome: null,
+    followThroughOutcome: null,
+    sweptLiquidityFirst: false,
+    leftFvg: false,
+    nearestUpperPoolAtPrint: 110,
+    nearestLowerPoolAtPrint: 90,
+  };
+
+  const candidates = buildExecutionCandidates({ '1h': malformed }, 'SHORT', 100, {
+    retestWindow: 20,
+  });
+
+  assert.equal(candidates.length, 0);
+});

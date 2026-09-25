@@ -27,12 +27,13 @@ export function expectedMove(
   };
 }
 
+export function formatMinutes(minutes: number): string {
+  if (minutes < 60) return minutes + 'm';
+  const hours = minutes / 60;
+  if (hours < 24) return (Math.round(hours * 10) / 10) + 'h';
+  return (Math.round((hours / 24) * 10) / 10) + 'd';
+}
+
 export function formatDuration(window: ExpectedMoveWindow): string {
-  const fmt = (minutes: number): string => {
-    if (minutes < 60) return minutes + 'm';
-    const hours = minutes / 60;
-    if (hours < 24) return (Math.round(hours * 10) / 10) + 'h';
-    return (Math.round((hours / 24) * 10) / 10) + 'd';
-  };
-  return fmt(window.minMinutes) + '–' + fmt(window.maxMinutes);
+  return formatMinutes(window.minMinutes) + '–' + formatMinutes(window.maxMinutes);
 }

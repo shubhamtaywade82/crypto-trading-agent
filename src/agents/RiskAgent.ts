@@ -109,17 +109,31 @@ export class RiskAgent extends BaseAgent {
       return this.reject('stop on wrong side of entry');
     }
 
+    const currentGross = notionalOf(ctx.positions ?? []);
+    const remainingHeadroom = Math.max(0, maxNotional - currentGross);
+    if (!this.isEngineOn()) {
+      if ((ctx.positions ?? []).length >= config.risk.maxConcurrentPositions) {
+        return this.reject(`max concurrent positions (${config.risk.maxConcurrentPositions}) reached`);
+      }
+      if (remainingHeadroom <= 0) {
+        return this.reject(`max gross exposure reached (${currentGross.toFixed(0)} / ${maxNotional.toFixed(0)})`);
+      }
+    }
+
     const positionSizeUsdt = riskBudget / slDistancePct;
-    const cappedSize = Math.min(positionSizeUsdt, maxNotional);
+    const cappedSize = Math.min(positionSizeUsdt, this.isEngineOn() ? maxNotional : remainingHeadroom);
     return this.checkBuffer(signal, ctx, cappedSize, slDistancePct);
   }
 
   // Funding harvest positions in futures
   private gateHedge(signal: Signal, ctx: MarketContext, riskBudget: number, maxNotional: number): RiskDecision {
+    const currentGross = notionalOf(ctx.positions ?? []);
+    const remainingHeadroom = Math.max(0, maxNotional - currentGross);
+    if (!this.isEngineOn() && remainingHeadroom <= 0) return this.reject('max gross exposure reached');
     const leverage = config.risk.minLeverage;
     const harvest: RiskDecision = {
       approved: true,
-      positionSizeUsdt: Math.min(signal.notionalUsdt ?? riskBudget, maxNotional),
+      positionSizeUsdt: Math.min(signal.notionalUsdt ?? riskBudget, this.isEngineOn() ? maxNotional : remainingHeadroom),
       leverage,
       marginType: 'ISOLATED',
       liqBufferAtr: Infinity,

@@ -27,10 +27,7 @@ import { AgentLedger } from '../learning/AgentLedger.js';
 import { confidenceMultiplier } from '../learning/ConfidenceAdjuster.js';
 import { TradeOutcomeRecorder } from '../learning/TradeOutcomeRecorder.js';
 
-type CycleContext = MarketContext & {
-  tickers: Record<string, { price: number; changePct: number; high24h?: number; low24h?: number; volumeQuote?: number }>;
-  nextFundingTime: number;
-};
+type CycleContext = MarketContext & { tickers: Record<string, MarketPriceInfo>; nextFundingTime: number };
 
 export class Orchestrator extends EventEmitter {
   private binance = new BinanceService();
@@ -69,8 +66,7 @@ export class Orchestrator extends EventEmitter {
     const dropped = this.binance.dropUnlistedPositions(config.symbols);
     if (dropped.length) this.log('SYSTEM', `Dropped ${dropped.length} saved position(s) outside SYMBOLS: ${dropped.join(', ')}`, 'warn');
     if (config.mode === 'live') this.log('SYSTEM', `${this.adaptive.id} disabled: dynamic exits are paper-only`, 'warn');
-    const remote = config.mode === 'paper' ? config.paperExchange : null;
-    if (remote) this.log('SYSTEM', `Paper trading routed through ${remote.url} (account ${remote.accountId})`, 'info');
+    if (config.mode === 'paper' && config.paperExchange) this.log('SYSTEM', `Paper trading routed through ${config.paperExchange.url} (account ${config.paperExchange.accountId})`, 'info');
     const runLoop = singleFlight(() => this.loop().catch((err: Error) => this.log('SYSTEM', `Loop crashed: ${err.message}`, 'error')));
     this.binance.loadSymbolRules(config.symbols)
       .catch((err: Error) => this.log('SYSTEM', `Symbol precision load failed (${err.message}); using 2dp defaults`, 'warn'))
@@ -88,16 +84,19 @@ export class Orchestrator extends EventEmitter {
     this.putTicker(sym, { ...(this.liveTickers[sym] ?? { changePct: 0 }), price });
     if (this.pendingTickFlush) return;
     this.pendingTickFlush = true;
-    setTimeout(() => { this.pendingTickFlush = false; this.flushRealtimeTick().catch((err: unknown) => this.logFailure('Tick flush failed', err)); }, 60);
+    setTimeout(() => {
+      this.pendingTickFlush = false;
+      this.flushRealtimeTick().catch((err: unknown) => this.logFailure('Tick flush failed', err));
+    }, 60);
   }
   private putTicker(sym: string, info: MarketPriceInfo): void { this.liveTickers[sym.replace('USDT', '')] = this.liveTickers[sym] = info; }
 
   private async flushRealtimeTick(): Promise<void> {
     this.logExits();
-    if (!this.binance.hasVenueData()) return;
+    if (config.mode !== 'paper' && !this.binance.hasVenueData()) return;
     const positions = await this.binance.getPositions(false);
     const account = await this.binance.getAccount();
-    this.emit('state', { ...accountFields(account, positions), spotPrices: { ...this.liveTickers }, serverTime: Date.now() });
+    this.emit('state', { ...accountFields(account, positions), spotPrices: { ...this.liveTickers }, wsStatus: this.binance.getWsStatus(), serverTime: Date.now() });
   }
   async closePosition(pos: Position) {
     this.log('SYSTEM', `Manual close ${pos.symbol} ${pos.side}`, 'warn');
@@ -134,6 +133,7 @@ export class Orchestrator extends EventEmitter {
 
   private async runCycle(): Promise<void> {
     const ctx = await this.gatherContext();
+    await this.guardEmergencyDrawdown(ctx);
     for (const { message, isFailure } of await this.binance.settleFunding(ctx)) this.log('SYSTEM', message, isFailure ? 'error' : 'info');
     for (const g of this.recorder.process(this.binance.getTrades())) this.logGrade(g);
     const signals = await this.collectSignals(ctx);
@@ -143,9 +143,18 @@ export class Orchestrator extends EventEmitter {
     await this.emitState(ctx);
   }
 
+  private async guardEmergencyDrawdown(ctx: CycleContext): Promise<void> {
+    const maxLoss = ctx.equity * (config.risk.maxDrawdownPct / 100);
+    for (const pos of ctx.positions ?? []) {
+      if (pos.upnl < 0 && Math.abs(pos.upnl) >= maxLoss) {
+        this.log('SYSTEM', `EMERGENCY CLOSE ${pos.symbol}: loss $${Math.abs(pos.upnl).toFixed(2)} exceeds ${config.risk.maxDrawdownPct}% drawdown`, 'error');
+        await this.binance.closePosition(pos).catch((err: unknown) => this.logFailure(`Emergency close ${pos.symbol} failed`, err));
+      }
+    }
+  }
   private async isVenueReady(): Promise<boolean> {
     if (!this.binance.hasVenueData()) await this.initVenue();
-    return this.binance.hasVenueData();
+    return config.mode === 'paper' || this.binance.hasVenueData();
   }
   private async initVenue(): Promise<void> {
     try { await this.binance.initVenue(); this.lastInitError = null; }
@@ -154,7 +163,7 @@ export class Orchestrator extends EventEmitter {
 
   private noteVenue(): void {
     const venue = this.binance.getVenueStatus();
-    this.emit('state', { venue: venueInfo(venue, config.mode) } satisfies Partial<AppState>);
+    this.emit('state', { venue: venueInfo(venue, config.mode), wsStatus: this.binance.getWsStatus() } satisfies Partial<AppState>);
     this.hooks.onVenueState(venue, this.binance.getWsStatus());
     if (venue === null || venue.state === this.lastVenueState) return;
     this.lastVenueState = venue.state;
@@ -214,9 +223,8 @@ export class Orchestrator extends EventEmitter {
   }
 
   private isCoolingDown(signal: Signal): boolean {
-    const cooldownMs = this.agents.find((a) => a.id === signal.agent)?.cooldownMs ?? DEFAULT_COOLDOWN_MS;
-    const startedAt = this.cooldownStartedAt.get(`${signal.symbol}:${signal.agent}`) ?? 0;
-    return Date.now() - startedAt < cooldownMs;
+    const cooldown = this.agents.find((a) => a.id === signal.agent)?.cooldownMs ?? DEFAULT_COOLDOWN_MS;
+    return Date.now() - (this.cooldownStartedAt.get(`${signal.symbol}:${signal.agent}`) ?? 0) < cooldown;
   }
 
   private async isVetoed(signal: Signal, ctx: MarketContext): Promise<boolean> {
@@ -236,7 +244,7 @@ export class Orchestrator extends EventEmitter {
   private logExits(): void { for (const line of this.binance.markAll(this.livePrices)) this.log('SYSTEM', line, 'warn'); this.hooks.onExit(this.binance.getTrades()); }
   private logFailure(what: string, err: unknown): void { this.log('SYSTEM', `${what}: ${errorText(err)}`, isRefusal(err) ? 'warn' : 'error'); }
   private async consultAdvisor(signals: Signal[], positions: Position[]): Promise<void> {
-    if (signals.length === 0) return;
+    if (!signals.length) return;
     const advice = await this.advisor.advise(positions, signals.map((s) => s.reason));
     if (advice) this.log(advice.agent, advice.msg, advice.level);
   }

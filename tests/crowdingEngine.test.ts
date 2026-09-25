@@ -56,8 +56,8 @@ test('identifies SHORT_CROWDED when global L/S is depressed with negative fundin
 
 test('correctly calculates top trader vs global positioning asymmetry', () => {
   const deriv = makeDerivatives({
-    globalLongShortRatio: 1.2,
-    topTraderPositionLongShortRatio: 1.8,
+    globalLongShortRatio: 1.0,
+    topTraderPositionLongShortRatio: 1.5,
   });
   const result = calculateCrowding(deriv, 0.0001);
   assert.equal(result.positioningExtreme, 'BALANCED');

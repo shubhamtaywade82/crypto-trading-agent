@@ -1,7 +1,7 @@
 import { formatPrice } from '../binance/symbolRules.js';
 import { escapeHtml } from './telegram.js';
 import type { SetupMap, SetupScenario } from '../decision/SetupEngine.js';
-import { formatDuration } from '../decision/SetupTiming.js';
+import { formatDuration, formatMinutes } from '../decision/SetupTiming.js';
 
 const MAX_CARD_CHARS = 3_500;
 
@@ -35,7 +35,7 @@ function scenarioLines(symbol: string, setup: SetupScenario): string[] {
     `⚡ <b>Trigger:</b> ${clean(setup.trigger)}`,
     `⛔ <b>Invalidation:</b> ${clean(setup.invalidation)}`,
     `🧠 <b>Flow hypothesis:</b> ${clean(setup.flowHypothesis)}`,
-    `⏱️ <b>Move window (model):</b> ${formatDuration(setup.expectedMove)} · <b>Thesis expiry:</b> ${formatDuration({ ...setup.expectedMove, minMinutes: setup.expectedMove.thesisExpiryMinutes, maxMinutes: setup.expectedMove.thesisExpiryMinutes })}`,
+    `⏱️ <b>Move window (model):</b> ${formatDuration(setup.expectedMove)} · <b>Thesis expiry:</b> ${formatMinutes(setup.expectedMove.thesisExpiryMinutes)},
   ];
 }
 

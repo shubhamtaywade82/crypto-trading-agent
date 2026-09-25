@@ -173,7 +173,7 @@ export interface SMCAnalysis {
   symbol: string;
   generatedAt: number;
   price: number;
-  timeframes: Record<SMCFrame, SMCFrameAnalysis>;
+  timeframes: Partial<Record<SMCFrame, SMCFrameAnalysis>>;
   confluence: SMCConfluence;
   candidates: ExecutionCandidate[];
 }

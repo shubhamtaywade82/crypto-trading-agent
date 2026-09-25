@@ -123,7 +123,7 @@ function parseJson(text: string): unknown {
   }
 }
 
-function validateDecision(raw: unknown, context: SMCDecisionContext): SMCTradeDecision {
+export function validateDecision(raw: unknown, context: SMCDecisionContext): SMCTradeDecision {
   if (!raw || typeof raw !== 'object') throw new Error('invalid decision');
 
   const obj = raw as Record<string, unknown>;
@@ -147,7 +147,7 @@ function validateDecision(raw: unknown, context: SMCDecisionContext): SMCTradeDe
         : null;
 
   const reason = typeof obj.reason === 'string' ? obj.reason.slice(0, 200) : 'no reason supplied';
-  let normalized: SMCTradeDecision = {
+  const normalized: SMCTradeDecision = {
     action: action as SMCTradeDecision['action'],
     side: side as SMCTradeDecision['side'],
     entrySource: source,
@@ -155,7 +155,10 @@ function validateDecision(raw: unknown, context: SMCDecisionContext): SMCTradeDe
   };
 
   const confluenceDirection = context.analysis.confluence.direction;
-  const candidateSources = new Set(context.analysis.candidates.map((c) => c.entrySource));
+  const hasCandidate = (requestedSide: 'LONG' | 'SHORT', requestedSource: SMCEntrySource) =>
+    context.analysis.candidates.some(
+      (candidate) => candidate.direction === requestedSide && candidate.entrySource === requestedSource,
+    );
 
   if (normalized.action === 'HOLD') {
     return { action: 'HOLD', side: 'NONE', entrySource: null, reason };
@@ -163,8 +166,19 @@ function validateDecision(raw: unknown, context: SMCDecisionContext): SMCTradeDe
 
   if (context.portfolioState === 'NO_POSITION') {
     if (normalized.action !== 'OPEN') return { action: 'HOLD', side: 'NONE', entrySource: null, reason };
-    if (confluenceDirection === 'NEUTRAL' || normalized.side !== confluenceDirection || !source || !candidateSources.has(source)) {
-      return { action: 'HOLD', side: 'NONE', entrySource: null, reason: 'validator rejected OPEN: no admissible confluence candidate' };
+    if (
+      confluenceDirection === 'NEUTRAL' ||
+      context.analysis.confluence.noTradeReasons.length > 0 ||
+      normalized.side !== confluenceDirection ||
+      !source ||
+      !hasCandidate(normalized.side, source)
+    ) {
+      return {
+        action: 'HOLD',
+        side: 'NONE',
+        entrySource: null,
+        reason: 'validator rejected OPEN: no admissible confluence candidate',
+      };
     }
     return normalized;
   }
@@ -174,14 +188,20 @@ function validateDecision(raw: unknown, context: SMCDecisionContext): SMCTradeDe
     if (normalized.side !== currentSide) {
       return { action: 'EXIT', side: currentSide, entrySource: null, reason };
     }
-    return normalized;
+    return { action: 'EXIT', side: currentSide, entrySource: null, reason };
   }
 
   if (normalized.action !== 'ADD') {
     return { action: 'HOLD', side: 'NONE', entrySource: null, reason };
   }
 
-  if (confluenceDirection !== currentSide || normalized.side !== currentSide || !source || !candidateSources.has(source)) {
+  if (
+    confluenceDirection !== currentSide ||
+    context.analysis.confluence.noTradeReasons.length > 0 ||
+    normalized.side !== currentSide ||
+    !source ||
+    !hasCandidate(normalized.side, source)
+  ) {
     return { action: 'HOLD', side: 'NONE', entrySource: null, reason: 'validator rejected ADD: confluence does not match open position' };
   }
 

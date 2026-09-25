@@ -189,7 +189,6 @@ export class SmcTradeLifecycleCoordinator {
 
     if (orderId === registered.stopOrderId) {
       this.setPositionCache(symbol, null);
-      this.setPositionCache(symbol, null);
       this.active.set(symbol, {
         ...registered,
         lifecycle: {

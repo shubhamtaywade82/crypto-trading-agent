@@ -238,3 +238,35 @@ test('account update hydrates the position cache without requiring REST on the n
   await coordinator.onMarkPrice('BTCUSDT', 105);
   assert.equal(calls.includes('reconcile:BTCUSDT'), false);
 });
+
+test('stale account updates do not overwrite newer cached position state', async () => {
+  const { exchange, calls } = exchangeFor();
+  const coordinator = new SmcTradeLifecycleCoordinator(exchange);
+  coordinator.register({
+    setupId: 'BTCUSDT:LONG:BOS:1000',
+    symbol: 'BTCUSDT',
+    direction: 'LONG',
+    initialQty: 1,
+    entryPrice: 100,
+    initialRisk: 10,
+    tp1: 110,
+    tp2: 120,
+    stopPrice: 90,
+    stopOrderId: 101,
+    tp2OrderId: 102,
+  });
+
+  coordinator.handleAccountUpdate({
+    e: 'ACCOUNT_UPDATE',
+    E: 200,
+    a: { P: [{ s: 'BTCUSDT', pa: '1', ep: '100' }] },
+  });
+  coordinator.handleAccountUpdate({
+    e: 'ACCOUNT_UPDATE',
+    E: 199,
+    a: { P: [{ s: 'BTCUSDT', pa: '0', ep: '0' }] },
+  });
+
+  await coordinator.onMarkPrice('BTCUSDT', 105);
+  assert.equal(calls.includes('reconcile:BTCUSDT'), false);
+});

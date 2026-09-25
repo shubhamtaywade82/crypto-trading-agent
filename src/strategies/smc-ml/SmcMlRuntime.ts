@@ -1,5 +1,4 @@
 import { BinanceClient, type KlineInterval } from '@nemesis-oss/binance-sdk';
-import type { SMCFrameAnalysis } from './types.js';
 import type { Candle } from '../../types.js';
 import { config } from '../../config.js';
 import { analyzeSmcMultiTimeframe } from './SmcMlEngine.js';
@@ -14,7 +13,6 @@ import {
   type SMCDecisionContext,
   type SMCFrame,
   type PortfolioState,
-  type SMCEntrySource,
   type SMCTradeDecision,
 } from './types.js';
 

@@ -234,8 +234,9 @@ function resolveRetest(candles: Candle[], b: RawBreak, window: number): { outcom
   for (let i = b.index + 1; i < Math.min(candles.length, b.index + window + 1); i++) {
     const c = candles[i];
     const touch = b.direction === 1 ? c.low <= b.level : c.high >= b.level;
+    if (!touch) continue;
     const reclaim = b.direction === 1 ? c.close > b.level : c.close < b.level;
-    if (touch && reclaim) return { outcome: true, entryClose: c.close };
+    return { outcome: true, entryClose: reclaim ? c.close : null };
   }
   if (b.index + window < candles.length) return { outcome: false, entryClose: null };
   return { outcome: null, entryClose: null };

@@ -1,5 +1,5 @@
 import { BinanceClient, type KlineInterval } from '@nemesis-oss/binance-sdk';
-import type { PositionRisk } from '@nemesis-oss/binance-sdk';
+import type { SMCFrameAnalysis } from './types.js';
 import type { Candle } from '../../types.js';
 import { config } from '../../config.js';
 import { analyzeSmcMultiTimeframe } from './SmcMlEngine.js';
@@ -116,7 +116,7 @@ export class SmcMlRuntime {
       symbol: s,
       generatedAt: now,
       price,
-      timeframes: frames as Record<SMCFrame, import('./types.js').SMCFrameAnalysis>,
+      timeframes: frames,
       confluence,
       candidates,
     };
@@ -208,10 +208,11 @@ export class SmcMlRuntime {
     };
   }
 
-  private async getPosition(symbol: string): Promise<PositionRisk | null> {
+  private async getPosition(symbol: string): Promise<{ positionAmt: number; entryPrice: number; positionSide: string } | null> {
     const positions = await this.client.futures.account.positionRiskV3(symbol);
-    const open = positions.find((p) => Math.abs(p.positionAmt) > 0);
-    return open ?? null;
+    const open = positions.filter((p) => Math.abs(p.positionAmt) > 0);
+    if (open.length > 1) throw new Error('SMC runtime requires a single unambiguous position; hedge mode needs explicit positionSide routing');
+    return open[0] ?? null;
   }
 }
 
@@ -270,6 +271,32 @@ function buildCandidates(
   });
 
   const newest = best.frame.candleCount - best.break.index - 1;
+  if (best.break.retestOutcome === true && best.break.retestEntryPrice !== null) {
+    const retestEntry = best.break.retestEntryPrice;
+    const retestRisk = Math.abs(retestEntry - sl);
+    if (retestRisk > 0 && retestRisk / atr <= maxRiskAtr) {
+      candidates.push({
+        direction,
+        entrySource: 'RETEST_LEVEL',
+        entryPrice: retestEntry,
+        protectedSwing: best.break.protectedSwing,
+        atr14: atr,
+        stopLoss: sl,
+        tp1: retestEntry + (direction === 'LONG' ? 1 : -1) * tp1R * retestRisk,
+        tp2: retestEntry + (direction === 'LONG' ? 1 : -1) * tp2R * retestRisk,
+        riskPerUnit: retestRisk,
+        riskAtr: retestRisk / atr,
+        sourceBreak: {
+          type: best.break.type,
+          timeframe: best.frame.timeframe,
+          level: best.break.level,
+          time: best.break.time,
+          retestProbability: best.break.retestProbability,
+        },
+      });
+    }
+  }
+
   if (newest <= 1) {
     const breakRisk = Math.abs(best.break.breakClose - sl);
     if (breakRisk > 0 && breakRisk / atr <= maxRiskAtr) {

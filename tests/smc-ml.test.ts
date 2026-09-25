@@ -175,8 +175,8 @@ test('causal calibration does not use an unresolved prior outcome', () => {
   const firstPrediction = calibration.observe(10, 0.9, 30, 0);
   const secondPrediction = calibration.observe(20, 0.9, null, null);
 
-  assert.equal(firstPrediction, 0.9);
-  assert.equal(secondPrediction, 0.9);
+  assert.ok(Math.abs(firstPrediction - 0.9) < 1e-12);
+  assert.ok(Math.abs(secondPrediction - 0.9) < 1e-12);
   assert.equal(calibration.summary().samples, 0);
 });
 

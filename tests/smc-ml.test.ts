@@ -1,4 +1,5 @@
 import test from 'node:test';
+import { analyzeSmcFrame } from '../src/strategies/smc-ml/SmcMlEngine.js';
 import assert from 'node:assert/strict';
 import { BayesianLogisticCalibration, CausalBayesianCalibration, clampProbability, touchProbability, twoProportionZ } from '../src/strategies/smc-ml/math.js';
 import { buildSmcConfluence } from '../src/strategies/smc-ml/SmcConfluence.js';
@@ -331,4 +332,12 @@ import { smcRunnerLockKey } from '../src/strategies/smc-ml/SmcMlRunner.js';
 test('SMC runner serializes all timeframe triggers for the same symbol', () => {
   assert.equal(smcRunnerLockKey('BTCUSDT', '5m'), smcRunnerLockKey('BTCUSDT', '15m'));
   assert.notEqual(smcRunnerLockKey('BTCUSDT', '5m'), smcRunnerLockKey('ETHUSDT', '5m'));
+});
+
+
+test('SMC frame analysis rejects an empty candle set with a useful error', () => {
+  assert.throws(
+    () => analyzeSmcFrame('1h', []),
+    /SMC 1h: no closed candles/,
+  );
 });

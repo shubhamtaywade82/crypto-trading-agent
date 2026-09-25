@@ -134,7 +134,26 @@ export class SmcMlRuntime {
       currentMark: price,
     };
 
-    const decision = await this.advisor.decide(context);
+    let decision = await this.advisor.decide(context);
+
+    // Deterministic portfolio safety rule: when a strong MTF thesis has flipped
+    // against an existing position, flatten first. The LLM never gets to reverse
+    // an opposite position directly.
+    if (
+      portfolioState !== 'NO_POSITION' &&
+      confluence.direction !== 'NEUTRAL' &&
+      confluence.direction !== portfolioState &&
+      confluence.score !== 0 &&
+      confluence.agreement >= 0.5
+    ) {
+      decision = {
+        action: 'EXIT',
+        side: portfolioState,
+        entrySource: null,
+        reason: 'deterministic portfolio policy: MTF confluence is opposite to the open position',
+      };
+    }
+
     const selectedCandidate = decision.entrySource
       ? candidates.find((c) =>
           c.direction === decision.side &&

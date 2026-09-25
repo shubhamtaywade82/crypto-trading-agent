@@ -6,6 +6,8 @@ import type { PerformanceSnapshot } from '../risk/performanceEngine.js';
 import type { LogEntry, RiskDecision, Side, Signal, TradeRecord, WsStatus } from '../types.js';
 import { makeAlert, type AlertClass, type AlertEvent, type AlertSeverity, type NotificationEngine } from './alerts.js';
 import { digestCard, signalCard, systemCard, tradeCard, type SignalCardInput, type SystemCardInput } from './cards.js';
+import { setupMapCard } from './setupCards.js';
+import type { SetupMap } from '../decision/SetupEngine.js';
 import type { AuditInput } from './eventStore.js';
 import type { KillSwitchState } from './killSwitch.js';
 
@@ -29,6 +31,7 @@ export interface DigestRequest {
 
 export interface OpsHooks {
   onSignal(signal: Signal): void;
+  onSetup(setup: SetupMap): void;
   onGate(signal: Signal, decision: RiskDecision): void;
   onVeto(signal: Signal, reason: string): void;
   onOrder(signal: Signal, decision: RiskDecision, log: LogEntry, ctx: Pick<MarketContext, 'positions' | 'marks'>): void;
@@ -52,10 +55,11 @@ interface Notice {
 
 const DAY_MS = 86_400_000;
 const REASON_KEY_CHARS = 80;
+const SETUP_COOLDOWN_MS = 15 * 60_000;
 
 const noop = (): void => {};
 const NOOP_HOOKS: OpsHooks = {
-  onSignal: noop, onGate: noop, onVeto: noop, onOrder: noop, onRefusal: noop, onExit: noop, onVenueState: noop,
+  onSignal: noop, onSetup: noop, onGate: noop, onVeto: noop, onOrder: noop, onRefusal: noop, onExit: noop, onVenueState: noop,
   onCircuit: noop, onLoopCrash: noop, onKillSwitch: noop, digest: noop,
 };
 
@@ -121,6 +125,22 @@ class Ops implements OpsHooks {
 
   onSignal = (signal: Signal): void => {
     this.safely(() => this.audit('signal', { ...signal }, signal));
+  };
+
+  onSetup = (setup: SetupMap): void => {
+    this.safely(() => {
+      if (setup.scenarios.length === 0) return;
+      const scenarioKey = setup.scenarios.map((s) => s.id).sort().join(',');
+      this.audit('setup', { state: setup.state, bias: setup.bias, scenarioIds: scenarioKey }, { symbol: setup.symbol });
+      this.notify({
+        cls: 'SETUP',
+        severity: setup.state === 'TRIGGERED' ? 'SIGNAL' : 'WATCH',
+        symbol: setup.symbol,
+        stateTo: setup.state,
+        fingerprint: `SETUP:${setup.symbol}:${setup.state === 'TRIGGERED' ? 'triggered' : scenarioKey}`,
+        html: setupMapCard(setup),
+      });
+    });
   };
 
   onGate = (signal: Signal, decision: RiskDecision): void => {

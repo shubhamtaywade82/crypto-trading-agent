@@ -80,12 +80,15 @@ test('coordinator executes TP1, then synchronizes protective order quantities', 
   assert.equal(state.position?.quantity, 0.5);
   assert.equal(state.openOrders.find((o) => o.orderId === 101)?.quantity, 0.5);
   assert.equal(state.openOrders.find((o) => o.orderId === 102)?.quantity, 0.5);
-  assert.deepEqual(calls.slice(0, 4), [
+  assert.deepEqual(calls.slice(0, 5), [
+    'reconcile:BTCUSDT',
     'reconcile:BTCUSDT',
     'partial:BTCUSDT:0.5',
     'reconcile:BTCUSDT',
-    'modify:BTCUSDT:101',
+    'reconcile:BTCUSDT',
   ]);
+  assert.equal(calls.includes('modify:BTCUSDT:101'), true);
+  assert.equal(calls.includes('modify:BTCUSDT:102'), true);
 });
 
 test('coordinator does not commit lifecycle state when an exchange mutation fails', async () => {

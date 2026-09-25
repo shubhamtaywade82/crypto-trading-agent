@@ -158,3 +158,10 @@ A lifecycle is registered only after a bracket entry has produced an observable 
 
 The current lifecycle is **position-level**, not individual-fill-level. Same-direction ADD operations continue to use the existing portfolio execution path; the active lifecycle manages the aggregate open position. Per-entry attribution, restart-safe persistent lifecycle storage, and exact multi-entry PnL accounting require the execution ledger integration before they should be treated as independent setup lifecycles.
 
+
+### User-data recovery and ordering
+
+The lifecycle coordinator tracks Binance user-data event time per symbol and ignores older updates, preventing a delayed account/order event from overwriting a newer lifecycle view. Zero-amount account updates invalidate the local position cache so the next lifecycle evaluation performs a fresh REST reconciliation rather than assuming the entire symbol is flat.
+
+The runner also listens for listen-key expiry and requests a fresh user stream while retaining the same execution/lifecycle coordinator. Binance documents a 60-minute user-data stream validity window and recommends keepalive; its USD-M user-data documentation also identifies ORDER_TRADE_UPDATE and ACCOUNT_UPDATE as the key order/position events and describes event-time ordering.
+

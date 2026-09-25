@@ -305,6 +305,8 @@ export class SmcTradeLifecycleCoordinator {
             await this.exchange.modifyOrder(symbol, registered.tp2OrderId, {
               quantity: after.position.quantity,
               ...(tp2.stopPrice === undefined ? {} : { stopPrice: tp2.stopPrice }),
+              side: tp2.side,
+              type: tp2.type,
             });
           }
         }

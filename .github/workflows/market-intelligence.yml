@@ -3,7 +3,7 @@ name: Market Intelligence CI
 on:
   push:
     branches:
-      - "feat/market-*"
+      - "feat/*"
   pull_request:
     paths:
       - "src/market/**"
@@ -13,6 +13,8 @@ on:
       - "src/binance/client.ts"
       - "src/runtime/Orchestrator.ts"
       - "tests/market*.test.ts"
+      - "tests/decisionEngine.test.ts"
+      - "tests/structureLiquidityStrategy.test.ts"
       - ".github/workflows/market-intelligence.yml"
 
 jobs:
@@ -61,3 +63,5 @@ jobs:
           tests/marketStateNativeData.test.ts
           tests/marketDataService.test.ts
           tests/marketConfig.test.ts
+          tests/decisionEngine.test.ts
+          tests/structureLiquidityStrategy.test.ts

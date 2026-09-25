@@ -92,6 +92,7 @@ export class BayesianLogisticCalibration {
 
   predict(p0: number | null): number | null {
     if (p0 === null) return null;
+    if (this.xs.length === 0 && this.a === 0 && this.b === 1) return p0;
     const x = logit(p0);
     const z = Math.max(-30, Math.min(30, this.a + this.b * x));
     return 1 / (1 + Math.exp(-z));

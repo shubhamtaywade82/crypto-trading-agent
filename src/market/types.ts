@@ -73,7 +73,10 @@ export interface LiquiditySweep {
 export interface LiquidityState {
   timeframe: Timeframe;
   pools: LiquidityPool[];
+  /** Sweeps confirmed on the latest closed candle. */
   latestSweeps: LiquiditySweep[];
+  /** Recent confirmed sweeps, ordered chronologically, for sequence-based strategies. */
+  recentSweeps: LiquiditySweep[];
 }
 
 export interface PriceZone {

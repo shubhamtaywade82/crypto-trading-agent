@@ -9,7 +9,8 @@ export type AgentId =
   | 'ADAPTIVE-ST-ζ'
   | 'STRUCTURE-TREND-η'
   | 'MEAN-REVERT-θ'
-  | 'CROWDING-ι';
+  | 'CROWDING-ι'
+  | 'STRUCT-LIQ-η';
 export type SignalType = 'OPEN_LONG' | 'OPEN_SHORT' | 'OPEN_HEDGE' | 'OPEN_FUNDING_SHORT' | 'CLOSE' | 'MONITOR' | 'ALERT';
 
 export interface Candle {

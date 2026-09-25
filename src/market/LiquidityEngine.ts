@@ -1,5 +1,43 @@
 import type { Candle } from '../types.js';
-import type { LiquidityPool, LiquiditySweep, LiquidityState, StructureState, Timeframe } from './types.js';
+import type { LiquidityPool, LiquidityState, LiquiditySweep, StructureState, Timeframe } from './types.js';
+
+const SWEEP_LOOKBACK_CANDLES = 12;
+const MAX_RECENT_SWEEPS = 30;
+
+function sweepForCandle(candle: Candle, index: number, pool: LiquidityPool): LiquiditySweep | null {
+  if (pool.sourceTimes.length === 0 || Math.max(...pool.sourceTimes) >= candle.openTime) return null;
+
+  const bullishSweep = candle.low < pool.price - pool.tolerance && candle.close > pool.price;
+  const bearishSweep = candle.high > pool.price + pool.tolerance && candle.close < pool.price;
+
+  if (bullishSweep) {
+    return {
+      poolType: pool.type,
+      direction: 'SELL_SIDE',
+      level: pool.price,
+      sweepPrice: candle.low,
+      close: candle.close,
+      index,
+      time: candle.openTime,
+      confirmed: true,
+    };
+  }
+
+  if (bearishSweep) {
+    return {
+      poolType: pool.type,
+      direction: 'BUY_SIDE',
+      level: pool.price,
+      sweepPrice: candle.high,
+      close: candle.close,
+      index,
+      time: candle.openTime,
+      confirmed: true,
+    };
+  }
+
+  return null;
+}
 
 export function detectLiquidity(
   timeframe: Timeframe,
@@ -74,43 +112,31 @@ export function detectLiquidity(
     );
   }
 
-  const latest = candles.at(-1);
-  const latestPrevious = candles.at(-2);
-  const latestSweeps: LiquiditySweep[] = latest && latestPrevious
-    ? pools.flatMap((pool): LiquiditySweep[] => {
-        const bullishSweep = latest.low < pool.price - pool.tolerance && latest.close > pool.price;
-        const bearishSweep = latest.high > pool.price + pool.tolerance && latest.close < pool.price;
-        if (bullishSweep) {
-          return [{
-            poolType: pool.type,
-            direction: 'SELL_SIDE' as const,
-            level: pool.price,
-            sweepPrice: latest.low,
-            close: latest.close,
-            index: candles.length - 1,
-            time: latest.openTime,
-            confirmed: true,
-          }];
-        }
-        if (bearishSweep) {
-          return [{
-            poolType: pool.type,
-            direction: 'BUY_SIDE' as const,
-            level: pool.price,
-            sweepPrice: latest.high,
-            close: latest.close,
-            index: candles.length - 1,
-            time: latest.openTime,
-            confirmed: true,
-          }];
-        }
-        return [];
-      })
-    : [];
+  const sweepCandles = candles.slice(-SWEEP_LOOKBACK_CANDLES);
+  const recentSweeps: LiquiditySweep[] = [];
+
+  for (let offset = 0; offset < sweepCandles.length; offset += 1) {
+    const candle = sweepCandles[offset];
+    const index = candles.length - sweepCandles.length + offset;
+
+    for (const pool of pools) {
+      const sweep = sweepForCandle(candle, index, pool);
+      if (sweep) recentSweeps.push(sweep);
+    }
+  }
+
+  const orderedSweeps = recentSweeps
+    .sort((a, b) => (a.time - b.time) || (a.index - b.index))
+    .slice(-MAX_RECENT_SWEEPS);
+  const latestTime = candles.at(-1)?.openTime;
+  const latestSweeps = latestTime === undefined
+    ? []
+    : orderedSweeps.filter((sweep) => sweep.time === latestTime);
 
   return {
     timeframe,
     pools: pools.slice(-40),
     latestSweeps: latestSweeps.slice(-10),
+    recentSweeps: orderedSweeps,
   };
 }

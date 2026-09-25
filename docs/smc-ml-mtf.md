@@ -138,3 +138,23 @@ Default controls:
 
 The lifecycle deliberately produces **intents**, not exchange mutations. This prevents the state machine from pretending an order succeeded. The next execution-layer integration must atomically reconcile position/open orders around each intent, persist the setup lifecycle across process restarts, and consume Binance user-data order events. Binance USDⓈ-M user-data streams expose ORDER_TRADE_UPDATE for order creation, amendment and terminal state transitions, which is the appropriate event source for that integration.
 
+
+
+## Live lifecycle integration
+
+When `autoExecute=true`, the runner subscribes to:
+
+- closed-candle kline streams for SMC analysis
+- 1-second mark-price streams for lifecycle management
+- USD-M user-data streams for `ACCOUNT_UPDATE` and `ORDER_TRADE_UPDATE`
+
+The lifecycle coordinator keeps the latest position from account events and uses REST reconciliation immediately before mutations. This avoids a signed REST request on every mark-price tick while retaining a fresh exchange check at the point where an order is about to change.
+
+The Binance lifecycle adapter uses the SDK's existing `FuturesOps.closePosition`, `FuturesTrading.modifyOrder`, and idempotent execution cancellation surface. Protective stop amendments are reconciled after a transport error instead of being blindly retried.
+
+A lifecycle is registered only after a bracket entry has produced an observable open position and a protective stop order ID. Pending LIMIT/RETEST entries therefore remain outside the lifecycle until they become a live position; persistent pending-entry attribution is a later integration.
+
+## Current lifecycle safety boundary
+
+The current lifecycle is **position-level**, not individual-fill-level. Same-direction ADD operations continue to use the existing portfolio execution path; the active lifecycle manages the aggregate open position. Per-entry attribution, restart-safe persistent lifecycle storage, and exact multi-entry PnL accounting require the execution ledger integration before they should be treated as independent setup lifecycles.
+

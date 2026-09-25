@@ -52,6 +52,8 @@ export interface SmcLifecycleCoordinatorResult {
 
 export class SmcTradeLifecycleCoordinator {
   private readonly active = new Map<string, RegisteredSmcLifecycle>();
+  private readonly positionCache = new Map<string, SmcLifecyclePosition | null>();
+  private readonly cacheKnown = new Set<string>();
 
   constructor(private readonly exchange: SmcLifecycleExchange) {}
 
@@ -80,7 +82,24 @@ export class SmcTradeLifecycleCoordinator {
   }
 
   clear(symbol: string): void {
-    this.active.delete(symbol.toUpperCase());
+    const key = symbol.toUpperCase();
+    this.active.delete(key);
+    this.positionCache.delete(key);
+    this.cacheKnown.delete(key);
+  }
+
+  private async knownPosition(symbol: string): Promise<SmcLifecyclePosition | null> {
+    const key = symbol.toUpperCase();
+    if (this.cacheKnown.has(key)) return this.positionCache.get(key) ?? null;
+    const state = await this.exchange.reconcile(key);
+    this.setPositionCache(key, state.position);
+    return state.position;
+  }
+
+  private setPositionCache(symbol: string, position: SmcLifecyclePosition | null): void {
+    const key = symbol.toUpperCase();
+    this.positionCache.set(key, position);
+    this.cacheKnown.add(key);
   }
 
   async onMarkPrice(symbol: string, markPrice: number): Promise<SmcLifecycleCoordinatorResult> {
@@ -88,8 +107,10 @@ export class SmcTradeLifecycleCoordinator {
     const registered = this.active.get(key);
     if (!registered) return { state: null, actions: [], transitionIds: [] };
 
-    const before = await this.exchange.reconcile(key);
+    const position = await this.knownPosition(key);
+    const before: SmcLifecycleExchangeState = { position, openOrders: [] };
     if (!before.position) {
+      this.setPositionCache(key, null);
       const state = {
         ...registered.lifecycle,
         phase: 'CLOSED' as const,
@@ -129,6 +150,30 @@ export class SmcTradeLifecycleCoordinator {
     return { state, actions: transition.actions, transitionIds };
   }
 
+  handleAccountUpdate(event: unknown): void {
+    if (!event || typeof event !== 'object') return;
+    const raw = event as { e?: unknown; a?: { P?: Array<Record<string, unknown>> } };
+    if (raw.e !== 'ACCOUNT_UPDATE' || !Array.isArray(raw.a?.P)) return;
+
+    for (const p of raw.a.P) {
+      const symbol = typeof p.s === 'string' ? p.s.toUpperCase() : '';
+      const amount = Number(p.pa);
+      const entryPrice = Number(p.ep);
+      if (!symbol || !Number.isFinite(amount) || !Number.isFinite(entryPrice)) continue;
+      this.setPositionCache(
+        symbol,
+        amount === 0
+          ? null
+          : {
+              symbol,
+              direction: amount > 0 ? 'LONG' : 'SHORT',
+              quantity: Math.abs(amount),
+              entryPrice,
+            },
+      );
+    }
+  }
+
   handleOrderTradeUpdate(event: unknown): void {
     if (!event || typeof event !== 'object') return;
     const raw = event as { e?: unknown; o?: Record<string, unknown> };
@@ -143,6 +188,8 @@ export class SmcTradeLifecycleCoordinator {
     if (!registered || registered.lifecycle.phase === 'CLOSED') return;
 
     if (orderId === registered.stopOrderId) {
+      this.setPositionCache(symbol, null);
+      this.setPositionCache(symbol, null);
       this.active.set(symbol, {
         ...registered,
         lifecycle: {
@@ -175,6 +222,7 @@ export class SmcTradeLifecycleCoordinator {
     action: SmcLifecycleAction,
   ): Promise<SmcTradeLifecycle> {
     const before = await this.exchange.reconcile(symbol);
+    this.setPositionCache(symbol, before.position);
     if (!before.position) {
       return { ...state, phase: 'CLOSED', remainingQty: 0, closedReason: 'EXTERNAL_CLOSE' };
     }
@@ -185,6 +233,7 @@ export class SmcTradeLifecycleCoordinator {
       case 'PARTIAL_CLOSE': {
         const result = await this.exchange.partialClose(symbol, action.fraction);
         const after = await this.exchange.reconcile(symbol);
+        this.setPositionCache(symbol, after.position);
 
         if (!after.position) {
           return { ...state, phase: 'CLOSED', remainingQty: 0, closedReason: 'EXTERNAL_CLOSE' };
@@ -218,6 +267,7 @@ export class SmcTradeLifecycleCoordinator {
         });
 
         const after = await this.exchange.reconcile(symbol);
+        this.setPositionCache(symbol, after.position);
         const updated = after.openOrders.find((order) => order.orderId === registered.stopOrderId);
         if (!updated || Math.abs((updated.stopPrice ?? NaN) - action.stopPrice) > Math.max(1e-12, Math.abs(action.stopPrice) * 1e-10)) {
           throw new Error('protective stop amendment was not confirmed by reconciliation');
@@ -229,6 +279,7 @@ export class SmcTradeLifecycleCoordinator {
       case 'CLOSE_REMAINING': {
         const result = await this.exchange.closeRemaining(symbol);
         const after = await this.exchange.reconcile(symbol);
+        this.setPositionCache(symbol, after.position);
         if (after.position) {
           throw new Error(result.reason ?? 'TP2 close was not confirmed by reconciliation');
         }

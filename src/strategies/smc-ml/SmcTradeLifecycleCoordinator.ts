@@ -54,6 +54,7 @@ export class SmcTradeLifecycleCoordinator {
   private readonly active = new Map<string, RegisteredSmcLifecycle>();
   private readonly positionCache = new Map<string, SmcLifecyclePosition | null>();
   private readonly cacheKnown = new Set<string>();
+  private readonly lastUserEventAt = new Map<string, number>();
 
   constructor(private readonly exchange: SmcLifecycleExchange) {}
 
@@ -86,6 +87,7 @@ export class SmcTradeLifecycleCoordinator {
     this.active.delete(key);
     this.positionCache.delete(key);
     this.cacheKnown.delete(key);
+    this.lastUserEventAt.delete(key);
   }
 
   private async knownPosition(symbol: string): Promise<SmcLifecyclePosition | null> {
@@ -152,14 +154,18 @@ export class SmcTradeLifecycleCoordinator {
 
   handleAccountUpdate(event: unknown): void {
     if (!event || typeof event !== 'object') return;
-    const raw = event as { e?: unknown; a?: { P?: Array<Record<string, unknown>> } };
+    const raw = event as { e?: unknown; E?: unknown; a?: { P?: Array<Record<string, unknown>> } };
     if (raw.e !== 'ACCOUNT_UPDATE' || !Array.isArray(raw.a?.P)) return;
 
+    const eventTime = Number(raw.E);
     for (const p of raw.a.P) {
       const symbol = typeof p.s === 'string' ? p.s.toUpperCase() : '';
       const amount = Number(p.pa);
       const entryPrice = Number(p.ep);
       if (!symbol || !Number.isFinite(amount) || !Number.isFinite(entryPrice)) continue;
+      const previousEventTime = this.lastUserEventAt.get(symbol) ?? -Infinity;
+      if (Number.isFinite(eventTime) && eventTime <= previousEventTime) continue;
+      if (Number.isFinite(eventTime)) this.lastUserEventAt.set(symbol, eventTime);
       if (amount === 0) {
         // ACCOUNT_UPDATE contains changed position legs, not necessarily a
         // complete symbol snapshot. Force one REST reconciliation instead of
@@ -180,13 +186,17 @@ export class SmcTradeLifecycleCoordinator {
 
   handleOrderTradeUpdate(event: unknown): void {
     if (!event || typeof event !== 'object') return;
-    const raw = event as { e?: unknown; o?: Record<string, unknown> };
+    const raw = event as { e?: unknown; E?: unknown; o?: Record<string, unknown> };
     if (raw.e !== 'ORDER_TRADE_UPDATE' || !raw.o) return;
 
     const symbol = typeof raw.o.s === 'string' ? raw.o.s.toUpperCase() : '';
     const orderId = typeof raw.o.i === 'number' ? raw.o.i : Number(raw.o.i);
     const status = raw.o.X;
+    const eventTime = Number(raw.E);
     if (!symbol || !Number.isFinite(orderId) || status !== 'FILLED') return;
+    const previousEventTime = this.lastUserEventAt.get(symbol) ?? -Infinity;
+    if (Number.isFinite(eventTime) && eventTime <= previousEventTime) return;
+    if (Number.isFinite(eventTime)) this.lastUserEventAt.set(symbol, eventTime);
 
     const registered = this.active.get(symbol);
     if (!registered || registered.lifecycle.phase === 'CLOSED') return;

@@ -32,7 +32,7 @@ export interface SmcLifecycleExchange {
   modifyOrder(
     symbol: string,
     orderId: number,
-    input: { quantity: number; stopPrice: number },
+    input: { quantity: number; stopPrice?: number },
   ): Promise<SmcLifecycleOrder>;
   closeRemaining(symbol: string): Promise<{ ok: boolean; orderId?: number; reason?: string }>;
   cancelOrder(symbol: string, orderId: number): Promise<void>;
@@ -258,7 +258,7 @@ export class SmcTradeLifecycleCoordinator {
       if (tp2 && tp2.status === 'NEW') {
         await this.exchange.modifyOrder(symbol, registered.tp2OrderId, {
           quantity,
-          stopPrice: tp2.stopPrice ?? 0,
+          ...(tp2.stopPrice === undefined ? {} : { stopPrice: tp2.stopPrice }),
         });
       }
     }

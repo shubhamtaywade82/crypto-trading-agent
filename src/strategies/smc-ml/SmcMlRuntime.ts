@@ -44,6 +44,27 @@ export interface SmcMlCycle {
   selectedCandidate: ExecutionCandidate | null;
 }
 
+export function executionPositionGuard(
+  action: SMCTradeDecision['action'],
+  expected: PortfolioState,
+  actual: PortfolioState,
+): 'PROCEED' | 'REJECT' | 'ALREADY_FLAT' {
+  if (action === 'EXIT') {
+    if (actual === 'NO_POSITION') return 'ALREADY_FLAT';
+    return actual === expected ? 'PROCEED' : 'REJECT';
+  }
+
+  if (action === 'OPEN') {
+    return actual === 'NO_POSITION' && expected === 'NO_POSITION' ? 'PROCEED' : 'REJECT';
+  }
+
+  if (action === 'ADD') {
+    return expected !== 'NO_POSITION' && actual === expected ? 'PROCEED' : 'REJECT';
+  }
+
+  return 'REJECT';
+}
+
 export function applySmcPortfolioSafety(
   portfolioState: PortfolioState,
   confluence: SMCConfluence,
@@ -179,6 +200,24 @@ export class SmcMlRuntime {
   async execute(cycle: SmcMlCycle): Promise<unknown> {
     const { analysis, decision, selectedCandidate } = cycle;
     if (decision.action === 'HOLD') return { executed: false, reason: decision.reason };
+
+    const currentPosition = await this.getPosition(analysis.symbol);
+    const currentState: PortfolioState =
+      currentPosition === null ? 'NO_POSITION' :
+      currentPosition.positionAmt > 0 ? 'LONG' : 'SHORT';
+    const guard = executionPositionGuard(decision.action, cycle.portfolioState, currentState);
+
+    if (guard === 'ALREADY_FLAT') {
+      return { executed: false, action: 'EXIT', reason: 'position already closed before execution' };
+    }
+    if (guard === 'REJECT') {
+      return {
+        executed: false,
+        reason: 'portfolio state changed after analysis; execution rejected',
+        expectedState: cycle.portfolioState,
+        actualState: currentState,
+      };
+    }
 
     const breakTime = selectedCandidate?.sourceBreak.time ?? analysis.generatedAt;
     const fingerprint = [

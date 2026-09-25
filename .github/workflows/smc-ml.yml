@@ -11,6 +11,7 @@ on:
       - "src/config.ts"
       - "tests/smc-ml.test.ts"
       - "tests/smc-ml-lifecycle.test.ts"
+      - "tests/smc-ml-lifecycle-coordinator.test.ts"
       - "package.json"
       - ".github/workflows/smc-ml.yml"
 
@@ -26,14 +27,25 @@ jobs:
           cache: npm
           cache-dependency-path: package-lock.json
 
-      # The root package currently has a machine-local CoinDCX dependency.
-      # Install only the public dependencies needed by this strategy test slice.
+      # The repository manifest contains a machine-local CoinDCX SDK.
+      # Use an isolated temporary manifest so CI never resolves that path.
+      - name: Prepare isolated SMC CI manifest
+        run: |
+          mv package.json package.json.repo
+          cat > package.json <<'JSON'
+          {
+            "private": true,
+            "type": "module"
+          }
+          JSON
+
       - name: Install SMC test dependencies
         run: >
           npm install --no-save --ignore-scripts
           tsx@4.19.0
-          typescript@5.6.3
+          typescript@5.9.3
           zod@3.23.0
+          @types/node@22.10.2
           dotenv@16.4.5
           ollama@0.5.0
           @nemesis-oss/binance-sdk@3.0.0
@@ -56,7 +68,10 @@ jobs:
           src/strategies/smc-ml/SmcMlRuntime.ts
           src/strategies/smc-ml/SmcMlRunner.ts
           src/strategies/smc-ml/SmcTradeLifecycle.ts
+          src/strategies/smc-ml/SmcTradeLifecycleCoordinator.ts
+          src/strategies/smc-ml/SmcBinanceLifecycleExchange.ts
+          src/strategies/smc-ml/SmcMarkPrice.ts
           src/strategies/smc-ml/index.ts
 
       - name: Run SMC ML tests
-        run: npx tsx --test tests/smc-ml.test.ts tests/smc-ml-lifecycle.test.ts
+        run: npx tsx --test tests/smc-ml.test.ts tests/smc-ml-lifecycle.test.ts tests/smc-ml-lifecycle-coordinator.test.ts

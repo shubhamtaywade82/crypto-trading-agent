@@ -2,6 +2,7 @@ import type { BinanceClient } from '@nemesis-oss/binance-sdk';
 import { SmcMlRuntime } from './SmcMlRuntime.js';
 import type { SmcMlCycle } from './SmcMlRuntime.js';
 import type { SMCFrame } from './types.js';
+import { parseMarkPriceEvent } from './SmcMarkPrice.js';
 
 export interface SmcMlRunnerOptions {
   symbols: string[];
@@ -27,6 +28,7 @@ export class SmcMlRunner {
   private readonly runtime: SmcMlRuntime;
   private readonly options: Required<SmcMlRunnerOptions>;
   private readonly active = new Map<string, Promise<void>>();
+  private userStreamRestarting = false;
 
   constructor(
     private readonly client: BinanceClient,
@@ -45,11 +47,66 @@ export class SmcMlRunner {
   async start(onResult?: (result: SmcMlRunResult) => void): Promise<void> {
     await this.client.syncTime();
 
-    const streams = this.options.symbols.flatMap((symbol) =>
+    if (this.options.autoExecute) {
+      const userEvents = this.client.futures.wsUser as unknown as {
+        on(event: string, listener: (event: unknown) => void): unknown;
+      };
+      const executionUserStream = this.client.futures.wsUser as unknown as Parameters<
+        typeof this.client.futures.execution.setUserStream
+      >[0];
+      this.client.futures.execution.setUserStream(executionUserStream);
+      userEvents.on('ORDER_TRADE_UPDATE', (event: unknown) => {
+        this.runtime.handleOrderTradeUpdate(event);
+      });
+      userEvents.on('ACCOUNT_UPDATE', (event: unknown) => {
+        this.runtime.handleAccountUpdate(event);
+      });
+      userEvents.on('listenKeyExpired', () => {
+        if (this.userStreamRestarting) return;
+        this.userStreamRestarting = true;
+        void this.client.startUserStream()
+          .catch((error) => {
+            console.error(JSON.stringify({
+              event: 'smc.user_stream_restart_failed',
+              error: error instanceof Error ? error.message : String(error),
+            }));
+          })
+          .finally(() => {
+            this.userStreamRestarting = false;
+          });
+      });
+      await this.client.startUserStream();
+    }
+
+    const marketStreams = this.options.symbols.flatMap((symbol) =>
       this.options.timeframes.map((tf) => this.client.futures.ws.kline(symbol, tf)),
     );
+    const lifecycleStreams = this.options.autoExecute
+      ? this.options.symbols.map((symbol) => this.client.futures.ws.markPrice(symbol, '1s'))
+      : [];
 
-    this.client.futures.ws.on('message', (stream: string, payload: unknown) => {
+    const streams = [...marketStreams, ...lifecycleStreams];
+
+    const marketEvents = this.client.futures.ws as unknown as {
+      on(event: 'message', listener: (stream: string, payload: unknown) => void): unknown;
+    };
+    marketEvents.on('message', (stream: string, payload: unknown) => {
+      if (stream.includes('@markPrice@')) {
+        const market = parseMarkPriceEvent(payload);
+        if (!market || !this.options.symbols.includes(market.symbol)) return;
+        const symbol = market.symbol;
+        const key = smcRunnerLockKey(symbol, '5m');
+        if (this.active.has(key)) return;
+        const promise = this.runtime.onMarkPrice(symbol, market.markPrice)
+          .catch((error) => {
+            console.error(JSON.stringify({ event: 'smc.lifecycle_error', symbol, error: error instanceof Error ? error.message : String(error) }));
+          })
+          .finally(() => this.active.delete(key))
+          .then(() => undefined);
+        this.active.set(key, promise);
+        return;
+      }
+
       if (!stream.includes('@kline_')) return;
       const event = payload as {
         e?: string;
@@ -80,6 +137,7 @@ export class SmcMlRunner {
 
   stop(): void {
     this.client.futures.ws.close();
+    if (this.options.autoExecute) this.client.closeUserStream();
   }
 
   private async run(
@@ -95,3 +153,4 @@ export class SmcMlRunner {
     onResult?.({ symbol, cycle, execution, triggeredBy });
   }
 }
+

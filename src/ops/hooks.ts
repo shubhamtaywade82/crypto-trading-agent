@@ -135,7 +135,6 @@ class Ops implements OpsHooks {
       this.notify(notice);
     });
   };
-
   onGate = (signal: Signal, decision: RiskDecision): void => {
     this.safely(() => {
       const { approved, reason, positionSizeUsdt: sizeUsdt, leverage } = decision;
@@ -143,18 +142,15 @@ class Ops implements OpsHooks {
       if (approved) this.notify(signalNotice({ outcome: 'ACCEPTED', signal, note: reason, at: this.now(), notionalUsdt: sizeUsdt }));
     });
   };
-
   onVeto = (signal: Signal, reason: string): void => {
     this.safely(() => {
       this.audit('veto', { reason }, signal);
       this.notify(signalNotice({ outcome: 'VETOED', signal, note: reason, at: this.now() }));
     });
   };
-
   onRefusal = (signal: Signal, reason: string): void => {
     this.safely(() => this.refuse(signal, reason));
   };
-
   onOrder = (signal: Signal, decision: RiskDecision, log: LogEntry, ctx: Pick<MarketContext, 'positions' | 'marks'>): void => {
     this.safely(() => {
       this.audit('order', { level: log.level, message: log.msg, sizeUsdt: decision.positionSizeUsdt, leverage: decision.leverage }, signal);
@@ -162,7 +158,6 @@ class Ops implements OpsHooks {
       if (log.level === 'success') this.filled(signal, decision, ctx);
     });
   };
-
   // Detects closes from the journal rather than from log text, so exits the loop never logged (reconcile, liquidation) are still reported
   onExit = (trades: readonly TradeRecord[]): void => {
     this.safely(() => {
@@ -173,11 +168,9 @@ class Ops implements OpsHooks {
       }
     });
   };
-
   onVenueState = (venue: VenueStatus | null, ws: WsStatus): void => {
     this.safely(() => { this.noteVenue(venue); this.noteWs(ws); });
   };
-
   onCircuit = (from: string, to: string, snapshot: PerformanceSnapshot): void => {
     this.safely(() => {
       const { dailyLossPercent, drawdownPercent, lossStreak } = snapshot;
@@ -187,7 +180,6 @@ class Ops implements OpsHooks {
       this.notify(systemNotice(input, severity, `SYSTEM:circuit:${to}`));
     });
   };
-
   onLoopCrash = (err: unknown): void => {
     this.safely(() => {
       const error = err instanceof Error ? err.message : String(err);
@@ -195,7 +187,6 @@ class Ops implements OpsHooks {
       this.notify(systemNotice({ kind: 'LOOP_CRASH', error, at: this.now() }, 'CRITICAL', `SYSTEM:crash:${reasonKey(error)}`));
     });
   };
-
   onKillSwitch = (state: KillSwitchState): void => {
     this.safely(() => {
       this.audit('killswitch', { halted: state.halted, reason: state.reason });
@@ -204,7 +195,6 @@ class Ops implements OpsHooks {
       this.notify(systemNotice(input, 'CRITICAL', `SYSTEM:killswitch:${state.at}`));
     });
   };
-
   // The digest covers the UTC day that just ended; its equity baseline is the wallet before that day's realized PnL
   digest = ({ trades, initialEquity, at = this.now() }: DigestRequest): void => {
     this.safely(() => {
@@ -219,11 +209,9 @@ class Ops implements OpsHooks {
       this.notify({ cls: 'RESEARCH', severity: 'WATCH', fingerprint: `RESEARCH:digest:${period}`, html });
     });
   };
-
   private safely(run: () => void): void {
     try { run(); } catch { /* an ops failure must never reach the trading loop */ }
   }
-
   private audit(type: string, payload: Record<string, unknown>, ref?: { id?: string; symbol?: string }): void {
     if (!this.deps.isAudit) return;
     try {

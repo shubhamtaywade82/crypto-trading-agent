@@ -7,7 +7,7 @@ import {
   type SmcLifecycleExchange,
   type SmcLifecycleExchangeState,
 } from '../src/strategies/smc-ml/SmcTradeLifecycleCoordinator.js';
-import { parseMarkPriceEvent } from '../src/strategies/smc-ml/SmcMlRunner.js';
+import { parseMarkPriceEvent } from '../src/strategies/smc-ml/SmcMarkPrice.js';
 
 function exchangeFor(initialQty = 1): {
   exchange: SmcLifecycleExchange;
@@ -175,7 +175,7 @@ test('Binance adapter exposes the lifecycle exchange boundary without inventing 
 });
 
 test('mark-price parser accepts only positive markPriceUpdate events', () => {
-  assert.equal(parseMarkPriceEvent({ e: 'markPriceUpdate', s: 'BTCUSDT', p: '100.5' }), 100.5);
+  assert.deepEqual(parseMarkPriceEvent({ e: 'markPriceUpdate', s: 'BTCUSDT', p: '100.5' }), { symbol: 'BTCUSDT', markPrice: 100.5 });
   assert.equal(parseMarkPriceEvent({ e: 'trade', p: '100.5' }), null);
   assert.equal(parseMarkPriceEvent({ e: 'markPriceUpdate', p: '0' }), null);
 });

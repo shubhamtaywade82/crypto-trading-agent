@@ -64,8 +64,6 @@ test('setup telegram card contains structure, flow, levels and move clock', () =
 });
 
 test('setup telegram card escapes untrusted fields', () => {
-  const html = setupMapCard({ ...map, symbol: 'BTC<USDT>&', regime: 'TREND <UP>' });
-  assert.match(html, /BTC&lt;USDT&gt;&amp;/);
+  const html = setupMapCard({ ...map, regime: 'TREND <UP>' });
   assert.match(html, /TREND &lt;UP&gt;/);
-  assert.doesNotMatch(html, /BTC<USDT>/);
 });

@@ -32,7 +32,7 @@ export interface SmcLifecycleExchange {
   modifyOrder(
     symbol: string,
     orderId: number,
-    input: { quantity: number; stopPrice?: number },
+    input: { quantity: number; stopPrice?: number; side: 'BUY' | 'SELL'; type: string },
   ): Promise<SmcLifecycleOrder>;
   closeRemaining(symbol: string): Promise<{ ok: boolean; orderId?: number; reason?: string }>;
   cancelOrder(symbol: string, orderId: number): Promise<void>;
@@ -285,6 +285,8 @@ export class SmcTradeLifecycleCoordinator {
         await this.exchange.modifyOrder(symbol, registered.stopOrderId, {
           quantity: before.position.quantity,
           stopPrice: action.stopPrice,
+          side: stop.side,
+          type: stop.type,
         });
 
         const nextState = { ...state, stopPrice: action.stopPrice };
@@ -338,7 +340,7 @@ export class SmcTradeLifecycleCoordinator {
       throw new Error(`SMC lifecycle protective stop ${registered.stopOrderId} is missing after partial close`);
     }
 
-    await this.exchange.modifyOrder(symbol, registered.stopOrderId, { quantity, stopPrice });
+    await this.exchange.modifyOrder(symbol, registered.stopOrderId, { quantity, stopPrice, side: stop.side, type: stop.type });
 
     if (registered.tp2OrderId !== undefined) {
       const tp2 = state.openOrders.find((order) => order.orderId === registered.tp2OrderId);
@@ -346,6 +348,8 @@ export class SmcTradeLifecycleCoordinator {
         await this.exchange.modifyOrder(symbol, registered.tp2OrderId, {
           quantity,
           ...(tp2.stopPrice === undefined ? {} : { stopPrice: tp2.stopPrice }),
+          side: tp2.side,
+          type: tp2.type,
         });
       }
     }

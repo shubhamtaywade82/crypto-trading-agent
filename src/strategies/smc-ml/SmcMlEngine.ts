@@ -1,6 +1,7 @@
 import type { Candle } from '../../types.js';
 import {
   BayesianLogisticCalibration,
+  CausalBayesianCalibration,
   atrSeries,
   changeStdAt,
   clampProbability,
@@ -206,7 +207,7 @@ function liveLiquidityOdds(
   upper: LiquidityPool | null,
   lower: LiquidityPool | null,
   price: number,
-  calibration: BayesianLogisticCalibration,
+  calibration: Pick<BayesianLogisticCalibration, 'predict'>,
 ): { upper: number | null; lower: number | null; formulaUpper: number | null; formulaLower: number | null } {
   if (!upper || !lower || upper.price <= price || lower.price >= price) {
     return { upper: null, lower: null, formulaUpper: null, formulaLower: null };
@@ -230,16 +231,22 @@ function rangePosition(price: number, hi: number | null, lo: number | null): num
   return (price - lo) / (hi - lo);
 }
 
-function resolveRetest(candles: Candle[], b: RawBreak, window: number): { outcome: boolean | null; entryClose: number | null } {
+function resolveRetest(
+  candles: Candle[],
+  b: RawBreak,
+  window: number,
+): { outcome: boolean | null; entryClose: number | null; resolvedIndex: number | null } {
   for (let i = b.index + 1; i < Math.min(candles.length, b.index + window + 1); i++) {
     const c = candles[i];
     const touch = b.direction === 1 ? c.low <= b.level : c.high >= b.level;
     if (!touch) continue;
     const reclaim = b.direction === 1 ? c.close > b.level : c.close < b.level;
-    return { outcome: true, entryClose: reclaim ? c.close : null };
+    return { outcome: true, entryClose: reclaim ? c.close : null, resolvedIndex: i };
   }
-  if (b.index + window < candles.length) return { outcome: false, entryClose: null };
-  return { outcome: null, entryClose: null };
+  if (b.index + window < candles.length) {
+    return { outcome: false, entryClose: null, resolvedIndex: b.index + window };
+  }
+  return { outcome: null, entryClose: null, resolvedIndex: null };
 }
 
 function resolveFollowThrough(candles: Candle[], b: RawBreak, window: number): boolean | null {
@@ -258,24 +265,24 @@ function resolveLiquidity(
   candles: Candle[],
   b: RawBreak,
   window: number,
-): { outcome: 0 | 1 | null; nearerUpper: boolean } {
+): { outcome: 0 | 1 | null; nearerUpper: boolean; resolvedIndex: number | null } {
   if (b.upperAtPrint === null || b.lowerAtPrint === null) {
-    return { outcome: null, nearerUpper: true };
+    return { outcome: null, nearerUpper: true, resolvedIndex: null };
   }
   const du = b.upperAtPrint - b.breakClose;
   const dl = b.breakClose - b.lowerAtPrint;
-  if (du <= 0 || dl <= 0) return { outcome: null, nearerUpper: true };
+  if (du <= 0 || dl <= 0) return { outcome: null, nearerUpper: true, resolvedIndex: null };
   const nearerUpper = du <= dl;
 
   for (let i = b.index + 1; i < Math.min(candles.length, b.index + window + 1); i++) {
     const hu = candles[i].high > b.upperAtPrint;
     const hl = candles[i].low < b.lowerAtPrint;
     if (hu || hl) {
-      if (hu === hl) return { outcome: null, nearerUpper };
-      return { outcome: hu === nearerUpper ? 1 : 0, nearerUpper };
+      if (hu === hl) return { outcome: null, nearerUpper, resolvedIndex: i };
+      return { outcome: hu === nearerUpper ? 1 : 0, nearerUpper, resolvedIndex: i };
     }
   }
-  return { outcome: null, nearerUpper };
+  return { outcome: null, nearerUpper, resolvedIndex: null };
 }
 
 function orderBlockForBreak(
@@ -490,16 +497,18 @@ export function analyzeSmcFrame(
     }
   }
 
-  const retestCal = new BayesianLogisticCalibration();
-  const liquidityCal = new BayesianLogisticCalibration(50, 500, true);
+  const retestCal = new CausalBayesianCalibration(new BayesianLogisticCalibration());
+  const liquidityCal = new CausalBayesianCalibration(new BayesianLogisticCalibration(50, 500, true));
   const breaks: StructureBreak[] = [];
 
   for (const raw of rawBreaks) {
-    const retestP = retestCal.predict(raw.p0);
     const retest = resolveRetest(candles, raw, cfg.retestWindow);
-    if (retestP !== null && raw.p0 !== null && retest.outcome !== null) {
-      retestCal.score(retestP, raw.p0, retest.outcome ? 1 : 0);
-    }
+    const retestP = retestCal.observe(
+      raw.index,
+      raw.p0,
+      retest.resolvedIndex,
+      retest.outcome === null ? null : retest.outcome ? 1 : 0,
+    );
 
     const followThroughOutcome = resolveFollowThrough(candles, raw, cfg.followThroughWindow);
     const liquidity = resolveLiquidity(candles, raw, cfg.liquidityWindow);
@@ -513,10 +522,7 @@ export function analyzeSmcFrame(
       const dl = raw.breakClose - raw.lowerAtPrint;
       const nearerUpper = du <= dl;
       const q0 = clampProbability((nearerUpper ? dl : du) / (du + dl));
-      const pm = liquidityCal.predict(q0);
-      if (pm !== null && liquidity.outcome !== null) {
-        liquidityCal.score(pm, q0, liquidity.outcome);
-      }
+      liquidityCal.observe(raw.index, q0, liquidity.resolvedIndex, liquidity.outcome);
     }
 
     breaks.push({
@@ -530,6 +536,9 @@ export function analyzeSmcFrame(
       nearestLowerPoolAtPrint: raw.lowerAtPrint,
     });
   }
+
+  retestCal.finalize();
+  liquidityCal.finalize();
 
   const latest = breaks.at(-1) ?? null;
   const lastPrice = candles.at(-1)!.close;

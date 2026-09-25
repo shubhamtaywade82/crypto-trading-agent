@@ -6,7 +6,7 @@ import type { PerformanceSnapshot } from '../risk/performanceEngine.js';
 import type { LogEntry, RiskDecision, Side, Signal, TradeRecord, WsStatus } from '../types.js';
 import { makeAlert, type AlertClass, type AlertEvent, type AlertSeverity, type NotificationEngine } from './alerts.js';
 import { digestCard, signalCard, systemCard, tradeCard, type SignalCardInput, type SystemCardInput } from './cards.js';
-import { setupMapCard } from './setupCards.js';
+import { buildSetupNotice } from './setupNotice.js';
 import type { SetupMap } from '../decision/SetupEngine.js';
 import type { AuditInput } from './eventStore.js';
 import type { KillSwitchState } from './killSwitch.js';
@@ -129,17 +129,10 @@ class Ops implements OpsHooks {
 
   onSetup = (setup: SetupMap): void => {
     this.safely(() => {
-      if (setup.scenarios.length === 0) return;
-      const scenarioKey = setup.scenarios.map((s) => s.id).sort().join(',');
-      this.audit('setup', { state: setup.state, bias: setup.bias, scenarioIds: scenarioKey }, { symbol: setup.symbol });
-      this.notify({
-        cls: 'SETUP',
-        severity: setup.state === 'TRIGGERED' ? 'SIGNAL' : 'WATCH',
-        symbol: setup.symbol,
-        stateTo: setup.state,
-        fingerprint: `SETUP:${setup.symbol}:${setup.state === 'TRIGGERED' ? 'triggered' : scenarioKey}`,
-        html: setupMapCard(setup),
-      });
+      const notice = buildSetupNotice(setup);
+      if (!notice) return;
+      this.audit('setup', { state: setup.state, bias: setup.bias, scenarioIds: notice.scenarioKey }, { symbol: setup.symbol });
+      this.notify(notice);
     });
   };
 

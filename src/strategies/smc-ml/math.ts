@@ -174,13 +174,6 @@ function logit(p: number): number {
 }
 
 
-export interface CausalCalibrationObservation {
-  signalIndex: number;
-  formulaProbability: number | null;
-  resolvedIndex: number | null;
-  outcome: 0 | 1 | null;
-}
-
 export class CausalBayesianCalibration {
   private readonly pending: Array<{
     resolvedIndex: number;

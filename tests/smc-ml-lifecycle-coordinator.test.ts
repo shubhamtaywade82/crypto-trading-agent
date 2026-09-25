@@ -179,3 +179,59 @@ test('mark-price parser accepts only positive markPriceUpdate events', () => {
   assert.equal(parseMarkPriceEvent({ e: 'trade', p: '100.5' }), null);
   assert.equal(parseMarkPriceEvent({ e: 'markPriceUpdate', p: '0' }), null);
 });
+
+test('coordinator preserves the confirmed TP1 transition when protection sync fails', async () => {
+  const { exchange } = exchangeFor();
+  exchange.modifyOrder = async () => {
+    throw new Error('stop amendment transport');
+  };
+
+  const coordinator = new SmcTradeLifecycleCoordinator(exchange);
+  coordinator.register({
+    setupId: 'BTCUSDT:LONG:BOS:1000',
+    symbol: 'BTCUSDT',
+    direction: 'LONG',
+    initialQty: 1,
+    entryPrice: 100,
+    initialRisk: 10,
+    tp1: 110,
+    tp2: 120,
+    stopPrice: 90,
+    stopOrderId: 101,
+    tp2OrderId: 102,
+  });
+
+  await assert.rejects(
+    () => coordinator.onMarkPrice('BTCUSDT', 110),
+    /stop amendment transport/,
+  );
+
+  assert.equal(coordinator.get('BTCUSDT')?.tp1Executed, true);
+  assert.equal(coordinator.get('BTCUSDT')?.remainingQty, 0.5);
+});
+
+test('account update hydrates the position cache without requiring REST on the next mark tick', async () => {
+  const { exchange, calls } = exchangeFor();
+  const coordinator = new SmcTradeLifecycleCoordinator(exchange);
+  coordinator.register({
+    setupId: 'BTCUSDT:LONG:BOS:1000',
+    symbol: 'BTCUSDT',
+    direction: 'LONG',
+    initialQty: 1,
+    entryPrice: 100,
+    initialRisk: 10,
+    tp1: 110,
+    tp2: 120,
+    stopPrice: 90,
+    stopOrderId: 101,
+    tp2OrderId: 102,
+  });
+
+  coordinator.handleAccountUpdate({
+    e: 'ACCOUNT_UPDATE',
+    a: { P: [{ s: 'BTCUSDT', pa: '1', ep: '100' }] },
+  });
+
+  await coordinator.onMarkPrice('BTCUSDT', 105);
+  assert.equal(calls.includes('reconcile:BTCUSDT'), false);
+});

@@ -250,6 +250,7 @@ export class SmcTradeLifecycleCoordinator {
 
     switch (action.type) {
       case 'PARTIAL_CLOSE': {
+        const beforeQuantity = before.position.quantity;
         const result = await this.exchange.partialClose(symbol, action.fraction);
         const after = await this.exchange.reconcile(symbol);
         this.setPositionCache(symbol, after.position);
@@ -257,7 +258,7 @@ export class SmcTradeLifecycleCoordinator {
         if (!after.position) {
           return { ...state, phase: 'CLOSED', remainingQty: 0, closedReason: 'EXTERNAL_CLOSE' };
         }
-        if (!result.ok || after.position.quantity >= before.position.quantity) {
+        if (!result.ok || after.position.quantity >= beforeQuantity) {
           throw new Error(result.reason ?? 'TP1 partial close was not confirmed by reconciliation');
         }
 

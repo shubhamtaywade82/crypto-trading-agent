@@ -4,6 +4,12 @@ import { config } from '../../config.js';
 import { analyzeSmcMultiTimeframe } from './SmcMlEngine.js';
 import { buildSmcConfluence } from './SmcConfluence.js';
 import { SmcExecutionAdvisor } from './SmcExecutionAdvisor.js';
+import { BinanceSmcLifecycleExchange } from './SmcBinanceLifecycleExchange.js';
+import { SmcTradeLifecycleCoordinator } from './SmcTradeLifecycleCoordinator.js';
+import {
+  DEFAULT_SMC_TRADE_LIFECYCLE_CONFIG,
+  type SmcTradeLifecycleConfig,
+} from './SmcTradeLifecycle.js';
 import {
   DEFAULT_SMC_CONFIG,
   type ExecutionCandidate,
@@ -23,6 +29,7 @@ export interface SmcMlRuntimeOptions {
   confluenceMinimum?: number;
   riskPct: number;
   leverage: number;
+  lifecycle?: Partial<SmcTradeLifecycleConfig>;
 }
 
 export const DEFAULT_SMC_RUNTIME_OPTIONS: SmcMlRuntimeOptions = {
@@ -31,6 +38,7 @@ export const DEFAULT_SMC_RUNTIME_OPTIONS: SmcMlRuntimeOptions = {
   confluenceMinimum: 0.35,
   riskPct: 1,
   leverage: 5,
+  lifecycle: { ...DEFAULT_SMC_TRADE_LIFECYCLE_CONFIG },
 };
 
 export interface SmcMlCycle {
@@ -91,6 +99,7 @@ export class SmcMlRuntime {
   private readonly advisor: SmcExecutionAdvisor;
   private readonly client: BinanceClient;
   private readonly executedFingerprints = new Set<string>();
+  private readonly lifecycle: SmcTradeLifecycleCoordinator;
 
   constructor(
     client: BinanceClient,
@@ -99,11 +108,13 @@ export class SmcMlRuntime {
   ) {
     this.client = client;
     this.advisor = advisor;
+    this.lifecycle = new SmcTradeLifecycleCoordinator(new BinanceSmcLifecycleExchange(client));
     this.options = {
       ...DEFAULT_SMC_RUNTIME_OPTIONS,
       ...options,
       timeframes: options.timeframes ?? DEFAULT_SMC_RUNTIME_OPTIONS.timeframes,
       config: { ...DEFAULT_SMC_CONFIG, ...(options.config ?? {}) },
+      lifecycle: { ...DEFAULT_SMC_TRADE_LIFECYCLE_CONFIG, ...(options.lifecycle ?? {}) },
     };
   }
 
@@ -195,6 +206,22 @@ export class SmcMlRuntime {
     return { analysis, portfolioState, positionQty: Math.abs(position?.positionAmt ?? 0), currentEntry: position?.entryPrice, decision, selectedCandidate };
   }
 
+  async onMarkPrice(symbol: string, markPrice: number): Promise<unknown> {
+    return this.lifecycle.onMarkPrice(symbol, markPrice);
+  }
+
+  handleOrderTradeUpdate(event: unknown): void {
+    this.lifecycle.handleOrderTradeUpdate(event);
+  }
+
+  handleAccountUpdate(event: unknown): void {
+    this.lifecycle.handleAccountUpdate(event);
+  }
+
+  getLifecycle(symbol: string): import('./SmcTradeLifecycle.js').SmcTradeLifecycle | null {
+    return this.lifecycle.get(symbol);
+  }
+
   async execute(cycle: SmcMlCycle): Promise<unknown> {
     const { analysis, decision, selectedCandidate } = cycle;
     if (decision.action === 'HOLD') return { executed: false, reason: decision.reason };
@@ -265,7 +292,10 @@ export class SmcMlRuntime {
       workingType: 'MARK_PRICE',
     });
 
-    if (result.protectionComplete !== false) this.executedFingerprints.add(fingerprint);
+    if (result.protectionComplete !== false) {
+      this.executedFingerprints.add(fingerprint);
+      await this.registerLifecycle(cycle, selectedCandidate, result);
+    }
     return {
       executed: true,
       action: decision.action,
@@ -274,6 +304,42 @@ export class SmcMlRuntime {
       sizing,
       order: result,
     };
+  }
+
+  private async registerLifecycle(
+    cycle: SmcMlCycle,
+    candidate: ExecutionCandidate,
+    bracketResult: Record<string, unknown>,
+  ): Promise<void> {
+    const position = await this.getPosition(cycle.analysis.symbol);
+    const stopOrderId = extractOrderId(bracketResult.stopLoss);
+    const tp2OrderId = extractOrderId(bracketResult.takeProfit);
+
+    if (!position || stopOrderId === undefined) return;
+
+    const entryPrice = position.entryPrice;
+    const initialRisk = Math.abs(entryPrice - candidate.stopLoss);
+    if (!(initialRisk > 0)) return;
+
+    this.lifecycle.register({
+      setupId: [
+        cycle.analysis.symbol,
+        candidate.sourceBreak.type,
+        candidate.sourceBreak.timeframe,
+        candidate.sourceBreak.time,
+      ].join(':'),
+      symbol: cycle.analysis.symbol,
+      direction: candidate.direction,
+      initialQty: Math.abs(position.positionAmt),
+      entryPrice,
+      initialRisk,
+      tp1: candidate.tp1,
+      tp2: candidate.tp2,
+      stopPrice: candidate.stopLoss,
+      config: this.options.lifecycle,
+      stopOrderId,
+      tp2OrderId,
+    });
   }
 
   private async getPosition(symbol: string): Promise<{ positionAmt: number; entryPrice: number; positionSide: string } | null> {
@@ -398,4 +464,10 @@ export function buildExecutionCandidates(
   }
 
   return candidates;
+}
+
+function extractOrderId(value: unknown): number | undefined {
+  if (!value || typeof value !== 'object') return undefined;
+  const orderId = (value as { orderId?: unknown }).orderId;
+  return typeof orderId === 'number' ? orderId : undefined;
 }

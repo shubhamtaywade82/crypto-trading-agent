@@ -1,4 +1,4 @@
-export { SmcMlRuntime, DEFAULT_SMC_RUNTIME_OPTIONS } from './SmcMlRuntime.js';
+export { SmcMlRuntime, DEFAULT_SMC_RUNTIME_OPTIONS, buildExecutionCandidates } from './SmcMlRuntime.js';
 export { SmcExecutionAdvisor } from './SmcExecutionAdvisor.js';
 export { analyzeSmcFrame, analyzeSmcMultiTimeframe } from './SmcMlEngine.js';
 export { buildSmcConfluence, scoreFrame } from './SmcConfluence.js';
@@ -20,6 +20,7 @@ export type {
 } from './SmcTradeLifecycle.js';
 
 export { BinanceSmcLifecycleExchange } from './SmcBinanceLifecycleExchange.js';
+export { SmcMlRunner, smcRunnerLockKey, parseMarkPriceEvent } from './SmcMlRunner.js';
 export {
   SmcTradeLifecycleCoordinator,
   smcLifecycleTransitionId,

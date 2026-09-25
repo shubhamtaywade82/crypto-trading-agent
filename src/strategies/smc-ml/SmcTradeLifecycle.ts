@@ -38,6 +38,7 @@ export interface SmcTradeLifecycle {
   tp1Executed: boolean;
   breakevenActivated: boolean;
   trailingActivated: boolean;
+  config: SmcTradeLifecycleConfig;
   closedReason?: 'TP2' | 'STOP' | 'EXTERNAL_CLOSE' | 'MANUAL_CLOSE';
 }
 
@@ -116,6 +117,7 @@ export function createSmcTradeLifecycle(params: {
     tp1Executed: false,
     breakevenActivated: false,
     trailingActivated: false,
+    config,
   };
 }
 
@@ -166,19 +168,19 @@ export function advanceSmcTradeLifecycle(
         ...next,
         phase: 'TP1_PARTIAL',
         tp1Executed: true,
-        remainingQty: market.positionQty * (1 - DEFAULT_SMC_TRADE_LIFECYCLE_CONFIG.tp1Fraction),
+        remainingQty: market.positionQty * (1 - lifecycle.config.tp1Fraction),
       },
       actions: [
         {
           type: 'PARTIAL_CLOSE',
-          fraction: DEFAULT_SMC_TRADE_LIFECYCLE_CONFIG.tp1Fraction,
+          fraction: lifecycle.config.tp1Fraction,
           reason: 'TP1',
         },
       ],
     };
   }
 
-  const config = DEFAULT_SMC_TRADE_LIFECYCLE_CONFIG;
+  const config = lifecycle.config;
   if (lifecycle.phase === 'TP1_PARTIAL' && !lifecycle.breakevenActivated) {
     const be =
       lifecycle.direction === 'LONG'

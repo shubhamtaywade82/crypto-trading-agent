@@ -84,7 +84,7 @@ export class BinanceSmcLifecycleExchange implements SmcLifecycleExchange {
   async modifyOrder(
     symbol: string,
     orderId: number,
-    input: { quantity: number; stopPrice?: number },
+    input: { quantity: number; stopPrice?: number; side: 'BUY' | 'SELL'; type: string },
   ): Promise<SmcLifecycleOrder> {
     const quantized = await this.client.futures.ops.quantize(symbol, {
       quantity: input.quantity,
@@ -95,6 +95,8 @@ export class BinanceSmcLifecycleExchange implements SmcLifecycleExchange {
       const order = await this.client.futures.trading.modifyOrder({
         symbol: symbol.toUpperCase(),
         orderId,
+        side: input.side,
+        type: input.type,
         quantity: quantized.quantity,
         ...(quantized.price === undefined ? {} : { stopPrice: quantized.price }),
       });

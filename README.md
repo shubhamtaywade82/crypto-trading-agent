@@ -143,6 +143,15 @@ has no `decisionId` on its exit.
 | SYSTEM (alert bot) | venue degraded / down / recovered, websocket drop after it was up, loop crash, circuit-breaker change, kill-switch on/off | down, crash, HALTED/EMERGENCY, kill-switch: CRITICAL; others IMPORTANT (websocket reconnecting: WATCH) |
 | RESEARCH (alert bot) | daily digest at 00:05 UTC for the previous UTC day: PnL, trades, win rate, profit factor, best/worst, drawdown, refusals by reason, per-strategy results (gross realized PnL; a dash where a ratio is undefined) | WATCH (silent) |
 
+### Institutional-style setup maps
+
+The alert pipeline can also publish one deterministic `SETUP` map per symbol instead of relying only on entry/refusal cards. A setup map summarizes the current directional regime, HTF/LTF structure, liquidity, crowding and derivatives context, then presents up to three executable hypotheses (liquidity sweep, pullback/retest, breakout/retest) with entry zone, invalidation, stop, targets, reward/risk, trigger, flow hypothesis, expected move window and thesis expiry.
+
+These are **market-derived hypotheses**, not claims of privileged institutional intent. The flow field explicitly describes an inference from observable positioning/aggression/liquidity data. Expected move windows are currently deterministic volatility/ATR model estimates; they are not yet historical time-to-target quantiles. The setup engine never routes an order by itself: the existing risk gate, execution-quality checks and executor remain authoritative.
+
+Setup maps are generated from the same `MarketState` already built by `Orchestrator.gatherContext()`. `WATCHING` cards use WATCH severity; `TRIGGERED` cards use SIGNAL severity. Setup alerts are deduplicated with a 15-minute cooldown, while a WATCHING → TRIGGERED transition is emitted immediately. Configure them through the existing `SETUP` class in `NOTIFICATIONS_PATH`; no new Telegram credentials are required.
+
+
 Repeats are dropped by fingerprint: a refused signal for the same symbol, agent and reason at most once per 15
 minutes, and the same system alert at most once per 5 minutes. Optional `NOTIFICATIONS_PATH` JSON turns classes,
 symbols or a minimum severity off, for example `{"notifications": {"signal": false, "minSeverity": "IMPORTANT"}}`

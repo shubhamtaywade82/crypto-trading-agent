@@ -1,6 +1,7 @@
 import { formatPrice } from '../binance/symbolRules.js';
 import { escapeHtml } from './telegram.js';
 import type { SetupMap, SetupScenario } from '../decision/SetupEngine.js';
+import { formatDuration } from '../decision/SetupTiming.js';
 
 const MAX_CARD_CHARS = 3_500;
 
@@ -9,12 +10,7 @@ const clean = (value: string): string =>
 
 const percent = (value: number): string => `${value.toFixed(0)}%`;
 
-const duration = (minutes: number): string => {
-  if (minutes < 60) return `${minutes}m`;
-  const hours = minutes / 60;
-  if (hours < 24) return `${Math.round(hours * 10) / 10}h`;
-  return `${Math.round((hours / 24) * 10) / 10}d`;
-};
+
 
 const statusLabel = (scenario: SetupScenario): string =>
   scenario.state === 'TRIGGERED' ? '🟢 TRIGGERED' : '🟡 WATCHING';
@@ -39,7 +35,7 @@ function scenarioLines(symbol: string, setup: SetupScenario): string[] {
     `⚡ <b>Trigger:</b> ${clean(setup.trigger)}`,
     `⛔ <b>Invalidation:</b> ${clean(setup.invalidation)}`,
     `🧠 <b>Flow hypothesis:</b> ${clean(setup.flowHypothesis)}`,
-    `⏱️ <b>Move window:</b> ${duration(setup.expectedMove.minMinutes)}–${duration(setup.expectedMove.maxMinutes)} · <b>Thesis expiry:</b> ${duration(setup.expectedMove.thesisExpiryMinutes)}`,
+    `⏱️ <b>Move window (model):</b> ${formatDuration(setup.expectedMove)} · <b>Thesis expiry:</b> ${formatDuration({ ...setup.expectedMove, minMinutes: setup.expectedMove.thesisExpiryMinutes, maxMinutes: setup.expectedMove.thesisExpiryMinutes })}`,
   ];
 }
 

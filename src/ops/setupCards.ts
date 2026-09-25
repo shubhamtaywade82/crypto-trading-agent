@@ -30,12 +30,12 @@ function scenarioLines(symbol: string, setup: SetupScenario): string[] {
     `<b>${statusLabel(setup)} · ${setup.direction} · ${setupLabel(setup.kind)}</b>`,
     `🎯 <b>Entry:</b> ${entry}`,
     `🛑 <b>SL:</b> ${formatPrice(symbol, setup.stopLoss)}`,
-    `✅ <b>TP1:</b> ${formatPrice(symbol, setup.target1)}${target2 ? ` · <b>TP2:</b>${target2}` : ''}`,
+    `✅ <b>TP1:</b> ${formatPrice(symbol, setup.target1)}${target2}`,
     `⚖️ <b>RR:</b> ${setup.rewardRisk.toFixed(2)} · <b>Target move:</b> ${setup.expectedMove.distanceAtr.toFixed(2)} ATR`,
     `⚡ <b>Trigger:</b> ${clean(setup.trigger)}`,
     `⛔ <b>Invalidation:</b> ${clean(setup.invalidation)}`,
     `🧠 <b>Flow hypothesis:</b> ${clean(setup.flowHypothesis)}`,
-    `⏱️ <b>Move window (model):</b> ${formatDuration(setup.expectedMove)} · <b>Thesis expiry:</b> ${formatMinutes(setup.expectedMove.thesisExpiryMinutes)},
+    `⏱️ <b>Move window (model):</b> ${formatDuration(setup.expectedMove)} · <b>Thesis expiry:</b> ${formatMinutes(setup.expectedMove.thesisExpiryMinutes)}`,
   ];
 }
 

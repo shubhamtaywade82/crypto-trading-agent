@@ -48,19 +48,19 @@ const map: SetupMap = {
 
 test('setup telegram card contains structure, flow, levels and move clock', () => {
   const html = setupMapCard(map);
-  assert.match(html, /\[ SETUP \] BTCUSDT/);
+  assert.match(html, /\[ SETUP \]<\/b> BTCUSDT/);
   assert.match(html, /INSTITUTIONAL-STYLE FLOW MAP/);
   assert.match(html, /HTF BULLISH · LTF BULLISH/);
   assert.match(html, /SHORT_CROWDED/);
   assert.match(html, /Entry:/);
   assert.match(html, /SL:/);
   assert.match(html, /TP1:/);
-  assert.match(html, /RR: 2\.75/);
+  assert.match(html, /RR:<\/b> 2\.75/);
   assert.match(html, /Trigger:/);
   assert.match(html, /Invalidation:/);
   assert.match(html, /Flow hypothesis:/);
-  assert.match(html, /Move window: 20m–1\.3h/);
-  assert.match(html, /Thesis expiry: 2h/);
+  assert.match(html, /Move window.*20m–1\.3h/);
+  assert.match(html, /Thesis expiry:<\/b> 2h/);
 });
 
 test('setup telegram card escapes untrusted fields', () => {

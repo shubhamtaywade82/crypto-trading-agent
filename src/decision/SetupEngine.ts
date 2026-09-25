@@ -1,6 +1,17 @@
-import type { MarketState, LiquidityPool, LiquiditySweep, PriceZone } from '../market/types.js';
-import type { SetupMap, SetupScenario, SetupDirection } from './SetupTypes.js';
+import type { MarketState, LiquidityPool, LiquiditySweep, PriceZone, TrendDirection } from '../market/types.js';
+import type { SetupMap, SetupScenario, SetupDirection, SetupKind } from './SetupTypes.js';
 import { expectedMove } from './SetupTiming.js';
+
+export type * from './SetupTypes.js';
+export { formatDuration } from './SetupTiming.js';
+
+const MAX_SWEEP_AGE_MS = 6 * 15 * 60_000;
+const STOP_BUFFER_ATR = 0.15;
+const MAX_STOP_ATR = 4;
+const MIN_STOP_ATR = 0.5;
+
+const finite = (value: number | null | undefined): value is number =>
+  value !== null && value !== undefined && Number.isFinite(value);
 
 function locationOf(state: MarketState): SetupMap['location'] {
   if (state.pricing.premium) return 'PREMIUM';
@@ -130,7 +141,7 @@ function buildBreakout(
     id: 'breakout-' + state.symbol + '-' + direction + '-' + Math.round(level * 100),
     kind: 'BREAKOUT_RETEST',
     direction,
-    state: stateForBreakout(state, level, direction),
+    state: stateForBreakout(state.mark, level, direction),
     timeframe: '15m',
     entryLow,
     entryHigh,
@@ -286,14 +297,4 @@ export function buildSetupMap(state: MarketState): SetupMap {
     scenarios,
     noTradeReasons: noTradeReasons.slice(0, 3),
   };
-}
-
-export function formatDuration(window: ExpectedMoveWindow): string {
-  const fmt = (minutes: number): string => {
-    if (minutes < 60) return minutes + 'm';
-    const hours = minutes / 60;
-    if (hours < 24) return (Math.round(hours * 10) / 10) + 'h';
-    return (Math.round((hours / 24) * 10) / 10) + 'd';
-  };
-  return fmt(window.minMinutes) + '–' + fmt(window.maxMinutes);
 }

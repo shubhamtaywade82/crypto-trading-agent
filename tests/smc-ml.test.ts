@@ -306,3 +306,22 @@ test('execution candidates reject a short stop below the entry price', () => {
 
   assert.equal(candidates.length, 0);
 });
+
+import { executionPositionGuard } from '../src/strategies/smc-ml/SmcMlRuntime.js';
+
+test('execution guard rejects an OPEN when a position appeared after analysis', () => {
+  assert.equal(executionPositionGuard('OPEN', 'NO_POSITION', 'LONG'), 'REJECT');
+});
+
+test('execution guard permits an ADD only when the same side is still open', () => {
+  assert.equal(executionPositionGuard('ADD', 'LONG', 'LONG'), 'PROCEED');
+  assert.equal(executionPositionGuard('ADD', 'LONG', 'SHORT'), 'REJECT');
+});
+
+test('execution guard treats an already-flat EXIT as idempotent', () => {
+  assert.equal(executionPositionGuard('EXIT', 'LONG', 'NO_POSITION'), 'ALREADY_FLAT');
+});
+
+test('execution guard rejects an EXIT when the position changed direction', () => {
+  assert.equal(executionPositionGuard('EXIT', 'LONG', 'SHORT'), 'REJECT');
+});

@@ -325,3 +325,10 @@ test('execution guard treats an already-flat EXIT as idempotent', () => {
 test('execution guard rejects an EXIT when the position changed direction', () => {
   assert.equal(executionPositionGuard('EXIT', 'LONG', 'SHORT'), 'REJECT');
 });
+
+import { smcRunnerLockKey } from '../src/strategies/smc-ml/SmcMlRunner.js';
+
+test('SMC runner serializes all timeframe triggers for the same symbol', () => {
+  assert.equal(smcRunnerLockKey('BTCUSDT', '5m'), smcRunnerLockKey('BTCUSDT', '15m'));
+  assert.notEqual(smcRunnerLockKey('BTCUSDT', '5m'), smcRunnerLockKey('ETHUSDT', '5m'));
+});

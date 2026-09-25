@@ -130,7 +130,7 @@ function buildBreakout(
     id: 'breakout-' + state.symbol + '-' + direction + '-' + Math.round(level * 100),
     kind: 'BREAKOUT_RETEST',
     direction,
-    state: stateForBreakout(state.mark, level, direction),
+    state: stateForBreakout(state, level, direction),
     timeframe: '15m',
     entryLow,
     entryHigh,

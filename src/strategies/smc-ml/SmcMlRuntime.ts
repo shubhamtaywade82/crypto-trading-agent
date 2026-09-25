@@ -10,6 +10,7 @@ import {
   type ExecutionCandidate,
   type SMCAnalysis,
   type SMCConfig,
+  type SMCConfluence,
   type SMCDecisionContext,
   type SMCFrame,
   type PortfolioState,
@@ -41,6 +42,29 @@ export interface SmcMlCycle {
   currentEntry?: number;
   decision: SMCTradeDecision;
   selectedCandidate: ExecutionCandidate | null;
+}
+
+export function applySmcPortfolioSafety(
+  portfolioState: PortfolioState,
+  confluence: SMCConfluence,
+): SMCTradeDecision | null {
+  if (
+    portfolioState === 'NO_POSITION' ||
+    confluence.direction === 'NEUTRAL' ||
+    confluence.direction === portfolioState ||
+    confluence.noTradeReasons.length > 0 ||
+    confluence.agreement < 0.5 ||
+    Math.abs(confluence.score) === 0
+  ) {
+    return null;
+  }
+
+  return {
+    action: 'EXIT',
+    side: portfolioState,
+    entrySource: null,
+    reason: 'deterministic portfolio policy: MTF confluence is opposite to the open position',
+  };
 }
 
 export class SmcMlRuntime {
@@ -136,23 +160,11 @@ export class SmcMlRuntime {
 
     let decision = await this.advisor.decide(context);
 
-    // Deterministic portfolio safety rule: when a strong MTF thesis has flipped
+    // Deterministic portfolio safety rule: when an admissible MTF thesis has flipped
     // against an existing position, flatten first. The LLM never gets to reverse
     // an opposite position directly.
-    if (
-      portfolioState !== 'NO_POSITION' &&
-      confluence.direction !== 'NEUTRAL' &&
-      confluence.direction !== portfolioState &&
-      confluence.score !== 0 &&
-      confluence.agreement >= 0.5
-    ) {
-      decision = {
-        action: 'EXIT',
-        side: portfolioState,
-        entrySource: null,
-        reason: 'deterministic portfolio policy: MTF confluence is opposite to the open position',
-      };
-    }
+    const safetyDecision = applySmcPortfolioSafety(portfolioState, confluence);
+    if (safetyDecision) decision = safetyDecision;
 
     const selectedCandidate = decision.entrySource
       ? candidates.find((c) =>
@@ -272,6 +284,9 @@ export function buildExecutionCandidates(
 
   const tp1R = Math.min(cfg?.tp1R ?? DEFAULT_SMC_CONFIG.tp1R, cfg?.tp2R ?? DEFAULT_SMC_CONFIG.tp2R);
   const tp2R = Math.max(cfg?.tp1R ?? DEFAULT_SMC_CONFIG.tp1R, cfg?.tp2R ?? DEFAULT_SMC_CONFIG.tp2R);
+
+  const validStopGeometry = direction === 'LONG' ? sl < price : sl > price;
+  if (!validStopGeometry || tp1R <= 0 || tp2R <= 0) return [];
 
   candidates.push({
     direction,

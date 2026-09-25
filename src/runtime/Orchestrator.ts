@@ -26,6 +26,7 @@ import { applyRouter } from '../decision/StrategyRouter.js';
 import { AgentLedger } from '../learning/AgentLedger.js';
 import { confidenceMultiplier } from '../learning/ConfidenceAdjuster.js';
 import { TradeOutcomeRecorder } from '../learning/TradeOutcomeRecorder.js';
+import { buildSetupMap } from '../decision/SetupEngine.js';
 
 type CycleContext = MarketContext & { tickers: Record<string, MarketPriceInfo>; nextFundingTime: number };
 
@@ -261,6 +262,7 @@ export class Orchestrator extends EventEmitter {
       mark: market.marks[symbol] ?? this.livePrices[symbol] ?? 0,
       fundingRate: market.funding[symbol] ?? 0,
     })));
+    for (const state of Object.values(marketState)) this.hooks.onSetup(buildSetupMap(state));
     return { ...market, spot: this.livePrices, equity: account.equity, positions, marketState, performance: this.ops.build(this.binance.getTrades(), account) };
   }
 

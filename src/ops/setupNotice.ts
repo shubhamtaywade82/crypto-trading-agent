@@ -1,5 +1,6 @@
 import type { SetupMap } from '../decision/SetupEngine.js';
 import type { AlertClass, AlertSeverity } from './alerts.js';
+import { setupMapCard } from './setupCards.js';
 
 export interface SetupNotice {
   cls: Extract<AlertClass, 'SETUP'>;
@@ -21,13 +22,6 @@ export function buildSetupNotice(setup: SetupMap): SetupNotice | null {
     stateTo: setup.state,
     scenarioKey,
     fingerprint: `SETUP:${setup.symbol}:${setup.state === 'TRIGGERED' ? 'triggered' : scenarioKey}`,
-    html: requireSetupCard(setup),
+    html: setupMapCard(setup),
   };
 }
-
-function requireSetupCard(setup: SetupMap): string {
-  // Kept as a small indirection so setup notice construction stays independent from Telegram formatting details.
-  return setupCard(setup);
-}
-
-import { setupMapCard as setupCard } from './setupCards.js';

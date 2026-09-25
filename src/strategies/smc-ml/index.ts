@@ -1,0 +1,20 @@
+export { SmcMlRuntime, DEFAULT_SMC_RUNTIME_OPTIONS } from './SmcMlRuntime.js';
+export { SmcExecutionAdvisor } from './SmcExecutionAdvisor.js';
+export { analyzeSmcFrame, analyzeSmcMultiTimeframe } from './SmcMlEngine.js';
+export { buildSmcConfluence, scoreFrame } from './SmcConfluence.js';
+export * from './types.js';
+
+export {
+  advanceSmcTradeLifecycle,
+  createSmcTradeLifecycle,
+  DEFAULT_SMC_TRADE_LIFECYCLE_CONFIG,
+} from './SmcTradeLifecycle.js';
+export type {
+  SmcTradeLifecycle,
+  SmcTradeLifecycleConfig,
+  SmcLifecycleAction,
+  SmcLifecycleMarketState,
+  SmcLifecyclePhase,
+  SmcLifecycleDirection,
+  SmcLifecycleTransition,
+} from './SmcTradeLifecycle.js';

@@ -29,7 +29,7 @@ function scenarioLines(symbol: string, setup: SetupScenario): string[] {
   const entry = setup.entryLow === setup.entryHigh
     ? formatPrice(symbol, setup.entryLow)
     : `${formatPrice(symbol, setup.entryLow)}–${formatPrice(symbol, setup.entryHigh)}`;
-  const target2 = setup.target2 !== undefined ? ` / ${formatPrice(symbol, setup.target2)}` : '';
+  const target2 = setup.target2 !== undefined ? ` · <b>TP2:</b> ${formatPrice(symbol, setup.target2)}` : '';
   return [
     `<b>${statusLabel(setup)} · ${setup.direction} · ${setupLabel(setup.kind)}</b>`,
     `🎯 <b>Entry:</b> ${entry}`,

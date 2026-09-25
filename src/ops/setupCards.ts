@@ -25,16 +25,16 @@ const setupLabel = (kind: SetupScenario['kind']): string => {
   return 'BREAKOUT / RETEST';
 };
 
-function scenarioLines(setup: SetupScenario): string[] {
+function scenarioLines(symbol: string, setup: SetupScenario): string[] {
   const entry = setup.entryLow === setup.entryHigh
-    ? formatPrice('SOLUSDT', setup.entryLow)
-    : `${formatPrice('SOLUSDT', setup.entryLow)}–${formatPrice('SOLUSDT', setup.entryHigh)}`;
-  const target2 = setup.target2 !== undefined ? ` / ${formatPrice('SOLUSDT', setup.target2)}` : '';
+    ? formatPrice(symbol, setup.entryLow)
+    : `${formatPrice(symbol, setup.entryLow)}–${formatPrice(symbol, setup.entryHigh)}`;
+  const target2 = setup.target2 !== undefined ? ` / ${formatPrice(symbol, setup.target2)}` : '';
   return [
     `<b>${statusLabel(setup)} · ${setup.direction} · ${setupLabel(setup.kind)}</b>`,
     `🎯 <b>Entry:</b> ${entry}`,
-    `🛑 <b>SL:</b> ${formatPrice('SOLUSDT', setup.stopLoss)}`,
-    `✅ <b>TP1:</b> ${formatPrice('SOLUSDT', setup.target1)}${target2 ? ` · <b>TP2:</b>${target2}` : ''}`,
+    `🛑 <b>SL:</b> ${formatPrice(symbol, setup.stopLoss)}`,
+    `✅ <b>TP1:</b> ${formatPrice(symbol, setup.target1)}${target2 ? ` · <b>TP2:</b>${target2}` : ''}`,
     `⚖️ <b>RR:</b> ${setup.rewardRisk.toFixed(2)} · <b>Risk:</b> ${setup.expectedMove.distanceAtr.toFixed(2)} ATR`,
     `⚡ <b>Trigger:</b> ${clean(setup.trigger)}`,
     `⛔ <b>Invalidation:</b> ${clean(setup.invalidation)}`,
@@ -78,7 +78,7 @@ export function setupMapCard(map: SetupMap): string {
     '',
     ...map.scenarios.flatMap((scenario, index) => [
       `<b>SETUP ${index + 1}</b>`,
-      ...scenarioLines({ ...scenario }),
+      ...scenarioLines(map.symbol, { ...scenario }),
       '',
     ]),
     map.noTradeReasons.length > 0 ? `⚠️ <b>Context:</b> ${map.noTradeReasons.map(clean).join(' · ')}` : '✅ <b>Context:</b> no structural veto detected',

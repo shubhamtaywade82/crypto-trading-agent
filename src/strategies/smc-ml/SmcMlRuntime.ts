@@ -311,6 +311,9 @@ export class SmcMlRuntime {
     candidate: ExecutionCandidate,
     bracketResult: Record<string, unknown>,
   ): Promise<void> {
+    const existing = this.lifecycle.get(cycle.analysis.symbol);
+    if (cycle.decision.action === 'ADD' && existing && existing.phase !== 'CLOSED') return;
+
     const position = await this.getPosition(cycle.analysis.symbol);
     const stopOrderId = extractOrderId(bracketResult.stopLoss);
     const tp2OrderId = extractOrderId(bracketResult.takeProfit);

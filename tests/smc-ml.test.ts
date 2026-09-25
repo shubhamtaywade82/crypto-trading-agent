@@ -71,3 +71,99 @@ test('MTF confluence remains unresolved when frames conflict', () => {
   assert.ok(c.direction === 'LONG' || c.direction === 'SHORT' || c.direction === 'NEUTRAL');
   assert.ok(c.agreement < 1);
 });
+
+import { validateDecision } from '../src/strategies/smc-ml/SmcExecutionAdvisor.js';
+import type { SMCAnalysis, SMCDecisionContext } from '../src/strategies/smc-ml/types.js';
+
+function decisionContext(
+  portfolioState: SMCDecisionContext['portfolioState'] = 'NO_POSITION',
+  noTradeReasons: string[] = [],
+): SMCDecisionContext {
+  const candidate = {
+    direction: 'LONG' as const,
+    entrySource: 'MARKET' as const,
+    entryPrice: 100,
+    protectedSwing: 98,
+    atr14: 1,
+    stopLoss: 97,
+    tp1: 103,
+    tp2: 106,
+    riskPerUnit: 3,
+    riskAtr: 3,
+    sourceBreak: {
+      type: 'BOS' as const,
+      timeframe: '1h' as const,
+      level: 99,
+      time: 1,
+      retestProbability: 0.6,
+    },
+  };
+
+  const analysis: SMCAnalysis = {
+    symbol: 'BTCUSDT',
+    generatedAt: 2,
+    price: 100,
+    timeframes: {},
+    confluence: {
+      direction: 'LONG',
+      score: 0.8,
+      frameScores: [],
+      agreement: 1,
+      reasons: ['1h: BOS bullish'],
+      noTradeReasons,
+    },
+    candidates: [candidate],
+  };
+
+  return {
+    analysis,
+    portfolioState,
+    positionQty: portfolioState === 'NO_POSITION' ? 0 : 1,
+    currentEntry: portfolioState === 'NO_POSITION' ? undefined : 100,
+    currentMark: 100,
+  };
+}
+
+test('validator fails closed when confluence contains a no-trade reason', () => {
+  const context = decisionContext('NO_POSITION', ['fewer than three analysed timeframes']);
+  const result = validateDecision(
+    { action: 'OPEN', side: 'LONG', entrySource: 'MARKET', reason: 'open' },
+    context,
+  );
+  assert.equal(result.action, 'HOLD');
+  assert.equal(result.side, 'NONE');
+  assert.equal(result.entrySource, null);
+});
+
+test('validator accepts only an existing candidate for an otherwise admissible OPEN', () => {
+  const context = decisionContext();
+  const result = validateDecision(
+    { action: 'OPEN', side: 'LONG', entrySource: 'MARKET', reason: 'open' },
+    context,
+  );
+  assert.equal(result.action, 'OPEN');
+  assert.equal(result.side, 'LONG');
+  assert.equal(result.entrySource, 'MARKET');
+});
+
+test('validator rejects ADD when confluence is opposite to the open position', () => {
+  const context = decisionContext('SHORT');
+  const result = validateDecision(
+    { action: 'ADD', side: 'SHORT', entrySource: 'MARKET', reason: 'add' },
+    context,
+  );
+  assert.equal(result.action, 'HOLD');
+  assert.equal(result.side, 'NONE');
+  assert.equal(result.entrySource, null);
+});
+
+test('validator normalizes EXIT to the actual open position side', () => {
+  const context = decisionContext('LONG');
+  const result = validateDecision(
+    { action: 'EXIT', side: 'SHORT', entrySource: 'MARKET', reason: 'exit' },
+    context,
+  );
+  assert.equal(result.action, 'EXIT');
+  assert.equal(result.side, 'LONG');
+  assert.equal(result.entrySource, null);
+});

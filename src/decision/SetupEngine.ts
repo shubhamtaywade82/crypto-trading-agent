@@ -1,5 +1,5 @@
 import type { MarketState, LiquidityPool, LiquiditySweep, PriceZone } from '../market/types.js';
-import type { SetupMap, SetupScenario, SetupDirection, ExpectedMoveWindow } from './SetupTypes.js';
+import type { SetupMap, SetupScenario, SetupDirection } from './SetupTypes.js';
 import { expectedMove } from './SetupTiming.js';
 
 function locationOf(state: MarketState): SetupMap['location'] {

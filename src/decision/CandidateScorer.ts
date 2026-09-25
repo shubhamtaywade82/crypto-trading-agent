@@ -67,7 +67,7 @@ export function scoreCandidate(
   structure = Math.min(25, structure);
 
   const expectedSweep = side === 'LONG' ? 'SELL_SIDE' : 'BUY_SIDE';
-  const sweeps = state.liquidity.ltf.latestSweeps;
+  const sweeps = state.liquidity.ltf.recentSweeps ?? state.liquidity.ltf.latestSweeps;
   if (sweeps.some((sweep) => sweep.direction === expectedSweep && sweep.confirmed)) {
     liquidity = 20;
     reasons.push(`${expectedSweep} liquidity sweep confirmed`);

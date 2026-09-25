@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { clampProbability, touchProbability, twoProportionZ } from '../src/strategies/smc-ml/math.js';
+import { BayesianLogisticCalibration, CausalBayesianCalibration, clampProbability, touchProbability, twoProportionZ } from '../src/strategies/smc-ml/math.js';
 import { buildSmcConfluence } from '../src/strategies/smc-ml/SmcConfluence.js';
 import type { SMCFrameAnalysis } from '../src/strategies/smc-ml/types.js';
 
@@ -166,4 +166,23 @@ test('validator strips entry source from EXIT decisions', () => {
   assert.equal(result.action, 'EXIT');
   assert.equal(result.side, 'LONG');
   assert.equal(result.entrySource, null);
+});
+
+test('causal calibration does not use an unresolved prior outcome', () => {
+  const calibration = new CausalBayesianCalibration(new BayesianLogisticCalibration());
+  const firstPrediction = calibration.observe(10, 0.9, 30, 0);
+  const secondPrediction = calibration.observe(20, 0.9, null, null);
+
+  assert.equal(firstPrediction, 0.9);
+  assert.equal(secondPrediction, 0.9);
+  assert.equal(calibration.summary().samples, 0);
+});
+
+test('causal calibration includes an outcome resolved on the current signal candle', () => {
+  const calibration = new CausalBayesianCalibration(new BayesianLogisticCalibration());
+  calibration.observe(10, 0.9, 20, 0);
+  const predictionAtResolution = calibration.observe(20, 0.9, null, null);
+
+  assert.ok(predictionAtResolution < 0.9);
+  assert.equal(calibration.summary().samples, 1);
 });

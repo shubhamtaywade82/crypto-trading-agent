@@ -155,10 +155,16 @@ function buildLiquidityPools(
     });
   }
 
-  const internalHighs = swings.filter((s) => s.type === 'HIGH' && s.index >= internalLength)
-    .filter((s) => pivotHigh(candles, s.index, internalLength));
-  const internalLows = swings.filter((s) => s.type === 'LOW' && s.index >= internalLength)
-    .filter((s) => pivotLow(candles, s.index, internalLength));
+  const internalHighs: SwingPoint[] = [];
+  const internalLows: SwingPoint[] = [];
+  for (let i = internalLength; i < candles.length - internalLength; i++) {
+    if (pivotHigh(candles, i, internalLength)) {
+      internalHighs.push({ index: i, time: candles[i].openTime, price: candles[i].high, type: 'HIGH' });
+    }
+    if (pivotLow(candles, i, internalLength)) {
+      internalLows.push({ index: i, time: candles[i].openTime, price: candles[i].low, type: 'LOW' });
+    }
+  }
 
   const addEqual = (points: SwingPoint[], side: 1 | -1) => {
     for (let i = 1; i < points.length; i++) {
@@ -224,13 +230,15 @@ function rangePosition(price: number, hi: number | null, lo: number | null): num
   return (price - lo) / (hi - lo);
 }
 
-function resolveRetest(candles: Candle[], b: RawBreak, window: number): boolean | null {
+function resolveRetest(candles: Candle[], b: RawBreak, window: number): { outcome: boolean | null; entryClose: number | null } {
   for (let i = b.index + 1; i < Math.min(candles.length, b.index + window + 1); i++) {
     const c = candles[i];
-    if (b.direction === 1 ? c.low <= b.level : c.high >= b.level) return true;
+    const touch = b.direction === 1 ? c.low <= b.level : c.high >= b.level;
+    const reclaim = b.direction === 1 ? c.close > b.level : c.close < b.level;
+    if (touch && reclaim) return { outcome: true, entryClose: c.close };
   }
-  if (b.index + window < candles.length) return false;
-  return null;
+  if (b.index + window < candles.length) return { outcome: false, entryClose: null };
+  return { outcome: null, entryClose: null };
 }
 
 function resolveFollowThrough(candles: Candle[], b: RawBreak, window: number): boolean | null {
@@ -487,9 +495,9 @@ export function analyzeSmcFrame(
 
   for (const raw of rawBreaks) {
     const retestP = retestCal.predict(raw.p0);
-    const retestOutcome = resolveRetest(candles, raw, cfg.retestWindow);
-    if (retestP !== null && raw.p0 !== null && retestOutcome !== null) {
-      retestCal.score(retestP, raw.p0, retestOutcome ? 1 : 0);
+    const retest = resolveRetest(candles, raw, cfg.retestWindow);
+    if (retestP !== null && raw.p0 !== null && retest.outcome !== null) {
+      retestCal.score(retestP, raw.p0, retest.outcome ? 1 : 0);
     }
 
     const followThroughOutcome = resolveFollowThrough(candles, raw, cfg.followThroughWindow);
@@ -514,7 +522,8 @@ export function analyzeSmcFrame(
       ...raw,
       retestFormulaProbability: raw.p0,
       retestProbability: retestP,
-      retestOutcome,
+      retestEntryPrice: retest.entryClose,
+      retestOutcome: retest.outcome,
       followThroughOutcome,
       nearestUpperPoolAtPrint: raw.upperAtPrint,
       nearestLowerPoolAtPrint: raw.lowerAtPrint,

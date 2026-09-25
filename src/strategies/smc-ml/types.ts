@@ -73,6 +73,7 @@ export interface StructureBreak {
   riskUnit: number;
   retestFormulaProbability: number | null;
   retestProbability: number | null;
+  retestEntryPrice: number | null;
   retestOutcome: boolean | null;
   followThroughOutcome: boolean | null;
   sweptLiquidityFirst: boolean;

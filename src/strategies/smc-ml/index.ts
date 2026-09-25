@@ -18,3 +18,17 @@ export type {
   SmcLifecycleDirection,
   SmcLifecycleTransition,
 } from './SmcTradeLifecycle.js';
+
+export { BinanceSmcLifecycleExchange } from './SmcBinanceLifecycleExchange.js';
+export {
+  SmcTradeLifecycleCoordinator,
+  smcLifecycleTransitionId,
+} from './SmcTradeLifecycleCoordinator.js';
+export type {
+  SmcLifecycleExchange,
+  SmcLifecycleExchangeState,
+  SmcLifecycleOrder,
+  SmcLifecyclePosition,
+  RegisteredSmcLifecycle,
+  SmcLifecycleCoordinatorResult,
+} from './SmcTradeLifecycleCoordinator.js';

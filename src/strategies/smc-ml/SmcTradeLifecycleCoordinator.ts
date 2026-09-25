@@ -202,6 +202,7 @@ export class SmcTradeLifecycleCoordinator {
     }
 
     if (registered.tp2OrderId !== undefined && orderId === registered.tp2OrderId) {
+      this.setPositionCache(symbol, null);
       this.active.set(symbol, {
         ...registered,
         lifecycle: {
@@ -241,8 +242,10 @@ export class SmcTradeLifecycleCoordinator {
           throw new Error(result.reason ?? 'TP1 partial close was not confirmed by reconciliation');
         }
 
+        const nextState = { ...state, remainingQty: after.position.quantity };
+        this.active.set(symbol, { ...registered, lifecycle: nextState });
         await this.syncProtection(symbol, registered, after.position.quantity, state.stopPrice);
-        return { ...state, remainingQty: after.position.quantity };
+        return nextState;
       }
 
       case 'MOVE_STOP': {
@@ -265,6 +268,9 @@ export class SmcTradeLifecycleCoordinator {
           stopPrice: action.stopPrice,
         });
 
+        const nextState = { ...state, stopPrice: action.stopPrice };
+        this.active.set(symbol, { ...registered, lifecycle: nextState });
+
         const after = await this.exchange.reconcile(symbol);
         this.setPositionCache(symbol, after.position);
         const updated = after.openOrders.find((order) => order.orderId === registered.stopOrderId);
@@ -272,7 +278,7 @@ export class SmcTradeLifecycleCoordinator {
           throw new Error('protective stop amendment was not confirmed by reconciliation');
         }
 
-        return { ...state, stopPrice: action.stopPrice };
+        return nextState;
       }
 
       case 'CLOSE_REMAINING': {
@@ -283,8 +289,10 @@ export class SmcTradeLifecycleCoordinator {
           throw new Error(result.reason ?? 'TP2 close was not confirmed by reconciliation');
         }
 
+        const nextState = { ...state, phase: 'CLOSED' as const, remainingQty: 0, closedReason: 'TP2' as const };
+        this.active.set(symbol, { ...registered, lifecycle: nextState });
         await this.cancelBoundOrders(symbol, registered, after);
-        return { ...state, phase: 'CLOSED', remainingQty: 0, closedReason: 'TP2' };
+        return nextState;
       }
     }
   }

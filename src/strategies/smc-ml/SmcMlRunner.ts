@@ -45,11 +45,43 @@ export class SmcMlRunner {
   async start(onResult?: (result: SmcMlRunResult) => void): Promise<void> {
     await this.client.syncTime();
 
-    const streams = this.options.symbols.flatMap((symbol) =>
+    if (this.options.autoExecute) {
+      this.client.futures.execution.setUserStream(this.client.futures.wsUser);
+      this.client.futures.wsUser.on('ORDER_TRADE_UPDATE', (event: unknown) => {
+        this.runtime.handleOrderTradeUpdate(event);
+      });
+      this.client.futures.wsUser.on('ACCOUNT_UPDATE', (event: unknown) => {
+        this.runtime.handleAccountUpdate(event);
+      });
+      await this.client.startUserStream();
+    }
+
+    const marketStreams = this.options.symbols.flatMap((symbol) =>
       this.options.timeframes.map((tf) => this.client.futures.ws.kline(symbol, tf)),
     );
+    const lifecycleStreams = this.options.autoExecute
+      ? this.options.symbols.map((symbol) => this.client.futures.ws.markPrice(symbol, '1s'))
+      : [];
+
+    const streams = [...marketStreams, ...lifecycleStreams];
 
     this.client.futures.ws.on('message', (stream: string, payload: unknown) => {
+      if (stream.includes('@markPrice@')) {
+        const symbol = payloadSymbol(payload);
+        const markPrice = parseMarkPriceEvent(payload);
+        if (!symbol || markPrice === null || !this.options.symbols.includes(symbol)) return;
+        const key = smcRunnerLockKey(symbol, '5m');
+        if (this.active.has(key)) return;
+        const promise = this.runtime.onMarkPrice(symbol, markPrice)
+          .catch((error) => {
+            console.error('[smc-ml-lifecycle]', symbol, error);
+          })
+          .finally(() => this.active.delete(key))
+          .then(() => undefined);
+        this.active.set(key, promise);
+        return;
+      }
+
       if (!stream.includes('@kline_')) return;
       const event = payload as {
         e?: string;
@@ -80,6 +112,7 @@ export class SmcMlRunner {
 
   stop(): void {
     this.client.futures.ws.close();
+    if (this.options.autoExecute) this.client.closeUserStream();
   }
 
   private async run(
@@ -94,4 +127,19 @@ export class SmcMlRunner {
 
     onResult?.({ symbol, cycle, execution, triggeredBy });
   }
+}
+
+
+export function parseMarkPriceEvent(payload: unknown): number | null {
+  if (!payload || typeof payload !== 'object') return null;
+  const event = payload as { e?: unknown; p?: unknown };
+  if (event.e !== 'markPriceUpdate') return null;
+  const price = Number(event.p);
+  return Number.isFinite(price) && price > 0 ? price : null;
+}
+
+function payloadSymbol(payload: unknown): string | null {
+  if (!payload || typeof payload !== 'object') return null;
+  const symbol = (payload as { s?: unknown }).s;
+  return typeof symbol === 'string' ? symbol.toUpperCase() : null;
 }

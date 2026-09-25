@@ -144,7 +144,7 @@ test('coordinator closes and cancels both protective orders at TP2', async () =>
 
   const result = await coordinator.onMarkPrice('BTCUSDT', 120);
   assert.equal(result.state.phase, 'CLOSED');
-  assert.deepEqual(calls.slice(-3), ['close:BTCUSDT', 'cancel:BTCUSDT:101', 'cancel:BTCUSDT:102']);
+  assert.deepEqual(calls.slice(-4), ['close:BTCUSDT', 'reconcile:BTCUSDT', 'cancel:BTCUSDT:101', 'cancel:BTCUSDT:102']);
 });
 
 test('order-trade update for the bound stop marks the lifecycle terminal', () => {

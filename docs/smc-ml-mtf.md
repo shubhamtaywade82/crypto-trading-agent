@@ -23,7 +23,7 @@ This strategy ports the supplied Pine Smart Money Concept ML logic into TypeScri
       - equal/swing liquidity
       - retest probability
       - liquidity first-touch probability
-      - Bayesian logistic calibration
+      - causal Bayesian logistic calibration (outcome-safe)
       - follow-through edge test
             |
             v
@@ -46,8 +46,11 @@ This strategy ports the supplied Pine Smart Money Concept ML logic into TypeScri
     Deterministic portfolio policy
       - no position + aligned setup -> OPEN
       - same direction position + aligned setup -> ADD
-      - strong opposite confluence -> EXIT
+      - strong admissible opposite confluence -> EXIT
+      - no-trade confluence cannot force an automatic exit
+      - stale setups produce no execution candidates
       - never reverse directly
+      - one active execution cycle per symbol
             |
             v
     Binance SDK FuturesOps
@@ -74,11 +77,15 @@ The LLM cannot invent levels, prices, quantity, leverage or indicators. It selec
 
 Opposite-direction reversal is deliberately two-step: flatten first, then a later closed-candle cycle can create a new entry.
 
+Before execution, the runtime re-reads the live position and rejects stale OPEN/ADD/EXIT decisions when the portfolio state changed. An already-flat EXIT is treated as idempotent.
+
 ## Install
 
     npm install @nemesis-oss/binance-sdk@^3.0.0
 
 The feature branch adds the dependency to package.json. The existing package-lock.json still needs regeneration on a machine with npm registry access.
+
+The SMC CI workflow validates only the strategy slice because the root package also contains an existing machine-local CoinDCX SDK dependency.
 
 ## Example
 

@@ -2,6 +2,7 @@ import type { BinanceClient } from '@nemesis-oss/binance-sdk';
 import { SmcMlRuntime } from './SmcMlRuntime.js';
 import type { SmcMlCycle } from './SmcMlRuntime.js';
 import type { SMCFrame } from './types.js';
+import { parseMarkPriceEvent } from './SmcMarkPrice.js';
 
 export interface SmcMlRunnerOptions {
   symbols: string[];
@@ -67,12 +68,12 @@ export class SmcMlRunner {
 
     this.client.futures.ws.on('message', (stream: string, payload: unknown) => {
       if (stream.includes('@markPrice@')) {
-        const symbol = payloadSymbol(payload);
-        const markPrice = parseMarkPriceEvent(payload);
-        if (!symbol || markPrice === null || !this.options.symbols.includes(symbol)) return;
+        const market = parseMarkPriceEvent(payload);
+        if (!market || !this.options.symbols.includes(market.symbol)) return;
+        const symbol = market.symbol;
         const key = smcRunnerLockKey(symbol, '5m');
         if (this.active.has(key)) return;
-        const promise = this.runtime.onMarkPrice(symbol, markPrice)
+        const promise = this.runtime.onMarkPrice(symbol, market.markPrice)
           .catch((error) => {
             console.error('[smc-ml-lifecycle]', symbol, error);
           })
@@ -129,17 +130,3 @@ export class SmcMlRunner {
   }
 }
 
-
-export function parseMarkPriceEvent(payload: unknown): number | null {
-  if (!payload || typeof payload !== 'object') return null;
-  const event = payload as { e?: unknown; p?: unknown };
-  if (event.e !== 'markPriceUpdate') return null;
-  const price = Number(event.p);
-  return Number.isFinite(price) && price > 0 ? price : null;
-}
-
-function payloadSymbol(payload: unknown): string | null {
-  if (!payload || typeof payload !== 'object') return null;
-  const symbol = (payload as { s?: unknown }).s;
-  return typeof symbol === 'string' ? symbol.toUpperCase() : null;
-}

@@ -10,6 +10,7 @@ on:
       - "src/types.ts"
       - "src/config.ts"
       - "tests/smc-ml.test.ts"
+      - "tests/smc-ml-lifecycle.test.ts"
       - "package.json"
       - ".github/workflows/smc-ml.yml"
 
@@ -54,7 +55,8 @@ jobs:
           src/strategies/smc-ml/SmcExecutionAdvisor.ts
           src/strategies/smc-ml/SmcMlRuntime.ts
           src/strategies/smc-ml/SmcMlRunner.ts
+          src/strategies/smc-ml/SmcTradeLifecycle.ts
           src/strategies/smc-ml/index.ts
 
       - name: Run SMC ML tests
-        run: npx tsx --test tests/smc-ml.test.ts
+        run: npx tsx --test tests/smc-ml.test.ts tests/smc-ml-lifecycle.test.ts

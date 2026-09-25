@@ -20,7 +20,7 @@ export type {
 } from './SmcTradeLifecycle.js';
 
 export { BinanceSmcLifecycleExchange } from './SmcBinanceLifecycleExchange.js';
-export { SmcMlRunner, smcRunnerLockKey, parseMarkPriceEvent } from './SmcMlRunner.js';
+export { SmcMlRunner, smcRunnerLockKey } from './SmcMlRunner.js';
 export {
   SmcTradeLifecycleCoordinator,
   smcLifecycleTransitionId,

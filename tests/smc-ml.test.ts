@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { BayesianLogisticCalibration, CausalBayesianCalibration, clampProbability, touchProbability, twoProportionZ } from '../src/strategies/smc-ml/math.js';
 import { buildSmcConfluence } from '../src/strategies/smc-ml/SmcConfluence.js';
+import { buildExecutionCandidates } from '../src/strategies/smc-ml/SmcMlRuntime.js';
 import type { SMCFrameAnalysis } from '../src/strategies/smc-ml/types.js';
 
 function frame(
@@ -185,4 +186,48 @@ test('causal calibration includes an outcome resolved on the current signal cand
 
   assert.ok(predictionAtResolution < 0.9);
   assert.equal(calibration.summary().samples, 1);
+});
+
+function frameWithBreak(breakIndex: number): SMCFrameAnalysis {
+  return {
+    ...frame('1h', 'LONG'),
+    candleCount: 100,
+    latestBreak: {
+      direction: 1,
+      type: 'BOS',
+      index: breakIndex,
+      time: breakIndex,
+      level: 99,
+      breakClose: 100,
+      protectedSwing: 95,
+      protectedSwingIndex: breakIndex - 5,
+      riskUnit: 5,
+      retestFormulaProbability: 0.6,
+      retestProbability: 0.6,
+      retestEntryPrice: null,
+      retestOutcome: null,
+      followThroughOutcome: null,
+      sweptLiquidityFirst: false,
+      leftFvg: false,
+      nearestUpperPoolAtPrint: 110,
+      nearestLowerPoolAtPrint: 90,
+    },
+    atr14: 1,
+  };
+}
+
+test('execution candidates expire after the retest window', () => {
+  const stale = frameWithBreak(10);
+  const candidates = buildExecutionCandidates({ '1h': stale }, 'LONG', 100, {
+    retestWindow: 20,
+  });
+  assert.equal(candidates.length, 0);
+});
+
+test('fresh structure breaks can produce a market execution candidate', () => {
+  const fresh = frameWithBreak(90);
+  const candidates = buildExecutionCandidates({ '1h': fresh }, 'LONG', 100, {
+    retestWindow: 20,
+  });
+  assert.ok(candidates.some((candidate) => candidate.entrySource === 'MARKET'));
 });

@@ -349,7 +349,7 @@ export function analyzeSmcFrame(
   const cfg = { ...DEFAULT_SMC_CONFIG, ...overrides };
   const candles = [...inputCandles].sort((a, b) => a.openTime - b.openTime);
   if (candles.length === 0) {
-    throw new Error(\`SMC \${timeframe}: no closed candles\`);
+    throw new Error(`SMC \${timeframe}: no closed candles`);
   }
 
   const atr = atrSeries(candles);

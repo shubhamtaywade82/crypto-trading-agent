@@ -54,7 +54,7 @@ export class BinanceSmcLifecycleExchange implements SmcLifecycleExchange {
       const result = await this.client.futures.ops.closePosition({
         symbol: symbol.toUpperCase(),
         portion,
-        positionSide: position.positionSide,
+        ...(normalizedPositionSide(position.positionSide) ? { positionSide: normalizedPositionSide(position.positionSide) } : {}),
       });
       if (!result.closed && result.reason !== 'dryRun') {
         const after = await this.reconcile(symbol);
@@ -121,7 +121,7 @@ export class BinanceSmcLifecycleExchange implements SmcLifecycleExchange {
     try {
       const result = await this.client.futures.ops.closePosition({
         symbol: symbol.toUpperCase(),
-        positionSide: position.positionSide,
+        ...(normalizedPositionSide(position.positionSide) ? { positionSide: normalizedPositionSide(position.positionSide) } : {}),
       });
       if (!result.closed) {
         const after = await this.reconcile(symbol);
@@ -186,4 +186,8 @@ function extractOrderId(order: unknown): number | undefined {
   if (!order || typeof order !== 'object') return undefined;
   const id = (order as { orderId?: unknown }).orderId;
   return typeof id === 'number' ? id : undefined;
+}
+
+function normalizedPositionSide(value: string): 'BOTH' | 'LONG' | 'SHORT' | undefined {
+  return value === 'BOTH' || value === 'LONG' || value === 'SHORT' ? value : undefined;
 }

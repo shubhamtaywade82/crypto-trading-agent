@@ -48,14 +48,20 @@ export class SmcMlRunner {
     await this.client.syncTime();
 
     if (this.options.autoExecute) {
-      this.client.futures.execution.setUserStream(this.client.futures.wsUser);
-      this.client.futures.wsUser.on('ORDER_TRADE_UPDATE', (event: unknown) => {
+      const userEvents = this.client.futures.wsUser as unknown as {
+        on(event: string, listener: (event: unknown) => void): unknown;
+      };
+      const executionUserStream = this.client.futures.wsUser as unknown as Parameters<
+        typeof this.client.futures.execution.setUserStream
+      >[0];
+      this.client.futures.execution.setUserStream(executionUserStream);
+      userEvents.on('ORDER_TRADE_UPDATE', (event: unknown) => {
         this.runtime.handleOrderTradeUpdate(event);
       });
-      this.client.futures.wsUser.on('ACCOUNT_UPDATE', (event: unknown) => {
+      userEvents.on('ACCOUNT_UPDATE', (event: unknown) => {
         this.runtime.handleAccountUpdate(event);
       });
-      this.client.futures.wsUser.on('listenKeyExpired', () => {
+      userEvents.on('listenKeyExpired', () => {
         if (this.userStreamRestarting) return;
         this.userStreamRestarting = true;
         void this.client.startUserStream()
@@ -81,7 +87,10 @@ export class SmcMlRunner {
 
     const streams = [...marketStreams, ...lifecycleStreams];
 
-    this.client.futures.ws.on('message', (stream: string, payload: unknown) => {
+    const marketEvents = this.client.futures.ws as unknown as {
+      on(event: 'message', listener: (stream: string, payload: unknown) => void): unknown;
+    };
+    marketEvents.on('message', (stream: string, payload: unknown) => {
       if (stream.includes('@markPrice@')) {
         const market = parseMarkPriceEvent(payload);
         if (!market || !this.options.symbols.includes(market.symbol)) return;

@@ -19,6 +19,10 @@ export interface SmcMlRunResult {
 
 const DEFAULT_TIMEFRAMES: SMCFrame[] = ['5m', '15m', '1h', '4h'];
 
+export function smcRunnerLockKey(symbol: string, _timeframe: SMCFrame): string {
+  return symbol.toUpperCase();
+}
+
 export class SmcMlRunner {
   private readonly runtime: SmcMlRuntime;
   private readonly options: Required<SmcMlRunnerOptions>;
@@ -59,7 +63,7 @@ export class SmcMlRunner {
       const symbol = event.s.toUpperCase();
       if (!this.options.symbols.includes(symbol)) return;
 
-      const key = symbol + ':' + timeframe;
+      const key = smcRunnerLockKey(symbol, timeframe);
       if (this.active.has(key)) return;
 
       const promise = this.run(symbol, timeframe, onResult)

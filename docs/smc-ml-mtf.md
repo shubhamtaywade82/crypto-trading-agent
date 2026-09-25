@@ -112,3 +112,29 @@ The SMC CI workflow validates only the strategy slice because the root package a
     });
 
 Start with autoExecute=false and paper/testnet execution. Enable live execution only after deterministic backtests and forward paper validation.
+
+## Trade lifecycle state machine
+
+The execution candidate now has a deterministic lifecycle model:
+
+    ENTRY
+      -> TP1_PARTIAL
+      -> BREAKEVEN
+      -> TRAILING
+      -> TP2 / CLOSED
+
+The lifecycle is pure and side-effect free. It tracks the setup fingerprint, initial risk, remaining quantity, favorable excursion, TP1 state, breakeven state and a monotonic protective stop.
+
+Default controls:
+
+- TP1 closes 50% of the currently observed position.
+- Breakeven activates only after TP1 and defaults to exact entry.
+- Trailing starts after 1R favorable excursion after TP1.
+- Trailing distance defaults to 0.5R.
+- LONG stops can only move upward; SHORT stops can only move downward.
+- TP2 produces a single close-remaining intent.
+- A zero exchange position terminates the lifecycle as an external close.
+- A terminal lifecycle emits no further actions.
+
+The lifecycle deliberately produces **intents**, not exchange mutations. This prevents the state machine from pretending an order succeeded. The next execution-layer integration must atomically reconcile position/open orders around each intent, persist the setup lifecycle across process restarts, and consume Binance user-data order events. Binance USDⓈ-M user-data streams expose ORDER_TRADE_UPDATE for order creation, amendment and terminal state transitions, which is the appropriate event source for that integration.
+

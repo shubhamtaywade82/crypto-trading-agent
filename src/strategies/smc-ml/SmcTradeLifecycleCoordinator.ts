@@ -160,17 +160,21 @@ export class SmcTradeLifecycleCoordinator {
       const amount = Number(p.pa);
       const entryPrice = Number(p.ep);
       if (!symbol || !Number.isFinite(amount) || !Number.isFinite(entryPrice)) continue;
-      this.setPositionCache(
+      if (amount === 0) {
+        // ACCOUNT_UPDATE contains changed position legs, not necessarily a
+        // complete symbol snapshot. Force one REST reconciliation instead of
+        // treating a zero leg as proof that the whole symbol is flat.
+        this.positionCache.delete(symbol);
+        this.cacheKnown.delete(symbol);
+        continue;
+      }
+
+      this.setPositionCache(symbol, {
         symbol,
-        amount === 0
-          ? null
-          : {
-              symbol,
-              direction: amount > 0 ? 'LONG' : 'SHORT',
-              quantity: Math.abs(amount),
-              entryPrice,
-            },
-      );
+        direction: amount > 0 ? 'LONG' : 'SHORT',
+        quantity: Math.abs(amount),
+        entryPrice,
+      });
     }
   }
 
@@ -276,6 +280,16 @@ export class SmcTradeLifecycleCoordinator {
         const updated = after.openOrders.find((order) => order.orderId === registered.stopOrderId);
         if (!updated || Math.abs((updated.stopPrice ?? NaN) - action.stopPrice) > Math.max(1e-12, Math.abs(action.stopPrice) * 1e-10)) {
           throw new Error('protective stop amendment was not confirmed by reconciliation');
+        }
+
+        if (registered.tp2OrderId !== undefined && after.position) {
+          const tp2 = after.openOrders.find((order) => order.orderId === registered.tp2OrderId);
+          if (tp2 && tp2.status === 'NEW') {
+            await this.exchange.modifyOrder(symbol, registered.tp2OrderId, {
+              quantity: after.position.quantity,
+              ...(tp2.stopPrice === undefined ? {} : { stopPrice: tp2.stopPrice }),
+            });
+          }
         }
 
         return nextState;

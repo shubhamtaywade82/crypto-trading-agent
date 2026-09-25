@@ -27,8 +27,18 @@ jobs:
           cache: npm
           cache-dependency-path: package-lock.json
 
-      # The root package currently has a machine-local CoinDCX dependency.
-      # Install only the public dependencies needed by this strategy test slice.
+      # The repository manifest contains a machine-local CoinDCX SDK.
+      # Use an isolated temporary manifest so CI never resolves that path.
+      - name: Prepare isolated SMC CI manifest
+        run: |
+          mv package.json package.json.repo
+          cat > package.json <<'JSON'
+          {
+            "private": true,
+            "type": "module"
+          }
+          JSON
+
       - name: Install SMC test dependencies
         run: >
           npm install --no-save --ignore-scripts

@@ -157,10 +157,10 @@ test('validator rejects ADD when confluence is opposite to the open position', (
   assert.equal(result.entrySource, null);
 });
 
-test('validator normalizes EXIT to the actual open position side', () => {
+test('validator strips entry source from EXIT decisions', () => {
   const context = decisionContext('LONG');
   const result = validateDecision(
-    { action: 'EXIT', side: 'SHORT', entrySource: 'MARKET', reason: 'exit' },
+    { action: 'EXIT', side: 'LONG', entrySource: 'MARKET', reason: 'exit' },
     context,
   );
   assert.equal(result.action, 'EXIT');

@@ -140,6 +140,7 @@ has no `decisionId` on its exit.
 | --- | --- | --- |
 | TRADE (trading bot) | position opened, scale-in, flip; exit with reason, gross PnL and R (R needs the position's initial stop) | fill: SIGNAL; exit: IMPORTANT; liquidation: CRITICAL |
 | SIGNAL (trading bot) | entry accepted; entry refused (risk gate or executor); entry vetoed by the advisor | accepted: SIGNAL; refused/vetoed: WATCH (silent) |
+| SETUP (trading bot) | deterministic multi-scenario flow map: regime, structure, liquidity, crowding, entry zones, SL/TP, trigger, invalidation, flow hypothesis and expected move window | triggered: SIGNAL; developing: WATCH (silent) |
 | SYSTEM (alert bot) | venue degraded / down / recovered, websocket drop after it was up, loop crash, circuit-breaker change, kill-switch on/off | down, crash, HALTED/EMERGENCY, kill-switch: CRITICAL; others IMPORTANT (websocket reconnecting: WATCH) |
 | RESEARCH (alert bot) | daily digest at 00:05 UTC for the previous UTC day: PnL, trades, win rate, profit factor, best/worst, drawdown, refusals by reason, per-strategy results (gross realized PnL; a dash where a ratio is undefined) | WATCH (silent) |
 

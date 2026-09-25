@@ -20,14 +20,32 @@ const arrow = (info: AdaptiveInfo) => (info.direction === 'BULLISH' ? chalk.gree
 const separator = (width: number) => padLine(` ${chalk.gray(rule('─', Math.max(10, width - 2)))}`, width);
 const mean = (values: number[]) => values.reduce((sum, v) => sum + v, 0) / values.length;
 
-function assetCells(symbol: string, info: MarketPriceInfo | undefined) {
+function formatTrend(trend: string | undefined): string {
+  if (!trend || trend === '—') return chalk.gray('—');
+  const upper = trend.toUpperCase();
+  if (upper.includes('BULL') || upper.includes('UP')) return chalk.green('▲ BULLISH');
+  if (upper.includes('BEAR') || upper.includes('DOWN')) return chalk.red('▼ BEARISH');
+  if (upper.includes('NEUT') || upper.includes('FLAT') || upper.includes('RANGE')) return chalk.gray('■ NEUTRAL');
+  return chalk.gray(trend);
+}
+
+function symbolTrend(p: CockpitProps, symbol: string, info: MarketPriceInfo | undefined): string | undefined {
+  const short = shortName(symbol);
+  return info?.trend
+    ?? p.strategyMetrics?.adaptive[symbol]?.direction
+    ?? p.strategyMetrics?.adaptive[short]?.direction
+    ?? p.marketIntel?.[symbol]?.ltfTrend
+    ?? p.marketIntel?.[short]?.ltfTrend;
+}
+
+function assetCells(symbol: string, info: MarketPriceInfo | undefined, trend?: string) {
   const chgCol = !info ? chalk.gray : info.changePct < 0 ? chalk.red : chalk.green;
   return {
     name: shortName(symbol),
     price: (info ? `$${formatPrice(symbol, info.price)}` : '—').padStart(11),
     chgCol,
     chg: (info ? `${signedDp(info.changePct)}%` : '—').padStart(8),
-    spark: info?.sparkline ? chgCol(info.sparkline) : '',
+    trend: formatTrend(trend ?? info?.trend),
     range: fmtRange(symbol, info?.low24h, info?.high24h),
     vol: fmtVol(info?.volumeQuote),
   };
@@ -35,14 +53,14 @@ function assetCells(symbol: string, info: MarketPriceInfo | undefined) {
 
 const WIDE_HEADER = ` ${chalk.gray('ASSET'.padEnd(5))} ${chalk.gray('PRICE'.padStart(11))}  ${chalk.gray('24h CHG'.padStart(8))}  ${chalk.gray('│ 24h RANGE'.padEnd(25))} ${chalk.gray('│ 24h VOLUME'.padStart(12))}  ${chalk.gray('│ 15m TREND')}`;
 
-function wideAssetRow(symbol: string, info: MarketPriceInfo | undefined): string {
-  const c = assetCells(symbol, info);
-  return ` ${chalk.yellow.bold(c.name.padEnd(5))} ${chalk.white(c.price)}  ${c.chgCol(c.chg)}  ${chalk.gray('│ ')}${chalk.white(c.range.padEnd(23))} ${chalk.gray('│ ')}${chalk.cyan(c.vol.padStart(10))}  ${chalk.gray('│ ')}${c.spark}`;
+function wideAssetRow(symbol: string, info: MarketPriceInfo | undefined, trend?: string): string {
+  const c = assetCells(symbol, info, trend);
+  return ` ${chalk.yellow.bold(c.name.padEnd(5))} ${chalk.white(c.price)}  ${c.chgCol(c.chg)}  ${chalk.gray('│ ')}${chalk.white(c.range.padEnd(23))} ${chalk.gray('│ ')}${chalk.cyan(c.vol.padStart(10))}  ${chalk.gray('│ ')}${c.trend}`;
 }
 
-function narrowAssetRows(symbol: string, info: MarketPriceInfo | undefined, width: number): string[] {
-  const c = assetCells(symbol, info);
-  const l1 = ` ${chalk.yellow.bold(c.name.padEnd(4))} ${chalk.white(c.price.trim().padStart(9))} ${c.chgCol(c.chg)} ${chalk.gray('│ ')}${c.spark}`;
+function narrowAssetRows(symbol: string, info: MarketPriceInfo | undefined, trend: string | undefined, width: number): string[] {
+  const c = assetCells(symbol, info, trend);
+  const l1 = ` ${chalk.yellow.bold(c.name.padEnd(4))} ${chalk.white(c.price.trim().padStart(9))} ${c.chgCol(c.chg)} ${chalk.gray('│ ')}${c.trend}`;
   const l2 = `   ${chalk.gray('24h')} ${chalk.white(c.range.padEnd(24))} ${chalk.gray('│ ')}${chalk.cyan(('Vol ' + c.vol).padStart(11))}`;
   return [padLine(l1, width), padLine(l2, width)];
 }
@@ -108,12 +126,13 @@ function fundingHeader(metrics: StrategyMetrics | null, width: number): string {
 
 export function renderCol2Lines(p: CockpitProps, width: number = 52, rowCount: number = 29): string[] {
   const infoOf = (symbol: string) => p.spotPrices?.[shortName(symbol)];
-  // Sparklines and ranges vary in width, so the wide layout is used only when every row really fits
-  const wideRows = config.symbols.map((symbol) => wideAssetRow(symbol, infoOf(symbol)));
+  const trendOf = (symbol: string) => symbolTrend(p, symbol, infoOf(symbol));
+  // Trends and ranges vary in width, so the wide layout is used only when every row really fits
+  const wideRows = config.symbols.map((symbol) => wideAssetRow(symbol, infoOf(symbol), trendOf(symbol)));
   const isWide = [WIDE_HEADER, ...wideRows].every((row) => stringWidth(row) <= width);
   const rows: string[] = [fundingHeader(p.strategyMetrics, width), separator(width)];
   if (isWide) rows.push(padLine(WIDE_HEADER, width), separator(width), ...wideRows.map((row) => padLine(row, width)));
-  else rows.push(...config.symbols.flatMap((symbol) => narrowAssetRows(symbol, infoOf(symbol), width)));
+  else rows.push(...config.symbols.flatMap((symbol) => narrowAssetRows(symbol, infoOf(symbol), trendOf(symbol), width)));
   rows.push(separator(width), ...regimeRows(p, width));
   while (rows.length < rowCount) rows.push(rule(' ', width));
   return rows.slice(0, rowCount);

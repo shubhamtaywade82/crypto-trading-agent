@@ -50,7 +50,7 @@ export function calculateCrowding(
   return {
     fundingPercentile,
     topTraderVsGlobalBias,
-    positioningExtreme: deriveExtreme(globalLs, topTraderLs, fundingRate),
+    positioningExtreme: deriveExtreme(globalLs, topTraderLs, fundingRate, derivatives.takerBuySellRatio),
     takerAggressionRatio: derivatives.takerBuySellRatio,
     openInterestExpansion,
   };

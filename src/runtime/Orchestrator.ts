@@ -274,7 +274,8 @@ export class Orchestrator extends EventEmitter {
   private refreshLiveTickers(ctx: CycleContext): void {
     for (const [sym, t] of Object.entries(ctx.tickers)) {
       const closes = (ctx.candles[sym] ?? []).map((c: Candle) => c.close);
-      this.putTicker(sym, { ...t, price: this.livePrices[sym] ?? t.price, sparkline: sparkline(closes, 12) });
+      const trend = this.adaptive.stateFor(sym)?.direction ?? ctx.marketState?.[sym]?.ltfStructure.trend;
+      this.putTicker(sym, { ...t, price: this.livePrices[sym] ?? t.price, sparkline: sparkline(closes, 12), trend });
     }
   }
 

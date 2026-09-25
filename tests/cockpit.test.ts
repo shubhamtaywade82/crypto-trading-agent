@@ -298,3 +298,28 @@ test('should display both UTC and local timezone time in header when available',
   assert.ok(fallback.includes('08:36:06 UTC') && !fallback.includes('08:36:06 UTC │'));
   assert.match(formatLocalTime(new Date(2026, 8, 20, 14, 6, 6)), /^14:06:06(\s+[A-Za-z0-9+-:]+)?$/);
 });
+
+test('should render 15m trend instead of sparkline in asset rows', () => {
+  const [first, second] = config.symbols;
+  const props = baseProps({
+    strategyMetrics: {
+      fundingBySymbol: {}, nextFundingCountdown: null, estNextFundingUsd: null, zscoreBtcEth: null,
+      atrBySymbol: {}, adaptive: { [first]: { direction: 'BULLISH', regime: 'HIGH', superTrend: 80_000, distanceAtr: 1 } },
+      momentumAboveEma50: { up: 1, total: 1 },
+    },
+    marketIntel: {
+      [second]: {
+        regime: 'TREND_DOWN', htfTrend: 'BEARISH', ltfTrend: 'BEARISH', volatility: 'LOW', volatilityPct: null,
+        premium: false, discount: true, positionPct: 20, fundingApr: null, fundingPct: null,
+        openInterestExpansion: null, crowding: null, spreadBps: null, lastSweep: null, strategyStatus: {},
+      },
+    },
+    spotPrices: {
+      [first.replace('USDT', '')]: { price: 80_000, changePct: 1.5, low24h: 79_000, high24h: 81_000, volumeQuote: 1e9 },
+      [second.replace('USDT', '')]: { price: 2_500, changePct: -2.0, low24h: 2_400, high24h: 2_600, volumeQuote: 5e8 },
+    },
+  });
+  const text = render(props);
+  assert.ok(text.includes('▲ BULLISH'), 'expected bullish trend in output');
+  assert.ok(text.includes('▼ BEARISH'), 'expected bearish trend in output');
+});

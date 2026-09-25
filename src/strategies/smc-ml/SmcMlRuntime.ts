@@ -111,7 +111,7 @@ export class SmcMlRuntime {
       minimumScore: this.options.confluenceMinimum,
     });
 
-    const candidates = buildCandidates(frames, confluence.direction, price, this.options.config);
+    const candidates = buildExecutionCandidates(frames, confluence.direction, price, this.options.config);
     const analysis: SMCAnalysis = {
       symbol: s,
       generatedAt: now,
@@ -235,7 +235,7 @@ export class SmcMlRuntime {
   }
 }
 
-function buildCandidates(
+export function buildExecutionCandidates(
   frames: Partial<Record<SMCFrame, import('./types.js').SMCFrameAnalysis>>,
   direction: 'LONG' | 'SHORT' | 'NEUTRAL',
   price: number,
@@ -256,6 +256,10 @@ function buildCandidates(
 
   const best = alignedBreaks[0];
   if (!best || !best.break.riskUnit || !best.frame.atr14 || best.frame.atr14 <= 0) return [];
+
+  const signalAge = best.frame.candleCount - best.break.index - 1;
+  const maxSignalAge = cfg?.retestWindow ?? DEFAULT_SMC_CONFIG.retestWindow;
+  if (signalAge > maxSignalAge) return [];
 
   const atr = best.frame.atr14;
   const sl = direction === 'LONG'

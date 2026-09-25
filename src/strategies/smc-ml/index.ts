@@ -33,3 +33,5 @@ export type {
   RegisteredSmcLifecycle,
   SmcLifecycleCoordinatorResult,
 } from './SmcTradeLifecycleCoordinator.js';
+
+export { parseMarkPriceEvent } from './SmcMarkPrice.js';

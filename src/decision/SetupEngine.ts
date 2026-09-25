@@ -95,8 +95,15 @@ function trendOf(state: MarketState): TrendDirection {
   return state.htfStructure.trend !== 'NEUTRAL' ? state.htfStructure.trend : state.ltfStructure.trend;
 }
 
+function isDirectionalLiquidity(pool: LiquidityPool, direction: SetupDirection): boolean {
+  const highSide = pool.type === 'EQUAL_HIGH' || pool.type === 'SWING_HIGH' || pool.type === 'RANGE_HIGH';
+  const lowSide = pool.type === 'EQUAL_LOW' || pool.type === 'SWING_LOW' || pool.type === 'RANGE_LOW';
+  return direction === 'LONG' ? highSide : lowSide;
+}
+
 function directionalPool(state: MarketState, direction: SetupDirection, entry: number): LiquidityPool | null {
   const pools = [...state.liquidity.ltf.pools, ...state.liquidity.htf.pools]
+    .filter((pool) => isDirectionalLiquidity(pool, direction))
     .filter((pool) => direction === 'LONG' ? pool.price > entry : pool.price < entry)
     .sort((a, b) => Math.abs(a.price - entry) - Math.abs(b.price - entry));
   return pools[0] ?? null;
@@ -104,6 +111,7 @@ function directionalPool(state: MarketState, direction: SetupDirection, entry: n
 
 function secondDirectionalPool(state: MarketState, direction: SetupDirection, after: number): LiquidityPool | null {
   const pools = [...state.liquidity.ltf.pools, ...state.liquidity.htf.pools]
+    .filter((pool) => isDirectionalLiquidity(pool, direction))
     .filter((pool) => direction === 'LONG' ? pool.price > after : pool.price < after)
     .sort((a, b) => Math.abs(a.price - after) - Math.abs(b.price - after));
   return pools[0] ?? null;
@@ -221,7 +229,7 @@ function buildPullback(
   if (!zone) return null;
   const entry = direction === 'LONG' ? Math.min(state.mark, zone.high) : Math.max(state.mark, zone.low);
   const stop = stopForZone(direction, zone, atrValue);
-  const target = directionalPool(state, direction, entry);
+  const target = directionalPool(state, direction, Math.max(entry, state.mark));
   if (!target) return null;
   const second = secondDirectionalPool(state, direction, target.price);
   const riskAtr = Math.abs(entry - stop) / atrValue;
@@ -265,7 +273,7 @@ function buildSweep(
 ): SetupScenario | null {
   const sweep = latestSweep(state, direction);
   if (!sweep || state.generatedAt - sweep.time > MAX_SWEEP_AGE_MS) return null;
-  const target = directionalPool(state, direction, sweep.level);
+  const target = directionalPool(state, direction, state.mark);
   if (!target || Math.abs(target.price - sweep.level) <= atrValue * 0.5) return null;
 
   const entry = sweep.level;

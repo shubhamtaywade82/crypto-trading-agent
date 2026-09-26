@@ -77,6 +77,21 @@ export class OllamaAdvisor {
     return this.available;
   }
 
+  async generateJson<T>(prompt: string, model = config.ollama.model): Promise<T | null> {
+    if (!this.available && Date.now() - this.lastPingAt >= PING_INTERVAL_MS) await this.ping();
+    if (!this.available) return null;
+    try {
+      const res = await this.executeGenerate({ model, prompt, format: 'json', stream: false });
+      try {
+        return JSON.parse(res.response) as T;
+      } catch {
+        return null;
+      }
+    } catch {
+      return null;
+    }
+  }
+
   private async executeGenerate(request: Parameters<Ollama['generate']>[0]): Promise<Awaited<ReturnType<Ollama['generate']>>> {
     let lastErr: Error | null = null;
     const count = this.clients.length;

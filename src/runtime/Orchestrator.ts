@@ -50,7 +50,6 @@ export class Orchestrator extends EventEmitter {
   private ops = new RiskOps((message) => this.log('SYSTEM', message, 'warn'), { killSwitch: this.killSwitch, onCircuit: (from, to, snapshot) => this.hooks.onCircuit(from, to, snapshot) });
   private executor = new ExecutorAgent(this.binance);
   private advisor = new OllamaAdvisor();
-  private council = new TradingCouncil(this.advisor, this.ledger);
   private timer: NodeJS.Timeout | null = null;
   private livePrices: Record<string, number> = {};
   private liveTickers: Record<string, MarketPriceInfo> = {};
@@ -62,6 +61,7 @@ export class Orchestrator extends EventEmitter {
   private lastInitError: string | null = null;
   private ledger = new AgentLedger('data/agent-ledger.json');
   private recorder = new TradeOutcomeRecorder(this.ledger);
+  private council = new TradingCouncil(this.advisor, this.ledger);
 
   start() {
     this.log('SYSTEM', `Orchestrator started in ${config.mode.toUpperCase()} mode`, 'info');

@@ -12,7 +12,18 @@ on:
       - "src/agents/BaseAgent.ts"
       - "src/binance/client.ts"
       - "src/runtime/Orchestrator.ts"
+      - "src/decision/SetupEngine.ts"
+      - "src/ops/setupCards.ts"
+      - "src/ops/setupNotice.ts"
+      - "src/ops/hooks.ts"
+      - "src/ops/telegram.ts"
+      - "src/llm/**"
+      - "src/learning/**"
       - "tests/market*.test.ts"
+      - "tests/setup*.test.ts"
+      - "tests/telegram.test.ts"
+      - "tests/selfLearning.test.ts"
+      - "tests/tradingCouncil.test.ts"
       - "tests/decisionEngine.test.ts"
       - "tests/structureLiquidityStrategy.test.ts"
       - ".github/workflows/market-intelligence.yml"
@@ -55,6 +66,29 @@ jobs:
           src/market/ZoneEngine.ts
           src/market/MarketStateBuilder.ts
 
+      - name: Typecheck agentic learning slice
+        run: >
+          npx tsc --noEmit
+          --target ES2022
+          --module NodeNext
+          --moduleResolution NodeNext
+          --strict
+          --skipLibCheck
+          src/types.ts
+          src/config.ts
+          src/market/MarketDataTypes.ts
+          src/market/types.ts
+          src/decision/SetupTypes.ts
+          src/decision/SetupTiming.ts
+          src/decision/SetupEngine.ts
+          src/learning/AgentLedger.ts
+          src/learning/ConfidenceAdjuster.ts
+          src/learning/TradeOutcomeRecorder.ts
+          src/learning/TradeGrader.ts
+          src/llm/types.ts
+          src/llm/personas.ts
+          src/llm/TradingCouncil.ts
+
       - name: Run market-intelligence tests
         run: >
           npx tsx --test
@@ -65,3 +99,9 @@ jobs:
           tests/marketConfig.test.ts
           tests/decisionEngine.test.ts
           tests/structureLiquidityStrategy.test.ts
+          tests/setupEngine.test.ts
+          tests/setupCards.test.ts
+          tests/setupOps.test.ts
+          tests/telegram.test.ts
+          tests/selfLearning.test.ts
+          tests/tradingCouncil.test.ts

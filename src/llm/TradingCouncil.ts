@@ -217,7 +217,7 @@ export class TradingCouncil {
 
     const evidence = evidencePacket(state, setup);
     const scenarioIds = new Set(setup.scenarios.map((s) => s.id));
-    const opinions = await this.collectOpinions(state.symbol, evidence, scenarioIds);
+    const opinions = await this.collectOpinions(state.symbol, state, evidence, scenarioIds);
     if (opinions.length === 0) return null;
 
     const chairMemory = this.ledger.personaMemory('PORTFOLIO-CHAIR', state.symbol);
@@ -245,6 +245,7 @@ export class TradingCouncil {
 
   private async collectOpinions(
     symbol: string,
+    state: MarketState,
     evidence: Record<string, unknown>,
     scenarioIds: Set<string>,
   ): Promise<PersonaOpinion[]> {
@@ -255,28 +256,28 @@ export class TradingCouncil {
         this.models[persona.modelKey],
       );
       const opinion = raw ? parseOpinion(persona.id, raw, scenarioIds) : null;
-      if (opinion) this.recordOpinionPrediction(symbol, opinion);
+      if (opinion) this.recordOpinionPrediction(symbol, state, opinion);
       return opinion;
     }));
     return reports.filter((report): report is PersonaOpinion => report !== null);
   }
 
-  private recordOpinionPrediction(symbol: string, opinion: PersonaOpinion): void {
+  private recordOpinionPrediction(symbol: string, state: MarketState, opinion: PersonaOpinion): void {
     this.ledger.recordPrediction({
-      id: this.predictionId(opinion.persona, symbol, Date.now()),
+      id: this.predictionId(opinion.persona, symbol, state.generatedAt),
       actorId: opinion.persona,
       symbol,
       stance: opinion.stance,
       probability: opinion.probability,
-      mark: 0,
-      thresholdPct: 0,
+      mark: state.mark,
+      thresholdPct: thresholdPct(state),
       horizonMinutes: opinion.horizonMinutes,
       createdAt: Date.now(),
     });
   }
 
-  private predictionId(actorId: string, symbol: string, createdAt: number): string {
-    return 'forecast:' + actorId + ':' + symbol + ':' + createdAt;
+  private predictionId(actorId: string, symbol: string, generatedAt: number): string {
+    return 'forecast:' + actorId + ':' + symbol + ':' + generatedAt;
   }
 }
 

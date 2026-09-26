@@ -151,7 +151,7 @@ test('TradingCouncil: runs five specialist personas plus a chair once per closed
   const repeat = await council.analyze(state, setup);
   assert.equal(repeat, null, 'same closed state must not be re-analyzed');
 
-  const resolved = ledger.resolvePredictions({ BTCUSDT: 103 }, state.generatedAt + 61 * 60_000);
+  const resolved = ledger.resolvePredictions({ BTCUSDT: 103 }, Date.now() + 61 * 60_000);
   assert.equal(resolved.length, 6);
   assert.ok(resolved.every((row) => row.correct === true));
 

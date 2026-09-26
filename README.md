@@ -152,6 +152,16 @@ These are **market-derived hypotheses**, not claims of privileged institutional 
 
 Setup maps are generated from the same `MarketState` already built by `Orchestrator.gatherContext()`. `WATCHING` cards use WATCH severity; `TRIGGERED` cards use SIGNAL severity. Setup alerts are deduplicated with a 15-minute cooldown, while a WATCHING → TRIGGERED transition is emitted immediately. Configure them through the existing `SETUP` class in `NOTIFICATIONS_PATH`; no new Telegram credentials are required.
 
+### Multi-persona agentic AI and self-learning
+
+When `LLM_COUNCIL=on`, the runtime adds a read-only research council above the deterministic market engine. Five specialist personas (technical, liquidity, derivatives, regime and skeptic) analyze the same normalized `MarketState` and setup map independently, then a portfolio-chair persona synthesizes the reports and may select only a supplied setup scenario or `WATCH`/`NO_TRADE`.
+
+The council never creates price levels, sizes positions, places orders or overrides `RiskAgent`, execution-quality checks or `ExecutorAgent`. LLM output is schema-validated and treated as advisory evidence. Each persona can use a different Ollama model through the `OLLAMA_*_MODEL` variables; all default to `OLLAMA_MODEL`.
+
+The learning ledger is persistent and idempotent. Closed trades update per-agent realized-R statistics, with symbol-specific history preferred after enough observations. Closed-trade keys are persisted so restarting the process cannot train twice on the same trade. Persona and chair forecasts are also persisted as prediction episodes and resolved later against live marks at their stated horizons using an adaptive volatility threshold. Resolution records directional correctness and a Brier score for calibration.
+
+This is adaptive self-learning, not live fine-tuning of neural-network weights. The learned state influences deterministic signal-confidence adjustment and is fed back to persona prompts as historical memory. It does not mutate code or bypass the risk boundary automatically; candidate policy changes should still be validated through replay/backtesting before production.
+
 
 Repeats are dropped by fingerprint: a refused signal for the same symbol, agent and reason at most once per 15
 minutes, and the same system alert at most once per 5 minutes. Optional `NOTIFICATIONS_PATH` JSON turns classes,

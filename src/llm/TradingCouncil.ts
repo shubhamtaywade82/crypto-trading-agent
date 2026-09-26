@@ -213,7 +213,6 @@ export class TradingCouncil {
 
   async analyze(state: MarketState, setup: SetupMap): Promise<CouncilResult | null> {
     if (!this.enabled || !shouldAnalyze(this.lastAnalyzed, state.symbol, state.generatedAt)) return null;
-    if (setup.scenarios.length === 0) return null;
 
     const evidence = evidencePacket(state, setup);
     const scenarioIds = new Set(setup.scenarios.map((s) => s.id));

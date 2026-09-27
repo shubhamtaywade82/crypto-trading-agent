@@ -98,3 +98,63 @@ test('TradeOutcomeRecorder: updates ledger so multiplier adapts after grading', 
   assert.ok(mult > 1.0, `ledger should push multiplier above 1 after 3 wins, got ${mult}`);
   cleanup();
 });
+
+
+test('TradeOutcomeRecorder: processed trade remains deduplicated after recorder restart', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'ledger-restart-'));
+  const path = join(dir, 'ledger.json');
+  const trade = {
+    symbol: 'BTCUSDT', strategy: 'MOMENTUM-γ' as any, side: 'LONG' as any,
+    entry: 40000, exit: 39500, qty: 0.1, pnl: -50, reason: 'STOP LOSS' as any,
+    closedAt: 2_000_000, initialRisk: 500,
+  };
+  const first = new TradeOutcomeRecorder(new AgentLedger(path));
+  assert.equal(first.process([trade]).length, 1);
+  const restarted = new TradeOutcomeRecorder(new AgentLedger(path));
+  assert.equal(restarted.process([trade]).length, 0);
+  rmSync(dir, { recursive: true });
+});
+
+test('AgentLedger: context history can differ by symbol', () => {
+  const { ledger, cleanup } = makeLedger();
+  for (let i = 0; i < 8; i++) ledger.record('MOMENTUM-γ' as any, true, 2, { symbol: 'BTCUSDT' });
+  for (let i = 0; i < 8; i++) ledger.record('MOMENTUM-γ' as any, false, -1, { symbol: 'ETHUSDT' });
+  assert.ok(ledger.tradeStats('MOMENTUM-γ' as any, 'BTCUSDT').wins === 8);
+  assert.equal(ledger.tradeStats('MOMENTUM-γ' as any, 'ETHUSDT').wins, 0);
+  const btcMultiplier = confidenceMultiplier('MOMENTUM-γ' as any, ledger, 'BTCUSDT');
+  const ethMultiplier = confidenceMultiplier('MOMENTUM-γ' as any, ledger, 'ETHUSDT');
+  assert.ok(btcMultiplier > 1, `expected BTC context multiplier > 1, got ${btcMultiplier}`);
+  assert.ok(ethMultiplier < 1, `expected ETH context multiplier < 1, got ${ethMultiplier}`);
+  cleanup();
+});
+
+test('AgentLedger: resolves directional and neutral forecasts from future marks', () => {
+  const { ledger, cleanup } = makeLedger();
+  ledger.recordPrediction({
+    id: 'forecast:test:long',
+    actorId: 'TECHNICAL-ANALYST',
+    symbol: 'BTCUSDT',
+    stance: 'LONG',
+    probability: 0.7,
+    mark: 100,
+    thresholdPct: 0.02,
+    horizonMinutes: 30,
+    createdAt: 1_000_000,
+  });
+  ledger.recordPrediction({
+    id: 'forecast:test:neutral',
+    actorId: 'SKEPTIC-ANALYST',
+    symbol: 'ETHUSDT',
+    stance: 'NEUTRAL',
+    probability: 0.65,
+    mark: 100,
+    thresholdPct: 0.02,
+    horizonMinutes: 30,
+    createdAt: 1_000_000,
+  });
+  const resolved = ledger.resolvePredictions({ BTCUSDT: 103, ETHUSDT: 101 }, 1_000_000 + 31 * 60_000);
+  assert.equal(resolved.length, 2);
+  assert.equal(resolved.find((r) => r.actorId === 'TECHNICAL-ANALYST')?.correct, true);
+  assert.equal(resolved.find((r) => r.actorId === 'SKEPTIC-ANALYST')?.correct, true);
+  cleanup();
+});

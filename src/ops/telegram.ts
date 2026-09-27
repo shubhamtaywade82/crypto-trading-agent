@@ -16,7 +16,7 @@ export interface TelegramDeps {
 
 const SEND_TIMEOUT_MS = 10_000;
 const DRY_RUN_PREFIX = '[telegram dry-run]';
-const TRADING_CHANNEL_CLASSES: ReadonlySet<string> = new Set(['TRADE', 'SIGNAL']);
+const TRADING_CHANNEL_CLASSES: ReadonlySet<string> = new Set(['TRADE', 'SIGNAL', 'SETUP']);
 
 // Truthiness rather than `??`: a blank variable in .env must fall through to the shared bot, not disable sending
 const firstValue = (env: Readonly<Record<string, string | undefined>>, keys: readonly string[]): string | undefined => {

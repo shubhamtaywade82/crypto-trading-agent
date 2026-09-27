@@ -21,6 +21,20 @@ export const DEFAULT_STRUCTURE_LIQUIDITY_OPTIONS: StructureLiquidityOptions = {
   minimumRewardRisk: 1.50,
 };
 
+/**
+ * The env-tunable subset of the setup options laid over the defaults.
+ *
+ * Only the sweep age window and the reward-risk floor are exposed as knobs
+ * (they are the parameters the firing rate is most sensitive to); every other
+ * threshold keeps its default so tuning cannot silently change stop sizing or
+ * break quality.
+ */
+export function tunedStructureLiquidityOptions(
+  overrides: Partial<Pick<StructureLiquidityOptions, 'maxSweepAgeCandles' | 'minimumRewardRisk'>>,
+): StructureLiquidityOptions {
+  return { ...DEFAULT_STRUCTURE_LIQUIDITY_OPTIONS, ...overrides };
+}
+
 const isLong = (side: Side): boolean => side === 'LONG';
 
 function expectedSweep(side: Side): LiquiditySweep['direction'] {

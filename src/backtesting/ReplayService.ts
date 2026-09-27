@@ -13,10 +13,15 @@ import { riskLimitsFromConfig, type RiskLimits } from '../risk/riskConfig.js';
 import { MarketStateBuilder } from '../market/MarketStateBuilder.js';
 import type { MarketRegime } from '../market/types.js';
 import type { NativeTimeframe } from '../market/MarketDataTypes.js';
+import { config } from '../config.js';
 import { buildDecisionRecord, decisionEvidence, runCandidateFlow } from '../decision/CandidateFlow.js';
+import { tunedStructureLiquidityOptions } from '../decision/StructureLiquidityStrategy.js';
 import { DecisionJournal } from '../decision/DecisionJournal.js';
 import { evaluateExecutionQuality } from '../execution/ExecutionQuality.js';
 import { roundQty } from '../binance/symbolRules.js';
+import { AgentLedger, type AgentStats } from '../learning/AgentLedger.js';
+import { confidenceMultiplier } from '../learning/ConfidenceAdjuster.js';
+import { TradeOutcomeRecorder } from '../learning/TradeOutcomeRecorder.js';
 import { computeMetrics, type BacktestMetrics } from './BacktestMetrics.js';
 import { ExecutionSimulator } from './ExecutionSimulator.js';
 import { MarketDataFeed } from './MarketDataFeed.js';
@@ -52,6 +57,8 @@ export interface ReplayResult {
   trades: SimTrade[];
   decisions: ReturnType<DecisionJournal['all']>;
   equityCurve: EquityPoint[];
+  /** Per-agent learning stats the run accumulated (trades graded, wins, total R); empty when learning is off. */
+  agentStats: Partial<Record<AgentId | string, AgentStats>>;
 }
 
 const NATIVE_TIMEFRAMES: NativeTimeframe[] = ['1m', '5m', '15m', '1h', '4h'];
@@ -62,17 +69,21 @@ const NOT_HALTED = { halted: false, reason: '', at: 0 };
  *
  *   MarketDataFeed -> MarketStateBuilder -> strategy agents -> candidate flow
  *   -> RiskAgent -> execution quality -> ExecutionSimulator -> PortfolioSimulator
- *   -> trade journal + decision journal -> metrics
+ *   -> trade journal + decision journal + learning ledger -> metrics
  *
- * The strategy, routing, fusion, risk-gate and evidence code is the SAME code
- * the orchestrator runs each cycle — only the market/execution adapters
- * differ. Decisions at a bar close fill at the next bar's open with spread,
- * slippage and taker fees; intrabar exits resolve stop-before-target (the
- * conservative ordering), and stops that gap through the open fill at the
- * open.
+ * The strategy, routing, fusion, risk-gate, evidence and learning code is the
+ * SAME code the orchestrator runs each cycle — only the market/execution
+ * adapters differ. Decisions at a bar close fill at the next bar's open with
+ * spread, slippage and taker fees; intrabar exits resolve stop-before-target
+ * (the conservative ordering), and stops that gap through the open fill at the
+ * open. Closed trades feed the per-agent stats of an in-memory learning
+ * ledger, and collected signals are confidence-adjusted from it exactly like
+ * the orchestrator's collectSignals — so an agent that performs in the replay
+ * earns the same bounded confidence boost (and a losing one the same
+ * suppression) it would earn live. The ledger is never written to disk: one
+ * replay never trains another.
  *
- * Known simplifications versus live: no LLM veto, no per-loop cooldowns, no
- * confidence feedback (a cold ledger multiplies every agent by 1.0), one
+ * Known simplifications versus live: no LLM veto, no per-loop cooldowns, one
  * position per symbol with venue-parity scale-in/flip semantics, and
  * paper-only dynamic-exit strategies (Adaptive SuperTrend) are not part of
  * the default fleet because their trailing adapter is not wired here.
@@ -105,6 +116,14 @@ export class ReplayService {
     });
     const journal = new DecisionJournal(cfg.decisionsPath);
     const agents = this.options.agents ?? defaultReplayAgents();
+
+    // The learning loop the orchestrator runs each cycle, scoped to this replay:
+    // closed trades grade into the per-agent stats of an in-memory ledger, and
+    // collected signals are confidence-adjusted from those stats. The ledger
+    // never touches disk, so one replay never trains another (or live).
+    const ledger = new AgentLedger(null);
+    const recorder = new TradeOutcomeRecorder(ledger);
+    let gradedTradeCount = 0;
 
     const curve: EquityPoint[] = [];
     let investedSteps = 0;
@@ -158,12 +177,29 @@ export class ReplayService {
 
       if (portfolio.positionCount() > 0) investedSteps += 1;
 
+      // 3.5) Learning phase: trades that closed on this bar grade into the
+      // per-agent ledger stats BEFORE the decision phase collects new signals,
+      // the same ordering the orchestrator's cycle uses (exits observed at the
+      // start of a loop, grading, then signal collection).
+      if (cfg.learning) {
+        const closed = portfolio.getTrades();
+        if (closed.length > gradedTradeCount) {
+          recorder.process(closed.slice(gradedTradeCount));
+          gradedTradeCount = closed.length;
+        }
+      }
+
       // 4) Decision phase: the same pipeline the orchestrator runs, on data closed by this step
       if (step >= cfg.warmupBars && step + 1 < feed.stepCount) {
         const ctx = this.buildContext(feed, closeTime, portfolio, builder, riskOps, cfg);
         const raw: Signal[] = [];
         for (const agent of agents) raw.push(...(await agent.run(ctx)));
-        const flow = runCandidateFlow(raw, ctx.marketState ?? {});
+        // Learning feedback, same shape as the orchestrator's collectSignals:
+        // proven agents collect with amplified confidence, losing ones damped
+        const adjusted = cfg.learning
+          ? raw.map((s) => ({ ...s, confidence: Math.min(1, s.confidence * confidenceMultiplier(s.agent, ledger, s.symbol)) }))
+          : raw;
+        const flow = runCandidateFlow(adjusted, ctx.marketState ?? {});
         reservedThisStep.clear();
         for (const signal of flow.signals) {
           const decisionId = `${signal.id}-${closeTime}`;
@@ -257,6 +293,19 @@ export class ReplayService {
       });
     }
 
+    // Trades closed by the forced end-of-run close still belong in the ledger's
+    // per-agent stats: in live trading those grades land on the next loop.
+    if (cfg.learning && trades.length > gradedTradeCount) {
+      recorder.process(trades.slice(gradedTradeCount));
+      gradedTradeCount = trades.length;
+    }
+    const agentStats: Partial<Record<AgentId | string, AgentStats>> = {};
+    if (cfg.learning) {
+      const ids = new Set<string>(agents.map((agent) => agent.id));
+      for (const trade of trades) ids.add(trade.strategy);
+      for (const id of ids) agentStats[id] = ledger.get(id);
+    }
+
     const firstDecisionStep = Math.min(cfg.warmupBars, Math.max(0, feed.stepCount - 1));
     const metrics = computeMetrics({
       trades,
@@ -271,7 +320,7 @@ export class ReplayService {
       },
     });
 
-    return { metrics, trades, decisions: journal.all(), equityCurve: curve };
+    return { metrics, trades, decisions: journal.all(), equityCurve: curve, agentStats };
   }
 
   private openRequest(order: PendingOrder, fillPrice: number, fee: number, slippage: number, openedAt: number) {
@@ -356,7 +405,13 @@ export function defaultReplayAgents(): BaseAgent[] {
     new FundingArbAgent(binance),
     new MomentumAgent(binance),
     new StructureTrendAgent(binance),
-    new StructureLiquidityAgent(binance),
+    new StructureLiquidityAgent(
+      binance,
+      tunedStructureLiquidityOptions({
+        maxSweepAgeCandles: config.structLiq.maxSweepAgeCandles,
+        minimumRewardRisk: config.structLiq.minimumRewardRisk,
+      }),
+    ),
     new MeanReversionAgent(binance),
     new CrowdingAgent(binance),
   ];

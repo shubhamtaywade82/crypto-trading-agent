@@ -32,3 +32,23 @@ test('should accept on/off ops flags, reject anything else, and treat a blank pa
   assert.ok(!EnvSchema.safeParse({ ALERTS: 'yes' }).success);
   assert.equal(EnvSchema.parse({ NOTIFICATIONS_PATH: '  ' }).NOTIFICATIONS_PATH, 'data/notifications.json');
 });
+
+test('struct-liq tuning knobs default to the strategy defaults and accept overrides', () => {
+  const defaults = EnvSchema.parse({});
+  assert.deepEqual(
+    [defaults.STRUCT_LIQ_MAX_SWEEP_AGE_CANDLES, defaults.STRUCT_LIQ_MIN_REWARD_RISK],
+    [6, 1.5],
+  );
+
+  const tuned = EnvSchema.parse({ STRUCT_LIQ_MAX_SWEEP_AGE_CANDLES: '24', STRUCT_LIQ_MIN_REWARD_RISK: '0.8' });
+  assert.deepEqual([tuned.STRUCT_LIQ_MAX_SWEEP_AGE_CANDLES, tuned.STRUCT_LIQ_MIN_REWARD_RISK], [24, 0.8]);
+});
+
+test('struct-liq sweep age must be a positive integer; reward-risk floor must be non-negative', () => {
+  assert.ok(!EnvSchema.safeParse({ STRUCT_LIQ_MAX_SWEEP_AGE_CANDLES: '0' }).success);
+  assert.ok(!EnvSchema.safeParse({ STRUCT_LIQ_MAX_SWEEP_AGE_CANDLES: '2.5' }).success);
+  assert.ok(!EnvSchema.safeParse({ STRUCT_LIQ_MAX_SWEEP_AGE_CANDLES: 'abc' }).success);
+  assert.ok(!EnvSchema.safeParse({ STRUCT_LIQ_MIN_REWARD_RISK: '-1' }).success);
+  // RR 0 is allowed: it disables the reward-risk floor entirely (diagnostic setting)
+  assert.ok(EnvSchema.safeParse({ STRUCT_LIQ_MIN_REWARD_RISK: '0' }).success);
+});

@@ -56,10 +56,12 @@ const MAX_TRADE_HISTORY = 2_000;
 const MAX_PROCESSED_KEYS = 2_000;
 const MAX_PREDICTIONS = 5_000;
 
+/** Per-agent trade outcomes and LLM forecast memory. Persists to disk across restarts; `null` path = in-memory only. */
 export class AgentLedger {
   private data: AgentLedgerData = emptyData();
 
-  constructor(private readonly path: string) {
+  /** A real path persists to disk; `null` keeps the ledger purely in memory (replay, tests). */
+  constructor(private readonly path: string | null) {
     this.load();
   }
 
@@ -162,6 +164,7 @@ export class AgentLedger {
   }
 
   private load(): void {
+    if (this.path === null) return;
     try {
       this.data = normalize(JSON.parse(readFileSync(this.path, 'utf-8')));
     } catch {
@@ -170,6 +173,7 @@ export class AgentLedger {
   }
 
   private save(): void {
+    if (this.path === null) return; // in-memory ledger: nothing to persist
     try {
       mkdirSync(dirname(this.path), { recursive: true });
       writeFileSync(this.path, JSON.stringify(this.data, null, 2));

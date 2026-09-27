@@ -43,6 +43,13 @@ export interface ReplayConfig {
   riskLimits?: RiskLimits;
   /** Where the decision journal is written; null keeps the lineage in memory only. */
   decisionsPath: string | null;
+  /**
+   * Feed closed trades into the learning ledger's per-agent stats and adjust
+   * collected signal confidence from them, exactly like the orchestrator's
+   * cycle (default). Off restores the pre-learning replay for A/B runs; the
+   * ledger is in-memory either way, so one replay never trains another.
+   */
+  learning: boolean;
 }
 
 /** A closed trade with the replay-only research fields the production TradeRecord cannot carry. */
@@ -83,6 +90,7 @@ export const DEFAULT_REPLAY_CONFIG: ReplayConfig = {
   funding: { enabled: false, intervalHours: 8, rate: 0 },
   riskEngine: 'on',
   decisionsPath: null,
+  learning: true,
 };
 
 export type { Candle, Side };

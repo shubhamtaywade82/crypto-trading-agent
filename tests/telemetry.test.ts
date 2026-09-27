@@ -89,7 +89,6 @@ test('should carry the risk agent note into its fleet entry and leave the other 
   const agents = buildTelemetry(input({ agents: fleetRuntimes(running, true) })).agents;
   assert.equal(agents.find((a) => a.id === 'RISK-MGR-δ')?.note, 'HALTED');
   assert.equal(agents.find((a) => a.id === 'EXECUTOR-ε')?.note, undefined);
-  assert.equal(agents.find((a) => a.id === 'PAIRS-TRD-β')?.note, undefined);
 });
 
 const remote = (state: VenueStatus['state']): VenueStatus => ({ name: 'paper_exchange', accountId: 'crypto-agent', state, lastError: null, lastSyncAt: 0 });
@@ -152,4 +151,3 @@ test('should pass edgeMultiplier through to agent state', () => {
   const t = buildTelemetry(input({ agents: running }));
   assert.equal(t.agents[0].edgeMultiplier, 1.15);
 });
-

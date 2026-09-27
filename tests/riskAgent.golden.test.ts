@@ -6,8 +6,9 @@ import { RiskAgent } from '../src/agents/RiskAgent.js';
 import { config } from '../src/config.js';
 import type { Candle, RiskDecision, Signal } from '../src/types.js';
 
-// The recorded values below depend on these limits; pinning them keeps the golden table independent of a local .env
+// The recorded values below depend on these limits and on the legacy sizing path; pinning both keeps the golden table independent of a local .env and of the RISK_ENGINE default
 Object.assign(config.risk, { minLeverage: 5, maxLeverage: 10, maxExposurePct: 80, riskPerTradePct: 1, maxDrawdownPct: 5, minLiqBufferAtr: 2 });
+const legacyAgent = (): RiskAgent => new RiskAgent({} as BinanceService, { riskEngine: 'off' });
 
 const flatCandles = (range: number): Candle[] =>
   Array.from({ length: 30 }, (_, i) => ({ openTime: i, open: 100, high: 100 + range / 2, low: 100 - range / 2, close: 100, volume: 1 }));
@@ -46,13 +47,13 @@ const cases: Case[] = [
 ];
 for (const c of cases) {
   test(`golden: ${c.name}`, () => {
-    const actual = new RiskAgent({} as BinanceService).gate(c.signal, c.ctx);
+    const actual = legacyAgent().gate(c.signal, c.ctx);
     assert.deepEqual(actual, c.expected);
   });
 }
 
 test('golden: drawdown kill-switch follows the peak equity seen by one agent', () => {
-  const agent = new RiskAgent({} as BinanceService);
+  const agent = legacyAgent();
   const gateAt = (equity: number) => agent.gate(signal({}), context({ equity }));
   assert.equal(gateAt(100_000).approved, true);
   assert.deepEqual(gateAt(94_000), rejected('drawdown kill-switch: current drawdown exceeds 5%'));

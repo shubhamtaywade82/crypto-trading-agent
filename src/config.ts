@@ -41,7 +41,7 @@ export const EnvSchema = z.object({
   MIN_RR: z.coerce.number().nonnegative().default(0),
   TAKER_FEE_RATE: z.coerce.number().nonnegative().default(0.0004),
   SLIPPAGE_BUFFER_RATE: z.coerce.number().nonnegative().default(0.0002),
-  RISK_ENGINE: z.enum(['off', 'on']).default('off'),
+  RISK_ENGINE: z.enum(['off', 'on']).default('on'),
 
   MARKET_DATA_1M_TTL_MS: timeframeTtl(15_000),
   MARKET_DATA_5M_TTL_MS: timeframeTtl(60_000),

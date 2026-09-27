@@ -169,6 +169,8 @@ export const config = {
   paperExchange: env.PAPER_EXCHANGE_URL && env.PAPER_EXCHANGE_ACCOUNT_ID
     ? { url: env.PAPER_EXCHANGE_URL.replace(/\/+$/, ''), accountId: env.PAPER_EXCHANGE_ACCOUNT_ID }
     : null,
+  // CoinDCX live-execution migration is in progress but not wired into BinanceService yet (issue #31):
+  // built whenever MODE=live so the adapter can pick it up once wired, but never required to start.
   coindcx: env.MODE === 'live' ? {
     apiKey: env.COINDCX_API_KEY,
     apiSecret: env.COINDCX_API_SECRET,
@@ -182,7 +184,4 @@ export const config = {
 
 if (config.mode === 'live' && (!config.binance.apiKey || !config.binance.apiSecret)) {
   throw new Error('LIVE mode requires BINANCE_API_KEY and BINANCE_API_SECRET');
-}
-if (config.mode === 'live' && (!config.coindcx?.apiKey || !config.coindcx.apiSecret)) {
-  throw new Error('LIVE mode requires COINDCX_API_KEY and COINDCX_API_SECRET');
 }

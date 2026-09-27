@@ -198,12 +198,10 @@ export function buildTelemetry(input: TelemetryInput): Telemetry {
 }
 
 const FLEET_ORDER: AgentId[] = [
-  'FUNDING-ARB-α', 'PAIRS-TRD-β', 'MOMENTUM-γ', 'ADAPTIVE-ST-ζ',
+  'FUNDING-ARB-α', 'MOMENTUM-γ', 'ADAPTIVE-ST-ζ',
   'STRUCTURE-TREND-η', 'STRUCT-LIQ-η', 'MEAN-REVERT-θ', 'CROWDING-ι',
   'RISK-MGR-δ', 'EXECUTOR-ε',
 ];
-// Pairs is disabled (see the agents list), so it is shown as paused rather than omitted from the fleet
-const PAIRS_RUNTIME: AgentRuntime = { id: 'PAIRS-TRD-β', status: 'PAUSED', strategy: 'stat_pairs_zscore' };
 const ADAPTIVE_DISABLED_RUNTIME: AgentRuntime = { id: 'ADAPTIVE-ST-ζ', status: 'PAUSED', strategy: 'ml_adaptive_supertrend' };
 const STRUCT_LIQ_DISABLED_RUNTIME: AgentRuntime = { id: 'STRUCT-LIQ-η', status: 'PAUSED', strategy: 'smc_structure_liquidity' };
 
@@ -220,7 +218,6 @@ export function fleetRuntimes(running: AgentRuntime[], flags: FleetFlags): Agent
   const adaptiveEnabled = typeof flags === 'boolean' ? flags : flags.adaptive !== false;
   const structLiqEnabled = typeof flags === 'boolean' ? true : flags.structLiq !== false;
   const disabled = [
-    PAIRS_RUNTIME,
     ...(adaptiveEnabled ? [] : [ADAPTIVE_DISABLED_RUNTIME]),
     ...(structLiqEnabled ? [] : [STRUCT_LIQ_DISABLED_RUNTIME]),
   ];

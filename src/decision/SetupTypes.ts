@@ -2,7 +2,15 @@ import type { TrendDirection, VolatilityRegime } from '../market/types.js';
 
 export type SetupDirection = 'LONG' | 'SHORT';
 export type SetupKind = 'BREAKOUT_RETEST' | 'PULLBACK_RETEST' | 'LIQUIDITY_SWEEP';
-export type SetupState = 'WATCHING' | 'TRIGGERED' | 'NO_TRADE';
+/**
+ * FORMING: structure/liquidity identified, level not yet taken/retested.
+ * ARMED: level taken (or zone retested / sweep reclaimed) but the lower-timeframe
+ * confirming break has not printed yet — one confirmation candle from TRIGGERED.
+ * TRIGGERED: confirming break printed in the setup's direction. INVALIDATED is a
+ * terminal state scenarios pass through but are never returned in (dead setups
+ * are dropped, not surfaced). NO_TRADE is map-level only: no admissible scenario.
+ */
+export type SetupState = 'FORMING' | 'ARMED' | 'TRIGGERED' | 'INVALIDATED' | 'NO_TRADE';
 
 export interface ExpectedMoveWindow {
   minMinutes: number;
@@ -15,7 +23,7 @@ export interface SetupScenario {
   id: string;
   kind: SetupKind;
   direction: SetupDirection;
-  state: Exclude<SetupState, 'NO_TRADE'>;
+  state: Exclude<SetupState, 'NO_TRADE' | 'INVALIDATED'>;
   timeframe: '15m' | '1h' | '4h';
   entryLow: number;
   entryHigh: number;

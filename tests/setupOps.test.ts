@@ -7,7 +7,7 @@ import type { SetupMap } from '../src/decision/SetupEngine.js';
 
 const T0 = Date.UTC(2026, 8, 25, 18, 0, 0);
 
-const setup = (state: SetupMap['state'] = 'WATCHING'): SetupMap => ({
+const setup = (state: SetupMap['state'] = 'FORMING'): SetupMap => ({
   symbol: 'BTCUSDT',
   generatedAt: T0,
   mark: 100,
@@ -29,7 +29,7 @@ const setup = (state: SetupMap['state'] = 'WATCHING'): SetupMap => ({
     id: 'breakout-btc-long-10500',
     kind: 'BREAKOUT_RETEST',
     direction: 'LONG',
-    state: state === 'TRIGGERED' ? 'TRIGGERED' : 'WATCHING',
+    state: state === 'TRIGGERED' ? 'TRIGGERED' : 'FORMING',
     timeframe: '15m',
     entryLow: 104.8,
     entryHigh: 105.2,
@@ -67,7 +67,7 @@ test('setup hook emits a rich SETUP alert and audit event', () => {
   const { ops, audits, sent } = harness();
   ops.onSetup(setup());
   assert.equal(sent.length, 1);
-  assert.deepEqual([sent[0].event.class, sent[0].event.severity, sent[0].event.stateTo], ['SETUP', 'WATCH', 'WATCHING']);
+  assert.deepEqual([sent[0].event.class, sent[0].event.severity, sent[0].event.stateTo], ['SETUP', 'WATCH', 'FORMING']);
   assert.match(sent[0].html, /INSTITUTIONAL-STYLE FLOW MAP/);
   assert.deepEqual(audits.map((a) => a.type), ['setup']);
   assert.equal(audits[0].symbol, 'BTCUSDT');
@@ -84,12 +84,12 @@ test('setup hook makes a triggered setup audible and suppresses identical repeat
   assert.equal(sent.length, 2);
 });
 
-test('setup state transition from watching to triggered emits immediately despite cooldown', () => {
+test('setup state transition from forming to triggered emits immediately despite cooldown', () => {
   const { ops, sent } = harness();
-  ops.onSetup(setup('WATCHING'));
+  ops.onSetup(setup('FORMING'));
   ops.onSetup(setup('TRIGGERED'));
   assert.equal(sent.length, 2);
-  assert.deepEqual(sent.map((s) => s.event.stateTo), ['WATCHING', 'TRIGGERED']);
+  assert.deepEqual(sent.map((s) => s.event.stateTo), ['FORMING', 'TRIGGERED']);
 });
 
 test('empty setup map is never sent', () => {

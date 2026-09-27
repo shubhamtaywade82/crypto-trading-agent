@@ -166,7 +166,7 @@ test('SYSTEM CRITICAL is emitted despite disabled symbol and a high severity flo
 
 test('minSeverity suppresses lower severities but not SYSTEM CRITICAL', () => {
   const engine = new NotificationEngine({ ...defaultSubscriptions(), minSeverity: 'IMPORTANT' });
-  const watch = engine.submit(alert({ class: 'SETUP', severity: 'WATCH', fingerprint: 'SETUP:w', stateTo: 'WATCHING' }));
+  const watch = engine.submit(alert({ class: 'SETUP', severity: 'WATCH', fingerprint: 'SETUP:w', stateTo: 'FORMING' }));
 
   assert.equal(watch.reason, 'SEVERITY');
   assert.equal(engine.submit(alert({ class: 'SYSTEM', severity: 'CRITICAL', fingerprint: 'SYSTEM:ws', stateTo: 'DOWN' })).action, 'emitted');
@@ -176,7 +176,7 @@ test('minSeverity suppresses lower severities but not SYSTEM CRITICAL', () => {
 test('setup developing and liquidity sweeps toggles suppress with reason CLASS', () => {
   const subs = { ...defaultSubscriptions(), setupDeveloping: false, liquiditySweeps: false };
   const engine = new NotificationEngine(subs);
-  const developing = engine.submit(alert({ class: 'SETUP', severity: 'IMPORTANT', fingerprint: 'SETUP:d', stateTo: 'WATCHING' }));
+  const developing = engine.submit(alert({ class: 'SETUP', severity: 'IMPORTANT', fingerprint: 'SETUP:d', stateTo: 'FORMING' }));
   const sweep = engine.submit(alert({ class: 'LEVEL', severity: 'IMPORTANT', fingerprint: 'LEVEL:s', stateTo: 'REACTION' }));
 
   assert.equal(developing.reason, 'CLASS');

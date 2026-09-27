@@ -2,7 +2,6 @@ export type Side = 'LONG' | 'SHORT';
 export type Mode = 'paper' | 'live';
 export type AgentId =
   | 'FUNDING-ARB-α'
-  | 'PAIRS-TRD-β'
   | 'MOMENTUM-γ'
   | 'RISK-MGR-δ'
   | 'EXECUTOR-ε'

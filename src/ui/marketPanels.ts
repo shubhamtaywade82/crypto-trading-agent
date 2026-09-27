@@ -187,7 +187,7 @@ export function renderMetricsLines(m: StrategyMetrics | null, width: number = 12
   const z = orDash(m?.zscoreBtcEth, (value) => signedDp(value));
   const rows = [
     row('FUNDING-ARB', m ? fundingRow(m) : '— │ next — est —'),
-    row('PAIRS-TRD', `disabled (ratio is not tradable) │ BTC/ETH z ${z} (info only)`),
+    row('DIVERGENCE', `BTC/ETH z ${z} (info only)`),
     row('MOMENTUM', m ? momentumRow(m) : 'ATR — │ EMA50 —'),
     row('ADAPTIVE-ST', adaptiveRow(m, mode)),
   ];

@@ -97,6 +97,7 @@ export interface PaperExchangeClientOptions {
   retries?: number;
   /** First backoff delay; doubles on every further retry. */
   backoffMs?: number;
+  apiKey?: string;
 }
 
 type Raw = Record<string, unknown>;
@@ -140,6 +141,7 @@ export class PaperExchangeClient implements ExchangeApi {
   private readonly timeoutMs: number;
   private readonly retries: number;
   private readonly backoffMs: number;
+  private readonly apiKey?: string;
 
   constructor(
     private readonly baseUrl: string,
@@ -150,6 +152,7 @@ export class PaperExchangeClient implements ExchangeApi {
     this.timeoutMs = opts.timeoutMs ?? 5000;
     this.retries = opts.retries ?? 2;
     this.backoffMs = opts.backoffMs ?? 250;
+    this.apiKey = opts.apiKey ?? process.env.PAPER_EXCHANGE_API_KEY;
   }
 
   async getAccount(): Promise<PaperExchangeAccountSnapshot | null> {
@@ -241,9 +244,14 @@ export class PaperExchangeClient implements ExchangeApi {
     let status: number;
     let text: string;
     try {
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        'X-Account-Id': this.accountId,
+      };
+      if (this.apiKey) headers['X-API-Key'] = this.apiKey;
       const res = await this.fetchImpl(`${this.baseUrl}${path}`, {
         method,
-        headers: { 'Content-Type': 'application/json', 'X-Account-Id': this.accountId },
+        headers,
         body: body === undefined ? undefined : JSON.stringify(body),
         signal: AbortSignal.timeout(this.timeoutMs),
       });

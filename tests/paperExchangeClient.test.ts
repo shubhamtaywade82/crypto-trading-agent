@@ -59,6 +59,21 @@ test('getAccount maps the Rails snake_case payload to camelCase', async () => {
   });
 });
 
+test('sends X-API-Key header when apiKey option is provided', async () => {
+  const calls: Call[] = [];
+  const client = new PaperExchangeClient('http://localhost:3000', 'ACC-1', {
+    fetchImpl: scriptedFetch([{ status: 200, json: {
+      account_id: 'ACC-1', currency: 'USDT', margin: '1000', available_balance: '1000',
+      locked_margin: '0', equity: '1000', unrealized_pnl: '0', realized_pnl: '0', positions_count: 0,
+    } }], calls),
+    apiKey: 'test-api-key',
+  });
+
+  await client.getAccount();
+
+  assert.equal(calls[0].headers['X-API-Key'], 'test-api-key');
+});
+
 test('getAccount returns null on 404 without retrying', async () => {
   const calls: Call[] = [];
   const client = clientFor([{ status: 404, json: { error: 'Account not found' } }], calls);

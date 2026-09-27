@@ -26,7 +26,7 @@ function remoteBrokerFromConfig(): RemoteBroker | null {
   const remote = config.paperExchange;
   if (config.mode !== 'paper' || !remote) return null;
   return new RemoteBroker({
-    api: new PaperExchangeClient(remote.url, remote.accountId),
+    api: new PaperExchangeClient(remote.url, remote.accountId, { apiKey: remote.apiKey }),
     store: new RemoteStore(REMOTE_STATE_FILE, remote.accountId),
     accountId: remote.accountId,
     symbols: config.symbols,

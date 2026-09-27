@@ -65,6 +65,7 @@ export const EnvSchema = z.object({
   DECISIONS_PATH: pathWithDefault('data/decisions.jsonl'),
   PAPER_EXCHANGE_URL: z.string().optional(),
   PAPER_EXCHANGE_ACCOUNT_ID: z.string().trim().optional(),
+  PAPER_EXCHANGE_API_KEY: z.string().trim().optional(),
   COINDCX_API_KEY: z.string().default(''),
   COINDCX_API_SECRET: z.string().default(''),
   COINDCX_PAPER_MODE: z.enum(['off', 'on']).default('on'),
@@ -167,7 +168,11 @@ export const config = {
   decisionsPath: env.DECISIONS_PATH,
   symbols: parseSymbols(env.SYMBOLS),
   paperExchange: env.PAPER_EXCHANGE_URL && env.PAPER_EXCHANGE_ACCOUNT_ID
-    ? { url: env.PAPER_EXCHANGE_URL.replace(/\/+$/, ''), accountId: env.PAPER_EXCHANGE_ACCOUNT_ID }
+    ? {
+        url: env.PAPER_EXCHANGE_URL.replace(/\/+$/, ''),
+        accountId: env.PAPER_EXCHANGE_ACCOUNT_ID,
+        apiKey: env.PAPER_EXCHANGE_API_KEY,
+      }
     : null,
   // CoinDCX live-execution migration is in progress but not wired into BinanceService yet (issue #31):
   // built whenever MODE=live so the adapter can pick it up once wired, but never required to start.

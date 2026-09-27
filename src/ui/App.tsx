@@ -14,6 +14,8 @@ export default function App() {
 
   useEffect(() => {
     const handleResize = () => {
+      // Clear viewport to prevent ghost borders when narrowing the terminal
+      process.stdout.write('\x1b[2J\x1b[H');
       setTerminalSize({
         cols: process.stdout.columns || 128,
         rows: process.stdout.rows || 58,
@@ -98,7 +100,7 @@ export default function App() {
   return (
     <Box flexDirection="column" width={cols}>
       {cockpitLines.map((line, idx) => (
-        <Text key={idx}>{line}</Text>
+        <Text key={idx}>{line + '\x1b[K'}</Text>
       ))}
     </Box>
   );

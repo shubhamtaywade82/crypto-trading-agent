@@ -7,7 +7,7 @@ import type { AgentId, AgentState } from '../src/types.js';
 const strip = (line: string) => line.replace(/\x1b\[[0-9;]*m/g, '');
 
 const FLEET: Array<[AgentId, AgentState['status'], string]> = [
-  ['FUNDING-ARB-α', 'RUNNING', 'funding_rate_harvest'], ['PAIRS-TRD-β', 'PAUSED', 'stat_pairs_zscore'], ['MOMENTUM-γ', 'RUNNING', 'ema_momentum'],
+  ['FUNDING-ARB-α', 'RUNNING', 'funding_rate_harvest'], ['MOMENTUM-γ', 'RUNNING', 'ema_momentum'],
   ['ADAPTIVE-ST-ζ', 'RUNNING', 'ml_adaptive_supertrend'], ['RISK-MGR-δ', 'WATCHING', 'liquidation_guard_isolated'], ['EXECUTOR-ε', 'RUNNING', 'binance_order_routing'],
 ];
 

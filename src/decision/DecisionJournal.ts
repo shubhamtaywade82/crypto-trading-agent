@@ -102,13 +102,14 @@ function isDecisionRecord(value: unknown): value is DecisionRecord {
  * decisionId supersedes earlier ones (last-write-wins), so execution and
  * outcome updates never rewrite history — they append it. Reads fold the file
  * into the latest record per decisionId, and a file that outgrows MAX_RECORDS
- * is compacted to its folded form on the next load.
+ * is compacted to its folded form on the next load. A null path keeps the
+ * journal purely in memory (replay).
  */
 export class DecisionJournal {
   private records = new Map<string, DecisionRecord>();
   private overflowed = false;
 
-  constructor(private readonly filePath = path.resolve('data/decisions.jsonl')) {
+  constructor(private readonly filePath: string | null = path.resolve('data/decisions.jsonl')) {
     this.load();
   }
 
@@ -148,7 +149,7 @@ export class DecisionJournal {
 
   private load(): void {
     try {
-      if (!existsSync(this.filePath)) return;
+      if (this.filePath === null || !existsSync(this.filePath)) return;
       const lines = readFileSync(this.filePath, 'utf-8').split('\n');
       for (const line of lines) {
         const trimmed = line.trim();
@@ -169,6 +170,7 @@ export class DecisionJournal {
 
   private append(entry: DecisionRecord): void {
     try {
+      if (this.filePath === null) return;
       mkdirSync(path.dirname(this.filePath), { recursive: true });
       appendFileSync(this.filePath, `${JSON.stringify(entry)}\n`, 'utf-8');
       if (this.records.size > MAX_RECORDS) this.compact();
@@ -179,6 +181,7 @@ export class DecisionJournal {
 
   /** Rewrites the file to its folded form so an unbounded journal cannot grow forever. */
   private compact(): void {
+    if (this.filePath === null) return;
     const folded = this.all().slice(this.records.size - MAX_RECORDS);
     try {
       mkdirSync(path.dirname(this.filePath), { recursive: true });

@@ -21,12 +21,9 @@ import { announceStartup, buildOps, refreshPortfolio, RiskOps, toggleKillSwitch 
 import { config, LOOP_INTERVAL_MS } from '../config.js';
 import type { AdaptiveSuperTrendBar } from '../binance/adaptiveSuperTrend.js';
 import { MarketStateBuilder } from '../market/MarketStateBuilder.js';
-import type { MarketState } from '../market/types.js';
-import { fuseSignals, type TradeIntent } from '../decision/SignalFusion.js';
-import { scoreCandidate } from '../decision/CandidateScorer.js';
-import { DecisionJournal, type DecisionEvidence, type DecisionRecord, type DecisionStatus } from '../decision/DecisionJournal.js';
+import { runCandidateFlow, decisionEvidence, buildDecisionRecord } from '../decision/CandidateFlow.js';
+import { DecisionJournal } from '../decision/DecisionJournal.js';
 import { evaluateExecutionQuality } from '../execution/ExecutionQuality.js';
-import { applyRouter } from '../decision/StrategyRouter.js';
 import { AgentLedger } from '../learning/AgentLedger.js';
 import { confidenceMultiplier } from '../learning/ConfidenceAdjuster.js';
 import { TradeOutcomeRecorder } from '../learning/TradeOutcomeRecorder.js';
@@ -68,7 +65,7 @@ export class Orchestrator extends EventEmitter {
   private journal = new DecisionJournal(config.decisionsPath);
   private recorder = new TradeOutcomeRecorder(this.ledger, this.journal);
   /** Winning fusion intents of the current cycle, keyed by `${symbol}:${agent}`; feeds decision evidence. */
-  private fusionIntents = new Map<string, TradeIntent>();
+  private fusionIntents = new Map<string, import('../decision/SignalFusion.js').TradeIntent>();
 
   start() {
     this.log('SYSTEM', `Orchestrator started in ${config.mode.toUpperCase()} mode`, 'info');
@@ -191,21 +188,12 @@ export class Orchestrator extends EventEmitter {
         this.log(s.agent, `${s.symbol}: ${s.reason} (conf ${(adjusted.confidence * 100).toFixed(0)}%${mult !== 1 ? ` adj×${mult.toFixed(2)}` : ''})`, 'info');
       }
     }
-    // Regime routing: block strategies in markets they are not designed for
-    const states = ctx.marketState ?? {};
-    const { passed, vetoed } = applyRouter(raw, states);
-    for (const v of vetoed) this.log(v.agent as any, `ROUTED OUT ${v.symbol}: ${v.agent} not allowed in ${v.regime}`, 'info');
-    // New multi-strategy agents participate in signal fusion; legacy agents bypass it.
-    const FUSION_AGENTS = new Set<string>(['STRUCTURE-TREND-η', 'MEAN-REVERT-θ', 'CROWDING-ι']);
-    const legacy = passed.filter((s) => !FUSION_AGENTS.has(s.agent));
-    const candidates = passed.filter((s) => FUSION_AGENTS.has(s.agent));
-    this.fusionIntents.clear();
-    if (candidates.length === 0) return legacy;
-    const intents = fuseSignals(candidates, states);
-    this.fusionIntents = new Map(intents.map((intent) => [`${intent.symbol}:${intent.sourceAgent}`, intent]));
-    const fused = intents.flatMap(({ symbol, sourceAgent }) => candidates.filter((s) => s.symbol === symbol && s.agent === sourceAgent));
-    if (candidates.length !== fused.length) this.log('SYSTEM', `SignalFusion: ${candidates.length - fused.length} candidate(s) filtered by conflict resolution`, 'info');
-    return [...legacy, ...fused];
+    // The canonical candidate pipeline (routing + fusion) — shared with the replay engine
+    const flow = runCandidateFlow(raw, ctx.marketState ?? {});
+    for (const v of flow.routedOut) this.log(v.agent as any, `ROUTED OUT ${v.symbol}: ${v.agent} not allowed in ${v.regime}`, 'info');
+    if (flow.fusionFiltered > 0) this.log('SYSTEM', `SignalFusion: ${flow.fusionFiltered} candidate(s) filtered by conflict resolution`, 'info');
+    this.fusionIntents = flow.intents;
+    return flow.signals;
   }
 
   private async processSignals(signals: Signal[], ctx: MarketContext): Promise<void> {
@@ -239,11 +227,11 @@ export class Orchestrator extends EventEmitter {
         continue;
       }
       const log = await this.executor.execute(signal, decision, decisionId);
-      const executed: DecisionRecord = {
+      const executed: import('../decision/DecisionJournal.js').DecisionRecord = {
         ...record,
         execution: { ts: Date.now(), spreadBps: eq.spreadBps, slippageBps: eq.estimatedSlippageBps, effectiveCostBps: eq.effectiveCostBps },
-        ...(log.level === 'success' ? { status: 'EXECUTED' satisfies DecisionStatus } : {
-          status: (log.level === 'warn' ? 'EXECUTION_REFUSED' : 'EXECUTION_FAILED') satisfies DecisionStatus,
+        ...(log.level === 'success' ? { status: 'EXECUTED' as const } : {
+          status: log.level === 'warn' ? 'EXECUTION_REFUSED' as const : 'EXECUTION_FAILED' as const,
           rejectionReason: log.msg,
         }),
       };
@@ -256,41 +244,16 @@ export class Orchestrator extends EventEmitter {
     }
   }
 
-  /** Evidence at decision time: the deterministic rubric from the MarketState plus the composite that drove the decision. */
-  private evidenceFor(signal: Signal, ctx: MarketContext): DecisionEvidence {
-    const state = ctx.marketState?.[signal.symbol];
-    const side = signal.type.includes('SHORT') ? 'SHORT' : 'LONG';
-    const breakdown = state ? scoreCandidate(side, state) : null;
-    const intent = this.fusionIntents.get(`${signal.symbol}:${signal.agent}`);
-    return {
-      breakdown,
-      score: intent?.evidenceScore ?? breakdown?.total ?? Math.round(signal.confidence * 100),
-      factors: intent?.reasons ?? breakdown?.reasons ?? [signal.reason],
-    };
-  }
-
-  private buildDecisionRecord(decisionId: string, signal: Signal, ctx: MarketContext, decision: import('../types.js').RiskDecision): DecisionRecord {
-    const state = ctx.marketState?.[signal.symbol];
-    return {
+  /** Delegates to the shared canonical builder so paper, live and replay produce identical records. */
+  private buildDecisionRecord(decisionId: string, signal: Signal, ctx: MarketContext, decision: import('../types.js').RiskDecision): import('../decision/DecisionJournal.js').DecisionRecord {
+    return buildDecisionRecord({
       decisionId,
-      timestamp: Date.now(),
-      symbol: signal.symbol,
-      strategy: signal.agent,
-      signalType: signal.type,
-      side: signal.type === 'OPEN_LONG' ? 'LONG' : signal.type.startsWith('OPEN_') ? 'SHORT' : null,
-      signalId: signal.id,
-      confidence: signal.confidence,
-      marketStateTime: state?.generatedAt ?? null,
-      marketStateVersion: state?.version ?? null,
-      evidence: this.evidenceFor(signal, ctx),
-      entry: signal.entry ?? null,
-      stopLoss: signal.stopLoss ?? null,
-      takeProfit: signal.takeProfit ?? null,
-      notionalUsdt: signal.notionalUsdt ?? decision.positionSizeUsdt,
-      riskDecision: { approved: decision.approved, size: decision.positionSizeUsdt, leverage: decision.leverage, reason: decision.reason },
-      status: decision.approved ? 'EXECUTED' : 'RISK_REJECTED',
-      rejectionReason: decision.approved ? null : decision.reason,
-    };
+      signal,
+      state: ctx.marketState?.[signal.symbol],
+      decision,
+      evidence: decisionEvidence(signal, ctx.marketState?.[signal.symbol], this.fusionIntents.get(`${signal.symbol}:${signal.agent}`)),
+      now: Date.now(),
+    });
   }
 
   private isCoolingDown(signal: Signal): boolean {

@@ -33,6 +33,53 @@ for the command cheatsheet.
 
 ---
 
+## Backtesting
+
+```bash
+npx tsx scripts/backtest.ts --symbol BTCUSDT --days 30 --funding
+```
+
+Fetches public Binance USD-M klines and replays the **same** strategy agents, regime routing, signal fusion,
+risk gate and execution-quality gate the orchestrator runs each cycle — only the market and execution adapters
+differ. The replay is strict about causality: decisions taken at a bar close see only candles that had closed by
+then, and fill at the next bar's open with half-spread, slippage and taker fees; intrabar exits resolve
+stop-before-target (conservative), and stops that gap through the open fill at the open. Funding payments
+settle on their boundaries when `--funding` is passed.
+
+The report covers expectancy, profit factor, Sharpe/Sortino, CVaR, MAE/MFE, fees/funding/slippage and
+research slices by strategy, regime, symbol and evidence bucket (does a high setup grade actually earn
+more?). Pass `--decisions data/backtest-decisions.jsonl` to keep the decision journal produced by the run —
+every decision carries the evidence it was taken on and, once closed, its realized outcome.
+
+See `src/backtesting/` and `tests/replayService.test.ts` for the engine itself.
+
+---
+
+## Decision lineage
+
+Every gated signal leaves a `DecisionRecord` in an append-only JSONL journal (`DECISIONS_PATH`, default
+`data/decisions.jsonl`): the market state it saw, the deterministic evidence rubric and the composite score,
+planned levels, the risk verdict, execution friction, and the realized outcome once the position closes. The
+record is written in the same shape by the paper, live and replay paths (`src/decision/CandidateFlow.ts`),
+and closed trades resolve back to their decision through the `decisionId` carried by the venue. The trade
+grader scores against this stored evidence instead of a neutral placeholder, so "which conditions produced
+profitable decisions?" becomes an empirical question:
+
+```
+cat data/decisions.jsonl | jq 'select(.outcome != null) | {score: .evidence.score, r: .outcome.rMultiple}'
+```
+
+---
+
+## Risk state that survives restarts
+
+The drawdown kill-switch measures against a persisted, mode-keyed equity high-water mark
+(`data/risk-hwm.json`, atomic writes): a process crash mid-drawdown no longer resets the peak and silently
+re-arms the bot. The same peak seeds the circuit-breaker's `PerformanceEngine`, so both drawdown views read
+one authority.
+
+---
+
 ## Configuration
 
 All configuration is via environment variables (validated with `zod` in
@@ -190,6 +237,27 @@ src/
     Orchestrator.ts          # main loop, state emit
     opsHooks.ts              # circuit/performance ops, hook wiring from the flags, daily digest timer
     telemetry.ts             # builds the cockpit state snapshot
+  decision/
+    CandidateFlow.ts          # canonical routing + fusion + DecisionRecord builder (shared with replay)
+    SignalFusion.ts           # evidence scoring and conflict resolution
+    CandidateScorer.ts       # deterministic evidence rubric from the MarketState
+    StrategyRouter.ts        # regime-based strategy eligibility
+    DecisionJournal.ts       # append-only JSONL decision lineage (evidence -> risk -> execution -> outcome)
+  market/                     # MarketState stack (data -> state)
+  risk/
+    equityHwm.ts             # persisted equity high-water mark (mode-keyed, atomic writes)
+    performanceEngine.ts      # journal-derived circuit-breaker metrics
+    positionSizer.ts          # Decimal-precise sizing
+    riskEngine.ts             # deterministic portfolio checks
+  backtesting/
+    ReplayService.ts          # full-system replay: same agents/fusion/risk as the live loop
+    MarketDataFeed.ts         # no-lookahead historical feed
+    ExecutionSimulator.ts     # spread/slippage/fee fills, conservative intrabar exits
+    PortfolioSimulator.ts     # multi-symbol positions, funding, liquidation, MAE/MFE
+    BacktestMetrics.ts       # expectancy/Sharpe/Sortino/CVaR + by-strategy/regime/evidence slices
+  learning/
+    AgentLedger.ts           # per-agent rolling stats
+    TradeOutcomeRecorder.ts  # grades closed trades against their stored decision evidence
   ui/                        # Ink TUI
   config.ts                  # zod-validated env config
   types.ts                   # shared types

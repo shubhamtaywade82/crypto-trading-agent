@@ -100,6 +100,111 @@ test('buildSetupMap refuses to manufacture a setup without directional structure
   assert.ok(map.noTradeReasons.some((reason) => /unresolved/i.test(reason)));
 });
 
+function breakoutOnlyState(over: Partial<MarketState> = {}): MarketState {
+  return baseState({
+    liquidity: {
+      htf: { timeframe: '1h', pools: [], latestSweeps: [], recentSweeps: [] },
+      ltf: {
+        timeframe: '15m',
+        pools: [
+          { type: 'SWING_HIGH', price: 105, tolerance: 0.2, strength: 0.8, timeframe: '15m', sourceTimes: [T0 - 3_600_000] },
+          { type: 'SWING_HIGH', price: 110, tolerance: 0.2, strength: 0.7, timeframe: '15m', sourceTimes: [T0 - 7_200_000] },
+        ],
+        latestSweeps: [],
+        recentSweeps: [],
+      },
+    },
+    zones: [],
+    zoneLedger: [],
+    ...over,
+  });
+}
+
+test('breakout scenario is FORMING while the liquidity level is untaken', () => {
+  const map = buildSetupMap(breakoutOnlyState());
+  const breakout = map.scenarios.find((s) => s.kind === 'BREAKOUT_RETEST');
+  assert.ok(breakout);
+  assert.equal(breakout?.state, 'FORMING');
+  assert.equal(map.state, 'FORMING');
+});
+
+test('breakout scenario is ARMED once the level is taken but unconfirmed', () => {
+  const sweptAt = T0 - 300_000;
+  const taken = breakoutOnlyState({
+    liquidity: {
+      htf: { timeframe: '1h', pools: [], latestSweeps: [], recentSweeps: [] },
+      ltf: {
+        timeframe: '15m',
+        pools: [
+          { type: 'SWING_HIGH', price: 105, tolerance: 0.2, strength: 0.8, timeframe: '15m', sourceTimes: [T0 - 3_600_000], taken: true, sweptAt },
+          { type: 'SWING_HIGH', price: 110, tolerance: 0.2, strength: 0.7, timeframe: '15m', sourceTimes: [T0 - 7_200_000] },
+        ],
+        latestSweeps: [],
+        recentSweeps: [],
+      },
+    },
+    ltfStructure: { timeframe: '15m', trend: 'BULLISH', swingHighs: [], swingLows: [], lastBreak: null, protectedHigh: null, protectedLow: null, breaks: [] },
+  });
+  const armedMap = buildSetupMap(taken);
+  const breakout = armedMap.scenarios.find((s) => s.kind === 'BREAKOUT_RETEST');
+  assert.ok(breakout);
+  assert.equal(breakout?.state, 'ARMED');
+  assert.equal(armedMap.state, 'ARMED');
+});
+
+test('breakout scenario TRIGGERS once a confirming BOS/CHOCH prints after the level is taken', () => {
+  const sweptAt = T0 - 300_000;
+  const state = breakoutOnlyState({
+    liquidity: {
+      htf: { timeframe: '1h', pools: [], latestSweeps: [], recentSweeps: [] },
+      ltf: {
+        timeframe: '15m',
+        pools: [
+          { type: 'SWING_HIGH', price: 105, tolerance: 0.2, strength: 0.8, timeframe: '15m', sourceTimes: [T0 - 3_600_000], taken: true, sweptAt },
+          { type: 'SWING_HIGH', price: 110, tolerance: 0.2, strength: 0.7, timeframe: '15m', sourceTimes: [T0 - 7_200_000] },
+        ],
+        latestSweeps: [],
+        recentSweeps: [],
+      },
+    },
+    ltfStructure: {
+      timeframe: '15m', trend: 'BULLISH', swingHighs: [], swingLows: [], protectedHigh: null, protectedLow: null,
+      lastBreak: { type: 'BOS', direction: 'BULLISH', level: 105, index: 200, time: T0 - 100_000, distanceAtr: 1 },
+      breaks: [{ type: 'BOS', direction: 'BULLISH', level: 105, index: 200, time: T0 - 100_000, distanceAtr: 1 }],
+    },
+  });
+  const map = buildSetupMap(state);
+  const breakout = map.scenarios.find((s) => s.kind === 'BREAKOUT_RETEST');
+  assert.ok(breakout);
+  assert.equal(breakout?.state, 'TRIGGERED');
+  assert.equal(map.state, 'TRIGGERED');
+});
+
+test('breakout scenario is dropped (invalidated) when structure breaks the other way after the level is taken', () => {
+  const sweptAt = T0 - 300_000;
+  const state = breakoutOnlyState({
+    liquidity: {
+      htf: { timeframe: '1h', pools: [], latestSweeps: [], recentSweeps: [] },
+      ltf: {
+        timeframe: '15m',
+        pools: [
+          { type: 'SWING_HIGH', price: 105, tolerance: 0.2, strength: 0.8, timeframe: '15m', sourceTimes: [T0 - 3_600_000], taken: true, sweptAt },
+          { type: 'SWING_HIGH', price: 110, tolerance: 0.2, strength: 0.7, timeframe: '15m', sourceTimes: [T0 - 7_200_000] },
+        ],
+        latestSweeps: [],
+        recentSweeps: [],
+      },
+    },
+    ltfStructure: {
+      timeframe: '15m', trend: 'BULLISH', swingHighs: [], swingLows: [], protectedHigh: null, protectedLow: null,
+      lastBreak: { type: 'CHOCH', direction: 'BEARISH', level: 103, index: 200, time: T0 - 100_000, distanceAtr: 1 },
+      breaks: [{ type: 'CHOCH', direction: 'BEARISH', level: 103, index: 200, time: T0 - 100_000, distanceAtr: 1 }],
+    },
+  });
+  const map = buildSetupMap(state);
+  assert.equal(map.scenarios.some((s) => s.kind === 'BREAKOUT_RETEST'), false);
+});
+
 test('formatDuration keeps Telegram timing compact', () => {
   assert.equal(formatDuration({ minMinutes: 15, maxMinutes: 90, thesisExpiryMinutes: 180, distanceAtr: 1 }), '15m–1.5h');
   assert.equal(formatDuration({ minMinutes: 120, maxMinutes: 240, thesisExpiryMinutes: 360, distanceAtr: 2 }), '2h–4h');

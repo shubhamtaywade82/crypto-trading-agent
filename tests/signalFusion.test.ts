@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { fuseSignals } from '../src/decision/SignalFusion.js';
 import type { Signal } from '../src/types.js';
-import type { MarketState } from '../market/types.js';
+import type { MarketState } from '../src/market/types.js';
 
 function mockSignal(overrides: Partial<Signal>): Signal {
   return {
@@ -74,8 +74,8 @@ function mockState(regime: 'TREND_UP' | 'RANGE' | 'TREND_DOWN' = 'TREND_UP'): Ma
       protectedLow: null,
     },
     liquidity: {
-      htf: { timeframe: '1h', pools: [], latestSweeps: [] },
-      ltf: { timeframe: '15m', pools: [], latestSweeps: [] },
+      htf: { timeframe: '1h', pools: [], latestSweeps: [], recentSweeps: [] },
+      ltf: { timeframe: '15m', pools: [], latestSweeps: [], recentSweeps: [] },
     },
     zones: [],
     pricing: {

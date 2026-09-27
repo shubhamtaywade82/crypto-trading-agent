@@ -18,7 +18,9 @@ export const EnvSchema = z.object({
   OLLAMA_REGIME_MODEL: z.string().optional(),
   OLLAMA_SKEPTIC_MODEL: z.string().optional(),
   OLLAMA_CHAIR_MODEL: z.string().optional(),
-  LLM_COUNCIL: z.enum(['off', 'on']).default('off'),
+  LLM_COUNCIL: z.enum(['off', 'on']).default('on'),
+  LLM_COUNCIL_AUTOTRADE: z.enum(['off', 'on']).default('on'),
+  LLM_COUNCIL_MIN_PROBABILITY: z.coerce.number().min(0.5).max(0.95).default(0.65),
   OLLAMA_API_KEY_1: z.string().optional(),
   OLLAMA_API_KEY_2: z.string().optional(),
   OLLAMA_API_KEY_3: z.string().optional(),
@@ -39,7 +41,7 @@ export const EnvSchema = z.object({
   MIN_RR: z.coerce.number().nonnegative().default(0),
   TAKER_FEE_RATE: z.coerce.number().nonnegative().default(0.0004),
   SLIPPAGE_BUFFER_RATE: z.coerce.number().nonnegative().default(0.0002),
-  RISK_ENGINE: z.enum(['off', 'on']).default('off'),
+  RISK_ENGINE: z.enum(['off', 'on']).default('on'),
 
   MARKET_DATA_1M_TTL_MS: timeframeTtl(15_000),
   MARKET_DATA_5M_TTL_MS: timeframeTtl(60_000),
@@ -53,8 +55,8 @@ export const EnvSchema = z.object({
   MARKET_DATA_MAX_CONCURRENCY: z.coerce.number().int().min(1).max(16).default(4),
   MARKET_DATA_DERIVATIVES_PERIOD: z.enum(['5m', '15m', '30m', '1h', '2h', '4h', '6h', '12h', '1d']).default('1h'),
 
-  AUDIT: z.enum(['off', 'on']).default('off'),
-  ALERTS: z.enum(['off', 'on']).default('off'),
+  AUDIT: z.enum(['off', 'on']).default('on'),
+  ALERTS: z.enum(['off', 'on']).default('on'),
   STRUCT_LIQ: z.enum(['off', 'on']).default('on'),
   STRUCT_LIQ_MAX_SWEEP_AGE_CANDLES: z.coerce.number().int().min(1).default(6),
   STRUCT_LIQ_MIN_REWARD_RISK: z.coerce.number().min(0).default(1.5),
@@ -130,7 +132,12 @@ export const config = {
   },
   risk: riskFromEnv(env),
   riskEngine: env.RISK_ENGINE,
-  llmCouncil: { enabled: env.LLM_COUNCIL === 'on' },
+  llmCouncil: {
+    enabled: env.LLM_COUNCIL === 'on',
+    /** When on, a chair TRADE verdict on a TRIGGERED setup becomes a real Signal through the normal risk gate. Off by default: the council stays advisory-only. */
+    autoTrade: env.LLM_COUNCIL_AUTOTRADE === 'on',
+    minProbability: env.LLM_COUNCIL_MIN_PROBABILITY,
+  },
   marketDataV2: {
     enabled: true,
     candleTtlMs: {

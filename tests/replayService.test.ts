@@ -70,7 +70,9 @@ test('feed: only candles fully closed by the step time are visible (no lookahead
   assert.equal(visible.length, 4);
   assert.equal(visible[3].openTime, 3 * FIFTEEN_MIN);
   // The next open after step 3 is candle #4's open — the fill anchor
-  near(feed.nextOpen(3), candles[4].open);
+  const nextOpen = feed.nextOpen(3);
+  if (nextOpen === undefined) throw new Error('expected a next candle open');
+  near(nextOpen, candles[4]!.open);
 });
 
 test('feed: higher timeframes only expose bars closed by the step', () => {
@@ -218,7 +220,7 @@ test('replay: same input produces the identical result (determinism)', async () 
   assert.deepEqual(first.trades.map((t) => [t.decisionId, t.entry, t.exit, t.pnl]), second.trades.map((t) => [t.decisionId, t.entry, t.exit, t.pnl]));
 });
 
-test('replay: the default fleet runs the full pipeline on trending data', async () => {
+test('replay: the default fleet runs the full pipeline on trending data', { timeout: 120_000 }, async () => {
   const data = {
     BTCUSDT: { '15m': vShapeCandles(520, 310) },
   };
@@ -239,7 +241,7 @@ test('replay: the default fleet runs the full pipeline on trending data', async 
     assert.ok(slice.trades >= 0);
     assert.ok(slice.winRatePct >= 0 && slice.winRatePct <= 100);
   }
-}, { timeout: 120_000 });
+});
 
 test('replay: decisions that risk rejects are journaled with the reason', async () => {
   // A stop 0.1% from entry: far inside the ATR buffer, so the risk gate must refuse it

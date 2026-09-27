@@ -181,14 +181,16 @@ PASS/FAIL/SKIPPED line per scenario with the agent and exchange numbers it compa
 
 ## Ops: audit trail, Telegram alerts, kill-switch
 
-Everything here is off by default and isolated from trading: an audit, alert or Telegram failure is swallowed
-before it reaches the loop, and sends are fire-and-forget, so trading never waits on Telegram. With a flag off its
-hook does nothing: no file is written, no request is made, no timer is started.
+Both are on by default and isolated from trading: an audit, alert or Telegram failure is swallowed before it
+reaches the loop, and sends are fire-and-forget, so trading never waits on Telegram. With a flag turned off its
+hook does nothing: no file is written, no request is made, no timer is started. `ALERTS=on` still needs
+`TELEGRAM_CHAT_ID` and a bot token below before it can actually send anything — until those are set it has nothing
+to send to.
 
 | Variable | Default | Purpose |
 | --- | --- | --- |
-| `AUDIT` | `off` | `on` appends one JSON line per decision step to `EVENTS_PATH` |
-| `ALERTS` | `off` | `on` sends Telegram cards (and starts the daily digest timer) |
+| `AUDIT` | `on` | `off` stops appending a JSON line per decision step to `EVENTS_PATH` |
+| `ALERTS` | `on` | `off` stops sending Telegram cards (and the daily digest timer) |
 | `EVENTS_PATH` | `data/events.jsonl` | Audit trail; rotated to `<file>.1` at 5 MB |
 | `NOTIFICATIONS_PATH` | `data/notifications.json` | Optional subscription JSON (missing or invalid means every class on) |
 | `TELEGRAM_CHAT_ID` | (unset) | Destination chat, required to send |
@@ -197,9 +199,10 @@ hook does nothing: no file is written, no request is made, no timer is started.
 | `TELEGRAM_ALERTBOT_BOT_TOKEN` | (unset) | Bot for SYSTEM and digest cards |
 | `TELEGRAM_DRY_RUN` | (unset) | `1` writes each card to the cockpit log (`[telegram dry-run] ...`) instead of sending; works without tokens |
 
-**Enable it:** set `AUDIT=on` and/or `ALERTS=on` in `.env`. For alerts, add `TELEGRAM_CHAT_ID` plus a bot token
-(`TELEGRAM_BOT_TOKEN`, or the two per-channel tokens). Try it first with `TELEGRAM_DRY_RUN=1`. Tokens are never
-logged. The audit trail and the alerts are independent of `RISK_ENGINE`.
+**Enable it:** both are already on; add `TELEGRAM_CHAT_ID` plus a bot token (`TELEGRAM_BOT_TOKEN`, or the two
+per-channel tokens) to `.env` to let `ALERTS` actually send. Try it first with `TELEGRAM_DRY_RUN=1`. Tokens are
+never logged. The audit trail and the alerts are independent of `RISK_ENGINE`. Set `AUDIT=off` / `ALERTS=off` to
+disable either.
 
 **Audit trail.** Each signal keeps one `decisionId` (the signal's `id`) from `signal` through `gate`, `veto`,
 `order`, `exit` and `journal`; refusals are `refusal` events with the same id. System events (`venue`, `circuit`,
@@ -227,9 +230,11 @@ Setup maps are generated from the same `MarketState` already built by `Orchestra
 
 ### Multi-persona agentic AI and self-learning
 
-When `LLM_COUNCIL=on`, the runtime adds a read-only research council above the deterministic market engine. Five specialist personas (technical, liquidity, derivatives, regime and skeptic) analyze the same normalized `MarketState` and setup map independently, then a portfolio-chair persona synthesizes the reports and may select only a supplied setup scenario or `WATCH`/`NO_TRADE`.
+`LLM_COUNCIL` is on by default: the runtime runs a research council above the deterministic market engine. Five specialist personas (technical, liquidity, derivatives, regime and skeptic) analyze the same normalized `MarketState` and setup map independently, then a portfolio-chair persona synthesizes the reports and may select only a supplied setup scenario or `WATCH`/`NO_TRADE`. Set `LLM_COUNCIL=off` to disable it entirely (no persona calls, no learning-ledger predictions).
 
-The council never creates price levels, sizes positions, places orders or overrides `RiskAgent`, execution-quality checks or `ExecutorAgent`. LLM output is schema-validated and treated as advisory evidence. Each persona can use a different Ollama model through the `OLLAMA_*_MODEL` variables; all default to `OLLAMA_MODEL`.
+The council never creates price levels, sizes positions or bypasses `RiskAgent`, execution-quality checks or `ExecutorAgent`. LLM output is schema-validated. Each persona can use a different Ollama model through the `OLLAMA_*_MODEL` variables; all default to `OLLAMA_MODEL`.
+
+`LLM_COUNCIL_AUTOTRADE` is also on by default (requires `LLM_COUNCIL=on`): a chair `TRADE` verdict is converted into a real `Signal` — but only when it targets a setup scenario the deterministic `SetupEngine` has *itself* already confirmed `TRIGGERED`, and only above `LLM_COUNCIL_MIN_PROBABILITY` (default 0.65). The signal's entry, stop loss and take-profit are always the scenario's own deterministic values; the LLM selects a scenario, it never invents a price. `WATCH`/`NO_TRADE` verdicts and verdicts on a `FORMING`/`ARMED` scenario are never traded. Because the council runs detached from the tick loop (to keep local-LLM latency off the trading loop), an approved verdict is queued and picked up by the risk gate on the next cycle, dropped after 5 minutes if unconsumed. From there it is one more `Signal` with agent id `AI-COUNCIL-κ`: it still goes through `RiskAgent.gate()` (mandatory stop loss, position sizing, drawdown kill-switch), execution-quality checks and the same Telegram/audit notices as every other agent's signal. Set `LLM_COUNCIL_AUTOTRADE=off` to keep the council advisory-only (it still runs and still logs every verdict) without touching `LLM_COUNCIL`.
 
 The learning ledger is persistent and idempotent. Closed trades update per-agent realized-R statistics, with symbol-specific history preferred after enough observations. Closed-trade keys are persisted so restarting the process cannot train twice on the same trade. Persona and chair forecasts are also persisted as prediction episodes and resolved later against live marks at their stated horizons using an adaptive volatility threshold. Resolution records directional correctness and a Brier score for calibration. The replay engine runs the same per-agent stats loop against an in-memory ledger (never persisted), so backtests exercise — and report — the same learned confidence adjustment the live fleet would apply.
 
@@ -244,10 +249,11 @@ symbols or a minimum severity off, for example `{"notifications": {"signal": fal
 **Kill-switch.** Press `k` in the cockpit to halt new entries: every OPEN is refused with `kill-switch: manual`,
 whatever `RISK_ENGINE` says, and the risk row of the fleet panel shows `KILL-SWITCH`. Exits, stops and manual closes
 are never affected. Press `k` again to resume. The state is saved to `data/kill-switch.json`, so a restart does not
-resume trading by itself (press `k` or delete the file to clear it). A circuit-breaker HALTED/EMERGENCY (with
-`RISK_ENGINE=on`) refuses entries on its own and is announced as a SYSTEM alert; it does not touch the kill-switch.
+resume trading by itself (press `k` or delete the file to clear it). A circuit-breaker HALTED/EMERGENCY (`RISK_ENGINE`,
+on by default) refuses entries on its own and is announced as a SYSTEM alert; it does not touch the kill-switch.
+Set `RISK_ENGINE=off` to fall back to the legacy sizing path (no fee netting, exposure caps or circuit breaker).
 
-With `MODE=live` the venue keeps no per-strategy trade journal, so `RISK_ENGINE=on` cannot see realized losses there: the daily-loss and loss-streak limits stay inactive (only drawdown applies) and a warning is logged at start.
+With `MODE=live` (without `PAPER_EXCHANGE_URL`) the venue keeps no per-strategy trade journal, so the risk engine cannot see realized losses there: the daily-loss and loss-streak limits stay inactive (only drawdown applies) and a warning is logged at start.
 
 ---
 

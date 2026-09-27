@@ -30,6 +30,7 @@ import { AgentLedger } from '../learning/AgentLedger.js';
 import { confidenceMultiplier } from '../learning/ConfidenceAdjuster.js';
 import { TradeOutcomeRecorder } from '../learning/TradeOutcomeRecorder.js';
 import { buildSetupMap } from '../decision/SetupEngine.js';
+import { buildCouncilSignal, COUNCIL_SIGNAL_TTL_MS } from '../decision/CouncilSignal.js';
 import { TradingCouncil } from '../llm/TradingCouncil.js';
 
 type CycleContext = MarketContext & { tickers: Record<string, MarketPriceInfo>; nextFundingTime: number };
@@ -79,6 +80,8 @@ export class Orchestrator extends EventEmitter {
   /** Winning fusion intents of the current cycle, keyed by `${symbol}:${agent}`; feeds decision evidence. */
   private fusionIntents = new Map<string, import('../decision/SignalFusion.js').TradeIntent>();
   private council = new TradingCouncil(this.advisor, this.ledger);
+  /** Council TRADE verdicts queued for the next cycle's risk gate — the council runs detached from the tick loop, so its result always lands after collectSignals() for the cycle that requested it. */
+  private pendingCouncilSignals: Signal[] = [];
 
   start() {
     this.log('SYSTEM', `Orchestrator started in ${config.mode.toUpperCase()} mode`, 'info');
@@ -203,6 +206,12 @@ export class Orchestrator extends EventEmitter {
         this.log(s.agent, `${s.symbol}: ${s.reason} (conf ${(adjusted.confidence * 100).toFixed(0)}%${mult !== 1 ? ` adj×${mult.toFixed(2)}` : ''})`, 'info');
       }
     }
+    for (const s of this.drainCouncilSignals()) {
+      const mult = confidenceMultiplier(s.agent as any, this.ledger, s.symbol);
+      const adjusted = { ...s, confidence: Math.min(1, s.confidence * mult) };
+      raw.push(adjusted);
+      this.log(s.agent, `${s.symbol}: ${s.reason} (conf ${(adjusted.confidence * 100).toFixed(0)}%${mult !== 1 ? ` adj×${mult.toFixed(2)}` : ''})`, 'info');
+    }
     // The canonical candidate pipeline (routing + fusion) — shared with the replay engine
     const flow = runCandidateFlow(raw, ctx.marketState ?? {});
     for (const v of flow.routedOut) this.log(v.agent as any, `ROUTED OUT ${v.symbol}: ${v.agent} not allowed in ${v.regime}`, 'info');
@@ -298,9 +307,27 @@ export class Orchestrator extends EventEmitter {
       if (!result) return;
       const votes = result.opinions.map((opinion) => opinion.persona + '=' + opinion.stance).join(' ');
       this.log('SYSTEM', 'AI-COUNCIL ' + state.symbol + ': ' + votes + ' | CHAIR=' + result.chair.action + '/' + result.chair.stance + ' ' + result.chair.rationale, 'info');
+      if (!config.llmCouncil.autoTrade) return;
+      const signal = buildCouncilSignal(state, setup, result, config.llmCouncil.minProbability);
+      if (signal) {
+        this.pendingCouncilSignals.push(signal);
+        this.log('SYSTEM', `AI-COUNCIL queued ${signal.type} ${signal.symbol} for the next risk gate pass (${signal.reason})`, 'info');
+      }
     } catch (err: unknown) {
       this.logFailure('AI council failed', err);
     }
+  }
+
+  /** Drains queued council signals, dropping anything the loop hasn't picked up within the TTL. */
+  private drainCouncilSignals(): Signal[] {
+    const now = Date.now();
+    const [fresh, stale] = this.pendingCouncilSignals.reduce<[Signal[], Signal[]]>(
+      ([keep, drop], s) => (now - s.ts <= COUNCIL_SIGNAL_TTL_MS ? [[...keep, s], drop] : [keep, [...drop, s]]),
+      [[], []],
+    );
+    this.pendingCouncilSignals = [];
+    for (const s of stale) this.log('SYSTEM', `AI-COUNCIL signal for ${s.symbol} expired unconsumed`, 'warn');
+    return fresh;
   }
 
   private async consultAdvisor(signals: Signal[], positions: Position[]): Promise<void> {

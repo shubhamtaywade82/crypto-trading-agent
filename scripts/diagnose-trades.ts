@@ -15,7 +15,8 @@ import { RiskAgent } from '../src/agents/RiskAgent.js';
 import { applyRouter } from '../src/decision/StrategyRouter.js';
 import { evaluateExecutionQuality } from '../src/execution/ExecutionQuality.js';
 import { config } from '../src/config.js';
-import type { Signal, MarketContext } from '../src/agents/BaseAgent.js';
+import type { MarketContext } from '../src/agents/BaseAgent.js';
+import type { Signal } from '../src/types.js';
 
 const binance = new BinanceService();
 const builder = new MarketStateBuilder();

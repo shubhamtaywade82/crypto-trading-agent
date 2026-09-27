@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { isRouted, applyRouter } from '../src/decision/StrategyRouter.js';
 import type { Signal } from '../src/types.js';
-import type { MarketState, MarketRegime } from '../market/types.js';
+import type { MarketState, MarketRegime } from '../src/market/types.js';
 
 function fakeState(regime: MarketRegime): MarketState {
   return {

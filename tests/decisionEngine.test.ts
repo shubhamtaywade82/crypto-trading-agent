@@ -92,7 +92,7 @@ test('fusion blocks an unresolved long/short conflict', () => {
 
 test('fusion resolves a clear directional conflict deterministically', () => {
   const base = state();
-  const marketState = {
+  const marketState: MarketState = {
     ...base,
     regime: { ...base.regime, regime: 'TREND_UP', trendDirection: 'BULLISH' },
     htfStructure: { ...base.htfStructure, trend: 'BULLISH' },

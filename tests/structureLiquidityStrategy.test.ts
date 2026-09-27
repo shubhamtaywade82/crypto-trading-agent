@@ -92,6 +92,22 @@ function baseState(): MarketState {
   };
 }
 
+function historySweep(overrides: Partial<LiquiditySweep> = {}): LiquiditySweep {
+  return {
+    poolType: 'SWING_LOW',
+    direction: 'SELL_SIDE',
+    level: 98,
+    sweepPrice: 97,
+    close: 99,
+    index: 9,
+    time: 9 * BAR_MS,
+    confirmed: true,
+    id: `${9 * BAR_MS}|SELL_SIDE|98|SWING_LOW|${5 * BAR_MS}`,
+    poolSourceTimes: [5 * BAR_MS],
+    ...overrides,
+  };
+}
+
 test('builds a deterministic long setup from HTF trend, LTF BOS, prior sell-side sweep and opposing liquidity', () => {
   const state = baseState();
   const signal = buildStructureLiquiditySignal(state);
@@ -203,4 +219,119 @@ test('builds the symmetric short setup from a buy-side sweep and downside liquid
   assert.ok(signal.stopLoss! > signal.entry!);
   assert.equal(signal.takeProfit, 94);
   assert.match(signal.reason, /BUY_SIDE sweep/);
+});
+
+test('fires from the persistent sweep history when the legacy 12-bar window missed the sweep', () => {
+  const state = baseState();
+  state.liquidity.ltf = {
+    ...state.liquidity.ltf,
+    latestSweeps: [],
+    recentSweeps: [],
+    sweepHistory: [historySweep()],
+  };
+
+  const signal = buildStructureLiquiditySignal(state);
+
+  assert.ok(signal);
+  assert.equal(signal.type, 'OPEN_LONG');
+  // The stop anchors to the history event's sweepPrice: min(97, zone low 97.5) - 0.15.
+  assert.ok(Math.abs(signal.stopLoss! - 96.85) < 1e-9);
+  assert.equal(signal.takeProfit, 106);
+});
+
+test('rejects a history sweep older than the configured sequence window', () => {
+  const state = baseState();
+  state.liquidity.ltf = {
+    ...state.liquidity.ltf,
+    latestSweeps: [],
+    recentSweeps: [],
+    sweepHistory: [historySweep({ time: 3 * BAR_MS, index: 3 })],
+  };
+
+  assert.equal(
+    buildStructureLiquiditySignal(state, { ...DEFAULT_STRUCTURE_LIQUIDITY_OPTIONS, maxSweepAgeCandles: 6 }),
+    null,
+  );
+});
+
+test('ignores sweep-history events that postdate the confirming break', () => {
+  const state = baseState();
+  state.liquidity.ltf = {
+    ...state.liquidity.ltf,
+    latestSweeps: [],
+    recentSweeps: [],
+    sweepHistory: [historySweep({ time: BREAK_TIME + BAR_MS, index: 11 })],
+  };
+
+  assert.equal(buildStructureLiquiditySignal(state), null);
+});
+
+test('unions history and legacy windows: a newer legacy sweep still wins the trigger', () => {
+  const state = baseState();
+  state.liquidity.ltf = {
+    ...state.liquidity.ltf,
+    sweepHistory: [historySweep({ time: 8 * BAR_MS, index: 8, level: 97, sweepPrice: 96 })],
+  };
+  // recentSweeps keeps the original event at 9 * BAR_MS with sweepPrice 97.
+
+  const signal = buildStructureLiquiditySignal(state);
+
+  assert.ok(signal);
+  // The legacy event at 9 * BAR_MS is later than the history event at 8 * BAR_MS,
+  // so the stop anchors to its sweepPrice: min(97, 97.5) - 0.15 = 96.85, not 95.85.
+  assert.ok(Math.abs(signal.stopLoss! - 96.85) < 1e-9);
+});
+
+test('prefers the ledger history event when both windows describe the same candle', () => {
+  const state = baseState();
+  state.liquidity.ltf = {
+    ...state.liquidity.ltf,
+    sweepHistory: [historySweep({ level: 98.2, sweepPrice: 96.8 })],
+  };
+  // recentSweeps holds the same candle at level 98 / sweepPrice 97; time and
+  // index tie, so the stable sort must keep the history event first.
+
+  const signal = buildStructureLiquiditySignal(state);
+
+  assert.ok(signal);
+  // History sweepPrice drives the stop: min(96.8, 97.5) - 0.15 = 96.65.
+  assert.ok(Math.abs(signal.stopLoss! - 96.65) < 1e-9);
+});
+
+test('falls back to the legacy sweep window when the state carries no sweep history', () => {
+  const state = baseState();
+  delete state.liquidity.ltf.sweepHistory;
+
+  const signal = buildStructureLiquiditySignal(state);
+
+  assert.ok(signal);
+  assert.equal(signal.type, 'OPEN_LONG');
+  assert.equal(signal.takeProfit, 106);
+});
+
+test('skips liquidity pools the sweep ledger consumed and targets the nearest untaken pool', () => {
+  const state = baseState();
+  const untaken = state.liquidity.ltf.pools[0]; // SWING_HIGH at 106
+  const consumed: LiquidityPool = { ...untaken, price: 105, taken: true, sweptAt: 9 * BAR_MS };
+
+  // Contrast: without the ledger annotation the nearer pool at 105 wins (RR 1.59).
+  state.liquidity.ltf.pools = [{ ...consumed, taken: undefined, sweptAt: undefined }, untaken];
+  const legacyBehavior = buildStructureLiquiditySignal(state);
+  assert.ok(legacyBehavior);
+  assert.equal(legacyBehavior.takeProfit, 105);
+
+  // With the annotation the consumed pool is skipped and the target walks out to 106.
+  state.liquidity.ltf.pools = [consumed, untaken];
+  const signal = buildStructureLiquiditySignal(state);
+  assert.ok(signal);
+  assert.equal(signal.takeProfit, 106);
+});
+
+test('rejects the setup when every opposing liquidity pool is already taken', () => {
+  const state = baseState();
+  state.liquidity.ltf.pools = [
+    { ...state.liquidity.ltf.pools[0], taken: true, sweptAt: 9 * BAR_MS },
+  ];
+
+  assert.equal(buildStructureLiquiditySignal(state), null);
 });

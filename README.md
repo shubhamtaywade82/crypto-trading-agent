@@ -223,10 +223,11 @@ symbols or a minimum severity off, for example `{"notifications": {"signal": fal
 **Kill-switch.** Press `k` in the cockpit to halt new entries: every OPEN is refused with `kill-switch: manual`,
 whatever `RISK_ENGINE` says, and the risk row of the fleet panel shows `KILL-SWITCH`. Exits, stops and manual closes
 are never affected. Press `k` again to resume. The state is saved to `data/kill-switch.json`, so a restart does not
-resume trading by itself (press `k` or delete the file to clear it). A circuit-breaker HALTED/EMERGENCY (with
-`RISK_ENGINE=on`) refuses entries on its own and is announced as a SYSTEM alert; it does not touch the kill-switch.
+resume trading by itself (press `k` or delete the file to clear it). A circuit-breaker HALTED/EMERGENCY (`RISK_ENGINE`,
+on by default) refuses entries on its own and is announced as a SYSTEM alert; it does not touch the kill-switch.
+Set `RISK_ENGINE=off` to fall back to the legacy sizing path (no fee netting, exposure caps or circuit breaker).
 
-With `MODE=live` the venue keeps no per-strategy trade journal, so `RISK_ENGINE=on` cannot see realized losses there: the daily-loss and loss-streak limits stay inactive (only drawdown applies) and a warning is logged at start.
+With `MODE=live` (without `PAPER_EXCHANGE_URL`) the venue keeps no per-strategy trade journal, so the risk engine cannot see realized losses there: the daily-loss and loss-streak limits stay inactive (only drawdown applies) and a warning is logged at start.
 
 ---
 

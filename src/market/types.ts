@@ -31,6 +31,25 @@ export interface SwingPoint {
   type: 'HIGH' | 'LOW';
 }
 
+/**
+ * Invalidation region attached to a structure break: the span between the broken
+ * level and the protected swing. A close beyond the protected swing invalidates
+ * the structure thesis that produced the break.
+ */
+export interface ProtectionZone {
+  low: number;
+  high: number;
+  /** The structure level whose break created this zone. */
+  originLevel: number;
+  /** The protected swing price; a close beyond it invalidates the break. */
+  protectedLevel: number;
+  tested: boolean;
+  testedAt: number | null;
+  violated: boolean;
+  violatedAt: number | null;
+  violatedIndex: number | null;
+}
+
 export interface StructureBreak {
   type: 'BOS' | 'CHOCH';
   direction: 'BULLISH' | 'BEARISH';
@@ -38,6 +57,10 @@ export interface StructureBreak {
   index: number;
   time: number;
   distanceAtr: number;
+  /** Protected swing price as of the break candle (bullish: last swing low, bearish: last swing high). */
+  protectedLevel?: number;
+  /** Invalidation zone between the broken level and the protected swing, with post-break tracking. */
+  protectionZone?: ProtectionZone | null;
 }
 
 export interface StructureState {
@@ -48,6 +71,12 @@ export interface StructureState {
   lastBreak: StructureBreak | null;
   protectedHigh: SwingPoint | null;
   protectedLow: SwingPoint | null;
+  /**
+   * Full causal BOS/CHOCH event history over the analysed window (oldest first,
+   * capped). Core fields are append-stable: appending candles never rewrites a
+   * past event. `protectionZone` lifecycle flags only ever accumulate.
+   */
+  breaks?: StructureBreak[];
 }
 
 export interface LiquidityPool {
@@ -57,6 +86,10 @@ export interface LiquidityPool {
   strength: number;
   timeframe: Timeframe;
   sourceTimes: number[];
+  /** True once the replayed sweep ledger saw this exact pool swept. */
+  taken?: boolean;
+  /** openTime of the candle that swept the pool, when known. */
+  sweptAt?: number | null;
 }
 
 export interface LiquiditySweep {
@@ -68,6 +101,10 @@ export interface LiquiditySweep {
   index: number;
   time: number;
   confirmed: boolean;
+  /** Stable identity `time|direction|level|poolType` — present on sweep-history events. */
+  id?: string;
+  /** sourceTimes of the swept pool at sweep time — every entry predates the sweep candle. */
+  poolSourceTimes?: number[];
 }
 
 export interface LiquidityState {
@@ -77,6 +114,12 @@ export interface LiquidityState {
   latestSweeps: LiquiditySweep[];
   /** Recent confirmed sweeps, ordered chronologically, for sequence-based strategies. */
   recentSweeps: LiquiditySweep[];
+  /**
+   * Persistent sweep history replayed causally over the analysed window: pools
+   * form when their swings confirm, persist until swept, and every sweep is an
+   * immutable event (never rewritten when candles are appended).
+   */
+  sweepHistory?: LiquiditySweep[];
 }
 
 export interface PriceZone {
@@ -90,6 +133,38 @@ export interface PriceZone {
   touches: number;
   fresh: boolean;
   strength: number;
+}
+
+export type ZoneLifecycleState =
+  | 'FRESH'
+  | 'TESTED'
+  | 'MITIGATED'
+  | 'INVALIDATED'
+  | 'EXPIRED';
+
+/**
+ * A cause zone tracked through its lifecycle. Transitions are monotonic and
+ * append-stable: FRESH -> TESTED (first retest) -> MITIGATED (close past the
+ * midpoint after entering), with INVALIDATED (close through the far boundary)
+ * and EXPIRED (untouched past the age budget) as terminal states.
+ */
+export interface ZoneRecord extends PriceZone {
+  state: ZoneLifecycleState;
+  /** openTime of the candle that first retested the zone. */
+  testedAt: number | null;
+  /** openTime of the first candle that closed past the zone midpoint. */
+  mitigatedAt: number | null;
+  /** openTime of the candle whose close pierced the far boundary. */
+  invalidatedAt: number | null;
+  invalidatedIndex: number | null;
+  /** openTime of the candle on which the untouched zone aged out. */
+  expiredAt: number | null;
+  /** Candle index of the originating break. */
+  breakIndex: number;
+  /** openTime of the originating break candle; unique per timeframe. */
+  breakTime: number;
+  /** Bars elapsed between the break and the end of the analysed window. */
+  ageBars: number;
 }
 
 export interface RangePricing {
@@ -141,6 +216,12 @@ export interface MarketState {
   };
 
   zones: PriceZone[];
+  /**
+   * Cause zones from every break event in the window, tracked through their
+   * lifecycle (FRESH/TESTED/MITIGATED/INVALIDATED/EXPIRED). Keyed per record by
+   * `timeframe|breakTime`. Supersedes nothing — `zones` keeps its legacy shape.
+   */
+  zoneLedger?: ZoneRecord[];
   pricing: RangePricing;
   meanReversion: MeanReversionState;
   derivatives?: DerivativesSnapshot | null;

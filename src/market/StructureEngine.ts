@@ -1,4 +1,5 @@
 import type { Candle } from '../types.js';
+import { findStructureBreakEvents } from './StructureEventLog.js';
 import type { StructureBreak, StructureState, SwingPoint, Timeframe, TrendDirection } from './types.js';
 
 function isSwingHigh(candles: Candle[], index: number, strength: number): boolean {
@@ -100,6 +101,10 @@ export function analyzeStructure(
   const protectedLow =
     trend === 'BULLISH' ? lows.at(-1) ?? null : lows.slice(-2, -1)[0] ?? lows.at(-1) ?? null;
 
+  // Full causal BOS/CHOCH history with protection zones. `lastBreak` keeps its
+  // exact per-snapshot semantics (only a break on the very last candle).
+  const breaks = findStructureBreakEvents(candles, atrValue, strength);
+
   return {
     timeframe,
     trend,
@@ -108,5 +113,6 @@ export function analyzeStructure(
     lastBreak: findLatestBreak(candles, trend, highs, lows, atrValue),
     protectedHigh,
     protectedLow,
+    breaks,
   };
 }

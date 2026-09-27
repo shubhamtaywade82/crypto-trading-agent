@@ -1,4 +1,5 @@
 import type { Candle } from '../types.js';
+import { buildSweepLedger, markPoolsFromLedger } from './SweepLedger.js';
 import type { LiquidityPool, LiquidityState, LiquiditySweep, StructureState, Timeframe } from './types.js';
 
 const SWEEP_LOOKBACK_CANDLES = 12;
@@ -133,10 +134,16 @@ export function detectLiquidity(
     ? []
     : orderedSweeps.filter((sweep) => sweep.time === latestTime);
 
+  // Persistent, causally replayed sweep history + pool swept-state. The legacy
+  // 12-bar recentSweeps/latestSweeps outputs above are untouched.
+  const ledger = buildSweepLedger(candles, atrValue);
+  markPoolsFromLedger(pools, ledger);
+
   return {
     timeframe,
     pools: pools.slice(-40),
     latestSweeps: latestSweeps.slice(-10),
     recentSweeps: orderedSweeps,
+    sweepHistory: ledger.sweepHistory,
   };
 }

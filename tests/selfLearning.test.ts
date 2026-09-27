@@ -158,3 +158,32 @@ test('AgentLedger: resolves directional and neutral forecasts from future marks'
   assert.equal(resolved.find((r) => r.actorId === 'SKEPTIC-ANALYST')?.correct, true);
   cleanup();
 });
+
+test('AgentLedger: null path keeps the ledger in memory without touching disk', () => {
+  const ledger = new AgentLedger(null);
+  ledger.record('STRUCT-LIQ-η' as any, true, 2.0, { symbol: 'BTCUSDT' });
+  ledger.record('STRUCT-LIQ-η' as any, true, 1.5, { symbol: 'ETHUSDT' });
+
+  const stats = ledger.get('STRUCT-LIQ-η' as any);
+  assert.equal(stats.trades, 2);
+  assert.equal(stats.wins, 2);
+  assert.ok(stats.totalR > 0);
+
+  // A second in-memory ledger starts cold: one replay never trains another
+  const fresh = new AgentLedger(null);
+  assert.equal(fresh.get('STRUCT-LIQ-η' as any).trades, 0);
+  assert.ok(!fresh.hasProcessedTrade('any-key'));
+});
+
+test('AgentLedger: in-memory mode still dedupes processed trades within the instance', () => {
+  const ledger = new AgentLedger(null);
+  const recorder = new TradeOutcomeRecorder(ledger);
+  const trade = {
+    symbol: 'BTCUSDT', strategy: 'STRUCT-LIQ-η' as any, side: 'LONG' as any,
+    entry: 100, exit: 103, qty: 1, pnl: 3, reason: 'TAKE PROFIT' as any,
+    closedAt: 5_000_000, initialRisk: 1.5,
+  };
+  assert.equal(recorder.process([trade]).length, 1);
+  assert.equal(recorder.process([trade]).length, 0, 'same trade must not grade twice');
+  assert.equal(ledger.get('STRUCT-LIQ-η' as any).trades, 1);
+});

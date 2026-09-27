@@ -23,6 +23,7 @@ import { config, LOOP_INTERVAL_MS } from '../config.js';
 import type { AdaptiveSuperTrendBar } from '../binance/adaptiveSuperTrend.js';
 import { MarketStateBuilder } from '../market/MarketStateBuilder.js';
 import { runCandidateFlow, decisionEvidence, buildDecisionRecord } from '../decision/CandidateFlow.js';
+import { tunedStructureLiquidityOptions, DEFAULT_STRUCTURE_LIQUIDITY_OPTIONS } from '../decision/StructureLiquidityStrategy.js';
 import { DecisionJournal } from '../decision/DecisionJournal.js';
 import { evaluateExecutionQuality } from '../execution/ExecutionQuality.js';
 import { AgentLedger } from '../learning/AgentLedger.js';
@@ -39,7 +40,13 @@ export class Orchestrator extends EventEmitter {
   private marketStateBuilder = new MarketStateBuilder();
   private adaptive = new AdaptiveSuperTrendAgent(this.binance);
   private structureTrend = new StructureTrendAgent(this.binance);
-  private structLiq = new StructureLiquidityAgent(this.binance);
+  private structLiq = new StructureLiquidityAgent(
+    this.binance,
+    tunedStructureLiquidityOptions({
+      maxSweepAgeCandles: config.structLiq.maxSweepAgeCandles,
+      minimumRewardRisk: config.structLiq.minimumRewardRisk,
+    }),
+  );
   private meanRevert = new MeanReversionAgent(this.binance);
   private crowding = new CrowdingAgent(this.binance);
   private agents: BaseAgent[] = [
@@ -83,6 +90,10 @@ export class Orchestrator extends EventEmitter {
     if (dropped.length) this.log('SYSTEM', `Dropped ${dropped.length} saved position(s) outside SYMBOLS: ${dropped.join(', ')}`, 'warn');
     if (config.mode === 'live') this.log('SYSTEM', `${this.adaptive.id} disabled: dynamic exits are paper-only`, 'warn');
     if (!config.structLiq.enabled) this.log('SYSTEM', `${this.structLiq.id} disabled by STRUCT_LIQ=off`, 'warn');
+    else if (
+      config.structLiq.maxSweepAgeCandles !== DEFAULT_STRUCTURE_LIQUIDITY_OPTIONS.maxSweepAgeCandles
+      || config.structLiq.minimumRewardRisk !== DEFAULT_STRUCTURE_LIQUIDITY_OPTIONS.minimumRewardRisk
+    ) this.log('SYSTEM', `${this.structLiq.id} tuned: maxSweepAgeCandles=${config.structLiq.maxSweepAgeCandles}, minimumRewardRisk=${config.structLiq.minimumRewardRisk}`, 'info');
     if (config.mode === 'paper' && config.paperExchange) this.log('SYSTEM', `Paper trading routed through ${config.paperExchange.url} (account ${config.paperExchange.accountId})`, 'info');
     const runLoop = singleFlight(() => this.loop().catch((err: Error) => this.log('SYSTEM', `Loop crashed: ${err.message}`, 'error')));
     this.binance.loadSymbolRules(config.symbols)

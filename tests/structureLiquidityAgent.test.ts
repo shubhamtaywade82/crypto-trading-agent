@@ -5,6 +5,7 @@ import type { LiquidityPool, LiquiditySweep, MarketState, PriceZone } from '../s
 import type { Candle, Signal } from '../src/types.js';
 import { MarketStateBuilder } from '../src/market/MarketStateBuilder.js';
 import { StructureLiquidityAgent } from '../src/agents/StructureLiquidityAgent.js';
+import { DEFAULT_STRUCTURE_LIQUIDITY_OPTIONS } from '../src/decision/StructureLiquidityStrategy.js';
 import { isRouted } from '../src/decision/StrategyRouter.js';
 import { runCandidateFlow } from '../src/decision/CandidateFlow.js';
 import type { MarketContext } from '../src/agents/BaseAgent.js';
@@ -25,7 +26,7 @@ function candle(index: number, close = 100): Candle {
 }
 
 /** The qualifying long setup from the strategy tests, built through the real builder. */
-function qualifyingState(): MarketState {
+function qualifyingState(overrides: { sweepTime?: number; targetPrice?: number } = {}): MarketState {
   const candles = Array.from({ length: 300 }, (_, i) => candle(i, 90 + i * 0.05));
   const base = new MarketStateBuilder().build({
     symbol: 'BTCUSDT',
@@ -41,13 +42,13 @@ function qualifyingState(): MarketState {
     sweepPrice: 97,
     close: 99,
     index: 9,
-    time: 9 * BAR_MS,
+    time: overrides.sweepTime ?? 9 * BAR_MS,
     confirmed: true,
   };
 
   const target: LiquidityPool = {
     type: 'SWING_HIGH',
-    price: 106,
+    price: overrides.targetPrice ?? 106,
     tolerance: 0.2,
     strength: 0.8,
     timeframe: '1h',
@@ -216,4 +217,36 @@ test('fusion drops the weaker opposing candidate and keeps the STRUCT-LIQ setup'
   assert.equal(flow.signals.length, 1);
   assert.equal(flow.signals[0].agent, 'STRUCT-LIQ-η');
   assert.equal(flow.fusionFiltered, 1);
+});
+
+test('relaxed sweep-age options let the agent fire on a setup the defaults reject', async () => {
+  // Sweep 7 candles before the break: outside the default 6-candle window, inside 12.
+  const agedSweep = qualifyingState({ sweepTime: 3 * BAR_MS });
+
+  const defaults = new StructureLiquidityAgent(dummyService);
+  assert.equal((await defaults.run(context(agedSweep))).length, 0, 'default window must reject a 7-candle-old sweep');
+
+  const relaxed = new StructureLiquidityAgent(dummyService, {
+    ...DEFAULT_STRUCTURE_LIQUIDITY_OPTIONS,
+    maxSweepAgeCandles: 12,
+  });
+  const signals = await relaxed.run(context(agedSweep));
+  assert.equal(signals.length, 1);
+  assert.equal(signals[0].agent, 'STRUCT-LIQ-η');
+});
+
+test('relaxed reward-risk options let the agent fire on a thinner target the defaults reject', async () => {
+  // Target 103 against a 3.15 risk unit: RR = 0.95 — below the default 1.5 floor, above 0.8.
+  const thinTarget = qualifyingState({ targetPrice: 103 });
+
+  const defaults = new StructureLiquidityAgent(dummyService);
+  assert.equal((await defaults.run(context(thinTarget))).length, 0, 'default floor must reject a sub-1.5R target');
+
+  const relaxed = new StructureLiquidityAgent(dummyService, {
+    ...DEFAULT_STRUCTURE_LIQUIDITY_OPTIONS,
+    minimumRewardRisk: 0.8,
+  });
+  const signals = await relaxed.run(context(thinTarget));
+  assert.equal(signals.length, 1);
+  assert.ok(signals[0].takeProfit !== undefined && signals[0].takeProfit! > signals[0].entry!);
 });

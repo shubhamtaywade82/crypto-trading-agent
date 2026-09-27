@@ -51,6 +51,29 @@ research slices by strategy, regime, symbol and evidence bucket (does a high set
 more?). Pass `--decisions data/backtest-decisions.jsonl` to keep the decision journal produced by the run —
 every decision carries the evidence it was taken on and, once closed, its realized outcome.
 
+The replay also runs the **learning loop** the orchestrator runs each cycle: closed trades grade into the
+per-agent stats of an in-memory agent ledger, and collected signals are confidence-adjusted from those
+stats exactly like the live `collectSignals` path. The ledger is never written to disk, so one replay never
+trains another (or the live bot); set `learning: false` in the replay config to A/B against the pre-learning
+behaviour. The run's final per-agent stats (trades graded, wins, total R) come back on
+`ReplayResult.agentStats`.
+
+### Parameter sweeps
+
+```bash
+npm run sweep:struct-liq -- --symbols BTCUSDT,ETHUSDT --days 45
+```
+
+A parameter-sensitivity harness for the STRUCT-LIQ setup (`src/backtesting/StructLiqSweep.ts`): it
+rebuilds the MarketState history with the same no-lookahead discipline as the replay engine and evaluates
+the setup over a grid of `maxSweepAgeCandles` x `minimumRewardRisk` values, reporting distinct setups
+(what cooldowns would turn into trades), emissions, and each cell's delta versus the default thresholds.
+Pass `--fleet 6:1.5,24:1.0` to also run full fleet replays at chosen combos and see which fires survive
+routing, fusion, risk and execution. A 45-day BTC+ETH sweep answered the firing-rate question directly:
+the sweep-age window showed **zero** sensitivity (6 -> 96 candles admitted no new setups at any RR level)
+while the reward-risk floor is the binding constraint (1.5 -> 1.0 doubles, -> 0.8 triples the setups;
+removing it entirely admits 12x — the diagnostic ceiling of every other gate combined).
+
 See `src/backtesting/` and `tests/replayService.test.ts` for the engine itself.
 
 ---
@@ -100,6 +123,9 @@ was fixed.
 | `MAX_DRAWDOWN_PCT` | `5` | **Kill-switch** (issue #10): once drawdown from session peak exceeds this, all OPEN signals are rejected until recovery |
 | `MIN_LIQ_BUFFER_ATR` | `2` | Minimum SL distance as a multiple of ATR(14) |
 | `SYMBOLS` | `BTCUSDT,ETHUSDT,SOLUSDT,AVAXUSDT` | Universe |
+| `STRUCT_LIQ` | `on` | `off` removes the STRUCT-LIQ-η agent from the fleet (shown paused in the cockpit) |
+| `STRUCT_LIQ_MAX_SWEEP_AGE_CANDLES` | `6` | How old (15m candles) the STRUCT-LIQ trigger sweep may be |
+| `STRUCT_LIQ_MIN_REWARD_RISK` | `1.5` | Minimum reward:risk the STRUCT-LIQ target liquidity must offer |
 | `AUDIT` / `ALERTS` | `off` | Audit trail and Telegram alerts, see [Ops](#ops-audit-trail-telegram-alerts-kill-switch) |
 | `PAPER_EXCHANGE_URL` | (unset) | When set in `paper` mode, routes through the remote Rails broker (`http://127.0.0.1:3100`) |
 | `PAPER_EXCHANGE_ACCOUNT_ID` | (none) | Account for the remote broker; **required** when `PAPER_EXCHANGE_URL` is set in `paper` mode (startup fails without it); `.env.example` suggests `crypto-agent` |
@@ -210,7 +236,7 @@ The council never creates price levels, sizes positions or bypasses `RiskAgent`,
 
 `LLM_COUNCIL_AUTOTRADE` is also on by default (requires `LLM_COUNCIL=on`): a chair `TRADE` verdict is converted into a real `Signal` — but only when it targets a setup scenario the deterministic `SetupEngine` has *itself* already confirmed `TRIGGERED`, and only above `LLM_COUNCIL_MIN_PROBABILITY` (default 0.65). The signal's entry, stop loss and take-profit are always the scenario's own deterministic values; the LLM selects a scenario, it never invents a price. `WATCH`/`NO_TRADE` verdicts and verdicts on a `FORMING`/`ARMED` scenario are never traded. Because the council runs detached from the tick loop (to keep local-LLM latency off the trading loop), an approved verdict is queued and picked up by the risk gate on the next cycle, dropped after 5 minutes if unconsumed. From there it is one more `Signal` with agent id `AI-COUNCIL-κ`: it still goes through `RiskAgent.gate()` (mandatory stop loss, position sizing, drawdown kill-switch), execution-quality checks and the same Telegram/audit notices as every other agent's signal. Set `LLM_COUNCIL_AUTOTRADE=off` to keep the council advisory-only (it still runs and still logs every verdict) without touching `LLM_COUNCIL`.
 
-The learning ledger is persistent and idempotent. Closed trades update per-agent realized-R statistics, with symbol-specific history preferred after enough observations. Closed-trade keys are persisted so restarting the process cannot train twice on the same trade. Persona and chair forecasts are also persisted as prediction episodes and resolved later against live marks at their stated horizons using an adaptive volatility threshold. Resolution records directional correctness and a Brier score for calibration.
+The learning ledger is persistent and idempotent. Closed trades update per-agent realized-R statistics, with symbol-specific history preferred after enough observations. Closed-trade keys are persisted so restarting the process cannot train twice on the same trade. Persona and chair forecasts are also persisted as prediction episodes and resolved later against live marks at their stated horizons using an adaptive volatility threshold. Resolution records directional correctness and a Brier score for calibration. The replay engine runs the same per-agent stats loop against an in-memory ledger (never persisted), so backtests exercise — and report — the same learned confidence adjustment the live fleet would apply.
 
 This is adaptive self-learning, not live fine-tuning of neural-network weights. The learned state influences deterministic signal-confidence adjustment and is fed back to persona prompts as historical memory. It does not mutate code or bypass the risk boundary automatically; candidate policy changes should still be validated through replay/backtesting before production.
 
@@ -278,13 +304,14 @@ src/
     positionSizer.ts          # Decimal-precise sizing
     riskEngine.ts             # deterministic portfolio checks
   backtesting/
-    ReplayService.ts          # full-system replay: same agents/fusion/risk as the live loop
+    ReplayService.ts          # full-system replay: same agents/fusion/risk/learning as the live loop
     MarketDataFeed.ts         # no-lookahead historical feed
     ExecutionSimulator.ts     # spread/slippage/fee fills, conservative intrabar exits
     PortfolioSimulator.ts     # multi-symbol positions, funding, liquidation, MAE/MFE
     BacktestMetrics.ts       # expectancy/Sharpe/Sortino/CVaR + by-strategy/regime/evidence slices
+    StructLiqSweep.ts         # STRUCT-LIQ parameter-sensitivity harness (age x reward-risk grid)
   learning/
-    AgentLedger.ts           # per-agent rolling stats
+    AgentLedger.ts           # per-agent rolling stats (disk-backed; null path = in-memory, e.g. replay)
     TradeOutcomeRecorder.ts  # grades closed trades against their stored decision evidence
   ui/                        # Ink TUI
   config.ts                  # zod-validated env config
@@ -319,6 +346,13 @@ behavior. The strategy stays deterministic and analysis-only — the router (dir
 only), signal fusion (it competes with the other market-state strategies per symbol), the risk
 gate and the executor remain authoritative. Set `STRUCT_LIQ=off` to remove the agent from the
 fleet; the cockpit then shows it paused.
+
+Two thresholds are env-tunable without code changes — `STRUCT_LIQ_MAX_SWEEP_AGE_CANDLES` (default 6)
+and `STRUCT_LIQ_MIN_REWARD_RISK` (default 1.5) — wired identically into the live fleet and the replay
+fleet. The parameter sweep above measured their sensitivity on real data: the age window is not the
+binding gate (the trigger sweep is fresh whenever the other gates pass), while the RR floor is — lower
+it to admit thinner targets at a known cost in expectancy per trade. The startup log names the active
+tuning whenever it deviates from the defaults.
 
 ---
 

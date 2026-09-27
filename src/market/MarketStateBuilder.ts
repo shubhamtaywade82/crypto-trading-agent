@@ -3,6 +3,7 @@ import { detectLiquidity } from './LiquidityEngine.js';
 import { classifyRegime, buildTimeframeState } from './RegimeEngine.js';
 import { calculateCrowding } from './CrowdingEngine.js';
 import { analyzeStructure } from './StructureEngine.js';
+import { buildZoneLedger } from './ZoneLedger.js';
 import { closedCandles, resampleCandles } from './TimeframeEngine.js';
 import { detectCauseZone } from './ZoneEngine.js';
 import type {
@@ -114,6 +115,11 @@ export class MarketStateBuilder {
       ...detectCauseZone('15m', tf15, ltfStructure.lastBreak, timeframes['15m'].atr14 ?? 0),
     ];
 
+    const zoneLedger = [
+      ...buildZoneLedger('1h', tf1h, timeframes['1h'].atr14 ?? 0, htfStructure.breaks ?? []),
+      ...buildZoneLedger('15m', tf15, timeframes['15m'].atr14 ?? 0, ltfStructure.breaks ?? []),
+    ];
+
     const derivatives = input.derivatives ?? null;
     const state: MarketState = {
       version: 1,
@@ -127,6 +133,7 @@ export class MarketStateBuilder {
       ltfStructure,
       liquidity,
       zones,
+      zoneLedger,
       pricing: rangePricing(tf1h),
       meanReversion: meanReversion(tf15),
       derivatives,

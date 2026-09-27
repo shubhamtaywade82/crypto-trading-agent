@@ -161,13 +161,13 @@ test('the token never appears in any logged string', async () => {
   assert.ok(logged.every((line) => !line.includes(TOKEN)));
 });
 
-test('sendAlert routes TRADE and SIGNAL to the trading bot and everything else to the alert bot', async () => {
+test('sendAlert routes TRADE, SIGNAL and SETUP to the trading bot and everything else to the alert bot', async () => {
   const env = { ...CONFIGURED, TELEGRAM_TRADING_BOT_TOKEN: 'tr', TELEGRAM_ALERTBOT_BOT_TOKEN: 'al' };
   const { calls, fetchImpl } = recorder();
-  for (const cls of ['TRADE', 'SIGNAL', 'SYSTEM', 'MARKET', 'RESEARCH'] as const) {
+  for (const cls of ['TRADE', 'SIGNAL', 'SETUP', 'SYSTEM', 'MARKET', 'RESEARCH'] as const) {
     await sendAlert(alertOf({ class: cls }), 'html', { fetchImpl, env });
   }
-  assert.deepEqual(calls.map((call) => call.url.match(/bot([^/]+)\//)?.[1]), ['tr', 'tr', 'al', 'al', 'al']);
+  assert.deepEqual(calls.map((call) => call.url.match(/bot([^/]+)\//)?.[1]), ['tr', 'tr', 'tr', 'al', 'al', 'al']);
 });
 
 test('sendAlert is silent only below IMPORTANT severity', async () => {

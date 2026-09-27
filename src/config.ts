@@ -12,6 +12,13 @@ export const EnvSchema = z.object({
   BINANCE_API_SECRET: z.string().default(''),
   OLLAMA_HOST: z.string().default('http://127.0.0.1:11434'),
   OLLAMA_MODEL: z.string().default('gemma4:31b'),
+  OLLAMA_TECHNICAL_MODEL: z.string().optional(),
+  OLLAMA_LIQUIDITY_MODEL: z.string().optional(),
+  OLLAMA_DERIVATIVES_MODEL: z.string().optional(),
+  OLLAMA_REGIME_MODEL: z.string().optional(),
+  OLLAMA_SKEPTIC_MODEL: z.string().optional(),
+  OLLAMA_CHAIR_MODEL: z.string().optional(),
+  LLM_COUNCIL: z.enum(['off', 'on']).default('off'),
   OLLAMA_API_KEY_1: z.string().optional(),
   OLLAMA_API_KEY_2: z.string().optional(),
   OLLAMA_API_KEY_3: z.string().optional(),
@@ -101,6 +108,14 @@ export const config = {
   ollama: {
     host: env.OLLAMA_HOST,
     model: env.OLLAMA_MODEL,
+    models: {
+      technical: env.OLLAMA_TECHNICAL_MODEL?.trim() || env.OLLAMA_MODEL,
+      liquidity: env.OLLAMA_LIQUIDITY_MODEL?.trim() || env.OLLAMA_MODEL,
+      derivatives: env.OLLAMA_DERIVATIVES_MODEL?.trim() || env.OLLAMA_MODEL,
+      regime: env.OLLAMA_REGIME_MODEL?.trim() || env.OLLAMA_MODEL,
+      skeptic: env.OLLAMA_SKEPTIC_MODEL?.trim() || env.OLLAMA_MODEL,
+      chair: env.OLLAMA_CHAIR_MODEL?.trim() || env.OLLAMA_MODEL,
+    },
     apiKeys: [
       env.OLLAMA_API_KEY_1,
       env.OLLAMA_API_KEY_2,
@@ -111,6 +126,7 @@ export const config = {
   },
   risk: riskFromEnv(env),
   riskEngine: env.RISK_ENGINE,
+  llmCouncil: { enabled: env.LLM_COUNCIL === 'on' },
   marketDataV2: {
     enabled: true,
     candleTtlMs: {

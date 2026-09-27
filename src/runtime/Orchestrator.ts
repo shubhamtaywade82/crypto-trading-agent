@@ -26,6 +26,8 @@ import { applyRouter } from '../decision/StrategyRouter.js';
 import { AgentLedger } from '../learning/AgentLedger.js';
 import { confidenceMultiplier } from '../learning/ConfidenceAdjuster.js';
 import { TradeOutcomeRecorder } from '../learning/TradeOutcomeRecorder.js';
+import { buildSetupMap } from '../decision/SetupEngine.js';
+import { TradingCouncil } from '../llm/TradingCouncil.js';
 
 type CycleContext = MarketContext & { tickers: Record<string, MarketPriceInfo>; nextFundingTime: number };
 
@@ -59,6 +61,7 @@ export class Orchestrator extends EventEmitter {
   private lastInitError: string | null = null;
   private ledger = new AgentLedger('data/agent-ledger.json');
   private recorder = new TradeOutcomeRecorder(this.ledger);
+  private council = new TradingCouncil(this.advisor, this.ledger);
 
   start() {
     this.log('SYSTEM', `Orchestrator started in ${config.mode.toUpperCase()} mode`, 'info');
@@ -78,7 +81,6 @@ export class Orchestrator extends EventEmitter {
   stop() { if (this.timer) clearInterval(this.timer); this.stopWs?.(); this.stopWs = null; this.hooks.stop(); }
   flushOnShutdown(): void { this.binance.flushPaperEngine(); }
   toggleKillSwitch(): void { flipKillSwitch(this.killSwitch, this.hooks, (message) => this.log('SYSTEM', message, 'warn')); }
-
   private handleRealtimeTick(sym: string, price: number): void {
     this.livePrices[sym] = price;
     this.putTicker(sym, { ...(this.liveTickers[sym] ?? { changePct: 0 }), price });
@@ -90,7 +92,6 @@ export class Orchestrator extends EventEmitter {
     }, 60);
   }
   private putTicker(sym: string, info: MarketPriceInfo): void { this.liveTickers[sym.replace('USDT', '')] = this.liveTickers[sym] = info; }
-
   private async flushRealtimeTick(): Promise<void> {
     this.logExits();
     if (config.mode !== 'paper' && !this.binance.hasVenueData()) return;
@@ -109,7 +110,6 @@ export class Orchestrator extends EventEmitter {
     agent.status = agent.status === 'PAUSED' ? 'RUNNING' : 'PAUSED';
     this.log('SYSTEM', `${id} ${agent.status}`, 'info');
   }
-
   async askAdvisor(question = 'Assess current portfolio risk and position exposures'): Promise<void> {
     if (!this.binance.hasVenueData()) return this.log('SYSTEM', 'Advisor unavailable: the venue has not returned account data yet', 'warn');
     const positions = await this.binance.getPositions(false);
@@ -117,7 +117,6 @@ export class Orchestrator extends EventEmitter {
     const entry = await this.advisor.ask(question, { positions, equity: account.equity });
     this.emit('log', entry);
   }
-
   private async loop() {
     try {
       this.emit('sync', true);
@@ -135,6 +134,9 @@ export class Orchestrator extends EventEmitter {
     const ctx = await this.gatherContext();
     await this.guardEmergencyDrawdown(ctx);
     for (const { message, isFailure } of await this.binance.settleFunding(ctx)) this.log('SYSTEM', message, isFailure ? 'error' : 'info');
+    for (const resolved of this.ledger.resolvePredictions(ctx.marks)) {
+      this.log('SYSTEM', 'LEARNING ' + resolved.actorId + ' ' + resolved.symbol + ': ' + (resolved.correct ? 'correct' : 'incorrect') + ' after ' + resolved.horizonMinutes + 'm (' + resolved.realizedReturnPct?.toFixed(2) + '%)', 'info');
+    }
     for (const g of this.recorder.process(this.binance.getTrades())) this.logGrade(g);
     const signals = await this.collectSignals(ctx);
     await this.processSignals(signals, ctx);
@@ -142,7 +144,6 @@ export class Orchestrator extends EventEmitter {
     await this.consultAdvisor(signals, ctx.positions ?? []);
     await this.emitState(ctx);
   }
-
   private async guardEmergencyDrawdown(ctx: CycleContext): Promise<void> {
     const maxLoss = ctx.equity * (config.risk.maxDrawdownPct / 100);
     for (const pos of ctx.positions ?? []) {
@@ -160,7 +161,6 @@ export class Orchestrator extends EventEmitter {
     try { await this.binance.initVenue(); this.lastInitError = null; }
     catch (err) { if (errorText(err) !== this.lastInitError) this.log('SYSTEM', `Venue init failed: ${errorText(err)}`, 'error'); this.lastInitError = errorText(err); }
   }
-
   private noteVenue(): void {
     const venue = this.binance.getVenueStatus();
     this.emit('state', { venue: venueInfo(venue, config.mode), wsStatus: this.binance.getWsStatus() } satisfies Partial<AppState>);
@@ -174,8 +174,8 @@ export class Orchestrator extends EventEmitter {
     const raw: Signal[] = [];
     for (const agent of this.agents) {
       const out = await agent.run(ctx);
-      const mult = confidenceMultiplier(agent.id as any, this.ledger);
       for (const s of out) {
+        const mult = confidenceMultiplier(agent.id as any, this.ledger, s.symbol);
         const adjusted = { ...s, confidence: Math.min(1, s.confidence * mult) };
         raw.push(adjusted);
         this.log(s.agent, `${s.symbol}: ${s.reason} (conf ${(adjusted.confidence * 100).toFixed(0)}%${mult !== 1 ? ` adj×${mult.toFixed(2)}` : ''})`, 'info');
@@ -243,6 +243,17 @@ export class Orchestrator extends EventEmitter {
   }
   private logExits(): void { for (const line of this.binance.markAll(this.livePrices)) this.log('SYSTEM', line, 'warn'); this.hooks.onExit(this.binance.getTrades()); }
   private logFailure(what: string, err: unknown): void { this.log('SYSTEM', `${what}: ${errorText(err)}`, isRefusal(err) ? 'warn' : 'error'); }
+  private async consultCouncil(state: import('../market/types.js').MarketState, setup: import('../decision/SetupTypes.js').SetupMap): Promise<void> {
+    try {
+      const result = await this.council.analyze(state, setup);
+      if (!result) return;
+      const votes = result.opinions.map((opinion) => opinion.persona + '=' + opinion.stance).join(' ');
+      this.log('SYSTEM', 'AI-COUNCIL ' + state.symbol + ': ' + votes + ' | CHAIR=' + result.chair.action + '/' + result.chair.stance + ' ' + result.chair.rationale, 'info');
+    } catch (err: unknown) {
+      this.logFailure('AI council failed', err);
+    }
+  }
+
   private async consultAdvisor(signals: Signal[], positions: Position[]): Promise<void> {
     if (!signals.length) return;
     const advice = await this.advisor.advise(positions, signals.map((s) => s.reason));
@@ -261,6 +272,11 @@ export class Orchestrator extends EventEmitter {
       mark: market.marks[symbol] ?? this.livePrices[symbol] ?? 0,
       fundingRate: market.funding[symbol] ?? 0,
     })));
+    for (const state of Object.values(marketState)) {
+      const setup = buildSetupMap(state);
+      this.hooks.onSetup(setup);
+      void this.consultCouncil(state, setup);
+    }
     return { ...market, spot: this.livePrices, equity: account.equity, positions, marketState, performance: this.ops.build(this.binance.getTrades(), account) };
   }
 

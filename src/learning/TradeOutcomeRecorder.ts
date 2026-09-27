@@ -1,43 +1,43 @@
-import type { TradeRecord, AgentId } from '../types.js';
+import type { TradeRecord } from '../types.js';
 import { gradeTrade } from './TradeGrader.js';
 import type { AgentLedger } from './AgentLedger.js';
 
 /**
- * Detects newly closed trades each cycle, grades them, and updates the ledger.
- * Stateless beyond the seen-trade set — no I/O except through AgentLedger.
+ * Detects newly closed trades, grades them and updates the learning ledger.
+ * Processed-trade keys are persisted so a restart cannot train twice on the same exit.
  */
 export class TradeOutcomeRecorder {
-  // Keyed on `${symbol}:${strategy}:${closedAt}` — survives restarts via AgentLedger persistence
-  private seen = new Set<string>();
-
   constructor(private readonly ledger: AgentLedger) {}
 
-  /** Call once per cycle with the full trade journal. Only new exits are processed. */
   process(trades: TradeRecord[]): GradedTrade[] {
     const graded: GradedTrade[] = [];
     for (const trade of trades) {
-      const key = `${trade.symbol}:${trade.strategy}:${trade.closedAt}`;
-      if (this.seen.has(key)) continue;
-      this.seen.add(key);
+      const key = tradeKey(trade);
+      if (this.ledger.hasProcessedTrade(key)) continue;
       const result = this.grade(trade);
+      this.ledger.markProcessedTrade(key);
       if (result) graded.push(result);
     }
     return graded;
   }
 
-  private grade(trade: TradeRecord): GradedTrade | null {
+  private grade(trade: TradeRecord): GradedTrade {
     const rMultiple = computeR(trade);
     const win = trade.pnl > 0;
-    this.ledger.record(trade.strategy, win, rMultiple);
+    this.ledger.record(trade.strategy, win, rMultiple, { symbol: trade.symbol, at: trade.closedAt });
     const grade = gradeTrade({
       intent: {
         symbol: trade.symbol,
         side: trade.side === 'LONG' ? 'LONG' : 'SHORT',
         sourceAgent: trade.strategy,
-        evidenceScore: 50, // base — no intent stored yet, neutral
+        evidenceScore: 50,
         entry: trade.entry,
-        stopLoss: trade.entry - (trade.initialRisk ?? trade.entry * 0.01),
-        takeProfit: trade.entry + (trade.initialRisk ?? trade.entry * 0.01) * 2,
+        stopLoss: trade.side === 'LONG'
+          ? trade.entry - (trade.initialRisk ?? trade.entry * 0.01)
+          : trade.entry + (trade.initialRisk ?? trade.entry * 0.01),
+        takeProfit: trade.side === 'LONG'
+          ? trade.entry + (trade.initialRisk ?? trade.entry * 0.01) * 2
+          : trade.entry - (trade.initialRisk ?? trade.entry * 0.01) * 2,
         reasons: [trade.reason],
       },
       entryPrice: trade.entry,
@@ -55,6 +55,17 @@ export interface GradedTrade {
   score: number;
   grade: string;
   commentary: string;
+}
+
+function tradeKey(trade: TradeRecord): string {
+  return [
+    trade.symbol,
+    trade.strategy,
+    trade.side,
+    trade.entry,
+    trade.qty,
+    trade.closedAt,
+  ].join(':');
 }
 
 function computeR(trade: TradeRecord): number {

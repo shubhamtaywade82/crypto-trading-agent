@@ -140,8 +140,28 @@ has no `decisionId` on its exit.
 | --- | --- | --- |
 | TRADE (trading bot) | position opened, scale-in, flip; exit with reason, gross PnL and R (R needs the position's initial stop) | fill: SIGNAL; exit: IMPORTANT; liquidation: CRITICAL |
 | SIGNAL (trading bot) | entry accepted; entry refused (risk gate or executor); entry vetoed by the advisor | accepted: SIGNAL; refused/vetoed: WATCH (silent) |
+| SETUP (trading bot) | deterministic multi-scenario flow map: regime, structure, liquidity, crowding, entry zones, SL/TP, trigger, invalidation, flow hypothesis and expected move window | triggered: SIGNAL; developing: WATCH (silent) |
 | SYSTEM (alert bot) | venue degraded / down / recovered, websocket drop after it was up, loop crash, circuit-breaker change, kill-switch on/off | down, crash, HALTED/EMERGENCY, kill-switch: CRITICAL; others IMPORTANT (websocket reconnecting: WATCH) |
 | RESEARCH (alert bot) | daily digest at 00:05 UTC for the previous UTC day: PnL, trades, win rate, profit factor, best/worst, drawdown, refusals by reason, per-strategy results (gross realized PnL; a dash where a ratio is undefined) | WATCH (silent) |
+
+### Institutional-style setup maps
+
+The alert pipeline can also publish one deterministic `SETUP` map per symbol instead of relying only on entry/refusal cards. A setup map summarizes the current directional regime, HTF/LTF structure, liquidity, crowding and derivatives context, then presents up to three executable hypotheses (liquidity sweep, pullback/retest, breakout/retest) with entry zone, invalidation, stop, targets, reward/risk, trigger, flow hypothesis, expected move window and thesis expiry.
+
+These are **market-derived hypotheses**, not claims of privileged institutional intent. The flow field explicitly describes an inference from observable positioning/aggression/liquidity data. Expected move windows are currently deterministic volatility/ATR model estimates; they are not yet historical time-to-target quantiles. The setup engine never routes an order by itself: the existing risk gate, execution-quality checks and executor remain authoritative.
+
+Setup maps are generated from the same `MarketState` already built by `Orchestrator.gatherContext()`. `WATCHING` cards use WATCH severity; `TRIGGERED` cards use SIGNAL severity. Setup alerts are deduplicated with a 15-minute cooldown, while a WATCHING → TRIGGERED transition is emitted immediately. Configure them through the existing `SETUP` class in `NOTIFICATIONS_PATH`; no new Telegram credentials are required.
+
+### Multi-persona agentic AI and self-learning
+
+When `LLM_COUNCIL=on`, the runtime adds a read-only research council above the deterministic market engine. Five specialist personas (technical, liquidity, derivatives, regime and skeptic) analyze the same normalized `MarketState` and setup map independently, then a portfolio-chair persona synthesizes the reports and may select only a supplied setup scenario or `WATCH`/`NO_TRADE`.
+
+The council never creates price levels, sizes positions, places orders or overrides `RiskAgent`, execution-quality checks or `ExecutorAgent`. LLM output is schema-validated and treated as advisory evidence. Each persona can use a different Ollama model through the `OLLAMA_*_MODEL` variables; all default to `OLLAMA_MODEL`.
+
+The learning ledger is persistent and idempotent. Closed trades update per-agent realized-R statistics, with symbol-specific history preferred after enough observations. Closed-trade keys are persisted so restarting the process cannot train twice on the same trade. Persona and chair forecasts are also persisted as prediction episodes and resolved later against live marks at their stated horizons using an adaptive volatility threshold. Resolution records directional correctness and a Brier score for calibration.
+
+This is adaptive self-learning, not live fine-tuning of neural-network weights. The learned state influences deterministic signal-confidence adjustment and is fed back to persona prompts as historical memory. It does not mutate code or bypass the risk boundary automatically; candidate policy changes should still be validated through replay/backtesting before production.
+
 
 Repeats are dropped by fingerprint: a refused signal for the same symbol, agent and reason at most once per 15
 minutes, and the same system alert at most once per 5 minutes. Optional `NOTIFICATIONS_PATH` JSON turns classes,

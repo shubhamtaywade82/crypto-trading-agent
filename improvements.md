@@ -1,3 +1,5 @@
+# Crypto Trading Agent Architecture & Improvements
+
 Yes. I reviewed the four uploaded books **and the current `main` branch of your `shubhamtaywade82/crypto-trading-agent` repository**. The conclusion is fairly clear:
 
 > **Do not turn the current agent into “more indicators + an LLM.” Turn it into a market-intelligence and decision engine that explicitly understands regime, structure, liquidity, derivatives positioning, and execution conditions.**
@@ -142,7 +144,7 @@ interface RegimeSnapshot {
 }
 ```
 
-### Why this matters
+## Why this matters
 
 Then strategies become conditional:
 
@@ -263,8 +265,6 @@ The book gives examples of:
 * range liquidity
 * liquidity sweeps
 * prior highs/lows
-
-
 
 And its examples explicitly distinguish liquidity sweeps from normal structure movement.
 
@@ -432,7 +432,7 @@ You do **not** need to use every timeframe in every strategy.
 
 Example:
 
-### Trend
+## Trend
 
 ```text
 4H → directional bias
@@ -441,7 +441,7 @@ Example:
 5m → entry
 ```
 
-### Mean reversion
+## Mean reversion
 
 ```text
 1H → regime
@@ -449,7 +449,7 @@ Example:
 5m → deviation
 ```
 
-### Scalping
+## Scalping
 
 ```text
 15m → regime
@@ -572,8 +572,6 @@ The mean-reversion book gives an almost ready-made design:
 5. Exit
 ```
 
-
-
 And specifically:
 
 * SMA / EMA / VWAP as mean
@@ -583,8 +581,6 @@ And specifically:
 * trend alignment
 * stop loss
 * backtesting
-
-
 
 I would implement:
 
@@ -606,7 +602,7 @@ location supports trade
 
 For example:
 
-### Long
+## Long
 
 ```text
 REGIME = RANGE
@@ -1686,7 +1682,7 @@ The important thing is that **risk and execution become downstream authorities**
 
 I would do this in the following order rather than trying to implement everything simultaneously.
 
-### Phase 1 — Correctness / hardening
+## Phase 1 — Correctness / hardening
 
 First fix:
 
@@ -1710,7 +1706,7 @@ That makes replay/idempotency much cleaner.
 
 ---
 
-### Phase 2 — Market data foundation
+## Phase 2 — Market data foundation
 
 Add:
 
@@ -1739,7 +1735,7 @@ Binance's current USDⓈ-M API explicitly documents these market-data families. 
 
 ---
 
-### Phase 3 — Intelligence
+## Phase 3 — Intelligence
 
 Implement:
 
@@ -1754,7 +1750,7 @@ CrowdingEngine
 
 ---
 
-### Phase 4 — Strategies
+## Phase 4 — Strategies
 
 Implement:
 
@@ -1776,7 +1772,7 @@ as supporting strategies/features until their measured contribution is known.
 
 ---
 
-### Phase 5 — Decision system
+## Phase 5 — Decision system
 
 Implement:
 
@@ -1789,7 +1785,7 @@ ExecutionQuality
 
 ---
 
-### Phase 6 — Backtesting
+## Phase 6 — Backtesting
 
 Then build the replay system.
 
@@ -1801,7 +1797,7 @@ This is where we determine which of the book-derived concepts actually add expec
 
 There are several traps here.
 
-### Don't create 20 indicator agents
+## Don't create 20 indicator agents
 
 You already have enough indicator infrastructure.
 
@@ -1822,7 +1818,7 @@ The algorithmic book itself warns that signals should be matched to market condi
 
 ---
 
-### Don't let “SMC” become subjective code
+## Don't let “SMC” become subjective code
 
 Avoid things like:
 
@@ -1834,7 +1830,7 @@ Define measurable rules.
 
 ---
 
-### Don't treat funding as a directional signal by itself
+## Don't treat funding as a directional signal by itself
 
 Funding tells you about positioning/carry.
 
@@ -1842,7 +1838,7 @@ It does **not** tell you when reversal occurs.
 
 ---
 
-### Don't let the LLM become the trader
+## Don't let the LLM become the trader
 
 The LLM should not see:
 
@@ -1866,7 +1862,7 @@ and make it explain/challenge the candidate.
 
 ---
 
-### Don't optimize directly for win rate
+## Don't optimize directly for win rate
 
 Your own SMC source identifies the objective as a consistently growing equity curve rather than avoiding every loss.
 

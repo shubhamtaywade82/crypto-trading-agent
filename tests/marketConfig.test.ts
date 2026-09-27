@@ -22,13 +22,13 @@ test('should not need an account id for local paper or live mode', () => {
   assert.ok(EnvSchema.safeParse({ MODE: 'live', PAPER_EXCHANGE_URL: URL }).success);
 });
 
-test('should keep ops flags off by default and expose tuning defaults', () => {
+test('should keep ops flags on by default and expose tuning defaults', () => {
   const env = EnvSchema.parse({});
   assert.equal(env.MARKET_DATA_DERIVATIVES_PERIOD, '1h');
   assert.equal(env.MARKET_DATA_MAX_CONCURRENCY, 4);
   assert.equal(env.MARKET_DATA_KLINE_LIMIT, 300);
-  assert.equal(env.AUDIT, 'off');
-  assert.equal(env.ALERTS, 'off');
+  assert.equal(env.AUDIT, 'on');
+  assert.equal(env.ALERTS, 'on');
 });
 
 test('should accept market-data tuning values and reject invalid values', () => {

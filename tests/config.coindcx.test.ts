@@ -12,11 +12,12 @@ async function loadConfig(env: Record<string, string>) {
   }
 }
 
-test('MODE=live without CoinDCX credentials refuses to start', async () => {
-  await assert.rejects(
-    () => loadConfig({ MODE: 'live' }),
-    /LIVE mode requires COINDCX_API_KEY and COINDCX_API_SECRET/
-  );
+// CoinDCX execution isn't wired into BinanceService yet (issue #31), so MODE=live must not
+// depend on CoinDCX credentials to start — only config.coindcx itself is optionally populated.
+test('MODE=live without CoinDCX credentials still starts', async () => {
+  const { config } = await loadConfig({ MODE: 'live' });
+  assert.equal(config.coindcx?.apiKey, '');
+  assert.equal(config.coindcx?.apiSecret, '');
 });
 
 test('MODE=live with CoinDCX credentials builds config.coindcx', async () => {

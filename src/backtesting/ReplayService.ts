@@ -6,6 +6,7 @@ import { FundingArbAgent } from '../agents/FundingArbAgent.js';
 import { MeanReversionAgent } from '../agents/MeanReversionAgent.js';
 import { MomentumAgent } from '../agents/MomentumAgent.js';
 import { StructureTrendAgent } from '../agents/StructureTrendAgent.js';
+import { StructureLiquidityAgent } from '../agents/StructureLiquidityAgent.js';
 import { RiskAgent } from '../agents/RiskAgent.js';
 import { RiskOps } from '../runtime/opsHooks.js';
 import { riskLimitsFromConfig, type RiskLimits } from '../risk/riskConfig.js';
@@ -355,6 +356,7 @@ export function defaultReplayAgents(): BaseAgent[] {
     new FundingArbAgent(binance),
     new MomentumAgent(binance),
     new StructureTrendAgent(binance),
+    new StructureLiquidityAgent(binance),
     new MeanReversionAgent(binance),
     new CrowdingAgent(binance),
   ];

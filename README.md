@@ -236,6 +236,7 @@ src/
     PairsAgent.ts            # DISABLED — see #11
     RiskAgent.ts             # gating authority, drawdown kill-switch
     ExecutorAgent.ts         # order routing
+    StructureLiquidityAgent.ts  # STRUCT-LIQ fleet agent (STRUCT_LIQ=off to disable)
   binance/
     client.ts                # BinanceService — paper/live/remote backend switch
     paperEngine.ts           # local in-memory paper engine (with flushOnShutdown — #5)
@@ -287,9 +288,11 @@ src/
 
 ### STRUCT-LIQ and the liquidity ledger
 
-`decision/StructureLiquidityStrategy.ts` is the analysis-only SMC trend setup — HTF directional
-regime -> LTF liquidity sweep -> LTF BOS/CHOCH confirmation -> opposing liquidity target. It is
-the first consumer of the market-state hardening ledgers:
+`agents/StructureLiquidityAgent.ts` runs `decision/StructureLiquidityStrategy.ts` — the SMC trend
+setup: HTF directional regime -> LTF liquidity sweep -> LTF BOS/CHOCH confirmation -> opposing
+liquidity target. It is a first-class fleet member (paper, live and replay all run the same
+agent, one evaluation per closed 15m candle per symbol) and the first consumer of the
+market-state hardening ledgers:
 
 - **Trigger sweeps** are drawn from the persistent `sweepHistory` (causally replayed over the
   whole window) unioned with the legacy 12-bar window. Sweeps of pools that aged out of the
@@ -297,12 +300,19 @@ the first consumer of the market-state hardening ledgers:
   strategy enforces causality rather than assuming it.
 - **Take-profit targets** skip every pool the sweep ledger marked `taken`. Spent liquidity is
   never re-targeted: the setup walks out to the nearest untaken pool or stands down.
+- **Stops** anchor on a zone that is alive per the zone ledger — FRESH, or TESTED (preferred:
+  it already absorbed one retest), formed before the break. When the ledger says every zone is
+  dead (MITIGATED/INVALIDATED/EXPIRED), the stop rides the sweep price alone instead of leaning
+  on a zone the ledger has retired.
 
-Both are behavioral changes against the pre-ledger strategy: some setups that were missed now
-fire, and setups that aimed at already-consumed liquidity now aim further out or do not fire.
-States without ledger annotations (and `RANGE_*` pools, which the ledger does not mark) fall
-back to the exact legacy behavior. The strategy stays deterministic and analysis-only — the
-risk gate and executor remain authoritative.
+These are behavioral changes against the pre-ledger strategy: some setups that were missed now
+fire, setups that aimed at already-consumed liquidity now aim further out or do not fire, and
+stops no longer trust legacy "fresh" zones the ledger knows are spent. States without ledger
+annotations (and `RANGE_*` pools, which the ledger does not mark) fall back to the exact legacy
+behavior. The strategy stays deterministic and analysis-only — the router (directional regimes
+only), signal fusion (it competes with the other market-state strategies per symbol), the risk
+gate and the executor remain authoritative. Set `STRUCT_LIQ=off` to remove the agent from the
+fleet; the cockpit then shows it paused.
 
 ---
 

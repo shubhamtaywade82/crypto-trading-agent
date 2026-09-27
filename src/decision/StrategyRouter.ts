@@ -10,6 +10,8 @@ const REGIME_ALLOW: Partial<Record<string, Set<MarketRegime>>> = {
   // Uses crowding + liquidity sweeps — both meaningful in any regime
   'CROWDING-ι':        new Set(['TREND_UP', 'TREND_DOWN', 'RANGE', 'TRANSITION']),
   'MOMENTUM-γ':        new Set(['TREND_UP', 'TREND_DOWN', 'HIGH_VOL']),
+  // The setup itself requires a directional regime; the router states the same domain
+  'STRUCT-LIQ-η':      new Set(['TREND_UP', 'TREND_DOWN']),
 };
 
 /**

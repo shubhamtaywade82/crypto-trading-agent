@@ -6,7 +6,7 @@ import { scoreCandidate } from './CandidateScorer.js';
 import type { DecisionEvidence, DecisionRecord } from './DecisionJournal.js';
 
 /** Agents whose candidates resolve through signal fusion; everyone else passes through directly. */
-export const FUSION_AGENTS: ReadonlySet<string> = new Set(['STRUCTURE-TREND-η', 'MEAN-REVERT-θ', 'CROWDING-ι']);
+export const FUSION_AGENTS: ReadonlySet<string> = new Set(['STRUCTURE-TREND-η', 'STRUCT-LIQ-η', 'MEAN-REVERT-θ', 'CROWDING-ι']);
 
 export interface RoutedOut {
   agent: string;

@@ -223,7 +223,7 @@ test('replay: the default fleet runs the full pipeline on trending data', async 
     BTCUSDT: { '15m': vShapeCandles(520, 310) },
   };
   const result = await new ReplayService({ config: { warmupBars: 280 } }).run(data);
-  assert.equal(defaultReplayAgents().length, 5);
+  assert.equal(defaultReplayAgents().length, 6);
   assert.equal(result.equityCurve.length, 520);
   // Whatever the strategies decided, the journal must be consistent: every executed trade has a decision with an outcome
   for (const trade of result.trades as SimTrade[]) {

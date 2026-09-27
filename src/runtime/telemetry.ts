@@ -199,16 +199,31 @@ export function buildTelemetry(input: TelemetryInput): Telemetry {
 
 const FLEET_ORDER: AgentId[] = [
   'FUNDING-ARB-α', 'PAIRS-TRD-β', 'MOMENTUM-γ', 'ADAPTIVE-ST-ζ',
-  'STRUCTURE-TREND-η', 'MEAN-REVERT-θ', 'CROWDING-ι',
+  'STRUCTURE-TREND-η', 'STRUCT-LIQ-η', 'MEAN-REVERT-θ', 'CROWDING-ι',
   'RISK-MGR-δ', 'EXECUTOR-ε',
 ];
 // Pairs is disabled (see the agents list), so it is shown as paused rather than omitted from the fleet
 const PAIRS_RUNTIME: AgentRuntime = { id: 'PAIRS-TRD-β', status: 'PAUSED', strategy: 'stat_pairs_zscore' };
 const ADAPTIVE_DISABLED_RUNTIME: AgentRuntime = { id: 'ADAPTIVE-ST-ζ', status: 'PAUSED', strategy: 'ml_adaptive_supertrend' };
+const STRUCT_LIQ_DISABLED_RUNTIME: AgentRuntime = { id: 'STRUCT-LIQ-η', status: 'PAUSED', strategy: 'smc_structure_liquidity' };
 
-/** The running agents plus the disabled ones shown as paused, in cockpit order. */
-export function fleetRuntimes(running: AgentRuntime[], isAdaptiveEnabled: boolean): AgentRuntime[] {
-  const disabled = isAdaptiveEnabled ? [PAIRS_RUNTIME] : [PAIRS_RUNTIME, ADAPTIVE_DISABLED_RUNTIME];
+/** Which fleet members are switched on; `true` keeps the pre-flags call shape (all but adaptive). */
+export type FleetFlags = boolean | { adaptive?: boolean; structLiq?: boolean };
+
+/**
+ * The running agents plus the disabled ones shown as paused, in cockpit order.
+ *
+ * The boolean form is backwards compatible: it only gates the adaptive agent
+ * (the historical call), and every other fleet member is assumed enabled.
+ */
+export function fleetRuntimes(running: AgentRuntime[], flags: FleetFlags): AgentRuntime[] {
+  const adaptiveEnabled = typeof flags === 'boolean' ? flags : flags.adaptive !== false;
+  const structLiqEnabled = typeof flags === 'boolean' ? true : flags.structLiq !== false;
+  const disabled = [
+    PAIRS_RUNTIME,
+    ...(adaptiveEnabled ? [] : [ADAPTIVE_DISABLED_RUNTIME]),
+    ...(structLiqEnabled ? [] : [STRUCT_LIQ_DISABLED_RUNTIME]),
+  ];
   return [...running, ...disabled].sort((a, b) => FLEET_ORDER.indexOf(a.id) - FLEET_ORDER.indexOf(b.id));
 }
 

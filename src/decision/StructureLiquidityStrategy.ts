@@ -1,5 +1,5 @@
 import type { Signal, Side } from '../types.js';
-import type { LiquidityPool, LiquiditySweep, MarketState, PriceZone } from '../market/types.js';
+import type { LiquidityPool, LiquiditySweep, MarketState, PriceZone, ZoneRecord } from '../market/types.js';
 
 const LTF_BAR_MS = 15 * 60_000;
 
@@ -115,12 +115,82 @@ function preferredZone(state: MarketState, side: Side, breakTime: number): Price
     .sort((a, b) => b.originTime - a.originTime)[0] ?? null;
 }
 
+/**
+ * The zone the stop leans on, with its provenance.
+ *
+ * `ledger` anchors come from the zone ledger and carry the lifecycle state the
+ * anchor was chosen in; `legacy` anchors come from the per-snapshot zone list
+ * and carry no lifecycle information.
+ */
+interface StopAnchor {
+  zone: PriceZone;
+  source: 'ledger' | 'legacy';
+  lifecycle: ZoneRecord['state'] | null;
+}
+
+/**
+ * Stop anchor from the zone ledger lifecycle.
+ *
+ * Only zones that are alive per the ledger qualify: FRESH (untouched) or TESTED
+ * (retested once and held). MITIGATED zones are half-consumed, INVALIDATED and
+ * EXPIRED zones are dead — the ledger knows, the legacy snapshot cannot. A zone
+ * must also have formed strictly before the confirming break (`breakTime <
+ * breakTime`), so the anchor is causal.
+ *
+ * Ordering, deterministic: a TESTED zone (already absorbed one retest) beats an
+ * unverified FRESH one; within a tier the zone nearest the entry anchors the
+ * tightest defensible stop; the freshest origin breaks exact ties.
+ */
+function ledgerStopAnchor(
+  state: MarketState,
+  side: Side,
+  entry: number,
+  breakTime: number,
+): StopAnchor | null {
+  const type: PriceZone['type'] = isLong(side) ? 'DEMAND' : 'SUPPLY';
+
+  const candidates = (state.zoneLedger ?? [])
+    .filter((zone) => zone.type === type)
+    .filter((zone) => zone.timeframe === '15m' || zone.timeframe === '1h')
+    .filter((zone) => zone.breakTime < breakTime)
+    .filter((zone) => zone.state === 'FRESH' || zone.state === 'TESTED')
+    .sort((a, b) => {
+      const testedRank = (a.state === 'TESTED' ? 1 : 0) - (b.state === 'TESTED' ? 1 : 0);
+      if (testedRank !== 0) return -testedRank;
+      const distance = Math.abs((a.high + a.low) / 2 - entry) - Math.abs((b.high + b.low) / 2 - entry);
+      if (distance !== 0) return distance;
+      return b.originTime - a.originTime;
+    });
+
+  if (candidates.length === 0) return null;
+
+  const zone = candidates[0];
+  return { zone, source: 'ledger', lifecycle: zone.state };
+}
+
+/**
+ * Stop anchor: the zone ledger when the state carries one, else the legacy
+ * per-snapshot zone list.
+ *
+ * When `zoneLedger` is present it is authoritative — an empty or all-dead
+ * ledger means no live zone to lean on, and the stop falls back to the sweep
+ * price alone rather than reaching for a legacy zone the ledger already knows
+ * is spent. Only states built without a ledger (older snapshots, fixtures)
+ * use the legacy path, which behaves exactly as before.
+ */
+function stopAnchor(state: MarketState, side: Side, entry: number, breakTime: number): StopAnchor | null {
+  if (state.zoneLedger !== undefined) return ledgerStopAnchor(state, side, entry, breakTime);
+
+  const zone = preferredZone(state, side, breakTime);
+  return zone ? { zone, source: 'legacy', lifecycle: null } : null;
+}
+
 function stopAndRisk(
   state: MarketState,
   side: Side,
   entry: number,
   sweep: LiquiditySweep,
-  zone: PriceZone | null,
+  anchor: StopAnchor | null,
   options: StructureLiquidityOptions,
 ): { stop: number; riskAtr: number } | null {
   const atr14 = state.timeframes['15m'].atr14;
@@ -128,8 +198,8 @@ function stopAndRisk(
 
   const buffer = atr14 * options.stopBufferAtr;
   const rawStop = isLong(side)
-    ? Math.min(sweep.sweepPrice, zone?.low ?? Number.POSITIVE_INFINITY) - buffer
-    : Math.max(sweep.sweepPrice, zone?.high ?? Number.NEGATIVE_INFINITY) + buffer;
+    ? Math.min(sweep.sweepPrice, anchor?.zone.low ?? Number.POSITIVE_INFINITY) - buffer
+    : Math.max(sweep.sweepPrice, anchor?.zone.high ?? Number.NEGATIVE_INFINITY) + buffer;
 
   const riskDistance = Math.abs(entry - rawStop);
   if (!(riskDistance > 0)) return null;
@@ -168,11 +238,15 @@ function targetAndRewardRisk(
  *   replayed over the whole window) unioned with the legacy 12-bar window, so
  *   sweeps of pools that aged out of the snapshot pool list still qualify;
  * - the take-profit target never selects a pool the sweep ledger already
- *   consumed (`taken`), it walks outward to the nearest untaken liquidity.
+ *   consumed (`taken`), it walks outward to the nearest untaken liquidity;
+ * - the stop anchors on a zone that is alive per the zone ledger — FRESH or
+ *   TESTED, formed before the break; a ledger that says every zone is dead
+ *   (MITIGATED/INVALIDATED/EXPIRED) leaves the stop on the sweep price alone.
  *
- * Both connections are behavioral changes: some setups that were missed now
- * fire, some that targeted spent liquidity now aim further out or stand down.
- * States built without ledger annotations fall back to the legacy behavior.
+ * All three connections are behavioral changes: some setups that were missed
+ * now fire, some that targeted spent liquidity now aim further out or stand
+ * down, and stops no longer lean on zones the ledger has retired. States built
+ * without ledger annotations fall back to the legacy behavior.
  *
  * Analysis-only: no venue, risk gate, or executor calls.
  */
@@ -203,12 +277,13 @@ export function buildStructureLiquiditySignal(
   const sweep = latestEligibleSweep(state, trendSide, breakEvent.time, options);
   if (!sweep) return null;
 
+  const anchor = stopAnchor(state, trendSide, state.mark, breakEvent.time);
   const stopRisk = stopAndRisk(
     state,
     trendSide,
     state.mark,
     sweep,
-    preferredZone(state, trendSide, breakEvent.time),
+    anchor,
     options,
   );
   if (!stopRisk) return null;
@@ -229,6 +304,7 @@ export function buildStructureLiquiditySignal(
   const id = `struct-liq-${state.symbol}-${breakEvent.time}`;
   const location = long ? state.pricing.discount : state.pricing.premium;
   const confidence = Math.min(0.95, 0.70 + (sweep.time === breakEvent.time ? 0.05 : 0) + (location ? 0.05 : 0));
+  const anchorNote = anchor?.source === 'ledger' ? `; ${anchor.lifecycle} zone anchor` : '';
 
   return {
     id,
@@ -242,6 +318,6 @@ export function buildStructureLiquiditySignal(
     takeProfit: target.target.price,
     reason:
       `HTF ${trendSide} regime + LTF ${breakEvent.type}; ${sweep.direction} sweep at ${sweep.level.toFixed(4)}; ` +
-      `target liquidity ${target.target.price.toFixed(4)}; RR ${target.rewardRisk.toFixed(2)}; stop ${riskAtr.toFixed(2)} ATR`,
+      `target liquidity ${target.target.price.toFixed(4)}; RR ${target.rewardRisk.toFixed(2)}; stop ${riskAtr.toFixed(2)} ATR${anchorNote}`,
   };
 }

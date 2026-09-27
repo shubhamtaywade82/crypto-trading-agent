@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import type { LiquidityPool, LiquiditySweep, MarketState, PriceZone } from '../src/market/types.js';
+import type { LiquidityPool, LiquiditySweep, MarketState, PriceZone, ZoneRecord } from '../src/market/types.js';
 import type { Candle } from '../src/types.js';
 import { MarketStateBuilder } from '../src/market/MarketStateBuilder.js';
 import {
@@ -104,6 +104,32 @@ function historySweep(overrides: Partial<LiquiditySweep> = {}): LiquiditySweep {
     confirmed: true,
     id: `${9 * BAR_MS}|SELL_SIDE|98|SWING_LOW|${5 * BAR_MS}`,
     poolSourceTimes: [5 * BAR_MS],
+    ...overrides,
+  };
+}
+
+/** A zone-ledger record: a cause zone tracked through its lifecycle. */
+function ledgerZone(overrides: Partial<ZoneRecord> = {}): ZoneRecord {
+  return {
+    type: 'DEMAND',
+    timeframe: '15m',
+    high: 98,
+    low: 96.5,
+    originTime: 7 * BAR_MS,
+    causedBreak: 'BOS',
+    displacementAtr: 1.5,
+    touches: 0,
+    fresh: true,
+    strength: 0.8,
+    state: 'FRESH',
+    testedAt: null,
+    mitigatedAt: null,
+    invalidatedAt: null,
+    invalidatedIndex: null,
+    expiredAt: null,
+    breakIndex: 7,
+    breakTime: 7 * BAR_MS,
+    ageBars: 3,
     ...overrides,
   };
 }
@@ -334,4 +360,77 @@ test('rejects the setup when every opposing liquidity pool is already taken', ()
   ];
 
   assert.equal(buildStructureLiquiditySignal(state), null);
+});
+
+test('anchors the stop on a live ledger zone and reports its lifecycle in the reason', () => {
+  const state = baseState();
+  // Ledger zone [96.5, 98] TESTED; the sweep low 97 no longer binds — the zone does.
+  state.zoneLedger = [ledgerZone({ state: 'TESTED', testedAt: 8 * BAR_MS, touches: 1 })];
+
+  const signal = buildStructureLiquiditySignal(state);
+
+  assert.ok(signal);
+  // stop = min(97, 96.5) - 0.15 = 96.35; riskAtr = 3.65 within [0.5, 4]; RR = 6/3.65 = 1.64.
+  assert.ok(Math.abs(signal.stopLoss! - 96.35) < 1e-9);
+  assert.match(signal.reason, /TESTED zone anchor/);
+});
+
+test('prefers a TESTED zone over a nearer FRESH one', () => {
+  const state = baseState();
+  state.zoneLedger = [
+    // FRESH is nearer the entry (low 96.6) but unverified; TESTED (low 96.5) must win.
+    ledgerZone({ state: 'FRESH', low: 96.6, high: 98.2 }),
+    ledgerZone({ state: 'TESTED', testedAt: 8 * BAR_MS, touches: 1 }),
+  ];
+
+  const signal = buildStructureLiquiditySignal(state);
+
+  assert.ok(signal);
+  // From the TESTED zone: min(97, 96.5) - 0.15 = 96.35, not 96.45 from the FRESH zone.
+  assert.ok(Math.abs(signal.stopLoss! - 96.35) < 1e-9);
+});
+
+test('dead ledger zones are not anchors and supersede the legacy zone list', () => {
+  // For every terminal/half-dead lifecycle state, the stop must fall back to the
+  // sweep alone — even though a "fresh" legacy zone sits lower and would bind.
+  for (const lifecycle of ['MITIGATED', 'INVALIDATED', 'EXPIRED'] as const) {
+    const state = baseState();
+    state.zoneLedger = [ledgerZone({ state: lifecycle })];
+    // A legacy fresh demand zone low enough to bind if it were consulted.
+    state.zones = [{ ...state.zones[0], low: 96.8, high: 98.5 }];
+
+    const signal = buildStructureLiquiditySignal(state);
+
+    assert.ok(signal, `${lifecycle} case must still trade off the sweep anchor`);
+    // Sweep-only stop: 97 - 0.15 = 96.85 — neither the dead ledger zone (96.5)
+    // nor the legacy zone (96.8) binds.
+    assert.ok(Math.abs(signal.stopLoss! - 96.85) < 1e-9, `${lifecycle} stop ${signal.stopLoss}`);
+    assert.doesNotMatch(signal.reason, /zone anchor/);
+  }
+});
+
+test('ignores a ledger zone that formed at or after the confirming break', () => {
+  const state = baseState();
+  // Same-zone geometry as the live-anchor test, but born on the break candle.
+  state.zoneLedger = [ledgerZone({ state: 'TESTED', breakTime: BREAK_TIME, originTime: BREAK_TIME })];
+
+  const signal = buildStructureLiquiditySignal(state);
+
+  assert.ok(signal);
+  // No causal anchor: sweep-only stop 96.85.
+  assert.ok(Math.abs(signal.stopLoss! - 96.85) < 1e-9);
+});
+
+test('falls back to the legacy zone list only when the state carries no zone ledger', () => {
+  const state = baseState();
+  delete state.zoneLedger;
+  // Make the legacy zone the binding anchor: low 96.8 < sweep low 97.
+  state.zones = [{ ...state.zones[0], low: 96.8, high: 98.5 }];
+
+  const signal = buildStructureLiquiditySignal(state);
+
+  assert.ok(signal);
+  // Legacy anchor: min(97, 96.8) - 0.15 = 96.65.
+  assert.ok(Math.abs(signal.stopLoss! - 96.65) < 1e-9);
+  assert.doesNotMatch(signal.reason, /zone anchor/);
 });

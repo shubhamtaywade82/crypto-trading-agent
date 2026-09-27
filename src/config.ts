@@ -55,6 +55,7 @@ export const EnvSchema = z.object({
 
   AUDIT: z.enum(['off', 'on']).default('off'),
   ALERTS: z.enum(['off', 'on']).default('off'),
+  STRUCT_LIQ: z.enum(['off', 'on']).default('on'),
   EVENTS_PATH: pathWithDefault('data/events.jsonl'),
   NOTIFICATIONS_PATH: pathWithDefault('data/notifications.json'),
   DECISIONS_PATH: pathWithDefault('data/decisions.jsonl'),
@@ -147,6 +148,7 @@ export const config = {
   },
   audit: env.AUDIT,
   alerts: env.ALERTS,
+  structLiq: { enabled: env.STRUCT_LIQ === 'on' },
   eventsPath: env.EVENTS_PATH,
   notificationsPath: env.NOTIFICATIONS_PATH,
   decisionsPath: env.DECISIONS_PATH,

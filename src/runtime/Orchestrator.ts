@@ -6,6 +6,7 @@ import { FundingArbAgent } from '../agents/FundingArbAgent.js';
 import { MomentumAgent } from '../agents/MomentumAgent.js';
 import { AdaptiveSuperTrendAgent } from '../agents/AdaptiveSuperTrendAgent.js';
 import { StructureTrendAgent } from '../agents/StructureTrendAgent.js';
+import { StructureLiquidityAgent } from '../agents/StructureLiquidityAgent.js';
 import { MeanReversionAgent } from '../agents/MeanReversionAgent.js';
 import { CrowdingAgent } from '../agents/CrowdingAgent.js';
 import { RiskAgent } from '../agents/RiskAgent.js';
@@ -37,6 +38,7 @@ export class Orchestrator extends EventEmitter {
   private marketStateBuilder = new MarketStateBuilder();
   private adaptive = new AdaptiveSuperTrendAgent(this.binance);
   private structureTrend = new StructureTrendAgent(this.binance);
+  private structLiq = new StructureLiquidityAgent(this.binance);
   private meanRevert = new MeanReversionAgent(this.binance);
   private crowding = new CrowdingAgent(this.binance);
   private agents: BaseAgent[] = [
@@ -44,6 +46,7 @@ export class Orchestrator extends EventEmitter {
     new MomentumAgent(this.binance),
     ...(config.mode === 'paper' ? [this.adaptive] : []),
     this.structureTrend, this.meanRevert, this.crowding,
+    ...(config.structLiq.enabled ? [this.structLiq] : []),
   ];
   private killSwitch = new KillSwitch();
   // Single authoritative equity high-water mark, shared by the risk agent and the
@@ -76,6 +79,7 @@ export class Orchestrator extends EventEmitter {
     const dropped = this.binance.dropUnlistedPositions(config.symbols);
     if (dropped.length) this.log('SYSTEM', `Dropped ${dropped.length} saved position(s) outside SYMBOLS: ${dropped.join(', ')}`, 'warn');
     if (config.mode === 'live') this.log('SYSTEM', `${this.adaptive.id} disabled: dynamic exits are paper-only`, 'warn');
+    if (!config.structLiq.enabled) this.log('SYSTEM', `${this.structLiq.id} disabled by STRUCT_LIQ=off`, 'warn');
     if (config.mode === 'paper' && config.paperExchange) this.log('SYSTEM', `Paper trading routed through ${config.paperExchange.url} (account ${config.paperExchange.accountId})`, 'info');
     const runLoop = singleFlight(() => this.loop().catch((err: Error) => this.log('SYSTEM', `Loop crashed: ${err.message}`, 'error')));
     this.binance.loadSymbolRules(config.symbols)
@@ -323,7 +327,7 @@ export class Orchestrator extends EventEmitter {
     return buildTelemetry({
       account, positions, adaptive, trades: this.binance.getTrades(),
       candles: ctx.candles, funding: ctx.funding, nextFundingTime: ctx.nextFundingTime,
-      agents: fleetRuntimes(running, this.agents.includes(this.adaptive)), counters: this.counters,
+      agents: fleetRuntimes(running, { adaptive: this.agents.includes(this.adaptive), structLiq: config.structLiq.enabled }), counters: this.counters,
       apiWeight: this.binance.getApiWeight(), wsStatus: this.binance.getWsStatus(), now: Date.now(),
       attributable: config.mode !== 'live', marketStates: ctx.marketState,
     });

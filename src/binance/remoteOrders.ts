@@ -66,6 +66,7 @@ export interface OpenParams {
   stopLoss?: number;
   takeProfit?: number;
   entryPrice: number;
+  decisionId?: string;
 }
 
 /** Sends an entry order and requires it to be filled; the price sent is the fill price, the broker has no price of its own. */
@@ -95,6 +96,7 @@ export function entryMeta(params: OpenParams, nowMs: number): PositionMeta {
     initialRisk: stopLoss === null ? null : Math.abs(params.entryPrice - stopLoss),
     openedAt: nowMs,
     lastSeen: { side, entry: params.entryPrice, qty: params.qty, mark: params.entryPrice },
+    ...(params.decisionId === undefined ? {} : { decisionId: params.decisionId }),
   };
 }
 
@@ -235,7 +237,11 @@ export class RemoteExits {
   private closedFrom(position: PaperExchangePosition): ClosedPosition {
     const meta = this.host.store.getMeta(position.symbol);
     const initialRisk = meta?.initialRisk ?? undefined;
-    return { symbol: position.symbol, owner: meta?.owner ?? EXTERNAL_OWNER, side: sideOf(position), entry: position.averagePrice, qty: position.netQuantity, initialRisk };
+    return {
+      symbol: position.symbol, owner: meta?.owner ?? EXTERNAL_OWNER, side: sideOf(position),
+      entry: position.averagePrice, qty: position.netQuantity, initialRisk,
+      ...(meta?.decisionId === undefined ? {} : { decisionId: meta.decisionId }),
+    };
   }
 
   private async dropAlreadyFlat(job: ExitJob): Promise<void> {
@@ -266,7 +272,11 @@ export class RemoteExits {
       const positions = await this.host.api.getPositions();
       const isHeld = positions.some((p) => p.symbol === closed.symbol && p.netQuantity > 0 && sideOf(p) === closed.side);
       // No lastSeen: the next sync fills it from the real residual instead of the pre-exit size.
-      if (isHeld) this.host.store.setMeta(closed.symbol, { owner: meta.owner, stopLoss: meta.stopLoss, takeProfit: meta.takeProfit, initialRisk: meta.initialRisk, openedAt: this.host.now() });
+      if (isHeld) this.host.store.setMeta(closed.symbol, {
+        owner: meta.owner, stopLoss: meta.stopLoss, takeProfit: meta.takeProfit,
+        initialRisk: meta.initialRisk, openedAt: this.host.now(),
+        ...(meta.decisionId === undefined ? {} : { decisionId: meta.decisionId }),
+      });
     } catch (err) {
       // Restoring a meta for a position that may be gone would journal a phantom close; an unverified residual is adopted as external instead.
       this.host.recordError(`exit ${closed.symbol}: residual check failed: ${errorText(err)}`);

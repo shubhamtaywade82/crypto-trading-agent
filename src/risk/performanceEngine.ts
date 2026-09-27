@@ -55,6 +55,16 @@ export class PerformanceEngine {
     if (Number.isFinite(equity)) this.observedPeakEquity = Math.max(this.observedPeakEquity, equity);
   }
 
+  /**
+   * Folds in a peak persisted by a previous session (EquityHwmStore). Restarts
+   * cannot erase unrealized peaks: hydrate() only replays the journal, which
+   * never contains equity readings between trades, and observedPeakEquity is
+   * memory-only otherwise.
+   */
+  seedObservedPeak(peak: number): void {
+    if (Number.isFinite(peak) && peak > 0) this.observedPeakEquity = Math.max(this.observedPeakEquity, peak);
+  }
+
   /** Risk metrics as of the injected clock, with drawdown measured against the given current equity. */
   snapshot(equity: number): PerformanceSnapshot {
     const today = utcDay(this.now());

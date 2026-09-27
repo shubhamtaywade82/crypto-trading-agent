@@ -82,7 +82,11 @@ export class RemoteReconciler {
   }
 
   private journal(symbol: string, meta: PositionMeta, seen: LastSeen, outcome: { exit: number; reason: ExitReason }): void {
-    const closed = { symbol, owner: meta.owner, side: seen.side, entry: seen.entry, qty: seen.qty, initialRisk: meta.initialRisk ?? undefined };
+    const closed = {
+      symbol, owner: meta.owner, side: seen.side, entry: seen.entry, qty: seen.qty,
+      initialRisk: meta.initialRisk ?? undefined,
+      ...(meta.decisionId === undefined ? {} : { decisionId: meta.decisionId }),
+    };
     this.host.store.recordClose(closedTrade(closed, outcome.exit, outcome.reason, this.host.now()));
   }
 

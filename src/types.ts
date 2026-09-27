@@ -61,6 +61,8 @@ export interface Position {
   serverSl: string;
   serverTp: string;
   initialRisk?: number; // |entry - first SL| in price units; the 1R used for breakeven trailing
+  /** Links the open position back to the DecisionRecord that created it. */
+  decisionId?: string;
   posType?: string; // e.g. 'PERP-SHORT' | 'LONG/SHORT' | 'LONG'
 }
 
@@ -77,6 +79,8 @@ export interface TradeRecord {
   reason: ExitReason;
   closedAt: number;
   initialRisk?: number; // the position's 1R in price units, so an exit can be shown as an R multiple
+  /** The decision that opened this trade — resolves the evidence the grader scores against. */
+  decisionId?: string;
 }
 
 /** What the LLM sees when asked to veto an entry; all numbers come from deterministic code. */

@@ -57,6 +57,7 @@ export const EnvSchema = z.object({
   ALERTS: z.enum(['off', 'on']).default('off'),
   EVENTS_PATH: pathWithDefault('data/events.jsonl'),
   NOTIFICATIONS_PATH: pathWithDefault('data/notifications.json'),
+  DECISIONS_PATH: pathWithDefault('data/decisions.jsonl'),
   PAPER_EXCHANGE_URL: z.string().optional(),
   PAPER_EXCHANGE_ACCOUNT_ID: z.string().trim().optional(),
   COINDCX_API_KEY: z.string().default(''),
@@ -148,6 +149,7 @@ export const config = {
   alerts: env.ALERTS,
   eventsPath: env.EVENTS_PATH,
   notificationsPath: env.NOTIFICATIONS_PATH,
+  decisionsPath: env.DECISIONS_PATH,
   symbols: parseSymbols(env.SYMBOLS),
   paperExchange: env.PAPER_EXCHANGE_URL && env.PAPER_EXCHANGE_ACCOUNT_ID
     ? { url: env.PAPER_EXCHANGE_URL.replace(/\/+$/, ''), accountId: env.PAPER_EXCHANGE_ACCOUNT_ID }

@@ -254,6 +254,15 @@ test('a hung request is aborted after timeoutMs and raises VenueUnavailableError
     fetchImpl: hangUntilAborted as typeof fetch, timeoutMs: 20, retries: 1, backoffMs: 1,
   });
 
-  await assert.rejects(client.getAccount(), VenueUnavailableError);
-  assert.equal(attempts, 2);
+  // AbortSignal.timeout() uses an unref'd timer, so the hanging fetch leaves nothing
+  // keeping the event loop alive. A ref'd keepalive interval guarantees the abort
+  // timers always fire before node:test's idle detection declares the loop drained
+  // (observed as a flaky "Promise resolution is still pending" failure in CI).
+  const keepAlive = setInterval(() => {}, 5);
+  try {
+    await assert.rejects(client.getAccount(), VenueUnavailableError);
+    assert.equal(attempts, 2);
+  } finally {
+    clearInterval(keepAlive);
+  }
 });

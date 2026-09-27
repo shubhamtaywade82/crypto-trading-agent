@@ -186,6 +186,15 @@ export function renderFooterLines(p: CockpitProps, width: number = 128): string[
   const orchestrator = ` │ ${runningCount(p.agents)} agents autonomous │ eval ${LOOP_INTERVAL_MS / 1000}s │ api weight `;
   const l1 = ' ' + spinner + chalk.gray(' orchestrator' + orchestrator) + chalk.white(`${p.apiWeight}/${API_WEIGHT_LIMIT}`) + chalk.gray(' │ ws ') + WS_COLOR[p.wsStatus](`●${p.wsStatus}`)
     + chalk.gray(' │ mode ') + chalk.yellow.bold(p.mode.toUpperCase()) + venueLabel(p.venue);
-  const l2 = ' ' + chalk.gray('╰─ ↑↓nav cclose-pos xcancel aadvisor-audit sstop-all ?help');
+  const commands = [
+    chalk.white.bold('↑↓') + ' ' + chalk.gray('nav'),
+    chalk.yellow.bold('c') + ' ' + chalk.gray('close-pos'),
+    chalk.yellow.bold('x') + ' ' + chalk.gray('cancel'),
+    chalk.yellow.bold('k') + ' ' + chalk.gray('kill-switch'),
+    chalk.yellow.bold('a') + ' ' + chalk.gray('advisor-audit'),
+    chalk.yellow.bold('s') + ' ' + chalk.gray('stop-all'),
+    chalk.yellow.bold('?') + ' ' + chalk.gray('help'),
+  ];
+  const l2 = ' ' + chalk.gray('╰─ ') + commands.join(chalk.gray(' │ '));
   return [chalk.cyan('╭' + rule('─', innerW) + '╮'), chalk.cyan('│') + padLine(l1, innerW) + chalk.cyan('│'), chalk.cyan('│') + padLine(l2, innerW) + chalk.cyan('│'), chalk.cyan('╰' + rule('─', innerW) + '╯')];
 }

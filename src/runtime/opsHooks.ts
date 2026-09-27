@@ -8,6 +8,7 @@ import type { KillSwitch } from '../ops/killSwitch.js';
 import { sendAlert, type TelegramDeps } from '../ops/telegram.js';
 import { PerformanceEngine, type PerformanceSnapshot } from '../risk/performanceEngine.js';
 import { deriveCircuitState, riskLimitsFromConfig, type CircuitState, type RiskLimits } from '../risk/riskConfig.js';
+import type { PeakEquitySource } from '../risk/equityHwm.js';
 import type { Mode, Position, TradeRecord } from '../types.js';
 
 // The paper account's starting balance, used until the first account read reports the venue's real one
@@ -22,6 +23,8 @@ export interface RiskOpsOptions {
   killSwitch?: Pick<KillSwitch, 'isHalted'>;
   /** Called once per circuit change with the numbers that caused it. */
   onCircuit?: (from: CircuitState, to: CircuitState, snapshot: PerformanceSnapshot) => void;
+  /** Persistent high-water mark; seeds the engine so drawdown survives restarts. */
+  hwm?: PeakEquitySource;
 }
 
 /**
@@ -50,8 +53,12 @@ export class RiskOps {
   build(trades: TradeRecord[], account: AccountReading): MarketContext['performance'] {
     if (!this.isEnabled) return undefined;
     this.adoptInitialEquity(account.initialEquity);
+    // The persisted peak outlives the journal (which is capped and only realized):
+    // seed it first so the drawdown governor starts where the last session ended.
+    if (this.options.hwm) this.engine.seedObservedPeak(this.options.hwm.peak());
     this.engine.hydrate(trades);
     this.engine.onEquity(account.equity);
+    this.options.hwm?.observe(account.equity);
     const snapshot = this.engine.snapshot(account.equity);
     const circuit = deriveCircuitState(snapshot.dailyLossPercent, snapshot.drawdownPercent, snapshot.lossStreak, this.limits);
     this.recordCircuit(circuit, snapshot);

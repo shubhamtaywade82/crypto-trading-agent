@@ -16,6 +16,7 @@ import { sparkline } from '../binance/indicators.js';
 import { accountFields, buildTelemetry, fleetRuntimes, singleFlight, venueInfo, type SessionCounters, type Telemetry, type TelemetryInput } from './telemetry.js';
 import { formatPrice } from '../binance/symbolRules.js';
 import { KillSwitch } from '../ops/killSwitch.js';
+import { EquityHwmStore } from '../risk/equityHwm.js';
 import { announceStartup, buildOps, refreshPortfolio, RiskOps, toggleKillSwitch as flipKillSwitch } from './opsHooks.js';
 import { config, LOOP_INTERVAL_MS } from '../config.js';
 import type { AdaptiveSuperTrendBar } from '../binance/adaptiveSuperTrend.js';
@@ -43,9 +44,12 @@ export class Orchestrator extends EventEmitter {
     this.structureTrend, this.meanRevert, this.crowding,
   ];
   private killSwitch = new KillSwitch();
-  private risk = new RiskAgent(this.binance, { killSwitch: this.killSwitch });
+  // Single authoritative equity high-water mark, shared by the risk agent and the
+  // performance engine so both measure drawdown against the same persisted peak.
+  private hwm = new EquityHwmStore();
+  private risk = new RiskAgent(this.binance, { killSwitch: this.killSwitch, hwm: this.hwm.forMode(config.mode) });
   private hooks = buildOps({ log: (line) => this.log('SYSTEM', line, 'info'), seedTrades: this.binance.getTrades() });
-  private ops = new RiskOps((message) => this.log('SYSTEM', message, 'warn'), { killSwitch: this.killSwitch, onCircuit: (from, to, snapshot) => this.hooks.onCircuit(from, to, snapshot) });
+  private ops = new RiskOps((message) => this.log('SYSTEM', message, 'warn'), { killSwitch: this.killSwitch, onCircuit: (from, to, snapshot) => this.hooks.onCircuit(from, to, snapshot), hwm: this.hwm.forMode(config.mode) });
   private executor = new ExecutorAgent(this.binance);
   private advisor = new OllamaAdvisor();
   private timer: NodeJS.Timeout | null = null;

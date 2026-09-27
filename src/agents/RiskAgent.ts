@@ -10,6 +10,7 @@ import type { PerformanceSnapshot } from '../risk/performanceEngine.js';
 import { sizePosition, type SizingResult } from '../risk/positionSizer.js';
 import { circuitRiskMultiplier, clusterOf, riskLimitsFromConfig, type RiskLimits } from '../risk/riskConfig.js';
 import { evaluateRisk, type PortfolioView } from '../risk/riskEngine.js';
+import type { PeakEquitySource } from '../risk/equityHwm.js';
 
 export interface RiskAgentOptions {
   /** Defaults to `config.riskEngine`; injectable so tests never mutate process.env. */
@@ -18,6 +19,8 @@ export interface RiskAgentOptions {
   limits?: RiskLimits;
   /** When halted, every entry is refused whatever RISK_ENGINE says; exits never pass through this agent. */
   killSwitch?: Pick<KillSwitch, 'state'>;
+  /** Persistent equity high-water mark; when absent the agent tracks a session-local peak (legacy behaviour). */
+  hwm?: PeakEquitySource;
 }
 
 const NO_PERFORMANCE = 'risk-engine: performance snapshot unavailable';
@@ -193,21 +196,21 @@ export class RiskAgent extends BaseAgent {
 
   /**
    * Drawdown kill-switch (issue #10). Compares current equity against the
-   * peak equity observed this session; if the drawdown from peak exceeds
+   * account's high-water mark; if the drawdown from peak exceeds
    * MAX_DRAWDOWN_PCT, all OPEN signals are rejected until the account
    * recovers. Closes still pass — reducing exposure is correct here.
    *
-   * ponytail: tracks the peak in-process. A restart resets the peak, so a
-   * process crash mid-drawdown is the one blind spot — for a paper broker
-   * this is acceptable; for live trading the peak should live in the
-   * broker's ledger (see paper_exchange issue #19 for the per-strategy
-   * metadata migration that would close this gap).
+   * The peak is the persisted EquityHwmStore when one is injected (survives
+   * restarts — a process crash mid-drawdown no longer silently re-arms the
+   * bot); without one, the agent tracks the peak in-process only.
    */
   private peakEquity = 0;
   private isDrawdownBreached(ctx: MarketContext): boolean {
     if (ctx.equity <= 0) return true;
-    this.peakEquity = Math.max(this.peakEquity, ctx.equity);
-    const drawdownPct = ((this.peakEquity - ctx.equity) / this.peakEquity) * 100;
+    const peak = this.options.hwm
+      ? this.options.hwm.observe(ctx.equity)
+      : (this.peakEquity = Math.max(this.peakEquity, ctx.equity));
+    const drawdownPct = ((peak - ctx.equity) / peak) * 100;
     return drawdownPct > config.risk.maxDrawdownPct;
   }
 

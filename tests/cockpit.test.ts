@@ -143,7 +143,7 @@ test('should show websocket, evaluation interval and venue in the footer, and ma
   assert.ok(!local.includes('stale') && !live.includes('stale') && !local.includes('●local') && !live.includes('●local'));
 });
 
-const FLEET: AgentId[] = ['FUNDING-ARB-α', 'PAIRS-TRD-β', 'MOMENTUM-γ', 'ADAPTIVE-ST-ζ', 'RISK-MGR-δ', 'EXECUTOR-ε'];
+const FLEET: AgentId[] = ['FUNDING-ARB-α', 'MOMENTUM-γ', 'ADAPTIVE-ST-ζ', 'RISK-MGR-δ', 'EXECUTOR-ε'];
 const WORST_UPNL = ['-$1,234.56', '+$987.65', '+$12.34'];
 
 // Real symbols differ by orders of magnitude, so each configured symbol gets its own price scale and precision

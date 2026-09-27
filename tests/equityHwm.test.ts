@@ -110,13 +110,13 @@ test('riskAgent: a drawdown halt survives a restart through the persisted peak',
 
   // Session one: equity peaks at 100k, falls into a >5% drawdown, the agent halts
   const store = new EquityHwmStore(file);
-  const agent = new RiskAgent({} as BinanceService, { hwm: store.forMode('paper') });
+  const agent = new RiskAgent({} as BinanceService, { riskEngine: 'off', hwm: store.forMode('paper') });
   assert.equal(agent.gate(signal(), context(100_000)).approved, true);
   assert.equal(agent.gate(signal(), context(94_000)).approved, false);
 
   // Session two: a brand-new agent and store read the same file — the halt must hold
   const restartedStore = new EquityHwmStore(file);
-  const restartedAgent = new RiskAgent({} as BinanceService, { hwm: restartedStore.forMode('paper') });
+  const restartedAgent = new RiskAgent({} as BinanceService, { riskEngine: 'off', hwm: restartedStore.forMode('paper') });
   const decision = restartedAgent.gate(signal(), context(94_500));
   assert.equal(decision.approved, false);
   assert.match(decision.reason, /drawdown kill-switch/);
@@ -125,12 +125,32 @@ test('riskAgent: a drawdown halt survives a restart through the persisted peak',
   assert.equal(restartedAgent.gate(signal(), context(100_000)).approved, true);
 });
 
+test('riskAgent: with the risk engine on (the default), a drawdown halt still survives a restart', () => {
+  Object.assign(config.risk, { minLeverage: 5, maxLeverage: 10, maxExposurePct: 80, riskPerTradePct: 1, maxDrawdownPct: 5, minLiqBufferAtr: 2 });
+  const withPerformance = (equity: number): MarketContext => {
+    const engine = new PerformanceEngine(100_000, () => 0);
+    engine.onEquity(equity);
+    return { ...context(equity), performance: { circuit: 'NORMAL', snapshot: engine.snapshot(equity) } };
+  };
+  const file = hwmFile();
+
+  const agent = new RiskAgent({} as BinanceService, { riskEngine: 'on', hwm: new EquityHwmStore(file).forMode('paper') });
+  const first = agent.gate(signal(), withPerformance(100_000));
+  assert.equal(first.approved, true, first.reason);
+  assert.equal(agent.gate(signal(), withPerformance(94_000)).approved, false);
+
+  const restarted = new RiskAgent({} as BinanceService, { riskEngine: 'on', hwm: new EquityHwmStore(file).forMode('paper') });
+  const decision = restarted.gate(signal(), withPerformance(94_500));
+  assert.equal(decision.approved, false);
+  assert.match(decision.reason, /drawdown kill-switch/);
+});
+
 test('riskAgent: without a store the legacy session-peak behaviour is unchanged', () => {
   Object.assign(config.risk, { minLeverage: 5, maxLeverage: 10, maxExposurePct: 80, riskPerTradePct: 1, maxDrawdownPct: 5, minLiqBufferAtr: 2 });
-  const agent = new RiskAgent({} as BinanceService);
+  const agent = new RiskAgent({} as BinanceService, { riskEngine: 'off' });
   assert.equal(agent.gate(signal(), context(100_000)).approved, true);
   assert.equal(agent.gate(signal(), context(94_000)).approved, false);
   // A restart without persistence forgets the peak (documented legacy behaviour)
-  const fresh = new RiskAgent({} as BinanceService);
+  const fresh = new RiskAgent({} as BinanceService, { riskEngine: 'off' });
   assert.equal(fresh.gate(signal(), context(94_000)).approved, true);
 });

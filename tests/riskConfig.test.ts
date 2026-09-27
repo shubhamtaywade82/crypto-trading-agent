@@ -105,9 +105,9 @@ test('should apply explicit overrides for every new variable', () => {
   assert.equal(derived.slippageBufferRate, 0.001);
 });
 
-test('should keep the risk engine off unless RISK_ENGINE=on', () => {
-  assert.equal(EnvSchema.parse({}).RISK_ENGINE, 'off');
-  assert.equal(EnvSchema.parse({ RISK_ENGINE: 'on' }).RISK_ENGINE, 'on');
+test('should run the risk engine unless RISK_ENGINE=off', () => {
+  assert.equal(EnvSchema.parse({}).RISK_ENGINE, 'on');
+  assert.equal(EnvSchema.parse({ RISK_ENGINE: 'off' }).RISK_ENGINE, 'off');
   assert.ok(!EnvSchema.safeParse({ RISK_ENGINE: 'yes' }).success);
 });
 

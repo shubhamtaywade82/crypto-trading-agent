@@ -276,7 +276,6 @@ src/
     FundingArbAgent.ts       # funding harvest (short perp when funding positive)
     MomentumAgent.ts         # momentum breakout
     AdaptiveSuperTrendAgent  # ML-adaptive supertrend (paper modes, local and remote)
-    PairsAgent.ts            # DISABLED — see #11
     RiskAgent.ts             # gating authority, drawdown kill-switch
     ExecutorAgent.ts         # order routing
     StructureLiquidityAgent.ts  # STRUCT-LIQ fleet agent (STRUCT_LIQ=off to disable)
@@ -373,10 +372,9 @@ tuning whenever it deviates from the defaults.
 
 ## Known gaps (cross-referenced to GitHub issues)
 
-Issues #1–#7, #10 and #12 are closed as fixed (verified against current source, see each entry below);
-#9 is resolved (`.env.example` and `config.ts` no longer disagree); #11 is intentionally left open — it
-is documented, not fixed, and stays disabled. #31 is a newly filed, still-open gap in the CoinDCX
-live-execution migration (see the "Modes" section above).
+Issues #1–#7, #10, #11 and #12 are closed as fixed (verified against current source, see each entry
+below); #9 is resolved (`.env.example` and `config.ts` no longer disagree); #31 is fixed on an interim
+basis (see its entry below and the "Modes" section above).
 
 ### #1 — SL/TP in remote-paper mode
 
@@ -427,8 +425,10 @@ correct response to a drawdown breach.
 
 ### #11 — PairsAgent disabled
 
-**Documented in code** (`Orchestrator.agents`). It signals a BTC/ETH ratio,
-which is not an exchange symbol; re-enable once it emits two legs.
+**Fixed (deleted).** The agent, its `PAIRS-TRD-β` `AgentId` and its permanently-paused fleet row are
+removed — it only ever signaled a BTC/ETH close-ratio, which is not a tradable exchange symbol. The
+underlying BTC/ETH divergence z-score is still shown in the cockpit as an informational-only metric
+(the "DIVERGENCE" row in `renderMetricsLines`), decoupled from any trading strategy.
 
 ### #12 — getTrades() returns [] in remote-paper mode
 

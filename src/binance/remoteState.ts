@@ -24,6 +24,8 @@ export interface PositionMeta {
   openedAt: number;
   external?: boolean;
   lastSeen?: LastSeen;
+  /** Decision lineage: the DecisionRecord id that opened this position. */
+  decisionId?: string;
 }
 
 export interface ClosedPosition {
@@ -33,13 +35,15 @@ export interface ClosedPosition {
   entry: number;
   qty: number;
   initialRisk?: number;
+  decisionId?: string;
 }
 
 /** Journal record with gross pnl (fees and funding live in the wallet, not in per-trade records). */
 export function closedTrade(closed: ClosedPosition, exit: number, reason: ExitReason, closedAt: number): TradeRecord {
   const pnl = (exit - closed.entry) * closed.qty * directionOf(closed.side);
   const risk = closed.initialRisk === undefined ? {} : { initialRisk: closed.initialRisk };
-  return { symbol: closed.symbol, strategy: closed.owner, side: closed.side, entry: closed.entry, exit, qty: closed.qty, pnl, reason, closedAt, ...risk };
+  const decision = closed.decisionId === undefined ? {} : { decisionId: closed.decisionId };
+  return { symbol: closed.symbol, strategy: closed.owner, side: closed.side, entry: closed.entry, exit, qty: closed.qty, pnl, reason, closedAt, ...risk, ...decision };
 }
 
 export interface RemoteStateFile {
@@ -68,7 +72,8 @@ function isValidMeta(raw: unknown): raw is PositionMeta {
   if (!isRecord(raw)) return false;
   const hasValidLevels = [raw.stopLoss, raw.takeProfit, raw.initialRisk].every(isLevel);
   const hasValidFlags = (raw.external === undefined || typeof raw.external === 'boolean') && (raw.lastSeen === undefined || isValidLastSeen(raw.lastSeen));
-  return typeof raw.owner === 'string' && isNumber(raw.openedAt) && hasValidLevels && hasValidFlags;
+  const hasValidDecision = raw.decisionId === undefined || typeof raw.decisionId === 'string';
+  return typeof raw.owner === 'string' && isNumber(raw.openedAt) && hasValidLevels && hasValidFlags && hasValidDecision;
 }
 
 function isValidTrade(raw: unknown): raw is TradeRecord {

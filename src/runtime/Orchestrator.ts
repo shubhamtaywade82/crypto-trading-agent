@@ -21,7 +21,10 @@ import { announceStartup, buildOps, refreshPortfolio, RiskOps, toggleKillSwitch 
 import { config, LOOP_INTERVAL_MS } from '../config.js';
 import type { AdaptiveSuperTrendBar } from '../binance/adaptiveSuperTrend.js';
 import { MarketStateBuilder } from '../market/MarketStateBuilder.js';
-import { fuseSignals } from '../decision/SignalFusion.js';
+import type { MarketState } from '../market/types.js';
+import { fuseSignals, type TradeIntent } from '../decision/SignalFusion.js';
+import { scoreCandidate } from '../decision/CandidateScorer.js';
+import { DecisionJournal, type DecisionEvidence, type DecisionRecord, type DecisionStatus } from '../decision/DecisionJournal.js';
 import { evaluateExecutionQuality } from '../execution/ExecutionQuality.js';
 import { applyRouter } from '../decision/StrategyRouter.js';
 import { AgentLedger } from '../learning/AgentLedger.js';
@@ -62,7 +65,10 @@ export class Orchestrator extends EventEmitter {
   private lastVenueState: string | null = null;
   private lastInitError: string | null = null;
   private ledger = new AgentLedger('data/agent-ledger.json');
-  private recorder = new TradeOutcomeRecorder(this.ledger);
+  private journal = new DecisionJournal(config.decisionsPath);
+  private recorder = new TradeOutcomeRecorder(this.ledger, this.journal);
+  /** Winning fusion intents of the current cycle, keyed by `${symbol}:${agent}`; feeds decision evidence. */
+  private fusionIntents = new Map<string, TradeIntent>();
 
   start() {
     this.log('SYSTEM', `Orchestrator started in ${config.mode.toUpperCase()} mode`, 'info');
@@ -193,8 +199,10 @@ export class Orchestrator extends EventEmitter {
     const FUSION_AGENTS = new Set<string>(['STRUCTURE-TREND-η', 'MEAN-REVERT-θ', 'CROWDING-ι']);
     const legacy = passed.filter((s) => !FUSION_AGENTS.has(s.agent));
     const candidates = passed.filter((s) => FUSION_AGENTS.has(s.agent));
+    this.fusionIntents.clear();
     if (candidates.length === 0) return legacy;
     const intents = fuseSignals(candidates, states);
+    this.fusionIntents = new Map(intents.map((intent) => [`${intent.symbol}:${intent.sourceAgent}`, intent]));
     const fused = intents.flatMap(({ symbol, sourceAgent }) => candidates.filter((s) => s.symbol === symbol && s.agent === sourceAgent));
     if (candidates.length !== fused.length) this.log('SYSTEM', `SignalFusion: ${candidates.length - fused.length} candidate(s) filtered by conflict resolution`, 'info');
     return [...legacy, ...fused];
@@ -205,25 +213,84 @@ export class Orchestrator extends EventEmitter {
       if (this.isCoolingDown(signal)) { this.counters.monitored += 1; continue; }
       this.counters.decisions += 1;
       this.hooks.onSignal(signal);
+      const decisionId = `${signal.id}-${Date.now()}`;
       const decision = this.risk.gate(signal, ctx);
       this.hooks.onGate(signal, decision);
+      // Decision lineage: what the market looked like, what was proposed, and what risk said — persisted before anything else happens
+      const record = this.buildDecisionRecord(decisionId, signal, ctx, decision);
       if (!decision.approved) {
+        this.journal.record(record);
         this.log('RISK-MGR-δ', `REJECTED ${signal.symbol}: ${decision.reason}`, 'warn');
         this.hooks.onRefusal(signal, decision.reason);
         this.counters.monitored += 1;
         continue;
       }
-      if (await this.isVetoed(signal, ctx)) { this.counters.monitored += 1; continue; }
+      if (await this.isVetoed(signal, ctx)) {
+        this.journal.record({ ...record, status: 'VETOED', rejectionReason: 'advisor veto' });
+        this.counters.monitored += 1;
+        continue;
+      }
       const derivatives = ctx.marketDataV2?.[signal.symbol]?.derivatives ?? null;
       const eq = evaluateExecutionQuality({ symbol: signal.symbol, side: signal.type.includes('SHORT') ? 'SHORT' : 'LONG', sourceAgent: signal.agent, evidenceScore: Math.round(signal.confidence * 100), entry: signal.entry ?? 0, stopLoss: signal.stopLoss ?? 0, takeProfit: signal.takeProfit ?? 0, reasons: [signal.reason] }, derivatives, decision.positionSizeUsdt);
-      if (!eq.approved) { this.log(signal.agent, `EQ BLOCK ${signal.symbol}: ${eq.reason}`, 'warn'); this.counters.monitored += 1; continue; }
-      const log = await this.executor.execute(signal, decision);
+      if (!eq.approved) {
+        this.journal.record({ ...record, status: 'EQ_REJECTED', rejectionReason: eq.reason });
+        this.log(signal.agent, `EQ BLOCK ${signal.symbol}: ${eq.reason}`, 'warn');
+        this.counters.monitored += 1;
+        continue;
+      }
+      const log = await this.executor.execute(signal, decision, decisionId);
+      const executed: DecisionRecord = {
+        ...record,
+        execution: { ts: Date.now(), spreadBps: eq.spreadBps, slippageBps: eq.estimatedSlippageBps, effectiveCostBps: eq.effectiveCostBps },
+        ...(log.level === 'success' ? { status: 'EXECUTED' satisfies DecisionStatus } : {
+          status: (log.level === 'warn' ? 'EXECUTION_REFUSED' : 'EXECUTION_FAILED') satisfies DecisionStatus,
+          rejectionReason: log.msg,
+        }),
+      };
+      this.journal.record(executed);
       this.log(log.agent, log.msg, log.level);
       this.hooks.onOrder(signal, decision, log, ctx);
       if (log.level === 'warn') this.counters.monitored += 1;
       if (startsCooldown(log.level, this.binance.getVenueStatus()?.state)) this.cooldownStartedAt.set(`${signal.symbol}:${signal.agent}`, Date.now());
       if (log.level === 'success') { this.counters.executed += 1; ctx = await refreshPortfolio(ctx, this.binance); }
     }
+  }
+
+  /** Evidence at decision time: the deterministic rubric from the MarketState plus the composite that drove the decision. */
+  private evidenceFor(signal: Signal, ctx: MarketContext): DecisionEvidence {
+    const state = ctx.marketState?.[signal.symbol];
+    const side = signal.type.includes('SHORT') ? 'SHORT' : 'LONG';
+    const breakdown = state ? scoreCandidate(side, state) : null;
+    const intent = this.fusionIntents.get(`${signal.symbol}:${signal.agent}`);
+    return {
+      breakdown,
+      score: intent?.evidenceScore ?? breakdown?.total ?? Math.round(signal.confidence * 100),
+      factors: intent?.reasons ?? breakdown?.reasons ?? [signal.reason],
+    };
+  }
+
+  private buildDecisionRecord(decisionId: string, signal: Signal, ctx: MarketContext, decision: import('../types.js').RiskDecision): DecisionRecord {
+    const state = ctx.marketState?.[signal.symbol];
+    return {
+      decisionId,
+      timestamp: Date.now(),
+      symbol: signal.symbol,
+      strategy: signal.agent,
+      signalType: signal.type,
+      side: signal.type === 'OPEN_LONG' ? 'LONG' : signal.type.startsWith('OPEN_') ? 'SHORT' : null,
+      signalId: signal.id,
+      confidence: signal.confidence,
+      marketStateTime: state?.generatedAt ?? null,
+      marketStateVersion: state?.version ?? null,
+      evidence: this.evidenceFor(signal, ctx),
+      entry: signal.entry ?? null,
+      stopLoss: signal.stopLoss ?? null,
+      takeProfit: signal.takeProfit ?? null,
+      notionalUsdt: signal.notionalUsdt ?? decision.positionSizeUsdt,
+      riskDecision: { approved: decision.approved, size: decision.positionSizeUsdt, leverage: decision.leverage, reason: decision.reason },
+      status: decision.approved ? 'EXECUTED' : 'RISK_REJECTED',
+      rejectionReason: decision.approved ? null : decision.reason,
+    };
   }
 
   private isCoolingDown(signal: Signal): boolean {
@@ -302,6 +369,7 @@ export class Orchestrator extends EventEmitter {
 
   private log(agent: any, msg: string, level: LogEntry['level']) { this.emit('log', { ts: Date.now(), agent, msg, level } satisfies LogEntry); }
   private logGrade(g: import('../learning/TradeOutcomeRecorder.js').GradedTrade): void {
-    this.log(g.trade.strategy, `GRADE ${g.grade} ${g.trade.symbol} ${g.rMultiple > 0 ? '+' : ''}${g.rMultiple}R — ${g.commentary}`, g.trade.pnl >= 0 ? 'success' : 'warn');
+    const evidence = g.evidence ? ` ev ${Math.round(g.evidence.score)}` : '';
+    this.log(g.trade.strategy, `GRADE ${g.grade} ${g.trade.symbol} ${g.rMultiple > 0 ? '+' : ''}${g.rMultiple}R${evidence} — ${g.commentary}`, g.trade.pnl >= 0 ? 'success' : 'warn');
   }
 }

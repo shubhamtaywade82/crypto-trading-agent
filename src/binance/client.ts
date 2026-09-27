@@ -16,6 +16,7 @@ const KLINE_LIMIT = 300;
 type OpenPositionParams = {
   symbol: string; side: 'BUY' | 'SELL'; qty: number; leverage: number;
   strategy: AgentId; stopLoss?: number; takeProfit?: number; reduceOnly?: boolean; entryPrice?: number;
+  decisionId?: string;
 };
 
 const REMOTE_STATE_FILE = 'data/remote-state.json';

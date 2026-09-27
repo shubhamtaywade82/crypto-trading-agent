@@ -22,7 +22,8 @@ export class ExecutorAgent extends BaseAgent {
     return [];
   }
 
-  async execute(signal: Signal, risk: RiskDecision): Promise<LogEntry> {
+  /** The optional decisionId threads the decision lineage through the venue into the trade journal. */
+  async execute(signal: Signal, risk: RiskDecision, decisionId?: string): Promise<LogEntry> {
     try {
       const { side, qty } = await this.buildOrder(signal, risk);
       const stopLoss = roundOptionalPrice(signal.symbol, signal.stopLoss);
@@ -35,6 +36,7 @@ export class ExecutorAgent extends BaseAgent {
         stopLoss,
         takeProfit: roundOptionalPrice(signal.symbol, signal.takeProfit),
         entryPrice: roundOptionalPrice(signal.symbol, signal.entry),
+        ...(decisionId === undefined ? {} : { decisionId }),
       });
       return this.log(`FILLED ${side} ${signal.symbol} qty=${formatQty(signal.symbol, qty)} orderId=${res.orderId} SL=${stopLoss === undefined ? '—' : formatPrice(signal.symbol, stopLoss)} ${stopPlacement(config.mode)}`, 'success');
     } catch (err: any) {

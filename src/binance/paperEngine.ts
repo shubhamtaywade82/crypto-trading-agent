@@ -19,6 +19,8 @@ interface FillParams {
   takeProfit?: number;
   reduceOnly?: boolean;
   entryPrice?: number;
+  /** DecisionRecord linkage: carried onto the position and into its trade journal entries. */
+  decisionId?: string;
 }
 
 // A realistic retail bankroll (~₹1,00,000), not the unrealistic 100k USDT default
@@ -169,6 +171,7 @@ export class PaperEngine {
       symbol: pos.symbol, strategy: pos.strategy, side: pos.side, entry: pos.entry,
       exit: price, qty: closeQty, pnl, reason, closedAt: Date.now(),
       ...(pos.initialRisk === undefined ? {} : { initialRisk: pos.initialRisk }),
+      ...(pos.decisionId === undefined ? {} : { decisionId: pos.decisionId }),
     });
     if (this.trades.length > MAX_TRADES) this.trades.shift();
     pos.qty -= closeQty;
@@ -206,6 +209,7 @@ export class PaperEngine {
       liqDistancePct: null,
       serverSl: params.stopLoss ? String(params.stopLoss) : '—',
       serverTp: params.takeProfit ? String(params.takeProfit) : 'trail',
+      ...(params.decisionId === undefined ? {} : { decisionId: params.decisionId }),
     };
     refreshMetrics(pos);
     return pos;

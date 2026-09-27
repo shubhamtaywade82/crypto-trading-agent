@@ -61,7 +61,7 @@ function buildRun(len: number): Run {
     lastTime: prefix[prefix.length - 1].openTime,
     events,
     zones: buildZoneLedger('15m', prefix, ATR, events),
-    sweepHistory: null,
+    sweepHistory: [],
     pools: [],
   };
 }

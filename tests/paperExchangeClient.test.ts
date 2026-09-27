@@ -17,7 +17,7 @@ type Reply = { status: number; json?: unknown; text?: string } | Error;
 
 /** Replays `replies` in order (the last one repeats) and records every request. */
 function scriptedFetch(replies: Reply[], calls: Call[]) {
-  return async (url: string | URL, init?: RequestInit) => {
+  return async (url: string | URL | Request, init?: RequestInit) => {
     calls.push({
       url: String(url),
       method: String(init?.method),

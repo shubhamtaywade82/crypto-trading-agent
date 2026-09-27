@@ -175,6 +175,8 @@ test('causal calibration does not use an unresolved prior outcome', () => {
   const firstPrediction = calibration.observe(10, 0.9, 30, 0);
   const secondPrediction = calibration.observe(20, 0.9, null, null);
 
+  assert.ok(firstPrediction !== null);
+  assert.ok(secondPrediction !== null);
   assert.ok(Math.abs(firstPrediction - 0.9) < 1e-12);
   assert.ok(Math.abs(secondPrediction - 0.9) < 1e-12);
   assert.equal(calibration.summary().samples, 0);
@@ -185,6 +187,7 @@ test('causal calibration includes an outcome resolved on the current signal cand
   calibration.observe(10, 0.9, 20, 0);
   const predictionAtResolution = calibration.observe(20, 0.9, null, null);
 
+  assert.ok(predictionAtResolution !== null);
   assert.ok(predictionAtResolution < 0.9);
   assert.equal(calibration.summary().samples, 1);
 });

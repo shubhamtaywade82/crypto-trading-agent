@@ -5,7 +5,7 @@ import { StructureTrendAgent } from '../src/agents/StructureTrendAgent.js';
 import { MeanReversionAgent } from '../src/agents/MeanReversionAgent.js';
 import { CrowdingAgent } from '../src/agents/CrowdingAgent.js';
 import type { MarketContext } from '../src/agents/BaseAgent.js';
-import type { MarketState } from '../market/types.js';
+import type { MarketState } from '../src/market/types.js';
 
 const dummyService = {} as BinanceService;
 
@@ -63,8 +63,8 @@ function mockMarketState(overrides: Partial<MarketState> = {}): MarketState {
       protectedLow: null,
     },
     liquidity: {
-      htf: { timeframe: '1h', pools: [], latestSweeps: [] },
-      ltf: { timeframe: '15m', pools: [], latestSweeps: [] },
+      htf: { timeframe: '1h', pools: [], latestSweeps: [], recentSweeps: [] },
+      ltf: { timeframe: '15m', pools: [], latestSweeps: [], recentSweeps: [] },
     },
     zones: [],
     pricing: {
@@ -170,10 +170,11 @@ test('CrowdingAgent fades LONG_CROWDED at premium after buy-side liquidity sweep
       openInterestExpansion: true,
     },
     liquidity: {
-      htf: { timeframe: '1h', pools: [], latestSweeps: [] },
+      htf: { timeframe: '1h', pools: [], latestSweeps: [], recentSweeps: [] },
       ltf: {
         timeframe: '15m',
         pools: [],
+        recentSweeps: [],
         latestSweeps: [{
           poolType: 'EQUAL_HIGH',
           direction: 'BUY_SIDE',

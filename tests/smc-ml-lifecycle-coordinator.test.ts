@@ -143,6 +143,7 @@ test('coordinator closes and cancels both protective orders at TP2', async () =>
   coordinator.replace('BTCUSDT', lifecycle);
 
   const result = await coordinator.onMarkPrice('BTCUSDT', 120);
+  assert.ok(result.state);
   assert.equal(result.state.phase, 'CLOSED');
   assert.deepEqual(calls.slice(-4), ['close:BTCUSDT', 'reconcile:BTCUSDT', 'cancel:BTCUSDT:101', 'cancel:BTCUSDT:102']);
 });

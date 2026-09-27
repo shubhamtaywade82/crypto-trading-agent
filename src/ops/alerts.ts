@@ -151,7 +151,7 @@ const subscriptionReject = (event: AlertEvent, subs: AlertSubscriptions): AlertS
   if (symbolDisabled(event, subs)) return 'SYMBOL';
   if (belowSeverityFloor(event, subs)) return 'SEVERITY';
   if (event.class === 'LEVEL' && event.stateTo === 'APPROACHING' && !subs.levelApproaching) return 'LEVEL_APPROACHING';
-  if (event.class === 'SETUP' && event.stateTo === 'WATCHING' && !subs.setupDeveloping) return 'CLASS';
+  if (event.class === 'SETUP' && (event.stateTo === 'FORMING' || event.stateTo === 'ARMED') && !subs.setupDeveloping) return 'CLASS';
   if (event.stateTo === 'REACTION' && !subs.liquiditySweeps) return 'CLASS';
   return signalGate(event, subs);
 };

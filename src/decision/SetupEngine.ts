@@ -1,6 +1,8 @@
-import type { MarketState, LiquidityPool, LiquiditySweep, PriceZone, TrendDirection } from '../market/types.js';
-import type { SetupMap, SetupScenario, SetupDirection, SetupKind } from './SetupTypes.js';
+import type { MarketState, LiquidityPool, LiquiditySweep, PriceZone, StructureBreak, StructureState, TrendDirection, ZoneRecord } from '../market/types.js';
+import type { SetupMap, SetupScenario, SetupDirection, SetupKind, SetupState } from './SetupTypes.js';
 import { expectedMove } from './SetupTiming.js';
+
+type ScenarioState = SetupScenario['state'] | 'INVALIDATED';
 
 export type * from './SetupTypes.js';
 export { formatDuration } from './SetupTiming.js';
@@ -46,13 +48,29 @@ function secondDirectionalPool(state: MarketState, direction: SetupDirection, af
   return pools[0] ?? null;
 }
 
-function freshZone(state: MarketState, direction: SetupDirection, mark: number): PriceZone | null {
+function nearestZoneRecord(state: MarketState, direction: SetupDirection, mark: number): ZoneRecord | null {
   const type: PriceZone['type'] = direction === 'LONG' ? 'DEMAND' : 'SUPPLY';
-  const zones = state.zones
-    .filter((zone) => zone.type === type && zone.fresh)
+  const zones = (state.zoneLedger ?? [])
+    .filter((zone) => zone.type === type && zone.state !== 'EXPIRED' && zone.state !== 'INVALIDATED')
     .filter((zone) => direction === 'LONG' ? zone.low <= mark : zone.high >= mark)
     .sort((a, b) => Math.abs(mark - (a.low + a.high) / 2) - Math.abs(mark - (b.low + b.high) / 2));
   return zones[0] ?? null;
+}
+
+/** Causal break history when available, else the single latest-candle break. */
+function breakEvents(structure: StructureState): StructureBreak[] {
+  if (structure.breaks && structure.breaks.length > 0) return structure.breaks;
+  return structure.lastBreak ? [structure.lastBreak] : [];
+}
+
+function confirmingBreakAfter(structure: StructureState, since: number, direction: SetupDirection): boolean {
+  const wanted: TrendDirection = direction === 'LONG' ? 'BULLISH' : 'BEARISH';
+  return breakEvents(structure).some((b) => b.time >= since && b.direction === wanted);
+}
+
+function opposingBreakAfter(structure: StructureState, since: number, direction: SetupDirection): boolean {
+  const opposing: TrendDirection = direction === 'LONG' ? 'BEARISH' : 'BULLISH';
+  return breakEvents(structure).some((b) => b.time >= since && b.direction === opposing);
 }
 
 function stopForZone(
@@ -92,27 +110,29 @@ function flowHypothesis(
   return 'trend continuation hypothesis; flow not independently confirmed';
 }
 
-function stateForBreakout(mark: number, level: number, direction: SetupDirection): SetupScenario['state'] {
-  const triggered = direction === 'LONG' ? mark >= level : mark <= level;
-  return triggered ? 'TRIGGERED' : 'WATCHING';
+function stateForBreakout(state: MarketState, pool: LiquidityPool, direction: SetupDirection): ScenarioState {
+  if (!pool.taken || pool.sweptAt === null || pool.sweptAt === undefined) return 'FORMING';
+  if (confirmingBreakAfter(state.ltfStructure, pool.sweptAt, direction)) return 'TRIGGERED';
+  if (opposingBreakAfter(state.ltfStructure, pool.sweptAt, direction)) return 'INVALIDATED';
+  return 'ARMED';
 }
 
-function stateForZone(state: MarketState, zone: PriceZone, direction: SetupDirection): SetupScenario['state'] {
-  const touched = direction === 'LONG' ? state.mark >= zone.low && state.mark <= zone.high * 1.002 : state.mark <= zone.high && state.mark >= zone.low * 0.998;
-  const breakEvent = state.ltfStructure.lastBreak;
-  const confirmed = breakEvent !== null
-    && breakEvent.time >= zone.originTime
-    && ((direction === 'LONG' && breakEvent.direction === 'BULLISH') || (direction === 'SHORT' && breakEvent.direction === 'BEARISH'));
-  return touched && confirmed ? 'TRIGGERED' : 'WATCHING';
+function stateForZone(state: MarketState, zone: ZoneRecord, direction: SetupDirection): ScenarioState {
+  if (zone.state === 'FRESH') return 'FORMING';
+  const since = zone.testedAt ?? zone.breakTime;
+  if (confirmingBreakAfter(state.ltfStructure, since, direction)) return 'TRIGGERED';
+  if (opposingBreakAfter(state.ltfStructure, since, direction)) return 'INVALIDATED';
+  return 'ARMED';
 }
 
-function stateForSweep(state: MarketState, sweep: LiquiditySweep, direction: SetupDirection): SetupScenario['state'] {
+function stateForSweep(state: MarketState, sweep: LiquiditySweep, direction: SetupDirection): ScenarioState {
+  const brokeExtreme = direction === 'LONG' ? state.mark < sweep.sweepPrice : state.mark > sweep.sweepPrice;
+  if (brokeExtreme) return 'INVALIDATED';
   const reclaimed = direction === 'LONG' ? state.mark > sweep.level : state.mark < sweep.level;
-  const breakEvent = state.ltfStructure.lastBreak;
-  const confirmed = breakEvent !== null
-    && breakEvent.time >= sweep.time
-    && ((direction === 'LONG' && breakEvent.direction === 'BULLISH') || (direction === 'SHORT' && breakEvent.direction === 'BEARISH'));
-  return reclaimed && confirmed ? 'TRIGGERED' : 'WATCHING';
+  if (!reclaimed) return 'FORMING';
+  if (confirmingBreakAfter(state.ltfStructure, sweep.time, direction)) return 'TRIGGERED';
+  if (opposingBreakAfter(state.ltfStructure, sweep.time, direction)) return 'INVALIDATED';
+  return 'ARMED';
 }
 
 function buildBreakout(
@@ -126,6 +146,9 @@ function buildBreakout(
   const level = pool.price;
   const next = secondDirectionalPool(state, direction, level);
   if (!next) return null;
+
+  const scenarioState = stateForBreakout(state, pool, direction);
+  if (scenarioState === 'INVALIDATED') return null;
 
   const pad = atrValue * 0.20;
   const entryLow = direction === 'LONG' ? level : level - pad;
@@ -141,7 +164,7 @@ function buildBreakout(
     id: 'breakout-' + state.symbol + '-' + direction + '-' + Math.round(level * 100),
     kind: 'BREAKOUT_RETEST',
     direction,
-    state: stateForBreakout(state.mark, level, direction),
+    state: scenarioState,
     timeframe: '15m',
     entryLow,
     entryHigh,
@@ -162,8 +185,11 @@ function buildPullback(
   direction: SetupDirection,
   atrValue: number,
 ): SetupScenario | null {
-  const zone = freshZone(state, direction, state.mark);
+  const zone = nearestZoneRecord(state, direction, state.mark);
   if (!zone) return null;
+  const scenarioState = stateForZone(state, zone, direction);
+  if (scenarioState === 'INVALIDATED') return null;
+
   const entry = direction === 'LONG' ? Math.min(state.mark, zone.high) : Math.max(state.mark, zone.low);
   const stop = stopForZone(direction, zone, atrValue);
   const target = directionalPool(state, direction, Math.max(entry, state.mark));
@@ -175,10 +201,10 @@ function buildPullback(
   if (!move || riskAtr < MIN_STOP_ATR || riskAtr > MAX_STOP_ATR || rr < 1.25) return null;
 
   return {
-    id: 'pullback-' + state.symbol + '-' + direction + '-' + zone.originTime,
+    id: 'pullback-' + state.symbol + '-' + direction + '-' + zone.breakTime,
     kind: 'PULLBACK_RETEST',
     direction,
-    state: stateForZone(state, zone, direction),
+    state: scenarioState,
     timeframe: '15m',
     entryLow: zone.low,
     entryHigh: zone.high,
@@ -186,19 +212,20 @@ function buildPullback(
     target1: target.price,
     target2: second?.price,
     trigger: direction === 'LONG'
-      ? '15m rejection of fresh demand + bullish BOS/CHOCH'
-      : '15m rejection of fresh supply + bearish BOS/CHOCH',
+      ? '15m rejection of demand + bullish BOS/CHOCH'
+      : '15m rejection of supply + bearish BOS/CHOCH',
     invalidation: direction === 'LONG' ? '15m acceptance below demand' : '15m acceptance above supply',
     flowHypothesis: flowHypothesis(state, direction, 'PULLBACK_RETEST'),
     expectedMove: move,
-    sourceTime: zone.originTime,
+    sourceTime: zone.breakTime,
     rewardRisk: rr,
   };
 }
 
 function latestSweep(state: MarketState, direction: SetupDirection): LiquiditySweep | null {
   const wanted: LiquiditySweep['direction'] = direction === 'LONG' ? 'SELL_SIDE' : 'BUY_SIDE';
-  return [...state.liquidity.ltf.recentSweeps]
+  const source = state.liquidity.ltf.sweepHistory ?? state.liquidity.ltf.recentSweeps;
+  return [...source]
     .filter((sweep) => sweep.confirmed && sweep.direction === wanted)
     .sort((a, b) => b.time - a.time)[0] ?? null;
 }
@@ -210,6 +237,8 @@ function buildSweep(
 ): SetupScenario | null {
   const sweep = latestSweep(state, direction);
   if (!sweep || state.generatedAt - sweep.time > MAX_SWEEP_AGE_MS) return null;
+  const scenarioState = stateForSweep(state, sweep, direction);
+  if (scenarioState === 'INVALIDATED') return null;
   const target = directionalPool(state, direction, state.mark);
   if (!target || Math.abs(target.price - sweep.level) <= atrValue * 0.5) return null;
 
@@ -226,7 +255,7 @@ function buildSweep(
     id: 'sweep-' + state.symbol + '-' + direction + '-' + sweep.time,
     kind: 'LIQUIDITY_SWEEP',
     direction,
-    state: stateForSweep(state, sweep, direction),
+    state: scenarioState,
     timeframe: '15m',
     entryLow: direction === 'LONG' ? entry : entry - atrValue * 0.1,
     entryHigh: direction === 'LONG' ? entry + atrValue * 0.1 : entry,
@@ -257,11 +286,18 @@ export function buildSetupMap(state: MarketState): SetupMap {
     }
   }
 
-  const triggered = scenarios.some((scenario) => scenario.state === 'TRIGGERED');
+  const STATE_RANK: Record<SetupScenario['state'], number> = { TRIGGERED: 2, ARMED: 1, FORMING: 0 };
   scenarios.sort((a, b) =>
-    Number(b.state === 'TRIGGERED') - Number(a.state === 'TRIGGERED')
+    STATE_RANK[b.state] - STATE_RANK[a.state]
     || (b.rewardRisk - a.rewardRisk)
   );
+  const mapState: SetupState = scenarios.length === 0
+    ? 'NO_TRADE'
+    : scenarios.some((s) => s.state === 'TRIGGERED')
+      ? 'TRIGGERED'
+      : scenarios.some((s) => s.state === 'ARMED')
+        ? 'ARMED'
+        : 'FORMING';
   const noTradeReasons: string[] = [];
   if (!direction) noTradeReasons.push('directional structure is unresolved');
   if (direction && scenarios.length === 0) noTradeReasons.push('no admissible structure/liquidity setup with a valid target');
@@ -272,7 +308,7 @@ export function buildSetupMap(state: MarketState): SetupMap {
     symbol: state.symbol,
     generatedAt: state.generatedAt,
     mark: state.mark,
-    state: scenarios.length === 0 ? 'NO_TRADE' : triggered ? 'TRIGGERED' : 'WATCHING',
+    state: mapState,
     bias,
     regime: state.regime.regime,
     volatility: state.regime.volatility,

@@ -12,8 +12,11 @@ const percent = (value: number): string => `${value.toFixed(0)}%`;
 
 
 
-const statusLabel = (scenario: SetupScenario): string =>
-  scenario.state === 'TRIGGERED' ? '🟢 TRIGGERED' : '🟡 WATCHING';
+const statusLabel = (scenario: SetupScenario): string => {
+  if (scenario.state === 'TRIGGERED') return '🟢 TRIGGERED';
+  if (scenario.state === 'ARMED') return '🟠 ARMED';
+  return '🟡 FORMING';
+};
 
 const setupLabel = (kind: SetupScenario['kind']): string => {
   if (kind === 'LIQUIDITY_SWEEP') return 'LIQUIDITY SWEEP';

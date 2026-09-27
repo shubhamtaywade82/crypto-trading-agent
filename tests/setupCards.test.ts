@@ -29,7 +29,7 @@ const map: SetupMap = {
     id: 's1',
     kind: 'BREAKOUT_RETEST',
     direction: 'LONG',
-    state: 'WATCHING',
+    state: 'FORMING',
     timeframe: '15m',
     entryLow: 104.8,
     entryHigh: 105.2,

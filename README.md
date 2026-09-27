@@ -263,6 +263,7 @@ src/
     CandidateScorer.ts       # deterministic evidence rubric from the MarketState
     StrategyRouter.ts        # regime-based strategy eligibility
     DecisionJournal.ts       # append-only JSONL decision lineage (evidence -> risk -> execution -> outcome)
+    StructureLiquidityStrategy.ts  # SMC trend setup consuming the liquidity ledger (sweep history + untaken targets)
   market/                     # MarketState stack (data -> state)
   risk/
     equityHwm.ts             # persisted equity high-water mark (mode-keyed, atomic writes)
@@ -283,6 +284,25 @@ src/
   types.ts                   # shared types
   index.tsx                  # entrypoint with SIGINT/SIGTERM hooks
 ```
+
+### STRUCT-LIQ and the liquidity ledger
+
+`decision/StructureLiquidityStrategy.ts` is the analysis-only SMC trend setup — HTF directional
+regime -> LTF liquidity sweep -> LTF BOS/CHOCH confirmation -> opposing liquidity target. It is
+the first consumer of the market-state hardening ledgers:
+
+- **Trigger sweeps** are drawn from the persistent `sweepHistory` (causally replayed over the
+  whole window) unioned with the legacy 12-bar window. Sweeps of pools that aged out of the
+  per-snapshot pool list still qualify, and a sweep must predate the confirming break — the
+  strategy enforces causality rather than assuming it.
+- **Take-profit targets** skip every pool the sweep ledger marked `taken`. Spent liquidity is
+  never re-targeted: the setup walks out to the nearest untaken pool or stands down.
+
+Both are behavioral changes against the pre-ledger strategy: some setups that were missed now
+fire, and setups that aimed at already-consumed liquidity now aim further out or do not fire.
+States without ledger annotations (and `RANGE_*` pools, which the ledger does not mark) fall
+back to the exact legacy behavior. The strategy stays deterministic and analysis-only — the
+risk gate and executor remain authoritative.
 
 ---
 

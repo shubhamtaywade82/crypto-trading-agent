@@ -42,8 +42,51 @@ function targetPools(state: MarketState, side: Side, entry: number, breakTime: n
   return [...state.liquidity.ltf.pools, ...state.liquidity.htf.pools]
     .filter((pool) => pool.sourceTimes.length > 0)
     .filter((pool) => Math.max(...pool.sourceTimes) < breakTime)
+    // Pools the sweep ledger already consumed are spent liquidity, not a magnet:
+    // price took them once, expecting the same rest to be taken twice is a
+    // different trade. The ledger marks pools via `taken`/`sweptAt`; pools built
+    // without ledger annotations (and RANGE_ pools, which the ledger skips)
+    // stay eligible, so legacy-shaped states behave exactly as before.
+    .filter((pool) => pool.taken !== true)
     .filter((pool) => isTargetPool(side, pool, entry))
     .sort((a, b) => (Math.abs(a.price - entry) - Math.abs(b.price - entry)) || (b.strength - a.strength));
+}
+
+/**
+ * Identity of a sweep event across the two windows: candle, direction, level and
+ * pool type. Deliberately excludes pool source times — two pools resting at the
+ * same level swept by the same candle are the same liquidity event for trigger
+ * purposes, whatever swings formed them.
+ */
+function sweepIdentity(sweep: LiquiditySweep): string {
+  return `${sweep.time}|${sweep.direction}|${sweep.level}|${sweep.poolType}`;
+}
+
+/**
+ * Trigger sweep candidates: the persistent ledger history unioned with the
+ * legacy 12-bar window.
+ *
+ * The ledger (`LiquidityState.sweepHistory`) records every sweep over the full
+ * analysed window, including sweeps of pools that aged out of the per-snapshot
+ * pool list — the legacy window cannot see those. Unioning keeps the legacy
+ * window as a safety net for the rare pool the ledger's active budget evicted
+ * before it was swept, so the candidate set is never smaller than before.
+ *
+ * Determinism: history events come first, and the latest-sweep selection below
+ * uses a stable sort — on an exact tie (same candle, direction and level) the
+ * ledger event wins because it carries pool-source causality (`poolSourceTimes`)
+ * and a stable identity (`id`). Exact duplicates collapse onto the history event.
+ */
+function eligibleSweeps(state: MarketState): LiquiditySweep[] {
+  const ltf = state.liquidity.ltf;
+  const history = ltf.sweepHistory ?? [];
+  const legacy = ltf.recentSweeps ?? ltf.latestSweeps ?? [];
+
+  if (history.length === 0) return legacy;
+  if (legacy.length === 0) return history;
+
+  const seen = new Set(history.map(sweepIdentity));
+  return [...history, ...legacy.filter((sweep) => !seen.has(sweepIdentity(sweep)))];
 }
 
 function latestEligibleSweep(
@@ -52,7 +95,7 @@ function latestEligibleSweep(
   breakTime: number,
   options: StructureLiquidityOptions,
 ): LiquiditySweep | null {
-  const sweeps = state.liquidity.ltf.recentSweeps ?? state.liquidity.ltf.latestSweeps;
+  const sweeps = eligibleSweeps(state);
   const maxAge = options.maxSweepAgeCandles * LTF_BAR_MS;
 
   return [...sweeps]
@@ -119,6 +162,17 @@ function targetAndRewardRisk(
 /**
  * Deterministic SMC-style trend setup:
  * HTF directional regime -> LTF liquidity sweep -> LTF BOS/CHOCH confirmation -> opposing liquidity target.
+ *
+ * Ledger-connected since the structure/liquidity hardening batch:
+ * - the trigger sweep is drawn from the persistent `sweepHistory` (causally
+ *   replayed over the whole window) unioned with the legacy 12-bar window, so
+ *   sweeps of pools that aged out of the snapshot pool list still qualify;
+ * - the take-profit target never selects a pool the sweep ledger already
+ *   consumed (`taken`), it walks outward to the nearest untaken liquidity.
+ *
+ * Both connections are behavioral changes: some setups that were missed now
+ * fire, some that targeted spent liquidity now aim further out or stand down.
+ * States built without ledger annotations fall back to the legacy behavior.
  *
  * Analysis-only: no venue, risk gate, or executor calls.
  */

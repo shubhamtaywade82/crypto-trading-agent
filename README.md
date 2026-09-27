@@ -15,6 +15,16 @@ built on Ink. Routes orders to either a local in-memory paper engine, a remote
 | `paper` + `PAPER_EXCHANGE_URL` | Remote `paper_exchange` Rails broker via `RemoteBroker` | Agent-side reduce-only market orders (the broker never evaluates resting orders and has no price feed). Liquidation, fees and funding are exchange-side | Yes: one account, a symbol is owned by the strategy that opened it |
 | `live` | Live Binance | Exchange-side STOP_MARKET / TAKE_PROFIT_MARKET | No — Binance positions are per-symbol |
 
+**Live mode is mid-migration to CoinDCX for execution.** `MODE=live` refuses to start without both
+`BINANCE_API_KEY`/`BINANCE_API_SECRET` (market data always, and today's actual order execution) **and**
+`COINDCX_API_KEY`/`COINDCX_API_SECRET` (checked at startup — `src/config.ts` throws
+`LIVE mode requires COINDCX_API_KEY and COINDCX_API_SECRET` without them). Right now the CoinDCX
+credentials are validated only: no order is routed through CoinDCX yet, and live execution still goes
+through `BinanceService.submitLiveOrder()` exactly as the table above describes. The wiring that switches
+live order routing to CoinDCX (`src/coindcx/coindcxClient.ts` already implements the adapter) is tracked in
+`docs/superpowers/plans/2026-09-22-coindcx-live-execution.md`, Task 5; until it lands, treat the CoinDCX
+env vars as a startup-only requirement with no functional effect.
+
 ---
 
 ## Quick start
@@ -113,7 +123,9 @@ was fixed.
 | Variable | Default | Purpose |
 | --- | --- | --- |
 | `MODE` | `paper` | `paper` or `live` |
-| `BINANCE_API_KEY` / `BINANCE_API_SECRET` | (empty) | Required for `MODE=live` |
+| `BINANCE_API_KEY` / `BINANCE_API_SECRET` | (empty) | Required for `MODE=live` (market data always; order execution too, until the CoinDCX wiring below lands) |
+| `COINDCX_API_KEY` / `COINDCX_API_SECRET` | (empty) | Also required for `MODE=live` — startup fails without them (fail-closed check in `config.ts`); validated only today, not yet wired into the order path, see "Modes" above |
+| `COINDCX_PAPER_MODE` / `COINDCX_QUOTE_PREFERENCE` / `COINDCX_MAX_ORDER_NOTIONAL` / `COINDCX_MAX_ORDER_QUANTITY` / `COINDCX_INITIAL_BALANCE` | see `.env.example` | Reserved for the CoinDCX execution path once wired in; currently have no effect |
 | `OLLAMA_HOST` | `http://127.0.0.1:11434` | Ollama daemon URL |
 | `OLLAMA_MODEL` | `gemma4:31b` | Model used for veto/advise/ask |
 | `MIN_LEVERAGE` | `5` | Floor for the dynamic-leverage calculation |
@@ -283,6 +295,10 @@ src/
     indicators.ts            # ATR, sparkline
     adaptiveSuperTrend.ts    # indicator math
     performance.ts           # win rate / max drawdown / Sharpe
+  coindcx/
+    coindcxClient.ts          # ExchangeApi adapter over a real CoinDCX futures account (not yet wired into client.ts)
+    symbolRouter.ts           # Binance symbol <-> CoinDCX B-<BASE>_<QUOTE> pair mapping, USDT/INR routing
+    contractSpec.ts           # CoinDCX instrument lot size / min qty / leverage cache
   ollama/
     advisor.ts               # veto / advise / ask (fail-closed on parse errors — #6)
   ops/                       # audit trail, alerts, Telegram sender, cards, kill-switch, hooks
@@ -357,6 +373,10 @@ tuning whenever it deviates from the defaults.
 ---
 
 ## Known gaps (cross-referenced to GitHub issues)
+
+Issues #1–#7, #10 and #12 are closed as fixed (verified against current source, see each entry below);
+#9 is resolved (`.env.example` and `config.ts` no longer disagree); #11 is intentionally left open — it
+is documented, not fixed, and stays disabled.
 
 ### #1 — SL/TP in remote-paper mode
 

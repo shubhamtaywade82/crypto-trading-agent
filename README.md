@@ -15,15 +15,15 @@ built on Ink. Routes orders to either a local in-memory paper engine, a remote
 | `paper` + `PAPER_EXCHANGE_URL` | Remote `paper_exchange` Rails broker via `RemoteBroker` | Agent-side reduce-only market orders (the broker never evaluates resting orders and has no price feed). Liquidation, fees and funding are exchange-side | Yes: one account, a symbol is owned by the strategy that opened it |
 | `live` | Live Binance | Exchange-side STOP_MARKET / TAKE_PROFIT_MARKET | No — Binance positions are per-symbol |
 
-**Live mode is mid-migration to CoinDCX for execution.** `MODE=live` refuses to start without both
-`BINANCE_API_KEY`/`BINANCE_API_SECRET` (market data always, and today's actual order execution) **and**
-`COINDCX_API_KEY`/`COINDCX_API_SECRET` (checked at startup — `src/config.ts` throws
-`LIVE mode requires COINDCX_API_KEY and COINDCX_API_SECRET` without them). Right now the CoinDCX
-credentials are validated only: no order is routed through CoinDCX yet, and live execution still goes
-through `BinanceService.submitLiveOrder()` exactly as the table above describes. The wiring that switches
-live order routing to CoinDCX (`src/coindcx/coindcxClient.ts` already implements the adapter) is tracked in
-`docs/superpowers/plans/2026-09-22-coindcx-live-execution.md`, Task 5; until it lands, treat the CoinDCX
-env vars as a startup-only requirement with no functional effect.
+**A CoinDCX live-execution migration is in progress but not live yet.** `src/coindcx/coindcxClient.ts`
+already implements a full `ExchangeApi` adapter for CoinDCX, but it is not wired into `BinanceService` —
+`MODE=live` still executes exclusively through `BinanceService.submitLiveOrder()` (raw Binance) exactly as
+the table above describes, and only needs `BINANCE_API_KEY`/`BINANCE_API_SECRET` to start. An earlier commit
+added a startup check requiring `COINDCX_API_KEY`/`COINDCX_API_SECRET` for `MODE=live` even though nothing
+used them yet; that check has been removed (see issue #31) until the wiring
+(`docs/superpowers/plans/2026-09-22-coindcx-live-execution.md`, Task 5) actually lands — finishing it needs
+the private `@nemesis-oss/coindcx-sdk` package (a `file:` dependency never added to `package.json`), which
+isn't published anywhere a CI runner or a fresh clone can install it from.
 
 ---
 
@@ -123,9 +123,8 @@ was fixed.
 | Variable | Default | Purpose |
 | --- | --- | --- |
 | `MODE` | `paper` | `paper` or `live` |
-| `BINANCE_API_KEY` / `BINANCE_API_SECRET` | (empty) | Required for `MODE=live` (market data always; order execution too, until the CoinDCX wiring below lands) |
-| `COINDCX_API_KEY` / `COINDCX_API_SECRET` | (empty) | Also required for `MODE=live` — startup fails without them (fail-closed check in `config.ts`); validated only today, not yet wired into the order path, see "Modes" above |
-| `COINDCX_PAPER_MODE` / `COINDCX_QUOTE_PREFERENCE` / `COINDCX_MAX_ORDER_NOTIONAL` / `COINDCX_MAX_ORDER_QUANTITY` / `COINDCX_INITIAL_BALANCE` | see `.env.example` | Reserved for the CoinDCX execution path once wired in; currently have no effect |
+| `BINANCE_API_KEY` / `BINANCE_API_SECRET` | (empty) | Required for `MODE=live` (market data always, and today's only order execution path) |
+| `COINDCX_API_KEY` / `COINDCX_API_SECRET` / `COINDCX_PAPER_MODE` / `COINDCX_QUOTE_PREFERENCE` / `COINDCX_MAX_ORDER_NOTIONAL` / `COINDCX_MAX_ORDER_QUANTITY` / `COINDCX_INITIAL_BALANCE` | see `.env.example` | Optional, reserved for the CoinDCX execution path (see "Modes" above and issue #31); not required to start `MODE=live`, and currently unused even when set |
 | `OLLAMA_HOST` | `http://127.0.0.1:11434` | Ollama daemon URL |
 | `OLLAMA_MODEL` | `gemma4:31b` | Model used for veto/advise/ask |
 | `MIN_LEVERAGE` | `5` | Floor for the dynamic-leverage calculation |
@@ -296,7 +295,7 @@ src/
     adaptiveSuperTrend.ts    # indicator math
     performance.ts           # win rate / max drawdown / Sharpe
   coindcx/
-    coindcxClient.ts          # ExchangeApi adapter over a real CoinDCX futures account (not yet wired into client.ts)
+    coindcxClient.ts          # ExchangeApi adapter over a real CoinDCX futures account (not yet wired into client.ts — #31)
     symbolRouter.ts           # Binance symbol <-> CoinDCX B-<BASE>_<QUOTE> pair mapping, USDT/INR routing
     contractSpec.ts           # CoinDCX instrument lot size / min qty / leverage cache
   ollama/
@@ -376,7 +375,8 @@ tuning whenever it deviates from the defaults.
 
 Issues #1–#7, #10 and #12 are closed as fixed (verified against current source, see each entry below);
 #9 is resolved (`.env.example` and `config.ts` no longer disagree); #11 is intentionally left open — it
-is documented, not fixed, and stays disabled.
+is documented, not fixed, and stays disabled. #31 is a newly filed, still-open gap in the CoinDCX
+live-execution migration (see the "Modes" section above).
 
 ### #1 — SL/TP in remote-paper mode
 
@@ -434,6 +434,13 @@ which is not an exchange symbol; re-enable once it emits two legs.
 
 **Fixed.** The trade journal lives in the sidecar (`data/remote-state.json`); the agent computes its own
 statistics from it instead of the exchange's `/api/performance`.
+
+### #31 — MODE=live required CoinDCX credentials it never used
+
+**Fixed (interim).** The fail-closed check requiring `COINDCX_API_KEY`/`COINDCX_API_SECRET` for `MODE=live`
+has been removed — see "Modes" above. `MODE=live` needs only Binance credentials again until the CoinDCX
+wiring (Task 5 of `docs/superpowers/plans/2026-09-22-coindcx-live-execution.md`) actually lands, which needs
+the private `@nemesis-oss/coindcx-sdk` package this environment cannot install.
 
 ---
 

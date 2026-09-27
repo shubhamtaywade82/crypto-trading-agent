@@ -19,6 +19,8 @@ export const EnvSchema = z.object({
   OLLAMA_SKEPTIC_MODEL: z.string().optional(),
   OLLAMA_CHAIR_MODEL: z.string().optional(),
   LLM_COUNCIL: z.enum(['off', 'on']).default('off'),
+  LLM_COUNCIL_AUTOTRADE: z.enum(['off', 'on']).default('off'),
+  LLM_COUNCIL_MIN_PROBABILITY: z.coerce.number().min(0.5).max(0.95).default(0.65),
   OLLAMA_API_KEY_1: z.string().optional(),
   OLLAMA_API_KEY_2: z.string().optional(),
   OLLAMA_API_KEY_3: z.string().optional(),
@@ -128,7 +130,12 @@ export const config = {
   },
   risk: riskFromEnv(env),
   riskEngine: env.RISK_ENGINE,
-  llmCouncil: { enabled: env.LLM_COUNCIL === 'on' },
+  llmCouncil: {
+    enabled: env.LLM_COUNCIL === 'on',
+    /** When on, a chair TRADE verdict on a TRIGGERED setup becomes a real Signal through the normal risk gate. Off by default: the council stays advisory-only. */
+    autoTrade: env.LLM_COUNCIL_AUTOTRADE === 'on',
+    minProbability: env.LLM_COUNCIL_MIN_PROBABILITY,
+  },
   marketDataV2: {
     enabled: true,
     candleTtlMs: {

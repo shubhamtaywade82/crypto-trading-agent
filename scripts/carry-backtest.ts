@@ -2,9 +2,10 @@
  * Funding-carry backtest on real Binance history: long spot + short the USDT-M perp, delta-neutral.
  *
  *   npx tsx scripts/carry-backtest.ts [--symbols BTCUSDT,ETHUSDT,SOLUSDT,XRPUSDT] [--days 365] [--end-days-ago 0]
- *                                     [--leverage 3] [--lookback 3] [--spot-fee 0.001] [--perp-fee 0.0004] [--slippage 0.0002]
+ *                                     [--leverage 2] [--lookback 3] [--min-hold 0] [--spot-fee 0.001] [--perp-fee 0.0004] [--slippage 0.0002]
  *
- * Public endpoints only (no keys): /fapi/v1/fundingRate, perp and spot 1h klines. The grid is fixed and small on purpose
+ * Public endpoints only (no keys): /fapi/v1/fundingRate, perp mark-price 1h klines (liquidation and funding notional
+ * follow mark price), and spot 1h klines. The grid is fixed and small on purpose
  * (always-in, plus three entry/exit pairs): pick ONE rule before looking, then confirm it on --end-days-ago windows.
  * Funding received is credited on the perp notional; entering and leaving cost four fills; a perp that trades through the
  * isolated-margin liquidation price loses its margin. No borrow, no spot yield, no capital cost beyond the capital base.
@@ -24,8 +25,9 @@ const num = (name: string, fallback: number): number => {
 const symbols = arg('symbols', 'BTCUSDT,ETHUSDT,SOLUSDT,XRPUSDT').split(',').map((s) => s.trim().toUpperCase()).filter(Boolean);
 const days = num('days', 365);
 const endDaysAgo = num('end-days-ago', 0);
-const leverage = num('leverage', 3);
+const leverage = num('leverage', 2);
 const lookback = Math.max(1, Math.round(num('lookback', 3)));
+const minHold = Math.max(0, Math.round(num('min-hold', 0)));
 const costs = { spotFeeRate: num('spot-fee', 0.001), perpFeeRate: num('perp-fee', 0.0004), slippageRate: num('slippage', 0.0002) };
 const toMs = Date.now() - endDaysAgo * 86_400_000;
 const fromMs = toMs - days * 86_400_000;
@@ -69,14 +71,15 @@ const grid: { label: string; entryApr: number; exitApr: number }[] = [
 ];
 
 const f = (v: number, d = 2): string => v.toFixed(d).padStart(7);
-console.log(`funding carry · ${new Date(fromMs).toISOString().slice(0, 10)} -> ${new Date(toMs).toISOString().slice(0, 10)} · perp ${leverage}x isolated · lookback ${lookback} intervals`);
+console.log(`funding carry · ${new Date(fromMs).toISOString().slice(0, 10)} -> ${new Date(toMs).toISOString().slice(0, 10)} · perp ${leverage}x isolated · lookback ${lookback} intervals · min hold ${minHold} intervals`);
 console.log(`costs per fill: spot ${(costs.spotFeeRate * 100).toFixed(3)}% + perp ${(costs.perpFeeRate * 100).toFixed(3)}% fees, ${(costs.slippageRate * 100).toFixed(3)}% slippage; one full cycle = four fills`);
 
 const pooled = new Map<string, number[]>();
 for (const symbol of symbols) {
   const [funding, perp, spot] = await Promise.all([
     fetchFunding(symbol),
-    fetchBars('https://fapi.binance.com', '/fapi/v1/klines', symbol, 1500),
+    // Mark-price bars: Binance liquidates and settles funding on mark price, so last-price wicks must not trigger liquidations
+    fetchBars('https://fapi.binance.com', '/fapi/v1/markPriceKlines', symbol, 1500),
     fetchBars('https://api.binance.com', '/api/v3/klines', symbol, 1000),
   ]);
   if (funding.length < lookback + 2 || perp.length === 0 || spot.length === 0) { console.log(`\n${symbol}: not enough data`); continue; }
@@ -86,7 +89,7 @@ for (const symbol of symbols) {
   console.log(`\n${symbol}: ${funding.length} funding intervals · mean funding ${(mean * 3 * 365 * 100).toFixed(2)}% APR · negative ${(negative * 100).toFixed(0)}% of intervals`);
   console.log('  rule                       cycles  inMkt%  funding%  basis%  costs%   net%  net%/cap  APR%/cap  maxDD%  liq');
   for (const g of grid) {
-    const params: CarryParams = { entryApr: g.entryApr, exitApr: g.exitApr, lookback, perpLeverage: leverage, maintenanceMarginRate: 0.005, costs };
+    const params: CarryParams = { entryApr: g.entryApr, exitApr: g.exitApr, lookback, perpLeverage: leverage, maintenanceMarginRate: 0.005, costs, minHoldIntervals: minHold };
     const r = simulateCarry(funding, spot, perp, params);
     (pooled.get(g.label) ?? pooled.set(g.label, []).get(g.label)!).push(r.annualisedOnCapitalPct);
     console.log(`  ${g.label.padEnd(26)} ${String(r.cycles.length).padStart(6)} ${f(r.timeInMarketPct, 0)} ${f(r.fundingPct)} ${f(r.basisPct)} ${f(r.costsPct)} ${f(r.netPct)} ${f(r.netOnCapitalPct)} ${f(r.annualisedOnCapitalPct)} ${f(r.maxDrawdownPct)} ${String(r.liquidations).padStart(4)}`);

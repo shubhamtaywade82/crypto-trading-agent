@@ -1,7 +1,7 @@
 /**
  * Calibrate per-strategy reward:risk floors from your own decision journal.
  *
- * Run locally where data/decisions.jsonl lives:
+ * Run locally where data/decisions.jsonl lives (--decisions accepts comma-separated files to pool, e.g. two backtest windows):
  *   npx tsx scripts/calibrate-rr.ts [--decisions data/decisions.jsonl] [--out data/rr-profile.json]
  *                                   [--min-samples 30] [--fee 0.0004] [--slippage 0.0002] [--write]
  *
@@ -11,7 +11,7 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { config } from '../src/config.js';
-import { DecisionJournal } from '../src/decision/DecisionJournal.js';
+import { loadDecisionFiles } from '../src/decision/loadDecisionFiles.js';
 import { calibrateRrFloors } from '../src/risk/rrProfile.js';
 
 function arg(name: string, fallback: string): string {
@@ -24,10 +24,9 @@ const number = (name: string, fallback: number): number => {
   return value;
 };
 
-const decisionsPath = path.resolve(arg('decisions', config.decisionsPath));
+const decisionsPath = arg('decisions', config.decisionsPath);
 const outPath = path.resolve(arg('out', 'data/rr-profile.json'));
-const journal = new DecisionJournal(decisionsPath);
-const records = journal.all();
+const records = loadDecisionFiles(decisionsPath);
 const report = calibrateRrFloors(records, {
   feeRate: number('fee', config.risk.takerFeeRate),
   slippageRate: number('slippage', config.risk.slippageBufferRate),

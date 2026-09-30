@@ -95,3 +95,33 @@ test('a position still open at the end of the journal counts as held', () => {
   const rows = capacityContext([{ ...held(1, 100, 0), outcome: undefined }, refused(2, 500, 'ETHUSDT', 'risk-engine: portfolio_limits: gross 99% (max 80%)')]);
   assert.equal(rows[0].whileSymbolHeld, 1);
 });
+
+// --- stop width vs exposure cap ---------------------------------------------------------------
+import { minStopPctToFitCap, stopFeasibility } from '../src/learning/RefusalContext.js';
+
+test('with 1% risk, an 80% cap and 0.12% round-trip costs a stop must be at least ~1.13% wide', () => {
+  const min = minStopPctToFitCap({ riskPerTradePct: 1, maxSymbolExposurePct: 80, legRate: 0.0006 });
+  assert.ok(Math.abs(min - (1.25 - 0.12)) < 1e-9);
+  // and that is exactly where notional/equity = risk / (stop + cost) hits the cap
+  assert.ok(Math.abs(1 / (min + 0.12) - 0.8) < 1e-9);
+});
+
+test('a looser cap or a smaller risk budget lowers the stop width that can trade', () => {
+  assert.ok(minStopPctToFitCap({ riskPerTradePct: 0.5, maxSymbolExposurePct: 80, legRate: 0.0006 }) < 0.6);
+  assert.ok(minStopPctToFitCap({ riskPerTradePct: 1, maxSymbolExposurePct: 200, legRate: 0.0006 }) < 0.4);
+});
+
+const stoppy = (id: number, strategy: string, stopPct: number, status: DecisionRecord['status']): DecisionRecord =>
+  ({ ...trade(id, 'STOP LOSS'), strategy: strategy as never, entry: 100, stopLoss: 100 - stopPct, status });
+
+test('stop feasibility shows which strategies can ever fit the cap and whether anything infeasible traded', () => {
+  const rows = stopFeasibility([
+    stoppy(1, 'MEAN-REVERT-θ', 0.3, 'RISK_REJECTED'), stoppy(2, 'MEAN-REVERT-θ', 0.5, 'RISK_REJECTED'), stoppy(3, 'MEAN-REVERT-θ', 0.8, 'RISK_REJECTED'),
+    stoppy(4, 'MOMENTUM-γ', 1.5, 'EXECUTED'), stoppy(5, 'MOMENTUM-γ', 2.0, 'RISK_REJECTED'), stoppy(6, 'MOMENTUM-γ', 0.4, 'RISK_REJECTED'),
+  ], 1.13);
+  const mr = rows.find((r) => r.strategy === 'MEAN-REVERT-θ')!;
+  assert.deepEqual([mr.proposals, mr.feasible, mr.executedOfFeasible, mr.executedOfInfeasible], [3, 0, 0, 0]);
+  const mo = rows.find((r) => r.strategy === 'MOMENTUM-γ')!;
+  assert.deepEqual([mo.proposals, mo.feasible, mo.executedOfFeasible, mo.executedOfInfeasible], [3, 2, 1, 0]);
+  assert.ok(mr.median < 1.13 && mo.p90 >= 1.13);
+});

@@ -10,6 +10,10 @@ export interface EdgeTest {
   pBetter: number | null;
 }
 
+/** Real exits and the price-path replay's hypothetical ones both count as a clean bracket outcome. */
+const TARGET_REASONS: ReadonlySet<string> = new Set(['TAKE PROFIT', 'HYPOTHETICAL TP']);
+const STOP_REASONS: ReadonlySet<string> = new Set(['STOP LOSS', 'HYPOTHETICAL SL']);
+
 const erf = (x: number): number => {
   // Abramowitz & Stegun 7.1.26, |error| < 1.5e-7
   const t = 1 / (1 + 0.3275911 * Math.abs(x));
@@ -36,14 +40,14 @@ export function edgeVsCoinFlip(records: readonly DecisionRecord[]): EdgeTest {
   for (const r of records) {
     const { entry, stopLoss, takeProfit, outcome } = r;
     if (r.status !== 'EXECUTED' || !outcome || entry === null || stopLoss === null || takeProfit === null) continue;
-    if (outcome.reason !== 'TAKE PROFIT' && outcome.reason !== 'STOP LOSS') continue;
+    if (!TARGET_REASONS.has(outcome.reason) && !STOP_REASONS.has(outcome.reason)) continue;
     const risk = Math.abs(entry - stopLoss);
     if (!(risk > 0)) continue;
     const p = 1 / (1 + Math.abs(takeProfit - entry) / risk);
     n += 1;
     expected += p;
     variance += p * (1 - p);
-    if (outcome.reason === 'TAKE PROFIT') wins += 1;
+    if (TARGET_REASONS.has(outcome.reason)) wins += 1;
   }
   if (n === 0 || !(variance > 0)) return { n, wins, expectedWins: expected, z: null, pBetter: null };
   const z = (wins - expected) / Math.sqrt(variance);

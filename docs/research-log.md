@@ -77,3 +77,9 @@ and instruments; cross-symbol relative value. The live setup outcome ledger (`da
 ## 8. Live gate (added 2026-09-30)
 No strategy currently passes `scripts/live-readiness.ts`, so `MODE=live` would trade nothing. The gate is enforced twice: the
 orchestrator drops unapproved OPEN signals before the journal and alerts, and `RiskAgent.gate` refuses them as defence in depth.
+
+## 9. Market-data recorder (added 2026-09-30)
+`scripts/record-market-data.ts` records 1-minute flow/derivatives features going forward. Probing found that Binance's legacy USD-M
+websocket endpoints no longer deliver aggTrade, markPrice or forceOrder (the `binance` npm library 2.15.22 routes those to the legacy
+URL; its raw `@trade` stream, which the agent uses for live prices, still works). The recorder uses `/market` and `/public` directly.
+Minimum useful dataset: several weeks across more than one volatility regime before testing any flow hypothesis.

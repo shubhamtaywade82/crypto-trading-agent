@@ -2,6 +2,17 @@ import { adx, atrPercentile, ema, emaSlopePct, rsi, vwap, bollinger, wilderAtr }
 import type { Candle } from '../types.js';
 import type { MarketRegime, RegimeSnapshot, TimeframeState, TrendDirection, VolatilityRegime } from './types.js';
 
+const VOLUME_Z_LOOKBACK = 20;
+
+/** z-score of the latest candle's volume against the preceding window; null when undefined (short/flat history). */
+export function latestVolumeZ(candles: Candle[]): number | null {
+  if (candles.length < VOLUME_Z_LOOKBACK + 1) return null;
+  const window = candles.slice(-VOLUME_Z_LOOKBACK - 1, -1).map((c) => c.volume);
+  const mean = window.reduce((sum, v) => sum + v, 0) / window.length;
+  const sd = Math.sqrt(window.reduce((sum, v) => sum + (v - mean) ** 2, 0) / (window.length - 1));
+  return sd > 0 ? (candles[candles.length - 1].volume - mean) / sd : null;
+}
+
 function lastFinite(values: number[]): number | null {
   const value = values.at(-1);
   return value !== undefined && Number.isFinite(value) ? value : null;
@@ -44,6 +55,7 @@ export function buildTimeframeState(
     bollingerMiddle: seriesValue(bb.middle),
     bollingerUpper: seriesValue(bb.upper),
     bollingerLower: seriesValue(bb.lower),
+    volumeZ: latestVolumeZ(candles),
   };
 }
 

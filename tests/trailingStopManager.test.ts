@@ -79,7 +79,7 @@ test('should lock tiered profit at 1.5R, 2R and 3R for non-SuperTrend fleet posi
 });
 
 test('should lock tiered profit for short positions', () => {
-  const pos = longPosition({ side: 'SHORT', strategy: 'STRUCTURE-TREND-δ', entry: 100, serverSl: '106', serverTp: '50', initialRisk: 6 });
+  const pos = longPosition({ side: 'SHORT', strategy: 'STRUCTURE-TREND-η', entry: 100, serverSl: '106', serverTp: '50', initialRisk: 6 });
   const trail: TrailState = { assignedAtr: 2 };
 
   // 1.5R drop (gain 9, mark 91) -> lock +0.5R (SL 97)

@@ -22,6 +22,8 @@ export interface TimeframeState {
   bollingerMiddle: number | null;
   bollingerUpper: number | null;
   bollingerLower: number | null;
+  /** Volume of the latest candle vs the previous 20 (z-score); null when history is too short or flat. */
+  volumeZ?: number | null;
 }
 
 export interface SwingPoint {

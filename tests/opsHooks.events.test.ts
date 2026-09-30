@@ -169,6 +169,21 @@ test('should not repeat a signal alert for the same symbol, agent and reason ins
   assert.equal(sent.length, 1);
 });
 
+test('should announce a standing risk block once, not again after the signal cooldown lapses', () => {
+  let now = T0;
+  const engine = new NotificationEngine(undefined, { now: () => now, cooldownMs: { SIGNAL: 900_000 } });
+  const { ops, sent } = harness({ engine, now: () => now });
+  ops.onRefusal(signal({ id: 'a' }), 'symbol exposure 127% > 100%');
+  now += 20 * 60_000;
+  ops.onRefusal(signal({ id: 'b' }), 'symbol exposure 130% > 100%');
+  assert.equal(sent.length, 1);
+  ops.onRefusal(signal({ id: 'c' }), 'gross exposure 196% > 150%');
+  assert.equal(sent.length, 2);
+  now += 4 * 60 * 60_000;
+  ops.onRefusal(signal({ id: 'd' }), 'symbol exposure 131% > 100%');
+  assert.equal(sent.length, 3);
+});
+
 test('should alert a signal without levels (a hedge) in the audit trail only', () => {
   const { ops, sent, audits } = harness();
   ops.onGate(signal({ type: 'OPEN_HEDGE', entry: undefined, stopLoss: undefined, takeProfit: undefined }), approved);

@@ -10,6 +10,7 @@ import { buildSetupNotice } from './setupNotice.js';
 import type { SetupMap } from '../decision/SetupEngine.js';
 import type { AuditInput } from './eventStore.js';
 import type { KillSwitchState } from './killSwitch.js';
+import type { UnprotectedPosition } from '../risk/unprotected.js';
 
 export interface OpsDeps {
   isAudit: boolean;
@@ -41,6 +42,7 @@ export interface OpsHooks {
   onCircuit(from: string, to: string, snapshot: PerformanceSnapshot): void;
   onLoopCrash(err: unknown): void;
   onKillSwitch(state: KillSwitchState): void;
+  onUnprotected(positions: readonly UnprotectedPosition[], equity: number): void;
   digest(request: DigestRequest): void;
 }
 
@@ -55,11 +57,16 @@ interface Notice {
 
 const DAY_MS = 86_400_000;
 const REASON_KEY_CHARS = 80;
+const SETUP_COOLDOWN_MS = 15 * 60_000;
+// A risk block is a standing state, not an event: say it once, then again only if the reason changes or after this long
+const REFUSAL_REANNOUNCE_MS = 4 * 60 * 60_000;
+// An unprotected position is a standing danger: say so when it appears or changes, then remind rarely
+const UNPROTECTED_REMIND_MS = 6 * 60 * 60_000;
 
 const noop = (): void => {};
 const NOOP_HOOKS: OpsHooks = {
   onSignal: noop, onSetup: noop, onGate: noop, onVeto: noop, onOrder: noop, onRefusal: noop, onExit: noop, onVenueState: noop,
-  onCircuit: noop, onLoopCrash: noop, onKillSwitch: noop, digest: noop,
+  onCircuit: noop, onLoopCrash: noop, onKillSwitch: noop, onUnprotected: noop, digest: noop,
 };
 
 const positionKey = (symbol: string, strategy: string): string => `${symbol}:${strategy}`;
@@ -114,6 +121,10 @@ class Ops implements OpsHooks {
   private readonly openIds = new Map<string, string>();
   private readonly flippedIds = new Map<string, string>();
   private refusals: Record<string, number> = {};
+  private readonly announcedRefusals = new Map<string, number>();
+  private unprotectedKey = '';
+  private unprotectedAt = 0;
+  private unprotectedSeq = 0;
   private lastVenueState: string | null = null;
   private lastWsStatus: WsStatus | null = null;
   private wasWsUp = false;
@@ -195,6 +206,20 @@ class Ops implements OpsHooks {
       this.notify(systemNotice(input, 'CRITICAL', `SYSTEM:killswitch:${state.at}`));
     });
   };
+  onUnprotected = (positions: readonly UnprotectedPosition[], equity: number): void => {
+    this.safely(() => {
+      if (positions.length === 0) { this.unprotectedKey = ''; return; }
+      // Frequency is decided here, so each announcement gets its own fingerprint rather than fighting the engine's cooldown
+      // Sizes drift with price; identity is the set of symbols and sides
+      const key = positions.map((p) => `${p.symbol}:${p.side}`).sort().join(',');
+      const now = this.now();
+      if (key === this.unprotectedKey && now - this.unprotectedAt < UNPROTECTED_REMIND_MS) return;
+      this.unprotectedKey = key;
+      this.unprotectedAt = now;
+      this.audit('unprotected', { positions: positions.map((p) => ({ ...p })), equity });
+      this.notify(systemNotice({ kind: 'UNPROTECTED', positions, equity, at: now }, 'CRITICAL', `SYSTEM:unprotected:${key}:${this.unprotectedSeq++}`));
+    });
+  };
   // The digest covers the UTC day that just ended; its equity baseline is the wallet before that day's realized PnL
   digest = ({ trades, initialEquity, at = this.now() }: DigestRequest): void => {
     this.safely(() => {
@@ -240,6 +265,10 @@ class Ops implements OpsHooks {
     const key = reasonKey(reason);
     this.refusals[key] = (this.refusals[key] ?? 0) + 1;
     this.audit('refusal', { reason }, signal);
+    const blockKey = `${signal.symbol}:${signal.agent}:${signal.type}:${key}`;
+    const announcedAt = this.announcedRefusals.get(blockKey);
+    if (announcedAt !== undefined && this.now() - announcedAt < REFUSAL_REANNOUNCE_MS) return;
+    this.announcedRefusals.set(blockKey, this.now());
     this.notify(signalNotice({ outcome: 'REFUSED', signal, note: reason, at: this.now() }));
   }
 

@@ -1,7 +1,7 @@
 /**
  * Backtest CLI — replays the full decision pipeline over public Binance klines.
  *
- *   npx tsx scripts/backtest.ts [--symbol BTCUSDT] [--days 30] [--equity 1150]
+ *   npx tsx scripts/backtest.ts [--symbol BTCUSDT] [--days 30] [--end-days-ago 0] [--equity 1150]
  *                                [--funding] [--decisions data/backtest-decisions.jsonl]
  *
  * Fetches public USD-M klines (15m/1h/4h — the timeframes the state layer
@@ -25,15 +25,18 @@ function arg(name: string, fallback: string): string {
 
 const symbol = arg('symbol', 'BTCUSDT').toUpperCase();
 const days = Number(arg('days', '30'));
+// Shifts the whole window into the past: --days 90 --end-days-ago 90 tests the 90 days before the last 90, unseen by anything tuned on those
+const endDaysAgo = Number(arg('end-days-ago', '0'));
+if (!Number.isFinite(days) || days <= 0 || !Number.isFinite(endDaysAgo) || endDaysAgo < 0) throw new Error('--days must be > 0 and --end-days-ago >= 0');
 const equity = Number(arg('equity', '1150'));
 const fundingEnabled = process.argv.includes('--funding');
 const decisionsPath = arg('decisions', '');
 
-async function fetchKlines(symbol: string, interval: NativeTimeframe, fromMs: number): Promise<Candle[]> {
+async function fetchKlines(symbol: string, interval: NativeTimeframe, fromMs: number, toMs: number): Promise<Candle[]> {
   const out: Candle[] = [];
   let cursor = fromMs;
   for (;;) {
-    const url = `${BASE}/fapi/v1/klines?symbol=${symbol}&interval=${interval}&startTime=${cursor}&limit=1500`;
+    const url = `${BASE}/fapi/v1/klines?symbol=${symbol}&interval=${interval}&startTime=${cursor}&endTime=${toMs}&limit=1500`;
     const response = await fetch(url);
     if (!response.ok) throw new Error(`klines ${interval} failed: HTTP ${response.status}`);
     const raw = (await response.json()) as unknown[][];
@@ -52,18 +55,19 @@ function row(label: string, value: string): void {
 
 function table(title: string, slices: Record<string, { trades: number; winRatePct: number; expectancyR: number | null; netPnl: number }>): void {
   console.log(`\n${title}`);
-  console.log('  ' + 'key'.padEnd(20) + 'trades'.padEnd(8) + 'win%'.padEnd(7) + 'E[R]'.padEnd(9) + 'net PnL');
+  console.log('  ' + 'key'.padEnd(20) + 'trades'.padEnd(8) + 'win%'.padEnd(7) + 'E[R]'.padEnd(9) + 'net PnL (after fees)');
   for (const [key, s] of Object.entries(slices)) {
     const expectancy = s.expectancyR === null ? '—' : s.expectancyR.toFixed(2);
     console.log('  ' + key.padEnd(20) + String(s.trades).padEnd(8) + String(s.winRatePct).padEnd(7) + expectancy.padEnd(9) + s.netPnl.toFixed(2));
   }
 }
 
-const fromMs = Date.now() - days * 86_400_000;
-console.log(`Backtesting ${symbol} over the last ${days} day(s) from public Binance USD-M klines...`);
+const toMs = Date.now() - endDaysAgo * 86_400_000;
+const fromMs = toMs - days * 86_400_000;
+console.log(`Backtesting ${symbol} over ${days} day(s) ending ${endDaysAgo === 0 ? 'now' : `${endDaysAgo} day(s) ago`} from public Binance USD-M klines...`);
 const data: ReplayData = { [symbol]: {} };
 for (const timeframe of TIMEFRAMES) {
-  const candles = await fetchKlines(symbol, timeframe, fromMs);
+  const candles = await fetchKlines(symbol, timeframe, fromMs, toMs);
   data[symbol][timeframe] = candles;
   console.log(`  ${timeframe}: ${candles.length} candles (${new Date(candles[0].openTime).toISOString()} -> ${new Date(candles[candles.length - 1].openTime).toISOString()})`);
 }
@@ -84,7 +88,8 @@ const m = result.metrics;
 console.log('\n=== Headline ===');
 row('Total trades', String(m.totalTrades));
 row('Win rate', `${m.winRatePct}%`);
-row('Net PnL', `${m.netPnl.toFixed(2)} USDT (${m.netReturnPct}%)`);
+row('Net PnL (after fees)', `${m.netPnl.toFixed(2)} USDT (${m.netReturnPct}%)`);
+row('Gross price PnL', `${m.grossPnl.toFixed(2)} USDT`);
 row('Final equity', `${m.finalEquity.toFixed(2)} USDT (from ${m.initialEquity})`);
 row('Profit factor', m.profitFactor === null ? '∞' : String(m.profitFactor));
 row('Expectancy', `${m.expectancyR ?? '—'} R / ${m.expectancyUsd?.toFixed(2) ?? '—'} USDT`);

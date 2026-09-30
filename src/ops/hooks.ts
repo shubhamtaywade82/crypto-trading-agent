@@ -55,6 +55,9 @@ interface Notice {
 
 const DAY_MS = 86_400_000;
 const REASON_KEY_CHARS = 80;
+const SETUP_COOLDOWN_MS = 15 * 60_000;
+// A risk block is a standing state, not an event: say it once, then again only if the reason changes or after this long
+const REFUSAL_REANNOUNCE_MS = 4 * 60 * 60_000;
 
 const noop = (): void => {};
 const NOOP_HOOKS: OpsHooks = {
@@ -114,6 +117,7 @@ class Ops implements OpsHooks {
   private readonly openIds = new Map<string, string>();
   private readonly flippedIds = new Map<string, string>();
   private refusals: Record<string, number> = {};
+  private readonly announcedRefusals = new Map<string, number>();
   private lastVenueState: string | null = null;
   private lastWsStatus: WsStatus | null = null;
   private wasWsUp = false;
@@ -240,6 +244,10 @@ class Ops implements OpsHooks {
     const key = reasonKey(reason);
     this.refusals[key] = (this.refusals[key] ?? 0) + 1;
     this.audit('refusal', { reason }, signal);
+    const blockKey = `${signal.symbol}:${signal.agent}:${signal.type}:${key}`;
+    const announcedAt = this.announcedRefusals.get(blockKey);
+    if (announcedAt !== undefined && this.now() - announcedAt < REFUSAL_REANNOUNCE_MS) return;
+    this.announcedRefusals.set(blockKey, this.now());
     this.notify(signalNotice({ outcome: 'REFUSED', signal, note: reason, at: this.now() }));
   }
 

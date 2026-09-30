@@ -31,6 +31,7 @@ import { AgentLedger } from '../learning/AgentLedger.js';
 import { confidenceMultiplier } from '../learning/ConfidenceAdjuster.js';
 import { TradeOutcomeRecorder } from '../learning/TradeOutcomeRecorder.js';
 import { buildSetupMap } from '../decision/SetupEngine.js';
+import { SetupLedger } from '../decision/SetupLedger.js';
 import { buildCouncilSignal, COUNCIL_SIGNAL_TTL_MS } from '../decision/CouncilSignal.js';
 import { TradingCouncil } from '../llm/TradingCouncil.js';
 
@@ -75,6 +76,7 @@ export class Orchestrator extends EventEmitter {
   private stopWs: (() => void) | null = null;
   private pendingTickFlush = false;
   private cooldownStartedAt = new Map<string, number>();
+  private readonly setupLedger = new SetupLedger();
   private counters: SessionCounters = { decisions: 0, executed: 0, monitored: 0 };
   private lastVenueState: string | null = null;
   private lastInitError: string | null = null;
@@ -365,8 +367,9 @@ export class Orchestrator extends EventEmitter {
       fundingRate: market.funding[symbol] ?? 0,
     })));
     for (const state of Object.values(marketState)) {
-      const setup = buildSetupMap(state);
-      this.hooks.onSetup(setup);
+      const { map: setup, transitions } = this.setupLedger.apply(buildSetupMap(state), state.timeframes['15m'].atr14 ?? 0);
+      // Only material lifecycle events (created / advanced) are announced; re-derivations of the same setup are not
+      if (transitions.some((t) => t.kind === 'CREATED' || t.kind === 'ADVANCED')) this.hooks.onSetup(setup);
       void this.consultCouncil(state, setup);
     }
     return { ...market, spot: this.livePrices, equity: account.equity, positions, marketState, performance: this.ops.build(this.binance.getTrades(), account) };

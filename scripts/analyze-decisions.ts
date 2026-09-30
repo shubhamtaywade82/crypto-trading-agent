@@ -9,7 +9,7 @@ import type { DecisionRecord } from '../src/decision/DecisionJournal.js';
 import { loadDecisionFiles } from '../src/decision/loadDecisionFiles.js';
 import { classifyRiskRefusal } from '../src/decision/NoTrade.js';
 import { edgeVsCoinFlip } from '../src/learning/EdgeTest.js';
-import { capacityContext } from '../src/learning/RefusalContext.js';
+import { capacityContext, minStopPctToFitCap, stopFeasibility } from '../src/learning/RefusalContext.js';
 
 const i = process.argv.indexOf('--file');
 const file = i >= 0 && process.argv[i + 1] ? process.argv[i + 1] : config.decisionsPath;
@@ -58,6 +58,13 @@ if (capacity.length > 0) {
   }
   console.log('  Refused with nothing open in that symbol means something other than "waiting for the open position".');
 }
+
+const minStop = minStopPctToFitCap({ riskPerTradePct: config.risk.riskPerTradePct, maxSymbolExposurePct: config.risk.maxSymbolExposurePct, legRate: config.risk.takerFeeRate + config.risk.slippageBufferRate });
+console.log(`\nstop width vs the exposure cap (risk ${config.risk.riskPerTradePct}% / cap ${config.risk.maxSymbolExposurePct}% / costs ${(2 * (config.risk.takerFeeRate + config.risk.slippageBufferRate) * 100).toFixed(2)}% round trip => a stop must be >= ${minStop.toFixed(2)}% of price to fit)`);
+for (const f of stopFeasibility(records, minStop)) {
+  console.log(`  ${f.strategy.padEnd(20)} stop% p10 ${f.p10.toFixed(2)}  median ${f.median.toFixed(2)}  p90 ${f.p90.toFixed(2)}  fit the cap: ${f.feasible}/${f.proposals} (${((f.feasible / f.proposals) * 100).toFixed(0)}%)  executed: ${f.executedOfFeasible} of those, ${f.executedOfInfeasible} of the rest`);
+}
+console.log('  Uses your current .env; a journal written under different limits will not line up exactly.');
 
 console.log('\nplanned RR by strategy (all decisions, rejected included)');
 for (const [strategy] of count(records, (r) => r.strategy)) {

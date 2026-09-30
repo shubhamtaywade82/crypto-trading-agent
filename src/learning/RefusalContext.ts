@@ -44,3 +44,59 @@ export function capacityContext(records: readonly DecisionRecord[]): CapacityCon
   }
   return [...byStrategy.values()].sort((a, b) => b.refused - a.refused);
 }
+
+export interface SizingConstraints {
+  /** Risk budget per trade, % of equity. */
+  riskPerTradePct: number;
+  /** Per-symbol (and gross, for one symbol) exposure cap, % of equity. */
+  maxSymbolExposurePct: number;
+  /** One-way taker fee + slippage, as a fraction. */
+  legRate: number;
+}
+
+/**
+ * Sizing is qty = riskBudget / (stopDistance + roundTripCosts) and the engine *refuses* (it does not shrink) a trade whose
+ * notional breaches the exposure cap. So notional/equity = risk / (stop% + cost%), and a trade can only fit the cap when
+ * stop% >= risk / cap - cost%. Returns that minimum stop distance, in % of price.
+ */
+export function minStopPctToFitCap(c: SizingConstraints): number {
+  const costPct = 2 * c.legRate * 100;
+  return c.riskPerTradePct / (c.maxSymbolExposurePct / 100) - costPct;
+}
+
+export interface StopFeasibility {
+  strategy: string;
+  proposals: number;
+  p10: number;
+  median: number;
+  p90: number;
+  /** Proposals whose stop is wide enough to fit the cap with an empty book. */
+  feasible: number;
+  executedOfFeasible: number;
+  executedOfInfeasible: number;
+}
+
+const quantile = (sorted: number[], q: number): number => sorted[Math.min(sorted.length - 1, Math.floor(q * sorted.length))];
+
+/** Stop width (% of price) per strategy against the width the exposure cap implies. */
+export function stopFeasibility(records: readonly DecisionRecord[], minStopPct: number): StopFeasibility[] {
+  const by = new Map<string, DecisionRecord[]>();
+  for (const r of records) by.set(r.strategy, [...(by.get(r.strategy) ?? []), r]);
+  const rows: StopFeasibility[] = [];
+  for (const [strategy, list] of by) {
+    const widths = list
+      .filter((r) => r.entry !== null && r.stopLoss !== null && r.entry > 0)
+      .map((r) => ({ r, pct: (Math.abs(r.entry! - r.stopLoss!) / r.entry!) * 100 }));
+    if (widths.length === 0) continue;
+    const sorted = widths.map((w) => w.pct).sort((a, b) => a - b);
+    const feasible = widths.filter((w) => w.pct >= minStopPct);
+    const infeasible = widths.filter((w) => w.pct < minStopPct);
+    rows.push({
+      strategy, proposals: widths.length, p10: quantile(sorted, 0.1), median: quantile(sorted, 0.5), p90: quantile(sorted, 0.9),
+      feasible: feasible.length,
+      executedOfFeasible: feasible.filter((w) => w.r.status === 'EXECUTED').length,
+      executedOfInfeasible: infeasible.filter((w) => w.r.status === 'EXECUTED').length,
+    });
+  }
+  return rows.sort((a, b) => b.proposals - a.proposals);
+}

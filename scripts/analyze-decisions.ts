@@ -2,16 +2,17 @@
  * Where do decisions go and what do the candidates look like? Works on rejected signals too, which calibrate-rr cannot
  * (they have no outcome), so it is the tool for "why is nothing trading" and "how bad is the RR geometry".
  *
- * Run locally:  npx tsx scripts/analyze-decisions.ts [--file data/decisions.jsonl]
+ * Run locally:  npx tsx scripts/analyze-decisions.ts [--file data/decisions.jsonl[,more.jsonl]]
  */
-import path from 'node:path';
 import { config } from '../src/config.js';
-import { DecisionJournal, type DecisionRecord } from '../src/decision/DecisionJournal.js';
+import type { DecisionRecord } from '../src/decision/DecisionJournal.js';
+import { loadDecisionFiles } from '../src/decision/loadDecisionFiles.js';
 import { classifyRiskRefusal } from '../src/decision/NoTrade.js';
+import { edgeVsCoinFlip } from '../src/learning/EdgeTest.js';
 
 const i = process.argv.indexOf('--file');
-const file = path.resolve(i >= 0 && process.argv[i + 1] ? process.argv[i + 1] : config.decisionsPath);
-const records = new DecisionJournal(file).all();
+const file = i >= 0 && process.argv[i + 1] ? process.argv[i + 1] : config.decisionsPath;
+const records = loadDecisionFiles(file);
 
 const count = <T>(items: T[], key: (t: T) => string): [string, number][] => {
   const m = new Map<string, number>();
@@ -38,6 +39,15 @@ const rejected = records.filter((r) => r.status === 'RISK_REJECTED');
 console.log('\nrisk refusals by cause');
 for (const [k, n] of count(rejected, (r) => classifyRiskRefusal(r.rejectionReason ?? ''))) line(k, n, rejected.length);
 
+console.log('\nrefusal causes by strategy');
+for (const [strategy] of count(records, (r) => r.strategy)) {
+  const own = rejected.filter((r) => r.strategy === strategy);
+  const made = records.filter((r) => r.strategy === strategy).length;
+  const causes = count(own, (r) => classifyRiskRefusal(r.rejectionReason ?? '')).map(([k, n]) => `${k} ${n}`).join(', ') || 'none';
+  const executed = records.filter((r) => r.strategy === strategy && r.status === 'EXECUTED').length;
+  console.log(`  ${strategy.padEnd(20)} proposed ${String(made).padStart(4)}  executed ${String(executed).padStart(3)}  refused ${String(own.length).padStart(4)}  [${causes}]`);
+}
+
 console.log('\nplanned RR by strategy (all decisions, rejected included)');
 for (const [strategy] of count(records, (r) => r.strategy)) {
   const rrs = records.filter((r) => r.strategy === strategy).map(plannedRr).filter((v): v is number => v !== null).sort((a, b) => a - b);
@@ -56,7 +66,19 @@ for (const r of records) {
 }
 console.log(`\nre-proposals within 60m of the same symbol/strategy/side: ${repeats} of ${records.length} (${((repeats / records.length) * 100).toFixed(0)}%)`);
 
+const fmtTest = (label: string, list: DecisionRecord[]): void => {
+  const t = edgeVsCoinFlip(list);
+  if (t.n === 0) return;
+  const z = t.z === null ? '  n/a' : t.z.toFixed(2).padStart(5);
+  const p = t.pBetter === null ? 'n/a' : t.pBetter.toFixed(3);
+  console.log(`  ${label.padEnd(20)} n=${String(t.n).padStart(3)}  target hits ${String(t.wins).padStart(3)}  coin-flip expectation ${t.expectedWins.toFixed(1).padStart(6)}  z ${z}  p(better by luck) ${p}`);
+};
+console.log('\nentry timing vs a coin flip (trades that ended at their own target or stop; before costs)');
+fmtTest('ALL', records);
+for (const [strategy] of count(records, (r) => r.strategy)) fmtTest(strategy, records.filter((r) => r.strategy === strategy));
+console.log('  A random entry hits a 2R target first ~33% of the time. Drift (e.g. long-only in an uptrend) can beat that without skill.');
+
 const executed = records.filter((r) => r.status === 'EXECUTED');
 const closed = executed.filter((r) => r.outcome);
-console.log(`\nexecuted: ${executed.length} · with outcome: ${closed.length}`);
-for (const r of closed) console.log(`  ${r.symbol} ${r.strategy} ${r.side} plannedRR ${plannedRr(r)?.toFixed(2)} → ${r.outcome!.rMultiple}R (${r.outcome!.reason})`);
+console.log(`\nexecuted: ${executed.length} · with outcome: ${closed.length}${closed.length > 15 ? ' · last 15 shown' : ''}`);
+for (const r of closed.slice(-15)) console.log(`  ${r.symbol} ${r.strategy} ${r.side} plannedRR ${plannedRr(r)?.toFixed(2)} → ${r.outcome!.rMultiple}R (${r.outcome!.reason})`);

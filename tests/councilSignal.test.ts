@@ -29,6 +29,8 @@ function scenario(over: Partial<SetupScenario> = {}): SetupScenario {
     expectedMove: { minMinutes: 20, maxMinutes: 80, thesisExpiryMinutes: 120, distanceAtr: 2 },
     sourceTime: T0,
     rewardRisk: 2.75,
+    quality: { verdict: 'ENTRY_ELIGIBLE', effectiveRr: 2, reasons: [], checks: { structure: 'PASS', location: 'PASS', trigger: 'PASS', evidence: 'PASS', flow: 'PASS', rr: 'PASS', freshness: 'PASS' } },
+    thesisRole: 'AUTHORITATIVE',
     ...over,
   };
 }
@@ -119,4 +121,24 @@ test('a TRADE verdict whose stance does not match the scenario direction is refu
 test('a NEUTRAL stance is never tradeable even with action TRADE', () => {
   const map = setup([scenario()]);
   assert.equal(buildCouncilSignal(state(), map, chair({ stance: 'NEUTRAL' }), MIN_PROBABILITY), null);
+});
+
+test('a triggered scenario the quality gate only rates WATCH (entry not yet in zone) is never executed', () => {
+  const base = scenario();
+  const map = setup([scenario({ quality: { ...base.quality!, verdict: 'WATCH' } })]);
+  assert.equal(buildCouncilSignal(state(), map, chair(), MIN_PROBABILITY), null);
+});
+
+test('a NO_TRADE quality verdict overrides a council TRADE', () => {
+  const base = scenario();
+  const map = setup([scenario({ quality: { ...base.quality!, verdict: 'NO_TRADE', reasons: ['COST_ADJUSTED_EDGE_TOO_LOW'] } })]);
+  assert.equal(buildCouncilSignal(state(), map, chair(), MIN_PROBABILITY), null);
+});
+
+test('a COMPETING-thesis scenario is never executed', () => {
+  assert.equal(buildCouncilSignal(state(), setup([scenario({ thesisRole: 'COMPETING' })]), chair(), MIN_PROBABILITY), null);
+});
+
+test('a scenario that never went through the quality pipeline fails closed', () => {
+  assert.equal(buildCouncilSignal(state(), setup([scenario({ quality: undefined })]), chair(), MIN_PROBABILITY), null);
 });

@@ -471,3 +471,17 @@ The floor for a strategy is the lowest planned RR whose cohort (that RR and abov
 and a positive 90% lower bound on **net** expectancy after round-trip fees and slippage. Strategies reported `NO_PROVEN_EDGE` or
 `INSUFFICIENT_DATA` get no floor and keep the global `MIN_RR`. With a profile loaded, the RR check uses cost-adjusted RR.
 Only executed trades have outcomes, so treat floors as candidates to paper-test, not proof.
+
+## Setup intelligence pipeline
+
+```
+MarketState → buildSetupMap → SetupLedger (identity, pinned expiry, frozen levels, grace)
+            → annotate (location@entry, sweep evidence, flow Δ, quality gate) → ThesisController → alerts / council
+                                   └→ SetupOutcomeLedger (hypothetical outcome of every setup, traded or not)
+```
+
+- A confirmed **trigger** is not an **order**: only `ENTRY_ELIGIBLE` scenarios on the authoritative thesis can become council signals (fail-closed).
+- One directional thesis per symbol; a flip needs an invalidation breach, expiry, or an opposing trigger while the old thesis never triggered.
+- `data/setup-outcomes.jsonl` (`SETUP_OUTCOMES_PATH`) records each setup's features and hypothetical net R. Read it with
+  `npx tsx scripts/setup-stats.ts`. Quality-gate thresholds are starting points; tune them from this data, not by hand or by the LLM.
+- Only the council path is gated by the pipeline; the legacy agents (Momentum, Structure, …) still emit independent signals through `RiskAgent`.

@@ -34,6 +34,10 @@ import { buildSetupMap } from '../decision/SetupEngine.js';
 import { SetupLedger } from '../decision/SetupLedger.js';
 import { loadRrProfile } from '../risk/rrProfile.js';
 import { RefusalSuppressor } from './refusalSuppressor.js';
+import { annotateSetupMap } from '../decision/SetupPipeline.js';
+import { ThesisController } from '../decision/ThesisController.js';
+import { FlowTracker } from '../market/FlowTracker.js';
+import { SetupOutcomeLedger } from '../learning/SetupOutcomeLedger.js';
 import { buildCouncilSignal, COUNCIL_SIGNAL_TTL_MS } from '../decision/CouncilSignal.js';
 import { TradingCouncil } from '../llm/TradingCouncil.js';
 
@@ -80,6 +84,10 @@ export class Orchestrator extends EventEmitter {
   private cooldownStartedAt = new Map<string, number>();
   private readonly setupLedger = new SetupLedger();
   private readonly refusalSuppressor = new RefusalSuppressor();
+  private readonly flowTracker = new FlowTracker();
+  private readonly announcedVerdicts = new Map<string, string>();
+  private readonly thesisController = new ThesisController();
+  private readonly setupOutcomes = new SetupOutcomeLedger(config.setupOutcomesPath, { feeRate: config.risk.takerFeeRate, slippageRate: config.risk.slippageBufferRate });
   private counters: SessionCounters = { decisions: 0, executed: 0, monitored: 0 };
   private lastVenueState: string | null = null;
   private lastInitError: string | null = null;
@@ -375,12 +383,31 @@ export class Orchestrator extends EventEmitter {
       fundingRate: market.funding[symbol] ?? 0,
     })));
     for (const state of Object.values(marketState)) {
-      const { map: setup, transitions } = this.setupLedger.apply(buildSetupMap(state), state.timeframes['15m'].atr14 ?? 0);
-      // Only material lifecycle events (created / advanced) are announced; re-derivations of the same setup are not
-      if (transitions.some((t) => t.kind === 'CREATED' || t.kind === 'ADVANCED')) this.hooks.onSetup(setup);
+      this.flowTracker.record(state.symbol, state.generatedAt, state.mark, state.derivatives ?? null, state.fundingRate);
+      const flow = this.flowTracker.context(state.symbol, state.generatedAt);
+      const { map: ledgered, transitions } = this.setupLedger.apply(buildSetupMap(state), state.timeframes['15m'].atr14 ?? 0);
+      const annotated = annotateSetupMap(state, ledgered, flow, { feeRate: config.risk.takerFeeRate, slippageRate: config.risk.slippageBufferRate });
+      // Outcomes are recorded for every setup, including ones the thesis controller withholds from execution
+      this.setupOutcomes.observe(annotated, transitions, state.generatedAt);
+      const setup = this.thesisController.apply(annotated);
+      // Only material lifecycle events (created / advanced / thesis flip) are announced; re-derivations are not
+      if (setup.thesisTransition || transitions.some((t) => t.kind === 'CREATED' || t.kind === 'ADVANCED') || this.verdictChanged(setup)) this.hooks.onSetup(setup);
       void this.consultCouncil(state, setup);
     }
     return { ...market, spot: this.livePrices, equity: account.equity, positions, marketState, performance: this.ops.build(this.binance.getTrades(), account) };
+  }
+
+  /** A quality-verdict change (e.g. WATCH -> ENTRY_ELIGIBLE) is material even when the setup state did not move. */
+  private verdictChanged(setup: import('../decision/SetupTypes.js').SetupMap): boolean {
+    let changed = false;
+    for (const s of setup.scenarios) {
+      const id = s.lifecycle?.setupId;
+      const verdict = s.quality?.verdict;
+      if (!id || !verdict) continue;
+      if (this.announcedVerdicts.get(id) !== verdict) { this.announcedVerdicts.set(id, verdict); changed = true; }
+      if (this.announcedVerdicts.size > 2_000) this.announcedVerdicts.delete(this.announcedVerdicts.keys().next().value as string);
+    }
+    return changed;
   }
 
   private telemetryFor(ctx: CycleContext, account: TelemetryInput['account'], positions: Position[]): Telemetry {

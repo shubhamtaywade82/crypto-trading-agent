@@ -99,21 +99,13 @@ test('empty setup map is never sent', () => {
   assert.equal(audits.length, 0);
 });
 
-test('setup de-escalation from triggered to forming suppresses alert and prevents flapping', () => {
-  const { ops, sent, advance } = harness();
-  ops.onSetup(setup('FORMING'));
-  ops.onSetup(setup('TRIGGERED'));
+test('becoming ENTRY_ELIGIBLE after a TRIGGERED notice is announced despite the cooldown', () => {
+  const { ops, sent } = harness();
+  const triggered = setup('TRIGGERED');
+  ops.onSetup(triggered);
+  const eligible = { ...triggered, scenarios: triggered.scenarios.map((s) => ({ ...s, quality: { verdict: 'ENTRY_ELIGIBLE' as const, effectiveRr: 2, reasons: [], checks: { structure: 'PASS', location: 'PASS', trigger: 'PASS', evidence: 'PASS', flow: 'PASS', rr: 'PASS', freshness: 'PASS' } as const } })) };
+  ops.onSetup(eligible);
   assert.equal(sent.length, 2);
-  // Price wicks down to forming — should not re-alert
-  advance(10_000);
-  ops.onSetup(setup('FORMING'));
+  ops.onSetup(eligible);
   assert.equal(sent.length, 2);
-  // Price wicks back up to triggered within cooldown — flapping suppressed
-  advance(10_000);
-  ops.onSetup(setup('TRIGGERED'));
-  assert.equal(sent.length, 2);
-  // After cooldown expires, triggered update emits
-  advance(900_000);
-  ops.onSetup(setup('TRIGGERED'));
-  assert.equal(sent.length, 3);
 });

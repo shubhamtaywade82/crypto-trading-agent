@@ -41,6 +41,9 @@ export function buildCouncilSignal(
 
   const scenario = matchingScenario(setup, chair.scenarioId);
   if (!scenario || scenario.state !== 'TRIGGERED') return null;
+  // Fail closed: a trigger is an event, not an order. Execution needs the deterministic gate's ENTRY_ELIGIBLE
+  // on the authoritative thesis; a scenario that never went through the pipeline has no verdict and is refused.
+  if (scenario.quality?.verdict !== 'ENTRY_ELIGIBLE' || scenario.thesisRole === 'COMPETING') return null;
   if ((chair.stance === 'LONG') !== (scenario.direction === 'LONG')) return null;
 
   return {

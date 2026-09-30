@@ -68,7 +68,7 @@ test('setup hook emits a rich SETUP alert and audit event', () => {
   ops.onSetup(setup());
   assert.equal(sent.length, 1);
   assert.deepEqual([sent[0].event.class, sent[0].event.severity, sent[0].event.stateTo], ['SETUP', 'WATCH', 'FORMING']);
-  assert.match(sent[0].html, /INSTITUTIONAL-STYLE FLOW MAP/);
+  assert.match(sent[0].html, /DERIVATIVES FLOW CONTEXT/);
   assert.deepEqual(audits.map((a) => a.type), ['setup']);
   assert.equal(audits[0].symbol, 'BTCUSDT');
 });

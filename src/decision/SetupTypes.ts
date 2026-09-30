@@ -36,6 +36,24 @@ export interface SetupScenario {
   expectedMove: ExpectedMoveWindow;
   sourceTime: number;
   rewardRisk: number;
+  /** Stamped by SetupLedger: stable identity and lifecycle, fixed at first sight. */
+  lifecycle?: SetupLifecycle;
+}
+
+/**
+ * Immutable-origin lifecycle. `expiresAt` is fixed from the originating structural event
+ * (`sourceTime` + thesis window at first sight) and is never extended; a new structural
+ * event yields a new scenario id and therefore a new setup.
+ */
+export interface SetupLifecycle {
+  setupId: string;
+  version: number;
+  createdAt: number;
+  expiresAt: number;
+  /** Highest state ever reached; states only advance while the setup lives. */
+  highestState: Exclude<SetupState, 'NO_TRADE' | 'INVALIDATED'>;
+  /** Trigger confirmed does not mean the entry is executable; the entry zone may still be ahead. */
+  entryState: 'WAITING_ENTRY' | 'IN_ENTRY_ZONE' | 'ENTRY_MISSED';
 }
 
 export interface SetupMap {

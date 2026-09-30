@@ -49,7 +49,7 @@ const map: SetupMap = {
 test('setup telegram card contains structure, flow, levels and move clock', () => {
   const html = setupMapCard(map);
   assert.match(html, /\[ SETUP \]<\/b> BTCUSDT/);
-  assert.match(html, /INSTITUTIONAL-STYLE FLOW MAP/);
+  assert.match(html, /DERIVATIVES FLOW CONTEXT/);
   assert.match(html, /HTF BULLISH · LTF BULLISH/);
   assert.match(html, /SHORT_CROWDED/);
   assert.match(html, /Entry:/);

@@ -485,3 +485,9 @@ MarketState → buildSetupMap → SetupLedger (identity, pinned expiry, frozen l
 - `data/setup-outcomes.jsonl` (`SETUP_OUTCOMES_PATH`) records each setup's features and hypothetical net R. Read it with
   `npx tsx scripts/setup-stats.ts`. Quality-gate thresholds are starting points; tune them from this data, not by hand or by the LLM.
 - Only the council path is gated by the pipeline; the legacy agents (Momentum, Structure, …) still emit independent signals through `RiskAgent`.
+
+## Evidence status
+
+As of 2026-09-30 no strategy family here has a demonstrated edge after costs. See `docs/research-log.md` for what was tested,
+the numbers, corrections and what is still untested. Positions with no protective stop above `UNPROTECTED_ALERT_PCT` (default 25%)
+of equity raise a CRITICAL system alert, since a strategy cannot enforce a stop on a position it does not own.

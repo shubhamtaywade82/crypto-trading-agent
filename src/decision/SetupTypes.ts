@@ -54,6 +54,8 @@ export interface SetupLifecycle {
   highestState: Exclude<SetupState, 'NO_TRADE' | 'INVALIDATED'>;
   /** Trigger confirmed does not mean the entry is executable; the entry zone may still be ahead. */
   entryState: 'WAITING_ENTRY' | 'IN_ENTRY_ZONE' | 'ENTRY_MISSED';
+  /** Cycles the engine failed to re-derive this setup without a structural kill; reset when it reappears. */
+  missedCycles: number;
 }
 
 export interface SetupMap {
@@ -81,5 +83,7 @@ export interface SetupMap {
   openInterestExpansion: boolean | null;
   takerAggressionRatio: number | null;
   scenarios: SetupScenario[];
+  /** Scenario ids whose thesis was structurally killed this cycle (as opposed to merely not admissible). */
+  invalidatedIds?: string[];
   noTradeReasons: string[];
 }

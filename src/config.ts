@@ -64,6 +64,8 @@ export const EnvSchema = z.object({
   EVENTS_PATH: pathWithDefault('data/events.jsonl'),
   NOTIFICATIONS_PATH: pathWithDefault('data/notifications.json'),
   DECISIONS_PATH: pathWithDefault('data/decisions.jsonl'),
+  /** Optional per-strategy RR floors written by scripts/calibrate-rr.ts; empty keeps the global MIN_RR. */
+  RR_PROFILE_PATH: z.string().trim().default(''),
   PAPER_EXCHANGE_URL: z.string().optional(),
   PAPER_EXCHANGE_ACCOUNT_ID: z.string().trim().optional(),
   PAPER_EXCHANGE_API_KEY: z.string().trim().optional(),
@@ -170,6 +172,7 @@ export const config = {
   eventsPath: env.EVENTS_PATH,
   notificationsPath: env.NOTIFICATIONS_PATH,
   decisionsPath: env.DECISIONS_PATH,
+  rrProfilePath: env.RR_PROFILE_PATH,
   symbols: parseSymbols(env.SYMBOLS),
   paperExchange: env.PAPER_EXCHANGE_URL && env.PAPER_EXCHANGE_ACCOUNT_ID
     ? {

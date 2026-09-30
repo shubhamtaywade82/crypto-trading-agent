@@ -457,3 +457,17 @@ npm run e2e:paper-exchange  # S1-S24 through RemoteBroker (E2E_BACKEND=fake|real
 ## License
 
 Proprietary — AlgoScalperAPI.
+
+## Per-strategy RR floors (calibrated from your own trades)
+
+`MIN_RR` is a single global floor and defaults to `0` (off). To gate each strategy on its own proven edge:
+
+```bash
+npx tsx scripts/calibrate-rr.ts --write          # reads data/decisions.jsonl, prints a report, writes data/rr-profile.json
+RR_PROFILE_PATH=data/rr-profile.json RISK_ENGINE=on npm run dev:paper
+```
+
+The floor for a strategy is the lowest planned RR whose cohort (that RR and above) has at least `--min-samples` executed trades
+and a positive 90% lower bound on **net** expectancy after round-trip fees and slippage. Strategies reported `NO_PROVEN_EDGE` or
+`INSUFFICIENT_DATA` get no floor and keep the global `MIN_RR`. With a profile loaded, the RR check uses cost-adjusted RR.
+Only executed trades have outcomes, so treat floors as candidates to paper-test, not proof.

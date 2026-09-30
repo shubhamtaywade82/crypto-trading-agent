@@ -11,6 +11,7 @@ import { sizePosition, type SizingResult } from '../risk/positionSizer.js';
 import { circuitRiskMultiplier, clusterOf, riskLimitsFromConfig, type RiskLimits } from '../risk/riskConfig.js';
 import { evaluateRisk, type PortfolioView } from '../risk/riskEngine.js';
 import type { PeakEquitySource } from '../risk/equityHwm.js';
+import { costAdjustedRr, minRrFor, type RrProfile } from '../risk/rrProfile.js';
 
 export interface RiskAgentOptions {
   /** Defaults to `config.riskEngine`; injectable so tests never mutate process.env. */
@@ -21,6 +22,8 @@ export interface RiskAgentOptions {
   killSwitch?: Pick<KillSwitch, 'state'>;
   /** Persistent equity high-water mark; when absent the agent tracks a session-local peak (legacy behaviour). */
   hwm?: PeakEquitySource;
+  /** Calibrated per-strategy RR floors; when present the RR check uses cost-adjusted RR against the strategy's floor. */
+  rrProfile?: RrProfile;
 }
 
 const NO_PERFORMANCE = 'risk-engine: performance snapshot unavailable';
@@ -168,7 +171,11 @@ export class RiskAgent extends BaseAgent {
 
   private evaluateWithEngine(signal: Signal, ctx: MarketContext, leverage: number, liqBufferAtr: number): RiskDecision {
     if (!ctx.performance) return this.reject(NO_PERFORMANCE);
-    const limits = this.limits();
+    const baseLimits = this.limits();
+    const profile = this.options.rrProfile;
+    const limits = profile
+      ? { ...baseLimits, minRiskRewardRatio: minRrFor(profile, signal.agent, baseLimits.minRiskRewardRatio) }
+      : baseLimits;
     const sizing = sizePosition({
       equity: ctx.equity,
       availableMargin: availableMargin(ctx),
@@ -182,7 +189,13 @@ export class RiskAgent extends BaseAgent {
       circuitMultiplier: circuitRiskMultiplier(ctx.performance.circuit),
     });
     const portfolio = portfolioView(ctx, ctx.performance.snapshot);
-    const verdict = evaluateRisk({ symbol: signal.symbol, sizing, portfolio, limits, rr: rewardRisk(signal) });
+    const rr = profile && signal.takeProfit !== undefined
+      ? costAdjustedRr(
+        { entry: signal.entry!, stopLoss: signal.stopLoss!, takeProfit: signal.takeProfit, side: isShort(signal) ? 'SHORT' : 'LONG' },
+        { feeRate: limits.feeRateTaker, slippageRate: limits.slippageBufferRate },
+      )
+      : rewardRisk(signal);
+    const verdict = evaluateRisk({ symbol: signal.symbol, sizing, portfolio, limits, rr });
     if (!verdict.approved) return this.reject(`risk-engine: ${verdict.reasons.join('; ')}`);
     return {
       approved: true,

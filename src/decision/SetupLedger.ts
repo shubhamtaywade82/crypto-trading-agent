@@ -6,6 +6,8 @@ type Terminal = 'EXPIRED' | 'INVALIDATED';
 const RANK: Readonly<Record<LiveState, number>> = { FORMING: 0, ARMED: 1, TRIGGERED: 2 };
 const TOMBSTONE_TTL_MS = 24 * 60 * 60_000;
 const ENTRY_MISSED_ATR = 1.5;
+/** Cycles a setup may go un-derived (RR dip, pool shift) before it is written off; structural kills are immediate. */
+export const SOFT_LOSS_GRACE_CYCLES = 3;
 
 export type SetupTransition =
   | { kind: 'CREATED'; setupId: string; symbol: string; to: LiveState }
@@ -20,6 +22,9 @@ interface Entry {
   expiresAt: number;
   state: LiveState;
   lastSeen: number;
+  missedCycles: number;
+  /** Levels are pinned at creation: entry, stop and targets never drift with the mark, so RR is stable. */
+  frozen: Pick<SetupScenario, 'entryLow' | 'entryHigh' | 'stopLoss' | 'target1' | 'target2' | 'rewardRisk'>;
 }
 
 export interface LedgerResult {
@@ -72,7 +77,11 @@ export class SetupLedger {
         entry = {
           setupId: key, symbol: map.symbol, version: 1, createdAt: now,
           expiresAt: origin + scenario.expectedMove.thesisExpiryMinutes * 60_000,
-          state: scenario.state, lastSeen: now,
+          state: scenario.state, lastSeen: now, missedCycles: 0,
+          frozen: {
+            entryLow: scenario.entryLow, entryHigh: scenario.entryHigh, stopLoss: scenario.stopLoss,
+            target1: scenario.target1, target2: scenario.target2, rewardRisk: scenario.rewardRisk,
+          },
         };
         if (entry.expiresAt <= now) { this.dead.set(key, { reason: 'EXPIRED', at: now }); continue; }
         this.live.set(key, entry);
@@ -85,22 +94,30 @@ export class SetupLedger {
         entry.state = scenario.state;
       }
       entry.lastSeen = now;
+      entry.missedCycles = 0;
+      const pinned = { ...scenario, ...entry.frozen };
 
       kept.push({
-        ...scenario,
+        ...pinned,
         // Monotonic: a recomputed lower state (e.g. TRIGGERED -> FORMING as a break ages out of the window) is noise
         state: entry.state,
         lifecycle: {
           setupId: entry.setupId, version: entry.version, createdAt: entry.createdAt, expiresAt: entry.expiresAt,
-          highestState: entry.state, entryState: entryStateOf(scenario, map.mark, atr),
+          highestState: entry.state, entryState: entryStateOf(pinned, map.mark, atr), missedCycles: 0,
         },
       });
     }
 
-    // Live setups the engine no longer produces were invalidated (or their zone/pool was consumed)
+    // A structural kill retires immediately; a mere absence is a soft loss and gets a grace window
+    const killed = new Set((map.invalidatedIds ?? []).map((id) => `${map.symbol}|${id}`));
     for (const [key, entry] of [...this.live]) {
       if (entry.symbol !== map.symbol || seen.has(key)) continue;
-      this.retire(entry, 'INVALIDATED', now, transitions);
+      entry.missedCycles += 1;
+      if (killed.has(key) || entry.missedCycles > SOFT_LOSS_GRACE_CYCLES) {
+        this.retire(entry, 'INVALIDATED', now, transitions);
+      } else if (now >= entry.expiresAt) {
+        this.retire(entry, 'EXPIRED', now, transitions);
+      }
     }
 
     const usable = kept.filter((s) => s.lifecycle?.entryState !== 'ENTRY_MISSED');

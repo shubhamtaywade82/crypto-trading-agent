@@ -32,6 +32,8 @@ import { confidenceMultiplier } from '../learning/ConfidenceAdjuster.js';
 import { TradeOutcomeRecorder } from '../learning/TradeOutcomeRecorder.js';
 import { buildSetupMap } from '../decision/SetupEngine.js';
 import { SetupLedger } from '../decision/SetupLedger.js';
+import { loadRrProfile } from '../risk/rrProfile.js';
+import { RefusalSuppressor } from './refusalSuppressor.js';
 import { buildCouncilSignal, COUNCIL_SIGNAL_TTL_MS } from '../decision/CouncilSignal.js';
 import { TradingCouncil } from '../llm/TradingCouncil.js';
 
@@ -65,7 +67,7 @@ export class Orchestrator extends EventEmitter {
   // Single authoritative equity high-water mark, shared by the risk agent and the
   // performance engine so both measure drawdown against the same persisted peak.
   private hwm = new EquityHwmStore();
-  private risk = new RiskAgent(this.binance, { killSwitch: this.killSwitch, hwm: this.hwm.forMode(config.mode) });
+  private risk = new RiskAgent(this.binance, { killSwitch: this.killSwitch, hwm: this.hwm.forMode(config.mode), rrProfile: loadRrProfile(config.rrProfilePath) });
   private hooks = buildOps({ log: (line) => this.log('SYSTEM', line, 'info'), seedTrades: this.binance.getTrades() });
   private ops = new RiskOps((message) => this.log('SYSTEM', message, 'warn'), { killSwitch: this.killSwitch, onCircuit: (from, to, snapshot) => this.hooks.onCircuit(from, to, snapshot), hwm: this.hwm.forMode(config.mode) });
   private executor = new ExecutorAgent(this.binance);
@@ -77,6 +79,7 @@ export class Orchestrator extends EventEmitter {
   private pendingTickFlush = false;
   private cooldownStartedAt = new Map<string, number>();
   private readonly setupLedger = new SetupLedger();
+  private readonly refusalSuppressor = new RefusalSuppressor();
   private counters: SessionCounters = { decisions: 0, executed: 0, monitored: 0 };
   private lastVenueState: string | null = null;
   private lastInitError: string | null = null;
@@ -229,6 +232,9 @@ export class Orchestrator extends EventEmitter {
   private async processSignals(signals: Signal[], ctx: MarketContext): Promise<void> {
     for (const signal of signals) {
       if (this.isCoolingDown(signal)) { this.counters.monitored += 1; continue; }
+      const portfolio = { equity: ctx.equity, positions: ctx.positions ?? [], circuit: ctx.performance?.circuit };
+      // A capacity/circuit block cannot clear while the book is unchanged: skip the gate instead of re-refusing
+      if (this.refusalSuppressor.shouldSkip(signal, portfolio)) { this.counters.monitored += 1; continue; }
       this.counters.decisions += 1;
       this.hooks.onSignal(signal);
       const decisionId = `${signal.id}-${Date.now()}`;
@@ -236,6 +242,8 @@ export class Orchestrator extends EventEmitter {
       this.hooks.onGate(signal, decision);
       // Decision lineage: what the market looked like, what was proposed, and what risk said — persisted before anything else happens
       const record = this.buildDecisionRecord(decisionId, signal, ctx, decision);
+      if (decision.approved) this.refusalSuppressor.noteApproval(signal);
+      else this.refusalSuppressor.noteRefusal(signal, decision.reason, portfolio);
       if (!decision.approved) {
         this.journal.record(record);
         this.log('RISK-MGR-δ', `REJECTED ${signal.symbol}: ${decision.reason}`, 'warn');

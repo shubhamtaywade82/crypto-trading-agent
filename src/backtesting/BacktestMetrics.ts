@@ -20,7 +20,10 @@ export interface BacktestMetrics {
   winningTrades: number;
   losingTrades: number;
   winRatePct: number;
+  /** After fees and funding (what the account experienced). */
   netPnl: number;
+  /** Price pnl only, before fees and funding. */
+  grossPnl: number;
   netReturnPct: number;
   initialEquity: number;
   finalEquity: number;
@@ -66,10 +69,17 @@ const EVIDENCE_BUCKETS: Array<{ label: string; min: number; max: number }> = [
   { label: '88-100', min: 88, max: 101 },
 ];
 
+/**
+ * Trade pnl in the journal is gross price pnl (spread/slippage already sit inside the fills; fees and funding are
+ * booked to the wallet separately). Every trade-level statistic below uses the economics the account actually
+ * experienced: price pnl plus funding (negative = paid) minus fees.
+ */
+const netPnlOf = (trade: SimTrade): number => trade.pnl + trade.funding - trade.fees;
+
+/** R after fees and funding: net dollars over the dollars at risk (qty x initial risk per unit). */
 const rMultiple = (trade: SimTrade): number | null => {
-  if (!trade.initialRisk || trade.initialRisk <= 0) return null;
-  const realized = (trade.exit - trade.entry) * (trade.side === 'LONG' ? 1 : -1);
-  return realized / trade.initialRisk;
+  if (!trade.initialRisk || trade.initialRisk <= 0 || !(trade.qty > 0)) return null;
+  return netPnlOf(trade) / (trade.qty * trade.initialRisk);
 };
 
 const mean = (values: number[]): number | null => (values.length > 0 ? values.reduce((a, b) => a + b, 0) / values.length : null);
@@ -85,10 +95,10 @@ function slice(trades: SimTrade[]): MetricsSlice {
   const rs = trades.map(rMultiple).filter((r): r is number => r !== null);
   return {
     trades: trades.length,
-    wins: trades.filter((t) => t.pnl > 0).length,
-    winRatePct: trades.length > 0 ? Number(((trades.filter((t) => t.pnl > 0).length / trades.length) * 100).toFixed(1)) : 0,
+    wins: trades.filter((t) => netPnlOf(t) > 0).length,
+    winRatePct: trades.length > 0 ? Number(((trades.filter((t) => netPnlOf(t) > 0).length / trades.length) * 100).toFixed(1)) : 0,
     expectancyR: mean(rs.map((r) => Number(r.toFixed(3)))),
-    netPnl: Number(trades.reduce((sum, t) => sum + t.pnl, 0).toFixed(2)),
+    netPnl: Number(trades.reduce((sum, t) => sum + netPnlOf(t), 0).toFixed(2)),
   };
 }
 
@@ -125,11 +135,12 @@ export function computeMetrics(input: {
   period: { from: number; to: number; steps: number; symbols: string[] };
 }): BacktestMetrics {
   const { trades, curve, initialEquity } = input;
-  const wins = trades.filter((t) => t.pnl > 0);
-  const losses = trades.filter((t) => t.pnl <= 0);
-  const grossWin = wins.reduce((sum, t) => sum + t.pnl, 0);
-  const grossLoss = Math.abs(losses.reduce((sum, t) => sum + t.pnl, 0));
+  const wins = trades.filter((t) => netPnlOf(t) > 0);
+  const losses = trades.filter((t) => netPnlOf(t) <= 0);
+  const grossWin = wins.reduce((sum, t) => sum + netPnlOf(t), 0);
+  const grossLoss = Math.abs(losses.reduce((sum, t) => sum + netPnlOf(t), 0));
   const netPnl = grossWin - grossLoss;
+  const pricePnl = trades.reduce((sum, t) => sum + t.pnl, 0);
   const finalEquity = curve.length > 0 ? curve[curve.length - 1].equity : initialEquity;
   const rs = trades.map(rMultiple).filter((r): r is number => r !== null);
 
@@ -153,7 +164,7 @@ export function computeMetrics(input: {
   let consecutive = 0;
   let maxConsecutive = 0;
   for (const trade of trades) {
-    if (trade.pnl <= 0) {
+    if (netPnlOf(trade) <= 0) {
       consecutive += 1;
       maxConsecutive = Math.max(maxConsecutive, consecutive);
     } else {
@@ -165,8 +176,8 @@ export function computeMetrics(input: {
   const maes = trades.map((t) => t.maeR).filter((m): m is number => m !== null);
   const mfes = trades.map((t) => t.mfeR).filter((m): m is number => m !== null);
   const worst = [...returns].sort((a, b) => a - b).slice(0, Math.max(1, Math.ceil(returns.length * 0.05)));
-  const avgWin = mean(wins.map((t) => t.pnl));
-  const avgLoss = mean(losses.map((t) => Math.abs(t.pnl)));
+  const avgWin = mean(wins.map(netPnlOf));
+  const avgLoss = mean(losses.map((t) => Math.abs(netPnlOf(t))));
 
   return {
     totalTrades: trades.length,
@@ -174,12 +185,13 @@ export function computeMetrics(input: {
     losingTrades: losses.length,
     winRatePct: trades.length > 0 ? Number(((wins.length / trades.length) * 100).toFixed(1)) : 0,
     netPnl: Number(netPnl.toFixed(2)),
+    grossPnl: Number(pricePnl.toFixed(2)),
     netReturnPct: initialEquity > 0 ? Number(((netPnl / initialEquity) * 100).toFixed(2)) : 0,
     initialEquity,
     finalEquity: Number(finalEquity.toFixed(2)),
     profitFactor: grossLoss > 0 ? Number((grossWin / grossLoss).toFixed(2)) : grossWin > 0 ? null : 0,
     expectancyR: mean(rs),
-    expectancyUsd: mean(trades.map((t) => t.pnl)),
+    expectancyUsd: mean(trades.map(netPnlOf)),
     payoffRatio: avgWin !== null && avgLoss !== null && avgLoss > 0 ? Number((avgWin / avgLoss).toFixed(2)) : null,
     maxDrawdownPct: peak > 0 ? Number(((maxDrawdownUsd / peak) * 100).toFixed(2)) : 0,
     maxDrawdownUsd: Number(maxDrawdownUsd.toFixed(2)),
@@ -187,8 +199,8 @@ export function computeMetrics(input: {
     sortino: downsideVariance !== null && downsideVariance > 0 && avgReturn !== null ? Number(((avgReturn / Math.sqrt(downsideVariance)) * Math.sqrt(PERIODS_PER_YEAR)).toFixed(2)) : null,
     cvar95Pct: worst.length > 0 ? Number((mean(worst)! * 100).toFixed(3)) : null,
     maxConsecutiveLosses: maxConsecutive,
-    largestWinUsd: wins.length > 0 ? Number(Math.max(...wins.map((t) => t.pnl)).toFixed(2)) : 0,
-    largestLossUsd: losses.length > 0 ? Number(Math.min(...losses.map((t) => t.pnl)).toFixed(2)) : 0,
+    largestWinUsd: wins.length > 0 ? Number(Math.max(...wins.map(netPnlOf)).toFixed(2)) : 0,
+    largestLossUsd: losses.length > 0 ? Number(Math.min(...losses.map(netPnlOf)).toFixed(2)) : 0,
     liquidations: trades.filter((t) => t.reason === 'LIQUIDATED').length,
     avgHoldHours: mean(holds) !== null ? Number(mean(holds)!.toFixed(2)) : null,
     maxHoldHours: holds.length > 0 ? Number(Math.max(...holds).toFixed(2)) : null,

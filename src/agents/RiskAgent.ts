@@ -26,6 +26,10 @@ export interface RiskAgentOptions {
   rrProfile?: RrProfile;
 }
 
+// Strategies place stops in multiples of the state layer's closed-candle ATR; the gate must measure with the same ruler,
+// and float noise must not turn a stop at exactly N ATR into "N-0.0001 < N".
+const STOP_WIDTH_TOLERANCE = 0.01;
+
 const NO_PERFORMANCE = 'risk-engine: performance snapshot unavailable';
 
 const isShort = (signal: Signal): boolean => signal.type === 'OPEN_SHORT';
@@ -254,14 +258,16 @@ export class RiskAgent extends BaseAgent {
       return this.reject('insufficient candle history');
     }
 
-    const atr14 = atr(candles, 14);
+    // Same ATR the strategies used (closed 15m candles); ctx.candles still carries the forming candle, which understates it
+    const stateAtr = ctx.marketState?.[signal.symbol]?.timeframes['15m'].atr14;
+    const atr14 = stateAtr !== undefined && stateAtr !== null && stateAtr > 0 ? stateAtr : atr(candles, 14);
     if (atr14 <= 0) {
       return this.reject('invalid ATR calculation');
     }
 
     const atrDist = signal.symbol.includes('/') ? (signal.entry! * 0.015) : atr14;
     const buffer = Math.abs(signal.entry! - signal.stopLoss!) / atrDist;
-    if (buffer < config.risk.minLiqBufferAtr) {
+    if (buffer * (1 + STOP_WIDTH_TOLERANCE) < config.risk.minLiqBufferAtr) {
       return this.reject(`liq buffer ${buffer.toFixed(1)}x ATR < ${config.risk.minLiqBufferAtr}x`);
     }
 

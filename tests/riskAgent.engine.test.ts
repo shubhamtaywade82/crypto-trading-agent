@@ -230,3 +230,23 @@ test('should not touch the broker when the engine is off', async () => {
   assert.equal(await refreshPortfolio(start, broker.source), start);
   assert.deepEqual(broker.reads, []);
 });
+
+// Stop-width check must use the strategies' ATR and tolerate float noise
+const withState = (atr14: number): Partial<MarketContext> =>
+  ({ marketState: { BTCUSDT: { timeframes: { '15m': { atr14 } } } } as unknown as MarketContext['marketState'] });
+
+test('a stop at exactly the minimum ATR multiple passes when measured with the state ATR', () => {
+  const min = config.risk.minLiqBufferAtr;
+  // state ATR 1.0: stop distance = min * 1.0 exactly; candle ATR in ctx is 0.5, which alone would make it look 2x wider
+  const agent = agentWith();
+  const ok = agent.gate(signal({ stopLoss: 100 - min * 1.0000001 }), ctx(withState(1)));
+  assert.equal(ok.approved, true, ok.reason);
+  const tight = agent.gate(signal({ stopLoss: 100 - min * 0.9 }), ctx(withState(1)));
+  assert.equal(tight.approved, false);
+  assert.match(tight.reason, /^liq buffer /);
+});
+
+test('without a state ATR the gate falls back to the candle ATR exactly as before', () => {
+  const agent = agentWith();
+  assert.equal(agent.gate(signal({ stopLoss: 98 }), ctx()).approved, true);
+});

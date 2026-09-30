@@ -6,6 +6,7 @@ import type { MarketContext } from '../src/agents/BaseAgent.js';
 import { RiskAgent } from '../src/agents/RiskAgent.js';
 import { config } from '../src/config.js';
 import type { DecisionRecord } from '../src/decision/DecisionJournal.js';
+import { dropDegenerateGeometry } from '../src/decision/CandidateFlow.js';
 import { classifyRiskRefusal, isStandingBlock } from '../src/decision/NoTrade.js';
 import { PerformanceEngine } from '../src/risk/performanceEngine.js';
 import { riskLimitsFromConfig } from '../src/risk/riskConfig.js';
@@ -170,4 +171,45 @@ test('non-standing refusals are never suppressed', () => {
   const book = { equity: EQUITY, positions: [], circuit: 'NORMAL' };
   s.noteRefusal(signal(), 'risk-engine: min_rr: rr 0.03 (min 1.5)', book);
   assert.equal(s.shouldSkip(signal(), book), false);
+});
+
+// --- legacy refusal strings + degenerate geometry --------------------------------------------
+
+test('legacy (engine-off) refusals classify as standing blocks so they are suppressed too', () => {
+  assert.equal(classifyRiskRefusal('drawdown kill-switch: current drawdown exceeds 10%'), 'CIRCUIT_BREAKER');
+  assert.equal(classifyRiskRefusal('kill-switch: manual halt'), 'CIRCUIT_BREAKER');
+  assert.equal(classifyRiskRefusal('max gross exposure reached (78834 / 78612)'), 'PORTFOLIO_CAPACITY');
+  assert.equal(classifyRiskRefusal('max concurrent positions (4) reached'), 'PORTFOLIO_CAPACITY');
+  assert.equal(classifyRiskRefusal('liq buffer 1.2x ATR < 2x'), 'LIQ_BUFFER');
+  assert.equal(isStandingBlock(classifyRiskRefusal('drawdown kill-switch: current drawdown exceeds 10%')), true);
+  assert.equal(isStandingBlock(classifyRiskRefusal('liq buffer 1.2x ATR < 2x')), false);
+});
+
+test('a drawdown kill-switch refusal is suppressed until the book or circuit changes', () => {
+  const s = new RefusalSuppressor();
+  const book = { equity: 50_000, positions: [], circuit: 'EMERGENCY' };
+  s.noteRefusal(signal(), 'drawdown kill-switch: current drawdown exceeds 10%', book);
+  assert.equal(s.shouldSkip(signal(), book), true);
+  assert.equal(s.shouldSkip(signal(), { ...book, circuit: 'NORMAL' }), false);
+});
+
+const geo = (over: Partial<Signal>): Signal => ({ id: 'g', agent: 'CROWDING-ι', symbol: 'SOLUSDT', type: 'OPEN_SHORT', confidence: 0.85, entry: 121.62, stopLoss: 122.37, takeProfit: 121.565, reason: '', ts: 0, ...over });
+
+test('a target sitting on the entry (RR 0.07, as in the SOL crowding signals) is dropped before risk', () => {
+  const { kept, dropped } = dropDegenerateGeometry([geo({})], 0.25);
+  assert.equal(kept.length, 0);
+  assert.ok(dropped[0].rr! < 0.1);
+});
+
+test('the real RR 0.03 case from the alert stream is dropped; adaptive-style RR ~0.9 and sound setups pass', () => {
+  const rrOf = (sig: Signal) => dropDegenerateGeometry([sig], 0.25).kept.length;
+  assert.equal(rrOf(geo({ entry: 119.23, stopLoss: 119.8156, takeProfit: 119.215 })), 0);
+  assert.equal(rrOf(geo({ entry: 121.45, stopLoss: 120.05, takeProfit: 122.67, type: 'OPEN_LONG', agent: 'ADAPTIVE-ST-ζ' })), 1);
+  assert.equal(rrOf(geo({ entry: 84516, stopLoss: 84640, takeProfit: 84177 })), 1);
+});
+
+test('hedges (no stop/target) and a zero floor are never filtered; zero-risk geometry is dropped', () => {
+  assert.equal(dropDegenerateGeometry([geo({ type: 'OPEN_HEDGE', entry: undefined, stopLoss: undefined, takeProfit: undefined })], 0.25).kept.length, 1);
+  assert.equal(dropDegenerateGeometry([geo({})], 0).kept.length, 1);
+  assert.equal(dropDegenerateGeometry([geo({ stopLoss: 121.62 })], 0.25).kept.length, 0);
 });

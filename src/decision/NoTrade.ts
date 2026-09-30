@@ -15,6 +15,8 @@ export const NO_TRADE_REASONS = [
   'CONFLICTING_TIMEFRAMES',
   'ENTRY_LOCATION',
   'CONFLICTING_THESIS',
+  'DEGENERATE_GEOMETRY',
+  'LIQ_BUFFER',
 ] as const;
 export type NoTradeReason = (typeof NO_TRADE_REASONS)[number];
 
@@ -23,6 +25,10 @@ const STANDING: ReadonlySet<NoTradeReason> = new Set(['PORTFOLIO_CAPACITY', 'CIR
 
 /** Maps a risk-engine refusal ("risk-engine: name: detail; name: detail") to a code; the first failing check wins. */
 export function classifyRiskRefusal(reason: string): NoTradeReason {
+  // The legacy (engine-off) gate speaks in prose, not `check: detail`; its capacity and drawdown blocks are standing states too
+  if (/drawdown kill-switch|^kill-switch:/.test(reason)) return 'CIRCUIT_BREAKER';
+  if (/max gross exposure|max concurrent positions/.test(reason)) return 'PORTFOLIO_CAPACITY';
+  if (/^liq buffer /.test(reason)) return 'LIQ_BUFFER';
   const text = reason.replace(/^risk-engine:\s*/, '');
   const name = /^([a-z_]+):/.exec(text)?.[1];
   switch (name) {

@@ -99,3 +99,19 @@ test('equity drawdown reflects an adverse basis move while positioned', () => {
   const r = simulateCarry(fundingSeries(Array(40).fill(0.0001)), flat(328), bars(328, perpSpike), params());
   assert.ok(r.maxDrawdownPct > 7);
 });
+
+test('a minimum hold defers a signal exit, so a flickering rate stops churning fills', () => {
+  // funding flips sign every 2 intervals: without a minimum hold it exits/re-enters constantly
+  const rates = Array.from({ length: 60 }, (_, i) => (Math.floor(i / 2) % 2 === 0 ? 0.0003 : -0.0003));
+  const churn = simulateCarry(fundingSeries(rates), flat(60 * 8 + 8), flat(60 * 8 + 8), params({ lookback: 2, entryApr: 0.05, exitApr: 0 }));
+  const slow = simulateCarry(fundingSeries(rates), flat(60 * 8 + 8), flat(60 * 8 + 8), params({ lookback: 2, entryApr: 0.05, exitApr: 0, minHoldIntervals: 12 }));
+  assert.ok(churn.cycles.length > slow.cycles.length);
+  assert.ok(slow.costsPct < churn.costsPct);
+  for (const c of slow.cycles.filter((x) => x.reason === 'SIGNAL')) assert.ok(c.intervals >= 12);
+});
+
+test('a minimum hold never delays a liquidation', () => {
+  const spike = (h: number) => (h === 40 ? 150 : 100);
+  const r = simulateCarry(fundingSeries(Array(40).fill(0.0001)), flat(328), bars(328, () => 100, spike), params({ minHoldIntervals: 1000 }));
+  assert.equal(r.liquidations, 1);
+});

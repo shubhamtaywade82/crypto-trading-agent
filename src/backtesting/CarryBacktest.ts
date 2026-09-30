@@ -37,6 +37,8 @@ export interface CarryParams {
   perpLeverage: number;
   maintenanceMarginRate: number;
   costs: CarryCosts;
+  /** Funding intervals a position must be held before a signal exit is allowed (liquidation is never deferred). Default 0. */
+  minHoldIntervals?: number;
 }
 
 export interface CarryCycle {
@@ -163,7 +165,7 @@ export function simulateCarry(funding: readonly FundingPoint[], spot: readonly B
       if (!open && !closedThisStep && mean >= entryRate) {
         open = { at: f.time, spotPx: s.open, perpPx: q.open, funding: 0, intervals: 0 };
         realised -= entryCost(p.costs);
-      } else if (open && mean < exitRate) {
+      } else if (open && mean < exitRate && open.intervals >= (p.minHoldIntervals ?? 0)) {
         close(f.time, s.open, q.open, 'SIGNAL');
       }
     }

@@ -31,14 +31,12 @@ function scenarioLines(symbol: string, setup: SetupScenario): string[] {
   const target2 = setup.target2 !== undefined ? ` · <b>TP2:</b> ${formatPrice(symbol, setup.target2)}` : '';
   return [
     `<b>${statusLabel(setup)} · ${setup.direction} · ${setupLabel(setup.kind)}</b>`,
-    `🎯 <b>Entry:</b> ${entry}`,
-    `🛑 <b>SL:</b> ${formatPrice(symbol, setup.stopLoss)}`,
-    `✅ <b>TP1:</b> ${formatPrice(symbol, setup.target1)}${target2}`,
-    `⚖️ <b>RR:</b> ${setup.rewardRisk.toFixed(2)} · <b>Target move:</b> ${setup.expectedMove.distanceAtr.toFixed(2)} ATR`,
+    `🎯 <b>Entry:</b> ${entry} │ 🛑 <b>SL:</b> ${formatPrice(symbol, setup.stopLoss)}`,
+    `✅ <b>TP1:</b> ${formatPrice(symbol, setup.target1)}${target2} │ ⚖️ <b>RR:</b> ${setup.rewardRisk.toFixed(2)} (${setup.expectedMove.distanceAtr.toFixed(2)} ATR)`,
     `⚡ <b>Trigger:</b> ${clean(setup.trigger)}`,
     `⛔ <b>Invalidation:</b> ${clean(setup.invalidation)}`,
     `🧠 <b>Flow hypothesis:</b> ${clean(setup.flowHypothesis)}`,
-    `⏱️ <b>Move window (model):</b> ${formatDuration(setup.expectedMove)} · <b>Thesis expiry:</b> ${formatMinutes(setup.expectedMove.thesisExpiryMinutes)}`,
+    `⏱️ <b>Move window:</b> ${formatDuration(setup.expectedMove)} · <b>Thesis expiry:</b> ${formatMinutes(setup.expectedMove.thesisExpiryMinutes)}`,
   ];
 }
 
@@ -65,14 +63,14 @@ export function setupMapCard(map: SetupMap): string {
   const crowd = map.crowding ?? 'BALANCED/UNKNOWN';
   const oi = map.openInterestExpansion === null ? '—' : map.openInterestExpansion ? 'EXPANDING' : 'NOT EXPANDING';
   const taker = map.takerAggressionRatio === null ? '—' : map.takerAggressionRatio.toFixed(2);
+  const context = map.noTradeReasons.length > 0 ? [`⚠️ <b>Context:</b> ${map.noTradeReasons.map(clean).join(' · ')}`] : [];
 
   const lines = [
-    `<b>[ SETUP ]</b> ${clean(map.symbol)}`,
-    `<b>🏦 INSTITUTIONAL-STYLE FLOW MAP</b> · ${map.state}`,
-    `💵 <b>Price:</b> ${formatPrice(map.symbol, map.mark)} · <b>Bias:</b> ${map.bias} · <b>Regime:</b> ${clean(map.regime)}`,
+    `<b>[ SETUP ]</b> ${clean(map.symbol)} · <b>${map.state}</b>`,
+    `<b>🏦 INSTITUTIONAL-STYLE FLOW MAP</b>`,
+    `💵 <b>Price:</b> ${formatPrice(map.symbol, map.mark)} · <b>Bias:</b> ${map.bias} (${clean(map.regime)})`,
     `📐 <b>Structure:</b> HTF ${map.htfTrend} · LTF ${map.ltfTrend} · <b>Last break:</b> ${clean(breakText)}`,
-    `📍 <b>Location:</b> ${location} · <b>Vol:</b> ${map.volatility}`,
-    `💧 <b>Liquidity:</b> ${liquidity}`,
+    `💧 <b>Liquidity:</b> ${liquidity} │ 📍 <b>Loc:</b> ${location}`,
     `👥 <b>Crowding:</b> ${clean(crowd)} · <b>OI:</b> ${oi} · <b>Taker:</b> ${taker}`,
     '',
     ...map.scenarios.flatMap((scenario, index) => [
@@ -80,9 +78,8 @@ export function setupMapCard(map: SetupMap): string {
       ...scenarioLines(map.symbol, { ...scenario }),
       '',
     ]),
-    map.noTradeReasons.length > 0 ? `⚠️ <b>Context:</b> ${map.noTradeReasons.map(clean).join(' · ')}` : '✅ <b>Context:</b> no structural veto detected',
-    `📝 <b>Execution:</b> setup map is deterministic; confirmation is required before order routing`,
-    `🕒 <b>As of:</b> ${new Date(map.generatedAt).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', hour12: false })} IST`,
+    ...context,
+    `🕒 <b>Time:</b> ${new Date(map.generatedAt).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', hour12: false })} IST`,
   ];
 
   return finish(lines);

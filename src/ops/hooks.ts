@@ -55,7 +55,6 @@ interface Notice {
 
 const DAY_MS = 86_400_000;
 const REASON_KEY_CHARS = 80;
-const SETUP_COOLDOWN_MS = 15 * 60_000;
 
 const noop = (): void => {};
 const NOOP_HOOKS: OpsHooks = {
@@ -111,6 +110,7 @@ function systemNotice(input: SystemCardInput, severity: AlertSeverity, fingerpri
 class Ops implements OpsHooks {
   private readonly now: () => number;
   private readonly seen: Set<string>;
+  private readonly startTime: number;
   private readonly openIds = new Map<string, string>();
   private readonly flippedIds = new Map<string, string>();
   private refusals: Record<string, number> = {};
@@ -121,11 +121,10 @@ class Ops implements OpsHooks {
   constructor(private readonly deps: OpsDeps) {
     this.now = deps.now ?? Date.now;
     this.seen = new Set((deps.seedTrades ?? []).map(tradeKey));
+    this.startTime = this.now();
   }
 
-  onSignal = (signal: Signal): void => {
-    this.safely(() => this.audit('signal', { ...signal }, signal));
-  };
+  onSignal = (signal: Signal): void => this.safely(() => this.audit('signal', { ...signal }, signal));
 
   onSetup = (setup: SetupMap): void => {
     this.safely(() => {
@@ -148,9 +147,7 @@ class Ops implements OpsHooks {
       this.notify(signalNotice({ outcome: 'VETOED', signal, note: reason, at: this.now() }));
     });
   };
-  onRefusal = (signal: Signal, reason: string): void => {
-    this.safely(() => this.refuse(signal, reason));
-  };
+  onRefusal = (signal: Signal, reason: string): void => this.safely(() => this.refuse(signal, reason));
   onOrder = (signal: Signal, decision: RiskDecision, log: LogEntry, ctx: Pick<MarketContext, 'positions' | 'marks'>): void => {
     this.safely(() => {
       this.audit('order', { level: log.level, message: log.msg, sizeUsdt: decision.positionSizeUsdt, leverage: decision.leverage }, signal);
@@ -162,8 +159,11 @@ class Ops implements OpsHooks {
   onExit = (trades: readonly TradeRecord[]): void => {
     this.safely(() => {
       for (const trade of trades) {
-        if (this.seen.has(tradeKey(trade))) continue;
-        this.seen.add(tradeKey(trade));
+        const key = tradeKey(trade);
+        if (this.seen.has(key)) continue;
+        this.seen.add(key);
+        // Trades closed before this session started were already reported by earlier runs
+        if (trade.closedAt <= this.startTime) continue;
         this.recordExit(trade);
       }
     });

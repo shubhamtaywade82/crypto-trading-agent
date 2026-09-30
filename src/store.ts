@@ -38,6 +38,15 @@ export const useStore = create<Store>((set) => ({
   corrBtcEth: null,
   marketIntel: undefined,
   serverTime: Date.now(),
-  set: (partial) => set((state) => ({ ...state, ...partial })),
+  set: (partial) => set((state) => {
+    let changed = false;
+    for (const key of Object.keys(partial) as Array<keyof AppState>) {
+      if (state[key] !== partial[key]) {
+        changed = true;
+        break;
+      }
+    }
+    return changed ? { ...state, ...partial } : state;
+  }),
   pushLog: (entry) => set((state) => ({ logs: [entry, ...state.logs].slice(0, 50) })),
 }));

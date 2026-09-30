@@ -61,10 +61,11 @@ test('should map each circuit state to its risk multiplier', () => {
   }
 });
 
-test('should cluster BTC and ETH separately from alts', () => {
+test('should cluster majors separately from other alts', () => {
   assert.equal(clusterOf('BTCUSDT'), 'BTC');
   assert.equal(clusterOf('ethusdt'), 'ETH');
-  assert.equal(clusterOf('SOLUSDT'), 'ALT');
+  assert.equal(clusterOf('SOLUSDT'), 'SOL');
+  assert.equal(clusterOf('xrpusdt'), 'XRP');
   assert.equal(clusterOf('AVAXUSDT'), 'ALT');
 });
 

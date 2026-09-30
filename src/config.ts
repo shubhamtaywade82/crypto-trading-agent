@@ -31,7 +31,7 @@ export const EnvSchema = z.object({
   MAX_EXPOSURE_PCT: z.coerce.number().default(80),
   RISK_PER_TRADE_PCT: z.coerce.number().default(1),
   MAX_DRAWDOWN_PCT: z.coerce.number().default(5),
-  MIN_LIQ_BUFFER_ATR: z.coerce.number().default(2),
+  MIN_LIQ_BUFFER_ATR: z.coerce.number().default(1.2),
   SYMBOLS: z.string().default('BTCUSDT,ETHUSDT,SOLUSDT,AVAXUSDT'),
   MAX_DAILY_LOSS_PCT: z.coerce.number().positive().default(3),
   MAX_LOSS_STREAK: z.coerce.number().int().positive().default(4),
@@ -57,6 +57,7 @@ export const EnvSchema = z.object({
 
   AUDIT: z.enum(['off', 'on']).default('on'),
   ALERTS: z.enum(['off', 'on']).default('on'),
+  ADAPTIVE_ST_REQUIRE_ANCHOR: z.enum(['off', 'on']).default('off'),
   STRUCT_LIQ: z.enum(['off', 'on']).default('on'),
   STRUCT_LIQ_MAX_SWEEP_AGE_CANDLES: z.coerce.number().int().min(1).default(6),
   STRUCT_LIQ_MIN_REWARD_RISK: z.coerce.number().min(0).default(1.5),
@@ -158,6 +159,9 @@ export const config = {
   },
   audit: env.AUDIT,
   alerts: env.ALERTS,
+  adaptiveSuperTrend: {
+    requireAnchor: env.ADAPTIVE_ST_REQUIRE_ANCHOR === 'on',
+  },
   structLiq: {
     enabled: env.STRUCT_LIQ === 'on',
     maxSweepAgeCandles: env.STRUCT_LIQ_MAX_SWEEP_AGE_CANDLES,

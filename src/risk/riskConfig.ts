@@ -77,10 +77,12 @@ export function circuitRiskMultiplier(state: CircuitState): number {
   }
 }
 
-/** Correlation bucket for exposure caps: BTC and ETH each stand alone, everything else is one alt cluster. */
+/** Correlation bucket for exposure caps: majors stand alone, everything else is one alt cluster. */
 export function clusterOf(symbol: string): string {
   const upper = symbol.toUpperCase();
   if (upper.startsWith('BTC')) return 'BTC';
   if (upper.startsWith('ETH')) return 'ETH';
+  if (upper.startsWith('SOL')) return 'SOL';
+  if (upper.startsWith('XRP')) return 'XRP';
   return 'ALT';
 }

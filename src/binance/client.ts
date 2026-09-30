@@ -6,7 +6,7 @@ import { RemoteBroker, type VenueStatus } from './remoteBroker.js';
 import type { FundingLine, FundingObservation } from './remoteFunding.js';
 import { RemoteStore } from './remoteState.js';
 import { roundPrice, roundQty, rulesFromExchangeInfo, setSymbolRules } from './symbolRules.js';
-import type { AgentId, Candle, Position, TradeRecord, WsStatus } from '../types.js';
+import type { AgentId, Candle, Position, Side, TradeRecord, WsStatus } from '../types.js';
 import { MarketDataService } from '../market/MarketDataService.js';
 import type { MarketDataSnapshot } from '../market/MarketDataTypes.js';
 
@@ -237,9 +237,15 @@ export class BinanceService {
     await this.cancelAll(pos.symbol);
   }
 
-  updateStops(symbol: string, strategy: AgentId, stopLoss: number, takeProfit: number): void {
+  updateStops(symbol: string, strategy: AgentId, stopLoss: number, takeProfit: number, side?: Side): void {
     if (this.broker) this.broker.updateStops(symbol, strategy, stopLoss, takeProfit);
     if (config.mode === 'paper') this.paper.updateStops(symbol, strategy, stopLoss, takeProfit);
+    if (config.mode === 'live' && side) {
+      const exitSide = side === 'LONG' ? 'SELL' : 'BUY';
+      void this.futures.cancelAllOpenOrders({ symbol }).then(() =>
+        this.futures.submitNewOrder({ symbol, side: exitSide, type: 'STOP_MARKET', stopPrice: roundPrice(symbol, stopLoss), closePosition: 'true' }),
+      ).catch(() => undefined);
+    }
   }
 
   dropUnlistedPositions(symbols: string[]): string[] {

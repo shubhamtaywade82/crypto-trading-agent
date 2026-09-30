@@ -21,7 +21,7 @@ const limits = riskLimitsFromConfig(risk);
 
 const NOW = Date.UTC(2026, 8, 22, 12);
 const INITIAL_EQUITY = 100_000;
-for (const symbol of ['BTCUSDT', 'AVAXUSDT']) {
+for (const symbol of ['BTCUSDT', 'AVAXUSDT', 'SOLUSDT', 'XRPUSDT']) {
   setSymbolRules(symbol, { pricePrecision: 2, quantityPrecision: 3, tickSize: 0.01, stepSize: 0.001, minQty: 0.001, minNotional: 5 });
 }
 
@@ -39,7 +39,7 @@ function performanceFor(trades: TradeRecord[], equity = INITIAL_EQUITY, lim: Ris
 }
 
 const ctx = (over: Partial<MarketContext> = {}): MarketContext => ({
-  candles: { BTCUSDT: candles(0.5), AVAXUSDT: candles(0.5) }, funding: {}, marks: {}, spot: {}, equity: INITIAL_EQUITY,
+  candles: { BTCUSDT: candles(0.5), AVAXUSDT: candles(0.5), SOLUSDT: candles(0.5), XRPUSDT: candles(0.5) }, funding: {}, marks: {}, spot: {}, equity: INITIAL_EQUITY,
   positions: [], performance: performanceFor([]), ...over,
 });
 const signal = (over: Partial<Signal> = {}): Signal =>
@@ -148,9 +148,11 @@ test('should reject an entry that pushes one symbol past its cap', () => {
 });
 
 test('should reject an entry that pushes a correlated cluster past its cap', () => {
-  const decision = agentWith({ maxCorrelatedExposurePercent: 60 }).gate(signal({ symbol: 'AVAXUSDT' }), ctx({ positions: [position('SOLUSDT', 200)] }));
+  const decision = agentWith({ maxCorrelatedExposurePercent: 60 }).gate(signal({ symbol: 'AVAXUSDT' }), ctx({ positions: [position('DOTUSDT', 200)] }));
   assert.match(decision.reason, /cluster ALT 67\.17% \(max 60%\)/);
-  assert.equal(agentWith({ maxCorrelatedExposurePercent: 60 }).gate(signal(), ctx({ positions: [position('SOLUSDT', 200)] })).approved, true); // BTC is its own cluster
+  assert.equal(agentWith({ maxCorrelatedExposurePercent: 60 }).gate(signal(), ctx({ positions: [position('DOTUSDT', 200)] })).approved, true); // BTC is its own cluster
+  assert.equal(agentWith({ maxCorrelatedExposurePercent: 60 }).gate(signal({ symbol: 'SOLUSDT' }), ctx({ positions: [position('DOTUSDT', 200)] })).approved, true); // SOL is its own cluster
+  assert.equal(agentWith({ maxCorrelatedExposurePercent: 60 }).gate(signal({ symbol: 'XRPUSDT' }), ctx({ positions: [position('SOLUSDT', 200)] })).approved, true); // XRP is its own cluster
 });
 
 test('should size against margin left after the open positions', () => {

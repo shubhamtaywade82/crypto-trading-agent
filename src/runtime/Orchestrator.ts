@@ -15,7 +15,8 @@ import { OllamaAdvisor } from '../ollama/advisor.js';
 import { errorText, isRefusal } from '../binance/remoteOrders.js';
 import { sparkline } from '../binance/indicators.js';
 import { accountFields, buildTelemetry, fleetRuntimes, singleFlight, venueInfo, type SessionCounters, type Telemetry, type TelemetryInput } from './telemetry.js';
-import { formatPrice } from '../binance/symbolRules.js';
+import { formatPrice, roundPrice } from '../binance/symbolRules.js';
+import { nextStops } from '../agents/TrailingStopManager.js';
 import { KillSwitch } from '../ops/killSwitch.js';
 import { EquityHwmStore } from '../risk/equityHwm.js';
 import { announceStartup, buildOps, refreshPortfolio, RiskOps, toggleKillSwitch as flipKillSwitch } from './opsHooks.js';
@@ -34,6 +35,9 @@ import { buildCouncilSignal, COUNCIL_SIGNAL_TTL_MS } from '../decision/CouncilSi
 import { TradingCouncil } from '../llm/TradingCouncil.js';
 
 type CycleContext = MarketContext & { tickers: Record<string, MarketPriceInfo>; nextFundingTime: number };
+
+// Debounce tick flushes to 4 Hz to keep live prices responsive without triggering terminal flicker
+const TICK_FLUSH_INTERVAL_MS = 250;
 
 export class Orchestrator extends EventEmitter {
   private binance = new BinanceService();
@@ -114,7 +118,7 @@ export class Orchestrator extends EventEmitter {
     setTimeout(() => {
       this.pendingTickFlush = false;
       this.flushRealtimeTick().catch((err: unknown) => this.logFailure('Tick flush failed', err));
-    }, 60);
+    }, TICK_FLUSH_INTERVAL_MS);
   }
   private putTicker(sym: string, info: MarketPriceInfo): void { this.liveTickers[sym.replace('USDT', '')] = this.liveTickers[sym] = info; }
   private async flushRealtimeTick(): Promise<void> {
@@ -122,7 +126,7 @@ export class Orchestrator extends EventEmitter {
     if (config.mode !== 'paper' && !this.binance.hasVenueData()) return;
     const positions = await this.binance.getPositions(false);
     const account = await this.binance.getAccount();
-    this.emit('state', { ...accountFields(account, positions), spotPrices: { ...this.liveTickers }, wsStatus: this.binance.getWsStatus(), serverTime: Date.now() });
+    this.emit('state', { ...accountFields(account, positions), spotPrices: { ...this.liveTickers }, wsStatus: this.binance.getWsStatus() });
   }
   async closePosition(pos: Position) {
     this.log('SYSTEM', `Manual close ${pos.symbol} ${pos.side}`, 'warn');
@@ -165,7 +169,7 @@ export class Orchestrator extends EventEmitter {
     for (const g of this.recorder.process(this.binance.getTrades())) this.logGrade(g);
     const signals = await this.collectSignals(ctx);
     await this.processSignals(signals, ctx);
-    if (config.mode === 'paper') this.trailStops(await this.binance.getPositions());
+    this.trailStops(await this.binance.getPositions(), ctx);
     await this.consultAdvisor(signals, ctx.positions ?? []);
     await this.emitState(ctx);
   }
@@ -293,10 +297,22 @@ export class Orchestrator extends EventEmitter {
     if (verdict === 'PROCEED' && reason.startsWith('advisor')) this.log(signal.agent, `veto skipped for ${signal.symbol}: ${reason}`, 'warn');
     return verdict === 'VETO';
   }
-  private trailStops(positions: Position[]): void {
-    for (const { symbol, strategy, stopLoss, takeProfit } of this.adaptive.stopUpdates(positions)) {
-      this.binance.updateStops(symbol, strategy, stopLoss, takeProfit);
-      this.log(strategy, `TRAIL ${symbol} SL ${formatPrice(symbol, stopLoss)} TP ${formatPrice(symbol, takeProfit)}`, 'info');
+  private trailStops(positions: Position[], ctx: CycleContext): void {
+    for (const pos of positions) {
+      const adaptiveState = this.adaptive.stateFor(pos.symbol);
+      const atr = adaptiveState?.assignedAtr ?? ctx.marketState?.[pos.symbol]?.timeframes?.['15m']?.atr14;
+      if (!atr || atr <= 0) continue;
+      const next = nextStops(pos, {
+        assignedAtr: atr,
+        regime: adaptiveState?.regime ?? (ctx.marketState?.[pos.symbol]?.regime?.volatility as 'LOW' | 'MEDIUM' | 'HIGH' | undefined),
+        superTrend: pos.strategy === this.adaptive.id ? adaptiveState?.superTrend : undefined,
+      });
+      if (!next) continue;
+      const stopLoss = roundPrice(pos.symbol, next.stopLoss);
+      const takeProfit = roundPrice(pos.symbol, next.takeProfit);
+      if (stopLoss === Number(pos.serverSl) && takeProfit === Number(pos.serverTp)) continue;
+      this.binance.updateStops(pos.symbol, pos.strategy, stopLoss, takeProfit, pos.side);
+      this.log(pos.strategy, `TRAIL ${pos.symbol} SL ${formatPrice(pos.symbol, stopLoss)} TP ${formatPrice(pos.symbol, takeProfit)}`, 'info');
     }
   }
   private logExits(): void { for (const line of this.binance.markAll(this.livePrices)) this.log('SYSTEM', line, 'warn'); this.hooks.onExit(this.binance.getTrades()); }

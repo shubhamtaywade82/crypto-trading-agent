@@ -128,8 +128,8 @@ const opsConfigFromEnv = (): OpsConfig => ({
   audit: config.audit === 'on', alerts: config.alerts === 'on', eventsPath: config.eventsPath, notificationsPath: config.notificationsPath,
 });
 
-// A refused signal re-fires every loop while its condition holds, and a flapping venue re-alerts on every flip
-const ALERT_COOLDOWN_MS = { SYSTEM: 5 * 60_000, SIGNAL: 15 * 60_000 };
+// Refused signals and active setups re-fire each loop while conditions hold; flapping venues re-alert
+const ALERT_COOLDOWN_MS = { SYSTEM: 5 * 60_000, SIGNAL: 15 * 60_000, SETUP: 30 * 60_000 };
 const DIGEST_DELAY_MS = 5 * 60_000;
 const DAY_MS = 86_400_000;
 

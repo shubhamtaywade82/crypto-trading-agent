@@ -63,3 +63,28 @@ test('should not re-tighten the LOW cap for a change smaller than half an ATR', 
   // cap = 105 + 2*2 = 109; TP 109.5 is only 0.5 above it (<= 0.5 ATR = 1)
   assert.equal(nextStops(longPosition({ serverTp: '109.5' }), state), null);
 });
+
+test('should lock tiered profit at 1.5R, 2R and 3R for non-SuperTrend fleet positions', () => {
+  const pos = longPosition({ strategy: 'STRUCT-LIQ-η', serverSl: '94', serverTp: '150', initialRisk: 6 });
+  const trail: TrailState = { assignedAtr: 2 };
+
+  // 1.5R move (gain 9, mark 109) -> lock +0.5R (SL 103)
+  assert.deepEqual(nextStops({ ...pos, mark: 109 }, trail), { stopLoss: 103, takeProfit: 150 });
+
+  // 2.16R move (gain 13, mark 113) -> lock +1.0R (106) and Chandelier 1.5 ATR (113 - 3 = 110) -> SL 110
+  assert.deepEqual(nextStops({ ...pos, mark: 113 }, trail), { stopLoss: 110, takeProfit: 150 });
+
+  // 3.33R move (gain 20, mark 120) -> lock +2.0R (112) and Chandelier (120 - 3 = 117) -> SL 117
+  assert.deepEqual(nextStops({ ...pos, mark: 120 }, trail), { stopLoss: 117, takeProfit: 150 });
+});
+
+test('should lock tiered profit for short positions', () => {
+  const pos = longPosition({ side: 'SHORT', strategy: 'STRUCTURE-TREND-δ', entry: 100, serverSl: '106', serverTp: '50', initialRisk: 6 });
+  const trail: TrailState = { assignedAtr: 2 };
+
+  // 1.5R drop (gain 9, mark 91) -> lock +0.5R (SL 97)
+  assert.deepEqual(nextStops({ ...pos, mark: 91 }, trail), { stopLoss: 97, takeProfit: 50 });
+
+  // 2.16R drop (gain 13, mark 87) -> lock +1.0R (94) and Chandelier (87 + 3 = 90) -> SL 90
+  assert.deepEqual(nextStops({ ...pos, mark: 87 }, trail), { stopLoss: 90, takeProfit: 50 });
+});

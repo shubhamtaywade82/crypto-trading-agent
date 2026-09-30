@@ -1,4 +1,5 @@
 import { BaseAgent, type MarketContext } from './BaseAgent.js';
+import type { BinanceService } from '../binance/client.js';
 import type { Position, Signal, VetoSnapshot } from '../types.js';
 import { calculateAdaptiveSuperTrend, TP_ATR_MULTIPLE, type AdaptiveSuperTrendBar, type TrendDirection } from '../binance/adaptiveSuperTrend.js';
 import { rsi } from '../binance/indicators.js';
@@ -10,6 +11,10 @@ import { config } from '../config.js';
 const ANCHOR_SYMBOL = 'BTCUSDT';
 const ENTRY_CONFIDENCE = 0.75;
 const RSI_PERIOD = 14;
+
+export interface AdaptiveSuperTrendOptions {
+  requireAnchor?: boolean;
+}
 
 export interface StopUpdate {
   symbol: string;
@@ -24,8 +29,14 @@ export class AdaptiveSuperTrendAgent extends BaseAgent {
   readonly strategy = 'ml_adaptive_supertrend';
   // One signal per closed candle is enforced below, so the shared fill cooldown would only swallow the next flip
   override readonly cooldownMs = 0;
+  private readonly requireAnchor: boolean;
   private latest = new Map<string, AdaptiveSuperTrendBar>();
   private lastHandledOpenTime = new Map<string, number>();
+
+  constructor(binance: BinanceService, options: AdaptiveSuperTrendOptions = {}) {
+    super(binance);
+    this.requireAnchor = options.requireAnchor ?? config.adaptiveSuperTrend.requireAnchor;
+  }
 
   protected async analyze(ctx: MarketContext): Promise<Signal[]> {
     const signals: Signal[] = [];
@@ -61,6 +72,7 @@ export class AdaptiveSuperTrendAgent extends BaseAgent {
   }
 
   private agreesWithAnchor(symbol: string, direction: TrendDirection, candleOpenTime: number): boolean {
+    if (!this.requireAnchor) return true;
     if (symbol === ANCHOR_SYMBOL || !config.symbols.includes(ANCHOR_SYMBOL)) return true;
     const anchor = this.latest.get(ANCHOR_SYMBOL);
     // Unknown or older-than-the-alt anchor state also blocks: a stale BTC read must not approve a fresh alt flip

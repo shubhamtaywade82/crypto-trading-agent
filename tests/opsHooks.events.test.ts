@@ -127,6 +127,17 @@ test('should ignore trades already in the journal at start and report each new o
   assert.equal(audits.filter((a) => a.type === 'exit').length, 1);
 });
 
+test('should suppress alerts for past closed trades arrived after startup without seedTrades', () => {
+  const historical = trade({ closedAt: T0 - 5_000 });
+  const { ops, sent, audits } = harness({ seedTrades: [] });
+  ops.onExit([historical]);
+  assert.equal(sent.length, 0);
+  assert.equal(audits.filter((a) => a.type === 'exit').length, 0);
+  ops.onExit([historical, trade({ closedAt: T0 + 1_000 })]);
+  assert.equal(sent.length, 1);
+  assert.equal(audits.filter((a) => a.type === 'exit').length, 1);
+});
+
 test('should turn a gate refusal into a WATCH SIGNAL alert and an audit refusal', () => {
   const { ops, sent, audits } = harness();
   ops.onGate(signal(), refused('liq buffer 0.7x ATR < 2x'));

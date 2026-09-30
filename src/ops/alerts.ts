@@ -202,7 +202,12 @@ export class NotificationEngine {
 
   private duplicateReject(event: AlertEvent): AlertSuppressReason | undefined {
     const previous = this.lastEmitted.get(event.fingerprint);
-    if (!previous || previous.stateTo !== event.stateTo) return undefined;
+    if (!previous) return undefined;
+    // Price wicks across trigger thresholds flip states rapidly; demotions are not actionable
+    if (event.class === 'SETUP' && previous.stateTo === 'TRIGGERED' && event.stateTo !== 'TRIGGERED') {
+      return 'DEDUPE';
+    }
+    if (previous.stateTo !== event.stateTo) return undefined;
     const cooldown = this.cooldown[event.class];
     return cooldown > 0 && this.timeOf(event) - previous.at < cooldown ? 'DEDUPE' : undefined;
   }

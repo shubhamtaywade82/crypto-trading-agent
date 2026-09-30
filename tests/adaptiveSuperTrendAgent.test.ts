@@ -21,7 +21,7 @@ function context(count: number, mark: number): MarketContext {
   return { candles: { [symbol]: candles(count) }, funding: {}, marks: { [symbol]: mark }, spot: {}, equity: 100_000 };
 }
 
-const agent = () => new AdaptiveSuperTrendAgent({} as BinanceService);
+const agent = (options = {}) => new AdaptiveSuperTrendAgent({} as BinanceService, options);
 
 test('should emit one long entry on a closed-candle flip, with SL on the SuperTrend line', async () => {
   // 128 candles: the last (index 127) is still forming, so the flip on index 126 is the last closed bar
@@ -57,14 +57,20 @@ function twoSymbolContext(btcCandles: Candle[]): MarketContext {
 }
 
 test('should allow an alt flip that agrees with the BTC anchor', async () => {
-  const signals = await agent().run(twoSymbolContext(candles(128)));
+  const signals = await agent({ requireAnchor: true }).run(twoSymbolContext(candles(128)));
   assert.deepEqual(signals.map((s) => s.symbol).sort(), ['BTCUSDT', 'ETHUSDT']);
 });
 
-test('should skip an alt flip while BTC has not flipped the same way', async () => {
+test('should skip an alt flip while BTC has not flipped the same way when requireAnchor is true', async () => {
+  const flatBtc = candles(128).map((c, i) => ({ ...c, open: 100, high: 101, low: 99, close: 100, openTime: i * BAR_MS }));
+  const signals = await agent({ requireAnchor: true }).run(twoSymbolContext(flatBtc));
+  assert.deepEqual(signals, []);
+});
+
+test('should allow independent alt flip when requireAnchor is false (default)', async () => {
   const flatBtc = candles(128).map((c, i) => ({ ...c, open: 100, high: 101, low: 99, close: 100, openTime: i * BAR_MS }));
   const signals = await agent().run(twoSymbolContext(flatBtc));
-  assert.deepEqual(signals, []);
+  assert.deepEqual(signals.map((s) => s.symbol), ['ETHUSDT']);
 });
 
 test('should not use the shared fill cooldown', () => {
@@ -84,8 +90,8 @@ test('should trail an open position with rounded stops and skip unchanged ones',
   assert.deepEqual(instance.stopUpdates([{ ...position, serverSl: String(update.stopLoss) }]), []);
 });
 
-test('should skip an alt flip when the BTC state is older than the alt candle', async () => {
-  const instance = agent();
+test('should skip an alt flip when the BTC state is older than the alt candle when requireAnchor is true', async () => {
+  const instance = agent({ requireAnchor: true });
   // Loop 1: BTC flips bullish on closed bar 126; ETH stays flat (no flip)
   await instance.run({ ...twoSymbolContext(candles(128)), candles: { BTCUSDT: candles(128), ETHUSDT: candles(128, 500) } });
   // Loop 2: BTC data is missing; ETH flips bullish on closed bar 127 (flat until bar 121)

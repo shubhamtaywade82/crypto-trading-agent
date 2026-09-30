@@ -184,12 +184,14 @@ test('should cap gross exposure at the limit and fail just above', () => {
 
 test('should cap the cluster exposure of the symbol cluster only', () => {
   const altHeavy = (alt: number) => portfolio({ clusterExposure: (c) => (c === 'ALT' ? alt : 0) });
-  assert.equal(evaluateRisk(inputWith({ portfolio: altHeavy(EXPOSURE_LIMIT - 150) })).approved, true);
-  const decision = evaluateRisk(inputWith({ portfolio: altHeavy(EXPOSURE_LIMIT - 149) }));
+  assert.equal(evaluateRisk(inputWith({ symbol: 'AVAXUSDT', portfolio: altHeavy(EXPOSURE_LIMIT - 150) })).approved, true);
+  const decision = evaluateRisk(inputWith({ symbol: 'AVAXUSDT', portfolio: altHeavy(EXPOSURE_LIMIT - 149) }));
   assert.deepEqual(failedNames(decision), ['portfolio_limits']);
   assert.match(checkNamed(decision, 'portfolio_limits').detail, /cluster ALT/);
   const btc = evaluateRisk(inputWith({ symbol: 'BTCUSDT', portfolio: altHeavy(9_000) }));
   assert.equal(btc.approved, true);
+  const sol = evaluateRisk(inputWith({ symbol: 'SOLUSDT', portfolio: altHeavy(9_000) }));
+  assert.equal(sol.approved, true);
 });
 
 test('should cap the notional of a single trade at the limit and fail just above', () => {

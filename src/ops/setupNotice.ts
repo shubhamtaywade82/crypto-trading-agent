@@ -21,7 +21,7 @@ export function buildSetupNotice(setup: SetupMap): SetupNotice | null {
     symbol: setup.symbol,
     stateTo: setup.state,
     scenarioKey,
-    fingerprint: `SETUP:${setup.symbol}:${setup.state === 'TRIGGERED' ? 'triggered' : scenarioKey}`,
+    fingerprint: `SETUP:${setup.symbol}:${scenarioKey}`,
     html: setupMapCard(setup),
   };
 }

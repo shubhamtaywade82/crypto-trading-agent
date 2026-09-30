@@ -491,3 +491,17 @@ MarketState → buildSetupMap → SetupLedger (identity, pinned expiry, frozen l
 As of 2026-09-30 no strategy family here has a demonstrated edge after costs. See `docs/research-log.md` for what was tested,
 the numbers, corrections and what is still untested. Positions with no protective stop above `UNPROTECTED_ALERT_PCT` (default 25%)
 of equity raise a CRITICAL system alert, since a strategy cannot enforce a stop on a position it does not own.
+
+## Live gate
+
+`MODE=live` trades only strategies listed in `data/strategy-approvals.json` (`APPROVALS_PATH`); with no file, nothing trades, and the
+process refuses to start live without `RISK_ENGINE=on` and `ALERTS=on`. Approvals come from measured evidence, never by hand:
+
+```bash
+npx tsx scripts/live-readiness.ts                      # checklist: evidence, forward paper, setup safety; exit 1 if not ready
+npx tsx scripts/live-readiness.ts --write-approvals    # writes only strategies that pass BOTH evidence and forward paper
+```
+
+A strategy needs >= 100 trades over >= 150 days with a positive 90% lower bound on net expectancy after costs and a positive mean in
+both time halves, plus >= 50 paper trades over >= 30 days with positive net expectancy. Limits (risk per trade, leverage, daily loss,
+drawdown) are operator policy in `DEFAULT_POLICY` (`src/ops/liveReadiness.ts`).

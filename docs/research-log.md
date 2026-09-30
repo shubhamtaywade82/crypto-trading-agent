@@ -73,3 +73,7 @@ Not modelled: borrow, spot yield, margin top-ups, counterparty risk.
 ## 7. Not tested
 Derivatives flow (OI, liquidations, taker delta, book imbalance) — no historical data beyond ~30 days; maker-only execution; other timeframes
 and instruments; cross-symbol relative value. The live setup outcome ledger (`data/setup-outcomes.jsonl`) is the start of the dataset those need.
+
+## 8. Live gate (added 2026-09-30)
+No strategy currently passes `scripts/live-readiness.ts`, so `MODE=live` would trade nothing. The gate is enforced twice: the
+orchestrator drops unapproved OPEN signals before the journal and alerts, and `RiskAgent.gate` refuses them as defence in depth.

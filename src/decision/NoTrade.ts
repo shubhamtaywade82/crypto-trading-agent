@@ -17,6 +17,7 @@ export const NO_TRADE_REASONS = [
   'CONFLICTING_THESIS',
   'DEGENERATE_GEOMETRY',
   'LIQ_BUFFER',
+  'NOT_APPROVED',
 ] as const;
 export type NoTradeReason = (typeof NO_TRADE_REASONS)[number];
 
@@ -29,6 +30,7 @@ export function classifyRiskRefusal(reason: string): NoTradeReason {
   if (/drawdown kill-switch|^kill-switch:/.test(reason)) return 'CIRCUIT_BREAKER';
   if (/max gross exposure|max concurrent positions/.test(reason)) return 'PORTFOLIO_CAPACITY';
   if (/^liq buffer /.test(reason)) return 'LIQ_BUFFER';
+  if (/not approved for live trading/.test(reason)) return 'NOT_APPROVED';
   const text = reason.replace(/^risk-engine:\s*/, '');
   const name = /^([a-z_]+):/.exec(text)?.[1];
   switch (name) {

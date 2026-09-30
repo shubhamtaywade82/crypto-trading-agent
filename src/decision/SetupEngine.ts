@@ -135,10 +135,14 @@ function stateForSweep(state: MarketState, sweep: LiquiditySweep, direction: Set
   return 'ARMED';
 }
 
+/** Collects ids of setups whose thesis is structurally dead, so a soft drop (RR dip) is distinguishable from a hard one. */
+type DeadIds = string[];
+
 function buildBreakout(
   state: MarketState,
   direction: SetupDirection,
   atrValue: number,
+  dead: DeadIds,
 ): SetupScenario | null {
   const pool = directionalPool(state, direction, state.mark);
   if (!pool) return null;
@@ -147,8 +151,9 @@ function buildBreakout(
   const next = secondDirectionalPool(state, direction, level);
   if (!next) return null;
 
+  const id = 'breakout-' + state.symbol + '-' + direction + '-' + Math.round(level * 100);
   const scenarioState = stateForBreakout(state, pool, direction);
-  if (scenarioState === 'INVALIDATED') return null;
+  if (scenarioState === 'INVALIDATED') { dead.push(id); return null; }
 
   const pad = atrValue * 0.20;
   const entryLow = direction === 'LONG' ? level : level - pad;
@@ -161,7 +166,7 @@ function buildBreakout(
   if (!move || rr < 1.25 || Math.abs(entry - stop) / atrValue > MAX_STOP_ATR) return null;
 
   return {
-    id: 'breakout-' + state.symbol + '-' + direction + '-' + Math.round(level * 100),
+    id,
     kind: 'BREAKOUT_RETEST',
     direction,
     state: scenarioState,
@@ -184,11 +189,13 @@ function buildPullback(
   state: MarketState,
   direction: SetupDirection,
   atrValue: number,
+  dead: DeadIds,
 ): SetupScenario | null {
   const zone = nearestZoneRecord(state, direction, state.mark);
   if (!zone) return null;
+  const id = 'pullback-' + state.symbol + '-' + direction + '-' + zone.breakTime;
   const scenarioState = stateForZone(state, zone, direction);
-  if (scenarioState === 'INVALIDATED') return null;
+  if (scenarioState === 'INVALIDATED') { dead.push(id); return null; }
 
   const entry = direction === 'LONG' ? Math.min(state.mark, zone.high) : Math.max(state.mark, zone.low);
   const stop = stopForZone(direction, zone, atrValue);
@@ -201,7 +208,7 @@ function buildPullback(
   if (!move || riskAtr < MIN_STOP_ATR || riskAtr > MAX_STOP_ATR || rr < 1.25) return null;
 
   return {
-    id: 'pullback-' + state.symbol + '-' + direction + '-' + zone.breakTime,
+    id,
     kind: 'PULLBACK_RETEST',
     direction,
     state: scenarioState,
@@ -234,11 +241,13 @@ function buildSweep(
   state: MarketState,
   direction: SetupDirection,
   atrValue: number,
+  dead: DeadIds,
 ): SetupScenario | null {
   const sweep = latestSweep(state, direction);
   if (!sweep || state.generatedAt - sweep.time > MAX_SWEEP_AGE_MS) return null;
+  const id = 'sweep-' + state.symbol + '-' + direction + '-' + sweep.time;
   const scenarioState = stateForSweep(state, sweep, direction);
-  if (scenarioState === 'INVALIDATED') return null;
+  if (scenarioState === 'INVALIDATED') { dead.push(id); return null; }
   const target = directionalPool(state, direction, state.mark);
   if (!target || Math.abs(target.price - sweep.level) <= atrValue * 0.5) return null;
 
@@ -252,7 +261,7 @@ function buildSweep(
   if (!move || riskAtr < MIN_STOP_ATR || riskAtr > MAX_STOP_ATR || rr < 1.25) return null;
 
   return {
-    id: 'sweep-' + state.symbol + '-' + direction + '-' + sweep.time,
+    id,
     kind: 'LIQUIDITY_SWEEP',
     direction,
     state: scenarioState,
@@ -278,10 +287,11 @@ export function buildSetupMap(state: MarketState): SetupMap {
   const direction: SetupDirection | null = bias === 'BULLISH' ? 'LONG' : bias === 'BEARISH' ? 'SHORT' : null;
   const atr15 = state.timeframes['15m'].atr14 ?? 0;
   const scenarios: SetupScenario[] = [];
+  const invalidatedIds: string[] = [];
 
   if (direction && atr15 > 0) {
     for (const builder of [buildSweep, buildPullback, buildBreakout]) {
-      const setup = builder(state, direction, atr15);
+      const setup = builder(state, direction, atr15, invalidatedIds);
       if (setup) scenarios.push(setup);
     }
   }
@@ -331,6 +341,7 @@ export function buildSetupMap(state: MarketState): SetupMap {
     openInterestExpansion: state.crowding?.openInterestExpansion ?? null,
     takerAggressionRatio: state.crowding?.takerAggressionRatio ?? null,
     scenarios,
+    invalidatedIds,
     noTradeReasons: noTradeReasons.slice(0, 3),
   };
 }

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { SetupLedger } from '../src/decision/SetupLedger.js';
+import { SetupLedger, SOFT_LOSS_GRACE_CYCLES } from '../src/decision/SetupLedger.js';
 import type { SetupMap, SetupScenario } from '../src/decision/SetupTypes.js';
 
 const T0 = Date.UTC(2026, 8, 30, 0, 45, 0);
@@ -80,12 +80,44 @@ test('a setup first seen after its origin window is dead on arrival', () => {
   assert.equal(late.transitions.length, 0);
 });
 
-test('a scenario the engine stops producing is invalidated, once', () => {
+test('a structural kill retires the setup immediately, once', () => {
   const ledger = new SetupLedger();
   ledger.apply(map(T0, [scenario()]), 1);
-  const gone = ledger.apply(map(T0 + 15 * MIN, []), 1);
+  const gone = ledger.apply({ ...map(T0 + 15 * MIN, []), invalidatedIds: ['pullback-SOLUSDT-LONG-1'] }, 1);
   assert.deepEqual(gone.transitions.map((t) => t.kind), ['INVALIDATED']);
-  assert.equal(ledger.apply(map(T0 + 30 * MIN, []), 1).transitions.length, 0);
+  assert.equal(ledger.apply(map(T0 + 30 * MIN, [scenario()]), 1).map.scenarios.length, 0);
+});
+
+test('a soft drop within the grace window keeps identity and levels when the setup returns', () => {
+  const ledger = new SetupLedger();
+  const first = ledger.apply(map(T0, [scenario({ state: 'ARMED' })]), 1);
+  for (let i = 1; i <= SOFT_LOSS_GRACE_CYCLES; i++) {
+    const out = ledger.apply(map(T0 + i * MIN, []), 1);
+    assert.equal(out.transitions.length, 0);
+  }
+  const back = ledger.apply(map(T0 + 5 * MIN, [scenario({ state: 'FORMING', entryLow: 115, entryHigh: 116, stopLoss: 110 })]), 1);
+  assert.equal(back.transitions.length, 0);
+  const s = back.map.scenarios[0];
+  assert.equal(s.lifecycle?.setupId, first.map.scenarios[0].lifecycle?.setupId);
+  assert.equal(s.state, 'ARMED');
+  assert.equal(s.entryLow, 117.29);
+  assert.equal(s.stopLoss, 116.9);
+});
+
+test('a soft drop beyond the grace window is written off', () => {
+  const ledger = new SetupLedger();
+  ledger.apply(map(T0, [scenario()]), 1);
+  const kinds: string[] = [];
+  for (let i = 1; i <= SOFT_LOSS_GRACE_CYCLES + 1; i++) kinds.push(...ledger.apply(map(T0 + i * MIN, []), 1).transitions.map((t) => t.kind));
+  assert.deepEqual(kinds, ['INVALIDATED']);
+});
+
+test('levels are frozen at creation so RR cannot drift with the mark', () => {
+  const ledger = new SetupLedger();
+  ledger.apply(map(T0, [scenario({ rewardRisk: 2 })]), 1);
+  const later = ledger.apply(map(T0 + 15 * MIN, [scenario({ rewardRisk: 1.3, entryHigh: 118, target1: 119 })]), 1);
+  assert.equal(later.map.scenarios[0].rewardRisk, 2);
+  assert.equal(later.map.scenarios[0].target1, 121);
 });
 
 test('entry state separates a confirmed trigger from an executable entry', () => {

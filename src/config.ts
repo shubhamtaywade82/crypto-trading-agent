@@ -40,6 +40,8 @@ export const EnvSchema = z.object({
   MAX_CORRELATED_EXPOSURE_PCT: z.coerce.number().positive().optional(),
   /** Geometry sanity floor applied to every candidate before risk: below this the target is effectively at the entry. Not an edge claim. */
   CANDIDATE_MIN_RR: z.coerce.number().nonnegative().default(0.25),
+  /** Optional: drop candidates whose cost-adjusted break-even win rate exceeds this (0 = off). Set it from scripts/replay-decisions.ts evidence, not a guess. */
+  CANDIDATE_MAX_BREAKEVEN_WINRATE: z.coerce.number().min(0).max(1).default(0),
   MIN_RR: z.coerce.number().nonnegative().default(0),
   TAKER_FEE_RATE: z.coerce.number().nonnegative().default(0.0004),
   SLIPPAGE_BUFFER_RATE: z.coerce.number().nonnegative().default(0.0002),
@@ -175,6 +177,7 @@ export const config = {
   eventsPath: env.EVENTS_PATH,
   notificationsPath: env.NOTIFICATIONS_PATH,
   candidateMinRr: env.CANDIDATE_MIN_RR,
+  candidateMaxBreakevenWinRate: env.CANDIDATE_MAX_BREAKEVEN_WINRATE,
   decisionsPath: env.DECISIONS_PATH,
   rrProfilePath: env.RR_PROFILE_PATH,
   setupOutcomesPath: env.SETUP_OUTCOMES_PATH,

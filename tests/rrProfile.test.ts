@@ -213,3 +213,31 @@ test('hedges (no stop/target) and a zero floor are never filtered; zero-risk geo
   assert.equal(dropDegenerateGeometry([geo({})], 0).kept.length, 1);
   assert.equal(dropDegenerateGeometry([geo({ stopLoss: 121.62 })], 0.25).kept.length, 0);
 });
+
+// --- cost as a share of the stop --------------------------------------------------------------
+import { breakevenWinRate, costInR } from '../src/risk/rrProfile.js';
+
+test('a 0.15% stop spends ~0.8R on a 0.12% round trip; a 2.7% stop spends ~0.04R', () => {
+  assert.ok(Math.abs(costInR(84516, 84640, COSTS) - (84516 * 0.0012) / 124) < 1e-9);
+  assert.ok(costInR(84516, 84640, COSTS) > 0.75 && costInR(84516, 84640, COSTS) < 0.85);
+  assert.ok(costInR(1.5151, 1.4744, COSTS) < 0.05);
+  assert.ok(Number.isNaN(costInR(100, 100, COSTS)));
+});
+
+test('break-even win rate: RR 2.7 on a cost-dominated stop needs ~49%; the same RR on a wide stop needs ~28%', () => {
+  const tight = breakevenWinRate(84516, 84640, 84516 - 124 * 2.7, COSTS);
+  assert.ok(tight > 0.45 && tight < 0.55, `tight ${tight}`); // (1+0.82)/(1+2.7)=0.49
+  const wide = breakevenWinRate(100, 97, 108.1, COSTS); // rr 2.7, cost 0.04R
+  assert.ok(wide > 0.27 && wide < 0.30, `wide ${wide}`);
+  assert.ok(breakevenWinRate(100, 99.9, 100.05, COSTS) > 1); // cannot break even at any hit rate
+});
+
+test('the optional break-even gate drops cost-dominated candidates and is off by default', () => {
+  const tightShort: Signal = { id: 't', agent: 'CROWDING-ι', symbol: 'BTCUSDT', type: 'OPEN_SHORT', confidence: 0.8, entry: 100, stopLoss: 100.15, takeProfit: 99.9, reason: '', ts: 0 };
+  assert.equal(dropDegenerateGeometry([tightShort], 0.25, 0, COSTS).kept.length, 1);
+  const r = dropDegenerateGeometry([tightShort], 0.25, 0.6, COSTS);
+  assert.equal(r.kept.length, 0);
+  assert.ok(r.dropped[0].breakevenWinRate! > 0.6);
+  const wide: Signal = { ...tightShort, stopLoss: 103, takeProfit: 92 };
+  assert.equal(dropDegenerateGeometry([wide], 0.25, 0.6, COSTS).kept.length, 1);
+});

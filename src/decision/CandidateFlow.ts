@@ -5,6 +5,7 @@ import { applyRouter } from './StrategyRouter.js';
 import { scoreCandidate } from './CandidateScorer.js';
 import type { DecisionEvidence, DecisionRecord } from './DecisionJournal.js';
 import { config } from '../config.js';
+import { breakevenWinRate } from '../risk/rrProfile.js';
 
 /** Agents whose candidates resolve through signal fusion; everyone else passes through directly. */
 export const FUSION_AGENTS: ReadonlySet<string> = new Set(['STRUCTURE-TREND-η', 'STRUCT-LIQ-η', 'MEAN-REVERT-θ', 'CROWDING-ι']);
@@ -32,23 +33,30 @@ export interface DecisionFlowResult {
  * multi-strategy agents. Both the live orchestrator and the replay engine call
  * this — the same strategy code must run in backtest, paper and live.
  */
-export interface GeometryRejection { agent: string; symbol: string; rr: number | null }
+export interface GeometryRejection { agent: string; symbol: string; rr: number | null; breakevenWinRate?: number }
 
 /**
  * Sanity floor on planned reward:risk. A target sitting on top of the entry (RR 0.03) is not a scalp, it is an
  * invalid candidate; whatever strategy produced it, it never reaches the risk gate, the journal or the alerts.
  * Hedges carry no stop/target and pass. This is not an edge claim (calibrated floors live in the RR profile).
  */
-export function dropDegenerateGeometry(signals: Signal[], minRr: number = config.candidateMinRr): { kept: Signal[]; dropped: GeometryRejection[] } {
+export function dropDegenerateGeometry(
+  signals: Signal[],
+  minRr: number = config.candidateMinRr,
+  maxBreakeven: number = config.candidateMaxBreakevenWinRate,
+  costs = { feeRate: config.risk.takerFeeRate, slippageRate: config.risk.slippageBufferRate },
+): { kept: Signal[]; dropped: GeometryRejection[] } {
   const kept: Signal[] = [];
   const dropped: GeometryRejection[] = [];
   for (const s of signals) {
     const { entry, stopLoss, takeProfit } = s;
-    if (minRr <= 0 || !s.type.startsWith('OPEN_') || entry === undefined || stopLoss === undefined || takeProfit === undefined) { kept.push(s); continue; }
+    if ((minRr <= 0 && maxBreakeven <= 0) || !s.type.startsWith('OPEN_') || entry === undefined || stopLoss === undefined || takeProfit === undefined) { kept.push(s); continue; }
     const risk = Math.abs(entry - stopLoss);
     const rr = risk > 0 ? Math.abs(takeProfit - entry) / risk : null;
-    if (rr !== null && rr >= minRr) kept.push(s);
-    else dropped.push({ agent: s.agent, symbol: s.symbol, rr });
+    if (rr === null || rr < minRr) { dropped.push({ agent: s.agent, symbol: s.symbol, rr }); continue; }
+    const needed = maxBreakeven > 0 ? breakevenWinRate(entry, stopLoss, takeProfit, costs) : 0;
+    if (maxBreakeven > 0 && !(needed <= maxBreakeven)) dropped.push({ agent: s.agent, symbol: s.symbol, rr, breakevenWinRate: needed });
+    else kept.push(s);
   }
   return { kept, dropped };
 }

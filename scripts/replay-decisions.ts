@@ -14,7 +14,7 @@ import path from 'node:path';
 import { config } from '../src/config.js';
 import { DecisionJournal, type DecisionRecord } from '../src/decision/DecisionJournal.js';
 import { asHypotheticalExecuted, dedupeProposals, simulateBracket } from '../src/learning/HypotheticalOutcome.js';
-import { calibrateRrFloors } from '../src/risk/rrProfile.js';
+import { breakevenWinRate, calibrateRrFloors, costInR } from '../src/risk/rrProfile.js';
 import type { Candle } from '../src/types.js';
 
 const arg = (name: string, fallback: string): string => {
@@ -88,6 +88,29 @@ for (const [strategy, rs] of [...perStrategy].sort()) {
   const mean = rs.reduce((a, b) => a + b, 0) / rs.length;
   console.log(`  ${strategy.padEnd(20)} n=${String(rs.length).padStart(3)}  mean ${mean.toFixed(3)}R  win ${((rs.filter((x) => x > 0).length / rs.length) * 100).toFixed(0)}%`);
 }
+// What decides viability is how much of the stop the round trip costs, not the strategy label
+interface Row { net: number; costR: number; pStar: number; stopPct: number; win: boolean }
+const rows: Row[] = synthetic.map((r) => {
+  const risk = Math.abs(r.entry! - r.stopLoss!);
+  const costR = costInR(r.entry!, r.stopLoss!, { feeRate, slippageRate });
+  return { net: r.outcome!.rMultiple - costR, costR, pStar: breakevenWinRate(r.entry!, r.stopLoss!, r.takeProfit!, { feeRate, slippageRate }), stopPct: (risk / r.entry!) * 100, win: r.outcome!.rMultiple > 0 };
+});
+const median = (xs: number[]): number => { const s2 = [...xs].sort((a, b) => a - b); return s2.length % 2 ? s2[(s2.length - 1) / 2] : (s2[s2.length / 2 - 1] + s2[s2.length / 2]) / 2; };
+const cut = (title: string, key: (r: Row) => string): void => {
+  console.log(`\n${title}`);
+  const groups = new Map<string, Row[]>();
+  for (const r of rows) groups.set(key(r), [...(groups.get(key(r)) ?? []), r]);
+  for (const [k, g] of [...groups].sort(([a], [b]) => a.localeCompare(b, undefined, { numeric: true }))) {
+    console.log(`  ${k.padEnd(22)} n=${String(g.length).padStart(3)}  win ${((g.filter((x) => x.win).length / g.length) * 100).toFixed(0).padStart(3)}%  mean ${(g.reduce((a, x) => a + x.net, 0) / g.length).toFixed(2).padStart(6)}R  median ${median(g.map((x) => x.net)).toFixed(2).padStart(6)}R`);
+  }
+};
+cut('by round-trip cost as a share of the stop (costR)', (r) => (r.costR < 0.15 ? '1) <0.15R' : r.costR < 0.35 ? '2) 0.15-0.35R' : r.costR < 0.7 ? '3) 0.35-0.70R' : '4) >=0.70R'));
+cut('by break-even win rate needed after costs', (r) => (r.pStar < 0.4 ? '1) <40%' : r.pStar < 0.5 ? '2) 40-50%' : r.pStar < 0.6 ? '3) 50-60%' : r.pStar < 0.7 ? '4) 60-70%' : '5) >=70%'));
+cut('by stop distance', (r) => (r.stopPct < 0.25 ? '1) <0.25%' : r.stopPct < 0.5 ? '2) 0.25-0.5%' : r.stopPct < 1 ? '3) 0.5-1%' : '4) >=1%'));
+const worst = [...synthetic].map((r) => ({ r, c: costInR(r.entry!, r.stopLoss!, { feeRate, slippageRate }) })).sort((a, b) => b.c - a.c).slice(0, 3);
+console.log('\nmost cost-dominated ideas (a few of these can dominate any mean)');
+for (const { r, c } of worst) console.log(`  ${r.symbol} ${r.strategy} ${r.side} stop ${(Math.abs(r.entry! - r.stopLoss!) / r.entry! * 100).toFixed(3)}% → costs ${c.toFixed(2)}R`);
+
 console.log('\nSmall sample, hypothetical fills at the quoted entry, intrabar ties resolved against us: a screen, not proof.');
 
 if (process.argv.includes('--write')) {

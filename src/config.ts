@@ -38,6 +38,8 @@ export const EnvSchema = z.object({
   MAX_CONCURRENT_POSITIONS: z.coerce.number().int().positive().optional(),
   MAX_SYMBOL_EXPOSURE_PCT: z.coerce.number().positive().optional(),
   MAX_CORRELATED_EXPOSURE_PCT: z.coerce.number().positive().optional(),
+  /** Geometry sanity floor applied to every candidate before risk: below this the target is effectively at the entry. Not an edge claim. */
+  CANDIDATE_MIN_RR: z.coerce.number().nonnegative().default(0.25),
   MIN_RR: z.coerce.number().nonnegative().default(0),
   TAKER_FEE_RATE: z.coerce.number().nonnegative().default(0.0004),
   SLIPPAGE_BUFFER_RATE: z.coerce.number().nonnegative().default(0.0002),
@@ -172,6 +174,7 @@ export const config = {
   },
   eventsPath: env.EVENTS_PATH,
   notificationsPath: env.NOTIFICATIONS_PATH,
+  candidateMinRr: env.CANDIDATE_MIN_RR,
   decisionsPath: env.DECISIONS_PATH,
   rrProfilePath: env.RR_PROFILE_PATH,
   setupOutcomesPath: env.SETUP_OUTCOMES_PATH,

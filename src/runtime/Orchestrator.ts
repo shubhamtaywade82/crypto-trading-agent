@@ -86,6 +86,7 @@ export class Orchestrator extends EventEmitter {
   private readonly refusalSuppressor = new RefusalSuppressor();
   private readonly flowTracker = new FlowTracker();
   private readonly announcedVerdicts = new Map<string, string>();
+  private setupCycles = 0;
   private readonly thesisController = new ThesisController();
   private readonly setupOutcomes = new SetupOutcomeLedger(config.setupOutcomesPath, { feeRate: config.risk.takerFeeRate, slippageRate: config.risk.slippageBufferRate });
   private counters: SessionCounters = { decisions: 0, executed: 0, monitored: 0 };
@@ -231,6 +232,7 @@ export class Orchestrator extends EventEmitter {
     }
     // The canonical candidate pipeline (routing + fusion) — shared with the replay engine
     const flow = runCandidateFlow(raw, ctx.marketState ?? {});
+    for (const g of flow.geometryDropped ?? []) this.log(g.agent as any, `DROPPED ${g.symbol}: degenerate geometry (planned RR ${g.rr === null ? 'n/a' : g.rr.toFixed(2)} < ${config.candidateMinRr})`, 'info');
     for (const v of flow.routedOut) this.log(v.agent as any, `ROUTED OUT ${v.symbol}: ${v.agent} not allowed in ${v.regime}`, 'info');
     if (flow.fusionFiltered > 0) this.log('SYSTEM', `SignalFusion: ${flow.fusionFiltered} candidate(s) filtered by conflict resolution`, 'info');
     this.fusionIntents = flow.intents;
@@ -385,16 +387,33 @@ export class Orchestrator extends EventEmitter {
     for (const state of Object.values(marketState)) {
       this.flowTracker.record(state.symbol, state.generatedAt, state.mark, state.derivatives ?? null, state.fundingRate);
       const flow = this.flowTracker.context(state.symbol, state.generatedAt);
-      const { map: ledgered, transitions } = this.setupLedger.apply(buildSetupMap(state), state.timeframes['15m'].atr14 ?? 0);
+      const raw = buildSetupMap(state);
+      const { map: ledgered, transitions } = this.setupLedger.apply(raw, state.timeframes['15m'].atr14 ?? 0);
       const annotated = annotateSetupMap(state, ledgered, flow, { feeRate: config.risk.takerFeeRate, slippageRate: config.risk.slippageBufferRate });
       // Outcomes are recorded for every setup, including ones the thesis controller withholds from execution
       this.setupOutcomes.observe(annotated, transitions, state.generatedAt);
       const setup = this.thesisController.apply(annotated);
+      this.logSetupPipeline(state.symbol, raw, annotated, setup, transitions);
       // Only material lifecycle events (created / advanced / thesis flip) are announced; re-derivations are not
       if (setup.thesisTransition || transitions.some((t) => t.kind === 'CREATED' || t.kind === 'ADVANCED') || this.verdictChanged(setup)) this.hooks.onSetup(setup);
       void this.consultCouncil(state, setup);
     }
     return { ...market, spot: this.livePrices, equity: account.equity, positions, marketState, performance: this.ops.build(this.binance.getTrades(), account) };
+  }
+
+  /** One compact line per symbol when something moved, else a heartbeat every 20 cycles, so an empty pipeline is visible rather than silent. */
+  private logSetupPipeline(
+    symbol: string,
+    raw: import('../decision/SetupTypes.js').SetupMap,
+    annotated: import('../decision/SetupTypes.js').SetupMap,
+    final: import('../decision/SetupTypes.js').SetupMap,
+    transitions: readonly import('../decision/SetupLedger.js').SetupTransition[],
+  ): void {
+    this.setupCycles += 1;
+    if (transitions.length === 0 && this.setupCycles % 20 !== 1) return;
+    const kinds = transitions.map((t) => t.kind).join(',') || 'none';
+    const verdicts = final.scenarios.map((s) => `${s.kind}:${s.state}/${s.quality?.verdict ?? '?'}`).join(' ') || 'none';
+    this.log('SYSTEM', `SETUPS ${symbol}: engine ${raw.scenarios.length} (dead ${raw.invalidatedIds?.length ?? 0}) → ledger ${annotated.scenarios.length} → live ${final.scenarios.length}${final.withheldIds?.length ? ` (withheld ${final.withheldIds.length})` : ''} · transitions ${kinds} · ${verdicts} · outcomes ${this.setupOutcomes.all().length} → ${config.setupOutcomesPath}`, 'info');
   }
 
   /** A quality-verdict change (e.g. WATCH -> ENTRY_ELIGIBLE) is material even when the setup state did not move. */

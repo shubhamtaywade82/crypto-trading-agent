@@ -4,6 +4,7 @@ import { fuseSignals, type TradeIntent } from './SignalFusion.js';
 import { applyRouter } from './StrategyRouter.js';
 import { scoreCandidate } from './CandidateScorer.js';
 import type { DecisionEvidence, DecisionRecord } from './DecisionJournal.js';
+import { config } from '../config.js';
 
 /** Agents whose candidates resolve through signal fusion; everyone else passes through directly. */
 export const FUSION_AGENTS: ReadonlySet<string> = new Set(['STRUCTURE-TREND-η', 'STRUCT-LIQ-η', 'MEAN-REVERT-θ', 'CROWDING-ι']);
@@ -22,6 +23,8 @@ export interface DecisionFlowResult {
   routedOut: RoutedOut[];
   /** Candidates dropped by fusion conflict resolution or the evidence floor. */
   fusionFiltered: number;
+  /** Candidates dropped before routing for degenerate reward:risk geometry. */
+  geometryDropped?: GeometryRejection[];
 }
 
 /**
@@ -29,7 +32,34 @@ export interface DecisionFlowResult {
  * multi-strategy agents. Both the live orchestrator and the replay engine call
  * this — the same strategy code must run in backtest, paper and live.
  */
-export function runCandidateFlow(raw: Signal[], states: Record<string, MarketState>): DecisionFlowResult {
+export interface GeometryRejection { agent: string; symbol: string; rr: number | null }
+
+/**
+ * Sanity floor on planned reward:risk. A target sitting on top of the entry (RR 0.03) is not a scalp, it is an
+ * invalid candidate; whatever strategy produced it, it never reaches the risk gate, the journal or the alerts.
+ * Hedges carry no stop/target and pass. This is not an edge claim (calibrated floors live in the RR profile).
+ */
+export function dropDegenerateGeometry(signals: Signal[], minRr: number = config.candidateMinRr): { kept: Signal[]; dropped: GeometryRejection[] } {
+  const kept: Signal[] = [];
+  const dropped: GeometryRejection[] = [];
+  for (const s of signals) {
+    const { entry, stopLoss, takeProfit } = s;
+    if (minRr <= 0 || !s.type.startsWith('OPEN_') || entry === undefined || stopLoss === undefined || takeProfit === undefined) { kept.push(s); continue; }
+    const risk = Math.abs(entry - stopLoss);
+    const rr = risk > 0 ? Math.abs(takeProfit - entry) / risk : null;
+    if (rr !== null && rr >= minRr) kept.push(s);
+    else dropped.push({ agent: s.agent, symbol: s.symbol, rr });
+  }
+  return { kept, dropped };
+}
+
+export function runCandidateFlow(rawSignals: Signal[], states: Record<string, MarketState>): DecisionFlowResult {
+  const { kept: raw, dropped } = dropDegenerateGeometry(rawSignals);
+  const result = routeAndFuse(raw, states);
+  return { ...result, geometryDropped: dropped };
+}
+
+function routeAndFuse(raw: Signal[], states: Record<string, MarketState>): DecisionFlowResult {
   const { passed, vetoed } = applyRouter(raw, states);
   const legacy = passed.filter((s) => !FUSION_AGENTS.has(s.agent));
   const candidates = passed.filter((s) => FUSION_AGENTS.has(s.agent));

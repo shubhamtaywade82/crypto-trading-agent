@@ -24,6 +24,9 @@ export interface RiskAgentOptions {
   hwm?: PeakEquitySource;
   /** Calibrated per-strategy RR floors; when present the RR check uses cost-adjusted RR against the strategy's floor. */
   rrProfile?: RrProfile;
+  /** Live gate: when set, OPEN signals from strategies outside `approvedStrategies` are refused. */
+  requireApproval?: boolean;
+  approvedStrategies?: ReadonlySet<string>;
 }
 
 // Strategies place stops in multiples of the state layer's closed-candle ATR; the gate must measure with the same ruler,
@@ -89,6 +92,9 @@ export class RiskAgent extends BaseAgent {
   }
 
   gate(signal: Signal, ctx: MarketContext): RiskDecision {
+    if (this.options.requireApproval && signal.type.startsWith('OPEN_') && !this.options.approvedStrategies?.has(signal.agent)) {
+      return this.reject(`strategy ${signal.agent} is not approved for live trading`);
+    }
     const halt = this.options.killSwitch?.state();
     if (!halt?.halted || !signal.type.startsWith('OPEN_')) return this.gateEntry(signal, ctx);
     this.isDrawdownBreached(ctx); // only to keep the session equity peak tracking while halted

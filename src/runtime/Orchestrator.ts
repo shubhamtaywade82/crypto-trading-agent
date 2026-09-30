@@ -34,6 +34,8 @@ import { buildSetupMap } from '../decision/SetupEngine.js';
 import { SetupLedger } from '../decision/SetupLedger.js';
 import { loadRrProfile } from '../risk/rrProfile.js';
 import { findUnprotected } from '../risk/unprotected.js';
+import { loadApprovals } from '../risk/strategyApprovals.js';
+import { liveStartBlockers } from '../ops/liveReadiness.js';
 import { RefusalSuppressor } from './refusalSuppressor.js';
 import { annotateSetupMap } from '../decision/SetupPipeline.js';
 import { ThesisController } from '../decision/ThesisController.js';
@@ -72,7 +74,11 @@ export class Orchestrator extends EventEmitter {
   // Single authoritative equity high-water mark, shared by the risk agent and the
   // performance engine so both measure drawdown against the same persisted peak.
   private hwm = new EquityHwmStore();
-  private risk = new RiskAgent(this.binance, { killSwitch: this.killSwitch, hwm: this.hwm.forMode(config.mode), rrProfile: loadRrProfile(config.rrProfilePath) });
+  // Live trades only strategies that earned approval from measured evidence; an absent file approves nothing
+  private readonly approved = loadApprovals(config.approvalsPath);
+  private readonly requireApproval = config.mode === 'live';
+  private readonly unapprovedLoggedAt = new Map<string, number>();
+  private risk = new RiskAgent(this.binance, { killSwitch: this.killSwitch, hwm: this.hwm.forMode(config.mode), rrProfile: loadRrProfile(config.rrProfilePath), requireApproval: this.requireApproval, approvedStrategies: this.approved });
   private hooks = buildOps({ log: (line) => this.log('SYSTEM', line, 'info'), seedTrades: this.binance.getTrades() });
   private ops = new RiskOps((message) => this.log('SYSTEM', message, 'warn'), { killSwitch: this.killSwitch, onCircuit: (from, to, snapshot) => this.hooks.onCircuit(from, to, snapshot), hwm: this.hwm.forMode(config.mode) });
   private executor = new ExecutorAgent(this.binance);
@@ -103,6 +109,12 @@ export class Orchestrator extends EventEmitter {
   private pendingCouncilSignals: Signal[] = [];
 
   start() {
+    const blockers = liveStartBlockers({ mode: config.mode, riskEngine: config.riskEngine, alerts: config.alerts });
+    if (blockers.length > 0) {
+      for (const b of blockers) this.log('SYSTEM', `LIVE START BLOCKED: ${b}`, 'error');
+      throw new Error(`live start blocked: ${blockers.join('; ')}`);
+    }
+    if (this.requireApproval) this.log('SYSTEM', `LIVE: ${this.approved.size === 0 ? 'no strategies approved, nothing will trade (run scripts/live-readiness.ts)' : `approved strategies: ${[...this.approved].join(', ')}`}`, this.approved.size === 0 ? 'warn' : 'info');
     this.log('SYSTEM', `Orchestrator started in ${config.mode.toUpperCase()} mode`, 'info');
     announceStartup({ killSwitch: this.killSwitch, hooks: this.hooks, warn: (message) => this.log('SYSTEM', message, 'warn') });
     const dropped = this.binance.dropUnlistedPositions(config.symbols);
@@ -242,6 +254,12 @@ export class Orchestrator extends EventEmitter {
 
   private async processSignals(signals: Signal[], ctx: MarketContext): Promise<void> {
     for (const signal of signals) {
+      // Dropped before the gate, journal and alerts: an unapproved strategy in live mode is expected silence, not a refusal stream
+      if (this.requireApproval && signal.type.startsWith('OPEN_') && !this.approved.has(signal.agent)) {
+        const last = this.unapprovedLoggedAt.get(signal.agent) ?? 0;
+        if (Date.now() - last > 3_600_000) { this.unapprovedLoggedAt.set(signal.agent, Date.now()); this.log(signal.agent, `live: ${signal.agent} is not approved; its signals are ignored`, 'info'); }
+        continue;
+      }
       if (this.isCoolingDown(signal)) { this.counters.monitored += 1; continue; }
       const portfolio = { equity: ctx.equity, positions: ctx.positions ?? [], circuit: ctx.performance?.circuit };
       // A capacity/circuit block cannot clear while the book is unchanged: skip the gate instead of re-refusing

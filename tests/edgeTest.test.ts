@@ -67,3 +67,31 @@ test('journal files pool, and a repeated decision id keeps the latest record', (
   assert.equal(pooled[1].outcome?.reason, 'STOP LOSS');
   assert.deepEqual(loadDecisionFiles(path.join(dir, 'missing.jsonl')), []);
 });
+
+// --- capacity refusal context -------------------------------------------------------------------
+import { capacityContext } from '../src/learning/RefusalContext.js';
+
+const refused = (id: number, at: number, symbol: string, reason: string, strategy = 'MEAN-REVERT-θ'): DecisionRecord =>
+  ({ ...trade(id, 'STOP LOSS'), timestamp: at, symbol, strategy: strategy as never, status: 'RISK_REJECTED', rejectionReason: reason, outcome: undefined });
+const held = (id: number, openAt: number, closeAt: number, symbol = 'ETHUSDT'): DecisionRecord =>
+  ({ ...trade(id, 'STOP LOSS'), timestamp: openAt, symbol, outcome: { closedAt: closeAt, exit: 99, qty: 1, pnl: -1, rMultiple: -1, reason: 'STOP LOSS' } });
+
+test('capacity refusals are split by whether the same symbol was already held, and by the limit named', () => {
+  const rows = capacityContext([
+    held(1, 100, 200),
+    refused(2, 150, 'ETHUSDT', 'risk-engine: portfolio_limits: symbol 185.8% (max 80%); gross 260.4% (max 80%); cluster ETH 185.8% (max 80%)'),
+    refused(3, 250, 'ETHUSDT', 'risk-engine: portfolio_limits: gross 99% (max 80%)'),
+    refused(4, 150, 'SOLUSDT', 'max gross exposure reached (78834 / 78612)'),
+    refused(5, 160, 'ETHUSDT', 'liq buffer 1.1x ATR < 1.2x'),
+  ]);
+  assert.equal(rows.length, 1);
+  const r = rows[0];
+  assert.equal(r.refused, 3);
+  assert.equal(r.whileSymbolHeld, 1); // only the first: ETH held 100-200; the 250 refusal came after close; SOL was never held
+  assert.deepEqual([r.limits.symbol, r.limits.gross, r.limits.cluster, r.limits.legacy_gross], [1, 2, 1, 1]);
+});
+
+test('a position still open at the end of the journal counts as held', () => {
+  const rows = capacityContext([{ ...held(1, 100, 0), outcome: undefined }, refused(2, 500, 'ETHUSDT', 'risk-engine: portfolio_limits: gross 99% (max 80%)')]);
+  assert.equal(rows[0].whileSymbolHeld, 1);
+});

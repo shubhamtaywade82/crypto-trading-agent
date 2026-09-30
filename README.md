@@ -521,3 +521,14 @@ volume, liquidations by side, book spread and imbalance, mark/index/funding, ope
 no keys. The first and last minute of a session are partial; drop them when analysing. As of 2026-09-30 Binance serves
 `aggTrade`/`markPrice`/`forceOrder` only from `wss://fstream.binance.com/market/` and the book from `/public/`; the legacy `/stream` and
 `/ws` URLs deliver neither, so `--self-check` is the first thing to re-run if a recording ever comes back empty.
+
+### Analysing the recorded data
+
+```bash
+npx tsx scripts/analyze-flow.ts          # pre-registered event study on data/market; needs >= 14 days for a meaningful answer
+```
+
+Three hypotheses (H1 liquidation flush reverses, H2 aggressor flow continues, H4 book imbalance predicts direction) are fixed in
+`src/marketdata/EventStudy.ts` and tested at 5/15/30/60 minutes with the trigger threshold taken from the first half of the recording and
+events counted only in the second half. The significance bar is Bonferroni-corrected across all 12 tests, and a result must also beat
+round-trip costs to matter. Do not edit the existing hypotheses after looking at results; add a new id.

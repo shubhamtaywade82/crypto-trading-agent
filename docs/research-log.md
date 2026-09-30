@@ -83,3 +83,11 @@ orchestrator drops unapproved OPEN signals before the journal and alerts, and `R
 websocket endpoints no longer deliver aggTrade, markPrice or forceOrder (the `binance` npm library 2.15.22 routes those to the legacy
 URL; its raw `@trade` stream, which the agent uses for live prices, still works). The recorder uses `/market` and `/public` directly.
 Minimum useful dataset: several weeks across more than one volatility regime before testing any flow hypothesis.
+
+## 10. Pre-registered flow hypotheses (committed 2026-09-30, before any recorded data was examined)
+Recording started 2026-09-30; at the time of this commit under five hours existed and none had been analysed. Fixed rules, in `src/marketdata/EventStudy.ts`:
+- **H1** — net long liquidation notional over 5 minutes in the top 5% of its first-half distribution predicts a bounce (buy); net short liquidation predicts a drop (sell).
+- **H2** — 5-minute net aggressor imbalance in the top 5% (by magnitude) predicts continuation in its direction.
+- **H4** — 5-minute mean book imbalance in the top 5% (by magnitude) predicts direction (bid-heavy up, ask-heavy down).
+Horizons 5/15/30/60 minutes, 12 tests, Bonferroni alpha 0.0042, n >= 30 events, events non-overlapping within the horizon, thresholds from the first half of the data,
+events counted in the second half, costs 16 bps round trip. A pass is a lead to re-test on later data; it does not approve a strategy (see section 8).

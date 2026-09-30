@@ -33,6 +33,7 @@ import { TradeOutcomeRecorder } from '../learning/TradeOutcomeRecorder.js';
 import { buildSetupMap } from '../decision/SetupEngine.js';
 import { SetupLedger } from '../decision/SetupLedger.js';
 import { loadRrProfile } from '../risk/rrProfile.js';
+import { findUnprotected } from '../risk/unprotected.js';
 import { RefusalSuppressor } from './refusalSuppressor.js';
 import { annotateSetupMap } from '../decision/SetupPipeline.js';
 import { ThesisController } from '../decision/ThesisController.js';
@@ -377,6 +378,10 @@ export class Orchestrator extends EventEmitter {
     Object.assign(this.livePrices, market.marks);
     this.logExits();
     const [positions, account] = await Promise.all([this.binance.getPositions(), this.binance.getAccount()]);
+    if (config.unprotectedAlertPct > 0) {
+      const exposed = findUnprotected(positions, account.equity, config.unprotectedAlertPct);
+      this.hooks.onUnprotected(exposed, account.equity);
+    }
     const marketState = this.marketStateBuilder.buildAll(config.symbols.map((symbol) => ({
       symbol, candles: market.candles[symbol] ?? [],
       candlesByTimeframe: market.marketDataV2?.[symbol]?.candles,

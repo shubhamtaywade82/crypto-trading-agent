@@ -42,6 +42,8 @@ export const EnvSchema = z.object({
   CANDIDATE_MIN_RR: z.coerce.number().nonnegative().default(0.25),
   /** Optional: drop candidates whose cost-adjusted break-even win rate exceeds this (0 = off). Set it from scripts/replay-decisions.ts evidence, not a guess. */
   CANDIDATE_MAX_BREAKEVEN_WINRATE: z.coerce.number().min(0).max(1).default(0),
+  /** Alert when a position with no protective stop is at least this % of equity (0 disables). */
+  UNPROTECTED_ALERT_PCT: z.coerce.number().nonnegative().default(25),
   MIN_RR: z.coerce.number().nonnegative().default(0),
   TAKER_FEE_RATE: z.coerce.number().nonnegative().default(0.0004),
   SLIPPAGE_BUFFER_RATE: z.coerce.number().nonnegative().default(0.0002),
@@ -177,6 +179,7 @@ export const config = {
   eventsPath: env.EVENTS_PATH,
   notificationsPath: env.NOTIFICATIONS_PATH,
   candidateMinRr: env.CANDIDATE_MIN_RR,
+  unprotectedAlertPct: env.UNPROTECTED_ALERT_PCT,
   candidateMaxBreakevenWinRate: env.CANDIDATE_MAX_BREAKEVEN_WINRATE,
   decisionsPath: env.DECISIONS_PATH,
   rrProfilePath: env.RR_PROFILE_PATH,

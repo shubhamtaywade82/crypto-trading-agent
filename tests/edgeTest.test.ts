@@ -125,3 +125,10 @@ test('stop feasibility shows which strategies can ever fit the cap and whether a
   assert.deepEqual([mo.proposals, mo.feasible, mo.executedOfFeasible, mo.executedOfInfeasible], [3, 2, 1, 0]);
   assert.ok(mr.median < 1.13 && mo.p90 >= 1.13);
 });
+
+test('hypothetical (price-path replay) outcomes count like real target/stop exits', () => {
+  const hypo = (id: number, tp: boolean): DecisionRecord => trade(id, tp ? 'HYPOTHETICAL TP' : 'HYPOTHETICAL SL');
+  const t = edgeVsCoinFlip([hypo(1, true), hypo(2, false), hypo(3, false), trade(4, 'HYPOTHETICAL TIMEOUT')]);
+  assert.equal(t.n, 3);
+  assert.equal(t.wins, 1);
+});

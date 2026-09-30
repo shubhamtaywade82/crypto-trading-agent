@@ -3,7 +3,7 @@
  * walked over the real 5m price path that followed. This answers "were the strategies' ideas any good?" without waiting
  * for trades that the gates (rightly or wrongly) never allowed.
  *
- *   npx tsx scripts/replay-decisions.ts [--file data/decisions.jsonl] [--hold-hours 24] [--min-samples 15]
+ *   npx tsx scripts/replay-decisions.ts [--file data/decisions.jsonl[,more.jsonl]] [--hold-hours 24] [--min-samples 15]
  *                                       [--fee 0.0004] [--slippage 0.0002] [--all-proposals] [--write]
  *
  * Needs outbound access to public Binance USD-M klines (no keys). Repeated proposals of one idea are collapsed
@@ -12,7 +12,10 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { config } from '../src/config.js';
-import { DecisionJournal, type DecisionRecord } from '../src/decision/DecisionJournal.js';
+import type { DecisionRecord } from '../src/decision/DecisionJournal.js';
+import { loadDecisionFiles } from '../src/decision/loadDecisionFiles.js';
+import { edgeVsCoinFlip } from '../src/learning/EdgeTest.js';
+import { minStopPctToFitCap } from '../src/learning/RefusalContext.js';
 import { asHypotheticalExecuted, dedupeProposals, simulateBracket } from '../src/learning/HypotheticalOutcome.js';
 import { breakevenWinRate, calibrateRrFloors, costInR } from '../src/risk/rrProfile.js';
 import type { Candle } from '../src/types.js';
@@ -44,11 +47,11 @@ async function fetchKlines(symbol: string, from: number, to: number): Promise<Ca
   return out;
 }
 
-const file = path.resolve(arg('file', config.decisionsPath));
+const file = arg('file', config.decisionsPath);
 const holdMs = num('hold-hours', 24) * 3_600_000;
 const feeRate = num('fee', config.risk.takerFeeRate);
 const slippageRate = num('slippage', config.risk.slippageBufferRate);
-const all = new DecisionJournal(file).all().filter((r) => r.side && r.entry !== null && r.stopLoss !== null && r.takeProfit !== null);
+const all = loadDecisionFiles(file).filter((r) => r.side && r.entry !== null && r.stopLoss !== null && r.takeProfit !== null);
 const ideas = process.argv.includes('--all-proposals') ? all : dedupeProposals(all);
 console.log(`decisions with levels: ${all.length} · distinct ideas after collapsing repeats: ${ideas.length} · hold ≤ ${holdMs / 3_600_000}h`);
 
@@ -89,11 +92,11 @@ for (const [strategy, rs] of [...perStrategy].sort()) {
   console.log(`  ${strategy.padEnd(20)} n=${String(rs.length).padStart(3)}  mean ${mean.toFixed(3)}R  win ${((rs.filter((x) => x > 0).length / rs.length) * 100).toFixed(0)}%`);
 }
 // What decides viability is how much of the stop the round trip costs, not the strategy label
-interface Row { net: number; costR: number; pStar: number; stopPct: number; win: boolean }
+interface Row { strategy: string; net: number; costR: number; pStar: number; stopPct: number; win: boolean }
 const rows: Row[] = synthetic.map((r) => {
   const risk = Math.abs(r.entry! - r.stopLoss!);
   const costR = costInR(r.entry!, r.stopLoss!, { feeRate, slippageRate });
-  return { net: r.outcome!.rMultiple - costR, costR, pStar: breakevenWinRate(r.entry!, r.stopLoss!, r.takeProfit!, { feeRate, slippageRate }), stopPct: (risk / r.entry!) * 100, win: r.outcome!.rMultiple > 0 };
+  return { strategy: r.strategy, net: r.outcome!.rMultiple - costR, costR, pStar: breakevenWinRate(r.entry!, r.stopLoss!, r.takeProfit!, { feeRate, slippageRate }), stopPct: (risk / r.entry!) * 100, win: r.outcome!.rMultiple > 0 };
 });
 const median = (xs: number[]): number => { const s2 = [...xs].sort((a, b) => a - b); return s2.length % 2 ? s2[(s2.length - 1) / 2] : (s2[s2.length / 2 - 1] + s2[s2.length / 2]) / 2; };
 const cut = (title: string, key: (r: Row) => string): void => {
@@ -106,6 +109,16 @@ const cut = (title: string, key: (r: Row) => string): void => {
 };
 cut('by round-trip cost as a share of the stop (costR)', (r) => (r.costR < 0.15 ? '1) <0.15R' : r.costR < 0.35 ? '2) 0.15-0.35R' : r.costR < 0.7 ? '3) 0.35-0.70R' : '4) >=0.70R'));
 cut('by break-even win rate needed after costs', (r) => (r.pStar < 0.4 ? '1) <40%' : r.pStar < 0.5 ? '2) 40-50%' : r.pStar < 0.6 ? '3) 50-60%' : r.pStar < 0.7 ? '4) 60-70%' : '5) >=70%'));
+const minStop = minStopPctToFitCap({ riskPerTradePct: config.risk.riskPerTradePct, maxSymbolExposurePct: config.risk.maxSymbolExposurePct, legRate: feeRate + slippageRate });
+cut(`by strategy × stop width (cap-feasible = stop >= ${minStop.toFixed(2)}%)`, (r) => `${r.strategy} ${r.stopPct >= minStop ? 'wide' : 'tight'}`);
+console.log('\nentry timing vs a coin flip on hypothetical outcomes (target vs stop only, before costs)');
+for (const strategy of [...new Set(synthetic.map((r) => r.strategy))].sort()) {
+  for (const [label, keep] of [['wide', (r: DecisionRecord) => (Math.abs(r.entry! - r.stopLoss!) / r.entry!) * 100 >= minStop], ['tight', (r: DecisionRecord) => (Math.abs(r.entry! - r.stopLoss!) / r.entry!) * 100 < minStop]] as const) {
+    const t = edgeVsCoinFlip(synthetic.filter((r) => r.strategy === strategy && keep(r)));
+    if (t.n === 0) continue;
+    console.log(`  ${`${strategy} ${label}`.padEnd(26)} n=${String(t.n).padStart(4)}  target hits ${String(t.wins).padStart(4)}  expected ${t.expectedWins.toFixed(1).padStart(7)}  z ${t.z === null ? '  n/a' : t.z.toFixed(2).padStart(5)}  p(better by luck) ${t.pBetter === null ? 'n/a' : t.pBetter.toFixed(3)}`);
+  }
+}
 cut('by stop distance', (r) => (r.stopPct < 0.25 ? '1) <0.25%' : r.stopPct < 0.5 ? '2) 0.25-0.5%' : r.stopPct < 1 ? '3) 0.5-1%' : '4) >=1%'));
 const worst = [...synthetic].map((r) => ({ r, c: costInR(r.entry!, r.stopLoss!, { feeRate, slippageRate }) })).sort((a, b) => b.c - a.c).slice(0, 3);
 console.log('\nmost cost-dominated ideas (a few of these can dominate any mean)');

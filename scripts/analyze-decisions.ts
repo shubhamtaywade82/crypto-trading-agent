@@ -9,6 +9,7 @@ import type { DecisionRecord } from '../src/decision/DecisionJournal.js';
 import { loadDecisionFiles } from '../src/decision/loadDecisionFiles.js';
 import { classifyRiskRefusal } from '../src/decision/NoTrade.js';
 import { edgeVsCoinFlip } from '../src/learning/EdgeTest.js';
+import { capacityContext } from '../src/learning/RefusalContext.js';
 
 const i = process.argv.indexOf('--file');
 const file = i >= 0 && process.argv[i + 1] ? process.argv[i + 1] : config.decisionsPath;
@@ -46,6 +47,16 @@ for (const [strategy] of count(records, (r) => r.strategy)) {
   const causes = count(own, (r) => classifyRiskRefusal(r.rejectionReason ?? '')).map(([k, n]) => `${k} ${n}`).join(', ') || 'none';
   const executed = records.filter((r) => r.strategy === strategy && r.status === 'EXECUTED').length;
   console.log(`  ${strategy.padEnd(20)} proposed ${String(made).padStart(4)}  executed ${String(executed).padStart(3)}  refused ${String(own.length).padStart(4)}  [${causes}]`);
+}
+
+const capacity = capacityContext(records);
+if (capacity.length > 0) {
+  console.log('\ncapacity refusals: was the symbol already held, and which limit was named');
+  for (const c of capacity) {
+    const limits = Object.entries(c.limits).filter(([, n]) => n > 0).map(([k, n]) => `${k} ${n}`).join(', ');
+    console.log(`  ${c.strategy.padEnd(20)} refused ${String(c.refused).padStart(4)}  while symbol held ${String(c.whileSymbolHeld).padStart(4)} (${((c.whileSymbolHeld / c.refused) * 100).toFixed(0)}%)  [${limits}]`);
+  }
+  console.log('  Refused with nothing open in that symbol means something other than "waiting for the open position".');
 }
 
 console.log('\nplanned RR by strategy (all decisions, rejected included)');

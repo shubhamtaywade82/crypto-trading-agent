@@ -505,3 +505,19 @@ npx tsx scripts/live-readiness.ts --write-approvals    # writes only strategies 
 A strategy needs >= 100 trades over >= 150 days with a positive 90% lower bound on net expectancy after costs and a positive mean in
 both time halves, plus >= 50 paper trades over >= 30 days with positive net expectancy. Limits (risk per trade, leverage, daily loss,
 drawdown) are operator policy in `DEFAULT_POLICY` (`src/ops/liveReadiness.ts`).
+
+## Market-data recorder
+
+Binance does not serve historical liquidations, order-book imbalance or aggressor flow, so flow-based ideas (CROWDING and
+anything derivatives-driven) cannot be backtested until the data has been recorded. Run it beside the agent:
+
+```bash
+npx tsx scripts/record-market-data.ts --self-check 30          # verify the streams first; exits 1 if trades/book/mark do not arrive
+npx tsx scripts/record-market-data.ts                          # then leave it running (tmux, systemd, docker)
+```
+
+It writes one 1-minute record per symbol to `data/market/SYMBOL-YYYY-MM-DD.jsonl` (~3 MB per symbol per week): aggressor buy/sell
+volume, liquidations by side, book spread and imbalance, mark/index/funding, open interest and taker ratio. Public streams only,
+no keys. The first and last minute of a session are partial; drop them when analysing. As of 2026-09-30 Binance serves
+`aggTrade`/`markPrice`/`forceOrder` only from `wss://fstream.binance.com/market/` and the book from `/public/`; the legacy `/stream` and
+`/ws` URLs deliver neither, so `--self-check` is the first thing to re-run if a recording ever comes back empty.

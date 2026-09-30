@@ -232,7 +232,7 @@ export class Orchestrator extends EventEmitter {
     }
     // The canonical candidate pipeline (routing + fusion) — shared with the replay engine
     const flow = runCandidateFlow(raw, ctx.marketState ?? {});
-    for (const g of flow.geometryDropped ?? []) this.log(g.agent as any, `DROPPED ${g.symbol}: degenerate geometry (planned RR ${g.rr === null ? 'n/a' : g.rr.toFixed(2)} < ${config.candidateMinRr})`, 'info');
+    for (const g of flow.geometryDropped ?? []) this.log(g.agent as any, `DROPPED ${g.symbol}: degenerate geometry (planned RR ${g.rr === null ? 'n/a' : g.rr.toFixed(2)}${g.breakevenWinRate !== undefined ? `, needs ${(g.breakevenWinRate * 100).toFixed(0)}% win rate to break even after costs > ${(config.candidateMaxBreakevenWinRate * 100).toFixed(0)}%` : ` < ${config.candidateMinRr}`})`, 'info');
     for (const v of flow.routedOut) this.log(v.agent as any, `ROUTED OUT ${v.symbol}: ${v.agent} not allowed in ${v.regime}`, 'info');
     if (flow.fusionFiltered > 0) this.log('SYSTEM', `SignalFusion: ${flow.fusionFiltered} candidate(s) filtered by conflict resolution`, 'info');
     this.fusionIntents = flow.intents;

@@ -40,6 +40,26 @@ export function costAdjustedRr(
   return reward / (risk + cost);
 }
 
+/**
+ * Cost of a round trip expressed in R (multiples of the stop distance). A 0.15% stop with 0.12% round-trip costs
+ * spends 0.8R before the market does anything.
+ */
+export function costInR(entry: number, stopLoss: number, costs: CostRates): number {
+  const risk = Math.abs(entry - stopLoss);
+  return risk > 0 && entry > 0 ? (entry * 2 * (costs.feeRate + costs.slippageRate)) / risk : Number.NaN;
+}
+
+/**
+ * Win rate a bracket needs just to break even after costs: p(rr - c) = (1 - p)(1 + c)  =>  p = (1 + c) / (1 + rr).
+ * Above 1 the bracket cannot break even at any hit rate.
+ */
+export function breakevenWinRate(entry: number, stopLoss: number, takeProfit: number, costs: CostRates): number {
+  const risk = Math.abs(entry - stopLoss);
+  if (!(risk > 0)) return Number.NaN;
+  const rr = Math.abs(takeProfit - entry) / risk;
+  return (1 + costInR(entry, stopLoss, costs)) / (1 + rr);
+}
+
 export function minRrFor(profile: RrProfile | undefined, strategy: string, fallback: number): number {
   return profile?.floors[strategy]?.minRr ?? fallback;
 }

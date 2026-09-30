@@ -49,13 +49,17 @@ for (const h of HYPOTHESES) {
     const pooled = poolRows(perSymbol.map((x) => x.row), costBps);
     if (pooled) lines.push({ label: 'POOLED', row: pooled });
     for (const { label, row } of lines) {
+      // Below the minimum a t-statistic or a "net" figure is an artefact of tiny samples; print the count and nothing tempting
+      if (row.n < MIN_EVENTS) {
+        console.log(`${label.padEnd(8)}${String(horizon).padStart(6)}m ${String(row.n).padStart(5)}   too few events (need ${MIN_EVENTS})`);
+        continue;
+      }
       const p = row.t === null ? null : twoSidedP(row.t);
-      const significant = p !== null && p < alpha && row.n >= MIN_EVENTS;
-      const verdict = row.n < MIN_EVENTS ? 'too few events'
-        : !significant ? '—'
+      const significant = p !== null && p < alpha;
+      const verdict = !significant ? ''
         : row.excessBps > 0 ? (row.netBps > 0 ? 'SIGNIFICANT, beats costs: confirm on new data' : 'significant but smaller than costs')
         : 'significant in the OPPOSITE direction: new lead, needs its own test';
-      console.log(`${label.padEnd(8)}${String(horizon).padStart(6)}m ${String(row.n).padStart(5)} ${f(row.meanSignedBps)} ${f(row.excessBps, 10)} ${row.t === null ? '     n/a' : f(row.t, 7, 2)} ${p === null ? '     n/a' : f(p, 8, 4)} ${row.hitRate === null ? '   n/a' : f(row.hitRate * 100, 6, 0)} ${f(row.netBps, 12)}   ${label === 'POOLED' ? verdict : verdict === '—' ? '' : verdict}`);
+      console.log(`${label.padEnd(8)}${String(horizon).padStart(6)}m ${String(row.n).padStart(5)} ${f(row.meanSignedBps)} ${f(row.excessBps, 10)} ${row.t === null ? '     n/a' : f(row.t, 7, 2)} ${p === null ? '     n/a' : f(p, 8, 4)} ${row.hitRate === null ? '   n/a' : f(row.hitRate * 100, 6, 0)} ${f(row.netBps, 12)}   ${verdict}`);
     }
   }
 }

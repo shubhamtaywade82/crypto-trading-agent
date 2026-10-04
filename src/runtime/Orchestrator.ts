@@ -31,6 +31,16 @@ import { AgentLedger } from '../learning/AgentLedger.js';
 import { confidenceMultiplier } from '../learning/ConfidenceAdjuster.js';
 import { TradeOutcomeRecorder } from '../learning/TradeOutcomeRecorder.js';
 import { buildSetupMap } from '../decision/SetupEngine.js';
+import { SetupLedger } from '../decision/SetupLedger.js';
+import { loadRrProfile } from '../risk/rrProfile.js';
+import { findUnprotected } from '../risk/unprotected.js';
+import { loadApprovals } from '../risk/strategyApprovals.js';
+import { liveStartBlockers } from '../ops/liveReadiness.js';
+import { RefusalSuppressor } from './refusalSuppressor.js';
+import { annotateSetupMap } from '../decision/SetupPipeline.js';
+import { ThesisController } from '../decision/ThesisController.js';
+import { FlowTracker } from '../market/FlowTracker.js';
+import { SetupOutcomeLedger } from '../learning/SetupOutcomeLedger.js';
 import { buildCouncilSignal, COUNCIL_SIGNAL_TTL_MS } from '../decision/CouncilSignal.js';
 import { TradingCouncil } from '../llm/TradingCouncil.js';
 import { assessSafety, type SafetyVerdict } from '../market/MarketSafety.js';
@@ -71,7 +81,11 @@ export class Orchestrator extends EventEmitter {
   // Single authoritative equity high-water mark, shared by the risk agent and the
   // performance engine so both measure drawdown against the same persisted peak.
   private hwm = new EquityHwmStore();
-  private risk = new RiskAgent(this.binance, { killSwitch: this.killSwitch, hwm: this.hwm.forMode(config.mode) });
+  // Live trades only strategies that earned approval from measured evidence; an absent file approves nothing
+  private readonly approved = loadApprovals(config.approvalsPath);
+  private readonly requireApproval = config.mode === 'live';
+  private readonly unapprovedLoggedAt = new Map<string, number>();
+  private risk = new RiskAgent(this.binance, { killSwitch: this.killSwitch, hwm: this.hwm.forMode(config.mode), rrProfile: loadRrProfile(config.rrProfilePath), requireApproval: this.requireApproval, approvedStrategies: this.approved });
   private hooks = buildOps({ log: (line) => this.log('SYSTEM', line, 'info'), seedTrades: this.binance.getTrades() });
   private ops = new RiskOps((message) => this.log('SYSTEM', message, 'warn'), { killSwitch: this.killSwitch, onCircuit: (from, to, snapshot) => this.hooks.onCircuit(from, to, snapshot), hwm: this.hwm.forMode(config.mode) });
   private executor = new ExecutorAgent(this.binance);
@@ -82,6 +96,13 @@ export class Orchestrator extends EventEmitter {
   private stopWs: (() => void) | null = null;
   private pendingTickFlush = false;
   private cooldownStartedAt = new Map<string, number>();
+  private readonly setupLedger = new SetupLedger();
+  private readonly refusalSuppressor = new RefusalSuppressor();
+  private readonly flowTracker = new FlowTracker();
+  private readonly announcedVerdicts = new Map<string, string>();
+  private setupCycles = 0;
+  private readonly thesisController = new ThesisController();
+  private readonly setupOutcomes = new SetupOutcomeLedger(config.setupOutcomesPath, { feeRate: config.risk.takerFeeRate, slippageRate: config.risk.slippageBufferRate });
   private counters: SessionCounters = { decisions: 0, executed: 0, monitored: 0 };
   private lastVenueState: string | null = null;
   private lastInitError: string | null = null;
@@ -107,6 +128,12 @@ export class Orchestrator extends EventEmitter {
     : null;
 
   start() {
+    const blockers = liveStartBlockers({ mode: config.mode, riskEngine: config.riskEngine, alerts: config.alerts });
+    if (blockers.length > 0) {
+      for (const b of blockers) this.log('SYSTEM', `LIVE START BLOCKED: ${b}`, 'error');
+      throw new Error(`live start blocked: ${blockers.join('; ')}`);
+    }
+    if (this.requireApproval) this.log('SYSTEM', `LIVE: ${this.approved.size === 0 ? 'no strategies approved, nothing will trade (run scripts/live-readiness.ts)' : `approved strategies: ${[...this.approved].join(', ')}`}`, this.approved.size === 0 ? 'warn' : 'info');
     this.log('SYSTEM', `Orchestrator started in ${config.mode.toUpperCase()} mode`, 'info');
     announceStartup({ killSwitch: this.killSwitch, hooks: this.hooks, warn: (message) => this.log('SYSTEM', message, 'warn') });
     const dropped = this.binance.dropUnlistedPositions(config.symbols);
@@ -238,6 +265,7 @@ export class Orchestrator extends EventEmitter {
     }
     // The canonical candidate pipeline (routing + fusion) — shared with the replay engine
     const flow = runCandidateFlow(raw, ctx.marketState ?? {});
+    for (const g of flow.geometryDropped ?? []) this.log(g.agent as any, `DROPPED ${g.symbol}: degenerate geometry (planned RR ${g.rr === null ? 'n/a' : g.rr.toFixed(2)}${g.breakevenWinRate !== undefined ? `, needs ${(g.breakevenWinRate * 100).toFixed(0)}% win rate to break even after costs > ${(config.candidateMaxBreakevenWinRate * 100).toFixed(0)}%` : ` < ${config.candidateMinRr}`})`, 'info');
     for (const v of flow.routedOut) this.log(v.agent as any, `ROUTED OUT ${v.symbol}: ${v.agent} not allowed in ${v.regime}`, 'info');
     if (flow.fusionFiltered > 0) this.log('SYSTEM', `SignalFusion: ${flow.fusionFiltered} candidate(s) filtered by conflict resolution`, 'info');
     this.fusionIntents = flow.intents;
@@ -246,7 +274,16 @@ export class Orchestrator extends EventEmitter {
 
   private async processSignals(signals: Signal[], ctx: MarketContext): Promise<void> {
     for (const signal of signals) {
+      // Dropped before the gate, journal and alerts: an unapproved strategy in live mode is expected silence, not a refusal stream
+      if (this.requireApproval && signal.type.startsWith('OPEN_') && !this.approved.has(signal.agent)) {
+        const last = this.unapprovedLoggedAt.get(signal.agent) ?? 0;
+        if (Date.now() - last > 3_600_000) { this.unapprovedLoggedAt.set(signal.agent, Date.now()); this.log(signal.agent, `live: ${signal.agent} is not approved; its signals are ignored`, 'info'); }
+        continue;
+      }
       if (this.isCoolingDown(signal)) { this.counters.monitored += 1; continue; }
+      const portfolio = { equity: ctx.equity, positions: ctx.positions ?? [], circuit: ctx.performance?.circuit };
+      // A capacity/circuit block cannot clear while the book is unchanged: skip the gate instead of re-refusing
+      if (this.refusalSuppressor.shouldSkip(signal, portfolio)) { this.counters.monitored += 1; continue; }
       this.counters.decisions += 1;
       this.hooks.onSignal(signal);
       const decisionId = `${signal.id}-${Date.now()}`;
@@ -255,6 +292,8 @@ export class Orchestrator extends EventEmitter {
       this.hooks.onGate(signal, decision);
       // Decision lineage: what the market looked like, what was proposed, and what risk said — persisted before anything else happens
       const record = this.buildDecisionRecord(decisionId, signal, ctx, decision, evidence);
+      if (decision.approved) this.refusalSuppressor.noteApproval(signal);
+      else this.refusalSuppressor.noteRefusal(signal, decision.reason, portfolio);
       if (!decision.approved) {
         this.journal.record(record);
         this.log('RISK-MGR-δ', `REJECTED ${signal.symbol}: ${decision.reason}`, 'warn');
@@ -382,6 +421,10 @@ export class Orchestrator extends EventEmitter {
     Object.assign(this.livePrices, market.marks);
     this.logExits();
     const [positions, account] = await Promise.all([this.binance.getPositions(), this.binance.getAccount()]);
+    if (config.unprotectedAlertPct > 0) {
+      const exposed = findUnprotected(positions, account.equity, config.unprotectedAlertPct);
+      this.hooks.onUnprotected(exposed, account.equity);
+    }
     const marketState = this.marketStateBuilder.buildAll(config.symbols.map((symbol) => ({
       symbol, candles: market.candles[symbol] ?? [],
       candlesByTimeframe: market.marketDataV2?.[symbol]?.candles,
@@ -390,8 +433,17 @@ export class Orchestrator extends EventEmitter {
       fundingRate: market.funding[symbol] ?? 0,
     })));
     for (const state of Object.values(marketState)) {
-      const setup = buildSetupMap(state);
-      this.hooks.onSetup(setup);
+      this.flowTracker.record(state.symbol, state.generatedAt, state.mark, state.derivatives ?? null, state.fundingRate);
+      const flow = this.flowTracker.context(state.symbol, state.generatedAt);
+      const raw = buildSetupMap(state);
+      const { map: ledgered, transitions } = this.setupLedger.apply(raw, state.timeframes['15m'].atr14 ?? 0);
+      const annotated = annotateSetupMap(state, ledgered, flow, { feeRate: config.risk.takerFeeRate, slippageRate: config.risk.slippageBufferRate });
+      // Outcomes are recorded for every setup, including ones the thesis controller withholds from execution
+      this.setupOutcomes.observe(annotated, transitions, state.generatedAt);
+      const setup = this.thesisController.apply(annotated);
+      this.logSetupPipeline(state.symbol, raw, annotated, setup, transitions);
+      // Only material lifecycle events (created / advanced / thesis flip) are announced; re-derivations are not
+      if (setup.thesisTransition || transitions.some((t) => t.kind === 'CREATED' || t.kind === 'ADVANCED') || this.verdictChanged(setup)) this.hooks.onSetup(setup);
       void this.consultCouncil(state, setup);
     }
     this.refreshPositionFeatures(marketState);
@@ -435,6 +487,34 @@ export class Orchestrator extends EventEmitter {
         ? { agent: this.adaptive.id, assignedAtr: adaptiveState.assignedAtr, regime: adaptiveState.regime, superTrend: adaptiveState.superTrend }
         : undefined));
     }
+  }
+
+  /** One compact line per symbol when something moved, else a heartbeat every 20 cycles, so an empty pipeline is visible rather than silent. */
+  private logSetupPipeline(
+    symbol: string,
+    raw: import('../decision/SetupTypes.js').SetupMap,
+    annotated: import('../decision/SetupTypes.js').SetupMap,
+    final: import('../decision/SetupTypes.js').SetupMap,
+    transitions: readonly import('../decision/SetupLedger.js').SetupTransition[],
+  ): void {
+    this.setupCycles += 1;
+    if (transitions.length === 0 && this.setupCycles % 20 !== 1) return;
+    const kinds = transitions.map((t) => t.kind).join(',') || 'none';
+    const verdicts = final.scenarios.map((s) => `${s.kind}:${s.state}/${s.quality?.verdict ?? '?'}`).join(' ') || 'none';
+    this.log('SYSTEM', `SETUPS ${symbol}: engine ${raw.scenarios.length} (dead ${raw.invalidatedIds?.length ?? 0}) → ledger ${annotated.scenarios.length} → live ${final.scenarios.length}${final.withheldIds?.length ? ` (withheld ${final.withheldIds.length})` : ''} · transitions ${kinds} · ${verdicts} · outcomes ${this.setupOutcomes.all().length} → ${config.setupOutcomesPath}`, 'info');
+  }
+
+  /** A quality-verdict change (e.g. WATCH -> ENTRY_ELIGIBLE) is material even when the setup state did not move. */
+  private verdictChanged(setup: import('../decision/SetupTypes.js').SetupMap): boolean {
+    let changed = false;
+    for (const s of setup.scenarios) {
+      const id = s.lifecycle?.setupId;
+      const verdict = s.quality?.verdict;
+      if (!id || !verdict) continue;
+      if (this.announcedVerdicts.get(id) !== verdict) { this.announcedVerdicts.set(id, verdict); changed = true; }
+      if (this.announcedVerdicts.size > 2_000) this.announcedVerdicts.delete(this.announcedVerdicts.keys().next().value as string);
+    }
+    return changed;
   }
 
   private telemetryFor(ctx: CycleContext, account: TelemetryInput['account'], positions: Position[]): Telemetry {

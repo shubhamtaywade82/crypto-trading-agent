@@ -38,6 +38,12 @@ export const EnvSchema = z.object({
   MAX_CONCURRENT_POSITIONS: z.coerce.number().int().positive().optional(),
   MAX_SYMBOL_EXPOSURE_PCT: z.coerce.number().positive().optional(),
   MAX_CORRELATED_EXPOSURE_PCT: z.coerce.number().positive().optional(),
+  /** Geometry sanity floor applied to every candidate before risk: below this the target is effectively at the entry. Not an edge claim. */
+  CANDIDATE_MIN_RR: z.coerce.number().nonnegative().default(0.25),
+  /** Optional: drop candidates whose cost-adjusted break-even win rate exceeds this (0 = off). Set it from scripts/replay-decisions.ts evidence, not a guess. */
+  CANDIDATE_MAX_BREAKEVEN_WINRATE: z.coerce.number().min(0).max(1).default(0),
+  /** Alert when a position with no protective stop is at least this % of equity (0 disables). */
+  UNPROTECTED_ALERT_PCT: z.coerce.number().nonnegative().default(25),
   MIN_RR: z.coerce.number().nonnegative().default(0),
   TAKER_FEE_RATE: z.coerce.number().nonnegative().default(0.0004),
   SLIPPAGE_BUFFER_RATE: z.coerce.number().nonnegative().default(0.0002),
@@ -84,6 +90,11 @@ export const EnvSchema = z.object({
   EVENTS_PATH: pathWithDefault('data/events.jsonl'),
   NOTIFICATIONS_PATH: pathWithDefault('data/notifications.json'),
   DECISIONS_PATH: pathWithDefault('data/decisions.jsonl'),
+  /** Optional per-strategy RR floors written by scripts/calibrate-rr.ts; empty keeps the global MIN_RR. */
+  SETUP_OUTCOMES_PATH: pathWithDefault('data/setup-outcomes.jsonl'),
+  /** Strategies allowed to trade live; written by scripts/live-readiness.ts --write-approvals. Missing file = none approved. */
+  APPROVALS_PATH: pathWithDefault('data/strategy-approvals.json'),
+  RR_PROFILE_PATH: z.string().trim().default(''),
   PAPER_EXCHANGE_URL: z.string().optional(),
   PAPER_EXCHANGE_ACCOUNT_ID: z.string().trim().optional(),
   PAPER_EXCHANGE_API_KEY: z.string().trim().optional(),
@@ -220,7 +231,13 @@ export const config = {
   },
   eventsPath: env.EVENTS_PATH,
   notificationsPath: env.NOTIFICATIONS_PATH,
+  candidateMinRr: env.CANDIDATE_MIN_RR,
+  unprotectedAlertPct: env.UNPROTECTED_ALERT_PCT,
+  candidateMaxBreakevenWinRate: env.CANDIDATE_MAX_BREAKEVEN_WINRATE,
   decisionsPath: env.DECISIONS_PATH,
+  rrProfilePath: env.RR_PROFILE_PATH,
+  approvalsPath: env.APPROVALS_PATH,
+  setupOutcomesPath: env.SETUP_OUTCOMES_PATH,
   symbols: parseSymbols(env.SYMBOLS),
   paperExchange: env.PAPER_EXCHANGE_URL && env.PAPER_EXCHANGE_ACCOUNT_ID
     ? {

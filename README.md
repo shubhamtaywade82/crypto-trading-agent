@@ -506,3 +506,78 @@ npm run e2e:paper-exchange  # S1-S24 through RemoteBroker (E2E_BACKEND=fake|real
 ## License
 
 Proprietary — AlgoScalperAPI.
+
+## Per-strategy RR floors (calibrated from your own trades)
+
+`MIN_RR` is a single global floor and defaults to `0` (off). To gate each strategy on its own proven edge:
+
+```bash
+npx tsx scripts/calibrate-rr.ts --write          # reads data/decisions.jsonl, prints a report, writes data/rr-profile.json
+RR_PROFILE_PATH=data/rr-profile.json RISK_ENGINE=on npm run dev:paper
+```
+
+The floor for a strategy is the lowest planned RR whose cohort (that RR and above) has at least `--min-samples` executed trades
+and a positive 90% lower bound on **net** expectancy after round-trip fees and slippage. Strategies reported `NO_PROVEN_EDGE` or
+`INSUFFICIENT_DATA` get no floor and keep the global `MIN_RR`. With a profile loaded, the RR check uses cost-adjusted RR.
+Only executed trades have outcomes, so treat floors as candidates to paper-test, not proof.
+
+## Setup intelligence pipeline
+
+```
+MarketState → buildSetupMap → SetupLedger (identity, pinned expiry, frozen levels, grace)
+            → annotate (location@entry, sweep evidence, flow Δ, quality gate) → ThesisController → alerts / council
+                                   └→ SetupOutcomeLedger (hypothetical outcome of every setup, traded or not)
+```
+
+- A confirmed **trigger** is not an **order**: only `ENTRY_ELIGIBLE` scenarios on the authoritative thesis can become council signals (fail-closed).
+- One directional thesis per symbol; a flip needs an invalidation breach, expiry, or an opposing trigger while the old thesis never triggered.
+- `data/setup-outcomes.jsonl` (`SETUP_OUTCOMES_PATH`) records each setup's features and hypothetical net R. Read it with
+  `npx tsx scripts/setup-stats.ts`. Quality-gate thresholds are starting points; tune them from this data, not by hand or by the LLM.
+- Only the council path is gated by the pipeline; the legacy agents (Momentum, Structure, …) still emit independent signals through `RiskAgent`.
+
+## Evidence status
+
+As of 2026-09-30 no strategy family here has a demonstrated edge after costs. See `docs/research-log.md` for what was tested,
+the numbers, corrections and what is still untested. Positions with no protective stop above `UNPROTECTED_ALERT_PCT` (default 25%)
+of equity raise a CRITICAL system alert, since a strategy cannot enforce a stop on a position it does not own.
+
+## Live gate
+
+`MODE=live` trades only strategies listed in `data/strategy-approvals.json` (`APPROVALS_PATH`); with no file, nothing trades, and the
+process refuses to start live without `RISK_ENGINE=on` and `ALERTS=on`. Approvals come from measured evidence, never by hand:
+
+```bash
+npx tsx scripts/live-readiness.ts                      # checklist: evidence, forward paper, setup safety; exit 1 if not ready
+npx tsx scripts/live-readiness.ts --write-approvals    # writes only strategies that pass BOTH evidence and forward paper
+```
+
+A strategy needs >= 100 trades over >= 150 days with a positive 90% lower bound on net expectancy after costs and a positive mean in
+both time halves, plus >= 50 paper trades over >= 30 days with positive net expectancy. Limits (risk per trade, leverage, daily loss,
+drawdown) are operator policy in `DEFAULT_POLICY` (`src/ops/liveReadiness.ts`).
+
+## Market-data recorder
+
+Binance does not serve historical liquidations, order-book imbalance or aggressor flow, so flow-based ideas (CROWDING and
+anything derivatives-driven) cannot be backtested until the data has been recorded. Run it beside the agent:
+
+```bash
+npx tsx scripts/record-market-data.ts --self-check 30          # verify the streams first; exits 1 if trades/book/mark do not arrive
+npx tsx scripts/record-market-data.ts                          # then leave it running (tmux, systemd, docker)
+```
+
+It writes one 1-minute record per symbol to `data/market/SYMBOL-YYYY-MM-DD.jsonl` (~3 MB per symbol per week): aggressor buy/sell
+volume, liquidations by side, book spread and imbalance, mark/index/funding, open interest and taker ratio. Public streams only,
+no keys. The first and last minute of a session are partial; drop them when analysing. As of 2026-09-30 Binance serves
+`aggTrade`/`markPrice`/`forceOrder` only from `wss://fstream.binance.com/market/` and the book from `/public/`; the legacy `/stream` and
+`/ws` URLs deliver neither, so `--self-check` is the first thing to re-run if a recording ever comes back empty.
+
+### Analysing the recorded data
+
+```bash
+npx tsx scripts/analyze-flow.ts          # pre-registered event study on data/market; needs >= 14 days for a meaningful answer
+```
+
+Three hypotheses (H1 liquidation flush reverses, H2 aggressor flow continues, H4 book imbalance predicts direction) are fixed in
+`src/marketdata/EventStudy.ts` and tested at 5/15/30/60 minutes with the trigger threshold taken from the first half of the recording and
+events counted only in the second half. The significance bar is Bonferroni-corrected across all 12 tests, and a result must also beat
+round-trip costs to matter. Do not edit the existing hypotheses after looking at results; add a new id.

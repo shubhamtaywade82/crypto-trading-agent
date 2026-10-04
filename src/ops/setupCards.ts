@@ -8,6 +8,24 @@ const MAX_CARD_CHARS = 3_500;
 const clean = (value: string): string =>
   escapeHtml(value.replace(/\s+/g, ' ').trim());
 
+const MARK: Readonly<Record<string, string>> = { PASS: '✓', WEAK: '~', FAIL: '✗' };
+const signed = (value: number | null, digits = 2, suffix = ''): string =>
+  value === null ? '—' : `${value >= 0 ? '+' : ''}${value.toFixed(digits)}${suffix}`;
+
+function qualityLines(setup: SetupScenario): string[] {
+  const q = setup.quality;
+  if (!q) return [];
+  const checks = Object.entries(q.checks).map(([name, result]) => `${name} ${MARK[result]}`).join(' · ');
+  const reasons = q.reasons.length > 0 ? ` · ${q.reasons.join(', ')}` : '';
+  const lines = [`🧪 <b>Gate:</b> ${q.verdict}${reasons} · <b>Cost-adj RR:</b> ${Number.isFinite(q.effectiveRr) ? q.effectiveRr.toFixed(2) : 'n/a'}`, `☑️ ${checks}`];
+  if (setup.locationAtEntry) lines.push(`📍 <b>Location @ entry:</b> ${setup.locationAtEntry.location} ${setup.locationAtEntry.pct.toFixed(0)}%`);
+  const e = setup.evidence;
+  if (e) {
+    lines.push(`🔬 <b>Sweep:</b> level ${e.sweepLevel} · extreme ${e.sweepExtreme} · reclaim close ${e.reclaimClose} · depth ${e.depthAtr.toFixed(2)} ATR · displacement ${e.displacementAtr.toFixed(2)} ATR${e.structureShift ? ` (${e.structureShift})` : ''} · vol z ${signed(e.volumeZLatest, 1)} (latest bar)`);
+  }
+  return lines;
+}
+
 const percent = (value: number): string => `${value.toFixed(0)}%`;
 
 
@@ -24,7 +42,14 @@ const setupLabel = (kind: SetupScenario['kind']): string => {
   return 'BREAKOUT / RETEST';
 };
 
-function scenarioLines(symbol: string, setup: SetupScenario): string[] {
+/** Pinned expiry counts down from the originating event; the model window is only the fallback. */
+const expiryText = (setup: SetupScenario, asOf: number): string => {
+  if (!setup.lifecycle) return formatMinutes(setup.expectedMove.thesisExpiryMinutes);
+  const left = Math.max(0, Math.round((setup.lifecycle.expiresAt - asOf) / 60_000));
+  return `${new Date(setup.lifecycle.expiresAt).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour12: false, hour: '2-digit', minute: '2-digit' })} IST (${formatMinutes(left)} left)`;
+};
+
+function scenarioLines(symbol: string, setup: SetupScenario, asOf: number): string[] {
   const entry = setup.entryLow === setup.entryHigh
     ? formatPrice(symbol, setup.entryLow)
     : `${formatPrice(symbol, setup.entryLow)}–${formatPrice(symbol, setup.entryHigh)}`;
@@ -36,7 +61,9 @@ function scenarioLines(symbol: string, setup: SetupScenario): string[] {
     `⚡ <b>Trigger:</b> ${clean(setup.trigger)}`,
     `⛔ <b>Invalidation:</b> ${clean(setup.invalidation)}`,
     `🧠 <b>Flow hypothesis:</b> ${clean(setup.flowHypothesis)}`,
-    `⏱️ <b>Move window:</b> ${formatDuration(setup.expectedMove)} · <b>Thesis expiry:</b> ${formatMinutes(setup.expectedMove.thesisExpiryMinutes)}`,
+    `⏱️ <b>Move window (model):</b> ${formatDuration(setup.expectedMove)} · <b>Thesis expiry:</b> ${expiryText(setup, asOf)}`,
+    ...qualityLines(setup),
+    ...(setup.lifecycle ? [`🔖 <b>Setup:</b> ${clean(setup.lifecycle.setupId)} v${setup.lifecycle.version} · <b>Entry:</b> ${setup.lifecycle.entryState.replace(/_/g, ' ')}${setup.state === 'TRIGGERED' ? ' · trigger confirmed, not an order' : ''}`] : []),
   ];
 }
 
@@ -66,16 +93,19 @@ export function setupMapCard(map: SetupMap): string {
   const context = map.noTradeReasons.length > 0 ? [`⚠️ <b>Context:</b> ${map.noTradeReasons.map(clean).join(' · ')}`] : [];
 
   const lines = [
-    `<b>[ SETUP ]</b> ${clean(map.symbol)} · <b>${map.state}</b>`,
-    `<b>🏦 INSTITUTIONAL-STYLE FLOW MAP</b>`,
-    `💵 <b>Price:</b> ${formatPrice(map.symbol, map.mark)} · <b>Bias:</b> ${map.bias} (${clean(map.regime)})`,
+    `<b>[ SETUP ]</b> ${clean(map.symbol)}`,
+    `<b>📊 DERIVATIVES FLOW CONTEXT</b> · ${map.state}`,
+    `💵 <b>Price:</b> ${formatPrice(map.symbol, map.mark)} · <b>Bias:</b> ${map.bias} · <b>Regime:</b> ${clean(map.regime)}`,
     `📐 <b>Structure:</b> HTF ${map.htfTrend} · LTF ${map.ltfTrend} · <b>Last break:</b> ${clean(breakText)}`,
-    `💧 <b>Liquidity:</b> ${liquidity} │ 📍 <b>Loc:</b> ${location}`,
+    `📍 <b>Location now:</b> ${location} · <b>Vol:</b> ${map.volatility}`,
+    `💧 <b>Liquidity:</b> ${liquidity}`,
+    ...(map.flow && map.flow.quadrant !== 'UNKNOWN' ? [`🌊 <b>Flow Δ${Math.round(map.flow.windowMs / 60_000)}m:</b> ${map.flow.quadrant.replace(/_/g, ' ')} · OI ${signed(map.flow.oiDeltaPct, 2, '%')} · price ${signed(map.flow.priceDeltaPct, 2, '%')} · taker z ${signed(map.flow.takerZ, 1)}`] : []),
+    ...(map.thesisTransition ? [`🔁 <b>Thesis:</b> ${map.thesisTransition.from} superseded by ${map.thesisTransition.to} (${map.thesisTransition.reason.replace(/_/g, ' ').toLowerCase()})`] : []),
     `👥 <b>Crowding:</b> ${clean(crowd)} · <b>OI:</b> ${oi} · <b>Taker:</b> ${taker}`,
     '',
     ...map.scenarios.flatMap((scenario, index) => [
       `<b>SETUP ${index + 1}</b>`,
-      ...scenarioLines(map.symbol, { ...scenario }),
+      ...scenarioLines(map.symbol, { ...scenario }, map.generatedAt),
       '',
     ]),
     ...context,

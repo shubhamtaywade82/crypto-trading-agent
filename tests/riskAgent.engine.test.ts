@@ -234,7 +234,7 @@ test('should not touch the broker when the engine is off', async () => {
 // ---- market safety, adaptive size, portfolio risk ----
 
 const volState = (percentile: number | null) =>
-  ({ BTCUSDT: { regime: { volatilityPercentile: percentile } } }) as unknown as MarketContext['marketState'];
+  ({ BTCUSDT: { timeframes: { '15m': { atr14: null } }, regime: { volatilityPercentile: percentile } } }) as unknown as MarketContext['marketState'];
 const sizeScaling = { volatility: true, score: true };
 const scaledAgent = () => new RiskAgent({} as BinanceService, { riskEngine: 'on', limits, sizeScaling });
 const qtyOf = (reason: string): number => Number(/^qty ([\d.]+) /.exec(reason)?.[1]);
@@ -291,4 +291,24 @@ test('should reject an entry that would push total open risk past the portfolio 
   const decision = agent.gate(signal(), ctx({ positions: [open] }));
   assert.equal(decision.approved, false);
   assert.match(decision.reason, /portfolio_risk/);
+});
+
+// Stop-width check must use the strategies' ATR and tolerate float noise
+const withState = (atr14: number): Partial<MarketContext> =>
+  ({ marketState: { BTCUSDT: { timeframes: { '15m': { atr14 } } } } as unknown as MarketContext['marketState'] });
+
+test('a stop at exactly the minimum ATR multiple passes when measured with the state ATR', () => {
+  const min = config.risk.minLiqBufferAtr;
+  // state ATR 1.0: stop distance = min * 1.0 exactly; candle ATR in ctx is 0.5, which alone would make it look 2x wider
+  const agent = agentWith();
+  const ok = agent.gate(signal({ stopLoss: 100 - min * 1.0000001 }), ctx(withState(1)));
+  assert.equal(ok.approved, true, ok.reason);
+  const tight = agent.gate(signal({ stopLoss: 100 - min * 0.9 }), ctx(withState(1)));
+  assert.equal(tight.approved, false);
+  assert.match(tight.reason, /^liq buffer /);
+});
+
+test('without a state ATR the gate falls back to the candle ATR exactly as before', () => {
+  const agent = agentWith();
+  assert.equal(agent.gate(signal({ stopLoss: 98 }), ctx()).approved, true);
 });

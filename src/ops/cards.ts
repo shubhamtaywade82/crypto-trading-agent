@@ -165,7 +165,8 @@ export type SystemCardInput =
   | { kind: 'WS'; status: WsStatus; at: number }
   | { kind: 'LOOP_CRASH'; error: string; at: number }
   | { kind: 'CIRCUIT'; from: string; to: string; dailyLossPercent: number; drawdownPercent: number; lossStreak: number; at: number }
-  | { kind: 'KILL_SWITCH'; halted: boolean; reason: string; at: number };
+  | { kind: 'KILL_SWITCH'; halted: boolean; reason: string; at: number }
+  | { kind: 'UNPROTECTED'; equity: number; positions: readonly { symbol: string; side: string; owner: string; notionalUsdt: number; equityPct: number }[]; at: number };
 
 const VENUE_TITLES = { degraded: '⚠️ VENUE DEGRADED', down: '🚨 VENUE DOWN', recovered: '✅ VENUE RECOVERED' } as const;
 const WS_TITLES: Readonly<Record<WsStatus, string>> = {
@@ -190,6 +191,13 @@ const systemBody = (input: SystemCardInput): string[] => {
         field('📉', 'Daily loss', percent(input.dailyLossPercent)),
         field('📉', 'Drawdown', percent(input.drawdownPercent)),
         field('🔻', 'Loss streak', String(input.lossStreak)),
+      ];
+    case 'UNPROTECTED':
+      return [
+        '<b>🚨 POSITION WITHOUT A STOP</b>',
+        ...input.positions.slice(0, 6).map((p) => `   • ${text(p.symbol)} ${text(p.side)} · $${p.notionalUsdt.toFixed(0)} (${p.equityPct.toFixed(0)}% of equity) · owner ${text(p.owner)}`),
+        field('📝', 'Risk', 'no protective stop; this agent cannot enforce one on a position it does not own'),
+        field('💼', 'Equity', `$${input.equity.toFixed(0)}`),
       ];
     case 'KILL_SWITCH':
       return [`<b>${input.halted ? '⛔ KILL SWITCH HALTED' : '▶️ KILL SWITCH RESUMED'}</b>`, field('📝', 'Reason', text(input.reason))];

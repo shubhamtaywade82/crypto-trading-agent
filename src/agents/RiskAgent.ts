@@ -12,6 +12,7 @@ import { circuitRiskMultiplier, clusterOf, riskLimitsFromConfig, type RiskLimits
 import { evaluateRisk, openRiskOf, type PortfolioView } from '../risk/riskEngine.js';
 import { combinedSizeMultiplier, type SizeScaling } from '../risk/sizeMultipliers.js';
 import type { PeakEquitySource } from '../risk/equityHwm.js';
+import { costAdjustedRr, minRrFor, type RrProfile } from '../risk/rrProfile.js';
 
 export interface RiskAgentOptions {
   /** Defaults to `config.riskEngine`; injectable so tests never mutate process.env. */
@@ -22,6 +23,11 @@ export interface RiskAgentOptions {
   killSwitch?: Pick<KillSwitch, 'state'>;
   /** Persistent equity high-water mark; when absent the agent tracks a session-local peak (legacy behaviour). */
   hwm?: PeakEquitySource;
+  /** Calibrated per-strategy RR floors; when present the RR check uses cost-adjusted RR against the strategy's floor. */
+  rrProfile?: RrProfile;
+  /** Live gate: when set, OPEN signals from strategies outside `approvedStrategies` are refused. */
+  requireApproval?: boolean;
+  approvedStrategies?: ReadonlySet<string>;
   /** Defaults to the SIZE_VOL_SCALING / SIZE_SCORE_SCALING config. */
   sizeScaling?: SizeScaling;
 }
@@ -29,6 +35,10 @@ export interface RiskAgentOptions {
 export interface GateOptions {
   evidenceScore?: number;
 }
+
+// Strategies place stops in multiples of the state layer's closed-candle ATR; the gate must measure with the same ruler,
+// and float noise must not turn a stop at exactly N ATR into "N-0.0001 < N".
+const STOP_WIDTH_TOLERANCE = 0.01;
 
 const NO_PERFORMANCE = 'risk-engine: performance snapshot unavailable';
 
@@ -91,6 +101,9 @@ export class RiskAgent extends BaseAgent {
 
   /** `evidenceScore` is the 0-100 score the entry was taken on; it only shrinks the size (see sizeMultipliers). */
   gate(signal: Signal, ctx: MarketContext, opts: GateOptions = {}): RiskDecision {
+    if (this.options.requireApproval && signal.type.startsWith('OPEN_') && !this.options.approvedStrategies?.has(signal.agent)) {
+      return this.reject(`strategy ${signal.agent} is not approved for live trading`);
+    }
     const halt = this.options.killSwitch?.state();
     if (!halt?.halted || !signal.type.startsWith('OPEN_')) return this.gateSafety(signal, ctx, opts);
     this.isDrawdownBreached(ctx); // only to keep the session equity peak tracking while halted
@@ -184,10 +197,14 @@ export class RiskAgent extends BaseAgent {
 
   private evaluateWithEngine(signal: Signal, ctx: MarketContext, leverage: number, liqBufferAtr: number, opts: GateOptions): RiskDecision {
     if (!ctx.performance) return this.reject(NO_PERFORMANCE);
-    const limits = this.limits();
+    const baseLimits = this.limits();
+    const profile = this.options.rrProfile;
+    const limits = profile
+      ? { ...baseLimits, minRiskRewardRatio: minRrFor(profile, signal.agent, baseLimits.minRiskRewardRatio) }
+      : baseLimits;
     const sizeMultiplier = combinedSizeMultiplier(
       this.options.sizeScaling ?? { volatility: config.sizing.volatilityScaling, score: config.sizing.scoreScaling },
-      { atrPercentile: ctx.marketState?.[signal.symbol]?.regime.volatilityPercentile ?? undefined, evidenceScore: opts.evidenceScore },
+      { atrPercentile: ctx.marketState?.[signal.symbol]?.regime?.volatilityPercentile ?? undefined, evidenceScore: opts.evidenceScore },
     );
     const sizing = sizePosition({
       equity: ctx.equity,
@@ -203,7 +220,13 @@ export class RiskAgent extends BaseAgent {
       riskMultiplier: sizeMultiplier,
     });
     const portfolio = portfolioView(ctx, ctx.performance.snapshot);
-    const verdict = evaluateRisk({ symbol: signal.symbol, sizing, portfolio, limits, rr: rewardRisk(signal) });
+    const rr = profile && signal.takeProfit !== undefined
+      ? costAdjustedRr(
+        { entry: signal.entry!, stopLoss: signal.stopLoss!, takeProfit: signal.takeProfit, side: isShort(signal) ? 'SHORT' : 'LONG' },
+        { feeRate: limits.feeRateTaker, slippageRate: limits.slippageBufferRate },
+      )
+      : rewardRisk(signal);
+    const verdict = evaluateRisk({ symbol: signal.symbol, sizing, portfolio, limits, rr });
     if (!verdict.approved) return this.reject(`risk-engine: ${verdict.reasons.join('; ')}`);
     return {
       approved: true,
@@ -263,14 +286,16 @@ export class RiskAgent extends BaseAgent {
       return this.reject('insufficient candle history');
     }
 
-    const atr14 = atr(candles, 14);
+    // Same ATR the strategies used (closed 15m candles); ctx.candles still carries the forming candle, which understates it
+    const stateAtr = ctx.marketState?.[signal.symbol]?.timeframes['15m'].atr14;
+    const atr14 = stateAtr !== undefined && stateAtr !== null && stateAtr > 0 ? stateAtr : atr(candles, 14);
     if (atr14 <= 0) {
       return this.reject('invalid ATR calculation');
     }
 
     const atrDist = signal.symbol.includes('/') ? (signal.entry! * 0.015) : atr14;
     const buffer = Math.abs(signal.entry! - signal.stopLoss!) / atrDist;
-    if (buffer < config.risk.minLiqBufferAtr) {
+    if (buffer * (1 + STOP_WIDTH_TOLERANCE) < config.risk.minLiqBufferAtr) {
       return this.reject(`liq buffer ${buffer.toFixed(1)}x ATR < ${config.risk.minLiqBufferAtr}x`);
     }
 

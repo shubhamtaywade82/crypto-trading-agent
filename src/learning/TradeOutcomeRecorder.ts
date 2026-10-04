@@ -1,5 +1,6 @@
 import type { TradeRecord } from '../types.js';
 import { gradeTrade } from './TradeGrader.js';
+import { wholePosition } from '../position/foldPartials.js';
 import type { AgentLedger } from './AgentLedger.js';
 import type { DecisionJournal } from '../decision/DecisionJournal.js';
 
@@ -22,7 +23,10 @@ export class TradeOutcomeRecorder {
     for (const trade of trades) {
       const key = tradeKey(trade);
       if (this.ledger.hasProcessedTrade(key)) continue;
-      const result = this.grade(trade);
+      // A partial take-profit is not a finished trade: it is folded into the final close's grade, so the
+      // ledger and the confidence adjuster see one outcome per position, not one win per partial.
+      if (trade.partial) { this.ledger.markProcessedTrade(key); continue; }
+      const result = this.grade(wholePosition(trade, trades));
       this.ledger.markProcessedTrade(key);
       if (result) graded.push(result);
     }

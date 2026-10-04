@@ -17,6 +17,8 @@ export interface RiskLimits {
   minRiskRewardRatio: number;
   feeRateTaker: number;
   slippageBufferRate: number;
+  /** Cap on the summed loss-at-stop of all open positions plus the new trade, as a % of equity; unset disables the check. */
+  maxPortfolioRiskPercent?: number;
 }
 
 // No per-trade notional env exists; the exposure and leverage caps are what bound a position
@@ -28,7 +30,7 @@ const REDUCED_FRACTION = 0.75;
 type RiskConfig = typeof config.risk;
 
 /** Builds the limits envelope from the env-driven `config.risk`. */
-export function riskLimitsFromConfig(risk: RiskConfig = config.risk): RiskLimits {
+export function riskLimitsFromConfig(risk: RiskConfig = config.risk, portfolioRiskPct: number | undefined = config.portfolioRiskPct): RiskLimits {
   return {
     maxRiskPerTradePercent: risk.riskPerTradePct,
     maxLeverage: risk.maxLeverage,
@@ -44,6 +46,7 @@ export function riskLimitsFromConfig(risk: RiskConfig = config.risk): RiskLimits
     minRiskRewardRatio: risk.minRr,
     feeRateTaker: risk.takerFeeRate,
     slippageBufferRate: risk.slippageBufferRate,
+    ...(portfolioRiskPct === undefined ? {} : { maxPortfolioRiskPercent: portfolioRiskPct }),
   };
 }
 

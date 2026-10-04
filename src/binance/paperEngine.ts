@@ -18,6 +18,8 @@ interface FillParams {
   stopLoss?: number;
   takeProfit?: number;
   reduceOnly?: boolean;
+  /** Journal reason for a reduce-only fill; defaults to CLOSE. PARTIAL TP marks the record partial. */
+  exitReason?: ExitReason;
   entryPrice?: number;
   /** DecisionRecord linkage: carried onto the position and into its trade journal entries. */
   decisionId?: string;
@@ -141,7 +143,7 @@ export class PaperEngine {
     const side: Side = params.side === 'BUY' ? 'LONG' : 'SHORT';
     if (!params.reduceOnly) this.assertSymbolNotHeldByOther(params);
     if (params.reduceOnly) {
-      if (existing) this.reduce(existing, params.qty, price, 'CLOSE');
+      if (existing) this.reduce(existing, params.qty, price, params.exitReason ?? 'CLOSE');
     } else if (!existing) {
       this.positions.push(this.createPosition(params, side, price, params.qty));
     } else if (existing.side === side) {
@@ -172,10 +174,12 @@ export class PaperEngine {
       exit: price, qty: closeQty, pnl, reason, closedAt: Date.now(),
       ...(pos.initialRisk === undefined ? {} : { initialRisk: pos.initialRisk }),
       ...(pos.decisionId === undefined ? {} : { decisionId: pos.decisionId }),
+      ...(reason === 'PARTIAL TP' ? { partial: true } : {}),
     });
     if (this.trades.length > MAX_TRADES) this.trades.shift();
     pos.qty -= closeQty;
     if (pos.qty <= 0) this.positions.splice(this.positions.indexOf(pos), 1);
+    else refreshMetrics(pos); // a partial leaves a smaller position: its unrealized PnL must follow the remaining quantity
     return qty - closeQty;
   }
 
@@ -216,11 +220,11 @@ export class PaperEngine {
   }
 
   /** Replaces SL/TP on the symbol+strategy position; the next markAll triggers on them. */
-  updateStops(symbol: string, strategy: AgentId, stopLoss: number, takeProfit: number): void {
+  updateStops(symbol: string, strategy: AgentId, stopLoss: number, takeProfit: number | null): void {
     const pos = this.positions.find((p) => p.symbol === symbol && p.strategy === strategy);
     if (!pos) return;
     pos.serverSl = String(stopLoss);
-    pos.serverTp = String(takeProfit);
+    pos.serverTp = takeProfit === null ? 'trail' : String(takeProfit);
     this.persist();
   }
 

@@ -33,6 +33,13 @@ import { TradeOutcomeRecorder } from '../learning/TradeOutcomeRecorder.js';
 import { buildSetupMap } from '../decision/SetupEngine.js';
 import { buildCouncilSignal, COUNCIL_SIGNAL_TTL_MS } from '../decision/CouncilSignal.js';
 import { TradingCouncil } from '../llm/TradingCouncil.js';
+import { assessSafety, type SafetyVerdict } from '../market/MarketSafety.js';
+import { ShockDetector } from '../market/ShockDetector.js';
+import { PositionDriver } from '../position/PositionDriver.js';
+import { featuresFromState } from '../position/features.js';
+import { PositionManagerStore } from '../position/PositionManagerStore.js';
+import { pmConfigFromEnv } from '../position/pmConfig.js';
+import { getSymbolRules } from '../binance/symbolRules.js';
 
 type CycleContext = MarketContext & { tickers: Record<string, MarketPriceInfo>; nextFundingTime: number };
 
@@ -86,6 +93,18 @@ export class Orchestrator extends EventEmitter {
   private council = new TradingCouncil(this.advisor, this.ledger);
   /** Council TRADE verdicts queued for the next cycle's risk gate — the council runs detached from the tick loop, so its result always lands after collectSignals() for the cycle that requested it. */
   private pendingCouncilSignals: Signal[] = [];
+  private shock = new ShockDetector(config.safety.shock);
+  private safetyLevels = new Map<string, string>();
+  /** Tick-driven position manager (partials, breakeven, chandelier/structure trail). Paper and remote paper only; live keeps server-side stops. */
+  private positionDriver: PositionDriver | null = config.positionManager.enabled && config.mode === 'paper'
+    ? new PositionDriver({
+      venue: this.binance,
+      store: new PositionManagerStore(config.mode),
+      cfg: pmConfigFromEnv(),
+      lotOf: (symbol) => { const r = getSymbolRules(symbol); return { step: r.stepSize, minQty: r.minQty, minNotional: r.minNotional }; },
+      log: (agent, message, level) => this.log(agent, message, level),
+    })
+    : null;
 
   start() {
     this.log('SYSTEM', `Orchestrator started in ${config.mode.toUpperCase()} mode`, 'info');
@@ -125,6 +144,7 @@ export class Orchestrator extends EventEmitter {
     this.logExits();
     if (config.mode !== 'paper' && !this.binance.hasVenueData()) return;
     const positions = await this.binance.getPositions(false);
+    await this.positionDriver?.manage(positions);
     const account = await this.binance.getAccount();
     this.emit('state', { ...accountFields(account, positions), spotPrices: { ...this.liveTickers }, wsStatus: this.binance.getWsStatus() });
   }
@@ -230,10 +250,11 @@ export class Orchestrator extends EventEmitter {
       this.counters.decisions += 1;
       this.hooks.onSignal(signal);
       const decisionId = `${signal.id}-${Date.now()}`;
-      const decision = this.risk.gate(signal, ctx);
+      const evidence = decisionEvidence(signal, ctx.marketState?.[signal.symbol], this.fusionIntents.get(`${signal.symbol}:${signal.agent}`));
+      const decision = this.risk.gate(signal, ctx, { evidenceScore: evidence.score });
       this.hooks.onGate(signal, decision);
       // Decision lineage: what the market looked like, what was proposed, and what risk said — persisted before anything else happens
-      const record = this.buildDecisionRecord(decisionId, signal, ctx, decision);
+      const record = this.buildDecisionRecord(decisionId, signal, ctx, decision, evidence);
       if (!decision.approved) {
         this.journal.record(record);
         this.log('RISK-MGR-δ', `REJECTED ${signal.symbol}: ${decision.reason}`, 'warn');
@@ -273,13 +294,13 @@ export class Orchestrator extends EventEmitter {
   }
 
   /** Delegates to the shared canonical builder so paper, live and replay produce identical records. */
-  private buildDecisionRecord(decisionId: string, signal: Signal, ctx: MarketContext, decision: import('../types.js').RiskDecision): import('../decision/DecisionJournal.js').DecisionRecord {
+  private buildDecisionRecord(decisionId: string, signal: Signal, ctx: MarketContext, decision: import('../types.js').RiskDecision, evidence: import('../decision/DecisionJournal.js').DecisionRecord['evidence']): import('../decision/DecisionJournal.js').DecisionRecord {
     return buildDecisionRecord({
       decisionId,
       signal,
       state: ctx.marketState?.[signal.symbol],
       decision,
-      evidence: decisionEvidence(signal, ctx.marketState?.[signal.symbol], this.fusionIntents.get(`${signal.symbol}:${signal.agent}`)),
+      evidence,
       now: Date.now(),
     });
   }
@@ -298,6 +319,10 @@ export class Orchestrator extends EventEmitter {
     return verdict === 'VETO';
   }
   private trailStops(positions: Position[], ctx: CycleContext): void {
+    if (this.positionDriver) {
+      this.positionDriver.manage(positions).catch((err: unknown) => this.logFailure('Position manager failed', err));
+      return;
+    }
     for (const pos of positions) {
       const adaptiveState = this.adaptive.stateFor(pos.symbol);
       const atr = adaptiveState?.assignedAtr ?? ctx.marketState?.[pos.symbol]?.timeframes?.['15m']?.atr14;
@@ -369,7 +394,47 @@ export class Orchestrator extends EventEmitter {
       this.hooks.onSetup(setup);
       void this.consultCouncil(state, setup);
     }
-    return { ...market, spot: this.livePrices, equity: account.equity, positions, marketState, performance: this.ops.build(this.binance.getTrades(), account) };
+    this.refreshPositionFeatures(marketState);
+    const safety = config.safety.enabled ? this.assessSafety(market) : undefined;
+    return { ...market, spot: this.livePrices, equity: account.equity, positions, marketState, ...(safety ? { safety } : {}), performance: this.ops.build(this.binance.getTrades(), account) };
+  }
+
+  /** Priority-0 market safety per symbol; transitions are logged once. Entries only: open positions keep their stops and manager. */
+  private assessSafety(market: Awaited<ReturnType<BinanceService['getMarketOverview']>>): Record<string, SafetyVerdict> {
+    const now = Date.now();
+    const out: Record<string, SafetyVerdict> = {};
+    for (const symbol of config.symbols) {
+      const v2 = market.marketDataV2?.[symbol];
+      // Snapshot candles are closed-only (parseCandles drops the forming bar)
+      const closed1m = v2?.candles['1m'] ?? [];
+      const shock = this.shock.evaluate(symbol, closed1m, v2?.derivatives?.spreadBps ?? undefined);
+      const health = this.binance.getFeedHealth(symbol);
+      const candles15m = market.candles[symbol] ?? [];
+      const verdict = assessSafety({
+        now, mark: market.marks[symbol], lastTickAt: health.lastTickAt, markAt: health.markAt, exchangeStatus: health.exchangeStatus,
+        latestClosed15mOpen: candles15m[candles15m.length - 1]?.openTime,
+        derivativesAsOf: config.marketDataV2.enabled && v2?.derivatives ? v2.derivatives.asOf : undefined,
+        shock, tickStaleMs: config.safety.tickStaleMs, markStaleMs: config.safety.markStaleMs,
+      });
+      out[symbol] = verdict;
+      const previous = this.safetyLevels.get(symbol) ?? 'NORMAL';
+      if (previous !== verdict.level) {
+        this.safetyLevels.set(symbol, verdict.level);
+        this.log('SYSTEM', `SAFETY ${symbol} ${previous}→${verdict.level}${verdict.reasons.length ? `: ${verdict.reasons.join('; ')}` : ''}`, verdict.level === 'NORMAL' ? 'info' : 'warn');
+      }
+    }
+    return out;
+  }
+
+  /** Caches the slow-loop inputs the tick-driven manager needs, so the 250 ms path does no indicator work. */
+  private refreshPositionFeatures(marketState: Record<string, import('../market/types.js').MarketState>): void {
+    if (!this.positionDriver) return;
+    for (const symbol of config.symbols) {
+      const adaptiveState = this.adaptive.stateFor(symbol);
+      this.positionDriver.setFeatures(symbol, featuresFromState(marketState[symbol], adaptiveState
+        ? { agent: this.adaptive.id, assignedAtr: adaptiveState.assignedAtr, regime: adaptiveState.regime, superTrend: adaptiveState.superTrend }
+        : undefined));
+    }
   }
 
   private telemetryFor(ctx: CycleContext, account: TelemetryInput['account'], positions: Position[]): Telemetry {

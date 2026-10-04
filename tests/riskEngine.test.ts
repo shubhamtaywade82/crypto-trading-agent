@@ -233,3 +233,46 @@ test('should report every failed check in the reasons, in check order', () => {
   assert.match(decision.reasons[0], /^leverage/);
   assert.match(decision.reasons[1], /^position_count/);
 });
+
+// ---- portfolio open-risk cap ----
+
+import { openRiskOf } from '../src/risk/riskEngine.js';
+
+const capped: RiskLimits = { ...limits, maxPortfolioRiskPercent: 3 };
+
+test('should sum the loss at stop of open positions and ignore stops at or beyond breakeven or without a numeric stop', () => {
+  const open = [
+    { side: 'LONG', entry: 100, qty: 2, serverSl: '95' }, // 10
+    { side: 'SHORT', entry: 50, qty: 4, serverSl: '52' }, // 8
+    { side: 'LONG', entry: 100, qty: 5, serverSl: '101' }, // stop above entry: locked profit, 0 risk
+    { side: 'LONG', entry: 100, qty: 5, serverSl: '—' }, // hedge / unmanaged: excluded
+  ];
+  assert.equal(openRiskOf(open), 18);
+});
+
+test('should reject a trade that pushes open risk past the portfolio cap', () => {
+  // equity 10_000, cap 3% = 300: open 260 + new 50 = 310
+  const decision = evaluateRisk(inputWith({ limits: capped, portfolio: portfolio({ openRisk: 260 }) }));
+  assert.equal(decision.approved, false);
+  assert.deepEqual(failedNames(decision), ['portfolio_risk']);
+  assert.match(checkNamed(decision, 'portfolio_risk').detail, /3\.10%/);
+});
+
+test('should approve a trade that lands exactly on the portfolio cap', () => {
+  const decision = evaluateRisk(inputWith({ limits: capped, portfolio: portfolio({ openRisk: 250 }) }));
+  assert.equal(decision.approved, true);
+  assert.equal(checkNamed(decision, 'portfolio_risk').passed, true);
+});
+
+test('should free risk capacity once positions are stopped at breakeven', () => {
+  const stopped = openRiskOf([{ side: 'LONG', entry: 100, qty: 3, serverSl: '100.1' }]);
+  assert.equal(stopped, 0);
+  assert.equal(evaluateRisk(inputWith({ limits: capped, portfolio: portfolio({ openRisk: stopped }) })).approved, true);
+});
+
+test('should not run the portfolio-risk check without a cap, without open-risk data, or for a hedge with no stop risk', () => {
+  assert.ok(!evaluateRisk(inputWith({ portfolio: portfolio({ openRisk: 9_999 }) })).checks.some((c) => c.name === 'portfolio_risk'));
+  assert.ok(!evaluateRisk(inputWith({ limits: capped })).checks.some((c) => c.name === 'portfolio_risk'));
+  const hedge = evaluateRisk(inputWith({ limits: capped, sizing: sizing({ riskAmount: 0 }), portfolio: portfolio({ openRisk: 9_999 }) }));
+  assert.ok(!hedge.checks.some((c) => c.name === 'portfolio_risk'));
+});

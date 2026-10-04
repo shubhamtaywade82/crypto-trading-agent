@@ -1,4 +1,5 @@
 import type { TradeRecord } from '../types.js';
+import { foldPartials } from '../position/foldPartials.js';
 
 export interface PerformanceSnapshot {
   dailyLossPercent: number;
@@ -40,6 +41,7 @@ function profitFactorOf(pnls: number[]): number {
  */
 export class PerformanceEngine {
   private trades: TradeRecord[] = [];
+  private positions: TradeRecord[] = [];
   // Unrealized peaks matter for drawdown but are not in the journal, so hydrate must not erase them
   private observedPeakEquity = 0;
 
@@ -48,6 +50,8 @@ export class PerformanceEngine {
   /** Replaces the journal-derived state; calling it twice with the same trades changes nothing. */
   hydrate(trades: TradeRecord[]): void {
     this.trades = [...trades].sort((a, b) => a.closedAt - b.closedAt);
+    // Streaks and expectancy count positions: a partial take-profit followed by a stopped-out remainder is one trade, not a win and a loss
+    this.positions = foldPartials(this.trades);
   }
 
   /** Records a live equity reading so unrealized peaks count towards the drawdown high-water mark. */
@@ -69,11 +73,12 @@ export class PerformanceEngine {
   snapshot(equity: number): PerformanceSnapshot {
     const today = utcDay(this.now());
     const todayPnls = this.trades.filter((t) => utcDay(t.closedAt) === today).map((t) => t.pnl);
-    const allPnls = this.trades.map((t) => t.pnl);
+    const allPnls = this.positions.map((t) => t.pnl);
+    const todayPositionPnls = this.positions.filter((t) => utcDay(t.closedAt) === today).map((t) => t.pnl);
     return {
       dailyLossPercent: this.dailyLossPercent(today, todayPnls),
       drawdownPercent: this.drawdownPercent(equity),
-      lossStreak: trailingRun(todayPnls, -1),
+      lossStreak: trailingRun(todayPositionPnls, -1),
       winStreak: trailingRun(allPnls, 1),
       realizedToday: sum(todayPnls),
       profitFactor: profitFactorOf(allPnls),

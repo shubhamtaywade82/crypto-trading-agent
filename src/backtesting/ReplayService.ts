@@ -18,14 +18,17 @@ import { buildDecisionRecord, decisionEvidence, runCandidateFlow } from '../deci
 import { tunedStructureLiquidityOptions } from '../decision/StructureLiquidityStrategy.js';
 import { DecisionJournal } from '../decision/DecisionJournal.js';
 import { evaluateExecutionQuality } from '../execution/ExecutionQuality.js';
-import { roundQty } from '../binance/symbolRules.js';
+import { getSymbolRules, roundQty } from '../binance/symbolRules.js';
+import { featuresFromState } from '../position/features.js';
+import type { SymbolFeatures } from '../position/PositionDriver.js';
+import { pmConfigFromEnv } from '../position/pmConfig.js';
 import { AgentLedger, type AgentStats } from '../learning/AgentLedger.js';
 import { confidenceMultiplier } from '../learning/ConfidenceAdjuster.js';
 import { TradeOutcomeRecorder } from '../learning/TradeOutcomeRecorder.js';
 import { computeMetrics, type BacktestMetrics } from './BacktestMetrics.js';
 import { ExecutionSimulator } from './ExecutionSimulator.js';
 import { MarketDataFeed } from './MarketDataFeed.js';
-import { PortfolioSimulator } from './PortfolioSimulator.js';
+import { foldSimTrades, PortfolioSimulator, type BarManager } from './PortfolioSimulator.js';
 import {
   DEFAULT_REPLAY_CONFIG, FIFTEEN_MINUTES_MS,
   type EquityPoint, type ReplayConfig, type ReplayData, type SimTrade,
@@ -54,7 +57,10 @@ export interface ReplayOptions {
 
 export interface ReplayResult {
   metrics: BacktestMetrics;
+  /** One record per position: partial take-profit legs are folded into their final close. */
   trades: SimTrade[];
+  /** The partial take-profit legs on their own (empty when the position manager is off). */
+  partials: SimTrade[];
   decisions: ReturnType<DecisionJournal['all']>;
   equityCurve: EquityPoint[];
   /** Per-agent learning stats the run accumulated (trades graded, wins, total R); empty when learning is off. */
@@ -115,6 +121,16 @@ export class ReplayService {
       hwm,
     });
     const journal = new DecisionJournal(cfg.decisionsPath);
+    // Slow-loop inputs of the position manager: refreshed from each decision-phase context and read on the NEXT bar's
+    // management, so the manager only ever sees features built from candles that had closed before that bar opened
+    const features = new Map<string, SymbolFeatures>();
+    const manager: BarManager | undefined = (cfg.positionManager ?? config.positionManager.enabled)
+      ? {
+        cfg: cfg.pm ?? pmConfigFromEnv(),
+        features: (symbol) => features.get(symbol),
+        lot: (symbol) => { const r = getSymbolRules(symbol); return { step: r.stepSize, minQty: r.minQty, minNotional: r.minNotional }; },
+      }
+      : undefined;
     const agents = this.options.agents ?? defaultReplayAgents();
 
     // The learning loop the orchestrator runs each cycle, scoped to this replay:
@@ -162,7 +178,7 @@ export class ReplayService {
       // 2) Exit phase: liquidation, stops and targets resolve on this bar
       for (const symbol of feed.universe) {
         const bar = feed.barFor(symbol, step);
-        if (bar) portfolio.onBar(symbol, bar);
+        if (bar) portfolio.onBar(symbol, bar, manager);
       }
 
       // 3) Funding phase: boundaries crossed by this bar settle on held positions
@@ -184,7 +200,8 @@ export class ReplayService {
       if (cfg.learning) {
         const closed = portfolio.getTrades();
         if (closed.length > gradedTradeCount) {
-          recorder.process(closed.slice(gradedTradeCount));
+          // The whole journal, not just the new tail: a final close needs its earlier partial legs to grade the position as one
+          recorder.process(closed);
           gradedTradeCount = closed.length;
         }
       }
@@ -192,6 +209,7 @@ export class ReplayService {
       // 4) Decision phase: the same pipeline the orchestrator runs, on data closed by this step
       if (step >= cfg.warmupBars && step + 1 < feed.stepCount) {
         const ctx = this.buildContext(feed, closeTime, portfolio, builder, riskOps, cfg);
+        if (manager) for (const symbol of feed.universe) features.set(symbol, featuresFromState(ctx.marketState?.[symbol]));
         const raw: Signal[] = [];
         for (const agent of agents) raw.push(...(await agent.run(ctx)));
         // Learning feedback, same shape as the orchestrator's collectSignals:
@@ -205,7 +223,7 @@ export class ReplayService {
           const decisionId = `${signal.id}-${closeTime}`;
           const state = ctx.marketState?.[signal.symbol];
           const evidence = decisionEvidence(signal, state, flow.intents.get(`${signal.symbol}:${signal.agent}`));
-          const decision = risk.gate(signal, ctx);
+          const decision = risk.gate(signal, ctx, { evidenceScore: evidence.score });
           const record = buildDecisionRecord({ decisionId, signal, state, decision, evidence, now: closeTime });
           if (!decision.approved) {
             journal.record(record);
@@ -277,7 +295,8 @@ export class ReplayService {
     }
     portfolio.forceCloseAll(lastMarks, lastClose, 'CLOSE');
 
-    const trades = portfolio.getTrades();
+    const legs = portfolio.getTrades();
+    const trades = foldSimTrades(legs);
     for (const trade of trades) {
       if (!trade.decisionId) continue;
       const rMultiple = trade.initialRisk && trade.initialRisk > 0
@@ -295,9 +314,9 @@ export class ReplayService {
 
     // Trades closed by the forced end-of-run close still belong in the ledger's
     // per-agent stats: in live trading those grades land on the next loop.
-    if (cfg.learning && trades.length > gradedTradeCount) {
-      recorder.process(trades.slice(gradedTradeCount));
-      gradedTradeCount = trades.length;
+    if (cfg.learning && legs.length > gradedTradeCount) {
+      recorder.process(legs);
+      gradedTradeCount = legs.length;
     }
     const agentStats: Partial<Record<AgentId | string, AgentStats>> = {};
     if (cfg.learning) {
@@ -320,7 +339,7 @@ export class ReplayService {
       },
     });
 
-    return { metrics, trades, decisions: journal.all(), equityCurve: curve, agentStats };
+    return { metrics, trades, partials: legs.filter((t) => t.partial), decisions: journal.all(), equityCurve: curve, agentStats };
   }
 
   private openRequest(order: PendingOrder, fillPrice: number, fee: number, slippage: number, openedAt: number) {

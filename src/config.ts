@@ -42,6 +42,26 @@ export const EnvSchema = z.object({
   TAKER_FEE_RATE: z.coerce.number().nonnegative().default(0.0004),
   SLIPPAGE_BUFFER_RATE: z.coerce.number().nonnegative().default(0.0002),
   RISK_ENGINE: z.enum(['off', 'on']).default('on'),
+  MAX_PORTFOLIO_RISK_PCT: z.coerce.number().positive().default(3),
+  SIZE_VOL_SCALING: z.enum(['off', 'on']).default('on'),
+  SIZE_SCORE_SCALING: z.enum(['off', 'on']).default('on'),
+
+  POSITION_MANAGER: z.enum(['off', 'on']).default('on'),
+  PM_TP1_R: z.coerce.number().positive().default(1),
+  PM_TP1_FRACTION: z.coerce.number().gt(0).lt(1).default(0.35),
+  PM_TP2_R: z.coerce.number().positive().default(2),
+  PM_TP2_FRACTION: z.coerce.number().gt(0).lt(1).default(0.3),
+  PM_TRAIL_ATR_LOW: z.coerce.number().positive().default(2),
+  PM_TRAIL_ATR_MEDIUM: z.coerce.number().positive().default(2.5),
+  PM_TRAIL_ATR_HIGH: z.coerce.number().positive().default(3.2),
+
+  SAFETY: z.enum(['off', 'on']).default('on'),
+  SAFETY_TICK_STALE_MS: z.coerce.number().int().positive().default(15_000),
+  SAFETY_MARK_STALE_MS: z.coerce.number().int().positive().default(30_000),
+  SHOCK_RETURN_Z: z.coerce.number().positive().default(4),
+  SHOCK_VOLUME_Z: z.coerce.number().positive().default(4),
+  SHOCK_SPREAD_MULT: z.coerce.number().positive().default(2),
+  SHOCK_RECOVERY_BARS: z.coerce.number().int().positive().default(5),
 
   MARKET_DATA_1M_TTL_MS: timeframeTtl(15_000),
   MARKET_DATA_5M_TTL_MS: timeframeTtl(60_000),
@@ -75,6 +95,12 @@ export const EnvSchema = z.object({
   COINDCX_MAX_ORDER_QUANTITY: z.coerce.number().positive().optional(),
   COINDCX_INITIAL_BALANCE: z.coerce.number().positive().default(1_150),
 }).superRefine((env, ctx) => {
+  if (env.PM_TP2_R <= env.PM_TP1_R) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['PM_TP2_R'], message: 'PM_TP2_R must be greater than PM_TP1_R' });
+  }
+  if (env.PM_TP1_FRACTION + env.PM_TP2_FRACTION >= 1) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['PM_TP2_FRACTION'], message: 'PM_TP1_FRACTION + PM_TP2_FRACTION must be below 1 so a runner remains' });
+  }
   if (env.MODE !== 'paper' || !env.PAPER_EXCHANGE_URL || env.PAPER_EXCHANGE_ACCOUNT_ID) return;
   ctx.addIssue({
     code: z.ZodIssueCode.custom,
@@ -134,6 +160,31 @@ export const config = {
   },
   risk: riskFromEnv(env),
   riskEngine: env.RISK_ENGINE,
+  /** Cap on summed loss-at-stop of open positions plus the new trade, % of equity. */
+  portfolioRiskPct: env.MAX_PORTFOLIO_RISK_PCT,
+  sizing: {
+    volatilityScaling: env.SIZE_VOL_SCALING === 'on',
+    scoreScaling: env.SIZE_SCORE_SCALING === 'on',
+  },
+  positionManager: {
+    enabled: env.POSITION_MANAGER === 'on',
+    tp1R: env.PM_TP1_R,
+    tp1Fraction: env.PM_TP1_FRACTION,
+    tp2R: env.PM_TP2_R,
+    tp2Fraction: env.PM_TP2_FRACTION,
+    trailAtr: { LOW: env.PM_TRAIL_ATR_LOW, MEDIUM: env.PM_TRAIL_ATR_MEDIUM, HIGH: env.PM_TRAIL_ATR_HIGH },
+  },
+  safety: {
+    enabled: env.SAFETY === 'on',
+    tickStaleMs: env.SAFETY_TICK_STALE_MS,
+    markStaleMs: env.SAFETY_MARK_STALE_MS,
+    shock: {
+      returnZ: env.SHOCK_RETURN_Z,
+      volumeZ: env.SHOCK_VOLUME_Z,
+      spreadMult: env.SHOCK_SPREAD_MULT,
+      recoveryBars: env.SHOCK_RECOVERY_BARS,
+    },
+  },
   llmCouncil: {
     enabled: env.LLM_COUNCIL === 'on',
     /** When on, a chair TRADE verdict on a TRIGGERED setup becomes a real Signal through the normal risk gate. Off by default: the council stays advisory-only. */

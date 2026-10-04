@@ -150,6 +150,12 @@ export class RemoteBroker {
     await this.exits.close(pos.symbol, reason, this.marks.get(pos.symbol) ?? pos.mark);
   }
 
+  /** Reduce-only partial exit of `qty`; refused while an open for the symbol is in flight, like `close`. */
+  async reduce(pos: Position, qty: number): Promise<void> {
+    if (this.pendingOpens.has(pos.symbol)) throw new OrderInFlightError(`${pos.symbol} has an open in flight: partial not sent`);
+    await this.exits.reduce(pos.symbol, qty, this.marks.get(pos.symbol) ?? pos.mark);
+  }
+
   /** Stores marks, pushes them to the exchange, starts exits for breached managed positions; returns exits completed since the last call. */
   markAll(prices: Record<string, number>): string[] {
     this.setMarks(prices);
@@ -160,7 +166,7 @@ export class RemoteBroker {
   }
 
   /** Persists new levels in the sidecar only; ignored unless `strategy` manages the symbol. */
-  updateStops(symbol: string, strategy: AgentId, stopLoss: number, takeProfit: number): void {
+  updateStops(symbol: string, strategy: AgentId, stopLoss: number, takeProfit: number | null): void {
     const meta = this.deps.store.getMeta(symbol);
     if (!meta || meta.external || meta.owner !== strategy) return;
     this.deps.store.setMeta(symbol, { ...meta, stopLoss, takeProfit });

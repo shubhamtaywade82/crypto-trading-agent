@@ -113,6 +113,52 @@ one authority.
 
 ---
 
+## Position manager & market safety
+
+**Market safety (entries only).** Every cycle each symbol gets a verdict (`src/market/MarketSafety.ts`):
+`NORMAL`, `NO_ENTRY` or `HALT`. `RiskAgent.gate` rejects `OPEN_*` signals unless the symbol is `NORMAL` (reason
+`safety <level>: …`, journaled like any rejection). Rules: mark missing/invalid or exchange status not `TRADING` → HALT;
+websocket silent > `SAFETY_TICK_STALE_MS` → NO_ENTRY (HALT if the REST mark is stale too); stale 15m candle or derivatives
+→ NO_ENTRY; **shock** → NO_ENTRY. Shock (`src/market/ShockDetector.ts`) is a 1m return z-score ≥ `SHOCK_RETURN_Z` confirmed
+by a volume z-score or a spread blow-out, left only after `SHOCK_RECOVERY_BARS` calm bars. The gate never closes anything:
+a protected position keeps its stop and its manager through a bad feed. Replay has no tick feed, so the gate does not apply there.
+
+**Position manager (paper and remote paper_exchange).** `src/position/PositionManager.ts` is a pure state machine
+(`INITIAL → PROTECTED → TRAILING`) driven by every price tick (250 ms) through `PositionDriver`, with ATR/structure inputs
+cached per 8 s cycle. The entry strategy still owns the initial stop; the manager only ratchets it toward price.
+
+| Step | Rule |
+| --- | --- |
+| TP1 | at +`PM_TP1_R` close `PM_TP1_FRACTION` of the entry quantity, arm breakeven at `entry ± entry × 2(fee+slippage)` |
+| TP2 (RUNNER) | at +`PM_TP2_R` close `PM_TP2_FRACTION`, drop the fixed target (`serverTp = 'trail'`) |
+| Trail | `max(extreme − k·ATR, protected 15m swing ∓ 0.15 ATR, SuperTrend)`, k = 2 / 2.5 / 3.2 by volatility class, never closer than 0.25 ATR to the mark, ratchet only |
+| TARGET mode | the signal target stays the final exit (mean reversion always; any signal with TP ≤ 2R) |
+
+A partial below the exchange lot/notional minimum, or one that would leave a remainder below it, is skipped (logged);
+a failed or refused partial is retried on the next tick; through a `paper_exchange` outage a partial stays queued under one
+client order id. State is persisted in `data/position-manager.json`; a position that changed outside the manager
+(scale-in, restart) is rebuilt from the venue (a stop already at/over entry rebuilds as `PROTECTED` with TP1 taken).
+**Live mode is unchanged** (exchange-side STOP_MARKET/TAKE_PROFIT_MARKET); the only live change is that `updateStops` now
+re-places the take-profit it used to drop.
+
+Partial legs are journaled as `PARTIAL TP` with `partial: true`. Everything that counts *positions* folds them into their
+final close (`src/position/foldPartials.ts`): the learning ledger and confidence adjuster grade one blended R per position,
+loss/win streaks and expectancy count positions, replay metrics report one trade per position (`result.partials` holds
+the legs). Realized PnL sums, daily loss and drawdown still use every leg on its own day.
+
+**Adaptive size.** The risk budget is `equity × RISK_PER_TRADE_PCT × circuit × volatility × score`; both new factors only
+shrink it (ATR percentile ≥ 60/80/95 → ×0.75/0.5/0.25; evidence score < 75/65 → ×0.75/0.5). The stop distance still sets
+the quantity, so leverage never sets the risk. A `portfolio_risk` check additionally caps the summed loss-at-stop of all open
+positions plus the new trade at `MAX_PORTFOLIO_RISK_PCT` of equity (a stop at/over breakeven counts 0).
+
+**Backtesting the manager.** `npx tsx scripts/backtest.ts --symbol BTCUSDT --days 30 --position-manager off|on` A/B-tests it.
+The bar is walked adverse-extreme first (open → low → high → close for a long): stop/liquidation, then partials and stop
+moves at the favourable extreme, then the remaining target, and a stop moved on a bar is tested against that bar's close — so a
+stop move never helps a trade on the bar that produced it. Partials fill at their level (at the open on a gap); manager
+inputs are the features of the last *closed* bar.
+
+---
+
 ## Configuration
 
 All configuration is via environment variables (validated with `zod` in
@@ -131,6 +177,9 @@ was fixed.
 | `MAX_LEVERAGE` | `10` | Ceiling for the dynamic-leverage calculation |
 | `MAX_EXPOSURE_PCT` | `80` | Cap on notional as a % of equity |
 | `RISK_PER_TRADE_PCT` | `1` | Risk budget per trade as a % of equity |
+| `POSITION_MANAGER` | `on` | Partials + breakeven + adaptive trail (paper / remote paper only), see [Position manager](#position-manager--market-safety) |
+| `MAX_PORTFOLIO_RISK_PCT` | `3` | Cap on summed loss-at-stop of open positions + the new trade, % of equity |
+| `SAFETY` | `on` | Market-safety / shock gate on new entries |
 | `MAX_DRAWDOWN_PCT` | `5` | **Kill-switch** (issue #10): once drawdown from session peak exceeds this, all OPEN signals are rejected until recovery |
 | `MIN_LIQ_BUFFER_ATR` | `2` | Minimum SL distance as a multiple of ATR(14) |
 | `SYMBOLS` | `BTCUSDT,ETHUSDT,SOLUSDT,AVAXUSDT` | Universe |

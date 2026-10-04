@@ -41,6 +41,9 @@ export class BinanceService {
   private readonly marketDataV2: MarketDataService;
   private paperEngine?: PaperEngine;
   private liveStartEquity: number | null = null;
+  private readonly lastTickAt = new Map<string, number>();
+  private readonly symbolStatus = new Map<string, string>();
+  private markAt = 0;
 
   constructor(private readonly broker: RemoteBroker | null = remoteBrokerFromConfig()) {
     this.futures = new USDMClient({ api_key: config.binance.apiKey, api_secret: config.binance.apiSecret });
@@ -61,10 +64,18 @@ export class BinanceService {
     this.ws.on('close', () => setStatus('down'));
     this.ws.on('error', () => setStatus('down'));
     this.ws.on('message', (d: any) => {
-      if (d?.e === 'trade' && d.s && Number(d.p) > 0) onTick(d.s, Number(d.p));
+      if (d?.e === 'trade' && d.s && Number(d.p) > 0) {
+        this.lastTickAt.set(d.s, Date.now());
+        onTick(d.s, Number(d.p));
+      }
     });
     for (const sym of symbols) this.ws.subscribeTrades(sym, 'usdm');
     return () => { this.ws?.closeAll(); this.ws = null; this.wsStatus = 'down'; };
+  }
+
+  /** Freshness of the feeds the safety gate reads; undefined timestamps mean never seen. */
+  getFeedHealth(symbol: string): { lastTickAt: number | undefined; markAt: number | undefined; exchangeStatus: string | undefined } {
+    return { lastTickAt: this.lastTickAt.get(symbol), markAt: this.markAt || undefined, exchangeStatus: this.symbolStatus.get(symbol) };
   }
 
   getWsStatus(): WsStatus {
@@ -79,6 +90,7 @@ export class BinanceService {
     const info = await this.futures.getExchangeInfo();
     for (const entry of info.symbols.filter((e) => symbols.includes(e.symbol))) {
       setSymbolRules(entry.symbol, rulesFromExchangeInfo(entry));
+      this.symbolStatus.set(entry.symbol, String((entry as { status?: string }).status ?? 'TRADING'));
     }
   }
 
@@ -116,6 +128,7 @@ export class BinanceService {
       this.futures.getMarkPrice(),
       v2Promise,
     ]);
+    this.markAt = Date.now();
 
     const candles: Record<string, Candle[]> = {};
     for (const symbol of symbols) {
@@ -237,14 +250,27 @@ export class BinanceService {
     await this.cancelAll(pos.symbol);
   }
 
-  updateStops(symbol: string, strategy: AgentId, stopLoss: number, takeProfit: number, side?: Side): void {
+  /** Reduce-only partial take-profit. Paper and remote only: live keeps its server-side stops until the manager supports it. */
+  async reducePosition(pos: Position, qty: number): Promise<void> {
+    if (!(qty > 0) || qty >= pos.qty) throw new Error(`Refusing partial ${qty} of ${pos.qty} ${pos.symbol}`);
+    if (this.isRemoteActive()) return this.broker!.reduce(pos, qty);
+    if (config.mode !== 'paper') throw new Error('Partial exits are not supported in live mode');
+    this.paper.openPosition({
+      symbol: pos.symbol, side: pos.side === 'LONG' ? 'SELL' : 'BUY', qty, leverage: pos.leverage,
+      strategy: pos.strategy, reduceOnly: true, exitReason: 'PARTIAL TP',
+    });
+  }
+
+  updateStops(symbol: string, strategy: AgentId, stopLoss: number, takeProfit: number | null, side?: Side): void {
     if (this.broker) this.broker.updateStops(symbol, strategy, stopLoss, takeProfit);
     if (config.mode === 'paper') this.paper.updateStops(symbol, strategy, stopLoss, takeProfit);
     if (config.mode === 'live' && side) {
       const exitSide = side === 'LONG' ? 'SELL' : 'BUY';
-      void this.futures.cancelAllOpenOrders({ symbol }).then(() =>
-        this.futures.submitNewOrder({ symbol, side: exitSide, type: 'STOP_MARKET', stopPrice: roundPrice(symbol, stopLoss), closePosition: 'true' }),
-      ).catch(() => undefined);
+      // Cancelling every open order also cancels the take-profit, so both protection orders are re-placed together
+      void this.futures.cancelAllOpenOrders({ symbol }).then(async () => {
+        await this.futures.submitNewOrder({ symbol, side: exitSide, type: 'STOP_MARKET', stopPrice: roundPrice(symbol, stopLoss), closePosition: 'true' });
+        if (takeProfit !== null) await this.futures.submitNewOrder({ symbol, side: exitSide, type: 'TAKE_PROFIT_MARKET', stopPrice: roundPrice(symbol, takeProfit), closePosition: 'true' });
+      }).catch((err: unknown) => console.error(`updateStops ${symbol} failed: ${err instanceof Error ? err.message : String(err)}`));
     }
   }
 

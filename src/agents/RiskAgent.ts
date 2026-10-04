@@ -9,7 +9,8 @@ import { contractSpecFor } from '../risk/contractSpec.js';
 import type { PerformanceSnapshot } from '../risk/performanceEngine.js';
 import { sizePosition, type SizingResult } from '../risk/positionSizer.js';
 import { circuitRiskMultiplier, clusterOf, riskLimitsFromConfig, type RiskLimits } from '../risk/riskConfig.js';
-import { evaluateRisk, type PortfolioView } from '../risk/riskEngine.js';
+import { evaluateRisk, openRiskOf, type PortfolioView } from '../risk/riskEngine.js';
+import { combinedSizeMultiplier, type SizeScaling } from '../risk/sizeMultipliers.js';
 import type { PeakEquitySource } from '../risk/equityHwm.js';
 import { costAdjustedRr, minRrFor, type RrProfile } from '../risk/rrProfile.js';
 
@@ -27,6 +28,12 @@ export interface RiskAgentOptions {
   /** Live gate: when set, OPEN signals from strategies outside `approvedStrategies` are refused. */
   requireApproval?: boolean;
   approvedStrategies?: ReadonlySet<string>;
+  /** Defaults to the SIZE_VOL_SCALING / SIZE_SCORE_SCALING config. */
+  sizeScaling?: SizeScaling;
+}
+
+export interface GateOptions {
+  evidenceScore?: number;
 }
 
 // Strategies place stops in multiples of the state layer's closed-candle ATR; the gate must measure with the same ruler,
@@ -63,6 +70,7 @@ function portfolioView(ctx: MarketContext, performance: PerformanceSnapshot): Po
     symbolExposure: (symbol) => notionalOf(positions.filter((p) => p.symbol === symbol)),
     clusterExposure: (cluster) => notionalOf(positions.filter((p) => clusterOf(p.symbol) === cluster)),
     performance,
+    openRisk: openRiskOf(positions),
   };
 }
 
@@ -91,17 +99,25 @@ export class RiskAgent extends BaseAgent {
     return [];
   }
 
-  gate(signal: Signal, ctx: MarketContext): RiskDecision {
+  /** `evidenceScore` is the 0-100 score the entry was taken on; it only shrinks the size (see sizeMultipliers). */
+  gate(signal: Signal, ctx: MarketContext, opts: GateOptions = {}): RiskDecision {
     if (this.options.requireApproval && signal.type.startsWith('OPEN_') && !this.options.approvedStrategies?.has(signal.agent)) {
       return this.reject(`strategy ${signal.agent} is not approved for live trading`);
     }
     const halt = this.options.killSwitch?.state();
-    if (!halt?.halted || !signal.type.startsWith('OPEN_')) return this.gateEntry(signal, ctx);
+    if (!halt?.halted || !signal.type.startsWith('OPEN_')) return this.gateSafety(signal, ctx, opts);
     this.isDrawdownBreached(ctx); // only to keep the session equity peak tracking while halted
     return this.reject(`kill-switch: ${halt.reason}`);
   }
 
-  private gateEntry(signal: Signal, ctx: MarketContext): RiskDecision {
+  /** Priority-0 market safety (stale feed, bad mark, exchange status, shock) blocks new entries only. */
+  private gateSafety(signal: Signal, ctx: MarketContext, opts: GateOptions): RiskDecision {
+    const verdict = signal.type.startsWith('OPEN_') ? ctx.safety?.[signal.symbol] : undefined;
+    if (verdict && verdict.level !== 'NORMAL') return this.reject(`safety ${verdict.level}: ${verdict.reasons.join('; ')}`);
+    return this.gateEntry(signal, ctx, opts);
+  }
+
+  private gateEntry(signal: Signal, ctx: MarketContext, opts: GateOptions): RiskDecision {
     const equity = ctx.equity;
     const maxNotional = equity * (config.risk.maxExposurePct / 100);
     const riskBudget = equity * (config.risk.riskPerTradePct / 100);
@@ -138,7 +154,7 @@ export class RiskAgent extends BaseAgent {
 
     const positionSizeUsdt = riskBudget / slDistancePct;
     const cappedSize = Math.min(positionSizeUsdt, this.isEngineOn() ? maxNotional : remainingHeadroom);
-    return this.checkBuffer(signal, ctx, cappedSize, slDistancePct);
+    return this.checkBuffer(signal, ctx, cappedSize, slDistancePct, opts);
   }
 
   // Funding harvest positions in futures
@@ -179,13 +195,17 @@ export class RiskAgent extends BaseAgent {
     return this.options.limits ?? riskLimitsFromConfig();
   }
 
-  private evaluateWithEngine(signal: Signal, ctx: MarketContext, leverage: number, liqBufferAtr: number): RiskDecision {
+  private evaluateWithEngine(signal: Signal, ctx: MarketContext, leverage: number, liqBufferAtr: number, opts: GateOptions): RiskDecision {
     if (!ctx.performance) return this.reject(NO_PERFORMANCE);
     const baseLimits = this.limits();
     const profile = this.options.rrProfile;
     const limits = profile
       ? { ...baseLimits, minRiskRewardRatio: minRrFor(profile, signal.agent, baseLimits.minRiskRewardRatio) }
       : baseLimits;
+    const sizeMultiplier = combinedSizeMultiplier(
+      this.options.sizeScaling ?? { volatility: config.sizing.volatilityScaling, score: config.sizing.scoreScaling },
+      { atrPercentile: ctx.marketState?.[signal.symbol]?.regime?.volatilityPercentile ?? undefined, evidenceScore: opts.evidenceScore },
+    );
     const sizing = sizePosition({
       equity: ctx.equity,
       availableMargin: availableMargin(ctx),
@@ -197,6 +217,7 @@ export class RiskAgent extends BaseAgent {
       spec: contractSpecFor(signal.symbol, getSymbolRules(signal.symbol), limits),
       limits,
       circuitMultiplier: circuitRiskMultiplier(ctx.performance.circuit),
+      riskMultiplier: sizeMultiplier,
     });
     const portfolio = portfolioView(ctx, ctx.performance.snapshot);
     const rr = profile && signal.takeProfit !== undefined
@@ -213,7 +234,7 @@ export class RiskAgent extends BaseAgent {
       leverage: sizing.leverage,
       marginType: 'ISOLATED',
       liqBufferAtr,
-      reason: `qty ${sizing.quantity} notional $${sizing.notional.toFixed(0)} lev ${sizing.leverage}x circuit ${verdict.circuit}`,
+      reason: `qty ${sizing.quantity} notional $${sizing.notional.toFixed(0)} lev ${sizing.leverage}x circuit ${verdict.circuit}${sizeMultiplier < 1 ? ` size×${sizeMultiplier.toFixed(2)}` : ''}`,
     };
   }
 
@@ -256,7 +277,8 @@ export class RiskAgent extends BaseAgent {
     signal: Signal,
     ctx: MarketContext,
     cappedSize: number,
-    slDistancePct: number
+    slDistancePct: number,
+    opts: GateOptions,
   ): RiskDecision {
     const baseSymbol = signal.symbol.split('/')[0];
     const candles = ctx.candles[signal.symbol] ?? ctx.candles[baseSymbol] ?? ctx.candles[`${baseSymbol}USDT`];
@@ -278,7 +300,7 @@ export class RiskAgent extends BaseAgent {
     }
 
     const leverage = this.calculateDynamicLeverage(signal.confidence, slDistancePct, buffer);
-    if (this.isEngineOn()) return this.evaluateWithEngine(signal, ctx, leverage, buffer);
+    if (this.isEngineOn()) return this.evaluateWithEngine(signal, ctx, leverage, buffer, opts);
     return this.approveCapped(cappedSize, leverage, buffer);
   }
 

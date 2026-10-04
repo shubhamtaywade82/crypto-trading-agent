@@ -231,6 +231,68 @@ test('should not touch the broker when the engine is off', async () => {
   assert.deepEqual(broker.reads, []);
 });
 
+// ---- market safety, adaptive size, portfolio risk ----
+
+const volState = (percentile: number | null) =>
+  ({ BTCUSDT: { timeframes: { '15m': { atr14: null } }, regime: { volatilityPercentile: percentile } } }) as unknown as MarketContext['marketState'];
+const sizeScaling = { volatility: true, score: true };
+const scaledAgent = () => new RiskAgent({} as BinanceService, { riskEngine: 'on', limits, sizeScaling });
+const qtyOf = (reason: string): number => Number(/^qty ([\d.]+) /.exec(reason)?.[1]);
+
+test('should reject new entries while the symbol is not NORMAL for safety, naming the reasons', () => {
+  const safety = { BTCUSDT: { level: 'NO_ENTRY' as const, reasons: ['shock retZ=5.0'] } };
+  const decision = agentWith().gate(signal(), ctx({ safety }));
+  assert.equal(decision.approved, false);
+  assert.equal(decision.reason, 'safety NO_ENTRY: shock retZ=5.0');
+});
+
+test('should apply the safety gate per symbol and let a NORMAL verdict through', () => {
+  const safety = { ETHUSDT: { level: 'HALT' as const, reasons: ['mark price missing or invalid'] }, BTCUSDT: { level: 'NORMAL' as const, reasons: [] } };
+  assert.equal(agentWith().gate(signal(), ctx({ safety })).approved, true);
+});
+
+test('should not apply the safety gate to exits or when no verdicts exist (replay)', () => {
+  const safety = { BTCUSDT: { level: 'HALT' as const, reasons: ['x'] } };
+  assert.equal(agentWith().gate(signal({ type: 'CLOSE_LONG' as Signal['type'] }), ctx({ safety })).approved, true);
+  assert.equal(agentWith().gate(signal(), ctx()).approved, true);
+});
+
+test('should shrink the quantity in a hot volatility regime and keep the stop distance', () => {
+  const base = qtyOf(scaledAgent().gate(signal(), ctx({ marketState: volState(20) })).reason);
+  const hot = scaledAgent().gate(signal(), ctx({ marketState: volState(85) }));
+  assert.ok(Math.abs(qtyOf(hot.reason) - base * 0.5) < 0.01, `${qtyOf(hot.reason)} vs ${base}`);
+  assert.match(hot.reason, /size×0\.50/);
+});
+
+test('should shrink the quantity for a marginal evidence score and never grow it for a high one', () => {
+  const base = qtyOf(scaledAgent().gate(signal(), ctx(), { evidenceScore: 80 }).reason);
+  const weak = scaledAgent().gate(signal(), ctx(), { evidenceScore: 60 });
+  assert.ok(Math.abs(qtyOf(weak.reason) - base * 0.5) < 0.01);
+  assert.equal(qtyOf(scaledAgent().gate(signal(), ctx(), { evidenceScore: 100 }).reason), base);
+});
+
+test('should combine the volatility and score multipliers', () => {
+  const base = qtyOf(scaledAgent().gate(signal(), ctx()).reason);
+  const both = scaledAgent().gate(signal(), ctx({ marketState: volState(97) }), { evidenceScore: 70 });
+  assert.ok(Math.abs(qtyOf(both.reason) - base * 0.25 * 0.75) < 0.01);
+});
+
+test('should leave size untouched when both scalers are disabled', () => {
+  const off = new RiskAgent({} as BinanceService, { riskEngine: 'on', limits, sizeScaling: { volatility: false, score: false } });
+  const base = qtyOf(agentWith().gate(signal(), ctx()).reason);
+  assert.equal(qtyOf(off.gate(signal(), ctx({ marketState: volState(99) }), { evidenceScore: 10 }).reason), base);
+});
+
+test('should reject an entry that would push total open risk past the portfolio cap', () => {
+  const capped = { ...limits, maxPortfolioRiskPercent: 1.5 };
+  const agent = new RiskAgent({} as BinanceService, { riskEngine: 'on', limits: capped, sizeScaling: { volatility: false, score: false } });
+  // 1% new trade risk + an open position risking 600 (0.6%) at its stop, 3 * ... = 1.6% > 1.5%
+  const open = { ...position('SOLUSDT', 100, 100), entry: 100, serverSl: '94' };
+  const decision = agent.gate(signal(), ctx({ positions: [open] }));
+  assert.equal(decision.approved, false);
+  assert.match(decision.reason, /portfolio_risk/);
+});
+
 // Stop-width check must use the strategies' ATR and tolerate float noise
 const withState = (atr14: number): Partial<MarketContext> =>
   ({ marketState: { BTCUSDT: { timeframes: { '15m': { atr14 } } } } as unknown as MarketContext['marketState'] });

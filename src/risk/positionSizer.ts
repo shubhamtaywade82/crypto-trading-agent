@@ -23,6 +23,8 @@ export interface SizingInput {
   readonly spec: ContractSpec;
   readonly limits: RiskLimits;
   readonly circuitMultiplier: number;
+  /** Extra budget scaling (volatility, setup score); defaults to 1 and is capped at 1 so it can only shrink the budget. */
+  readonly riskMultiplier?: number;
 }
 
 export interface SizingResult {
@@ -59,7 +61,7 @@ export const failedSizing = (rejection: string): SizingResult => ({
   riskAmount: 0, effectiveRiskPerUnit: 0, feePerUnit: 0, fundingPerUnit: 0, warnings: [],
 });
 
-const FINITE_FIELDS = ['equity', 'availableMargin', 'entry', 'stop', 'requestedLeverage', 'circuitMultiplier', 'fundingRate'] as const;
+const FINITE_FIELDS = ['equity', 'availableMargin', 'entry', 'stop', 'requestedLeverage', 'circuitMultiplier', 'riskMultiplier', 'fundingRate'] as const;
 
 // Every comparison against NaN is false, so a NaN margin would skip the margin check instead of failing it
 const firstNonFinite = (input: SizingInput): string | undefined =>
@@ -142,7 +144,7 @@ export function sizePosition(input: SizingInput): SizingResult {
   const warnings: string[] = [];
   const riskBudget = dec(input.equity)
     .times(input.limits.maxRiskPerTradePercent).dividedBy(100)
-    .times(input.circuitMultiplier).toNumber();
+    .times(input.circuitMultiplier).times(Math.min(1, input.riskMultiplier ?? 1)).toNumber();
   if (riskBudget <= 0) return fail(input, 'zero risk budget (circuit state)', warnings);
 
   const stopDistance = Math.abs(input.entry - input.stop);

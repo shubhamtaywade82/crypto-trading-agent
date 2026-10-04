@@ -150,3 +150,34 @@ test('should leave initialRisk off a trade whose position had no stop', () => {
   engine.openPosition({ ...base, side: 'SELL', qty: 1, entryPrice: 101, reduceOnly: true });
   assert.equal('initialRisk' in engine.getTrades()[0], false);
 });
+
+test('should book a partial take-profit as a partial record and keep the residual with its stops and 1R', () => {
+  const engine = freshEngine();
+  engine.openPosition({ ...base, side: 'BUY', qty: 1, entryPrice: 100, stopLoss: 95, takeProfit: 130 });
+  engine.markAll({ BTCUSDT: 105 });
+  engine.openPosition({ ...base, side: 'SELL', qty: 0.35, reduceOnly: true, exitReason: 'PARTIAL TP' });
+  const [trade] = engine.getTrades();
+  assert.deepEqual([trade.reason, trade.partial, trade.qty, trade.exit], ['PARTIAL TP', true, 0.35, 105]);
+  near(trade.pnl, 1.75);
+  const [pos] = engine.getPositions();
+  near(pos.qty, 0.65);
+  assert.deepEqual([pos.serverSl, pos.serverTp, pos.initialRisk], ['95', '130', 5]);
+  near(engine.getAccount().equity, 1_150 + 1.75 + 0.65 * 5);
+});
+
+test('should leave the plain reduce-only close unflagged', () => {
+  const engine = freshEngine();
+  engine.openPosition({ ...base, side: 'BUY', qty: 1, entryPrice: 100, stopLoss: 95 });
+  engine.openPosition({ ...base, side: 'SELL', qty: 1, reduceOnly: true, entryPrice: 101 });
+  const [trade] = engine.getTrades();
+  assert.deepEqual([trade.reason, trade.partial], ['CLOSE', undefined]);
+});
+
+test('should set a trailing (no fixed target) take-profit label when the target is removed', () => {
+  const engine = freshEngine();
+  engine.openPosition({ ...base, side: 'BUY', qty: 1, entryPrice: 100, stopLoss: 95, takeProfit: 130 });
+  engine.updateStops('BTCUSDT', base.strategy, 101, null);
+  const [pos] = engine.getPositions();
+  assert.deepEqual([pos.serverSl, pos.serverTp], ['101', 'trail']);
+  assert.deepEqual(engine.markAll({ BTCUSDT: 500 }), []); // 'trail' never triggers
+});

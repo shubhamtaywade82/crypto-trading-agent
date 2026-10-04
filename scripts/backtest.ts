@@ -3,6 +3,7 @@
  *
  *   npx tsx scripts/backtest.ts [--symbol BTCUSDT] [--days 30] [--end-days-ago 0] [--equity 1150]
  *                                [--funding] [--decisions data/backtest-decisions.jsonl]
+ *                                [--position-manager on|off]
  *
  * Fetches public USD-M klines (15m/1h/4h — the timeframes the state layer
  * consumes), then runs the same agents, fusion, risk gate and execution model
@@ -31,6 +32,8 @@ if (!Number.isFinite(days) || days <= 0 || !Number.isFinite(endDaysAgo) || endDa
 const equity = Number(arg('equity', '1150'));
 const fundingEnabled = process.argv.includes('--funding');
 const decisionsPath = arg('decisions', '');
+const positionManagerArg = arg('position-manager', '');
+if (positionManagerArg && !['on', 'off'].includes(positionManagerArg)) throw new Error('--position-manager must be on or off');
 
 async function fetchKlines(symbol: string, interval: NativeTimeframe, fromMs: number, toMs: number): Promise<Candle[]> {
   const out: Candle[] = [];
@@ -79,6 +82,7 @@ const service = new ReplayService({
     warmupBars: 300,
     funding: { enabled: fundingEnabled, intervalHours: 8, rate: 0.0001 },
     ...(decisionsPath ? { decisionsPath } : {}),
+    ...(positionManagerArg ? { positionManager: positionManagerArg === 'on' } : {}),
   },
 });
 
@@ -86,7 +90,7 @@ const result = await service.run(data);
 const m = result.metrics;
 
 console.log('\n=== Headline ===');
-row('Total trades', String(m.totalTrades));
+row('Total trades', `${m.totalTrades} (${result.partials.length} partial take-profit legs)`);
 row('Win rate', `${m.winRatePct}%`);
 row('Net PnL (after fees)', `${m.netPnl.toFixed(2)} USDT (${m.netReturnPct}%)`);
 row('Gross price PnL', `${m.grossPnl.toFixed(2)} USDT`);

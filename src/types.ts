@@ -66,7 +66,7 @@ export interface Position {
   posType?: string; // e.g. 'PERP-SHORT' | 'LONG/SHORT' | 'LONG'
 }
 
-export type ExitReason = 'CLOSE' | 'FLIP' | 'STOP LOSS' | 'TAKE PROFIT' | 'LIQUIDATED';
+export type ExitReason = 'CLOSE' | 'FLIP' | 'STOP LOSS' | 'TAKE PROFIT' | 'LIQUIDATED' | 'PARTIAL TP';
 
 export interface TradeRecord {
   symbol: string;
@@ -81,6 +81,8 @@ export interface TradeRecord {
   initialRisk?: number; // the position's 1R in price units, so an exit can be shown as an R multiple
   /** The decision that opened this trade — resolves the evidence the grader scores against. */
   decisionId?: string;
+  /** True for a partial take-profit: the position stays open, so this record must not be graded as a finished trade. */
+  partial?: boolean;
 }
 
 /** What the LLM sees when asked to veto an entry; all numbers come from deterministic code. */

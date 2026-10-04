@@ -161,6 +161,13 @@ export class RemoteStore {
     this.persist();
   }
 
+  /** Journals a partial exit and leaves the position's meta (stops, 1R, owner) in place: the position is still open. */
+  recordPartial(trade: TradeRecord): void {
+    this.state.closedTrades.push({ ...trade, partial: true });
+    if (this.state.closedTrades.length > MAX_TRADES) this.state.closedTrades.splice(0, this.state.closedTrades.length - MAX_TRADES);
+    this.persist();
+  }
+
   trades(): TradeRecord[] {
     return [...this.state.closedTrades];
   }

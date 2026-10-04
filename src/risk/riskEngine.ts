@@ -9,6 +9,8 @@ export interface PortfolioView {
   symbolExposure: (symbol: string) => number;
   clusterExposure: (cluster: string) => number;
   performance: PerformanceSnapshot;
+  /** Summed loss-at-stop (quote currency) of open positions that carry a numeric stop; undefined skips the portfolio-risk check. */
+  openRisk?: number;
 }
 
 export interface RiskInput {
@@ -95,6 +97,25 @@ function portfolioLimitsCheck(input: RiskInput): RiskCheck {
     breaches.length === 0 ? 'symbol, gross, cluster and notional caps respected' : breaches.join('; '));
 }
 
+/** Loss if every open position with a numeric stop is stopped out; a stop at or beyond breakeven contributes nothing. */
+export function openRiskOf(positions: ReadonlyArray<{ side: string; entry: number; qty: number; serverSl: string }>): number {
+  return positions.reduce((sum, p) => {
+    const stop = Number(p.serverSl);
+    if (!(stop > 0)) return sum;
+    const loss = (p.side === 'LONG' ? p.entry - stop : stop - p.entry) * p.qty;
+    return sum + Math.max(0, loss);
+  }, 0);
+}
+
+function portfolioRiskCheck(input: RiskInput): RiskCheck | null {
+  const { sizing, portfolio, limits } = input;
+  const cap = limits.maxPortfolioRiskPercent;
+  // A hedge carries no stop-based risk, so it is neither counted nor blocked by the open risk of other positions
+  if (cap === undefined || portfolio.openRisk === undefined || !sizing.ok || !(sizing.riskAmount > 0)) return null;
+  const percent = ((portfolio.openRisk + sizing.riskAmount) / Math.max(1, portfolio.equity)) * 100;
+  return check('portfolio_risk', percent <= cap, `open risk ${percent.toFixed(2)}% of equity (max ${cap}%)`);
+}
+
 function minRewardRiskCheck(input: RiskInput): RiskCheck {
   const { rr, limits } = input;
   const min = limits.minRiskRewardRatio;
@@ -104,6 +125,8 @@ function minRewardRiskCheck(input: RiskInput): RiskCheck {
 
 function runChecks(input: RiskInput, circuit: CircuitState): RiskCheck[] {
   const checks = [...sizingChecks(input, circuit), ...portfolioChecks(input), portfolioLimitsCheck(input)];
+  const portfolioRisk = portfolioRiskCheck(input);
+  if (portfolioRisk) checks.push(portfolioRisk);
   if (input.limits.minRiskRewardRatio > 0) checks.push(minRewardRiskCheck(input));
   return checks;
 }

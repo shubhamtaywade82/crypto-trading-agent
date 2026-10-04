@@ -50,11 +50,20 @@ export interface ReplayConfig {
    * ledger is in-memory either way, so one replay never trains another.
    */
   learning: boolean;
+  /**
+   * Manage open positions with the production position manager (TP1/TP2 partials, breakeven + cost buffer, chandelier and
+   * structure trail). Undefined follows config.positionManager.enabled; false restores the fixed stop/target replay for A/B runs.
+   */
+  positionManager?: boolean;
+  /** Overrides the manager parameters derived from the environment. */
+  pm?: import('../position/PositionManager.js').PmConfig;
 }
 
 /** A closed trade with the replay-only research fields the production TradeRecord cannot carry. */
 export interface SimTrade extends TradeRecord {
   openedAt: number;
+  /** Groups the partial legs and the final close of one position; absent on records from before partial exits existed. */
+  positionId?: string;
   /** Market regime at entry — the slice the strategy router keys on. */
   regime: MarketRegime;
   /** Evidence score of the decision that opened the trade, when known. */

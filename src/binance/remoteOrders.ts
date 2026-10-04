@@ -123,11 +123,13 @@ interface ExitJob {
   /** Frozen at the first submission: a replayed order fills at its original price, so the journal must use the same one. */
   price: number;
   clientOrderId: string;
+  /** Partial exit size; undefined closes the whole position. */
+  qty?: number;
   /** What the latest submission was sized from; enough to journal the exit when only a lookup can confirm the fill. */
   sent?: ClosedPosition;
 }
 
-const ANNOUNCED_REASONS: ExitReason[] = ['STOP LOSS', 'TAKE PROFIT'];
+const ANNOUNCED_REASONS: ExitReason[] = ['STOP LOSS', 'TAKE PROFIT', 'PARTIAL TP'];
 const RETRY_INTERVAL_MS = 1_000;
 
 /** Reduce-only exits: one job per symbol, retried through outages under a single client order id. */
@@ -163,6 +165,21 @@ export class RemoteExits {
     }
   }
 
+  /**
+   * Reduce-only partial exit. Refused while another exit job exists for the symbol. Through an outage the job stays queued
+   * under its single client order id (the order may already have landed, so re-deciding with a new id could reduce twice);
+   * retryPending completes it after recovery and this call returns as if sent. Any other failure drops the job and rejects.
+   */
+  async reduce(symbol: string, qty: number, price: number): Promise<void> {
+    if (this.jobs.has(symbol)) throw new OrderInFlightError(`${symbol} already has an exit in flight: partial not sent`);
+    this.enqueue(symbol, 'PARTIAL TP', price, qty);
+    try {
+      await this.drive(symbol);
+    } catch (err) {
+      if (!(err instanceof VenueUnavailableError)) throw err;
+    }
+  }
+
   /** Renames a queued job, e.g. a flip's close that lost its open leg. */
   retag(symbol: string, reason: ExitReason): void {
     const job = this.jobs.get(symbol);
@@ -185,10 +202,10 @@ export class RemoteExits {
     while (this.running.size > 0) await Promise.allSettled([...this.running.values()]);
   }
 
-  private enqueue(symbol: string, reason: ExitReason, price: number): void {
+  private enqueue(symbol: string, reason: ExitReason, price: number, qty?: number): void {
     const owner = this.host.store.getMeta(symbol)?.owner ?? EXTERNAL_OWNER;
     const clientOrderId = newClientOrderId(symbol, owner, `EXIT-${reason}`, this.host.now());
-    this.jobs.set(symbol, { symbol, reason, trigger: price, price, clientOrderId });
+    this.jobs.set(symbol, { symbol, reason, trigger: price, price, clientOrderId, ...(qty === undefined ? {} : { qty }) });
   }
 
   private runInBackground(symbol: string): void {
@@ -226,7 +243,7 @@ export class RemoteExits {
     }
     const fresh = (await api.getPositions()).find((p) => p.symbol === job.symbol && p.netQuantity > 0);
     if (!fresh) return this.dropAlreadyFlat(job);
-    const closed = this.closedFrom(fresh);
+    const closed = this.closedFrom(fresh, job.qty);
     if (!job.sent) job.price = repricedStop(job, fresh.side, this.host.markOf(job.symbol));
     job.sent = closed;
     const result = await sendOrder(api, exitOrder(job, fresh));
@@ -234,12 +251,12 @@ export class RemoteExits {
     return this.complete(job, closed, result);
   }
 
-  private closedFrom(position: PaperExchangePosition): ClosedPosition {
+  private closedFrom(position: PaperExchangePosition, cap?: number): ClosedPosition {
     const meta = this.host.store.getMeta(position.symbol);
     const initialRisk = meta?.initialRisk ?? undefined;
     return {
       symbol: position.symbol, owner: meta?.owner ?? EXTERNAL_OWNER, side: sideOf(position),
-      entry: position.averagePrice, qty: position.netQuantity, initialRisk,
+      entry: position.averagePrice, qty: cap === undefined ? position.netQuantity : Math.min(cap, position.netQuantity), initialRisk,
       ...(meta?.decisionId === undefined ? {} : { decisionId: meta.decisionId }),
     };
   }
@@ -253,11 +270,12 @@ export class RemoteExits {
     const closed = { ...sized, qty: filledQuantity(result) ?? sized.qty };
     const trade = closedTrade(closed, job.price, job.reason, this.host.now());
     const meta = this.host.store.getMeta(job.symbol);
-    this.host.store.recordClose(trade);
+    if (job.reason === 'PARTIAL TP') this.host.store.recordPartial(trade);
+    else this.host.store.recordClose(trade);
     if (ANNOUNCED_REASONS.includes(job.reason)) {
       this.announcements.push(`${job.reason} ${job.symbol} ${closed.side} @ ${formatPrice(job.symbol, job.price)} pnl=${trade.pnl.toFixed(2)}`);
     }
-    await this.keepResidualManaged(closed, meta);
+    if (job.reason !== 'PARTIAL TP') await this.keepResidualManaged(closed, meta);
     try {
       await this.host.afterOrder();
     } finally {
@@ -297,7 +315,7 @@ function exitOrder(job: ExitJob, position: PaperExchangePosition): SubmitOrderPa
   return {
     symbol: job.symbol,
     side: position.side === 'long' ? 'sell' : 'buy',
-    quantity: position.netQuantity,
+    quantity: job.qty === undefined ? position.netQuantity : Math.min(job.qty, position.netQuantity),
     leverage: position.leverage,
     marginType: position.marginType,
     reduceOnly: true,

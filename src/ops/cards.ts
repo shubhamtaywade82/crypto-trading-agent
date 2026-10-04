@@ -64,7 +64,7 @@ export type TradeCardInput =
 const ENTRY_TITLES = { OPEN: '🚀 POSITION OPENED', SCALE_IN: '➕ SCALE-IN', FLIP: '🔄 FLIPPED' } as const;
 
 const EXIT_TITLES: Readonly<Record<ExitReason, string>> = {
-  'STOP LOSS': '🛑 STOP LOSS', 'TAKE PROFIT': '✅ TAKE PROFIT', LIQUIDATED: '💥 LIQUIDATED', CLOSE: '🔒 CLOSED', FLIP: '🔄 FLIP EXIT',
+  'STOP LOSS': '🛑 STOP LOSS', 'TAKE PROFIT': '✅ TAKE PROFIT', LIQUIDATED: '💥 LIQUIDATED', CLOSE: '🔒 CLOSED', FLIP: '🔄 FLIP EXIT', 'PARTIAL TP': '🎯 PARTIAL TAKE PROFIT',
 };
 
 const rMultipleLine = (trade: TradeRecord, initialRisk?: number): string[] => {

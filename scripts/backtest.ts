@@ -3,7 +3,7 @@
  *
  *   npx tsx scripts/backtest.ts [--symbol BTCUSDT] [--days 30] [--end-days-ago 0] [--equity 1150]
  *                                [--funding] [--decisions data/backtest-decisions.jsonl]
- *                                [--position-manager on|off]
+ *                                [--position-manager on|off] [--source api|archive]
  *
  * Fetches public USD-M klines (15m/1h/4h — the timeframes the state layer
  * consumes), then runs the same agents, fusion, risk gate and execution model
@@ -14,6 +14,7 @@ import { ReplayService } from '../src/backtesting/ReplayService.js';
 import type { Candle } from '../src/types.js';
 import type { NativeTimeframe } from '../src/market/MarketDataTypes.js';
 import type { ReplayData } from '../src/backtesting/types.js';
+import { fetchArchiveKlines } from '../src/backtesting/archiveKlines.js';
 
 const BASE = 'https://fapi.binance.com';
 const INTERVAL_MS: Record<string, number> = { '15m': 900_000, '1h': 3_600_000, '4h': 14_400_000 };
@@ -32,6 +33,9 @@ if (!Number.isFinite(days) || days <= 0 || !Number.isFinite(endDaysAgo) || endDa
 const equity = Number(arg('equity', '1150'));
 const fundingEnabled = process.argv.includes('--funding');
 const decisionsPath = arg('decisions', '');
+// archive = data.binance.vision, for networks where fapi.binance.com is blocked (HTTP 451); it lags by about a day
+const source = arg('source', 'api');
+if (!['api', 'archive'].includes(source)) throw new Error('--source must be api or archive');
 const positionManagerArg = arg('position-manager', '');
 if (positionManagerArg && !['on', 'off'].includes(positionManagerArg)) throw new Error('--position-manager must be on or off');
 
@@ -70,7 +74,15 @@ const fromMs = toMs - days * 86_400_000;
 console.log(`Backtesting ${symbol} over ${days} day(s) ending ${endDaysAgo === 0 ? 'now' : `${endDaysAgo} day(s) ago`} from public Binance USD-M klines...`);
 const data: ReplayData = { [symbol]: {} };
 for (const timeframe of TIMEFRAMES) {
-  const candles = await fetchKlines(symbol, timeframe, fromMs, toMs);
+  let candles: Candle[];
+  if (source === 'archive') {
+    const archive = await fetchArchiveKlines(symbol, timeframe, fromMs, toMs);
+    candles = archive.candles;
+    if (archive.missingDays.length) console.log(`  ${timeframe}: no archive file for ${archive.missingDays.length} day(s): ${archive.missingDays.join(', ')}`);
+  } else {
+    candles = await fetchKlines(symbol, timeframe, fromMs, toMs);
+  }
+  if (candles.length === 0) throw new Error(`no ${timeframe} candles for ${symbol} in the requested window`);
   data[symbol][timeframe] = candles;
   console.log(`  ${timeframe}: ${candles.length} candles (${new Date(candles[0].openTime).toISOString()} -> ${new Date(candles[candles.length - 1].openTime).toISOString()})`);
 }

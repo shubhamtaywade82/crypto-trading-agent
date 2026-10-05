@@ -151,8 +151,24 @@ A partial below the exchange lot/notional minimum, or one that would leave a rem
 a failed or refused partial is retried on the next tick; through a `paper_exchange` outage a partial stays queued under one
 client order id. State is persisted in `data/position-manager.json`; a position that changed outside the manager
 (scale-in, restart) is rebuilt from the venue (a stop already at/over entry rebuilds as `PROTECTED` with TP1 taken).
-**Live mode is unchanged** (exchange-side STOP_MARKET/TAKE_PROFIT_MARKET); the only live change is that `updateStops` now
-re-places the take-profit it used to drop.
+**Live Binance** keeps its exchange-side STOP_MARKET / TAKE_PROFIT_MARKET (`closePosition`) orders by default;
+`updateStops` now re-places the take-profit it used to drop. `LIVE_POSITION_MANAGER` (needs `POSITION_MANAGER=on`) adds the manager there:
+
+| Value | Behaviour |
+| --- | --- |
+| `off` (default) | Exchange-side stops only, exactly as before. |
+| `shadow` | Runs the manager on the live feed and **logs what it would do** (`SHADOW would reduce …`, `SHADOW would move … stop`) against an in-memory overlay. Sends no orders. State goes to `data/position-manager-shadow.json`. Run this first. |
+| `on` | Sends real reduce-only market partials and replaces stop orders. |
+
+How `on` stays safe (`src/binance/liveBook.ts`, entries recorded in `data/live-state.json`): the client library cannot edit a
+conditional order, so a stop move is *cancel the old stop by id → place the new one (3 tries) → if that fails restore the previous
+stop → if that fails close at market*; a failed cancel aborts and leaves the old stop standing. Partials use
+`newOrderRespType: RESULT` and the manager counts only the executed quantity. Every cycle the book reconciles with the exchange and
+**re-places a stop that has disappeared** (closing the position if it cannot). Positions it has no recorded entry for are left alone.
+One-way position mode only. **This path is covered by a fake-exchange test suite, not by the real exchange**: run `shadow`, then
+`on` with a small size, and watch the first trades. Also verify against Binance's current changelog that STOP_MARKET /
+TAKE_PROFIT_MARKET `closePosition` orders are still accepted on `/fapi/v1/order` (the installed `binance` client, 2.15.22, has no
+separate conditional-order API, so the existing entry protection depends on it too).
 
 Partial legs are journaled as `PARTIAL TP` with `partial: true`. Everything that counts *positions* folds them into their
 final close (`src/position/foldPartials.ts`): the learning ledger and confidence adjuster grade one blended R per position,
@@ -190,6 +206,7 @@ was fixed.
 | `MAX_LEVERAGE` | `10` | Ceiling for the dynamic-leverage calculation |
 | `MAX_EXPOSURE_PCT` | `80` | Cap on notional as a % of equity |
 | `RISK_PER_TRADE_PCT` | `1` | Risk budget per trade as a % of equity |
+| `LIVE_POSITION_MANAGER` | `off` | `off` / `shadow` / `on`: the position manager on live Binance, see [Position manager](#position-manager--market-safety) |
 | `POSITION_MANAGER` | `on` | Partials + breakeven + adaptive trail (paper / remote paper only), see [Position manager](#position-manager--market-safety) |
 | `MAX_PORTFOLIO_RISK_PCT` | `3` | Cap on summed loss-at-stop of open positions + the new trade, % of equity |
 | `SAFETY` | `on` | Market-safety / shock gate on new entries |
@@ -199,6 +216,7 @@ was fixed.
 | `STRUCT_LIQ` | `on` | `off` removes the STRUCT-LIQ-η agent from the fleet (shown paused in the cockpit) |
 | `STRUCT_LIQ_MAX_SWEEP_AGE_CANDLES` | `6` | How old (15m candles) the STRUCT-LIQ trigger sweep may be |
 | `STRUCT_LIQ_MIN_REWARD_RISK` | `1.5` | Minimum reward:risk the STRUCT-LIQ target liquidity must offer |
+| `REGIME_MODEL` | `classic` | `scored` = trend score + hysteresis + dwell time (`REGIME_CONFIRM_BARS`, `REGIME_TREND_ENTER`, `REGIME_TREND_EXIT`); labels unchanged, adds `confidence`, `rawRegime`, `barsInRegime` to the snapshot |
 | `SETUP_MIN_REWARD_RISK` | `1.5` | Gross reward:risk a Telegram setup scenario must offer to be built at all (was a hard-coded 1.25); the quality gate then re-checks it after costs |
 | `SETUP_ALERT_HIDE_NO_TRADE` | `on` | Leave scenarios the quality gate rejected (`NO_TRADE`, e.g. a long entered in premium or cost-adjusted RR < 1.0) out of setup cards; they still reach `data/setup-outcomes.jsonl` |
 | `CROWDING_MIN_REWARD_RISK` | `1.5` | CROWDING-ι targets the nearest untaken liquidity pool paying at least this multiple of its stop (≥ 1.2 ATR); with none, no signal. Replaced the range-midpoint target, whose reward collapsed as price drifted toward it (RR 1.17 → 0.89 → 0.42) |

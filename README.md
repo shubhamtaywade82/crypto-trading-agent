@@ -136,6 +136,24 @@ websocket silent > `SAFETY_TICK_STALE_MS` → NO_ENTRY (HALT if the REST mark is
 by a volume z-score or a spread blow-out, left only after `SHOCK_RECOVERY_BARS` calm bars. The gate never closes anything:
 a protected position keeps its stop and its manager through a bad feed. Replay has no tick feed, so the gate does not apply there.
 
+**Status: off by default (`POSITION_MANAGER=off`), because replay does not support turning it on.** 90-day replays of the
+whole fleet on real Binance klines (BTC, ETH, SOL; the last 90 days and the 90 before them; `scripts/pm-sweep.ts`, data from
+`--source archive`), pooled, net of fees and slippage:
+
+| Exit management | Trades | Win % | E[R] | Net PnL (USDT) | vs off |
+| --- | --- | --- | --- | --- | --- |
+| off (fixed stop / target) | 227 | 29.9 | -0.248 | -184.6 | n/a |
+| 35% @ 1R, then breakeven + trail (the original default) | 334 | 44.9 | -0.271 | -280.8 | -96.2 |
+| 35% @ 1R only, original stop / target | 271 | 31.4 | -0.231 | -192.2 | -7.6 |
+| 35% @ 1.5R only | 247 | 31.6 | -0.230 | -200.7 | -16.0 |
+| breakeven + trail only after TP2 | 302 | 34.1 | -0.266 | -256.9 | -72.3 |
+| wide trail (4 / 5 / 6 ATR) | 293 | 44.7 | -0.294 | -296.3 | -111.7 |
+
+It raises the win rate (30% -> 45%) and cuts the winners; the breakeven + trail is what costs money, partials alone are about
+neutral. It also frees the symbol sooner, which lets a fleet with negative expectancy (E[R] about -0.25 here) re-enter more often.
+The result is the same in both windows. Treat it as a measured "no" for these exits on this fleet, not as a verdict on trailing in
+general: fix the entries first (the fleet loses with or without it), then re-run `pm-sweep` before switching it on.
+
 **Position manager (paper and remote paper_exchange).** `src/position/PositionManager.ts` is a pure state machine
 (`INITIAL → PROTECTED → TRAILING`) driven by every price tick (250 ms) through `PositionDriver`, with ATR/structure inputs
 cached per 8 s cycle. The entry strategy still owns the initial stop; the manager only ratchets it toward price.
@@ -207,7 +225,7 @@ was fixed.
 | `MAX_EXPOSURE_PCT` | `80` | Cap on notional as a % of equity |
 | `RISK_PER_TRADE_PCT` | `1` | Risk budget per trade as a % of equity |
 | `LIVE_POSITION_MANAGER` | `off` | `off` / `shadow` / `on`: the position manager on live Binance, see [Position manager](#position-manager--market-safety) |
-| `POSITION_MANAGER` | `on` | Partials + breakeven + adaptive trail (paper / remote paper only), see [Position manager](#position-manager--market-safety) |
+| `POSITION_MANAGER` | `off` | Partials + breakeven + adaptive trail (paper / remote paper; live via `LIVE_POSITION_MANAGER`). **Off by default: it did not beat the fixed stop/target in replay**, see [Position manager](#position-manager--market-safety) |
 | `MAX_PORTFOLIO_RISK_PCT` | `3` | Cap on summed loss-at-stop of open positions + the new trade, % of equity |
 | `SAFETY` | `on` | Market-safety / shock gate on new entries |
 | `MAX_DRAWDOWN_PCT` | `5` | **Kill-switch** (issue #10): once drawdown from session peak exceeds this, all OPEN signals are rejected until recovery |

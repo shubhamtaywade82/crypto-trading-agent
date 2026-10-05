@@ -11,6 +11,8 @@ const MAX_SWEEP_AGE_MS = 6 * 15 * 60_000;
 const STOP_BUFFER_ATR = 0.15;
 const MAX_STOP_ATR = 4;
 const MIN_STOP_ATR = 0.5;
+/** TP2 must sit at least this far beyond TP1: equal-high clusters otherwise print a TP2 a few ticks past TP1, which is the same target twice. */
+const MIN_TP2_GAP_ATR = 0.5;
 
 const finite = (value: number | null | undefined): value is number =>
   value !== null && value !== undefined && Number.isFinite(value);
@@ -40,10 +42,12 @@ function directionalPool(state: MarketState, direction: SetupDirection, entry: n
   return pools[0] ?? null;
 }
 
-function secondDirectionalPool(state: MarketState, direction: SetupDirection, after: number): LiquidityPool | null {
+function secondDirectionalPool(state: MarketState, direction: SetupDirection, after: number, minGap = 0): LiquidityPool | null {
   const pools = [...state.liquidity.ltf.pools, ...state.liquidity.htf.pools]
     .filter((pool) => isDirectionalLiquidity(pool, direction))
     .filter((pool) => direction === 'LONG' ? pool.price > after : pool.price < after)
+    // "At least minGap beyond": inclusive, with a hair of slack so a gap that is exactly N ATR in decimal survives float noise
+    .filter((pool) => Math.abs(pool.price - after) >= minGap * (1 - 1e-9))
     .sort((a, b) => Math.abs(a.price - after) - Math.abs(b.price - after));
   return pools[0] ?? null;
 }
@@ -201,7 +205,7 @@ function buildPullback(
   const stop = stopForZone(direction, zone, atrValue);
   const target = directionalPool(state, direction, Math.max(entry, state.mark));
   if (!target) return null;
-  const second = secondDirectionalPool(state, direction, target.price);
+  const second = secondDirectionalPool(state, direction, target.price, atrValue * MIN_TP2_GAP_ATR);
   const riskAtr = Math.abs(entry - stop) / atrValue;
   const rr = riskReward(entry, stop, target.price);
   const move = expectedMove(Math.abs(target.price - entry), atrValue, '15m', state.regime.volatility);
@@ -270,7 +274,7 @@ function buildSweep(
     entryHigh: direction === 'LONG' ? entry + atrValue * 0.1 : entry,
     stopLoss: stop,
     target1: target.price,
-    target2: secondDirectionalPool(state, direction, target.price)?.price,
+    target2: secondDirectionalPool(state, direction, target.price, atrValue * MIN_TP2_GAP_ATR)?.price,
     trigger: direction === 'LONG'
       ? 'sell-side sweep + reclaim of sweep level + bullish displacement'
       : 'buy-side sweep + reclaim of sweep level + bearish displacement',

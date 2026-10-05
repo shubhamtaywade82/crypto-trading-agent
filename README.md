@@ -171,7 +171,7 @@ was fixed.
 | `MODE` | `paper` | `paper` or `live` |
 | `BINANCE_API_KEY` / `BINANCE_API_SECRET` | (empty) | Required for `MODE=live` (market data always, and today's only order execution path) |
 | `COINDCX_API_KEY` / `COINDCX_API_SECRET` / `COINDCX_PAPER_MODE` / `COINDCX_QUOTE_PREFERENCE` / `COINDCX_MAX_ORDER_NOTIONAL` / `COINDCX_MAX_ORDER_QUANTITY` / `COINDCX_INITIAL_BALANCE` | see `.env.example` | Optional, reserved for the CoinDCX execution path (see "Modes" above and issue #31); not required to start `MODE=live`, and currently unused even when set |
-| `OLLAMA_HOST` | `http://127.0.0.1:11434` | Ollama daemon URL |
+| `OLLAMA_HOST` | `http://127.0.0.1:11434` | Ollama daemon URL (`https://ollama.com` for cloud). All LLM calls go through [`@nemesis-oss/ollama-sdk`](https://github.com/shubhamtaywade82/ollama-sdk); JSON mode (`format: "json"`) is requested only from local hosts because the SDK refuses `format` requests against cloud endpoints, so elsewhere the prompts demand JSON and replies are parsed tolerantly (code fences / prose around the object) |
 | `OLLAMA_MODEL` | `gemma4:31b` | Model used for veto/advise/ask |
 | `MIN_LEVERAGE` | `5` | Floor for the dynamic-leverage calculation |
 | `MAX_LEVERAGE` | `10` | Ceiling for the dynamic-leverage calculation |
@@ -186,6 +186,7 @@ was fixed.
 | `STRUCT_LIQ` | `on` | `off` removes the STRUCT-LIQ-η agent from the fleet (shown paused in the cockpit) |
 | `STRUCT_LIQ_MAX_SWEEP_AGE_CANDLES` | `6` | How old (15m candles) the STRUCT-LIQ trigger sweep may be |
 | `STRUCT_LIQ_MIN_REWARD_RISK` | `1.5` | Minimum reward:risk the STRUCT-LIQ target liquidity must offer |
+| `CROWDING_MIN_REWARD_RISK` | `1.5` | CROWDING-ι targets the nearest untaken liquidity pool paying at least this multiple of its stop (≥ 1.2 ATR); with none, no signal. Replaced the range-midpoint target, whose reward collapsed as price drifted toward it (RR 1.17 → 0.89 → 0.42) |
 | `AUDIT` / `ALERTS` | `off` | Audit trail and Telegram alerts, see [Ops](#ops-audit-trail-telegram-alerts-kill-switch) |
 | `PAPER_EXCHANGE_URL` | (unset) | When set in `paper` mode, routes through the remote Rails broker (`http://127.0.0.1:3100`) |
 | `PAPER_EXCHANGE_ACCOUNT_ID` | (none) | Account for the remote broker; **required** when `PAPER_EXCHANGE_URL` is set in `paper` mode (startup fails without it); `.env.example` suggests `crypto-agent` |

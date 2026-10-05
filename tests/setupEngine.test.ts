@@ -209,3 +209,54 @@ test('formatDuration keeps Telegram timing compact', () => {
   assert.equal(formatDuration({ minMinutes: 15, maxMinutes: 90, thesisExpiryMinutes: 180, distanceAtr: 1 }), '15m–1.5h');
   assert.equal(formatDuration({ minMinutes: 120, maxMinutes: 240, thesisExpiryMinutes: 360, distanceAtr: 2 }), '2h–4h');
 });
+
+// ---- TP2 must be a different target from TP1 ----
+
+const highPool = (type: 'SWING_HIGH' | 'EQUAL_HIGH', price: number) =>
+  ({ type, price, tolerance: 0.2, strength: 0.8, timeframe: '15m' as const, sourceTimes: [T0 - 1_800_000] });
+const withPools = (prices: Array<['SWING_HIGH' | 'EQUAL_HIGH', number]>): MarketState => {
+  const base = baseState();
+  return baseState({
+    // The pullback scenario reads the zone ledger, not the legacy zones list
+    zoneLedger: [{
+      type: 'DEMAND', timeframe: '15m', high: 99.2, low: 98, originTime: T0 - 1_800_000, causedBreak: 'BOS', displacementAtr: 1.2,
+      touches: 0, fresh: true, strength: 0.9, state: 'FRESH', testedAt: null, mitigatedAt: null, invalidatedAt: null,
+      invalidatedIndex: null, expiredAt: null, breakIndex: 199, breakTime: T0 - 1_800_000, ageBars: 2,
+    }],
+    liquidity: {
+      htf: { ...base.liquidity.htf, pools: [] },
+      ltf: { ...base.liquidity.ltf, pools: prices.map(([type, price]) => highPool(type, price)) },
+    },
+  });
+};
+const scenario = (state: MarketState, kind: 'LIQUIDITY_SWEEP' | 'PULLBACK_RETEST') => {
+  const found = buildSetupMap(state).scenarios.find((s) => s.kind === kind);
+  assert.ok(found, `${kind} scenario missing`);
+  return found;
+};
+
+test('TP2 skips pools within half an ATR of TP1 (an equal-high cluster is one target, not two)', () => {
+  // ATR(15m) is 1, so 105.02 and 105.3 are both inside the 0.5 ATR gap; 106 is the first real second target
+  const state = withPools([['SWING_HIGH', 105], ['EQUAL_HIGH', 105.02], ['EQUAL_HIGH', 105.3], ['SWING_HIGH', 106]]);
+  for (const kind of ['LIQUIDITY_SWEEP', 'PULLBACK_RETEST'] as const) {
+    const s = scenario(state, kind);
+    assert.equal(s.target1, 105, kind);
+    assert.equal(s.target2, 106, kind);
+  }
+});
+
+test('TP2 is left out when every farther pool is inside the gap', () => {
+  const state = withPools([['SWING_HIGH', 105], ['EQUAL_HIGH', 105.02], ['EQUAL_HIGH', 105.4]]);
+  for (const kind of ['LIQUIDITY_SWEEP', 'PULLBACK_RETEST'] as const) assert.equal(scenario(state, kind).target2, undefined, kind);
+});
+
+test('TP2 at exactly half an ATR beyond TP1 is accepted and anything closer is not', () => {
+  assert.equal(scenario(withPools([['SWING_HIGH', 105], ['SWING_HIGH', 105.5]]), 'LIQUIDITY_SWEEP').target2, 105.5);
+  assert.equal(scenario(withPools([['SWING_HIGH', 105], ['SWING_HIGH', 105.49]]), 'LIQUIDITY_SWEEP').target2, undefined);
+});
+
+test('TP2 spacing leaves TP1 and the reward:risk untouched', () => {
+  const clustered = scenario(withPools([['SWING_HIGH', 105], ['EQUAL_HIGH', 105.02], ['SWING_HIGH', 110]]), 'PULLBACK_RETEST');
+  const plain = scenario(withPools([['SWING_HIGH', 105], ['SWING_HIGH', 110]]), 'PULLBACK_RETEST');
+  assert.deepEqual([clustered.target1, clustered.rewardRisk, clustered.target2], [plain.target1, plain.rewardRisk, plain.target2]);
+});

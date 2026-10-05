@@ -87,6 +87,8 @@ export const EnvSchema = z.object({
   STRUCT_LIQ: z.enum(['off', 'on']).default('on'),
   STRUCT_LIQ_MAX_SWEEP_AGE_CANDLES: z.coerce.number().int().min(1).default(6),
   STRUCT_LIQ_MIN_REWARD_RISK: z.coerce.number().min(0).default(1.5),
+  /** CROWDING-ι only trades when an untaken liquidity pool pays at least this multiple of its stop distance. */
+  CROWDING_MIN_REWARD_RISK: z.coerce.number().min(0).default(1.5),
   EVENTS_PATH: pathWithDefault('data/events.jsonl'),
   NOTIFICATIONS_PATH: pathWithDefault('data/notifications.json'),
   DECISIONS_PATH: pathWithDefault('data/decisions.jsonl'),
@@ -223,6 +225,9 @@ export const config = {
   alerts: env.ALERTS,
   adaptiveSuperTrend: {
     requireAnchor: env.ADAPTIVE_ST_REQUIRE_ANCHOR === 'on',
+  },
+  crowding: {
+    minimumRewardRisk: env.CROWDING_MIN_REWARD_RISK,
   },
   structLiq: {
     enabled: env.STRUCT_LIQ === 'on',

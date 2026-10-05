@@ -2,11 +2,31 @@ import { BaseAgent, type MarketContext } from './BaseAgent.js';
 import type { Signal } from '../types.js';
 import { config } from '../config.js';
 import type { MarketState } from '../market/types.js';
+import type { BinanceService } from '../binance/client.js';
+import { nearestPoolWithRewardRisk } from '../decision/liquidityTargets.js';
 
+export interface CrowdingAgentOptions {
+  /** Defaults to CROWDING_MIN_REWARD_RISK. */
+  minimumRewardRisk?: number;
+}
+
+/**
+ * Fades an over-crowded side after it swept liquidity. The stop sits behind the sweep (at least 1.2 ATR from entry),
+ * and the target is the nearest untaken liquidity pool that pays `minimumRewardRisk` times that stop. It is not the
+ * range midpoint: the midpoint sits a fixed distance from the range edges, so as price drifts toward it the reward
+ * collapses while the stop stays 1.2 ATR wide (RR 1.17 -> 0.89 -> 0.42 in one morning of SOL alerts). With no pool
+ * that clears the floor there is no trade.
+ */
 export class CrowdingAgent extends BaseAgent {
   readonly id = 'CROWDING-ι' as const;
   readonly strategy = 'contrarian_crowding_reversal';
   private lastHandledTime = new Map<string, number>();
+  private readonly minimumRewardRisk: number;
+
+  constructor(svc: BinanceService, options: CrowdingAgentOptions = {}) {
+    super(svc);
+    this.minimumRewardRisk = options.minimumRewardRisk ?? config.crowding.minimumRewardRisk;
+  }
 
   protected async analyze(ctx: MarketContext): Promise<Signal[]> {
     if (!ctx.marketState) return [];
@@ -44,8 +64,8 @@ export class CrowdingAgent extends BaseAgent {
 
     const entry = state.mark;
     const stopLoss = Math.max(sweep.sweepPrice, entry + 1.2 * atr);
-    const takeProfit = state.pricing.equilibrium;
-    if (takeProfit >= entry) return null;
+    const target = nearestPoolWithRewardRisk(state, 'SHORT', entry, stopLoss - entry, this.minimumRewardRisk);
+    if (!target) return null;
 
     this.lastHandledTime.set(symbol, state.generatedAt);
     return this.signal({
@@ -54,8 +74,8 @@ export class CrowdingAgent extends BaseAgent {
       confidence: 0.85,
       entry,
       stopLoss,
-      takeProfit,
-      reason: `Fading LONG_CROWDED at premium after buy-side sweep at ${sweep.sweepPrice}`,
+      takeProfit: target.pool.price,
+      reason: `Fading LONG_CROWDED at premium after buy-side sweep at ${sweep.sweepPrice}; target ${target.pool.type} ${target.pool.price} (${target.rewardRisk.toFixed(2)}R)`,
       ts: state.generatedAt,
     });
   }
@@ -67,8 +87,8 @@ export class CrowdingAgent extends BaseAgent {
 
     const entry = state.mark;
     const stopLoss = Math.min(sweep.sweepPrice, entry - 1.2 * atr);
-    const takeProfit = state.pricing.equilibrium;
-    if (takeProfit <= entry) return null;
+    const target = nearestPoolWithRewardRisk(state, 'LONG', entry, entry - stopLoss, this.minimumRewardRisk);
+    if (!target) return null;
 
     this.lastHandledTime.set(symbol, state.generatedAt);
     return this.signal({
@@ -77,8 +97,8 @@ export class CrowdingAgent extends BaseAgent {
       confidence: 0.85,
       entry,
       stopLoss,
-      takeProfit,
-      reason: `Squeezing SHORT_CROWDED at discount after sell-side sweep at ${sweep.sweepPrice}`,
+      takeProfit: target.pool.price,
+      reason: `Squeezing SHORT_CROWDED at discount after sell-side sweep at ${sweep.sweepPrice}; target ${target.pool.type} ${target.pool.price} (${target.rewardRisk.toFixed(2)}R)`,
       ts: state.generatedAt,
     });
   }

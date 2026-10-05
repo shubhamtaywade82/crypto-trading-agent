@@ -56,6 +56,8 @@ export class RiskOps {
     // The persisted peak outlives the journal (which is capped and only realized):
     // seed it first so the drawdown governor starts where the last session ended.
     if (this.options.hwm) this.engine.seedObservedPeak(this.options.hwm.peak());
+    // An operator drawdown reset also retires the journal's older realized peaks
+    this.engine.setDrawdownEpoch(this.options.hwm?.resetAt?.() ?? 0);
     this.engine.hydrate(trades);
     this.engine.onEquity(account.equity);
     this.options.hwm?.observe(account.equity);

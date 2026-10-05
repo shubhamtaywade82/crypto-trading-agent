@@ -14,12 +14,16 @@ export interface PeakEquitySource {
   observe(equity: number): number;
   /** Clears the peak (operator maintenance); the next reading re-establishes it. */
   reset(): void;
+  /** When the operator last reset the drawdown baseline (epoch ms), 0 if never. Realized peaks before it no longer count. */
+  resetAt?(): number;
 }
 
 export interface EquityHwmSnapshot {
   version: 1;
   /** Peak equity per account mode: paper and live are different wallets and must not share a peak. */
   peaks: Partial<Record<Mode, number>>;
+  /** Per-mode time of the last operator drawdown reset; absent in files written before resets existed. */
+  resets?: Partial<Record<Mode, number>>;
   updatedAt: number;
 }
 
@@ -31,6 +35,9 @@ function isHwmSnapshot(value: unknown): value is EquityHwmSnapshot {
   if (state.version !== 1 || typeof state.updatedAt !== 'number' || state.peaks === null || typeof state.peaks !== 'object') {
     return false;
   }
+  const resets = state.resets;
+  if (resets !== undefined && (resets === null || typeof resets !== 'object'
+    || !Object.values(resets).every((at) => typeof at === 'number' && Number.isFinite(at)))) return false;
   return Object.values(state.peaks).every((peak) => typeof peak === 'number' && Number.isFinite(peak));
 }
 
@@ -75,6 +82,7 @@ export class EquityHwmStore {
     if (!Number.isFinite(equity) || equity <= 0) return this.peak(mode);
     if (equity > this.peak(mode)) {
       this.snapshot = {
+        ...this.snapshot,
         version: 1,
         peaks: { ...this.snapshot.peaks, [mode]: equity },
         updatedAt: this.now(),
@@ -88,8 +96,29 @@ export class EquityHwmStore {
     if (!(mode in this.snapshot.peaks)) return;
     const peaks = { ...this.snapshot.peaks };
     delete peaks[mode];
-    this.snapshot = { version: 1, peaks, updatedAt: this.now() };
+    this.snapshot = { ...this.snapshot, version: 1, peaks, updatedAt: this.now() };
     this.persist();
+  }
+
+  /** When the drawdown baseline of `mode` was last reset by the operator (epoch ms), 0 if never. */
+  resetAt(mode: Mode): number {
+    return this.snapshot.resets?.[mode] ?? 0;
+  }
+
+  /**
+   * Operator reset of the drawdown baseline: forgets the stored peak AND stamps the reset time, so the closed-trade
+   * journal's realized peak from before it stops counting too (the circuit breaker reads both). Returns what was cleared.
+   * The loss-streak and daily-loss limits are untouched: they look at today's trades only.
+   */
+  resetDrawdown(mode: Mode): { previousPeak: number; previousResetAt: number; resetAt: number } {
+    const previousPeak = this.peak(mode);
+    const previousResetAt = this.resetAt(mode);
+    const peaks = { ...this.snapshot.peaks };
+    delete peaks[mode];
+    const resetAt = this.now();
+    this.snapshot = { version: 1, peaks, resets: { ...this.snapshot.resets, [mode]: resetAt }, updatedAt: resetAt };
+    this.persist();
+    return { previousPeak, previousResetAt, resetAt };
   }
 
   /** Binds this store to one account mode so consumers stay mode-agnostic. */
@@ -98,6 +127,7 @@ export class EquityHwmStore {
       peak: () => this.peak(mode),
       observe: (equity) => this.observe(mode, equity),
       reset: () => this.reset(mode),
+      resetAt: () => this.resetAt(mode),
     };
   }
 

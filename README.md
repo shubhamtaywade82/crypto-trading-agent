@@ -206,6 +206,33 @@ inputs are the features of the last *closed* bar.
 
 ---
 
+## Regime model: classic vs scored
+
+`REGIME_MODEL=scored` (`src/market/RegimeScoring.ts`) keeps the six labels but scores a trend 0..1 (ADX, EMA slope, EMA alignment,
+VWAP side, gated by the 1h direction), enters a trend at >= `REGIME_TREND_ENTER` and keeps it until < `REGIME_TREND_EXIT`, and
+only adopts a different label after `REGIME_CONFIRM_BARS` closed bars. It exists because the classic classifier flips
+TREND <-> TRANSITION every time ADX crosses 25 and the strategy router follows that label.
+
+Replay of the same fleet on real klines (BTC, ETH, SOL; `npx tsx scripts/pm-sweep.ts --study regime`), net PnL in USDT:
+
+| Regime model | Older 90d | Last 90d | Pooled (trades) |
+| --- | --- | --- | --- |
+| classic | -81.5 | -104.7 | -186.1 (227) |
+| scored, confirm 1 bar | -25.2 | -123.6 | -148.8 (261) |
+| scored, confirm 2 bars | -39.0 | -109.0 | -148.0 (223) |
+| scored, confirm 3 bars | -22.0 | -102.1 | -124.1 (276) |
+| scored, confirm 2, enter .60 / exit .45 | -11.3 | -114.8 | -126.1 (246) |
+
+Pooled, every scored variant is better, but all of the gain is in the older window; in the last 90 days most are slightly worse, and
+by symbol the sign flips (BTC gains where SOL loses). With about 250 trades at roughly +-5 USDT each the noise on these sums is
+around +-80, so the difference is not distinguishable from chance. It stays opt-in until a longer or out-of-sample run says otherwise.
+
+**What the sweeps do show**: the fleet loses money in both windows whatever the regime model or exit management (E[R] about -0.25
+after fees and slippage; on BTC roughly 40% of the loss is fees plus slippage and the rest is negative gross edge). Neither of these
+layers is the problem; the entries are.
+
+---
+
 ## Configuration
 
 All configuration is via environment variables (validated with `zod` in
@@ -234,7 +261,7 @@ was fixed.
 | `STRUCT_LIQ` | `on` | `off` removes the STRUCT-LIQ-η agent from the fleet (shown paused in the cockpit) |
 | `STRUCT_LIQ_MAX_SWEEP_AGE_CANDLES` | `6` | How old (15m candles) the STRUCT-LIQ trigger sweep may be |
 | `STRUCT_LIQ_MIN_REWARD_RISK` | `1.5` | Minimum reward:risk the STRUCT-LIQ target liquidity must offer |
-| `REGIME_MODEL` | `classic` | `scored` = trend score + hysteresis + dwell time (`REGIME_CONFIRM_BARS`, `REGIME_TREND_ENTER`, `REGIME_TREND_EXIT`); labels unchanged, adds `confidence`, `rawRegime`, `barsInRegime` to the snapshot |
+| `REGIME_MODEL` | `classic` | `scored` = trend score + hysteresis + dwell time (`REGIME_CONFIRM_BARS`, `REGIME_TREND_ENTER`, `REGIME_TREND_EXIT`); labels unchanged, adds `confidence`, `rawRegime`, `barsInRegime` to the snapshot. **Off by default: not shown to help**, see [Regime model](#regime-model-classic-vs-scored) |
 | `SETUP_MIN_REWARD_RISK` | `1.5` | Gross reward:risk a Telegram setup scenario must offer to be built at all (was a hard-coded 1.25); the quality gate then re-checks it after costs |
 | `SETUP_ALERT_HIDE_NO_TRADE` | `on` | Leave scenarios the quality gate rejected (`NO_TRADE`, e.g. a long entered in premium or cost-adjusted RR < 1.0) out of setup cards; they still reach `data/setup-outcomes.jsonl` |
 | `CROWDING_MIN_REWARD_RISK` | `1.5` | CROWDING-ι targets the nearest untaken liquidity pool paying at least this multiple of its stop (≥ 1.2 ATR); with none, no signal. Replaced the range-midpoint target, whose reward collapsed as price drifted toward it (RR 1.17 → 0.89 → 0.42) |

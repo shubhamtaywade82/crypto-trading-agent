@@ -26,6 +26,10 @@ export interface PmConfig {
   costBufferRate: number;
   /** Strategies whose final exit is always their own target (mean reversion has no trend to ride). */
   targetOnlyStrategies: readonly AgentId[];
+  /** When the stop first moves to entry plus costs: after the TP1 fill (default), after the TP2 fill, or never. */
+  breakevenAfter: 'TP1' | 'TP2' | 'NEVER';
+  /** The trail only starts once the best price since entry is this many R in profit (0 = as soon as TP1 is taken). */
+  trailStartR: number;
 }
 
 export const DEFAULT_PM_CONFIG: PmConfig = {
@@ -34,6 +38,8 @@ export const DEFAULT_PM_CONFIG: PmConfig = {
   minTrailGapAtr: 0.25,
   costBufferRate: 2 * (0.0004 + 0.0002),
   targetOnlyStrategies: ['MEAN-REVERT-θ'],
+  breakevenAfter: 'TP1',
+  trailStartR: 0,
 };
 
 export interface PmState {
@@ -146,11 +152,13 @@ function stopCandidates(state: PmState, input: PmInput, cfg: PmConfig): StopCand
   const dir = dirOf(state.side);
   const out: StopCandidate[] = [];
   const beyondMark = (level: number): boolean => (input.mark - level) * dir > 0;
-  if (state.tp1Done) {
+  const breakevenArmed = cfg.breakevenAfter === 'TP1' ? state.tp1Done : cfg.breakevenAfter === 'TP2' ? state.tp2Done : false;
+  if (breakevenArmed) {
     const be = state.entry + dir * state.entry * cfg.costBufferRate;
     if (beyondMark(be)) out.push({ level: be, reason: 'BREAKEVEN' });
   }
-  if (state.phase === 'INITIAL' || input.atr === null || !(input.atr > 0)) return out;
+  const excursionR = ((state.extreme - state.entry) * dir) / state.oneR;
+  if (state.phase === 'INITIAL' || excursionR < cfg.trailStartR || input.atr === null || !(input.atr > 0)) return out;
   const gap = cfg.minTrailGapAtr * input.atr;
   const clamp = (level: number): number => (dir === 1 ? Math.min(level, input.mark - gap) : Math.max(level, input.mark + gap));
   out.push({ level: clamp(state.extreme - dir * cfg.trailAtr[input.vol] * input.atr), reason: 'TRAIL' });

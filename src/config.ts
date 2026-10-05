@@ -93,6 +93,11 @@ export const EnvSchema = z.object({
   NOTIFICATIONS_PATH: pathWithDefault('data/notifications.json'),
   DECISIONS_PATH: pathWithDefault('data/decisions.jsonl'),
   /** Optional per-strategy RR floors written by scripts/calibrate-rr.ts; empty keeps the global MIN_RR. */
+  /** classic = the original first-match classifier; scored = trend score + hysteresis + dwell time (see src/market/RegimeScoring.ts). */
+  REGIME_MODEL: z.enum(['classic', 'scored']).default('classic'),
+  REGIME_CONFIRM_BARS: z.coerce.number().int().min(1).default(2),
+  REGIME_TREND_ENTER: z.coerce.number().min(0).max(1).default(0.55),
+  REGIME_TREND_EXIT: z.coerce.number().min(0).max(1).default(0.4),
   SETUP_OUTCOMES_PATH: pathWithDefault('data/setup-outcomes.jsonl'),
   /** Gross reward:risk a setup scenario must offer to be built at all (the quality gate then re-checks it after costs). */
   SETUP_MIN_REWARD_RISK: z.coerce.number().min(0).default(1.5),
@@ -114,6 +119,9 @@ export const EnvSchema = z.object({
 }).superRefine((env, ctx) => {
   if (env.PM_TP2_R <= env.PM_TP1_R) {
     ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['PM_TP2_R'], message: 'PM_TP2_R must be greater than PM_TP1_R' });
+  }
+  if (env.REGIME_TREND_EXIT >= env.REGIME_TREND_ENTER) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['REGIME_TREND_EXIT'], message: 'REGIME_TREND_EXIT must be below REGIME_TREND_ENTER (that gap is the hysteresis)' });
   }
   if (env.PM_TP1_FRACTION + env.PM_TP2_FRACTION >= 1) {
     ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['PM_TP2_FRACTION'], message: 'PM_TP1_FRACTION + PM_TP2_FRACTION must be below 1 so a runner remains' });
@@ -247,6 +255,10 @@ export const config = {
   rrProfilePath: env.RR_PROFILE_PATH,
   approvalsPath: env.APPROVALS_PATH,
   setupOutcomesPath: env.SETUP_OUTCOMES_PATH,
+  regime: {
+    scored: env.REGIME_MODEL === 'scored',
+    options: { confirmBars: env.REGIME_CONFIRM_BARS, trendEnter: env.REGIME_TREND_ENTER, trendExit: env.REGIME_TREND_EXIT },
+  },
   setup: {
     minRewardRisk: env.SETUP_MIN_REWARD_RISK,
     alertHideNoTrade: env.SETUP_ALERT_HIDE_NO_TRADE === 'on',

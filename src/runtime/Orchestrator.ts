@@ -58,7 +58,7 @@ const TICK_FLUSH_INTERVAL_MS = 250;
 
 export class Orchestrator extends EventEmitter {
   private binance = new BinanceService();
-  private marketStateBuilder = new MarketStateBuilder();
+  private marketStateBuilder = new MarketStateBuilder(config.regime.scored ? config.regime.options : undefined);
   private adaptive = new AdaptiveSuperTrendAgent(this.binance);
   private structureTrend = new StructureTrendAgent(this.binance);
   private structLiq = new StructureLiquidityAgent(

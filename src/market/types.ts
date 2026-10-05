@@ -197,6 +197,18 @@ export interface RegimeSnapshot {
   volatilityPercentile: number | null;
   adx14: number | null;
   emaSlopePct: number | null;
+  /**
+   * Set by the scored regime tracker only. `regime` is then the HELD label (hysteresis + dwell), `rawRegime` what the
+   * indicators say right now, `pendingRegime` the challenger waiting out its dwell time.
+   */
+  rawRegime?: MarketRegime;
+  pendingRegime?: MarketRegime | null;
+  /** Closed 15m bars the held regime has lasted. */
+  barsInRegime?: number;
+  /** 0..1: for a trend, its score; otherwise how far from trending the market is (1 - strongest trend score). */
+  confidence?: number;
+  /** Signed trend score in -1..1 (positive = up). */
+  trendScore?: number;
 }
 
 export interface MarketState {

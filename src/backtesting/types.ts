@@ -55,6 +55,8 @@ export interface ReplayConfig {
    * structure trail). Undefined follows config.positionManager.enabled; false restores the fixed stop/target replay for A/B runs.
    */
   positionManager?: boolean;
+  /** Scored regime with hysteresis: options to use it, null for the original classifier, undefined to follow REGIME_MODEL. */
+  regime?: Partial<import('../market/RegimeScoring.js').RegimeOptions> | null;
   /** Overrides the manager parameters derived from the environment. */
   pm?: import('../position/PositionManager.js').PmConfig;
 }

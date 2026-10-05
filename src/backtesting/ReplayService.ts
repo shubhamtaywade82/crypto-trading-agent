@@ -106,7 +106,8 @@ export class ReplayService {
     const feed = new MarketDataFeed(data);
     const simulator = new ExecutionSimulator(cfg.costs);
     const portfolio = new PortfolioSimulator(cfg.initialEquity, simulator);
-    const builder = new MarketStateBuilder();
+    const regime = cfg.regime === undefined ? (config.regime.scored ? config.regime.options : undefined) : (cfg.regime ?? undefined);
+    const builder = new MarketStateBuilder(regime);
     const limits: RiskLimits = cfg.riskLimits ?? riskLimitsFromConfig();
 
     // In-memory equity high-water mark shared by the risk agent and the performance ops — replay never writes risk state to disk

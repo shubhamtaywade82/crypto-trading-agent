@@ -1,6 +1,7 @@
 import type { Candle } from '../types.js';
 import { detectLiquidity } from './LiquidityEngine.js';
 import { classifyRegime, buildTimeframeState } from './RegimeEngine.js';
+import { RegimeTracker, type RegimeOptions } from './RegimeScoring.js';
 import { calculateCrowding } from './CrowdingEngine.js';
 import { analyzeStructure } from './StructureEngine.js';
 import { buildZoneLedger } from './ZoneLedger.js';
@@ -76,6 +77,12 @@ function nativeOrResampled(
 
 export class MarketStateBuilder {
   private cache = new Map<string, MarketState>();
+  private readonly regimeTracker: RegimeTracker | null;
+
+  /** Pass regime options to use the scored regime with hysteresis; omit for the original first-match classifier. */
+  constructor(regimeOptions?: Partial<RegimeOptions>) {
+    this.regimeTracker = regimeOptions ? new RegimeTracker(regimeOptions) : null;
+  }
 
   build(input: MarketStateInput): MarketState {
     const fallback15m = closedCandles(input.candles);
@@ -127,7 +134,9 @@ export class MarketStateBuilder {
       generatedAt: latestClosedTime,
       mark: input.mark,
       fundingRate: input.fundingRate,
-      regime: classifyRegime(timeframes['15m'], timeframes['1h']),
+      regime: this.regimeTracker
+        ? this.regimeTracker.update(input.symbol, latestClosedTime, timeframes['15m'], timeframes['1h'])
+        : classifyRegime(timeframes['15m'], timeframes['1h']),
       timeframes,
       htfStructure,
       ltfStructure,

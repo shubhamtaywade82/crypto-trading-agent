@@ -94,6 +94,10 @@ export const EnvSchema = z.object({
   DECISIONS_PATH: pathWithDefault('data/decisions.jsonl'),
   /** Optional per-strategy RR floors written by scripts/calibrate-rr.ts; empty keeps the global MIN_RR. */
   SETUP_OUTCOMES_PATH: pathWithDefault('data/setup-outcomes.jsonl'),
+  /** Gross reward:risk a setup scenario must offer to be built at all (the quality gate then re-checks it after costs). */
+  SETUP_MIN_REWARD_RISK: z.coerce.number().min(0).default(1.5),
+  /** Hide scenarios the quality gate already rejected (NO_TRADE) from Telegram setup cards; they still reach the outcome ledger. */
+  SETUP_ALERT_HIDE_NO_TRADE: z.enum(['off', 'on']).default('on'),
   /** Strategies allowed to trade live; written by scripts/live-readiness.ts --write-approvals. Missing file = none approved. */
   APPROVALS_PATH: pathWithDefault('data/strategy-approvals.json'),
   RR_PROFILE_PATH: z.string().trim().default(''),
@@ -243,6 +247,10 @@ export const config = {
   rrProfilePath: env.RR_PROFILE_PATH,
   approvalsPath: env.APPROVALS_PATH,
   setupOutcomesPath: env.SETUP_OUTCOMES_PATH,
+  setup: {
+    minRewardRisk: env.SETUP_MIN_REWARD_RISK,
+    alertHideNoTrade: env.SETUP_ALERT_HIDE_NO_TRADE === 'on',
+  },
   symbols: parseSymbols(env.SYMBOLS),
   paperExchange: env.PAPER_EXCHANGE_URL && env.PAPER_EXCHANGE_ACCOUNT_ID
     ? {

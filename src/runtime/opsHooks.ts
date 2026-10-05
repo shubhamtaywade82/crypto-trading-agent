@@ -124,10 +124,11 @@ export async function refreshPortfolio(ctx: MarketContext, source: PortfolioSour
   return { ...ctx, positions, equity };
 }
 
-export interface OpsConfig { audit: boolean; alerts: boolean; eventsPath: string; notificationsPath: string }
+export interface OpsConfig { audit: boolean; alerts: boolean; eventsPath: string; notificationsPath: string; hideNoTradeSetups?: boolean }
 
 const opsConfigFromEnv = (): OpsConfig => ({
   audit: config.audit === 'on', alerts: config.alerts === 'on', eventsPath: config.eventsPath, notificationsPath: config.notificationsPath,
+  hideNoTradeSetups: config.setup.alertHideNoTrade,
 });
 
 // Refused signals and active setups re-fire each loop while conditions hold; flapping venues re-alert
@@ -206,7 +207,7 @@ export function buildOps(options: BuildOpsOptions): Ops {
   const now = options.now ?? Date.now;
   const telegram: TelegramDeps = { log: (line) => options.log(oneLine(line)), ...options.telegram };
   const hooks = createOps({
-    isAudit: cfg.audit, isAlerts: cfg.alerts, seedTrades: options.seedTrades, now,
+    isAudit: cfg.audit, isAlerts: cfg.alerts, seedTrades: options.seedTrades, now, hideNoTradeSetups: cfg.hideNoTradeSetups ?? false,
     store: new EventStore(cfg.eventsPath),
     engine: new NotificationEngine(cfg.alerts ? loadSubscriptions(cfg.notificationsPath) : undefined, { cooldownMs: ALERT_COOLDOWN_MS, now }),
     send: (event, html) => sendAlert(event, html, telegram),

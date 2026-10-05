@@ -435,7 +435,7 @@ export class Orchestrator extends EventEmitter {
     for (const state of Object.values(marketState)) {
       this.flowTracker.record(state.symbol, state.generatedAt, state.mark, state.derivatives ?? null, state.fundingRate);
       const flow = this.flowTracker.context(state.symbol, state.generatedAt);
-      const raw = buildSetupMap(state);
+      const raw = buildSetupMap(state, { minRewardRisk: config.setup.minRewardRisk });
       const { map: ledgered, transitions } = this.setupLedger.apply(raw, state.timeframes['15m'].atr14 ?? 0);
       const annotated = annotateSetupMap(state, ledgered, flow, { feeRate: config.risk.takerFeeRate, slippageRate: config.risk.slippageBufferRate });
       // Outcomes are recorded for every setup, including ones the thesis controller withholds from execution

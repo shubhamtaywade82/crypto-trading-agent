@@ -199,6 +199,8 @@ was fixed.
 | `STRUCT_LIQ` | `on` | `off` removes the STRUCT-LIQ-η agent from the fleet (shown paused in the cockpit) |
 | `STRUCT_LIQ_MAX_SWEEP_AGE_CANDLES` | `6` | How old (15m candles) the STRUCT-LIQ trigger sweep may be |
 | `STRUCT_LIQ_MIN_REWARD_RISK` | `1.5` | Minimum reward:risk the STRUCT-LIQ target liquidity must offer |
+| `SETUP_MIN_REWARD_RISK` | `1.5` | Gross reward:risk a Telegram setup scenario must offer to be built at all (was a hard-coded 1.25); the quality gate then re-checks it after costs |
+| `SETUP_ALERT_HIDE_NO_TRADE` | `on` | Leave scenarios the quality gate rejected (`NO_TRADE`, e.g. a long entered in premium or cost-adjusted RR < 1.0) out of setup cards; they still reach `data/setup-outcomes.jsonl` |
 | `CROWDING_MIN_REWARD_RISK` | `1.5` | CROWDING-ι targets the nearest untaken liquidity pool paying at least this multiple of its stop (≥ 1.2 ATR); with none, no signal. Replaced the range-midpoint target, whose reward collapsed as price drifted toward it (RR 1.17 → 0.89 → 0.42) |
 | `AUDIT` / `ALERTS` | `off` | Audit trail and Telegram alerts, see [Ops](#ops-audit-trail-telegram-alerts-kill-switch) |
 | `PAPER_EXCHANGE_URL` | (unset) | When set in `paper` mode, routes through the remote Rails broker (`http://127.0.0.1:3100`) |

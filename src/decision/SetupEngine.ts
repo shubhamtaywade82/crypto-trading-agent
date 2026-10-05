@@ -11,6 +11,13 @@ const MAX_SWEEP_AGE_MS = 6 * 15 * 60_000;
 const STOP_BUFFER_ATR = 0.15;
 const MAX_STOP_ATR = 4;
 const MIN_STOP_ATR = 0.5;
+
+export interface SetupEngineOptions {
+  /** Gross reward:risk a scenario must offer to exist at all; the quality gate then judges it after costs. */
+  minRewardRisk: number;
+}
+/** Same 1.5R floor as STRUCT-LIQ and CROWDING-ι. The old hard-coded 1.25 let a 0.8-ATR target through as "RR 1.57". */
+export const DEFAULT_SETUP_OPTIONS: SetupEngineOptions = { minRewardRisk: 1.5 };
 /** TP2 must sit at least this far beyond TP1: equal-high clusters otherwise print a TP2 a few ticks past TP1, which is the same target twice. */
 const MIN_TP2_GAP_ATR = 0.5;
 
@@ -147,6 +154,7 @@ function buildBreakout(
   direction: SetupDirection,
   atrValue: number,
   dead: DeadIds,
+  minRr: number,
 ): SetupScenario | null {
   const pool = directionalPool(state, direction, state.mark);
   if (!pool) return null;
@@ -167,7 +175,7 @@ function buildBreakout(
   const target1 = next.price;
   const rr = riskReward(entry, stop, target1);
   const move = expectedMove(Math.abs(target1 - entry), atrValue, '15m', state.regime.volatility);
-  if (!move || rr < 1.25 || Math.abs(entry - stop) / atrValue > MAX_STOP_ATR) return null;
+  if (!move || rr < minRr || Math.abs(entry - stop) / atrValue > MAX_STOP_ATR) return null;
 
   return {
     id,
@@ -194,6 +202,7 @@ function buildPullback(
   direction: SetupDirection,
   atrValue: number,
   dead: DeadIds,
+  minRr: number,
 ): SetupScenario | null {
   const zone = nearestZoneRecord(state, direction, state.mark);
   if (!zone) return null;
@@ -209,7 +218,7 @@ function buildPullback(
   const riskAtr = Math.abs(entry - stop) / atrValue;
   const rr = riskReward(entry, stop, target.price);
   const move = expectedMove(Math.abs(target.price - entry), atrValue, '15m', state.regime.volatility);
-  if (!move || riskAtr < MIN_STOP_ATR || riskAtr > MAX_STOP_ATR || rr < 1.25) return null;
+  if (!move || riskAtr < MIN_STOP_ATR || riskAtr > MAX_STOP_ATR || rr < minRr) return null;
 
   return {
     id,
@@ -246,6 +255,7 @@ function buildSweep(
   direction: SetupDirection,
   atrValue: number,
   dead: DeadIds,
+  minRr: number,
 ): SetupScenario | null {
   const sweep = latestSweep(state, direction);
   if (!sweep || state.generatedAt - sweep.time > MAX_SWEEP_AGE_MS) return null;
@@ -262,7 +272,7 @@ function buildSweep(
   const rr = riskReward(entry, stop, target.price);
   const move = expectedMove(Math.abs(target.price - entry), atrValue, '15m', state.regime.volatility);
   const riskAtr = Math.abs(entry - stop) / atrValue;
-  if (!move || riskAtr < MIN_STOP_ATR || riskAtr > MAX_STOP_ATR || rr < 1.25) return null;
+  if (!move || riskAtr < MIN_STOP_ATR || riskAtr > MAX_STOP_ATR || rr < minRr) return null;
 
   return {
     id,
@@ -286,7 +296,7 @@ function buildSweep(
   };
 }
 
-export function buildSetupMap(state: MarketState): SetupMap {
+export function buildSetupMap(state: MarketState, options: SetupEngineOptions = DEFAULT_SETUP_OPTIONS): SetupMap {
   const bias = trendOf(state);
   const direction: SetupDirection | null = bias === 'BULLISH' ? 'LONG' : bias === 'BEARISH' ? 'SHORT' : null;
   const atr15 = state.timeframes['15m'].atr14 ?? 0;
@@ -295,7 +305,7 @@ export function buildSetupMap(state: MarketState): SetupMap {
 
   if (direction && atr15 > 0) {
     for (const builder of [buildSweep, buildPullback, buildBreakout]) {
-      const setup = builder(state, direction, atr15, invalidatedIds);
+      const setup = builder(state, direction, atr15, invalidatedIds, options.minRewardRisk);
       if (setup) scenarios.push(setup);
     }
   }

@@ -21,6 +21,8 @@ export interface OpsDeps {
   /** The journal as it stood at start: those trades were already reported by an earlier run. */
   seedTrades?: readonly TradeRecord[];
   now?: () => number;
+  /** Leave scenarios the quality gate rejected (NO_TRADE) out of setup cards. */
+  hideNoTradeSetups?: boolean;
 }
 
 export interface DigestRequest {
@@ -139,7 +141,7 @@ class Ops implements OpsHooks {
 
   onSetup = (setup: SetupMap): void => {
     this.safely(() => {
-      const notice = buildSetupNotice(setup);
+      const notice = buildSetupNotice(setup, { hideNoTrade: this.deps.hideNoTradeSetups ?? false });
       if (!notice) return;
       this.audit('setup', { state: setup.state, bias: setup.bias, scenarioIds: notice.scenarioKey }, { symbol: setup.symbol });
       this.notify(notice);

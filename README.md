@@ -111,6 +111,19 @@ The drawdown kill-switch measures against a persisted, mode-keyed equity high-wa
 re-arms the bot. The same peak seeds the circuit-breaker's `PerformanceEngine`, so both drawdown views read
 one authority.
 
+**Resetting it.** After a long drawdown every entry is refused with `drawdown kill-switch` until equity recovers. To start a
+fresh baseline on purpose (stop the agent first, it keeps the peak in memory):
+
+```bash
+npx tsx scripts/reset-risk-hwm.ts            # dry run: shows the stored peak and what would change
+npx tsx scripts/reset-risk-hwm.ts --confirm  # backs up data/risk-hwm.json, then resets (paper by default)
+npx tsx scripts/reset-risk-hwm.ts --mode live --confirm --allow-live   # a live account needs both flags
+```
+
+The reset forgets the stored peak **and** stamps a reset time that the circuit breaker also honours: realized peaks in the
+closed-trade journal from before it stop counting, otherwise `EMERGENCY` would persist off the journal alone. The next equity
+reading becomes the new peak. The daily-loss and loss-streak limits are not reset, and the trade journal is untouched.
+
 ---
 
 ## Position manager & market safety

@@ -44,6 +44,8 @@ export class PerformanceEngine {
   private positions: TradeRecord[] = [];
   // Unrealized peaks matter for drawdown but are not in the journal, so hydrate must not erase them
   private observedPeakEquity = 0;
+  // Realized peaks before this time are ignored (operator drawdown reset); 0 counts the whole journal
+  private drawdownEpoch = 0;
 
   constructor(private readonly initialEquity: number, private readonly now: () => number = Date.now) {}
 
@@ -52,6 +54,11 @@ export class PerformanceEngine {
     this.trades = [...trades].sort((a, b) => a.closedAt - b.closedAt);
     // Streaks and expectancy count positions: a partial take-profit followed by a stopped-out remainder is one trade, not a win and a loss
     this.positions = foldPartials(this.trades);
+  }
+
+  /** Starts the drawdown baseline at `epoch` (epoch ms): the realized equity at that moment becomes the first peak. 0 = whole journal. */
+  setDrawdownEpoch(epoch: number): void {
+    this.drawdownEpoch = Number.isFinite(epoch) && epoch > 0 ? epoch : 0;
   }
 
   /** Records a live equity reading so unrealized peaks count towards the drawdown high-water mark. */
@@ -101,11 +108,13 @@ export class PerformanceEngine {
 
   private realizedPeakEquity(): number {
     let running = this.initialEquity;
-    let peak = running;
+    // After an operator reset the peak is undefined until the journal reaches the reset time, then restarts at the equity held then
+    let peak: number | undefined = this.drawdownEpoch > 0 ? undefined : running;
     for (const trade of this.trades) {
+      if (peak === undefined && trade.closedAt >= this.drawdownEpoch) peak = running;
       running += trade.pnl;
-      peak = Math.max(peak, running);
+      if (peak !== undefined) peak = Math.max(peak, running);
     }
-    return peak;
+    return peak ?? running;
   }
 }

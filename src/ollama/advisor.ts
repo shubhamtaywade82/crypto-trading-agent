@@ -1,5 +1,6 @@
-import { Ollama } from 'ollama';
+import { OllamaClient } from '@nemesis-oss/ollama-sdk';
 import { config } from '../config.js';
+import { jsonFormatFor, parseJsonLoose } from './jsonMode.js';
 import type { Position, LogEntry, VetoSnapshot } from '../types.js';
 
 export interface VetoVerdict {
@@ -9,6 +10,18 @@ export interface VetoVerdict {
 
 const VETO_TIMEOUT_MS = 5000;
 const PING_INTERVAL_MS = 60_000;
+
+/** The slice of `OllamaClient` the advisor uses; injectable so tests never open a socket. */
+export interface AdvisorClient {
+  listModels(): Promise<unknown>;
+  generateText(request: { model: string; prompt: string; format?: 'json' }): Promise<string>;
+}
+
+type GenerateRequest = Parameters<AdvisorClient['generateText']>[0];
+
+/** One client per API key; the pool (round-robin + failover) lives in the advisor, so the SDK must not retry or time out on its own. */
+const clientFor = (credential?: { apiKey: string }): AdvisorClient =>
+  new OllamaClient({ baseUrl: config.ollama.host, timeoutMs: VETO_TIMEOUT_MS, retries: 0, ...credential });
 
 /**
  * LLM layer via Ollama.
@@ -29,7 +42,7 @@ const PING_INTERVAL_MS = 60_000;
  */
 export function parseVerdict(text: string): VetoVerdict {
   try {
-    const parsed = JSON.parse(text);
+    const parsed = parseJsonLoose(text) as { verdict?: unknown; reason?: unknown };
     const reason = String(parsed.reason ?? '');
     if (parsed.verdict === 'VETO') return { verdict: 'VETO', reason };
     if (parsed.verdict === 'PROCEED') return { verdict: 'PROCEED', reason };
@@ -57,18 +70,16 @@ function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
 export class OllamaAdvisor {
   private available = false;
   private lastPingAt = 0;
-  private clients: Array<Pick<Ollama, 'list' | 'generate'>> = [];
+  private clients: AdvisorClient[] = [];
   private keyIndex = 0;
 
-  constructor(clientOverride?: Pick<Ollama, 'list' | 'generate'>) {
+  constructor(clientOverride?: AdvisorClient) {
     if (clientOverride) {
       this.clients = [clientOverride];
     } else if (config.ollama.apiKeys.length > 0) {
-      this.clients = config.ollama.apiKeys.map(
-        (key) => new Ollama({ host: config.ollama.host, headers: { Authorization: `Bearer ${key}` } })
-      );
+      this.clients = config.ollama.apiKeys.map((apiKey) => clientFor({ apiKey }));
     } else {
-      this.clients = [new Ollama({ host: config.ollama.host })];
+      this.clients = [clientFor()];
     }
     this.ping();
   }
@@ -81,9 +92,9 @@ export class OllamaAdvisor {
     if (!this.available && Date.now() - this.lastPingAt >= PING_INTERVAL_MS) await this.ping();
     if (!this.available) return null;
     try {
-      const res = await this.executeGenerate({ model, prompt, format: 'json', stream: false });
+      const text = await this.executeGenerate({ model, prompt, ...jsonFormatFor(config.ollama.host) });
       try {
-        return JSON.parse(res.response) as T;
+        return parseJsonLoose(text) as T;
       } catch {
         return null;
       }
@@ -92,13 +103,13 @@ export class OllamaAdvisor {
     }
   }
 
-  private async executeGenerate(request: Parameters<Ollama['generate']>[0]): Promise<Awaited<ReturnType<Ollama['generate']>>> {
+  private async executeGenerate(request: GenerateRequest): Promise<string> {
     let lastErr: Error | null = null;
     const count = this.clients.length;
     for (let attempt = 0; attempt < count; attempt++) {
       const idx = (this.keyIndex + attempt) % count;
       try {
-        const res = await withTimeout(this.clients[idx].generate(request), VETO_TIMEOUT_MS);
+        const res = await withTimeout(this.clients[idx].generateText(request), VETO_TIMEOUT_MS);
         this.keyIndex = (idx + 1) % count;
         return res;
       } catch (err: any) {
@@ -112,7 +123,7 @@ export class OllamaAdvisor {
     this.lastPingAt = Date.now();
     for (const client of this.clients) {
       try {
-        await withTimeout(client.list(), VETO_TIMEOUT_MS);
+        await withTimeout(client.listModels(), VETO_TIMEOUT_MS);
         this.available = true;
         return;
       } catch {
@@ -130,8 +141,8 @@ export class OllamaAdvisor {
       'Reply with JSON only: {"verdict":"PROCEED"|"VETO","reason":"<max 15 words>"}. ' +
       'VETO only for a concrete reason such as an overextended entry or crowded funding.';
     try {
-      const res = await this.executeGenerate({ model: config.ollama.model, prompt, format: 'json', stream: false });
-      return parseVerdict(res.response);
+      const text = await this.executeGenerate({ model: config.ollama.model, prompt, ...jsonFormatFor(config.ollama.host) });
+      return parseVerdict(text);
     } catch (err) {
       return { verdict: 'PROCEED', reason: `advisor error: ${(err as Error).message}` };
     }
@@ -141,11 +152,11 @@ export class OllamaAdvisor {
     if (!this.available) return null;
     try {
       const prompt = `You are a crypto futures risk analyst. Portfolio: ${JSON.stringify(positions.slice(0, 3))}. Recent signals: ${signals.slice(-5).join('; ')}. Provide ONE sentence risk assessment, max 20 words.`;
-      const res = await this.executeGenerate({ model: config.ollama.model, prompt, stream: false });
+      const text = await this.executeGenerate({ model: config.ollama.model, prompt });
       return {
         ts: Date.now(),
         agent: 'SYSTEM',
-        msg: `OLLAMA-ADVISOR: ${res.response.trim().slice(0, 120)}`,
+        msg: `OLLAMA-ADVISOR: ${text.trim().slice(0, 120)}`,
         level: 'info',
       };
     } catch {
@@ -162,11 +173,11 @@ export class OllamaAdvisor {
         ? `Equity: $${context.equity.toFixed(2)}, Positions: ${context.positions.length}`
         : 'Portfolio: active';
       const prompt = `You are an institutional crypto risk advisor. Context: ${portfolioBrief}. Question: ${question}. Answer concisely in at most 25 words.`;
-      const res = await this.executeGenerate({ model: config.ollama.model, prompt, stream: false });
+      const text = await this.executeGenerate({ model: config.ollama.model, prompt });
       return {
         ts: Date.now(),
         agent: 'SYSTEM',
-        msg: `ADVISOR-AUDIT: ${res.response.trim().slice(0, 120)}`,
+        msg: `ADVISOR-AUDIT: ${text.trim().slice(0, 120)}`,
         level: 'info',
       };
     } catch {

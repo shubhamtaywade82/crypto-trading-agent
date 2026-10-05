@@ -1,4 +1,5 @@
-import { Ollama } from 'ollama';
+import { OllamaClient } from '@nemesis-oss/ollama-sdk';
+import { jsonFormatFor, parseJsonLoose } from '../../ollama/jsonMode.js';
 import {
   type ExecutionCandidate,
   type SMCDecisionContext,
@@ -10,6 +11,8 @@ export interface SmcExecutionAdvisorOptions {
   host: string;
   model: string;
   timeoutMs?: number;
+  /** Injectable for tests; defaults to an SDK client on `host` with the SDK's own retry and timeout disabled (the advisor is fail-closed and bounded here). */
+  client?: Pick<OllamaClient, 'generateText'>;
 }
 
 const TIMEOUT_MS = 8000;
@@ -22,30 +25,26 @@ function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
 }
 
 export class SmcExecutionAdvisor {
-  private readonly client: Ollama;
+  private readonly client: Pick<OllamaClient, 'generateText'>;
   private readonly timeoutMs: number;
+  private readonly model: string;
+  private readonly host: string;
 
   constructor(options: SmcExecutionAdvisorOptions) {
-    this.client = new Ollama({ host: options.host });
     this.timeoutMs = options.timeoutMs ?? TIMEOUT_MS;
+    this.client = options.client ?? new OllamaClient({ baseUrl: options.host, timeoutMs: this.timeoutMs, retries: 0 });
     this.model = options.model;
+    this.host = options.host;
   }
-
-  private readonly model: string;
 
   async decide(context: SMCDecisionContext): Promise<SMCTradeDecision> {
     const prompt = this.buildPrompt(context);
     try {
       const result = await withTimeout(
-        this.client.generate({
-          model: this.model,
-          prompt,
-          format: 'json',
-          stream: false,
-        }),
+        this.client.generateText({ model: this.model, prompt, ...jsonFormatFor(this.host) }),
         this.timeoutMs,
       );
-      return validateDecision(parseJson(result.response), context);
+      return validateDecision(parseJsonLoose(result), context);
     } catch (error) {
       return {
         action: 'HOLD',
@@ -109,18 +108,6 @@ function buildCandidateTable(candidates: ExecutionCandidate[]): string {
       sourceBreak: c.sourceBreak,
     })),
   );
-}
-
-function parseJson(text: string): unknown {
-  const trimmed = text.trim();
-  try {
-    return JSON.parse(trimmed);
-  } catch {
-    const start = trimmed.indexOf('{');
-    const end = trimmed.lastIndexOf('}');
-    if (start >= 0 && end > start) return JSON.parse(trimmed.slice(start, end + 1));
-    throw new Error('invalid JSON');
-  }
 }
 
 export function validateDecision(raw: unknown, context: SMCDecisionContext): SMCTradeDecision {

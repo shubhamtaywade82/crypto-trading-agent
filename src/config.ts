@@ -52,7 +52,8 @@ export const EnvSchema = z.object({
   SIZE_VOL_SCALING: z.enum(['off', 'on']).default('on'),
   SIZE_SCORE_SCALING: z.enum(['off', 'on']).default('on'),
 
-  POSITION_MANAGER: z.enum(['off', 'on']).default('on'),
+  /** Off by default: on 90-day real-kline replays of BTC/ETH/SOL in two windows no manager variant beat the fixed stop/target (see README). */
+  POSITION_MANAGER: z.enum(['off', 'on']).default('off'),
   /**
    * Position manager on live Binance. off = exchange-side stops only (default). shadow = compute and log what it would
    * do against an in-memory overlay, send nothing. on = send real reduce-only and stop-replacement orders. Needs POSITION_MANAGER=on.

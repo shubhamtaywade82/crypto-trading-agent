@@ -1,6 +1,7 @@
 import type { Position } from '../types.js';
 import { isRefusal, errorText } from '../binance/remoteOrders.js';
 import { formatPrice, roundPrice } from '../binance/symbolRules.js';
+import { dec } from '../risk/primitives.js';
 import {
   advance, initState, isStale, pmKey, revertReduce,
   type LotRules, type PmAction, type PmConfig, type PmInput, type PmState, type VolClass,
@@ -20,9 +21,13 @@ export interface SymbolFeatures {
 
 const SWING_BUFFER_ATR = 0.15;
 
+/** What a venue reports for a partial: a venue that can fill less than asked says how much it did. */
+export type ReduceResult = void | { executedQty?: number };
+
 export interface PositionVenue {
-  reducePosition(pos: Position, qty: number): Promise<void>;
-  updateStops(symbol: string, strategy: Position['strategy'], stopLoss: number, takeProfit: number | null, side: Position['side']): void;
+  reducePosition(pos: Position, qty: number): Promise<ReduceResult>;
+  /** May be asynchronous (a live venue replaces an exchange order); the driver waits for it and only then records the stop. */
+  updateStops(symbol: string, strategy: Position['strategy'], stopLoss: number, takeProfit: number | null, side: Position['side']): void | Promise<void>;
 }
 
 export interface PositionDriverDeps {
@@ -105,7 +110,15 @@ export class PositionDriver {
     const { venue, store } = this.deps;
     if (action.type === 'REDUCE') {
       try {
-        await venue.reducePosition(pos, action.qty);
+        const result = await venue.reducePosition(pos, action.qty);
+        const executed = result && typeof result.executedQty === 'number' ? result.executedQty : action.qty;
+        if (executed < action.qty - 1e-12) {
+          // A partial fill: count only what executed, so the state matches the position the exchange now reports
+          const adjusted: PmState = { ...state, reducedQty: Math.max(0, dec(state.reducedQty).minus(dec(action.qty).minus(executed)).toNumber()) };
+          store.set(adjusted);
+          this.deps.log(pos.strategy, `PM ${action.reason} ${pos.symbol} reduced ${executed} of ${action.qty} @ ${formatPrice(pos.symbol, pos.mark)} (partially filled)`, 'warn');
+          return adjusted;
+        }
         this.deps.log(pos.strategy, `PM ${action.reason} ${pos.symbol} reduce ${action.qty} @ ${formatPrice(pos.symbol, pos.mark)}`, 'info');
         return state;
       } catch (err) {
@@ -126,7 +139,13 @@ export class PositionDriver {
     if (!tightens && !targetChanged) return state;
     // Rounding to the tick must never loosen a stop that is already tighter
     const effectiveStop = tightens ? stop : currentStop;
-    venue.updateStops(pos.symbol, pos.strategy, effectiveStop, target, pos.side);
+    try {
+      await venue.updateStops(pos.symbol, pos.strategy, effectiveStop, target, pos.side);
+    } catch (err) {
+      // The venue's stop is unchanged; the next tick reads it back and tries again
+      this.deps.log(pos.strategy, `PM ${action.reason} ${pos.symbol} stop move not applied (${errorText(err)}); will retry`, isRefusal(err) ? 'info' : 'warn');
+      return state;
+    }
     const next = { ...state, stop: effectiveStop };
     store.set(next);
     this.deps.log(pos.strategy, `PM ${action.reason} ${pos.symbol} SL ${formatPrice(pos.symbol, effectiveStop)} TP ${target === null ? 'trail' : formatPrice(pos.symbol, target)}`, 'info');

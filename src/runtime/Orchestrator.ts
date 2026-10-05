@@ -46,6 +46,7 @@ import { TradingCouncil } from '../llm/TradingCouncil.js';
 import { assessSafety, type SafetyVerdict } from '../market/MarketSafety.js';
 import { ShockDetector } from '../market/ShockDetector.js';
 import { PositionDriver } from '../position/PositionDriver.js';
+import type { LiveBook } from '../binance/liveBook.js';
 import { featuresFromState } from '../position/features.js';
 import { PositionManagerStore } from '../position/PositionManagerStore.js';
 import { pmConfigFromEnv } from '../position/pmConfig.js';
@@ -116,11 +117,16 @@ export class Orchestrator extends EventEmitter {
   private pendingCouncilSignals: Signal[] = [];
   private shock = new ShockDetector(config.safety.shock);
   private safetyLevels = new Map<string, string>();
-  /** Tick-driven position manager (partials, breakeven, chandelier/structure trail). Paper and remote paper only; live keeps server-side stops. */
-  private positionDriver: PositionDriver | null = config.positionManager.enabled && config.mode === 'paper'
+  /** Live position manager book (LIVE_POSITION_MANAGER=shadow|on); null otherwise, and then live keeps exchange-side stops only. */
+  private liveBook: LiveBook | null = config.positionManager.enabled && config.mode === 'live' && config.positionManager.live !== 'off'
+    ? this.binance.createLiveBook(config.positionManager.live, (message, level) => this.log('SYSTEM', message, level))
+    : null;
+  /** Tick-driven position manager (partials, breakeven, chandelier/structure trail): paper, remote paper, and live when LIVE_POSITION_MANAGER is shadow or on. */
+  private positionDriver: PositionDriver | null = config.positionManager.enabled && (config.mode === 'paper' || this.liveBook !== null)
     ? new PositionDriver({
-      venue: this.binance,
-      store: new PositionManagerStore(config.mode),
+      venue: this.liveBook ? this.liveBook.venue() : this.binance,
+      // Shadow decisions never touch real orders, so they must not leave state that a later real run would trust
+      store: new PositionManagerStore(config.mode, this.liveBook?.mode === 'shadow' ? 'data/position-manager-shadow.json' : undefined),
       cfg: pmConfigFromEnv(),
       lotOf: (symbol) => { const r = getSymbolRules(symbol); return { step: r.stepSize, minQty: r.minQty, minNotional: r.minNotional }; },
       log: (agent, message, level) => this.log(agent, message, level),
@@ -139,6 +145,9 @@ export class Orchestrator extends EventEmitter {
     const dropped = this.binance.dropUnlistedPositions(config.symbols);
     if (dropped.length) this.log('SYSTEM', `Dropped ${dropped.length} saved position(s) outside SYMBOLS: ${dropped.join(', ')}`, 'warn');
     if (config.mode === 'live') this.log('SYSTEM', `${this.adaptive.id} disabled: dynamic exits are paper-only`, 'warn');
+    if (this.liveBook) this.log('SYSTEM', this.liveBook.mode === 'shadow'
+      ? 'LIVE position manager in SHADOW mode: it logs what it would do (partials, breakeven, trail) and sends no orders; exchange-side stops keep protecting positions'
+      : 'LIVE position manager is ON: it sends real reduce-only orders and replaces exchange stop orders. Not exercised against the real exchange in CI; watch the first trades', 'warn');
     if (!config.structLiq.enabled) this.log('SYSTEM', `${this.structLiq.id} disabled by STRUCT_LIQ=off`, 'warn');
     else if (
       config.structLiq.maxSweepAgeCandles !== DEFAULT_STRUCTURE_LIQUIDITY_OPTIONS.maxSweepAgeCandles
@@ -171,7 +180,7 @@ export class Orchestrator extends EventEmitter {
     this.logExits();
     if (config.mode !== 'paper' && !this.binance.hasVenueData()) return;
     const positions = await this.binance.getPositions(false);
-    await this.positionDriver?.manage(positions);
+    await this.positionDriver?.manage(this.liveBook ? this.liveBook.positions(this.livePrices) : positions);
     const account = await this.binance.getAccount();
     this.emit('state', { ...accountFields(account, positions), spotPrices: { ...this.liveTickers }, wsStatus: this.binance.getWsStatus() });
   }
@@ -359,7 +368,7 @@ export class Orchestrator extends EventEmitter {
   }
   private trailStops(positions: Position[], ctx: CycleContext): void {
     if (this.positionDriver) {
-      this.positionDriver.manage(positions).catch((err: unknown) => this.logFailure('Position manager failed', err));
+      this.positionDriver.manage(this.liveBook ? this.liveBook.positions(this.livePrices) : positions).catch((err: unknown) => this.logFailure('Position manager failed', err));
       return;
     }
     for (const pos of positions) {
@@ -446,6 +455,7 @@ export class Orchestrator extends EventEmitter {
       if (setup.thesisTransition || transitions.some((t) => t.kind === 'CREATED' || t.kind === 'ADVANCED') || this.verdictChanged(setup)) this.hooks.onSetup(setup);
       void this.consultCouncil(state, setup);
     }
+    await this.refreshLiveBook();
     this.refreshPositionFeatures(marketState);
     const safety = config.safety.enabled ? this.assessSafety(market) : undefined;
     return { ...market, spot: this.livePrices, equity: account.equity, positions, marketState, ...(safety ? { safety } : {}), performance: this.ops.build(this.binance.getTrades(), account) };
@@ -476,6 +486,13 @@ export class Orchestrator extends EventEmitter {
       }
     }
     return out;
+  }
+
+  /** Once per cycle: reconcile the live book with the exchange. A failure is logged and the book keeps its last view. */
+  private async refreshLiveBook(): Promise<void> {
+    if (!this.liveBook) return;
+    try { await this.liveBook.refresh(); }
+    catch (err) { this.logFailure('Live position book refresh failed', err); }
   }
 
   /** Caches the slow-loop inputs the tick-driven manager needs, so the 250 ms path does no indicator work. */

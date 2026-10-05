@@ -53,6 +53,11 @@ export const EnvSchema = z.object({
   SIZE_SCORE_SCALING: z.enum(['off', 'on']).default('on'),
 
   POSITION_MANAGER: z.enum(['off', 'on']).default('on'),
+  /**
+   * Position manager on live Binance. off = exchange-side stops only (default). shadow = compute and log what it would
+   * do against an in-memory overlay, send nothing. on = send real reduce-only and stop-replacement orders. Needs POSITION_MANAGER=on.
+   */
+  LIVE_POSITION_MANAGER: z.enum(['off', 'shadow', 'on']).default('off'),
   PM_TP1_R: z.coerce.number().positive().default(1),
   PM_TP1_FRACTION: z.coerce.number().gt(0).lt(1).default(0.35),
   PM_TP2_R: z.coerce.number().positive().default(2),
@@ -193,6 +198,7 @@ export const config = {
   },
   positionManager: {
     enabled: env.POSITION_MANAGER === 'on',
+    live: env.LIVE_POSITION_MANAGER,
     tp1R: env.PM_TP1_R,
     tp1Fraction: env.PM_TP1_FRACTION,
     tp2R: env.PM_TP2_R,

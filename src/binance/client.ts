@@ -9,6 +9,7 @@ import { roundPrice, roundQty, rulesFromExchangeInfo, setSymbolRules } from './s
 import type { AgentId, Candle, Position, Side, TradeRecord, WsStatus } from '../types.js';
 import { MarketDataService } from '../market/MarketDataService.js';
 import type { MarketDataSnapshot } from '../market/MarketDataTypes.js';
+import { LiveBook, LiveStateStore, type LiveManagerMode, type LiveOrderPort } from './liveBook.js';
 
 const KLINE_INTERVAL = '15m';
 const KLINE_LIMIT = 300;
@@ -44,6 +45,7 @@ export class BinanceService {
   private readonly lastTickAt = new Map<string, number>();
   private readonly symbolStatus = new Map<string, string>();
   private markAt = 0;
+  private liveBook: LiveBook | null = null;
 
   constructor(private readonly broker: RemoteBroker | null = remoteBrokerFromConfig()) {
     this.futures = new USDMClient({ api_key: config.binance.apiKey, api_secret: config.binance.apiSecret });
@@ -213,8 +215,54 @@ export class BinanceService {
       quantity: roundQty(params.symbol, params.qty),
       reduceOnly: params.reduceOnly ? 'true' : 'false',
     });
-    await this.placeServerProtectionOrders(params);
+    const protection = await this.placeServerProtectionOrders(params);
+    if (this.liveBook && !params.reduceOnly && params.stopLoss) {
+      this.liveBook.recordEntry({
+        symbol: params.symbol, side: params.side === 'BUY' ? 'LONG' : 'SHORT', strategy: params.strategy,
+        stopLoss: params.stopLoss, takeProfit: params.takeProfit ?? null,
+        ...(protection.stopOrderId === undefined ? {} : { stopOrderId: protection.stopOrderId }),
+        ...(protection.tpOrderId === undefined ? {} : { tpOrderId: protection.tpOrderId }),
+        ...(params.decisionId === undefined ? {} : { decisionId: params.decisionId }),
+      });
+    }
     return { orderId: order.orderId, status: order.status };
+  }
+
+  /** Live position manager: builds the exchange adapter and the book that reconciles positions with their recorded entries. */
+  createLiveBook(mode: LiveManagerMode, log: (message: string, level: 'info' | 'warn' | 'error') => void): LiveBook {
+    this.liveBook = new LiveBook(this.livePort(), new LiveStateStore(), { mode, log });
+    return this.liveBook;
+  }
+
+  private livePort(): LiveOrderPort {
+    const futures = this.futures;
+    return {
+      fetchPositions: async () => {
+        // getPositionsV3 has marks and liquidation prices; leverage and margin mode only exist on the account's positions
+        const [risk, account] = await Promise.all([futures.getPositionsV3(), futures.getAccountInformation()]);
+        const setup = new Map(account.positions.filter((p) => p.positionSide === 'BOTH').map((p) => [p.symbol, p]));
+        return risk
+          .filter((p) => p.positionSide === 'BOTH' && Number(p.positionAmt) !== 0) // one-way mode only
+          .map((p) => ({
+            symbol: p.symbol, positionAmt: Number(p.positionAmt), entryPrice: Number(p.entryPrice), markPrice: Number(p.markPrice),
+            unrealizedProfit: Number(p.unRealizedProfit), liquidationPrice: Number(p.liquidationPrice),
+            leverage: Number(setup.get(p.symbol)?.leverage ?? 1), isolated: setup.get(p.symbol)?.isolated ?? true,
+          }));
+      },
+      openOrders: async (symbol) => (await futures.getAllOpenOrders({ symbol })).map((o) => ({
+        orderId: o.orderId, type: o.type, side: o.side as 'BUY' | 'SELL', stopPrice: Number(o.stopPrice), closePosition: Boolean(o.closePosition),
+      })),
+      placeConditional: async ({ symbol, side, type, stopPrice }) => {
+        const res = await futures.submitNewOrder({ symbol, side, type, stopPrice: roundPrice(symbol, stopPrice), closePosition: 'true' });
+        return { orderId: res.orderId };
+      },
+      cancel: async (symbol, orderId) => { await futures.cancelOrder({ symbol, orderId }); },
+      marketReduce: async ({ symbol, side, quantity, clientOrderId }) => {
+        // RESULT, not the default ACK, so the executed quantity of a partial fill is known
+        const res = await futures.submitNewOrder({ symbol, side, type: 'MARKET', quantity, reduceOnly: 'true', newClientOrderId: clientOrderId, newOrderRespType: 'RESULT' });
+        return { status: res.status, executedQty: Number(res.executedQty) };
+      },
+    };
   }
 
   async cancelAll(symbol: string): Promise<void> {
@@ -318,14 +366,17 @@ export class BinanceService {
     return this.isRemoteActive() ? this.broker!.observeFunding(market) : [];
   }
 
-  private async placeServerProtectionOrders(params: OpenPositionParams): Promise<void> {
+  private async placeServerProtectionOrders(params: OpenPositionParams): Promise<{ stopOrderId?: number; tpOrderId?: number }> {
     const { symbol, side, qty, stopLoss, takeProfit } = params;
     const exitSide = side === 'BUY' ? 'SELL' : 'BUY';
     const levels = [{ type: 'STOP_MARKET', price: stopLoss }, { type: 'TAKE_PROFIT_MARKET', price: takeProfit }] as const;
+    const ids: { stopOrderId?: number; tpOrderId?: number } = {};
     for (const { type, price } of levels) {
       if (!price) continue;
-      await this.placeProtectionWithRetry(symbol, exitSide, type, price, qty);
+      const orderId = await this.placeProtectionWithRetry(symbol, exitSide, type, price, qty);
+      if (type === 'STOP_MARKET') ids.stopOrderId = orderId; else ids.tpOrderId = orderId;
     }
+    return ids;
   }
 
   private async placeProtectionWithRetry(
@@ -334,11 +385,11 @@ export class BinanceService {
     type: 'STOP_MARKET' | 'TAKE_PROFIT_MARKET',
     price: number,
     qty: number
-  ): Promise<void> {
+  ): Promise<number> {
     for (let attempt = 0; attempt < 3; attempt++) {
       try {
-        await this.futures.submitNewOrder({ symbol, side, type, stopPrice: roundPrice(symbol, price), closePosition: 'true' });
-        return;
+        const placed = await this.futures.submitNewOrder({ symbol, side, type, stopPrice: roundPrice(symbol, price), closePosition: 'true' });
+        return placed.orderId;
       } catch (err: any) {
         if (attempt === 2) {
           // Emergency close: never leave a filled live position without stop-loss protection
@@ -349,6 +400,7 @@ export class BinanceService {
         }
       }
     }
+    throw new Error(`Protection order failed (${type} for ${symbol})`); // unreachable: the last attempt throws above
   }
 
   private mapPosition(p: any): Position {

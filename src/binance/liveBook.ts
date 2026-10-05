@@ -167,21 +167,15 @@ export class LiveBook {
 
   /**
    * Once per cycle: forget positions that no longer exist, fix up the 1R of new ones, and (mode `on`) make sure every
-   * managed position still has its stop on the exchange. Orders are read BEFORE positions: a stop that vanished
-   * together with its position then shows up as a closed position, never as a missing stop on an open one.
+   * managed position still has its stop on the exchange. The stop audit reads the open orders INSIDE the symbol's lock:
+   * read outside it, a snapshot taken between a stop replacement's cancel and its place would show "no stop" and the
+   * audit would act on it after the replacement finished.
    */
   async refresh(): Promise<void> {
-    const symbols = this.store.symbols();
-    const orders = new Map<string, LiveOpenOrder[]>();
-    if (this.options.mode === 'on') {
-      await Promise.all(symbols.map(async (symbol) => {
-        try { orders.set(symbol, await this.port.openOrders(symbol)); } catch (err) { this.options.log(`live book: open orders ${symbol} unavailable (${errText(err)}); stop audit skipped`, 'warn'); }
-      }));
-    }
     const positions = await this.port.fetchPositions();
     this.raw = new Map(positions.map((p) => [p.symbol, p]));
 
-    for (const symbol of symbols) {
+    for (const symbol of this.store.symbols()) {
       const meta = this.store.get(symbol)!;
       const position = this.raw.get(symbol);
       if (!position || sideOfAmount(position.positionAmt) !== meta.side) {
@@ -193,8 +187,7 @@ export class LiveBook {
         const initialRisk = Math.abs(position.entryPrice - meta.stopLoss);
         if (initialRisk > 0) this.store.set({ ...meta, initialRisk });
       }
-      const open = orders.get(symbol);
-      if (this.options.mode === 'on' && open) await this.exclusive(symbol, () => this.auditProtection(symbol, open));
+      if (this.options.mode === 'on') await this.exclusive(symbol, () => this.auditProtection(symbol));
     }
     for (const position of positions) {
       if (this.store.get(position.symbol) || this.announcedUnmanaged.has(position.symbol)) continue;
@@ -252,6 +245,8 @@ export class LiveBook {
       const result = await this.port.marketReduce({ symbol: pos.symbol, side: exitSideOf(pos.side), quantity, clientOrderId });
       if (!(result.executedQty > 0)) throw new Error(`partial reduce of ${pos.symbol} executed nothing (status ${result.status})`);
       if (result.executedQty < quantity) this.options.log(`live book: partial reduce of ${pos.symbol} filled ${result.executedQty} of ${quantity} (status ${result.status})`, 'warn');
+      const held = this.raw.get(pos.symbol);
+      if (held) this.raw.set(pos.symbol, { ...held, positionAmt: held.positionAmt - Math.sign(held.positionAmt) * result.executedQty });
       return { executedQty: result.executedQty };
     });
   }
@@ -317,14 +312,26 @@ export class LiveBook {
     this.options.log(`live book: ${meta.symbol} fixed target dropped, the trail decides`, 'info');
   }
 
-  private async auditProtection(symbol: string, open: LiveOpenOrder[]): Promise<void> {
+  private async auditProtection(symbol: string): Promise<void> {
     const meta = this.store.get(symbol);
     if (!meta) return;
+    let open: LiveOpenOrder[];
+    try { open = await this.port.openOrders(symbol); }
+    catch (err) { this.options.log(`live book: open orders ${symbol} unavailable (${errText(err)}); stop audit skipped`, 'warn'); return; }
     const exitSide = exitSideOf(meta.side);
     const stop = open.find((o) => o.type === 'STOP_MARKET' && o.closePosition && o.side === exitSide);
     if (stop) {
       // The exchange is the truth: adopt a stop someone replaced by hand, loosened or not, so the ratchet follows reality
       if (stop.orderId !== meta.stopOrderId || stop.stopPrice !== meta.stopLoss) this.store.set({ ...meta, stopOrderId: stop.orderId, stopLoss: stop.stopPrice });
+      return;
+    }
+    // No stop in a snapshot taken moments ago. A stop that TRIGGERED looks the same, so confirm the position is still open
+    // (read AFTER the orders) before re-placing anything or closing anything.
+    const current = (await this.port.fetchPositions()).find((p) => p.symbol === symbol);
+    this.refreshRaw(symbol, current);
+    if (!current || sideOfAmount(current.positionAmt) !== meta.side) {
+      this.store.delete(symbol);
+      this.sim.delete(symbol);
       return;
     }
     this.options.log(`live book: ${symbol} has NO stop order on the exchange; re-placing it at ${meta.stopLoss}`, 'error');
@@ -333,10 +340,18 @@ export class LiveBook {
     await this.emergencyClose(meta, 'unprotected and the stop could not be re-placed');
   }
 
+  private refreshRaw(symbol: string, position: LivePositionRaw | undefined): void {
+    if (position) this.raw.set(symbol, position); else this.raw.delete(symbol);
+  }
+
   private async emergencyClose(meta: LiveMeta, reason: string): Promise<void> {
-    const raw = this.raw.get(meta.symbol);
-    const quantity = raw ? roundQty(meta.symbol, Math.abs(raw.positionAmt)) : 0;
     this.options.log(`live book: EMERGENCY CLOSE ${meta.symbol}: ${reason}`, 'error');
+    // The cached quantity can be seconds old (a partial may have reduced it); an oversized reduce-only order is rejected
+    // exactly when this matters, so size from the exchange and fall back to the cache only if that read fails
+    let held = this.raw.get(meta.symbol);
+    try { held = (await this.port.fetchPositions()).find((p) => p.symbol === meta.symbol); this.refreshRaw(meta.symbol, held); }
+    catch (err) { this.options.log(`live book: could not re-read ${meta.symbol} before the emergency close (${errText(err)}); using the last known size`, 'warn'); }
+    const quantity = held ? roundQty(meta.symbol, Math.abs(held.positionAmt)) : 0;
     if (!(quantity > 0)) return;
     try {
       await this.port.marketReduce({ symbol: meta.symbol, side: exitSideOf(meta.side), quantity, clientOrderId: `pm-emergency-${meta.symbol}-${this.now()}-${this.sequence++}` });

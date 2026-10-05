@@ -383,3 +383,48 @@ test('should retry the stop move on the next tick when the exchange refused it, 
   await driver.manage(ctx.book.positions({ BTCUSDT: 105 }));
   assert.deepEqual(ctx.exchange.calls, ['cancel 1', 'place STOP_MARKET SELL 100.1']);
 });
+
+// ---- races found in review ----
+
+test('should not mistake a stop mid-replacement for a missing stop when a refresh lands between the cancel and the place', async () => {
+  const ctx = setup();
+  await openLong(ctx);
+  let refreshing: Promise<void> | undefined;
+  const place = ctx.exchange.placeConditional.bind(ctx.exchange);
+  // The old stop is already cancelled when the new one starts to be placed: exactly when a naive audit would see "no stop"
+  ctx.exchange.placeConditional = async (order) => {
+    refreshing ??= ctx.book.refresh();
+    await new Promise((resolve) => setTimeout(resolve, 5));
+    return place(order);
+  };
+  await ctx.book.venue().updateStops('BTCUSDT', 'STRUCTURE-TREND-η', 100.1, 130, 'LONG');
+  await refreshing;
+  assert.doesNotMatch(ctx.text(), /NO stop order/);
+  assert.equal(ctx.exchange.calls.filter((c) => c.startsWith('place STOP_MARKET')).length, 1); // no duplicate stop
+  assert.ok(!ctx.exchange.calls.some((c) => c.startsWith('reduce')));
+  assert.equal(ctx.book.positions()[0]!.serverSl, '100.1');
+});
+
+test('should size an emergency close from the exchange, not from a quantity that a partial has since reduced', async () => {
+  const ctx = setup();
+  await openLong(ctx);
+  await ctx.book.venue().reducePosition(ctx.book.positions()[0]!, 0.35);
+  ctx.exchange.positions = [longPosition({ positionAmt: 0.65 })]; // what the exchange now holds; the book's last refresh still says 1
+  ctx.exchange.failPlace = 99;
+  ctx.exchange.calls.length = 0;
+  await ctx.book.venue().updateStops('BTCUSDT', 'STRUCTURE-TREND-η', 100.1, 130, 'LONG');
+  assert.equal(ctx.exchange.calls.at(-1), 'reduce SELL 0.65');
+});
+
+test('should not emergency-close, or re-place a stop, for a position that closed while its stop was being audited', async () => {
+  const ctx = setup();
+  await openLong(ctx);
+  ctx.exchange.orders = []; // the stop is gone because it TRIGGERED...
+  const fetch = ctx.exchange.fetchPositions.bind(ctx.exchange);
+  let calls = 0;
+  ctx.exchange.fetchPositions = async () => { calls += 1; if (calls >= 2) ctx.exchange.positions = []; return fetch(); }; // ...and the position is flat by the time it is re-read
+  ctx.exchange.failPlace = 99;
+  await ctx.book.refresh();
+  assert.ok(!ctx.exchange.calls.some((c) => c.startsWith('reduce') || c.startsWith('place')));
+  assert.deepEqual(ctx.book.positions(), []);
+});

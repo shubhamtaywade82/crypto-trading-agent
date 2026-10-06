@@ -5,6 +5,7 @@
  *
  *   npx tsx scripts/replay-decisions.ts [--file data/decisions.jsonl[,more.jsonl]] [--hold-hours 24] [--min-samples 15]
  *                                       [--fee 0.0004] [--slippage 0.0002] [--all-proposals] [--write]
+ *                                       [--write-hypothetical data/hypothetical-decisions.jsonl]
  *
  * Needs outbound access to public Binance USD-M klines (no keys). Repeated proposals of one idea are collapsed
  * unless --all-proposals. Stop and target in the same 5m bar resolve against us. Treat output as a screen on a small sample.
@@ -131,4 +132,13 @@ if (process.argv.includes('--write')) {
   mkdirSync(path.dirname(out), { recursive: true });
   writeFileSync(out, JSON.stringify(report.profile, null, 2));
   console.log(`wrote ${out}`);
+}
+
+const hypotheticalOut = arg('write-hypothetical', '');
+if (hypotheticalOut) {
+  // Input for scripts/conditional-edge.ts: every idea, rejected ones included, with its replayed outcome
+  const out = path.resolve(hypotheticalOut);
+  mkdirSync(path.dirname(out), { recursive: true });
+  writeFileSync(out, synthetic.map((r) => JSON.stringify(r)).join('\n') + (synthetic.length ? '\n' : ''));
+  console.log(`wrote ${synthetic.length} hypothetical outcomes to ${out}`);
 }

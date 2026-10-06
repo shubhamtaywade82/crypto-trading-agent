@@ -6,6 +6,7 @@ import { scoreCandidate } from './CandidateScorer.js';
 import type { DecisionEvidence, DecisionRecord } from './DecisionJournal.js';
 import { config } from '../config.js';
 import { breakevenWinRate } from '../risk/rrProfile.js';
+import { decisionContextOf } from '../market/VolatilityPhase.js';
 
 /** Agents whose candidates resolve through signal fusion; everyone else passes through directly. */
 export const FUSION_AGENTS: ReadonlySet<string> = new Set(['STRUCTURE-TREND-η', 'STRUCT-LIQ-η', 'MEAN-REVERT-θ', 'CROWDING-ι']);
@@ -131,6 +132,7 @@ export function buildDecisionRecord(input: DecisionRecordInput): DecisionRecord 
     riskDecision: { approved: decision.approved, size: decision.positionSizeUsdt, leverage: decision.leverage, reason: decision.reason },
     status: decision.approved ? 'EXECUTED' : 'RISK_REJECTED',
     rejectionReason: decision.approved ? null : decision.reason,
+    ...(state ? { context: decisionContextOf(state.regime, state.timeframes['15m']) } : {}),
   };
 }
 

@@ -91,3 +91,23 @@ Recording started 2026-09-30; at the time of this commit under five hours existe
 - **H4** — 5-minute mean book imbalance in the top 5% (by magnitude) predicts direction (bid-heavy up, ask-heavy down).
 Horizons 5/15/30/60 minutes, 12 tests, Bonferroni alpha 0.0042, n >= 30 events, events non-overlapping within the horizon, thresholds from the first half of the data,
 events counted in the second half, costs 16 bps round trip. A pass is a lead to re-test on later data; it does not approve a strategy (see section 8).
+
+## 11. Conditional edge and microstructure state (added 2026-10-06)
+Motivation: a pooled −0.16R can hide a positive regime slice, but slicing 7 strategies × 6 regimes × 5 volatility phases × 2 sides
+gives hundreds of cells, and some will look profitable by chance. The tooling therefore tests the *selection rule*, not the slices.
+
+- Every decision now journals `context` (`regime`, `volatilityPhase`, 15m ATR percentile, ADX). Volatility phase
+  (`COMPRESSED` ≤ 20th pct, `NORMAL`, `EXPANDING` ≥ 75th, `EXTREME` ≥ 95th) is a level, independent of the directional regime,
+  so TREND_UP + COMPRESSED and TREND_UP + EXTREME are different cells. Bins are descriptive, not fitted. Older records group as `UNKNOWN`.
+- `scripts/conditional-edge.ts` reads any decision journal with outcomes (backtest journal, or
+  `scripts/replay-decisions.ts --write-hypothetical` for every idea including rejected ones) and reports:
+  - an in-sample matrix by `--dims` (strategy, regime, phase, side, symbol) with a **day-clustered** bootstrap interval
+    (same-day trades across correlated symbols resample together) and **Holm** family-wise correction across every tested cell;
+  - a **rolling walk-forward**: on each train window select cells with bootstrap lower bound > 0, using only outcomes that closed
+    before the window ended; pool the decisions those cells produced in the next, non-overlapping test window. Only a positive
+    out-of-sample lower bound counts, and even that is a lead for `live-readiness`, not an approval.
+- `src/marketdata/MicrostructureState.ts` classifies recorded minutes into price × OI (`LONG_BUILD`, `SHORT_BUILD`, `SHORT_COVER`,
+  `LONG_LIQUIDATION`) and taker flow (`BUY/SELL_DOMINANT`, `BUY/SELL_ABSORBED`) with z-scores against the symbol's own trailing
+  240-minute baseline; it refuses to classify across gaps or without OI. `scripts/microstructure-state.ts` prints the current state and
+  label frequencies. It is not wired into strategies or `MarketState`: the recording is a week old, and no label has been tested
+  for predictive value. Any such test must be pre-registered as a new hypothesis id in `EventStudy.ts` before looking at outcomes.

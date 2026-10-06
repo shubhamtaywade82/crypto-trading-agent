@@ -92,14 +92,22 @@ const DEFAULT_FLOORS = [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2, 2.5, 3] as const;
 
 interface Sample { plannedRr: number; netR: number }
 
-function toSample(record: DecisionRecord, costs: CostRates): Sample | undefined {
-  const { entry, stopLoss, takeProfit, outcome } = record;
-  if (record.status !== 'EXECUTED' || !outcome || entry === null || stopLoss === null || takeProfit === null) return undefined;
+/**
+ * Net R of an executed (or hypothetically replayed) decision after round-trip fees and slippage; undefined when the
+ * record has no clean outcome. The journalled R is price-only; the round trip's costs are paid on top of it.
+ */
+export function netROf(record: DecisionRecord, costs: CostRates): number | undefined {
+  const { entry, stopLoss, outcome } = record;
+  if (record.status !== 'EXECUTED' || !outcome || entry === null || stopLoss === null) return undefined;
   const risk = Math.abs(entry - stopLoss);
   if (!(risk > 0) || !Number.isFinite(outcome.rMultiple)) return undefined;
-  // The journalled R is price-only; the round trip's fees and slippage are paid on top of it
-  const costR = (entry * 2 * (costs.feeRate + costs.slippageRate)) / risk;
-  return { plannedRr: Math.abs(takeProfit - entry) / risk, netR: outcome.rMultiple - costR };
+  return outcome.rMultiple - (entry * 2 * (costs.feeRate + costs.slippageRate)) / risk;
+}
+
+function toSample(record: DecisionRecord, costs: CostRates): Sample | undefined {
+  const netR = netROf(record, costs);
+  if (netR === undefined || record.takeProfit === null) return undefined;
+  return { plannedRr: Math.abs(record.takeProfit - record.entry!) / Math.abs(record.entry! - record.stopLoss!), netR };
 }
 
 function stats(samples: readonly Sample[], z: number) {

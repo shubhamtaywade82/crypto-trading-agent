@@ -2,6 +2,7 @@ import { appendFileSync, existsSync, mkdirSync, readFileSync, renameSync, writeF
 import path from 'node:path';
 import type { AgentId, Side, SignalType } from '../types.js';
 import type { EvidenceBreakdown } from './types.js';
+import type { DecisionContext } from '../market/VolatilityPhase.js';
 
 /** Terminal status of a decision; every candidate follows exactly one of these paths. */
 export type DecisionStatus =
@@ -76,6 +77,8 @@ export interface DecisionRecord {
   riskDecision: DecisionRisk;
   status: DecisionStatus;
   rejectionReason: string | null;
+  /** Regime and volatility phase at decision time; absent on records written before it existed. */
+  context?: DecisionContext;
   execution?: DecisionExecution;
   outcome?: DecisionOutcome;
 }

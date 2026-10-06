@@ -10,6 +10,22 @@ export interface DashboardContext {
   workers: WorkerStatus[];
 }
 
+// Strip ANSI control codes for exact visual character length calculation
+const stripAnsi = (str: string): string => str.replace(/\x1B\[[0-9;]*[a-zA-Z]/g, '');
+
+function padCell(content: string, visibleWidth: number, align: 'left' | 'right' | 'center' = 'left'): string {
+  const len = stripAnsi(content).length;
+  const diff = visibleWidth - len;
+  if (diff <= 0) return content;
+  if (align === 'right') return ' '.repeat(diff) + content;
+  if (align === 'center') {
+    const left = Math.floor(diff / 2);
+    const right = diff - left;
+    return ' '.repeat(left) + content + ' '.repeat(right);
+  }
+  return content + ' '.repeat(diff);
+}
+
 function fmtPrice(val: number): string {
   if (val >= 1000) return val.toFixed(2);
   if (val >= 10) return val.toFixed(2);
@@ -22,7 +38,7 @@ function trajectoryMeter(current: number, entry: number, sl: number, tp: number,
 
   const ratio = isLong ? (current - sl) / span : (sl - current) / span;
   const clamped = Math.max(0, Math.min(1, ratio));
-  const len = 16;
+  const len = 14;
   const pin = Math.round(clamped * (len - 1));
 
   let out = '';
@@ -64,104 +80,105 @@ export function renderDashboard(ctx: DashboardContext): void {
   const realizedColor = totalRealized >= 0 ? chalk.green(`+$${totalRealized.toFixed(2)}`) : chalk.red(`-$${Math.abs(totalRealized).toFixed(2)}`);
 
   console.clear();
-  // TOP COMPACT TELEMETRY BAR
-  console.log(chalk.bold.cyan('╔══════════════════════════════════════════════════════════════════════════════════════════════════════════════╗'));
-  console.log(
-    chalk.bold.cyan('║') +
+  const BOX_WIDTH = 106;
+
+  // Header Box
+  console.log(chalk.bold.cyan('╔' + '═'.repeat(BOX_WIDTH) + '╗'));
+
+  const row1Content =
     chalk.bold.white(' ⬡ MINICPM-2B COCKPIT v2.0 ') +
-    chalk.gray('│ Up: ') + chalk.yellow(timeStr) +
-    chalk.gray(' │ Fleet: ') + chalk.bold.white(`${activeCount}/3 Active`) +
-    chalk.gray(' │ BTC: ') + chalk.bold.white(`$${btcPrice > 0 ? btcPrice.toLocaleString() : '—'}`) + ' ' + btcTrendStr + ` (${btcChangeStr})` +
-    chalk.cyan(' ║')
-  );
-  console.log(
-    chalk.bold.cyan('║') +
-    chalk.gray(' PORTFOLIO: Equity: ') + chalk.bold.white(`$${totalEquity.toFixed(2)}`) +
+    chalk.gray('│ Uptime: ') + chalk.yellow(timeStr) +
+    chalk.gray(' │ Active: ') + chalk.bold.white(`${activeCount}/3 Symbols`) +
+    chalk.gray(' │ BTC Anchor: ') + chalk.bold.white(`$${btcPrice > 0 ? btcPrice.toLocaleString() : '—'}`) + ' ' + btcTrendStr + ` (${btcChangeStr})`;
+  console.log(chalk.bold.cyan('║') + padCell(row1Content, BOX_WIDTH, 'left') + chalk.bold.cyan('║'));
+
+  const row2Content =
+    chalk.gray(' PORTFOLIO: Total Equity: ') + chalk.bold.white(`$${totalEquity.toFixed(2)}`) +
     chalk.gray(' │ Open uPnL: ') + upnlColor +
     chalk.gray(' │ Realized: ') + realizedColor +
-    chalk.gray(' │ Venue: ') + chalk.green('● paper_exchange') +
-    chalk.cyan('                       ║')
-  );
-  console.log(chalk.bold.cyan('╠══════════════════════════════════════════════════════════════════════════════════════════════════════════════╣'));
+    chalk.gray(' │ Venue: ') + chalk.green('● paper_exchange');
+  console.log(chalk.bold.cyan('║') + padCell(row2Content, BOX_WIDTH, 'left') + chalk.bold.cyan('║'));
 
-  // CLEAN STRUCTURED TABLE HEADERS
-  console.log(
-    chalk.gray('║') +
-    chalk.bold.cyan(' ASSET ') +
-    chalk.gray('│') +
-    chalk.bold.cyan(' POSITION ') +
-    chalk.gray('│') +
-    chalk.bold.cyan(' ENTRY ➔ MARK      ') +
-    chalk.gray('│') +
-    chalk.bold.cyan(' uPnL (RET%)     ') +
-    chalk.gray('│') +
-    chalk.bold.cyan(' TARGET TRAJECTORY (SL ➔ TP)      ') +
-    chalk.gray('║')
-  );
-  console.log(chalk.gray('╟───────┼──────────┼──────────────────┼─────────────────┼──────────────────────────────────╢'));
+  console.log(chalk.bold.cyan('╠' + '═'.repeat(BOX_WIDTH) + '╣'));
 
+  // Column definitions (Exact total matching BOX_WIDTH: 8 + 1 + 11 + 1 + 22 + 1 + 19 + 1 + 42 = 106)
+  const W_ASSET = 8;
+  const W_SIDE = 11;
+  const W_PRICE = 22;
+  const W_PNL = 19;
+  const W_TRAJ = 42;
+
+  const headerRow =
+    padCell(chalk.bold.cyan(' ASSET'), W_ASSET, 'left') + chalk.gray('│') +
+    padCell(chalk.bold.cyan(' POSITION'), W_SIDE, 'left') + chalk.gray('│') +
+    padCell(chalk.bold.cyan(' ENTRY ➔ MARK'), W_PRICE, 'center') + chalk.gray('│') +
+    padCell(chalk.bold.cyan(' uPnL (RET%)'), W_PNL, 'center') + chalk.gray('│') +
+    padCell(chalk.bold.cyan(' TARGET TRAJECTORY (SL ➔ TP)'), W_TRAJ, 'center');
+  console.log(chalk.bold.cyan('║') + headerRow + chalk.bold.cyan('║'));
+
+  const divRow =
+    '─'.repeat(W_ASSET) + chalk.gray('┼') +
+    '─'.repeat(W_SIDE) + chalk.gray('┼') +
+    '─'.repeat(W_PRICE) + chalk.gray('┼') +
+    '─'.repeat(W_PNL) + chalk.gray('┼') +
+    '─'.repeat(W_TRAJ);
+  console.log(chalk.bold.cyan('╟') + chalk.gray(divRow) + chalk.bold.cyan('╢'));
+
+  // Table Body Rows
   for (const w of workers) {
-    const symShort = w.symbol.replace('USDT', '').padEnd(5);
+    const sym = ' ' + w.symbol.replace('USDT', '');
+    const cellAsset = padCell(chalk.bold.white(sym), W_ASSET, 'left');
+
     if (w.activePosition) {
       const pos = w.activePosition;
       const isLong = pos.side.toUpperCase() === 'LONG';
-      const sideTag = isLong ? chalk.bold.green('LONG 10x ') : chalk.bold.red('SHORT 10x');
+      const sideText = isLong ? chalk.bold.green(' LONG 10x') : chalk.bold.red(' SHORT 10x');
+      const cellSide = padCell(sideText, W_SIDE, 'left');
+
       const entryStr = `$${fmtPrice(pos.averagePrice)}`;
       const markStr = `$${fmtPrice(pos.currentPrice)}`;
-      const priceFlow = `${entryStr.padStart(7)} ➔ ${markStr.padEnd(7)}`;
+      const cellPrice = padCell(`${entryStr} ➔ ${markStr}`, W_PRICE, 'center');
 
       const retPctNum = (pos.unrealizedPnl / 980) * 100;
       const pnlSign = pos.unrealizedPnl >= 0 ? '+' : '-';
       const pnlText = `${pnlSign}$${Math.abs(pos.unrealizedPnl).toFixed(2)}`;
       const retText = `(${retPctNum >= 0 ? '+' : ''}${retPctNum.toFixed(1)}%)`;
-      const pnlCombined = pos.unrealizedPnl >= 0 ? chalk.green(`${pnlText.padStart(7)} ${retText.padEnd(7)}`) : chalk.red(`${pnlText.padStart(7)} ${retText.padEnd(7)}`);
+      const pnlStyled = pos.unrealizedPnl >= 0 ? chalk.green(`${pnlText} ${retText}`) : chalk.red(`${pnlText} ${retText}`);
+      const cellPnl = padCell(pnlStyled, W_PNL, 'center');
 
-      let traj = chalk.gray('— no levels —');
+      let trajContent = chalk.gray('— no levels —');
       if (w.stopLoss && w.takeProfit) {
         const slFmt = fmtPrice(w.stopLoss);
         const tpFmt = fmtPrice(w.takeProfit);
         const bar = trajectoryMeter(pos.currentPrice, pos.averagePrice, w.stopLoss, w.takeProfit, isLong);
-        const slTag = chalk.red(slFmt);
-        const tpTag = chalk.green(tpFmt);
-        traj = `${slTag} ${bar} ${tpTag}`;
+        trajContent = `${chalk.red(slFmt)} ${bar} ${chalk.green(tpFmt)}`;
       }
+      const cellTraj = padCell(trajContent, W_TRAJ, 'center');
 
-      console.log(
-        chalk.gray('║') + ` ${chalk.bold.white(symShort)} ` +
-        chalk.gray('│') + ` ${sideTag} ` +
-        chalk.gray('│') + ` ${priceFlow} ` +
-        chalk.gray('│') + ` ${pnlCombined} ` +
-        chalk.gray('│') + ` ${traj} ` +
-        chalk.gray('║')
-      );
+      console.log(chalk.bold.cyan('║') + cellAsset + chalk.gray('│') + cellSide + chalk.gray('│') + cellPrice + chalk.gray('│') + cellPnl + chalk.gray('│') + cellTraj + chalk.bold.cyan('║'));
     } else {
-      console.log(
-        chalk.gray('║') + ` ${chalk.bold.white(symShort)} ` +
-        chalk.gray('│') + chalk.gray(' IDLE     ') +
-        chalk.gray('│') + chalk.gray(' —                ') +
-        chalk.gray('│') + chalk.gray(' $0.00 (0.0%)    ') +
-        chalk.gray('│') + chalk.italic.gray(' Scanning market with MiniCPM...   ') +
-        chalk.gray('║')
-      );
+      const cellSide = padCell(chalk.gray(' IDLE'), W_SIDE, 'left');
+      const cellPrice = padCell(chalk.gray('—'), W_PRICE, 'center');
+      const cellPnl = padCell(chalk.gray('$0.00 (0.0%)'), W_PNL, 'center');
+      const cellTraj = padCell(chalk.italic.gray('Scanning market with MiniCPM...'), W_TRAJ, 'center');
+      console.log(chalk.bold.cyan('║') + cellAsset + chalk.gray('│') + cellSide + chalk.gray('│') + cellPrice + chalk.gray('│') + cellPnl + chalk.gray('│') + cellTraj + chalk.bold.cyan('║'));
     }
   }
 
-  console.log(chalk.bold.cyan('╠══════════════════════════════════════════════════════════════════════════════════════════════════════════════╣'));
+  console.log(chalk.bold.cyan('╠' + '═'.repeat(BOX_WIDTH) + '╣'));
 
-  // LLM INSIGHTS / REASONING PANEL
-  console.log(chalk.bold.cyan('║') + chalk.bold.white(' LATEST LLM INTELLIGENCE & REASONING:') + ' '.repeat(67) + chalk.bold.cyan('║'));
+  // Bottom Intelligence Panel
+  const intelHeader = chalk.bold.white(' LATEST LLM INTELLIGENCE & REASONING:');
+  console.log(chalk.bold.cyan('║') + padCell(intelHeader, BOX_WIDTH, 'left') + chalk.bold.cyan('║'));
+
   for (const w of workers) {
     const sym = w.symbol.replace('USDT', '');
     const beNotice = w.breakEvenMoved ? chalk.bold.cyan(' [PROTECTED BREAK-EVEN]') : '';
     let decision = w.lastDecision.replace(/^Recovered:\s*/, '');
-    if (decision.length > 88) decision = decision.slice(0, 85) + '...';
-    console.log(
-      chalk.bold.cyan('║') +
-      `  ${chalk.bold.magenta(sym.padEnd(4))}: ${chalk.white(decision)}${beNotice}`.padEnd(108) +
-      chalk.bold.cyan('║')
-    );
+    const line = `  ${chalk.bold.magenta(sym)}: ${chalk.white(decision)}${beNotice}`;
+    console.log(chalk.bold.cyan('║') + padCell(line, BOX_WIDTH, 'left') + chalk.bold.cyan('║'));
   }
 
-  console.log(chalk.bold.cyan('╚══════════════════════════════════════════════════════════════════════════════════════════════════════════════╝'));
+  console.log(chalk.bold.cyan('╚' + '═'.repeat(BOX_WIDTH) + '╝'));
   console.log(chalk.gray('  Rule: $980 Margin · 10x Isolated · Min +5% TP · Auto Break-Even Trailing · 24/7 Realtime'));
 }

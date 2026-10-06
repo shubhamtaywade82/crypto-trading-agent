@@ -46,11 +46,15 @@ async function main() {
   const startTime = Date.now();
   console.log('Connecting real-time Binance WebSocket feeds...');
 
-  // Protect process from unhandled rejections/exceptions so it runs 24/7 uninterrupted
+  // State cache for dashboard macro header
+  let btcPrice = 0;
+  let btcTrend1h = 'SIDEWAYS';
+  let btcTrend15m = 'SIDEWAYS';
+  let btcChange24h = 0;
+
   process.on('uncaughtException', (err) => console.error('[Uncaught Exception]:', err.message));
   process.on('unhandledRejection', (reason) => console.error('[Unhandled Rejection]:', reason));
 
-  // Setup live websocket stream for sub-second updates and instant SL/TP execution
   const silent = { silly: () => {}, verbose: () => {}, info: () => {}, warning: () => {}, error: () => {} };
   const ws = new WebsocketClient({ beautify: false }, silent as any);
   ws.on('error', (err: any) => console.error('[Binance WS Error]:', err?.message || err));
@@ -64,7 +68,14 @@ async function main() {
     if (now - lastDashboardRender > 250) {
       lastDashboardRender = now;
       const statuses = Array.from(workers.values()).map((w) => w.getStatus());
-      renderDashboard(startTime, statuses);
+      renderDashboard({
+        startTime,
+        btcPrice,
+        btcTrend1h,
+        btcTrend15m,
+        btcChange24h,
+        workers: statuses,
+      });
     }
   };
 
@@ -72,6 +83,11 @@ async function main() {
     if (data?.e === 'trade' && data.s && Number(data.p) > 0) {
       const symbol = data.s;
       const price = Number(data.p);
+
+      if (symbol === ANCHOR) {
+        btcPrice = price;
+      }
+
       const worker = workers.get(symbol);
       if (worker) {
         await worker.onLiveTick(price);
@@ -84,7 +100,6 @@ async function main() {
     ws.subscribeTrades(sym, 'usdm');
   }
 
-  // 1-second continuous TUI tick timer for uptime / clock
   const renderInterval = setInterval(triggerRender, 1000);
 
   let running = true;
@@ -101,7 +116,6 @@ async function main() {
 
   console.log('Real-time feed active. Starting background LLM evaluation loop...');
 
-  // Background market candle & LLM evaluation loop (runs concurrently with real-time websocket)
   while (running) {
     try {
       const snapshots = await marketData.snapshot(ALL_SYMBOLS);
@@ -109,6 +123,19 @@ async function main() {
       const btcSnapshot = snapshots[ANCHOR];
       const btc15m = btcSnapshot?.candles['15m'] ?? [];
       const btc1h = btcSnapshot?.candles['1h'] ?? [];
+
+      if (btc15m.length > 0) {
+        const last = btc15m.at(-1)!;
+        btcPrice = last.close;
+        const open24h = btc1h.length >= 24 ? btc1h.at(-24)!.open : btc1h[0]?.open ?? last.close;
+        btcChange24h = ((last.close - open24h) / open24h) * 100;
+
+        const diff1h = btc1h.length >= 5 ? ((last.close - btc1h.at(-5)!.close) / btc1h.at(-5)!.close) * 100 : 0;
+        btcTrend1h = diff1h > 0.3 ? 'BULLISH' : diff1h < -0.3 ? 'BEARISH' : 'SIDEWAYS';
+
+        const diff15m = btc15m.length >= 5 ? ((last.close - btc15m.at(-5)!.close) / btc15m.at(-5)!.close) * 100 : 0;
+        btcTrend15m = diff15m > 0.2 ? 'BULLISH' : diff15m < -0.2 ? 'BEARISH' : 'SIDEWAYS';
+      }
 
       for (const symbol of SYMBOLS) {
         const snap = snapshots[symbol];
@@ -130,7 +157,6 @@ async function main() {
       console.error('[Fleet Loop Error]:', (err as Error).message);
     }
 
-    // Small delay between full multi-candle LLM sweeps
     await new Promise((r) => setTimeout(r, 10_000));
   }
 

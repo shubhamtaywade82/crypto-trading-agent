@@ -2,6 +2,7 @@ import { PaperExchangeClient, type PaperExchangePosition, type PaperExchangeAcco
 import { MiniCpmService } from './MiniCpmService.js';
 import type { PromptInput } from './MiniCpmPrompt.js';
 import type { Candle } from '../types.js';
+import { loadMiniCpmState, saveMiniCpmPosition, removeMiniCpmPosition } from './MiniCpmStateStore.js';
 
 export interface SymbolWorkerConfig {
   symbol: string;
@@ -18,6 +19,11 @@ export interface WorkerStatus {
   state: 'IDLE' | 'ANALYZING' | 'IN_POSITION';
   activePosition: PaperExchangePosition | null;
   account: PaperExchangeAccountSnapshot | null;
+  stopLoss: number | null;
+  takeProfit: number | null;
+  slDistancePct: number | null;
+  tpDistancePct: number | null;
+  breakEvenMoved: boolean;
   lastDecision: string;
   lastUpdated: number;
 }
@@ -26,10 +32,9 @@ export class SymbolTraderWorker {
   private readonly client: PaperExchangeClient;
   private readonly llm: MiniCpmService;
   private status: WorkerStatus;
-  private activeSlOrderId: number | null = null;
-  private activeTpOrderId: number | null = null;
   private currentSl: number | null = null;
   private currentTp: number | null = null;
+  private breakEvenMoved = false;
 
   constructor(
     private readonly config: SymbolWorkerConfig,
@@ -45,9 +50,23 @@ export class SymbolTraderWorker {
       state: 'IDLE',
       activePosition: null,
       account: null,
-      lastDecision: 'Initial boot',
+      stopLoss: null,
+      takeProfit: null,
+      slDistancePct: null,
+      tpDistancePct: null,
+      breakEvenMoved: false,
+      lastDecision: 'Initialized',
       lastUpdated: Date.now(),
     };
+
+    // Recover persisted state if available
+    const saved = loadMiniCpmState().positions[config.symbol];
+    if (saved) {
+      this.currentSl = saved.stopLoss;
+      this.currentTp = saved.takeProfit;
+      this.breakEvenMoved = !!saved.breakEvenMoved;
+      this.status.lastDecision = `Recovered: SL $${saved.stopLoss} | TP $${saved.takeProfit}`;
+    }
   }
 
   getStatus(): WorkerStatus {
@@ -68,6 +87,15 @@ export class SymbolTraderWorker {
       const pos = positions.find((p) => p.symbol === this.config.symbol && p.netQuantity > 0);
       this.status.activePosition = pos ?? null;
       this.status.state = pos ? 'IN_POSITION' : 'IDLE';
+
+      if (!pos && (this.currentSl !== null || this.currentTp !== null)) {
+        this.currentSl = null;
+        this.currentTp = null;
+        this.breakEvenMoved = false;
+        removeMiniCpmPosition(this.config.symbol);
+      }
+
+      this.updateStatusLevels(pos ? pos.currentPrice : null);
       this.status.lastUpdated = Date.now();
     } catch (err) {
       console.error(`[Worker ${this.config.symbol}] sync error:`, (err as Error).message);
@@ -82,6 +110,7 @@ export class SymbolTraderWorker {
         ? (price - this.status.activePosition.averagePrice) * this.status.activePosition.netQuantity
         : (this.status.activePosition.averagePrice - price) * this.status.activePosition.netQuantity;
       this.status.activePosition.unrealizedPnl = Number(pnl.toFixed(2));
+      this.updateStatusLevels(price);
       await this.manageOpenPosition(price);
     }
   }
@@ -93,17 +122,29 @@ export class SymbolTraderWorker {
     symbolCandles15m: Candle[],
     symbolCandles1h: Candle[],
   ): Promise<void> {
-    // Push mark price to paper exchange broker
     await this.client.pushMarkPrices({ [this.config.symbol]: markPrice });
     await this.syncAccount();
 
-    // If already in position, manage exit levels (SL / TP)
     if (this.status.activePosition) {
+      // If position exists but SL/TP wasn't persisted, establish default 1.5% SL and 5% TP
+      if (this.currentSl === null || this.currentTp === null) {
+        const isLong = this.status.activePosition.side === 'long';
+        this.currentSl = isLong ? Number((markPrice * 0.985).toFixed(4)) : Number((markPrice * 1.015).toFixed(4));
+        this.currentTp = isLong ? Number((markPrice * 1.01).toFixed(4)) : Number((markPrice * 0.99).toFixed(4));
+        saveMiniCpmPosition({
+          symbol: this.config.symbol,
+          entryPrice: this.status.activePosition.averagePrice,
+          stopLoss: this.currentSl,
+          takeProfit: this.currentTp,
+          breakEvenMoved: false,
+          openedAt: Date.now(),
+          reason: 'Auto-anchored recovery levels',
+        });
+      }
       await this.manageOpenPosition(markPrice);
       return;
     }
 
-    // Build feature input for LLM
     const input = this.buildPromptInput(markPrice, btcCandles15m, btcCandles1h, symbolCandles15m, symbolCandles1h);
     if (!input) return;
 
@@ -115,7 +156,6 @@ export class SymbolTraderWorker {
       return;
     }
 
-    // Enter position with fee buffer so margin + taker fee fits within available balance
     const effectiveMargin = this.config.marginPerPosition * 0.98;
     const notional = effectiveMargin * this.config.leverage;
     const quantity = Number((notional / markPrice).toFixed(4));
@@ -137,24 +177,71 @@ export class SymbolTraderWorker {
       if (order.status === 'FILLED' || order.orderId > 0) {
         this.currentSl = rec.stopLoss;
         this.currentTp = rec.takeProfit;
+        this.breakEvenMoved = false;
         this.status.state = 'IN_POSITION';
+        saveMiniCpmPosition({
+          symbol: this.config.symbol,
+          entryPrice: markPrice,
+          stopLoss: rec.stopLoss,
+          takeProfit: rec.takeProfit,
+          breakEvenMoved: false,
+          openedAt: Date.now(),
+          reason: rec.reason,
+        });
+        await this.syncAccount();
       }
     } catch (err) {
       console.error(`[Worker ${this.config.symbol}] order error:`, (err as Error).message);
     }
   }
 
+  private updateStatusLevels(currentPrice: number | null): void {
+    this.status.stopLoss = this.currentSl;
+    this.status.takeProfit = this.currentTp;
+    this.status.breakEvenMoved = this.breakEvenMoved;
+
+    if (currentPrice && this.currentSl !== null && this.currentTp !== null) {
+      this.status.slDistancePct = Number((((this.currentSl - currentPrice) / currentPrice) * 100).toFixed(2));
+      this.status.tpDistancePct = Number((((this.currentTp - currentPrice) / currentPrice) * 100).toFixed(2));
+    } else {
+      this.status.slDistancePct = null;
+      this.status.tpDistancePct = null;
+    }
+  }
+
   private async manageOpenPosition(currentPrice: number): Promise<void> {
     const pos = this.status.activePosition;
-    if (!pos || !this.currentSl || !this.currentTp) return;
+    if (!pos || this.currentSl === null || this.currentTp === null) return;
 
     const isLong = pos.side === 'long';
+    const entry = pos.averagePrice;
+
+    // Trailing Break-Even rule: If gain >= 2.5% on capital (0.25% price gain), shift SL to entry price
+    if (!this.breakEvenMoved) {
+      const gainPct = isLong ? ((currentPrice - entry) / entry) * 100 : ((entry - currentPrice) / entry) * 100;
+      if (gainPct >= 0.25) {
+        this.currentSl = entry;
+        this.breakEvenMoved = true;
+        this.status.breakEvenMoved = true;
+        this.status.lastDecision = `Moved SL to Break-Even ($${entry.toFixed(2)}) after +${(gainPct * 10).toFixed(1)}% profit move`;
+        saveMiniCpmPosition({
+          symbol: this.config.symbol,
+          entryPrice: entry,
+          stopLoss: this.currentSl,
+          takeProfit: this.currentTp,
+          breakEvenMoved: true,
+          openedAt: Date.now(),
+          reason: 'Shifted to Break-Even',
+        });
+      }
+    }
+
     const hitSl = isLong ? currentPrice <= this.currentSl : currentPrice >= this.currentSl;
     const hitTp = isLong ? currentPrice >= this.currentTp : currentPrice <= this.currentTp;
 
     if (hitSl || hitTp) {
       const exitSide = isLong ? 'sell' : 'buy';
-      const reason = hitSl ? 'STOP_LOSS' : 'TAKE_PROFIT';
+      const reason = hitSl ? (this.breakEvenMoved && this.currentSl === entry ? 'BREAK_EVEN' : 'STOP_LOSS') : 'TAKE_PROFIT';
       this.status.lastDecision = `CLOSING (${reason}) @ ${currentPrice}`;
 
       try {
@@ -170,6 +257,8 @@ export class SymbolTraderWorker {
         });
         this.currentSl = null;
         this.currentTp = null;
+        this.breakEvenMoved = false;
+        removeMiniCpmPosition(this.config.symbol);
         await this.syncAccount();
       } catch (err) {
         console.error(`[Worker ${this.config.symbol}] exit error:`, (err as Error).message);
@@ -184,9 +273,7 @@ export class SymbolTraderWorker {
     sym15m: Candle[],
     sym1h: Candle[],
   ): PromptInput | null {
-    if (btc15m.length < 20 || btc1h.length < 10 || sym15m.length < 20 || sym1h.length < 10) {
-      return null;
-    }
+    if (btc15m.length < 20 || btc1h.length < 10 || sym15m.length < 20 || sym1h.length < 10) return null;
 
     const btcLast = btc15m.at(-1)!;
     const btcOpen24h = btc1h.length >= 24 ? btc1h.at(-24)!.open : btc1h[0]!.open;

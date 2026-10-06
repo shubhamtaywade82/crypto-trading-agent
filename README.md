@@ -7,6 +7,22 @@ built on Ink. Routes orders to either a local in-memory paper engine, a remote
 
 ---
 
+## ⚡ MiniCPM-2B Autonomous 24/7 Trading Fleet
+
+A dedicated, real-time autonomous trading system powered by local **`openbmb/minicpm5-2b:latest`** (Ollama) and Binance WebSocket feeds.
+
+* **Full Guide & Documentation**: [docs/MINICPM_TRADING_FLEET.md](docs/MINICPM_TRADING_FLEET.md)
+* **Macro Anchor**: `BTCUSDT` is used strictly as a market context anchor (trend, momentum, 24h delta) to guide trades on `ETHUSDT`, `SOLUSDT`, and `XRPUSDT`.
+* **Capital & Sizing**: **$1,000.00 account** with **$980.00 margin** per position at **10x isolated leverage** ($9,800 notional). The remaining $20.00 (2%) is held in cash to prevent order rejection from exchange taker fees.
+* **Profit Target**: Mandatory minimum **$\ge 5\%$ return on capital** ($\ge 0.5\%$ price distance from entry) and minimum $R/R \ge 1.5$.
+* **Exits**: Evaluated and triggered **instantly on real-time sub-second WebSocket ticks**.
+* **Launch Command**:
+  ```bash
+  npx tsx scripts/run-minicpm-fleet.ts
+  ```
+
+---
+
 ## Modes
 
 | `MODE` | Backend | SL/TP/trailing exits | Per-strategy attribution |

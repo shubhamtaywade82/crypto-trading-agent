@@ -50,135 +50,172 @@ function trajectoryMeter(current: number, entry: number, sl: number, tp: number,
   return out;
 }
 
-export function renderDashboard(ctx: DashboardContext): void {
-  const { startTime, btcPrice, btcTrend1h, btcTrend15m, btcChange24h, workers } = ctx;
-  const uptimeSeconds = Math.floor((Date.now() - startTime) / 1000);
-  const hours = Math.floor(uptimeSeconds / 3600);
-  const mins = Math.floor((uptimeSeconds % 3600) / 60);
-  const secs = uptimeSeconds % 60;
-  const timeStr = `${hours}h ${mins}m ${secs}s`;
+interface DashboardTotals {
+  equity: number;
+  upnl: number;
+  realized: number;
+  activeCount: number;
+}
 
-  let totalEquity = 0;
-  let totalUpnl = 0;
-  let totalRealized = 0;
+function wrapText(text: string, maxWidth: number): string[] {
+  const paragraphs = text.split(/\r?\n/);
+  const lines: string[] = [];
+
+  for (const para of paragraphs) {
+    const words = para.split(/\s+/).filter(Boolean);
+    if (words.length === 0) continue;
+
+    let current = '';
+    for (const word of words) {
+      if (word.length > maxWidth) {
+        if (current) lines.push(current);
+        current = '';
+        for (let i = 0; i < word.length; i += maxWidth) lines.push(word.slice(i, i + maxWidth));
+        continue;
+      }
+      if (!current) current = word;
+      else if (current.length + 1 + word.length <= maxWidth) current += ' ' + word;
+      else {
+        lines.push(current);
+        current = word;
+      }
+    }
+    if (current) lines.push(current);
+  }
+
+  return lines.length > 0 ? lines : [''];
+}
+
+function calculateTotals(workers: WorkerStatus[]): DashboardTotals {
+  let equity = 0;
+  let upnl = 0;
+  let realized = 0;
   let activeCount = 0;
 
   for (const w of workers) {
     if (w.account) {
-      totalEquity += w.account.equity;
-      totalRealized += w.account.realizedPnl;
+      equity += w.account.equity;
+      realized += w.account.realizedPnl;
     }
     if (w.activePosition) {
-      totalUpnl += w.activePosition.unrealizedPnl;
+      upnl += w.activePosition.unrealizedPnl;
       activeCount++;
     }
   }
 
-  const btcChangeStr = btcChange24h >= 0 ? chalk.green(`+${btcChange24h.toFixed(2)}%`) : chalk.red(`${btcChange24h.toFixed(2)}%`);
-  const btcTrendStr = btcTrend1h === 'BULLISH' ? chalk.bold.green('▲ BULL') : btcTrend1h === 'BEARISH' ? chalk.bold.red('▼ BEAR') : chalk.gray('■ FLAT');
-  const upnlColor = totalUpnl >= 0 ? chalk.bold.green(`+$${totalUpnl.toFixed(2)}`) : chalk.bold.red(`-$${Math.abs(totalUpnl).toFixed(2)}`);
-  const realizedColor = totalRealized >= 0 ? chalk.green(`+$${totalRealized.toFixed(2)}`) : chalk.red(`-$${Math.abs(totalRealized).toFixed(2)}`);
+  return { equity, upnl, realized, activeCount };
+}
 
-  console.clear();
-  const BOX_WIDTH = 106;
+function renderHeaderBox(ctx: DashboardContext, totals: DashboardTotals, boxWidth: number): void {
+  const uptimeSec = Math.floor((Date.now() - ctx.startTime) / 1000);
+  const timeStr = `${Math.floor(uptimeSec / 3600)}h ${Math.floor((uptimeSec % 3600) / 60)}m ${uptimeSec % 60}s`;
+  const btcChange = ctx.btcChange24h >= 0 ? chalk.green(`+${ctx.btcChange24h.toFixed(2)}%`) : chalk.red(`${ctx.btcChange24h.toFixed(2)}%`);
+  const btcTrend = ctx.btcTrend1h === 'BULLISH' ? chalk.bold.green('▲ BULL') : ctx.btcTrend1h === 'BEARISH' ? chalk.bold.red('▼ BEAR') : chalk.gray('■ FLAT');
+  const upnlColor = totals.upnl >= 0 ? chalk.bold.green(`+$${totals.upnl.toFixed(2)}`) : chalk.bold.red(`-$${Math.abs(totals.upnl).toFixed(2)}`);
+  const realizedColor = totals.realized >= 0 ? chalk.green(`+$${totals.realized.toFixed(2)}`) : chalk.red(`-$${Math.abs(totals.realized).toFixed(2)}`);
 
-  // Header Box
-  console.log(chalk.bold.cyan('╔' + '═'.repeat(BOX_WIDTH) + '╗'));
-
-  const row1Content =
+  console.log(chalk.bold.cyan('╔' + '═'.repeat(boxWidth) + '╗'));
+  const row1 =
     chalk.bold.white(' ⬡ MINICPM-2B COCKPIT v2.0 ') +
     chalk.gray('│ Uptime: ') + chalk.yellow(timeStr) +
-    chalk.gray(' │ Active: ') + chalk.bold.white(`${activeCount}/3 Symbols`) +
-    chalk.gray(' │ BTC Anchor: ') + chalk.bold.white(`$${btcPrice > 0 ? btcPrice.toLocaleString() : '—'}`) + ' ' + btcTrendStr + ` (${btcChangeStr})`;
-  console.log(chalk.bold.cyan('║') + padCell(row1Content, BOX_WIDTH, 'left') + chalk.bold.cyan('║'));
+    chalk.gray(' │ Active: ') + chalk.bold.white(`${totals.activeCount}/3 Symbols`) +
+    chalk.gray(' │ BTC Anchor: ') + chalk.bold.white(`$${ctx.btcPrice > 0 ? ctx.btcPrice.toLocaleString() : '—'}`) + ' ' + btcTrend + ` (${btcChange})`;
+  console.log(chalk.bold.cyan('║') + padCell(row1, boxWidth, 'left') + chalk.bold.cyan('║'));
 
-  const row2Content =
-    chalk.gray(' PORTFOLIO: Total Equity: ') + chalk.bold.white(`$${totalEquity.toFixed(2)}`) +
+  const row2 =
+    chalk.gray(' PORTFOLIO: Total Equity: ') + chalk.bold.white(`$${totals.equity.toFixed(2)}`) +
     chalk.gray(' │ Open uPnL: ') + upnlColor +
     chalk.gray(' │ Realized: ') + realizedColor +
     chalk.gray(' │ Venue: ') + chalk.green('● paper_exchange');
-  console.log(chalk.bold.cyan('║') + padCell(row2Content, BOX_WIDTH, 'left') + chalk.bold.cyan('║'));
+  console.log(chalk.bold.cyan('║') + padCell(row2, boxWidth, 'left') + chalk.bold.cyan('║'));
+}
 
-  console.log(chalk.bold.cyan('╠' + '═'.repeat(BOX_WIDTH) + '╣'));
-
-  // Column definitions (Exact total matching BOX_WIDTH: 8 + 1 + 11 + 1 + 22 + 1 + 19 + 1 + 42 = 106)
-  const W_ASSET = 8;
-  const W_SIDE = 11;
-  const W_PRICE = 22;
-  const W_PNL = 19;
-  const W_TRAJ = 42;
-
+function renderTableHeaders(): void {
   const headerRow =
-    padCell(chalk.bold.cyan(' ASSET'), W_ASSET, 'left') + chalk.gray('│') +
-    padCell(chalk.bold.cyan(' POSITION'), W_SIDE, 'left') + chalk.gray('│') +
-    padCell(chalk.bold.cyan(' ENTRY ➔ MARK'), W_PRICE, 'center') + chalk.gray('│') +
-    padCell(chalk.bold.cyan(' uPnL (RET%)'), W_PNL, 'center') + chalk.gray('│') +
-    padCell(chalk.bold.cyan(' TARGET TRAJECTORY (SL ➔ TP)'), W_TRAJ, 'center');
+    padCell(chalk.bold.cyan(' ASSET'), 8, 'left') + chalk.gray('│') +
+    padCell(chalk.bold.cyan(' POSITION'), 11, 'left') + chalk.gray('│') +
+    padCell(chalk.bold.cyan(' ENTRY ➔ MARK'), 22, 'center') + chalk.gray('│') +
+    padCell(chalk.bold.cyan(' uPnL (RET%)'), 19, 'center') + chalk.gray('│') +
+    padCell(chalk.bold.cyan(' TARGET TRAJECTORY (SL ➔ TP)'), 42, 'center');
   console.log(chalk.bold.cyan('║') + headerRow + chalk.bold.cyan('║'));
 
   const divRow =
-    '─'.repeat(W_ASSET) + chalk.gray('┼') +
-    '─'.repeat(W_SIDE) + chalk.gray('┼') +
-    '─'.repeat(W_PRICE) + chalk.gray('┼') +
-    '─'.repeat(W_PNL) + chalk.gray('┼') +
-    '─'.repeat(W_TRAJ);
+    '─'.repeat(8) + chalk.gray('┼') +
+    '─'.repeat(11) + chalk.gray('┼') +
+    '─'.repeat(22) + chalk.gray('┼') +
+    '─'.repeat(19) + chalk.gray('┼') +
+    '─'.repeat(42);
   console.log(chalk.bold.cyan('╟') + chalk.gray(divRow) + chalk.bold.cyan('╢'));
+}
 
-  // Table Body Rows
-  for (const w of workers) {
-    const sym = ' ' + w.symbol.replace('USDT', '');
-    const cellAsset = padCell(chalk.bold.white(sym), W_ASSET, 'left');
+function renderWorkerRow(w: WorkerStatus): void {
+  const sym = ' ' + w.symbol.replace('USDT', '');
+  const cellAsset = padCell(chalk.bold.white(sym), 8, 'left');
 
-    if (w.activePosition) {
-      const pos = w.activePosition;
-      const isLong = pos.side.toUpperCase() === 'LONG';
-      const sideText = isLong ? chalk.bold.green(' LONG 10x') : chalk.bold.red(' SHORT 10x');
-      const cellSide = padCell(sideText, W_SIDE, 'left');
-
-      const entryStr = `$${fmtPrice(pos.averagePrice)}`;
-      const markStr = `$${fmtPrice(pos.currentPrice)}`;
-      const cellPrice = padCell(`${entryStr} ➔ ${markStr}`, W_PRICE, 'center');
-
-      const retPctNum = (pos.unrealizedPnl / 980) * 100;
-      const pnlSign = pos.unrealizedPnl >= 0 ? '+' : '-';
-      const pnlText = `${pnlSign}$${Math.abs(pos.unrealizedPnl).toFixed(2)}`;
-      const retText = `(${retPctNum >= 0 ? '+' : ''}${retPctNum.toFixed(1)}%)`;
-      const pnlStyled = pos.unrealizedPnl >= 0 ? chalk.green(`${pnlText} ${retText}`) : chalk.red(`${pnlText} ${retText}`);
-      const cellPnl = padCell(pnlStyled, W_PNL, 'center');
-
-      let trajContent = chalk.gray('— no levels —');
-      if (w.stopLoss && w.takeProfit) {
-        const slFmt = fmtPrice(w.stopLoss);
-        const tpFmt = fmtPrice(w.takeProfit);
-        const bar = trajectoryMeter(pos.currentPrice, pos.averagePrice, w.stopLoss, w.takeProfit, isLong);
-        trajContent = `${chalk.red(slFmt)} ${bar} ${chalk.green(tpFmt)}`;
-      }
-      const cellTraj = padCell(trajContent, W_TRAJ, 'center');
-
-      console.log(chalk.bold.cyan('║') + cellAsset + chalk.gray('│') + cellSide + chalk.gray('│') + cellPrice + chalk.gray('│') + cellPnl + chalk.gray('│') + cellTraj + chalk.bold.cyan('║'));
-    } else {
-      const cellSide = padCell(chalk.gray(' IDLE'), W_SIDE, 'left');
-      const cellPrice = padCell(chalk.gray('—'), W_PRICE, 'center');
-      const cellPnl = padCell(chalk.gray('$0.00 (0.0%)'), W_PNL, 'center');
-      const cellTraj = padCell(chalk.italic.gray('Scanning market with MiniCPM...'), W_TRAJ, 'center');
-      console.log(chalk.bold.cyan('║') + cellAsset + chalk.gray('│') + cellSide + chalk.gray('│') + cellPrice + chalk.gray('│') + cellPnl + chalk.gray('│') + cellTraj + chalk.bold.cyan('║'));
-    }
+  if (!w.activePosition) {
+    const cellSide = padCell(chalk.gray(' IDLE'), 11, 'left');
+    const cellPrice = padCell(chalk.gray('—'), 22, 'center');
+    const cellPnl = padCell(chalk.gray('$0.00 (0.0%)'), 19, 'center');
+    const cellTraj = padCell(chalk.italic.gray('Scanning market with MiniCPM...'), 42, 'center');
+    console.log(chalk.bold.cyan('║') + cellAsset + chalk.gray('│') + cellSide + chalk.gray('│') + cellPrice + chalk.gray('│') + cellPnl + chalk.gray('│') + cellTraj + chalk.bold.cyan('║'));
+    return;
   }
 
-  console.log(chalk.bold.cyan('╠' + '═'.repeat(BOX_WIDTH) + '╣'));
+  const pos = w.activePosition;
+  const isLong = pos.side.toUpperCase() === 'LONG';
+  const sideText = isLong ? chalk.bold.green(' LONG 10x') : chalk.bold.red(' SHORT 10x');
+  const cellSide = padCell(sideText, 11, 'left');
+  const cellPrice = padCell(`$${fmtPrice(pos.averagePrice)} ➔ $${fmtPrice(pos.currentPrice)}`, 22, 'center');
 
-  // Bottom Intelligence Panel
+  const retPct = (pos.unrealizedPnl / 980) * 100;
+  const pnlSign = pos.unrealizedPnl >= 0 ? '+' : '-';
+  const pnlText = `${pnlSign}$${Math.abs(pos.unrealizedPnl).toFixed(2)} (${retPct >= 0 ? '+' : ''}${retPct.toFixed(1)}%)`;
+  const cellPnl = padCell(pos.unrealizedPnl >= 0 ? chalk.green(pnlText) : chalk.red(pnlText), 19, 'center');
+
+  let traj = chalk.gray('— no levels —');
+  if (w.stopLoss && w.takeProfit) {
+    const bar = trajectoryMeter(pos.currentPrice, pos.averagePrice, w.stopLoss, w.takeProfit, isLong);
+    traj = `${chalk.red(fmtPrice(w.stopLoss))} ${bar} ${chalk.green(fmtPrice(w.takeProfit))}`;
+  }
+  const cellTraj = padCell(traj, 42, 'center');
+  console.log(chalk.bold.cyan('║') + cellAsset + chalk.gray('│') + cellSide + chalk.gray('│') + cellPrice + chalk.gray('│') + cellPnl + chalk.gray('│') + cellTraj + chalk.bold.cyan('║'));
+}
+
+function renderIntelligencePanel(workers: WorkerStatus[], boxWidth: number): void {
   const intelHeader = chalk.bold.white(' LATEST LLM INTELLIGENCE & REASONING:');
-  console.log(chalk.bold.cyan('║') + padCell(intelHeader, BOX_WIDTH, 'left') + chalk.bold.cyan('║'));
+  console.log(chalk.bold.cyan('║') + padCell(intelHeader, boxWidth, 'left') + chalk.bold.cyan('║'));
 
   for (const w of workers) {
     const sym = w.symbol.replace('USDT', '');
-    const beNotice = w.breakEvenMoved ? chalk.bold.cyan(' [PROTECTED BREAK-EVEN]') : '';
-    let decision = w.lastDecision.replace(/^Recovered:\s*/, '');
-    const line = `  ${chalk.bold.magenta(sym)}: ${chalk.white(decision)}${beNotice}`;
-    console.log(chalk.bold.cyan('║') + padCell(line, BOX_WIDTH, 'left') + chalk.bold.cyan('║'));
+    const prefix = `  ${chalk.bold.magenta(sym)}: `;
+    const indent = '       ';
+    const maxTextWidth = boxWidth - 12;
+    const rawDecision = w.lastDecision.replace(/^Recovered:\s*/, '') + (w.breakEvenMoved ? ' [PROTECTED BREAK-EVEN]' : '');
+    const wrapped = wrapText(rawDecision, maxTextWidth);
+
+    for (let j = 0; j < wrapped.length; j++) {
+      const linePrefix = j === 0 ? prefix : indent;
+      const lineText = wrapped[j];
+      const styledText = lineText.includes('[PROTECTED BREAK-EVEN]')
+        ? chalk.white(lineText.replace(' [PROTECTED BREAK-EVEN]', '')) + chalk.bold.cyan(' [PROTECTED BREAK-EVEN]')
+        : chalk.white(lineText);
+      console.log(chalk.bold.cyan('║') + padCell(linePrefix + styledText, boxWidth, 'left') + chalk.bold.cyan('║'));
+    }
   }
 
-  console.log(chalk.bold.cyan('╚' + '═'.repeat(BOX_WIDTH) + '╝'));
+  console.log(chalk.bold.cyan('╚' + '═'.repeat(boxWidth) + '╝'));
   console.log(chalk.gray('  Rule: $980 Margin · 10x Isolated · Min +5% TP · Auto Break-Even Trailing · 24/7 Realtime'));
+}
+
+export function renderDashboard(ctx: DashboardContext): void {
+  const BOX_WIDTH = 106;
+  const totals = calculateTotals(ctx.workers);
+
+  console.clear();
+  renderHeaderBox(ctx, totals, BOX_WIDTH);
+  console.log(chalk.bold.cyan('╠' + '═'.repeat(BOX_WIDTH) + '╣'));
+  renderTableHeaders();
+  for (const w of ctx.workers) renderWorkerRow(w);
+  console.log(chalk.bold.cyan('╠' + '═'.repeat(BOX_WIDTH) + '╣'));
+  renderIntelligencePanel(ctx.workers, BOX_WIDTH);
 }

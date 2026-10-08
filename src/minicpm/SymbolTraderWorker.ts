@@ -1,7 +1,9 @@
 import { PaperExchangeClient, type PaperExchangePosition, type PaperExchangeAccountSnapshot } from '../binance/paperExchangeClient.js';
+import { wilderAtr } from '../binance/indicators.js';
 import { MiniCpmService } from './MiniCpmService.js';
-import type { PromptInput } from './MiniCpmPrompt.js';
+import type { LlmTradeRecommendation, PromptInput } from './MiniCpmPrompt.js';
 import type { Candle } from '../types.js';
+import type { MarketState } from '../market/types.js';
 import { loadMiniCpmState, saveMiniCpmPosition, removeMiniCpmPosition } from './MiniCpmStateStore.js';
 
 export interface SymbolWorkerConfig {
@@ -26,6 +28,15 @@ export interface WorkerStatus {
   breakEvenMoved: boolean;
   lastDecision: string;
   lastUpdated: number;
+}
+
+export interface EvaluationParams {
+  markPrice: number;
+  btcCandles15m: Candle[];
+  btcCandles1h: Candle[];
+  symbolCandles15m: Candle[];
+  symbolCandles1h: Candle[];
+  marketState?: MarketState;
 }
 
 export class SymbolTraderWorker {
@@ -59,7 +70,6 @@ export class SymbolTraderWorker {
       lastUpdated: Date.now(),
     };
 
-    // Recover persisted state if available
     const saved = loadMiniCpmState().positions[config.symbol];
     if (saved) {
       this.currentSl = saved.stopLoss;
@@ -103,49 +113,29 @@ export class SymbolTraderWorker {
   }
 
   async onLiveTick(price: number): Promise<void> {
-    if (this.status.activePosition) {
-      this.status.activePosition.currentPrice = price;
-      const isLong = this.status.activePosition.side === 'long';
-      const pnl = isLong
-        ? (price - this.status.activePosition.averagePrice) * this.status.activePosition.netQuantity
-        : (this.status.activePosition.averagePrice - price) * this.status.activePosition.netQuantity;
-      this.status.activePosition.unrealizedPnl = Number(pnl.toFixed(2));
-      this.updateStatusLevels(price);
-      await this.manageOpenPosition(price);
-    }
+    const pos = this.status.activePosition;
+    if (!pos) return;
+
+    pos.currentPrice = price;
+    const isLong = pos.side === 'long';
+    const delta = isLong ? price - pos.averagePrice : pos.averagePrice - price;
+    pos.unrealizedPnl = Number((delta * pos.netQuantity).toFixed(2));
+    this.updateStatusLevels(price);
+    await this.manageOpenPosition(price);
   }
 
-  async evaluate(
-    markPrice: number,
-    btcCandles15m: Candle[],
-    btcCandles1h: Candle[],
-    symbolCandles15m: Candle[],
-    symbolCandles1h: Candle[],
-  ): Promise<void> {
+  async evaluate(params: EvaluationParams): Promise<void> {
+    const { markPrice } = params;
     await this.client.pushMarkPrices({ [this.config.symbol]: markPrice });
     await this.syncAccount();
 
     if (this.status.activePosition) {
-      // If position exists but SL/TP wasn't persisted, establish default 1.5% SL and 5% TP
-      if (this.currentSl === null || this.currentTp === null) {
-        const isLong = this.status.activePosition.side === 'long';
-        this.currentSl = isLong ? Number((markPrice * 0.985).toFixed(4)) : Number((markPrice * 1.015).toFixed(4));
-        this.currentTp = isLong ? Number((markPrice * 1.01).toFixed(4)) : Number((markPrice * 0.99).toFixed(4));
-        saveMiniCpmPosition({
-          symbol: this.config.symbol,
-          entryPrice: this.status.activePosition.averagePrice,
-          stopLoss: this.currentSl,
-          takeProfit: this.currentTp,
-          breakEvenMoved: false,
-          openedAt: Date.now(),
-          reason: 'Auto-anchored recovery levels',
-        });
-      }
+      this.ensureRecoveryLevels(markPrice);
       await this.manageOpenPosition(markPrice);
       return;
     }
 
-    const input = this.buildPromptInput(markPrice, btcCandles15m, btcCandles1h, symbolCandles15m, symbolCandles1h);
+    const input = this.buildPromptInput(params);
     if (!input) return;
 
     this.status.state = 'ANALYZING';
@@ -156,11 +146,30 @@ export class SymbolTraderWorker {
       return;
     }
 
-    const effectiveMargin = this.config.marginPerPosition * 0.98;
-    const notional = effectiveMargin * this.config.leverage;
+    await this.executeEntry(rec, markPrice);
+  }
+
+  // Establishes default bounds when an exchange position exists without local stop levels
+  private ensureRecoveryLevels(markPrice: number): void {
+    if (this.currentSl !== null && this.currentTp !== null) return;
+    const isLong = this.status.activePosition?.side === 'long';
+    this.currentSl = isLong ? Number((markPrice * 0.985).toFixed(4)) : Number((markPrice * 1.015).toFixed(4));
+    this.currentTp = isLong ? Number((markPrice * 1.01).toFixed(4)) : Number((markPrice * 0.99).toFixed(4));
+    saveMiniCpmPosition({
+      symbol: this.config.symbol,
+      entryPrice: this.status.activePosition?.averagePrice ?? markPrice,
+      stopLoss: this.currentSl,
+      takeProfit: this.currentTp,
+      breakEvenMoved: false,
+      openedAt: Date.now(),
+      reason: 'Auto-anchored recovery levels',
+    });
+  }
+
+  private async executeEntry(rec: LlmTradeRecommendation, markPrice: number): Promise<void> {
+    const notional = this.config.marginPerPosition * 0.98 * this.config.leverage;
     const quantity = Number((notional / markPrice).toFixed(4));
     const side = rec.action === 'ENTER_LONG' ? 'buy' : 'sell';
-
     this.status.lastDecision = `${rec.action} @ ${markPrice} | SL: ${rec.stopLoss} | TP: ${rec.takeProfit} (${rec.reason})`;
 
     try {
@@ -213,98 +222,112 @@ export class SymbolTraderWorker {
     const pos = this.status.activePosition;
     if (!pos || this.currentSl === null || this.currentTp === null) return;
 
+    this.applyTrailingBreakEven(pos, currentPrice);
+
     const isLong = pos.side === 'long';
-    const entry = pos.averagePrice;
-
-    // Trailing Break-Even rule: If gain >= 2.5% on capital (0.25% price gain), shift SL to entry price
-    if (!this.breakEvenMoved) {
-      const gainPct = isLong ? ((currentPrice - entry) / entry) * 100 : ((entry - currentPrice) / entry) * 100;
-      if (gainPct >= 0.25) {
-        this.currentSl = entry;
-        this.breakEvenMoved = true;
-        this.status.breakEvenMoved = true;
-        this.status.lastDecision = `Moved SL to Break-Even ($${entry.toFixed(2)}) after +${(gainPct * 10).toFixed(1)}% profit move`;
-        saveMiniCpmPosition({
-          symbol: this.config.symbol,
-          entryPrice: entry,
-          stopLoss: this.currentSl,
-          takeProfit: this.currentTp,
-          breakEvenMoved: true,
-          openedAt: Date.now(),
-          reason: 'Shifted to Break-Even',
-        });
-      }
-    }
-
     const hitSl = isLong ? currentPrice <= this.currentSl : currentPrice >= this.currentSl;
     const hitTp = isLong ? currentPrice >= this.currentTp : currentPrice <= this.currentTp;
+    if (!hitSl && !hitTp) return;
 
-    if (hitSl || hitTp) {
-      const exitSide = isLong ? 'sell' : 'buy';
-      const reason = hitSl ? (this.breakEvenMoved && this.currentSl === entry ? 'BREAK_EVEN' : 'STOP_LOSS') : 'TAKE_PROFIT';
-      this.status.lastDecision = `CLOSING (${reason}) @ ${currentPrice}`;
+    const exitSide = isLong ? 'sell' : 'buy';
+    const isBe = this.breakEvenMoved && this.currentSl === pos.averagePrice;
+    const reason = hitSl ? (isBe ? 'BREAK_EVEN' : 'STOP_LOSS') : 'TAKE_PROFIT';
+    await this.closePosition(pos, exitSide, reason, currentPrice);
+  }
 
-      try {
-        await this.client.submitOrder({
-          symbol: this.config.symbol,
-          side: exitSide,
-          quantity: pos.netQuantity,
-          leverage: this.config.leverage,
-          marginType: 'isolated',
-          reduceOnly: true,
-          executionPrice: currentPrice,
-          clientOrderId: `minicpm-close-${this.config.symbol}-${Date.now()}`,
-        });
-        this.currentSl = null;
-        this.currentTp = null;
-        this.breakEvenMoved = false;
-        removeMiniCpmPosition(this.config.symbol);
-        await this.syncAccount();
-      } catch (err) {
-        console.error(`[Worker ${this.config.symbol}] exit error:`, (err as Error).message);
-      }
+  // Locks profit once price moves at least 0.25% in favor (2.5% return on 10x margin)
+  private applyTrailingBreakEven(pos: PaperExchangePosition, currentPrice: number): void {
+    if (this.breakEvenMoved) return;
+    const isLong = pos.side === 'long';
+    const gainPct = isLong
+      ? ((currentPrice - pos.averagePrice) / pos.averagePrice) * 100
+      : ((pos.averagePrice - currentPrice) / pos.averagePrice) * 100;
+    if (gainPct < 0.25) return;
+
+    this.currentSl = pos.averagePrice;
+    this.breakEvenMoved = true;
+    this.status.breakEvenMoved = true;
+    this.status.lastDecision = `Moved SL to Break-Even ($${pos.averagePrice.toFixed(2)}) after +${(gainPct * 10).toFixed(1)}% profit move`;
+    saveMiniCpmPosition({
+      symbol: this.config.symbol,
+      entryPrice: pos.averagePrice,
+      stopLoss: this.currentSl,
+      takeProfit: this.currentTp!,
+      breakEvenMoved: true,
+      openedAt: Date.now(),
+      reason: 'Shifted to Break-Even',
+    });
+  }
+
+  private async closePosition(
+    pos: PaperExchangePosition,
+    side: 'buy' | 'sell',
+    reason: string,
+    currentPrice: number,
+  ): Promise<void> {
+    this.status.lastDecision = `CLOSING (${reason}) @ ${currentPrice}`;
+    try {
+      await this.client.submitOrder({
+        symbol: this.config.symbol,
+        side,
+        quantity: pos.netQuantity,
+        leverage: this.config.leverage,
+        marginType: 'isolated',
+        reduceOnly: true,
+        executionPrice: currentPrice,
+        clientOrderId: `minicpm-close-${this.config.symbol}-${Date.now()}`,
+      });
+      this.currentSl = null;
+      this.currentTp = null;
+      this.breakEvenMoved = false;
+      removeMiniCpmPosition(this.config.symbol);
+      await this.syncAccount();
+    } catch (err) {
+      console.error(`[Worker ${this.config.symbol}] exit error:`, (err as Error).message);
     }
   }
 
-  private buildPromptInput(
-    markPrice: number,
-    btc15m: Candle[],
-    btc1h: Candle[],
-    sym15m: Candle[],
-    sym1h: Candle[],
-  ): PromptInput | null {
-    if (btc15m.length < 20 || btc1h.length < 10 || sym15m.length < 20 || sym1h.length < 10) return null;
+  private buildPromptInput(params: EvaluationParams): PromptInput | null {
+    const { markPrice, btcCandles15m, btcCandles1h, symbolCandles15m, symbolCandles1h, marketState } = params;
+    if (btcCandles15m.length < 20 || btcCandles1h.length < 10 || symbolCandles15m.length < 20 || symbolCandles1h.length < 10) {
+      return null;
+    }
 
-    const btcLast = btc15m.at(-1)!;
-    const btcOpen24h = btc1h.length >= 24 ? btc1h.at(-24)!.open : btc1h[0]!.open;
-    const btcChange24h = ((btcLast.close - btcOpen24h) / btcOpen24h) * 100;
-
-    const symOpen24h = sym1h.length >= 24 ? sym1h.at(-24)!.open : sym1h[0]!.open;
-    const symChange24h = ((markPrice - symOpen24h) / symOpen24h) * 100;
-
-    const recentHigh = Math.max(...sym15m.slice(-20).map((c) => c.high));
-    const recentLow = Math.min(...sym15m.slice(-20).map((c) => c.low));
-
+    const atr14 = marketState?.timeframes['15m'].atr14 ?? (wilderAtr(symbolCandles15m, 14).at(-1) ?? 1.0);
     return {
       symbol: this.config.symbol,
       currentPrice: markPrice,
-      btcContext: {
-        price: btcLast.close,
-        trend1h: this.detectTrend(btc1h),
-        trend15m: this.detectTrend(btc15m),
-        change24hPct: btcChange24h,
-      },
-      symbolContext: {
-        price: markPrice,
-        trend1h: this.detectTrend(sym1h),
-        trend15m: this.detectTrend(sym15m),
-        change24hPct: symChange24h,
-        atr14: this.calculateAtr(sym15m, 14),
-        support: recentLow,
-        resistance: recentHigh,
-        recentHigh,
-        recentLow,
-      },
+      btcContext: this.buildBtcContext(btcCandles15m, btcCandles1h),
+      symbolContext: this.buildSymbolContext(markPrice, symbolCandles15m, symbolCandles1h, atr14),
+      marketState,
+    };
+  }
+
+  private buildBtcContext(btc15m: Candle[], btc1h: Candle[]) {
+    const last = btc15m.at(-1)!;
+    const open24h = btc1h.length >= 24 ? btc1h.at(-24)!.open : btc1h[0]!.open;
+    return {
+      price: last.close,
+      trend1h: this.detectTrend(btc1h),
+      trend15m: this.detectTrend(btc15m),
+      change24hPct: ((last.close - open24h) / open24h) * 100,
+    };
+  }
+
+  private buildSymbolContext(markPrice: number, sym15m: Candle[], sym1h: Candle[], atr14: number) {
+    const open24h = sym1h.length >= 24 ? sym1h.at(-24)!.open : sym1h[0]!.open;
+    const recentHigh = Math.max(...sym15m.slice(-20).map((c) => c.high));
+    const recentLow = Math.min(...sym15m.slice(-20).map((c) => c.low));
+    return {
+      price: markPrice,
+      trend1h: this.detectTrend(sym1h),
+      trend15m: this.detectTrend(sym15m),
+      change24hPct: ((markPrice - open24h) / open24h) * 100,
+      atr14,
+      support: recentLow,
+      resistance: recentHigh,
+      recentHigh,
+      recentLow,
     };
   }
 
@@ -316,18 +339,5 @@ export class SymbolTraderWorker {
     if (diffPct > 0.3) return 'BULLISH';
     if (diffPct < -0.3) return 'BEARISH';
     return 'SIDEWAYS';
-  }
-
-  private calculateAtr(candles: Candle[], period = 14): number {
-    if (candles.length < period + 1) return 1.0;
-    let trSum = 0;
-    for (let i = candles.length - period; i < candles.length; i++) {
-      const high = candles[i]!.high;
-      const low = candles[i]!.low;
-      const prevClose = candles[i - 1]!.close;
-      const tr = Math.max(high - low, Math.abs(high - prevClose), Math.abs(low - prevClose));
-      trSum += tr;
-    }
-    return trSum / period;
   }
 }

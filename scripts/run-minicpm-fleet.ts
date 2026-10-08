@@ -1,5 +1,6 @@
 import { USDMClient, WebsocketClient } from 'binance';
 import { MarketDataService, DEFAULT_MARKET_DATA_OPTIONS } from '../src/market/MarketDataService.js';
+import { MarketStateBuilder } from '../src/market/MarketStateBuilder.js';
 import { MiniCpmService } from '../src/minicpm/MiniCpmService.js';
 import { SymbolTraderWorker } from '../src/minicpm/SymbolTraderWorker.js';
 import { renderDashboard } from '../src/minicpm/MiniCpmDashboard.js';
@@ -20,6 +21,7 @@ async function main() {
   });
 
   const marketData = new MarketDataService(futuresClient, DEFAULT_MARKET_DATA_OPTIONS);
+  const marketStateBuilder = new MarketStateBuilder();
   const llm = new MiniCpmService({
     host: 'http://127.0.0.1:11434',
     model: 'openbmb/minicpm5-2b:latest',
@@ -143,15 +145,33 @@ async function main() {
 
         const sym15m = snap.candles['15m'] ?? [];
         const sym1h = snap.candles['1h'] ?? [];
+        const sym4h = snap.candles['4h'] ?? [];
         const markPrice = sym15m.at(-1)?.close;
 
         if (markPrice && btc15m.length > 0) {
           const worker = workers.get(symbol);
           if (worker) {
-            await worker.evaluate(markPrice, btc15m, btc1h, sym15m, sym1h);
+            // Build rich MarketState so the LLM receives regime/structure/liquidity facts
+            const marketState = sym15m.length >= 50 ? marketStateBuilder.build({
+              symbol,
+              candles: sym15m,
+              candlesByTimeframe: { '15m': sym15m, '1h': sym1h, '4h': sym4h },
+              mark: markPrice,
+              fundingRate: 0,
+              derivatives: snap.derivatives ?? null,
+            }) : undefined;
+            await worker.evaluate({
+              markPrice,
+              btcCandles15m: btc15m,
+              btcCandles1h: btc1h,
+              symbolCandles15m: sym15m,
+              symbolCandles1h: sym1h,
+              marketState,
+            });
           }
         }
       }
+
       triggerRender();
     } catch (err) {
       console.error('[Fleet Loop Error]:', (err as Error).message);

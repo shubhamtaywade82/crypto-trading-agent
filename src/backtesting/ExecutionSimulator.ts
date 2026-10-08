@@ -13,12 +13,17 @@ export interface FillQuote {
 }
 
 // Binance's lowest-tier maintenance margin rate; real tiers rise with notional
-const MAINTENANCE_MARGIN_RATE = 0.005;
+export const MAINTENANCE_MARGIN_RATE = 0.005;
 
 /** Isolated-margin liquidation price; null when a 1x long cannot be liquidated. */
-export function liquidationPrice(side: Side, entry: number, leverage: number): number | null {
+export function liquidationPrice(
+  side: Side,
+  entry: number,
+  leverage: number,
+  mmr = MAINTENANCE_MARGIN_RATE,
+): number | null {
   if (side === 'LONG' && leverage <= 1) return null;
-  const buffer = 1 / leverage - MAINTENANCE_MARGIN_RATE;
+  const buffer = 1 / leverage - mmr;
   return side === 'LONG' ? entry * (1 - buffer) : entry * (1 + buffer);
 }
 

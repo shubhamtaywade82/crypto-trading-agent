@@ -8,4 +8,5 @@ export * from './PromotionGate.js';
 export * from './ChampionRegistry.js';
 export * from './Optimizer.js';
 export * from './ResearchAgent.js';
+export * from './Events.js';
 export * from './SelfImprovementLoop.js';

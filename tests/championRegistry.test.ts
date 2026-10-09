@@ -49,7 +49,7 @@ test('transition rejects skips (SHADOW → CANARY is not allowed)', () => {
   champions.appoint(seed);
   const candidate = strategies.registerMutation(seed.id, seed.version, { minimumRewardRisk: 1.75 }, 'v2', { kind: 'manual', note: '' });
   champions.stageChallenger(candidate);
-  assert.throws(() => champions.transition('STRUCT-LIQ-η', candidate.version, 'CANARY'), /invalid transition SHADOW → CANARY/);
+  assert.throws(() => champions.transition('STRUCT-LIQ-η', candidate.version, 'CANARY'), /Illegal challenger transition: SHADOW → CANARY/);
 });
 
 test('stageChallenger auto-REJECTS the previous SHADOW challenger when a new one is staged', () => {

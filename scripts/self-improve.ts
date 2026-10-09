@@ -17,13 +17,19 @@
  *   --iters N    Number of iterations to run. Default 1.
  *   --llm        Use the OllamaAdvisor to propose hypotheses (default: deterministic fallback).
  *   --status     Print the current state (champion, challengers, experiment count) and exit.
+ *   --events     Print the last N research events from data/research-events.jsonl (audit trail) and exit.
+ *   --events-tail N  Number of events to print with --events (default 50).
  *   --ledger PATH  Path to the setup-outcomes.jsonl file. Default data/setup-outcomes.jsonl.
  *
  * The script never promotes a candidate past SHADOW — operator decides SHADOW → PAPER → CANARY → PROMOTED
  * via `--advance` (a future CLI sub-command). The loop produces evidence; the operator consumes it.
+ *
+ * Event sourcing: every transition (champion appointed, challenger staged, experiment run, gate verdict
+ * issued) is emitted to a `ResearchEventBus` and persisted to `data/research-events.jsonl`. Read with
+ * `--events`.
  */
 
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { OllamaAdvisor } from '../src/ollama/advisor.js';
 import { SetupOutcomeLedger, type SetupOutcomeRecord } from '../src/learning/SetupOutcomeLedger.js';
@@ -32,6 +38,7 @@ import { ExperimentStore, type ExperimentRecord } from '../src/research/Experime
 import { ResearchAgent, type ResearchDiagnostics } from '../src/research/ResearchAgent.js';
 import { SelfImprovementLoop, DEFAULT_LOOP_CONFIG } from '../src/research/SelfImprovementLoop.js';
 import { StrategyRegistry } from '../src/research/StrategyRegistry.js';
+import { JsonlEventSubscriber, ResearchEventBus, type ResearchEvent } from '../src/research/Events.js';
 
 function arg(name: string, fallback: string): string {
   const index = process.argv.indexOf(`--${name}`);
@@ -109,9 +116,17 @@ async function main(): Promise<void> {
   const iters = Number(arg('iters', '1'));
   const useLlm = flag('llm');
   const statusOnly = flag('status');
+  const eventsOnly = flag('events');
+  const eventsTail = Number(arg('events-tail', '50'));
+
+  // Construct the event bus + JSONL subscriber. The bus is the canonical audit trail; subscribers persist
+  // every event to data/research-events.jsonl. ChampionRegistry and SelfImprovementLoop emit through it.
+  const bus = new ResearchEventBus();
+  const jsonlSub = new JsonlEventSubscriber(path.resolve('data/research-events.jsonl'));
+  bus.subscribe(jsonlSub.toSubscriber());
 
   const strategies = new StrategyRegistry(path.resolve('data/strategy-registry.jsonl'));
-  const champions = new ChampionRegistry(path.resolve('data/champion-registry.json'));
+  const champions = new ChampionRegistry(path.resolve('data/champion-registry.json'), bus);
   const experiments = new ExperimentStore(path.resolve('data/experiments.jsonl'));
   strategies.ensureSeeds();
   for (const id of strategies.ids()) {
@@ -121,6 +136,27 @@ async function main(): Promise<void> {
     }
   }
 
+  if (eventsOnly) {
+    // Print the last N persisted events from data/research-events.jsonl as a readable audit trail.
+    const eventsPath = path.resolve('data/research-events.jsonl');
+    if (!existsSync(eventsPath)) {
+      console.log(`No events file at ${eventsPath}. Run the loop first to populate it.`);
+      return;
+    }
+    const lines = readFileSync(eventsPath, 'utf8').split('\n').filter(Boolean);
+    const tail = lines.slice(-eventsTail);
+    console.log(`=== Last ${tail.length} research events (of ${lines.length} total) ===`);
+    for (const line of tail) {
+      try {
+        const e = JSON.parse(line) as ResearchEvent;
+        console.log(`[${e.seq}] ${new Date(e.at).toISOString()} ${e.type} ${summaryOf(e)}`);
+      } catch {
+        console.log(`(unparseable line) ${line.slice(0, 100)}`);
+      }
+    }
+    return;
+  }
+
   if (statusOnly) {
     console.log('=== Current state ===');
     printChampion(champions, strategies);
@@ -128,6 +164,11 @@ async function main(): Promise<void> {
     console.log(`Experiments on record: ${experiments.all().length}`);
     const promoted = experiments.withVerdict('PROMOTE');
     console.log(`Promoted experiments: ${promoted.length}`);
+    const eventsPath = path.resolve('data/research-events.jsonl');
+    if (existsSync(eventsPath)) {
+      const eventCount = readFileSync(eventsPath, 'utf8').split('\n').filter(Boolean).length;
+      console.log(`Events on record: ${eventCount}`);
+    }
     return;
   }
 
@@ -168,7 +209,7 @@ async function main(): Promise<void> {
     trainDays: Number(arg('train-days', String(DEFAULT_LOOP_CONFIG.trainDays))),
     testDays: Number(arg('test-days', String(DEFAULT_LOOP_CONFIG.testDays))),
     maxHypothesesPerRun: Number(arg('max-hypotheses', String(DEFAULT_LOOP_CONFIG.maxHypothesesPerRun))),
-  });
+  }, bus);
 
   for (let i = 0; i < iters; i += 1) {
     console.log(`=== Iteration ${i + 1} / ${iters} ===`);
@@ -199,3 +240,29 @@ main().catch((err) => {
   console.error(err);
   process.exit(1);
 });
+
+/** Render a one-line summary of an event for the `--events` audit trail view. */
+function summaryOf(e: ResearchEvent): string {
+  switch (e.type) {
+    case 'spec_registered':
+      return `${e.payload.id}:v${e.payload.version} (parent: ${e.payload.parentVersion ?? '∅'})`;
+    case 'champion_appointed':
+      return `${e.payload.id}:v${e.payload.version}${e.payload.replacedVersion ? ` (replaced v${e.payload.replacedVersion})` : ''}${e.payload.note ? ` — ${e.payload.note}` : ''}`;
+    case 'challenger_staged':
+      return `${e.payload.id}:v${e.payload.version} at SHADOW${e.payload.supersededVersion ? ` (superseded v${e.payload.supersededVersion})` : ''}`;
+    case 'challenger_transitioned':
+      return `${e.payload.id}:v${e.payload.version} ${e.payload.from} → ${e.payload.to}${e.payload.note ? ` — ${e.payload.note}` : ''}`;
+    case 'champion_rolled_back':
+      return `${e.payload.id}:v${e.payload.fromVersion} → v${e.payload.toVersion} (${e.payload.reason})`;
+    case 'experiment_started':
+      return `${e.payload.experimentId}: candidate ${e.payload.candidateId}:v${e.payload.candidateVersion} from parent ${e.payload.parentId}:v${e.payload.parentVersion}`;
+    case 'experiment_completed':
+      return `${e.payload.experimentId}: ${e.payload.decision} (test n=${e.payload.testN}, meanR=${e.payload.testMeanR.toFixed(3)} vs parent ${e.payload.parentTestMeanR.toFixed(3)})`;
+    case 'loop_iteration_started':
+      return `champion ${e.payload.championId}:v${e.payload.championVersion}, ledger=${e.payload.ledgerSize}`;
+    case 'loop_iteration_completed':
+      return `${e.payload.hypothesesProposed} hypotheses, ${e.payload.experimentsRun} experiments, new shadow=${e.payload.newShadowStaged}`;
+    case 'hypothesis_proposed':
+      return `[${e.payload.source}] ${e.payload.observation} → ${e.payload.proposal}`;
+  }
+}

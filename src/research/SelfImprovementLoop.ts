@@ -24,6 +24,7 @@ import { DEFAULT_PROMOTION_POLICY, evaluatePromotion } from './PromotionGate.js'
 import { ResearchAgent, candidateFromHypothesis, type Hypothesis, type ResearchDiagnostics } from './ResearchAgent.js';
 import { StrategyRegistry } from './StrategyRegistry.js';
 import type { StrategySpec, StructLiqSpecParams } from './StrategySpec.js';
+import type { ResearchEventBus } from './Events.js';
 
 export interface LoopConfig {
   /** Train window (days). */
@@ -59,6 +60,10 @@ export interface LoopStepResult {
  * Constructed once with persistent registries (StrategyRegistry, ChampionRegistry, ExperimentStore) and a
  * ResearchAgent. Each `run()` reads the current champion, computes diagnostics, asks the agent for hypotheses,
  * runs an experiment per hypothesis, and stages any candidate that clears the PromotionGate as a SHADOW challenger.
+ *
+ * An optional `ResearchEventBus` makes the loop observable. When supplied, the loop emits
+ * `loop_iteration_started`, `hypothesis_proposed`, `experiment_started`, `experiment_completed`, and
+ * `loop_iteration_completed` events.
  */
 export class SelfImprovementLoop {
   constructor(
@@ -67,6 +72,7 @@ export class SelfImprovementLoop {
     private readonly experiments: ExperimentStore,
     private readonly agent: ResearchAgent,
     private readonly config: LoopConfig = DEFAULT_LOOP_CONFIG,
+    private readonly bus: ResearchEventBus | null = null,
   ) {
     this.strategies.ensureSeeds();
     // Appoint the seed as champion if no champion exists yet.
@@ -92,6 +98,11 @@ export class SelfImprovementLoop {
     const champion = this.strategies.get<StructLiqSpecParams>('STRUCT-LIQ-η', championEntry.version);
     if (!champion) throw new Error(`champion spec STRUCT-LIQ-η:v${championEntry.version} not in registry`);
 
+    this.emit({
+      type: 'loop_iteration_started',
+      payload: { championId: champion.id, championVersion: champion.version, ledgerSize: ledger.length },
+    });
+
     const first = Math.min(...ledger.map((r) => r.createdAt));
     const last = Math.max(...ledger.map((r) => r.createdAt));
     const from = first;
@@ -110,6 +121,20 @@ export class SelfImprovementLoop {
     };
 
     const hypotheses = (await this.agent.propose(diagnostics)).slice(0, this.config.maxHypothesesPerRun);
+
+    for (const h of hypotheses) {
+      this.emit({
+        type: 'hypothesis_proposed',
+        payload: {
+          hypothesisId: h.id,
+          source: h.source,
+          observation: h.observation,
+          proposal: h.proposal,
+          changes: h.changes as Record<string, number>,
+        },
+      });
+    }
+
     const experiments: ExperimentRecord[] = [];
 
     const experimentConfig: ExperimentConfig = {
@@ -127,10 +152,23 @@ export class SelfImprovementLoop {
     for (const h of hypotheses) {
       const candidate = this.strategies.register(candidateFromHypothesis(champion, h));
       const parent = this.strategies.get<StructLiqSpecParams>(champion.id, champion.version)!;
+
+      const experimentId = `exp-${Date.now()}-${experiments.length + 1}`;
+      this.emit({
+        type: 'experiment_started',
+        payload: {
+          experimentId,
+          candidateId: candidate.id,
+          candidateVersion: candidate.version,
+          parentId: parent.id,
+          parentVersion: parent.version,
+        },
+      });
+
       const result = runExperiment(candidate, parent, ledger, experimentConfig);
       const verdict = evaluatePromotion(result, DEFAULT_PROMOTION_POLICY);
       const record: ExperimentRecord = {
-        experimentId: `exp-${Date.now()}-${experiments.length + 1}`,
+        experimentId,
         ranAt: Date.now(),
         candidate,
         parent,
@@ -140,12 +178,38 @@ export class SelfImprovementLoop {
       this.experiments.append(record);
       experiments.push(record);
 
+      this.emit({
+        type: 'experiment_completed',
+        payload: {
+          experimentId,
+          candidateId: candidate.id,
+          candidateVersion: candidate.version,
+          decision: verdict.decision,
+          testN: result.test.n,
+          testMeanR: result.test.meanNetR,
+          parentTestMeanR: result.parentTest.meanNetR,
+          policy: verdict.policy,
+          experimentNotes: result.experimentNotes,
+        },
+      });
+
       if (verdict.decision === 'PROMOTE') {
         // Stage the candidate as a SHADOW challenger. The operator decides when to transition to PAPER/CANARY/PROMOTED.
         this.champions.stageChallenger(candidate, `PROMOTED by gate: ${verdict.reasons.join('; ')}`);
         newChampion = { id: candidate.id, version: candidate.version };
       }
     }
+
+    this.emit({
+      type: 'loop_iteration_completed',
+      payload: {
+        championId: champion.id,
+        championVersion: champion.version,
+        hypothesesProposed: hypotheses.length,
+        experimentsRun: experiments.length,
+        newShadowStaged: newChampion !== undefined,
+      },
+    });
 
     return { hypotheses, experiments, newChampion, diagnostics };
   }
@@ -160,6 +224,12 @@ export class SelfImprovementLoop {
     // Pick the highest-stage active challenger.
     const challenger = challengers.sort((a, b) => stageRank(b.stage) - stageRank(a.stage))[0];
     this.champions.transition(id, challenger.version, to, note, experimentId);
+  }
+
+  /** Emit an event via the bus if one is configured. */
+  private emit(event: { type: string; payload: unknown }): void {
+    if (!this.bus) return;
+    this.bus.publishSync(event as never);
   }
 }
 

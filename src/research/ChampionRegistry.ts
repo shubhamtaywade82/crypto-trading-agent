@@ -4,7 +4,7 @@
  * The StrategyRegistry is the *genealogy* (every spec that has ever existed). The ChampionRegistry is the
  * *runtime*: which spec is currently live, which are observing in shadow, which are staging for promotion.
  *
- * Stages (the only allowed transitions, enforced by `transition()`):
+ * Stages (the only allowed transitions, enforced by `transition()` via the ALLOWED table):
  *
  *   SHADOW   → the candidate produces signals but does not trade. Compared against the champion on the same
  *              decisions. The candidate has no risk; it is being measured for divergence.
@@ -13,15 +13,22 @@
  *   PROMOTED → the candidate is now the champion. The previous champion becomes FORMER and can be rolled back to.
  *   REJECTED → the candidate failed promotion and is shelved. It remains in the registry for audit but does not
  *              run again unless an operator explicitly re-stages it.
+ *   FORMER   → the prior champion of a successful promotion. Kept so a rollback can restore it.
  *
  * The champion is always a single spec per strategy id. There is at most one challenger per (id, stage) at
  * SHADOW, PAPER, and CANARY — a new challenger at the same stage replaces the prior one (the prior one is
  * auto-REJECTED; if it had not been measured yet, that is a research-process problem to fix, not a runtime one).
+ *
+ * Event sourcing: every state transition emits a domain event via the supplied `ResearchEventBus`. The bus
+ * subscribers persist the event to `data/research-events.jsonl` (the canonical audit trail) and may stream
+ * to dashboards. The legacy in-memory `state.history` array is kept for backward compatibility with the
+ * existing CLI, but the bus is the source of truth.
  */
 
 import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync, renameSync } from 'node:fs';
 import path from 'node:path';
 import { specId, type SpecParams, type StrategySpec } from './StrategySpec.js';
+import type { ResearchEventBus } from './Events.js';
 
 export type ChallengerStage = 'SHADOW' | 'PAPER' | 'CANARY' | 'PROMOTED' | 'REJECTED' | 'FORMER';
 
@@ -52,7 +59,8 @@ export interface ChallengerEntry {
 export interface ChampionRegistryState {
   champions: ChampionEntry[];
   challengers: ChallengerEntry[];
-  /** History of every transition, oldest first — the audit trail of who was champion when. */
+  /** History of every transition, oldest first — the audit trail of who was champion when. Kept for
+   * backward compatibility; the bus is the canonical audit trail going forward. */
   history: Array<{ at: number; from: string; to: string; kind: string; note?: string }>;
 }
 
@@ -62,17 +70,57 @@ function isState(value: unknown): value is ChampionRegistryState {
   return Array.isArray(s.champions) && Array.isArray(s.challengers) && Array.isArray(s.history);
 }
 
-const STAGE_ORDER: readonly ChallengerStage[] = ['SHADOW', 'PAPER', 'CANARY', 'PROMOTED'];
+/**
+ * Allowed transitions for challenger stages. The default forward path is SHADOW → PAPER → CANARY → PROMOTED,
+ * walked one stage at a time — skipping forward (SHADOW → CANARY) throws IllegalTransitionError.
+ *
+ * PROMOTED is reachable from any active stage (SHADOW / PAPER / CANARY): an operator may explicitly
+ * promote a high-conviction candidate without walking the full pipeline. This is the operator-override
+ * path; the auto-staging in SelfImprovementLoop only ever produces SHADOW candidates that the operator
+ * then walks forward. REJECTED is reachable from any active stage too — a candidate can be killed at
+ * any point.
+ *
+ * PROMOTED, REJECTED, and FORMER are terminal.
+ *
+ * Adapted from agent-tui's StateMachine.ALLOWED pattern: a declarative transition graph rather than an
+ * imperative stage-order array. This makes "what can I do next?" a pure lookup (`reachableFrom`).
+ */
+const ALLOWED: Record<ChallengerStage, ChallengerStage[]> = {
+  SHADOW: ['PAPER', 'PROMOTED', 'REJECTED'],
+  PAPER: ['CANARY', 'PROMOTED', 'REJECTED'],
+  CANARY: ['PROMOTED', 'REJECTED'],
+  PROMOTED: [],
+  REJECTED: [],
+  FORMER: [],
+};
+
+/** Throws when a transition is not in the ALLOWED table. Adapted from agent-tui's IllegalTransitionError. */
+export class IllegalTransitionError extends Error {
+  constructor(
+    public readonly from: ChallengerStage,
+    public readonly to: ChallengerStage,
+    public readonly specKey: string,
+  ) {
+    super(`Illegal challenger transition: ${from} → ${to} for ${specKey}`);
+    this.name = 'IllegalTransitionError';
+  }
+}
 
 /**
  * Champion / Challenger registry with persistent state. The state file is *rewritten* on every transition
  * (not appended), because the registry is small and the runtime must always reflect the latest state — an append
  * file with stale champion entries would be ambiguous. Transitions are atomic (tmp + rename).
+ *
+ * An optional `ResearchEventBus` makes every transition observable. When supplied, the registry emits
+ * `champion_appointed`, `challenger_staged`, `challenger_transitioned`, and `champion_rolled_back` events.
  */
 export class ChampionRegistry {
   private state: ChampionRegistryState = { champions: [], challengers: [], history: [] };
 
-  constructor(private readonly filePath: string | null = path.resolve('data/champion-registry.json')) {
+  constructor(
+    private readonly filePath: string | null = path.resolve('data/champion-registry.json'),
+    private readonly bus: ResearchEventBus | null = null,
+  ) {
     this.load();
   }
 
@@ -97,6 +145,16 @@ export class ChampionRegistry {
     return this.state.challengers.filter((c) => c.id === id && (c.stage === 'SHADOW' || c.stage === 'PAPER' || c.stage === 'CANARY'));
   }
 
+  /** Returns the set of stages reachable from `from` in one hop, per the ALLOWED table. */
+  reachableFrom(from: ChallengerStage): ChallengerStage[] {
+    return [...(ALLOWED[from] ?? [])];
+  }
+
+  /** Returns true if `from → to` is a legal forward transition. */
+  canTransition(from: ChallengerStage, to: ChallengerStage): boolean {
+    return (ALLOWED[from] ?? []).includes(to);
+  }
+
   /**
    * Appoint a spec as champion immediately. Used for the initial seed: v1 of every strategy is appointed champion
    * with no challenger. For non-seed promotions, use `transition(id, version, 'PROMOTED', experimentId)` instead,
@@ -108,19 +166,29 @@ export class ChampionRegistry {
     if (existing) entry.replacedVersion = existing.version;
     this.state.champions = [...this.state.champions.filter((c) => c.id !== spec.id), entry];
     this.state.history.push({ at: Date.now(), from: existing ? specId(existing) : '∅', to: specId(spec), kind: 'APPOINT', note });
+    this.emit({
+      type: 'champion_appointed',
+      payload: { id: spec.id, version: spec.version, replacedVersion: existing?.version, note },
+    });
     this.persist();
   }
 
   /**
-   * Transition a challenger to a new stage. The transition is validated against STAGE_ORDER — skipping a stage
-   * (SHADOW → CANARY) is rejected. PROMOTED is the terminal stage: the challenger becomes champion and the
-   * previous champion becomes FORMER.
+   * Transition a challenger to a new stage. The transition is validated against the ALLOWED table — skipping a
+   * stage (SHADOW → CANARY) throws IllegalTransitionError. PROMOTED is the terminal stage: the challenger
+   * becomes champion and the previous champion becomes FORMER.
    */
   transition(id: string, version: number, to: ChallengerStage, note?: string, experimentId?: string): void {
     const current = this.state.challengers.find((c) => c.id === id && c.version === version);
     if (!current) throw new Error(`no challenger for ${specId({ id, version })}`);
+    const from = current.stage;
 
     if (to === 'PROMOTED') {
+      // PROMOTED is legal from any active stage (SHADOW / PAPER / CANARY). Skipping stages is allowed;
+      // the operator decides when a candidate is ready.
+      if (!this.canTransition(from, to)) {
+        throw new IllegalTransitionError(from, to, specId({ id, version }));
+      }
       const prior = this.champion(id);
       const entry: ChampionEntry = { id, version, since: Date.now(), promotedBy: experimentId, replacedVersion: prior?.version };
       this.state.champions = [...this.state.champions.filter((c) => c.id !== id), entry];
@@ -133,6 +201,10 @@ export class ChampionRegistry {
         this.state.challengers = this.state.challengers.filter((c) => !(c.id === id && c.version === version));
       }
       this.state.history.push({ at: Date.now(), from: prior ? specId(prior) : '∅', to: specId({ id, version }), kind: 'PROMOTE', note });
+      this.emit({
+        type: 'challenger_transitioned',
+        payload: { id, version, from, to, note, experimentId },
+      });
       this.persist();
       return;
     }
@@ -141,19 +213,25 @@ export class ChampionRegistry {
       this.state.challengers = this.state.challengers
         .map((c) => (c.id === id && c.version === version ? { ...c, stage: 'REJECTED', since: Date.now(), note, experimentId: experimentId ?? c.experimentId } : c));
       this.state.history.push({ at: Date.now(), from: specId({ id, version }), to: 'REJECTED', kind: 'REJECT', note });
+      this.emit({
+        type: 'challenger_transitioned',
+        payload: { id, version, from, to, note, experimentId },
+      });
       this.persist();
       return;
     }
 
-    // Forward-stage transition: must be the next step in STAGE_ORDER.
-    const currentIdx = STAGE_ORDER.indexOf(current.stage);
-    const toIdx = STAGE_ORDER.indexOf(to);
-    if (toIdx !== currentIdx + 1) {
-      throw new Error(`invalid transition ${current.stage} → ${to} for ${specId({ id, version })}; must step forward through ${STAGE_ORDER.join(' → ')}`);
+    // Forward-stage transition: must be allowed by the table.
+    if (!this.canTransition(from, to)) {
+      throw new IllegalTransitionError(from, to, specId({ id, version }));
     }
     this.state.challengers = this.state.challengers
       .map((c) => (c.id === id && c.version === version ? { ...c, stage: to, since: Date.now(), note, experimentId: experimentId ?? c.experimentId } : c));
     this.state.history.push({ at: Date.now(), from: specId({ id, version }), to, kind: 'TRANSITION', note });
+    this.emit({
+      type: 'challenger_transitioned',
+      payload: { id, version, from, to, note, experimentId },
+    });
     this.persist();
   }
 
@@ -164,12 +242,18 @@ export class ChampionRegistry {
    */
   stageChallenger(spec: StrategySpec, note?: string): void {
     const existing = this.state.challengers.find((c) => c.id === spec.id && c.stage === 'SHADOW');
+    let supersededVersion: number | undefined;
     if (existing) {
+      supersededVersion = existing.version;
       this.state.challengers = this.state.challengers
         .map((c) => (c.id === spec.id && c.version === existing.version ? { ...c, stage: 'REJECTED', since: Date.now(), note: 'superseded by newer shadow' } : c));
     }
     this.state.challengers.push({ id: spec.id, version: spec.version, stage: 'SHADOW', since: Date.now(), note });
     this.state.history.push({ at: Date.now(), from: '∅', to: specId(spec), kind: 'STAGE', note });
+    this.emit({
+      type: 'challenger_staged',
+      payload: { id: spec.id, version: spec.version, note, supersededVersion },
+    });
     this.persist();
   }
 
@@ -187,11 +271,15 @@ export class ChampionRegistry {
       .filter((c) => !(c.id === id && c.version === current.version))
       .concat([{ id, version: current.version, stage: 'REJECTED', since: Date.now(), note: `rollback: ${reason}` }]);
     this.state.history.push({ at: Date.now(), from: specId(current), to: specId(restored), kind: 'ROLLBACK', note: reason });
+    this.emit({
+      type: 'champion_rolled_back',
+      payload: { id, fromVersion: current.version, toVersion: restored.version, reason },
+    });
     this.persist();
     return restored;
   }
 
-  /** Returns the full transition history. */
+  /** Returns the full transition history (legacy in-memory trail). */
   auditTrail(): ChampionRegistryState['history'] {
     return [...this.state.history];
   }
@@ -199,6 +287,12 @@ export class ChampionRegistry {
   /** Snapshot of the entire state — used by the dashboard / CLI to render the current state. */
   snapshot(): ChampionRegistryState {
     return JSON.parse(JSON.stringify(this.state)) as ChampionRegistryState;
+  }
+
+  /** Emit an event via the bus if one is configured. Synchronous (fire-and-forget for async subscribers). */
+  private emit(event: { type: string; payload: unknown }): void {
+    if (!this.bus) return;
+    this.bus.publishSync(event as never);
   }
 
   private load(): void {

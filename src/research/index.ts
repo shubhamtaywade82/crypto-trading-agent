@@ -13,4 +13,5 @@ export * from './Events.js';
 export * from './LedgerFixtures.js';
 export * from './GoldenTasks.js';
 export * from './defineGoldenTasks.js';
+export * from './MetricsCollector.js';
 export * from './SelfImprovementLoop.js';

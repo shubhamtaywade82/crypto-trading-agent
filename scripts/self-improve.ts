@@ -19,6 +19,7 @@
  *   --status     Print the current state (champion, challengers, experiment count) and exit.
  *   --events     Print the last N research events from data/research-events.jsonl (audit trail) and exit.
  *   --events-tail N  Number of events to print with --events (default 50).
+ *   --metrics    Print aggregate research-plane metrics (replayed from data/research-events.jsonl) and exit.
  *   --ledger PATH  Path to the setup-outcomes.jsonl file. Default data/setup-outcomes.jsonl.
  *
  * The script never promotes a candidate past SHADOW — operator decides SHADOW → PAPER → CANARY → PROMOTED
@@ -39,6 +40,7 @@ import { ResearchAgent, type ResearchDiagnostics } from '../src/research/Researc
 import { SelfImprovementLoop, DEFAULT_LOOP_CONFIG } from '../src/research/SelfImprovementLoop.js';
 import { StrategyRegistry } from '../src/research/StrategyRegistry.js';
 import { JsonlEventSubscriber, ResearchEventBus, type ResearchEvent } from '../src/research/Events.js';
+import { MetricsCollector, formatMetrics, replayEvents, attachCollector, type ResearchMetrics } from '../src/research/MetricsCollector.js';
 
 function arg(name: string, fallback: string): string {
   const index = process.argv.indexOf(`--${name}`);
@@ -117,6 +119,7 @@ async function main(): Promise<void> {
   const useLlm = flag('llm');
   const statusOnly = flag('status');
   const eventsOnly = flag('events');
+  const metricsOnly = flag('metrics');
   const eventsTail = Number(arg('events-tail', '50'));
 
   // Construct the event bus + JSONL subscriber. The bus is the canonical audit trail; subscribers persist
@@ -124,6 +127,12 @@ async function main(): Promise<void> {
   const bus = new ResearchEventBus();
   const jsonlSub = new JsonlEventSubscriber(path.resolve('data/research-events.jsonl'));
   bus.subscribe(jsonlSub.toSubscriber());
+
+  // Attach the metrics collector as a bus subscriber. It auto-tracks every event published during this run.
+  // For --metrics, we also replay persisted events from disk so the snapshot reflects the full history, not
+  // just this process's events.
+  const collector = new MetricsCollector();
+  attachCollector(bus, collector);
 
   const strategies = new StrategyRegistry(path.resolve('data/strategy-registry.jsonl'));
   const champions = new ChampionRegistry(path.resolve('data/champion-registry.json'), bus);
@@ -134,6 +143,24 @@ async function main(): Promise<void> {
       const seed = strategies.latest(id);
       if (seed) champions.appoint(seed, 'seed appointment on first run');
     }
+  }
+
+  if (metricsOnly) {
+    // Replay persisted events from disk so the snapshot reflects the full history, not just this process.
+    const eventsPath = path.resolve('data/research-events.jsonl');
+    let metrics: ResearchMetrics;
+    if (existsSync(eventsPath)) {
+      const events: ResearchEvent[] = [];
+      for (const line of readFileSync(eventsPath, 'utf8').split('\n')) {
+        if (!line.trim()) continue;
+        try { events.push(JSON.parse(line) as ResearchEvent); } catch { /* skip torn line */ }
+      }
+      metrics = replayEvents(events);
+    } else {
+      metrics = collector.snapshot();
+    }
+    console.log(formatMetrics(metrics));
+    return;
   }
 
   if (eventsOnly) {

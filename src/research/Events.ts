@@ -131,6 +131,29 @@ export interface ModelRouted extends ResearchEventBase {
   };
 }
 
+/** The PatchWorkflow applied a code patch in a git worktree and ran validation commands. */
+export interface PatchApplied extends ResearchEventBase {
+  type: 'patch_applied';
+  payload: {
+    /** The run id from the PatchRequest. */
+    runId: string;
+    /** True if all validation commands passed. */
+    ok: boolean;
+    /** The worktree path where the patch was applied. */
+    worktreePath: string;
+    /** The commit SHA, if a commit was made. */
+    commitSha?: string;
+    /** The number of files changed. */
+    filesChanged: number;
+    /** The number of validation commands run. */
+    verifyCommandCount: number;
+    /** The number of validation commands that passed. */
+    verifyPassed: number;
+    /** When the patch failed, the error message. */
+    error?: string;
+  };
+}
+
 /** Union of all research-plane events. */
 export type ResearchEvent =
   | SpecRegistered
@@ -144,7 +167,8 @@ export type ResearchEvent =
   | LoopIterationCompleted
   | HypothesisProposed
   | HypothesisRepaired
-  | ModelRouted;
+  | ModelRouted
+  | PatchApplied;
 
 export type ResearchEventType = ResearchEvent['type'];
 

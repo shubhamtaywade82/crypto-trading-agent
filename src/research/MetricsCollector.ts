@@ -60,6 +60,10 @@ export interface ResearchMetrics {
   championRollbacks: number;
   // Spec-level
   specsRegistered: number;
+  // Patch-level
+  patchesApplied: number;
+  patchesSucceeded: number;
+  patchesFailed: number;
   // Latency (ms)
   avgExperimentDurationMs: number;
   // Derived rates (0..1)
@@ -95,6 +99,9 @@ function emptyMetrics(): ResearchMetrics {
     challengersTransitionedToRejected: 0,
     championRollbacks: 0,
     specsRegistered: 0,
+    patchesApplied: 0,
+    patchesSucceeded: 0,
+    patchesFailed: 0,
     avgExperimentDurationMs: 0,
     promotionRate: 0,
     repairSuccessRate: 0,
@@ -189,6 +196,11 @@ export class MetricsCollector {
       case 'spec_registered':
         this.m.specsRegistered += 1;
         break;
+      case 'patch_applied':
+        this.m.patchesApplied += 1;
+        if (event.payload.ok) this.m.patchesSucceeded += 1;
+        else this.m.patchesFailed += 1;
+        break;
     }
 
     // Derived rates — recomputed on every event so the snapshot is always current.
@@ -268,5 +280,10 @@ export function formatMetrics(m: Readonly<ResearchMetrics>): string {
   lines.push('');
   lines.push('Specs:');
   lines.push(`  registered: ${m.specsRegistered}`);
+  if (m.patchesApplied > 0) {
+    lines.push('');
+    lines.push('Patches:');
+    lines.push(`  applied: ${m.patchesApplied} (succeeded: ${m.patchesSucceeded}, failed: ${m.patchesFailed})`);
+  }
   return lines.join('\n');
 }

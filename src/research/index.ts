@@ -16,4 +16,6 @@ export * from './defineGoldenTasks.js';
 export * from './MetricsCollector.js';
 export * from './ExperimentMemory.js';
 export * from './ModelRouter.js';
+export * from './CommandPolicy.js';
+export * from './PatchWorkflow.js';
 export * from './SelfImprovementLoop.js';

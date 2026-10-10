@@ -302,5 +302,7 @@ function summaryOf(e: ResearchEvent): string {
       return `${e.payload.ok ? 'repaired' : 'repair failed'} after ${e.payload.attempts} attempt(s); ${e.payload.errorCount} error(s)${e.payload.firstError ? ` — ${e.payload.firstError}` : ''}`;
     case 'model_routed':
       return `${e.payload.kind} → ${e.payload.model} (score=${e.payload.score.toFixed(3)}${e.payload.reasons.length > 0 ? `; ${e.payload.reasons.join('; ')}` : ''})`;
+    case 'patch_applied':
+      return `${e.payload.ok ? 'succeeded' : 'failed'} — ${e.payload.filesChanged} file(s), ${e.payload.verifyPassed}/${e.payload.verifyCommandCount} validations passed${e.payload.commitSha ? `; commit ${e.payload.commitSha.slice(0, 7)}` : ''}${e.payload.error ? `; ${e.payload.error}` : ''}`;
   }
 }

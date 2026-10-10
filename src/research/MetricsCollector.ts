@@ -40,6 +40,10 @@ export interface ResearchMetrics {
   repairLoopInvocations: number;
   repairLoopSucceeded: number;
   repairLoopFailed: number;
+  // Model routing
+  modelRoutesLocal: number;
+  modelRoutesEscalate: number;
+  modelRouteAvgScore: number;
   // Experiment-level
   experimentsStarted: number;
   experimentsCompleted: number;
@@ -75,6 +79,9 @@ function emptyMetrics(): ResearchMetrics {
     repairLoopInvocations: 0,
     repairLoopSucceeded: 0,
     repairLoopFailed: 0,
+    modelRoutesLocal: 0,
+    modelRoutesEscalate: 0,
+    modelRouteAvgScore: 0,
     experimentsStarted: 0,
     experimentsCompleted: 0,
     experimentsPromoted: 0,
@@ -130,6 +137,17 @@ export class MetricsCollector {
         this.m.repairLoopInvocations += 1;
         if (event.payload.ok) this.m.repairLoopSucceeded += 1;
         else this.m.repairLoopFailed += 1;
+        break;
+      case 'model_routed':
+        if (event.payload.kind === 'local') this.m.modelRoutesLocal += 1;
+        else if (event.payload.kind === 'escalate') this.m.modelRoutesEscalate += 1;
+        // Running average of complexity scores.
+        {
+          const total = this.m.modelRoutesLocal + this.m.modelRoutesEscalate;
+          if (total > 0) {
+            this.m.modelRouteAvgScore = (this.m.modelRouteAvgScore * (total - 1) + event.payload.score) / total;
+          }
+        }
         break;
       case 'experiment_started':
         this.m.experimentsStarted += 1;
@@ -231,6 +249,10 @@ export function formatMetrics(m: Readonly<ResearchMetrics>): string {
   lines.push(`  proposed: ${m.hypothesesProposed} (LLM: ${m.hypothesesFromLlm}, fallback: ${m.hypothesesFromFallback})`);
   lines.push(`  LLM hypothesis rate: ${pct(m.llmHypothesisRate)}`);
   lines.push(`  repair loop: ${m.repairLoopInvocations} invoked, ${m.repairLoopSucceeded} succeeded, ${m.repairLoopFailed} failed (success rate: ${pct(m.repairSuccessRate)})`);
+  lines.push('');
+  lines.push('Model routing:');
+  lines.push(`  local/escalate: ${m.modelRoutesLocal}/${m.modelRoutesEscalate}`);
+  lines.push(`  avg complexity score: ${m.modelRouteAvgScore.toFixed(3)}`);
   lines.push('');
   lines.push('Experiments:');
   lines.push(`  started/completed: ${m.experimentsStarted}/${m.experimentsCompleted}`);

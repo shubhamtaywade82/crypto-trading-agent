@@ -120,7 +120,8 @@ test('ResearchAgent.propose uses LLM hypotheses when the client returns valid JS
       { observation: 'collapse in TRANSITION', proposal: 'require sweep depth >= 0.8', changes: { minSweepDepthAtr: 0.8 } },
     ]),
   };
-  const agent = new ResearchAgent(goodClient, 'qwen-test');
+  // routerConfig=null disables routing so the constructor's model ('qwen-test') is used.
+  const agent = new ResearchAgent(goodClient, 'qwen-test', undefined, undefined, undefined, null);
   const hs = await agent.propose(baseDiagnostics);
   assert.equal(hs.length, 1);
   assert.equal(hs[0].source, 'llm');
@@ -143,7 +144,8 @@ test('ResearchAgent.propose repairs a malformed LLM output instead of falling ba
       return callCount === 1 ? malformed : valid;
     },
   };
-  const agent = new ResearchAgent(repairingClient, 'qwen-test');
+  // routerConfig=null disables routing so the constructor's model ('qwen-test') is used.
+  const agent = new ResearchAgent(repairingClient, 'qwen-test', undefined, undefined, undefined, null);
   const hs = await agent.propose(baseDiagnostics);
   // The repair loop recovered — the agent returned LLM hypotheses, not fallback.
   assert.equal(hs.length, 1);
@@ -186,7 +188,8 @@ test('ResearchAgent emits a hypothesis_repaired event when the repair loop is in
       return callCount === 1 ? malformed : valid;
     },
   };
-  const agent = new ResearchAgent(client, 'qwen-test', 2, bus);
+  // routerConfig=null disables routing so the constructor's model ('qwen-test') is used.
+  const agent = new ResearchAgent(client, 'qwen-test', 2, bus, undefined, null);
   await agent.propose(baseDiagnostics);
 
   const repairedEvent = events.find((e) => e.type === 'hypothesis_repaired');

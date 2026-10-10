@@ -24,6 +24,7 @@ import { DEFAULT_MAX_REPAIR_RETRIES, HypothesisRepairLoop } from './HypothesisRe
 import type { ResearchEventBus } from './Events.js';
 import type { ExperimentMemory } from './ExperimentMemory.js';
 import { formatSearchResults } from './ExperimentMemory.js';
+import { DEFAULT_MODEL_ROUTER_CONFIG, FixedModelRouter, ModelRouter, type ModelChoice, type ModelRouterConfig } from './ModelRouter.js';
 
 /** A natural-language hypothesis + the parameter mutation it implies. */
 export interface Hypothesis {
@@ -198,6 +199,7 @@ export function fallbackHypotheses(d: ResearchDiagnostics): Hypothesis[] {
  */
 export class ResearchAgent {
   private readonly repairLoop: HypothesisRepairLoop | null;
+  private readonly router: ModelRouter | FixedModelRouter;
 
   constructor(
     private readonly client: AdvisorClient | null,
@@ -205,8 +207,12 @@ export class ResearchAgent {
     private readonly maxRepairRetries: number = DEFAULT_MAX_REPAIR_RETRIES,
     private readonly bus: ResearchEventBus | null = null,
     private readonly memory: ExperimentMemory | null = null,
+    routerConfig: ModelRouterConfig | null = DEFAULT_MODEL_ROUTER_CONFIG,
   ) {
     this.repairLoop = client ? new HypothesisRepairLoop(client, model, maxRepairRetries) : null;
+    // When routerConfig is null, routing is disabled — every call uses the constructor's `model`.
+    // Otherwise, the ModelRouter picks the model per-diagnostics based on complexity.
+    this.router = routerConfig ? new ModelRouter(routerConfig) : new FixedModelRouter(model);
   }
 
   /** True when an LLM client is configured and reachable; false otherwise (fallback will be used). */
@@ -216,6 +222,11 @@ export class ResearchAgent {
    * Propose hypotheses from diagnostics. Tries the LLM first; if the output is malformed, invokes the repair
    * loop to re-prompt with validation errors. Only if the repair loop also fails does the agent fall back to
    * the deterministic proposer.
+   *
+   * Model routing: when a routerConfig is configured, the agent queries the ModelRouter to pick the model
+   * for this diagnostics digest (simple → small model, complex → large model). The choice is emitted as a
+   * `model_routed` event so the operator can monitor routing decisions. When routing is disabled
+   * (routerConfig=null), the constructor's `model` is used for every call.
    *
    * Memory: when an ExperimentMemory is configured, the agent queries it for prior experiments on similar
    * cells and includes the results in the LLM prompt — "we already tried X and it was REJECTED for Y" — so
@@ -239,12 +250,26 @@ export class ResearchAgent {
     }
 
     if (this.client && this.repairLoop) {
+      // Route to the appropriate model based on complexity.
+      const choice: ModelChoice = this.router.decide(diagnostics);
+      this.emit({
+        type: 'model_routed',
+        payload: {
+          model: choice.model,
+          kind: choice.kind,
+          score: choice.score.score,
+          reasons: choice.score.reasons,
+        },
+      });
+
       try {
         const prompt = this.buildPrompt(diagnostics, priorExperiments);
-        const text = await this.client.generateText({ model: this.model, prompt });
+        const text = await this.client.generateText({ model: choice.model, prompt });
         const raw = typeof text === 'string' ? text : String(text);
 
-        const result = await this.repairLoop.run({ diagnostics, originalRawOutput: raw });
+        // The repair loop uses the same model the router chose — re-create it with that model.
+        const repairLoop = new HypothesisRepairLoop(this.client, choice.model, this.maxRepairRetries);
+        const result = await repairLoop.run({ diagnostics, originalRawOutput: raw });
 
         if (result.attempts > 0) {
           this.emit({
@@ -259,7 +284,7 @@ export class ResearchAgent {
         }
 
         if (result.ok && result.hypotheses.length > 0) {
-          return result.hypotheses.map((h) => ({ ...h, model: this.model }));
+          return result.hypotheses.map((h) => ({ ...h, model: choice.model }));
         }
       } catch {
         // Network error, timeout — fall through to fallback

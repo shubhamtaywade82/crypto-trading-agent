@@ -128,6 +128,76 @@ test('ResearchAgent.propose uses LLM hypotheses when the client returns valid JS
   assert.equal(hs[0].model, 'qwen-test');
 });
 
+test('ResearchAgent.propose repairs a malformed LLM output instead of falling back', async () => {
+  // First call returns malformed JSON (unknown key); second call returns valid JSON.
+  // The repair loop should re-prompt and recover — the agent must NOT fall back to the deterministic proposer.
+  const malformed = JSON.stringify([{ observation: 'x', proposal: 'y', changes: { unknown_key: 1 } }]);
+  const valid = JSON.stringify([
+    { observation: 'repaired', proposal: 'require sweep depth >= 0.6', changes: { minSweepDepthAtr: 0.6 } },
+  ]);
+  let callCount = 0;
+  const repairingClient = {
+    listModels: async () => [],
+    generateText: async () => {
+      callCount += 1;
+      return callCount === 1 ? malformed : valid;
+    },
+  };
+  const agent = new ResearchAgent(repairingClient, 'qwen-test');
+  const hs = await agent.propose(baseDiagnostics);
+  // The repair loop recovered — the agent returned LLM hypotheses, not fallback.
+  assert.equal(hs.length, 1);
+  assert.equal(hs[0].source, 'llm');
+  assert.equal(hs[0].changes.minSweepDepthAtr, 0.6);
+  assert.equal(hs[0].model, 'qwen-test');
+  // Two LLM calls: the original + one repair retry.
+  assert.equal(callCount, 2);
+});
+
+test('ResearchAgent.propose falls back to deterministic when the repair loop is exhausted', async () => {
+  // Every call returns malformed JSON — the repair loop can't recover.
+  const malformed = 'not json at all';
+  const alwaysMalformedClient = {
+    listModels: async () => [],
+    generateText: async () => malformed,
+  };
+  const agent = new ResearchAgent(alwaysMalformedClient, 'qwen-test', 2);
+  const hs = await agent.propose(baseDiagnostics);
+  // Repair loop exhausted — the agent fell back to the deterministic proposer.
+  assert.ok(hs.length > 0);
+  assert.ok(hs.every((h) => h.source === 'fallback'));
+});
+
+test('ResearchAgent emits a hypothesis_repaired event when the repair loop is invoked', async () => {
+  const { ResearchEventBus } = await import('../src/research/Events.js');
+  const bus = new ResearchEventBus();
+  const events: Array<{ type: string; payload: unknown }> = [];
+  bus.subscribe((e) => { events.push({ type: e.type, payload: e.payload }); });
+
+  const malformed = JSON.stringify([{ observation: 'x', proposal: 'y', changes: { unknown_key: 1 } }]);
+  const valid = JSON.stringify([
+    { observation: 'repaired', proposal: 'require sweep depth >= 0.7', changes: { minSweepDepthAtr: 0.7 } },
+  ]);
+  let callCount = 0;
+  const client = {
+    listModels: async () => [],
+    generateText: async () => {
+      callCount += 1;
+      return callCount === 1 ? malformed : valid;
+    },
+  };
+  const agent = new ResearchAgent(client, 'qwen-test', 2, bus);
+  await agent.propose(baseDiagnostics);
+
+  const repairedEvent = events.find((e) => e.type === 'hypothesis_repaired');
+  assert.ok(repairedEvent, 'expected a hypothesis_repaired event');
+  const payload = repairedEvent!.payload as { ok: boolean; attempts: number; errorCount: number };
+  assert.equal(payload.ok, true);
+  assert.equal(payload.attempts, 1);
+  // errorCount is the count from the *final* attempt — which is 0 on success (the repaired output has no errors).
+  assert.equal(payload.errorCount, 0);
+});
+
 test('candidateFromHypothesis produces a child spec with hypothesis-driven params and traceable provenance', () => {
   const parent = seedStructLiqSpec();
   const h = {

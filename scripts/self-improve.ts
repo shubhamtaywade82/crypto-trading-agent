@@ -196,7 +196,7 @@ async function main(): Promise<void> {
         throw new Error('OllamaAdvisor does not expose generateText');
       },
     };
-    agent = new ResearchAgent(client, 'qwen2.5:7b');
+    agent = new ResearchAgent(client, 'qwen2.5:7b', undefined, bus);
     console.log('ResearchAgent: LLM mode (Ollama qwen2.5:7b). Will fall back to deterministic proposer on any LLM failure.');
   } else {
     agent = new ResearchAgent(null);
@@ -264,5 +264,7 @@ function summaryOf(e: ResearchEvent): string {
       return `${e.payload.hypothesesProposed} hypotheses, ${e.payload.experimentsRun} experiments, new shadow=${e.payload.newShadowStaged}`;
     case 'hypothesis_proposed':
       return `[${e.payload.source}] ${e.payload.observation} → ${e.payload.proposal}`;
+    case 'hypothesis_repaired':
+      return `${e.payload.ok ? 'repaired' : 'repair failed'} after ${e.payload.attempts} attempt(s); ${e.payload.errorCount} error(s)${e.payload.firstError ? ` — ${e.payload.firstError}` : ''}`;
   }
 }

@@ -104,6 +104,18 @@ export interface HypothesisProposed extends ResearchEventBase {
   payload: { hypothesisId: string; source: 'llm' | 'fallback'; observation: string; proposal: string; changes: Record<string, number> };
 }
 
+/** The ResearchAgent invoked the repair loop to recover a malformed LLM output. */
+export interface HypothesisRepaired extends ResearchEventBase {
+  type: 'hypothesis_repaired';
+  payload: {
+    ok: boolean;
+    attempts: number;
+    errorCount: number;
+    /** A short sample of the first error from the final attempt (for dashboard at-a-glance). */
+    firstError?: string;
+  };
+}
+
 /** Union of all research-plane events. */
 export type ResearchEvent =
   | SpecRegistered
@@ -115,7 +127,8 @@ export type ResearchEvent =
   | ExperimentCompleted
   | LoopIterationStarted
   | LoopIterationCompleted
-  | HypothesisProposed;
+  | HypothesisProposed
+  | HypothesisRepaired;
 
 export type ResearchEventType = ResearchEvent['type'];
 

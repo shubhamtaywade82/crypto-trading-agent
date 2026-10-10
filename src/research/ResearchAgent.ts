@@ -20,6 +20,8 @@ import type { AdvisorClient } from '../ollama/advisor.js';
 import type { CellStat } from './ConditionalEdge.js';
 import type { ExperimentResult } from './ExperimentRunner.js';
 import type { StructLiqSpecParams, StrategySpec } from './StrategySpec.js';
+import { DEFAULT_MAX_REPAIR_RETRIES, HypothesisRepairLoop } from './HypothesisRepairLoop.js';
+import type { ResearchEventBus } from './Events.js';
 
 /** A natural-language hypothesis + the parameter mutation it implies. */
 export interface Hypothesis {
@@ -186,35 +188,79 @@ export function fallbackHypotheses(d: ResearchDiagnostics): Hypothesis[] {
  * get a list of hypotheses; each hypothesis is a partial parameter mutation ready for the ExperimentRunner.
  *
  * The agent does NOT mutate the registry, NOT run experiments, NOT decide promotion. It only proposes.
+ *
+ * Repair loop: when the LLM produces malformed output (non-JSON, unknown keys, non-numeric values), the
+ * agent invokes the HypothesisRepairLoop to re-prompt the LLM with the specific validation errors, up to
+ * `maxRepairRetries` times. Only if the repair loop also fails does the agent fall back to the deterministic
+ * proposer. This recovers LLM calls that would otherwise be wasted.
  */
 export class ResearchAgent {
+  private readonly repairLoop: HypothesisRepairLoop | null;
+
   constructor(
     private readonly client: AdvisorClient | null,
     private readonly model: string = 'qwen2.5:7b',
-  ) {}
+    private readonly maxRepairRetries: number = DEFAULT_MAX_REPAIR_RETRIES,
+    private readonly bus: ResearchEventBus | null = null,
+  ) {
+    this.repairLoop = client ? new HypothesisRepairLoop(client, model, maxRepairRetries) : null;
+  }
 
   /** True when an LLM client is configured and reachable; false otherwise (fallback will be used). */
   hasLlm(): boolean { return this.client !== null; }
 
   /**
-   * Propose hypotheses from diagnostics. Tries the LLM first; on any failure (network, parse, empty result)
-   * falls back to the deterministic proposer. The fallback is intentionally conservative — it proposes at most
-   * two mutations, both of which are gated by sample size.
+   * Propose hypotheses from diagnostics. Tries the LLM first; if the output is malformed, invokes the repair
+   * loop to re-prompt with validation errors. Only if the repair loop also fails does the agent fall back to
+   * the deterministic proposer.
+   *
+   * Emits `hypothesis_repaired` events via the bus (when configured) so the operator can monitor LLM drift:
+   * a rising repair rate signals the model is degrading.
+   *
+   * The fallback is intentionally conservative — it proposes at most two mutations, both gated by sample size.
    */
   async propose(diagnostics: ResearchDiagnostics): Promise<Hypothesis[]> {
-    if (this.client) {
+    if (this.client && this.repairLoop) {
       try {
         const text = await this.client.generateText({
           model: this.model,
           prompt: LLM_PROMPT_PREFIX + renderDiagnostics(diagnostics),
         });
-        const hypotheses = parseHypotheses(text, this.model);
-        if (hypotheses.length > 0) return hypotheses;
+        const raw = typeof text === 'string' ? text : String(text);
+
+        // Attempt 0: validate the original output via the repair loop (it does attempt-0 validation internally).
+        const result = await this.repairLoop.run({ diagnostics, originalRawOutput: raw });
+
+        // Emit a hypothesis_repaired event when the repair loop was invoked (attempts > 0) — whether it
+        // succeeded or failed. This lets the operator track LLM drift via the event stream.
+        if (result.attempts > 0) {
+          this.emit({
+            type: 'hypothesis_repaired',
+            payload: {
+              ok: result.ok,
+              attempts: result.attempts,
+              errorCount: result.history[result.history.length - 1]?.errors.length ?? 0,
+              firstError: result.history[result.history.length - 1]?.errors[0]?.slice(0, 200),
+            },
+          });
+        }
+
+        if (result.ok && result.hypotheses.length > 0) {
+          // Stamp the model name on the hypotheses (the repair loop doesn't know it).
+          return result.hypotheses.map((h) => ({ ...h, model: this.model }));
+        }
+        // Repair loop exhausted — fall through to fallback.
       } catch {
-        // Network error, timeout, malformed response — fall through to fallback
+        // Network error, timeout — fall through to fallback
       }
     }
     return fallbackHypotheses(diagnostics);
+  }
+
+  /** Emit an event via the bus if one is configured. */
+  private emit(event: { type: string; payload: unknown }): void {
+    if (!this.bus) return;
+    this.bus.publishSync(event as never);
   }
 }
 

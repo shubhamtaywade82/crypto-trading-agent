@@ -8,6 +8,7 @@ export * from './PromotionGate.js';
 export * from './ChampionRegistry.js';
 export * from './Optimizer.js';
 export * from './ResearchAgent.js';
+export * from './HypothesisRepairLoop.js';
 export * from './Events.js';
 export * from './LedgerFixtures.js';
 export * from './GoldenTasks.js';

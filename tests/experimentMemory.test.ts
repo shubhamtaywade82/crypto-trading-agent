@@ -179,8 +179,9 @@ test('ExperimentMemory.all returns a copy (mutating it does not affect the memor
   await m.index(fakeExperiment('e1', { minSweepDepthAtr: 0.5 }, 'h', { decision: 'REJECT', reasons: [], policy: {} as never }));
   const records = m.all();
   assert.equal(records.length, 1);
-  // The returned array is a copy — pushing to it does not affect the memory.
-  records.push({} as ExperimentMemoryRecord);
+  // The returned array is a copy — pushing to a mutable copy of it does not affect the memory.
+  const mutable = [...records];
+  mutable.push({} as ExperimentMemoryRecord);
   assert.equal(m.all().length, 1);
 });
 

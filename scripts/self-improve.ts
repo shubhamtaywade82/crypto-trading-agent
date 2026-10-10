@@ -41,6 +41,7 @@ import { SelfImprovementLoop, DEFAULT_LOOP_CONFIG } from '../src/research/SelfIm
 import { StrategyRegistry } from '../src/research/StrategyRegistry.js';
 import { JsonlEventSubscriber, ResearchEventBus, type ResearchEvent } from '../src/research/Events.js';
 import { MetricsCollector, formatMetrics, replayEvents, attachCollector, type ResearchMetrics } from '../src/research/MetricsCollector.js';
+import { ExperimentMemory } from '../src/research/ExperimentMemory.js';
 
 function arg(name: string, fallback: string): string {
   const index = process.argv.indexOf(`--${name}`);
@@ -134,6 +135,12 @@ async function main(): Promise<void> {
   const collector = new MetricsCollector();
   attachCollector(bus, collector);
 
+  // Construct the experiment memory. Persists to data/experiment-memory.json. Uses Jaccard text similarity
+  // when no LLM is configured (offline mode), or dense-vector cosine similarity when an embedder is supplied.
+  // The memory gives the ResearchAgent a record of prior experiments so it doesn't propose the same hypothesis
+  // twice — "we already tried raising minSweepDepthAtr to 0.5 on these cells and it was REJECTED for regime collapse".
+  const memory = new ExperimentMemory(path.resolve('data/experiment-memory.json'), null);
+
   const strategies = new StrategyRegistry(path.resolve('data/strategy-registry.jsonl'));
   const champions = new ChampionRegistry(path.resolve('data/champion-registry.json'), bus);
   const experiments = new ExperimentStore(path.resolve('data/experiments.jsonl'));
@@ -223,10 +230,10 @@ async function main(): Promise<void> {
         throw new Error('OllamaAdvisor does not expose generateText');
       },
     };
-    agent = new ResearchAgent(client, 'qwen2.5:7b', undefined, bus);
+    agent = new ResearchAgent(client, 'qwen2.5:7b', undefined, bus, memory);
     console.log('ResearchAgent: LLM mode (Ollama qwen2.5:7b). Will fall back to deterministic proposer on any LLM failure.');
   } else {
-    agent = new ResearchAgent(null);
+    agent = new ResearchAgent(null, undefined, undefined, bus, memory);
     console.log('ResearchAgent: deterministic fallback mode (no LLM). Use --llm to enable.');
   }
   console.log('');
@@ -236,7 +243,7 @@ async function main(): Promise<void> {
     trainDays: Number(arg('train-days', String(DEFAULT_LOOP_CONFIG.trainDays))),
     testDays: Number(arg('test-days', String(DEFAULT_LOOP_CONFIG.testDays))),
     maxHypothesesPerRun: Number(arg('max-hypotheses', String(DEFAULT_LOOP_CONFIG.maxHypothesesPerRun))),
-  }, bus);
+  }, bus, memory);
 
   for (let i = 0; i < iters; i += 1) {
     console.log(`=== Iteration ${i + 1} / ${iters} ===`);

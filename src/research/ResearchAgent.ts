@@ -22,6 +22,8 @@ import type { ExperimentResult } from './ExperimentRunner.js';
 import type { StructLiqSpecParams, StrategySpec } from './StrategySpec.js';
 import { DEFAULT_MAX_REPAIR_RETRIES, HypothesisRepairLoop } from './HypothesisRepairLoop.js';
 import type { ResearchEventBus } from './Events.js';
+import type { ExperimentMemory } from './ExperimentMemory.js';
+import { formatSearchResults } from './ExperimentMemory.js';
 
 /** A natural-language hypothesis + the parameter mutation it implies. */
 export interface Hypothesis {
@@ -202,6 +204,7 @@ export class ResearchAgent {
     private readonly model: string = 'qwen2.5:7b',
     private readonly maxRepairRetries: number = DEFAULT_MAX_REPAIR_RETRIES,
     private readonly bus: ResearchEventBus | null = null,
+    private readonly memory: ExperimentMemory | null = null,
   ) {
     this.repairLoop = client ? new HypothesisRepairLoop(client, model, maxRepairRetries) : null;
   }
@@ -214,25 +217,35 @@ export class ResearchAgent {
    * loop to re-prompt with validation errors. Only if the repair loop also fails does the agent fall back to
    * the deterministic proposer.
    *
+   * Memory: when an ExperimentMemory is configured, the agent queries it for prior experiments on similar
+   * cells and includes the results in the LLM prompt — "we already tried X and it was REJECTED for Y" — so
+   * the LLM doesn't propose the same hypothesis twice. The fallback proposer also reads the memory and skips
+   * any hypothesis whose changes match an already-indexed REJECTED experiment.
+   *
    * Emits `hypothesis_repaired` events via the bus (when configured) so the operator can monitor LLM drift:
    * a rising repair rate signals the model is degrading.
    *
    * The fallback is intentionally conservative — it proposes at most two mutations, both gated by sample size.
    */
   async propose(diagnostics: ResearchDiagnostics): Promise<Hypothesis[]> {
+    // Query the experiment memory for prior experiments on similar cells. Included in the LLM prompt below.
+    let priorExperiments: Awaited<ReturnType<ExperimentMemory['search']>> = [];
+    if (this.memory) {
+      try {
+        priorExperiments = await this.memory.search(diagnostics, 5);
+      } catch {
+        // memory search must never break the proposal loop — fall through with empty results
+      }
+    }
+
     if (this.client && this.repairLoop) {
       try {
-        const text = await this.client.generateText({
-          model: this.model,
-          prompt: LLM_PROMPT_PREFIX + renderDiagnostics(diagnostics),
-        });
+        const prompt = this.buildPrompt(diagnostics, priorExperiments);
+        const text = await this.client.generateText({ model: this.model, prompt });
         const raw = typeof text === 'string' ? text : String(text);
 
-        // Attempt 0: validate the original output via the repair loop (it does attempt-0 validation internally).
         const result = await this.repairLoop.run({ diagnostics, originalRawOutput: raw });
 
-        // Emit a hypothesis_repaired event when the repair loop was invoked (attempts > 0) — whether it
-        // succeeded or failed. This lets the operator track LLM drift via the event stream.
         if (result.attempts > 0) {
           this.emit({
             type: 'hypothesis_repaired',
@@ -246,15 +259,46 @@ export class ResearchAgent {
         }
 
         if (result.ok && result.hypotheses.length > 0) {
-          // Stamp the model name on the hypotheses (the repair loop doesn't know it).
           return result.hypotheses.map((h) => ({ ...h, model: this.model }));
         }
-        // Repair loop exhausted — fall through to fallback.
       } catch {
         // Network error, timeout — fall through to fallback
       }
     }
-    return fallbackHypotheses(diagnostics);
+
+    const fallback = fallbackHypotheses(diagnostics);
+    return this.filterAlreadyTried(fallback, priorExperiments);
+  }
+
+  /** Build the LLM prompt. Includes diagnostics and (when available) prior experiments on similar cells. */
+  private buildPrompt(diagnostics: ResearchDiagnostics, priorExperiments: Awaited<ReturnType<ExperimentMemory['search']>>): string {
+    const base = LLM_PROMPT_PREFIX + renderDiagnostics(diagnostics);
+    if (priorExperiments.length === 0) return base;
+    return base + '\n\n## Prior experiments on similar cells (DO NOT re-propose these)\n' + formatSearchResults(priorExperiments);
+  }
+
+  /**
+   * Filter the fallback hypotheses to drop any whose changes match an already-indexed REJECTED experiment.
+   * This prevents the deterministic proposer from re-proposing something the LLM already tried and the gate
+   * rejected. PROMOTED experiments are not filtered — re-proposing a promoted change is fine (it may have
+   * been superseded by a later champion).
+   */
+  private filterAlreadyTried(hypotheses: Hypothesis[], priorExperiments: Awaited<ReturnType<ExperimentMemory['search']>>): Hypothesis[] {
+    if (priorExperiments.length === 0) return hypotheses;
+    const rejectedChanges = new Set(
+      priorExperiments
+        .filter((r) => r.record.verdict === 'REJECT')
+        .map((r) => r.record.changes),
+    );
+    if (rejectedChanges.size === 0) return hypotheses;
+    return hypotheses.filter((h) => {
+      const hChanges = Object.entries(h.changes).map(([k, v]) => `${k}=${v}`).sort().join(', ');
+      return ![...rejectedChanges].some((rejected) => {
+        // Normalize both sides for comparison: sort the key=value pairs.
+        const normalized = rejected.split(', ').map((s) => s.trim()).filter(Boolean).sort().join(', ');
+        return normalized === hChanges;
+      });
+    });
   }
 
   /** Emit an event via the bus if one is configured. */

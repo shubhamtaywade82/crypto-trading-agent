@@ -116,6 +116,21 @@ export interface HypothesisRepaired extends ResearchEventBase {
   };
 }
 
+/** The ModelRouter picked a model for the current diagnostics (complexity-based routing). */
+export interface ModelRouted extends ResearchEventBase {
+  type: 'model_routed';
+  payload: {
+    /** The model name chosen. */
+    model: string;
+    /** 'local' (small model) or 'escalate' (large model). */
+    kind: 'local' | 'escalate';
+    /** The complexity score (0..1). */
+    score: number;
+    /** The reasons the scorer produced. */
+    reasons: string[];
+  };
+}
+
 /** Union of all research-plane events. */
 export type ResearchEvent =
   | SpecRegistered
@@ -128,7 +143,8 @@ export type ResearchEvent =
   | LoopIterationStarted
   | LoopIterationCompleted
   | HypothesisProposed
-  | HypothesisRepaired;
+  | HypothesisRepaired
+  | ModelRouted;
 
 export type ResearchEventType = ResearchEvent['type'];
 

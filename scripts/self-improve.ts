@@ -300,5 +300,7 @@ function summaryOf(e: ResearchEvent): string {
       return `[${e.payload.source}] ${e.payload.observation} → ${e.payload.proposal}`;
     case 'hypothesis_repaired':
       return `${e.payload.ok ? 'repaired' : 'repair failed'} after ${e.payload.attempts} attempt(s); ${e.payload.errorCount} error(s)${e.payload.firstError ? ` — ${e.payload.firstError}` : ''}`;
+    case 'model_routed':
+      return `${e.payload.kind} → ${e.payload.model} (score=${e.payload.score.toFixed(3)}${e.payload.reasons.length > 0 ? `; ${e.payload.reasons.join('; ')}` : ''})`;
   }
 }

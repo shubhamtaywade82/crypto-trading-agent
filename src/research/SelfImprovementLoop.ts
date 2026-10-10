@@ -25,6 +25,7 @@ import { ResearchAgent, candidateFromHypothesis, type Hypothesis, type ResearchD
 import { StrategyRegistry } from './StrategyRegistry.js';
 import type { StrategySpec, StructLiqSpecParams } from './StrategySpec.js';
 import type { ResearchEventBus } from './Events.js';
+import type { ExperimentMemory } from './ExperimentMemory.js';
 
 export interface LoopConfig {
   /** Train window (days). */
@@ -64,6 +65,10 @@ export interface LoopStepResult {
  * An optional `ResearchEventBus` makes the loop observable. When supplied, the loop emits
  * `loop_iteration_started`, `hypothesis_proposed`, `experiment_started`, `experiment_completed`, and
  * `loop_iteration_completed` events.
+ *
+ * An optional `ExperimentMemory` gives the ResearchAgent a memory of past experiments so it doesn't propose
+ * the same hypothesis twice. The loop indexes every completed experiment into the memory (best-effort,
+ * non-blocking) so the next iteration's ResearchAgent can query it.
  */
 export class SelfImprovementLoop {
   constructor(
@@ -73,6 +78,7 @@ export class SelfImprovementLoop {
     private readonly agent: ResearchAgent,
     private readonly config: LoopConfig = DEFAULT_LOOP_CONFIG,
     private readonly bus: ResearchEventBus | null = null,
+    private readonly memory: ExperimentMemory | null = null,
   ) {
     this.strategies.ensureSeeds();
     // Appoint the seed as champion if no champion exists yet.
@@ -177,6 +183,16 @@ export class SelfImprovementLoop {
       };
       this.experiments.append(record);
       experiments.push(record);
+
+      // Index the completed experiment into the memory (best-effort, non-blocking) so the next iteration's
+      // ResearchAgent can query "have we already tried this?" before proposing.
+      if (this.memory) {
+        try {
+          await this.memory.index(record);
+        } catch {
+          // memory indexing must never break the loop — best-effort
+        }
+      }
 
       this.emit({
         type: 'experiment_completed',

@@ -22,6 +22,7 @@
  * fusion, risk and execution — the raw sweep only measures the strategy gate.
  */
 import { MarketDataFeed } from '../src/backtesting/MarketDataFeed.js';
+import { validateCandles } from '../src/backtesting/archiveKlines.js';
 import { MarketStateBuilder } from '../src/market/MarketStateBuilder.js';
 import { ReplayService } from '../src/backtesting/ReplayService.js';
 import { DEFAULT_SWEEP_GRID, marginalAxes, sweepStructureLiquidity } from '../src/backtesting/StructLiqSweep.js';
@@ -53,11 +54,11 @@ const days = Number(arg('days', '45'));
 const warmupBars = Number(arg('warmup', '300'));
 const fleetArg = arg('fleet', '');
 
-async function fetchKlines(symbol: string, interval: NativeTimeframe, fromMs: number): Promise<Candle[]> {
+async function fetchKlines(symbol: string, interval: NativeTimeframe, fromMs: number, toMs: number): Promise<Candle[]> {
   const out: Candle[] = [];
   let cursor = fromMs;
   for (;;) {
-    const url = `${BASE}/fapi/v1/klines?symbol=${symbol}&interval=${interval}&startTime=${cursor}&limit=1500`;
+    const url = `${BASE}/fapi/v1/klines?symbol=${symbol}&interval=${interval}&startTime=${cursor}&endTime=${toMs}&limit=1500`;
     const response = await fetch(url);
     if (!response.ok) throw new Error(`klines ${interval} failed: HTTP ${response.status}`);
     const raw = (await response.json()) as unknown[][];
@@ -70,14 +71,21 @@ async function fetchKlines(symbol: string, interval: NativeTimeframe, fromMs: nu
   return out;
 }
 
-const fromMs = Date.now() - days * 86_400_000;
-console.log(`STRUCT-LIQ parameter sweep over the last ${days} day(s)...`);
+const runNowMs = Date.now();
+const toMs = runNowMs;
+const fromMs = toMs - days * 86_400_000;
+console.log(`STRUCT-LIQ parameter sweep over the last ${days} day(s), with strict candle-integrity validation...`);
 const data: ReplayData = {};
 for (const symbol of symbols) {
   data[symbol] = {};
   for (const timeframe of TIMEFRAMES) {
-    const candles = await fetchKlines(symbol, timeframe, fromMs);
+    const fetched = await fetchKlines(symbol, timeframe, fromMs, toMs);
+    // Binance endTime is inclusive; keep the requested half-open open-time window.
+    const candles = fetched.filter((candle) => candle.openTime >= fromMs && candle.openTime < toMs);
+    if (candles.length === 0) throw new Error(`${symbol} ${timeframe}: no candles in requested window`);
+    const validation = validateCandles(candles, INTERVAL_MS[timeframe], fromMs, toMs);
     data[symbol][timeframe] = candles;
+    console.log(`  ${symbol} ${timeframe}: integrity passed (${validation.actualBars}/${validation.expectedBars} expected bars)`);
   }
   console.log(`  ${symbol}: ${data[symbol]['15m']!.length} x 15m candles`);
 }

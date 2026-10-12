@@ -24,7 +24,7 @@
 import { mkdirSync } from 'node:fs';
 import path from 'node:path';
 import { MarketDataFeed } from '../src/backtesting/MarketDataFeed.js';
-import { validateCandles } from '../src/backtesting/archiveKlines.js';
+import { fetchArchiveKlines, validateCandles } from '../src/backtesting/archiveKlines.js';
 import { MarketStateBuilder } from '../src/market/MarketStateBuilder.js';
 import { ReplayService } from '../src/backtesting/ReplayService.js';
 import { DEFAULT_SWEEP_GRID, marginalAxes, sweepStructureLiquidity } from '../src/backtesting/StructLiqSweep.js';
@@ -55,6 +55,8 @@ const symbols = arg('symbols', 'BTCUSDT,ETHUSDT').toUpperCase().split(',').map((
 const days = Number(arg('days', '45'));
 const warmupBars = Number(arg('warmup', '300'));
 const fleetArg = arg('fleet', '');
+const source = arg('source', 'api');
+if (!['api', 'archive'].includes(source)) throw new Error('--source must be api or archive');
 const journalDirArg = arg('journal-dir', '');
 const journalRunId = new Date().toISOString().replace(/[:.]/g, '-');
 const journalPaths: string[] = [];
@@ -80,16 +82,26 @@ async function fetchKlines(symbol: string, interval: NativeTimeframe, fromMs: nu
 const runNowMs = Date.now();
 const toMs = runNowMs;
 const fromMs = toMs - days * 86_400_000;
-console.log(`STRUCT-LIQ parameter sweep over the last ${days} day(s), with strict candle-integrity validation...`);
+const integrityToMs = source === 'archive' ? Math.floor(runNowMs / 86_400_000) * 86_400_000 : toMs;
+console.log(`STRUCT-LIQ parameter sweep over the last ${days} day(s) from ${source}, with strict candle-integrity validation...`);
 const data: ReplayData = {};
 for (const symbol of symbols) {
   data[symbol] = {};
   for (const timeframe of TIMEFRAMES) {
-    const fetched = await fetchKlines(symbol, timeframe, fromMs, toMs);
-    // Binance endTime is inclusive; keep the requested half-open open-time window.
-    const candles = fetched.filter((candle) => candle.openTime >= fromMs && candle.openTime < toMs);
+    let fetched: Candle[];
+    if (source === 'archive') {
+      const archive = await fetchArchiveKlines(symbol, timeframe, fromMs, toMs, undefined, runNowMs);
+      if (archive.missingDays.length) {
+        throw new Error(`${symbol} ${timeframe}: archive has missing daily files; refusing incomplete sweep: ${archive.missingDays.join(', ')}`);
+      }
+      fetched = archive.candles;
+    } else {
+      fetched = await fetchKlines(symbol, timeframe, fromMs, toMs);
+    }
+    // Binance API endTime is inclusive; archive mode stops at the last complete UTC day.
+    const candles = fetched.filter((candle) => candle.openTime >= fromMs && candle.openTime < integrityToMs);
     if (candles.length === 0) throw new Error(`${symbol} ${timeframe}: no candles in requested window`);
-    const validation = validateCandles(candles, INTERVAL_MS[timeframe], fromMs, toMs);
+    const validation = validateCandles(candles, INTERVAL_MS[timeframe], fromMs, integrityToMs);
     data[symbol][timeframe] = candles;
     console.log(`  ${symbol} ${timeframe}: integrity passed (${validation.actualBars}/${validation.expectedBars} expected bars)`);
   }

@@ -190,3 +190,16 @@ test('validateCandles computes expected bars for a non-aligned half-open window'
   const candles = [candleAt(aligned + INTERVAL), candleAt(aligned + INTERVAL * 2)];
   assert.equal(validateCandles(candles, INTERVAL, from, to).expectedBars, 2);
 });
+
+
+test('fetchArchiveKlines fails on duplicate timestamps instead of silently de-duplicating them', async () => {
+  const day = T(2026, 10, 3);
+  const now = T(2026, 10, 5, 12);
+  const { fetchImpl } = archive({
+    'daily/klines/BTCUSDT/15m/BTCUSDT-15m-2026-10-03.zip': HEADER + row(day, 100) + row(day, 101),
+  });
+  await assert.rejects(
+    fetchArchiveKlines('BTCUSDT', '15m', day, day + DAY, fetchImpl, now),
+    /duplicate archive candle openTime/,
+  );
+});

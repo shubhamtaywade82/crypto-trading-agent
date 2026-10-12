@@ -181,3 +181,12 @@ test('validateCandles rejects out-of-window and non-finite fields and invalid co
   assert.throws(() => validateCandles([], 0, from, from + INTERVAL), /positive integer intervalMs/);
   assert.throws(() => validateCandles([], INTERVAL, from + INTERVAL, from), /invalid window/);
 });
+
+
+test('validateCandles computes expected bars for a non-aligned half-open window', () => {
+  const aligned = T(2026, 10, 1);
+  const from = aligned + 100;
+  const to = aligned + INTERVAL * 2 + 100;
+  const candles = [candleAt(aligned + INTERVAL), candleAt(aligned + INTERVAL * 2)];
+  assert.equal(validateCandles(candles, INTERVAL, from, to).expectedBars, 2);
+});

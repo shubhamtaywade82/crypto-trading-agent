@@ -53,19 +53,23 @@ jobs:
 
       - name: SOLUSDT 90-day integrity-gated backtest
         run: |
+          set -o pipefail
           mkdir -p data/research
-          npm run backtest -- --symbol SOLUSDT --days 90 --decisions data/research/solusdt-backtest-decisions.jsonl | tee data/research/solusdt-backtest-report.txt
+          npm run backtest -- --symbol SOLUSDT --days 90 --source archive --decisions data/research/solusdt-backtest-decisions.jsonl | tee data/research/solusdt-backtest-report.txt
 
       - name: SOLUSDT STRUCT-LIQ sweep and journaled fleet replays
         run: |
-          npm run sweep:struct-liq -- --symbols SOLUSDT --days 90 --warmup 300 --fleet 6:1.5,12:1.2,24:1.0,48:0.8 --journal-dir data/research/struct-liq | tee data/research/solusdt-struct-liq-report.txt
+          set -o pipefail
+          npm run sweep:struct-liq -- --symbols SOLUSDT --days 90 --source archive --warmup 300 --fleet 6:1.5,12:1.2,24:1.0,48:0.8 --journal-dir data/research/struct-liq | tee data/research/solusdt-struct-liq-report.txt
 
       - name: Conditional edge — baseline SOLUSDT backtest
         run: |
+          set -o pipefail
           npm run research:conditional -- --decisions data/research/solusdt-backtest-decisions.jsonl --dims strategy,phase,side --min-n 30 --iterations 5000 | tee data/research/solusdt-conditional-edge.txt
 
       - name: Conditional edge — STRUCT-LIQ replay journals
         run: |
+          set -o pipefail
           files=$(printf '%s,' data/research/struct-liq/*.jsonl)
           files=${files%,}
           npm run research:conditional -- --decisions "$files" --dims strategy,phase,side --min-n 30 --iterations 5000 | tee data/research/solusdt-struct-liq-conditional-edge.txt

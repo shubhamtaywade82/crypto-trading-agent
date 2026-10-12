@@ -147,7 +147,7 @@ export function validateCandles(
       `Candle integrity validation failed (interval=${intervalMs}ms, expected=${expectedBars}, actual=${candles.length}).`,
       ...shown.map((issue) => `- ${issue}`),
       ...(remaining > 0 ? [`- ... and ${remaining} more issue(s)`] : []),
-    ].join('\\n'));
+    ].join('\n'));
   }
 
   return {

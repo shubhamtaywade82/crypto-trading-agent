@@ -21,7 +21,10 @@
  * the tuned agent in the default fleet, showing which fires survive routing,
  * fusion, risk and execution — the raw sweep only measures the strategy gate.
  */
+import { mkdirSync } from 'node:fs';
+import path from 'node:path';
 import { MarketDataFeed } from '../src/backtesting/MarketDataFeed.js';
+import { fetchArchiveKlines, validateCandles } from '../src/backtesting/archiveKlines.js';
 import { MarketStateBuilder } from '../src/market/MarketStateBuilder.js';
 import { ReplayService } from '../src/backtesting/ReplayService.js';
 import { DEFAULT_SWEEP_GRID, marginalAxes, sweepStructureLiquidity } from '../src/backtesting/StructLiqSweep.js';
@@ -52,12 +55,18 @@ const symbols = arg('symbols', 'BTCUSDT,ETHUSDT').toUpperCase().split(',').map((
 const days = Number(arg('days', '45'));
 const warmupBars = Number(arg('warmup', '300'));
 const fleetArg = arg('fleet', '');
+const source = arg('source', 'api');
+if (!['api', 'archive'].includes(source)) throw new Error('--source must be api or archive');
+const journalDirArg = arg('journal-dir', '');
+const journalRunId = new Date().toISOString().replace(/[:.]/g, '-');
+const journalPaths: string[] = [];
+if (journalDirArg) mkdirSync(path.resolve(journalDirArg), { recursive: true });
 
-async function fetchKlines(symbol: string, interval: NativeTimeframe, fromMs: number): Promise<Candle[]> {
+async function fetchKlines(symbol: string, interval: NativeTimeframe, fromMs: number, toMs: number): Promise<Candle[]> {
   const out: Candle[] = [];
   let cursor = fromMs;
   for (;;) {
-    const url = `${BASE}/fapi/v1/klines?symbol=${symbol}&interval=${interval}&startTime=${cursor}&limit=1500`;
+    const url = `${BASE}/fapi/v1/klines?symbol=${symbol}&interval=${interval}&startTime=${cursor}&endTime=${toMs}&limit=1500`;
     const response = await fetch(url);
     if (!response.ok) throw new Error(`klines ${interval} failed: HTTP ${response.status}`);
     const raw = (await response.json()) as unknown[][];
@@ -70,14 +79,31 @@ async function fetchKlines(symbol: string, interval: NativeTimeframe, fromMs: nu
   return out;
 }
 
-const fromMs = Date.now() - days * 86_400_000;
-console.log(`STRUCT-LIQ parameter sweep over the last ${days} day(s)...`);
+const runNowMs = Date.now();
+const toMs = runNowMs;
+const fromMs = toMs - days * 86_400_000;
+const integrityToMs = source === 'archive' ? Math.floor(runNowMs / 86_400_000) * 86_400_000 : toMs;
+console.log(`STRUCT-LIQ parameter sweep over the last ${days} day(s) from ${source}, with strict candle-integrity validation...`);
 const data: ReplayData = {};
 for (const symbol of symbols) {
   data[symbol] = {};
   for (const timeframe of TIMEFRAMES) {
-    const candles = await fetchKlines(symbol, timeframe, fromMs);
+    let fetched: Candle[];
+    if (source === 'archive') {
+      const archive = await fetchArchiveKlines(symbol, timeframe, fromMs, toMs, undefined, runNowMs);
+      if (archive.missingDays.length) {
+        throw new Error(`${symbol} ${timeframe}: archive has missing daily files; refusing incomplete sweep: ${archive.missingDays.join(', ')}`);
+      }
+      fetched = archive.candles;
+    } else {
+      fetched = await fetchKlines(symbol, timeframe, fromMs, toMs);
+    }
+    // Binance API endTime is inclusive; archive mode stops at the last complete UTC day.
+    const candles = fetched.filter((candle) => candle.openTime >= fromMs && candle.openTime < integrityToMs);
+    if (candles.length === 0) throw new Error(`${symbol} ${timeframe}: no candles in requested window`);
+    const validation = validateCandles(candles, INTERVAL_MS[timeframe], fromMs, integrityToMs);
     data[symbol][timeframe] = candles;
+    console.log(`  ${symbol} ${timeframe}: integrity passed (${validation.actualBars}/${validation.expectedBars} expected bars)`);
   }
   console.log(`  ${symbol}: ${data[symbol]['15m']!.length} x 15m candles`);
 }
@@ -173,7 +199,11 @@ for (const { age, rr } of combos) {
     new MeanReversionAgent(binance),
     new CrowdingAgent(binance),
   ];
-  const result = await new ReplayService({ agents: fleet, config: { warmupBars }, log: () => undefined }).run(data);
+  const journalPath = journalDirArg
+    ? path.resolve(journalDirArg, `struct-liq-${journalRunId}-age-${age}-rr-${String(rr).replace('.', '_')}.jsonl`)
+    : null;
+  if (journalPath) journalPaths.push(journalPath);
+  const result = await new ReplayService({ agents: fleet, config: { warmupBars, decisionsPath: journalPath }, log: () => undefined }).run(data);
   const m = result.metrics;
   const slice = m.byStrategy['STRUCT-LIQ-η'];
   const learned = result.agentStats['STRUCT-LIQ-η'];
@@ -185,3 +215,8 @@ for (const { age, rr } of combos) {
 console.log(`\nGrid: ages [${grid.sweepAges.join(', ')}] x RRs [${grid.rewardRisks.join(', ')}]`);
 console.log('Notes: emissions repeat the same setup on following bars; distinct setups are what cooldowns turn into trades.');
 console.log('      RR 0.01 is a diagnostic "reward-risk gate off" probe, not a tradable setting.');
+if (journalPaths.length) {
+  console.log(`\nDecision journals written (${journalPaths.length}):`);
+  for (const journalPath of journalPaths) console.log(`  ${journalPath}`);
+  console.log(`\nAnalyze the combined replay journals with:\nnpm run research:conditional -- --decisions ${journalPaths.join(',')} --dims strategy,phase,side --min-n 30 --iterations 5000`);
+}

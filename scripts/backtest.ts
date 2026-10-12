@@ -14,7 +14,7 @@ import { ReplayService } from '../src/backtesting/ReplayService.js';
 import type { Candle } from '../src/types.js';
 import type { NativeTimeframe } from '../src/market/MarketDataTypes.js';
 import type { ReplayData } from '../src/backtesting/types.js';
-import { fetchArchiveKlines } from '../src/backtesting/archiveKlines.js';
+import { fetchArchiveKlines, validateCandles } from '../src/backtesting/archiveKlines.js';
 
 const BASE = 'https://fapi.binance.com';
 const INTERVAL_MS: Record<string, number> = { '15m': 900_000, '1h': 3_600_000, '4h': 14_400_000 };
@@ -69,22 +69,31 @@ function table(title: string, slices: Record<string, { trades: number; winRatePc
   }
 }
 
-const toMs = Date.now() - endDaysAgo * 86_400_000;
+const runNowMs = Date.now();
+const toMs = runNowMs - endDaysAgo * 86_400_000;
 const fromMs = toMs - days * 86_400_000;
+// Archive files omit the current UTC day; pin the archive coverage cutoff once for all timeframes.
+const integrityToMs = source === 'archive'
+  ? Math.min(toMs, Math.floor(runNowMs / 86_400_000) * 86_400_000)
+  : toMs;
 console.log(`Backtesting ${symbol} over ${days} day(s) ending ${endDaysAgo === 0 ? 'now' : `${endDaysAgo} day(s) ago`} from public Binance USD-M klines...`);
 const data: ReplayData = { [symbol]: {} };
 for (const timeframe of TIMEFRAMES) {
   let candles: Candle[];
   if (source === 'archive') {
-    const archive = await fetchArchiveKlines(symbol, timeframe, fromMs, toMs);
+    const archive = await fetchArchiveKlines(symbol, timeframe, fromMs, toMs, undefined, runNowMs);
     candles = archive.candles;
-    if (archive.missingDays.length) console.log(`  ${timeframe}: no archive file for ${archive.missingDays.length} day(s): ${archive.missingDays.join(', ')}`);
+    if (archive.missingDays.length) {
+      throw new Error(`${timeframe}: archive has missing daily files; refusing incomplete backtest: ${archive.missingDays.join(', ')}`);
+    }
   } else {
     candles = await fetchKlines(symbol, timeframe, fromMs, toMs);
   }
   if (candles.length === 0) throw new Error(`no ${timeframe} candles for ${symbol} in the requested window`);
+  // Fail closed if data is malformed, duplicated, missing, irregularly spaced, or out of window.
+  const validation = validateCandles(candles, INTERVAL_MS[timeframe], fromMs, integrityToMs);
   data[symbol][timeframe] = candles;
-  console.log(`  ${timeframe}: ${candles.length} candles (${new Date(candles[0].openTime).toISOString()} -> ${new Date(candles[candles.length - 1].openTime).toISOString()})`);
+  console.log(`  ${timeframe}: integrity passed (${validation.actualBars}/${validation.expectedBars} expected bars; ${new Date(candles[0].openTime).toISOString()} -> ${new Date(candles[candles.length - 1].openTime).toISOString()})`);
 }
 
 const service = new ReplayService({

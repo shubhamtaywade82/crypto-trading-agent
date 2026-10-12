@@ -10,7 +10,7 @@ const BASE = 'https://data.binance.vision/data/futures/um';
 const DAY_MS = 86_400_000;
 const BATCH = 6;
 
-export type FetchLike = (url: string) => Promise<{ ok: boolean; status: number; arrayBuffer(): Promise<ArrayBuffer> }>;
+export type FetchLike = (url: string, init?: { signal?: AbortSignal }) => Promise<{ ok: boolean; status: number; arrayBuffer(): Promise<ArrayBuffer> }>;
 
 const EOCD_SIGNATURE = 0x06054b50;
 const CENTRAL_SIGNATURE = 0x02014b50;
@@ -49,6 +49,116 @@ export function parseKlineCsv(text: string): Candle[] {
   return out;
 }
 
+
+export interface CandleValidationSummary {
+  intervalMs: number;
+  expectedBars: number;
+  actualBars: number;
+  firstOpenTime: number | null;
+  lastOpenTime: number | null;
+}
+
+/**
+ * Strictly validate an OHLCV series for the requested open-time window [fromMs, toMs).
+ *
+ * This throws rather than warning: a backtest built on malformed, duplicated, missing, or
+ * irregularly spaced bars must not produce a performance result.
+ */
+export function validateCandles(
+  candles: readonly Candle[],
+  intervalMs: number,
+  fromMs: number,
+  toMs: number,
+): CandleValidationSummary {
+  if (!Number.isSafeInteger(intervalMs) || intervalMs <= 0) {
+    throw new Error(`Candle integrity validation requires a positive integer intervalMs; got ${intervalMs}`);
+  }
+  if (!Number.isFinite(fromMs) || !Number.isFinite(toMs) || toMs < fromMs) {
+    throw new Error(`Candle integrity validation received an invalid window [${fromMs}, ${toMs})`);
+  }
+
+  // Count epoch-aligned candle opens satisfying fromMs <= openTime < toMs.
+  const firstExpectedOpen = Math.ceil(fromMs / intervalMs) * intervalMs;
+  const endExpectedOpen = Math.ceil(toMs / intervalMs) * intervalMs;
+  const expectedBars = Math.max(0, Math.round((endExpectedOpen - firstExpectedOpen) / intervalMs));
+  const issues: string[] = [];
+  const addIssue = (issue: string): void => { issues.push(issue); };
+
+  if (candles.length !== expectedBars) {
+    addIssue(`expected ${expectedBars} bars for [${fromMs}, ${toMs}), received ${candles.length}`);
+  }
+
+  let previousOpenTime: number | null = null;
+  for (let i = 0; i < candles.length; i += 1) {
+    const candle = candles[i]!;
+    const label = `bar[${i}] openTime=${String(candle.openTime)}`;
+
+    if (!Number.isSafeInteger(candle.openTime)) {
+      addIssue(`${label}: openTime must be a safe integer`);
+    } else {
+      if (candle.openTime < fromMs || candle.openTime >= toMs) {
+        addIssue(`${label}: openTime is outside requested window [${fromMs}, ${toMs})`);
+      }
+      if (candle.openTime % intervalMs !== 0) {
+        addIssue(`${label}: openTime is not aligned to the ${intervalMs}ms interval`);
+      }
+      if (previousOpenTime !== null) {
+        if (candle.openTime === previousOpenTime) {
+          addIssue(`${label}: duplicate openTime`);
+        } else if (candle.openTime < previousOpenTime) {
+          addIssue(`${label}: openTime is not strictly increasing after ${previousOpenTime}`);
+        } else if (candle.openTime - previousOpenTime !== intervalMs) {
+          addIssue(`${label}: expected interval step ${intervalMs}ms after ${previousOpenTime}, got ${candle.openTime - previousOpenTime}ms`);
+        }
+      }
+      const expectedOpenTime = firstExpectedOpen + i * intervalMs;
+      if (candle.openTime !== expectedOpenTime) {
+        addIssue(`${label}: expected openTime ${expectedOpenTime} at sequence index ${i}`);
+      }
+      previousOpenTime = candle.openTime;
+    }
+
+    const pricesAndVolume = [candle.open, candle.high, candle.low, candle.close, candle.volume];
+    if (pricesAndVolume.some((value) => !Number.isFinite(value))) {
+      addIssue(`${label}: OHLCV fields must all be finite numbers`);
+      continue;
+    }
+    if (candle.open <= 0 || candle.high <= 0 || candle.low <= 0 || candle.close <= 0) {
+      addIssue(`${label}: OHLC prices must be greater than zero`);
+    }
+    if (candle.low > candle.high) {
+      addIssue(`${label}: low exceeds high`);
+    }
+    if (candle.low > candle.open || candle.low > candle.close) {
+      addIssue(`${label}: low exceeds open/close`);
+    }
+    if (candle.high < candle.open || candle.high < candle.close) {
+      addIssue(`${label}: high is below open/close`);
+    }
+    if (candle.volume < 0) {
+      addIssue(`${label}: volume must be non-negative`);
+    }
+  }
+
+  if (issues.length > 0) {
+    const shown = issues.slice(0, 20);
+    const remaining = issues.length - shown.length;
+    throw new Error([
+      `Candle integrity validation failed (interval=${intervalMs}ms, expected=${expectedBars}, actual=${candles.length}).`,
+      ...shown.map((issue) => `- ${issue}`),
+      ...(remaining > 0 ? [`- ... and ${remaining} more issue(s)`] : []),
+    ].join('\n'));
+  }
+
+  return {
+    intervalMs,
+    expectedBars,
+    actualBars: candles.length,
+    firstOpenTime: candles[0]?.openTime ?? null,
+    lastOpenTime: candles[candles.length - 1]?.openTime ?? null,
+  };
+}
+
 const pad = (n: number): string => String(n).padStart(2, '0');
 const dayKey = (ms: number): string => { const d = new Date(ms); return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}`; };
 const monthKey = (ms: number): string => dayKey(ms).slice(0, 7);
@@ -56,7 +166,7 @@ const startOfDay = (ms: number): number => Math.floor(ms / DAY_MS) * DAY_MS;
 const startOfNextMonth = (ms: number): number => { const d = new Date(ms); return Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 1); };
 
 async function fetchZip(url: string, fetchImpl: FetchLike): Promise<Candle[] | null> {
-  const response = await fetchImpl(url);
+  const response = await fetchImpl(url, { signal: AbortSignal.timeout(20_000) });
   if (response.status === 404) return null;
   if (!response.ok) throw new Error(`${url}: HTTP ${response.status}`);
   return parseKlineCsv(readFirstZipEntry(Buffer.from(await response.arrayBuffer())));
@@ -80,7 +190,16 @@ export async function fetchArchiveKlines(
   const lastDay = Math.min(startOfDay(toMs - 1), startOfDay(now) - DAY_MS); // the archive has nothing for today
   const byTime = new Map<number, Candle>();
   const missingDays: string[] = [];
-  const add = (candles: Candle[]): void => { for (const c of candles) if (c.openTime >= fromMs && c.openTime < toMs) byTime.set(c.openTime, c); };
+  const add = (candles: Candle[]): void => {
+    for (const candle of candles) {
+      if (candle.openTime < fromMs || candle.openTime >= toMs) continue;
+      // Do not silently hide corrupted/overlapping archive rows behind Map de-duplication.
+      if (byTime.has(candle.openTime)) {
+        throw new Error(`duplicate archive candle openTime ${candle.openTime} (${new Date(candle.openTime).toISOString()})`);
+      }
+      byTime.set(candle.openTime, candle);
+    }
+  };
 
   const dailyTasks: number[] = [];
   for (let monthStart = Date.UTC(new Date(fromMs).getUTCFullYear(), new Date(fromMs).getUTCMonth(), 1); monthStart <= lastDay; monthStart = startOfNextMonth(monthStart)) {

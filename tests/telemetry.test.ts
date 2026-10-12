@@ -134,12 +134,16 @@ test('should build marketIntel summary when marketStates are provided', () => {
     liquidity: { ltf: { latestSweeps: [{ direction: 'SELL_SIDE', level: 49500 }] } },
     crowding: { fundingPercentile: 65, positioningExtreme: 'BALANCED', openInterestExpansion: true },
     derivatives: { spreadBps: 1.5 },
+    timeframes: {
+      '4h': { lastClose: 50000, ema20: 48000, ema50: 45000, ema200: 40000, emaSlopePct: 0.5 },
+    },
   };
   const t = buildTelemetry(input({ marketStates: { BTCUSDT: fakeMs } }));
   assert.ok(t.marketIntel?.BTCUSDT);
   const intel = t.marketIntel.BTCUSDT;
   assert.equal(intel.regime, 'TREND_UP');
   assert.equal(intel.htfTrend, 'BULLISH');
+  assert.equal(intel.trend4h, 'BULLISH');
   assert.equal(intel.discount, true);
   assert.equal(intel.spreadBps, 1.5);
   assert.equal(intel.strategyStatus.Structure, 'READY');

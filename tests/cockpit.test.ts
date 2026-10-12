@@ -323,3 +323,29 @@ test('should render 15m trend instead of sparkline in asset rows', () => {
   assert.ok(text.includes('▲ BULLISH'), 'expected bullish trend in output');
   assert.ok(text.includes('▼ BEARISH'), 'expected bearish trend in output');
 });
+
+test('should render MTF trend confluence states including 3/3 and pullback in asset rows', () => {
+  const [first, second] = config.symbols;
+  const props = baseProps({
+    marketIntel: {
+      [first]: {
+        regime: 'TREND_UP', htfTrend: 'BULLISH', ltfTrend: 'BULLISH', trend4h: 'BULLISH', volatility: 'MEDIUM', volatilityPct: 50,
+        premium: true, discount: false, positionPct: 80, fundingApr: null, fundingPct: null,
+        openInterestExpansion: null, crowding: null, spreadBps: null, lastSweep: null, strategyStatus: {},
+      },
+      [second]: {
+        regime: 'TREND_UP', htfTrend: 'BULLISH', ltfTrend: 'BEARISH', trend4h: 'BULLISH', volatility: 'MEDIUM', volatilityPct: 50,
+        premium: false, discount: true, positionPct: 30, fundingApr: null, fundingPct: null,
+        openInterestExpansion: null, crowding: null, spreadBps: null, lastSweep: null, strategyStatus: {},
+      },
+    },
+    spotPrices: {
+      [first.replace('USDT', '')]: { price: 80_000, changePct: 1.5, low24h: 79_000, high24h: 81_000, volumeQuote: 1e9 },
+      [second.replace('USDT', '')]: { price: 2_500, changePct: -2.0, low24h: 2_400, high24h: 2_600, volumeQuote: 5e8 },
+    },
+  });
+  const text = render(props);
+  assert.ok(text.includes('▲ BULLISH 3/3'), 'expected 3/3 bullish MTF confluence');
+  assert.ok(text.includes('▼ PULLBACK'), 'expected pullback trend in output');
+});
+

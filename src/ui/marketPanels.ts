@@ -2,7 +2,7 @@ import chalk from 'chalk';
 import stringWidth from 'string-width';
 import { config } from '../config.js';
 import { formatPrice, formatQty } from '../binance/symbolRules.js';
-import type { AdaptiveInfo, LogEntry, MarketPriceInfo, Mode, Position, StrategyMetrics } from '../types.js';
+import type { AdaptiveInfo, LogEntry, MarketIntelSummary, MarketPriceInfo, Mode, Position, StrategyMetrics } from '../types.js';
 import { boxLines, dp, fmtRange, fmtVol, orDash, padLine, pnlColor, rule, signedDp, signedUsd, usd, wrapTokens } from './format.js';
 import type { CockpitProps } from './panels.js';
 
@@ -29,13 +29,42 @@ function formatTrend(trend: string | undefined): string {
   return chalk.gray(trend);
 }
 
-function symbolTrend(p: CockpitProps, symbol: string, info: MarketPriceInfo | undefined): string | undefined {
+function resolveMtfTrend(intel?: MarketIntelSummary, fallback?: string): string {
+  if (!intel) return formatTrend(fallback);
+
+  const { ltfTrend: ltf, htfTrend: htf, trend4h: macro } = intel;
+  const isBull = (t?: string) => t === 'BULLISH';
+  const isBear = (t?: string) => t === 'BEARISH';
+
+  // 3-tier confluence when 4h macro trend is available
+  if (macro && macro !== 'NEUTRAL') {
+    if (isBull(ltf) && isBull(htf) && isBull(macro)) return chalk.green('▲ BULLISH 3/3');
+    if (isBear(ltf) && isBear(htf) && isBear(macro)) return chalk.red('▼ BEARISH 3/3');
+    if (isBear(ltf) && isBull(htf) && isBull(macro)) return chalk.yellow('▼ PULLBACK');
+    if (isBull(ltf) && isBear(htf) && isBear(macro)) return chalk.magenta('▲ BOUNCE');
+    const bullCount = [ltf, htf, macro].filter(isBull).length;
+    const bearCount = [ltf, htf, macro].filter(isBear).length;
+    if (bullCount >= 2) return chalk.green('▲ BULLISH 2/3');
+    if (bearCount >= 2) return chalk.red('▼ BEARISH 2/3');
+    return chalk.gray('■ MIXED');
+  }
+
+  // 2-tier confluence (15m LTF + 1h HTF)
+  if (isBull(ltf) && isBull(htf)) return chalk.green('▲ BULLISH');
+  if (isBear(ltf) && isBear(htf)) return chalk.red('▼ BEARISH');
+  if (isBear(ltf) && isBull(htf)) return chalk.yellow('▼ PULLBACK');
+  if (isBull(ltf) && isBear(htf)) return chalk.magenta('▲ BOUNCE');
+  if (ltf === 'NEUTRAL' && htf === 'NEUTRAL') return chalk.gray('■ NEUTRAL');
+  return chalk.gray('■ MIXED');
+}
+
+function symbolTrend(p: CockpitProps, symbol: string, info: MarketPriceInfo | undefined): string {
   const short = shortName(symbol);
-  return info?.trend
+  const intel = p.marketIntel?.[symbol] ?? p.marketIntel?.[short];
+  const fallback = info?.trend
     ?? p.strategyMetrics?.adaptive[symbol]?.direction
-    ?? p.strategyMetrics?.adaptive[short]?.direction
-    ?? p.marketIntel?.[symbol]?.ltfTrend
-    ?? p.marketIntel?.[short]?.ltfTrend;
+    ?? p.strategyMetrics?.adaptive[short]?.direction;
+  return resolveMtfTrend(intel, fallback);
 }
 
 function assetCells(symbol: string, info: MarketPriceInfo | undefined, trend?: string) {
@@ -45,13 +74,13 @@ function assetCells(symbol: string, info: MarketPriceInfo | undefined, trend?: s
     price: (info ? `$${formatPrice(symbol, info.price)}` : '—').padStart(11),
     chgCol,
     chg: (info ? `${signedDp(info.changePct)}%` : '—').padStart(8),
-    trend: formatTrend(trend ?? info?.trend),
+    trend: trend ?? formatTrend(info?.trend),
     range: fmtRange(symbol, info?.low24h, info?.high24h),
     vol: fmtVol(info?.volumeQuote),
   };
 }
 
-const WIDE_HEADER = ` ${chalk.gray('ASSET'.padEnd(5))} ${chalk.gray('PRICE'.padStart(11))}  ${chalk.gray('24h CHG'.padStart(8))}  ${chalk.gray('│ 24h RANGE'.padEnd(25))} ${chalk.gray('│ 24h VOLUME'.padStart(12))}  ${chalk.gray('│ 15m TREND')}`;
+const WIDE_HEADER = ` ${chalk.gray('ASSET'.padEnd(5))} ${chalk.gray('PRICE'.padStart(11))}  ${chalk.gray('24h CHG'.padStart(8))}  ${chalk.gray('│ 24h RANGE'.padEnd(25))} ${chalk.gray('│ 24h VOLUME'.padStart(12))}  ${chalk.gray('│ MTF TREND')}`;
 
 function wideAssetRow(symbol: string, info: MarketPriceInfo | undefined, trend?: string): string {
   const c = assetCells(symbol, info, trend);

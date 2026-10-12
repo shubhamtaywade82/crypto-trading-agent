@@ -4,6 +4,7 @@ import { correlation, simpleReturns, summarizePerformance, type StrategyPerforma
 import type { VenueStatus } from '../binance/remoteBroker.js';
 import type { AdaptiveInfo, AgentId, AgentState, AppState, Candle, FundingInfo, MarketIntelSummary, Mode, Position, StrategyMetrics, TradeRecord, WsStatus } from '../types.js';
 import type { MarketState } from '../market/types.js';
+import { inferTrend } from '../market/RegimeEngine.js';
 
 export interface AgentRuntime { id: AgentId; status: 'RUNNING' | 'PAUSED' | 'WATCHING'; strategy: string; note?: string; edgeMultiplier?: number }
 export interface SessionCounters { decisions: number; executed: number; monitored: number }
@@ -146,6 +147,7 @@ function intelForSymbol(ms: MarketState): MarketIntelSummary {
     regime: ms.regime.regime,
     htfTrend: ms.htfStructure.trend,
     ltfTrend: ms.ltfStructure.trend,
+    trend4h: ms.timeframes?.['4h'] ? inferTrend(ms.timeframes['4h']) : undefined,
     volatility: ms.regime.volatility,
     volatilityPct: ms.regime.volatilityPercentile,
     premium: ms.pricing.premium,

@@ -184,6 +184,7 @@ export interface MarketIntelSummary {
   regime: string;
   htfTrend: string;
   ltfTrend: string;
+  trend4h?: string;
   volatility: string;
   volatilityPct: number | null;
   premium: boolean;

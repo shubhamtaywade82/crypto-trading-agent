@@ -59,7 +59,7 @@ export function buildTimeframeState(
   };
 }
 
-function inferTrend(state: TimeframeState): TrendDirection {
+export function inferTrend(state: TimeframeState): TrendDirection {
   const baseline = state.ema200 ?? state.ema50 ?? state.ema20;
   if (baseline === null || state.lastClose <= 0) return 'NEUTRAL';
 

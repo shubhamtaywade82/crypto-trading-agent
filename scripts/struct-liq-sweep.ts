@@ -29,6 +29,7 @@ import { DEFAULT_STRUCTURE_LIQUIDITY_OPTIONS, tunedStructureLiquidityOptions } f
 import type { Candle } from '../src/types.js';
 import type { NativeTimeframe } from '../src/market/MarketDataTypes.js';
 import type { ReplayData } from '../src/backtesting/types.js';
+import { loadValidatedKlines } from '../src/backtesting/klineLoader.js';
 import type { MarketState } from '../src/market/types.js';
 import { CrowdingAgent } from '../src/agents/CrowdingAgent.js';
 import { FundingArbAgent } from '../src/agents/FundingArbAgent.js';
@@ -39,8 +40,6 @@ import { StructureLiquidityAgent } from '../src/agents/StructureLiquidityAgent.j
 import type { BinanceService } from '../src/binance/client.js';
 import type { BaseAgent } from '../src/agents/BaseAgent.js';
 
-const BASE = 'https://fapi.binance.com';
-const INTERVAL_MS: Record<string, number> = { '15m': 900_000, '1h': 3_600_000, '4h': 14_400_000 };
 const TIMEFRAMES: NativeTimeframe[] = ['15m', '1h', '4h'];
 
 function arg(name: string, fallback: string): string {
@@ -53,30 +52,14 @@ const days = Number(arg('days', '45'));
 const warmupBars = Number(arg('warmup', '300'));
 const fleetArg = arg('fleet', '');
 
-async function fetchKlines(symbol: string, interval: NativeTimeframe, fromMs: number): Promise<Candle[]> {
-  const out: Candle[] = [];
-  let cursor = fromMs;
-  for (;;) {
-    const url = `${BASE}/fapi/v1/klines?symbol=${symbol}&interval=${interval}&startTime=${cursor}&limit=1500`;
-    const response = await fetch(url);
-    if (!response.ok) throw new Error(`klines ${interval} failed: HTTP ${response.status}`);
-    const raw = (await response.json()) as unknown[][];
-    for (const k of raw) {
-      out.push({ openTime: Number(k[0]), open: Number(k[1]), high: Number(k[2]), low: Number(k[3]), close: Number(k[4]), volume: Number(k[5]) });
-    }
-    if (raw.length < 1500) break;
-    cursor = Number(raw[raw.length - 1][0]) + INTERVAL_MS[interval];
-  }
-  return out;
-}
-
-const fromMs = Date.now() - days * 86_400_000;
+const toMs = Date.now();
+const fromMs = toMs - days * 86_400_000;
 console.log(`STRUCT-LIQ parameter sweep over the last ${days} day(s)...`);
 const data: ReplayData = {};
 for (const symbol of symbols) {
   data[symbol] = {};
   for (const timeframe of TIMEFRAMES) {
-    const candles = await fetchKlines(symbol, timeframe, fromMs);
+    const { candles } = await loadValidatedKlines({ symbol, interval: timeframe, fromMs, toMs, source: 'api' });
     data[symbol][timeframe] = candles;
   }
   console.log(`  ${symbol}: ${data[symbol]['15m']!.length} x 15m candles`);

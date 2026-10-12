@@ -9,15 +9,15 @@
  * consumes), then runs the same agents, fusion, risk gate and execution model
  * the orchestrator runs, on a no-lookahead feed with spread, slippage, taker
  * fees and conservative intrabar exits.
+ *
+ * Every series passes the candle integrity gate (src/backtesting/candleIntegrity.ts) before it is replayed: a gap, duplicate,
+ * off-grid bar or broken OHLC invariant aborts the run. The window is trimmed to complete bars, so the forming bar never enters.
  */
 import { ReplayService } from '../src/backtesting/ReplayService.js';
-import type { Candle } from '../src/types.js';
 import type { NativeTimeframe } from '../src/market/MarketDataTypes.js';
 import type { ReplayData } from '../src/backtesting/types.js';
-import { fetchArchiveKlines } from '../src/backtesting/archiveKlines.js';
+import { loadValidatedKlines, type KlineSource } from '../src/backtesting/klineLoader.js';
 
-const BASE = 'https://fapi.binance.com';
-const INTERVAL_MS: Record<string, number> = { '15m': 900_000, '1h': 3_600_000, '4h': 14_400_000 };
 const TIMEFRAMES: NativeTimeframe[] = ['15m', '1h', '4h'];
 
 function arg(name: string, fallback: string): string {
@@ -34,27 +34,10 @@ const equity = Number(arg('equity', '1150'));
 const fundingEnabled = process.argv.includes('--funding');
 const decisionsPath = arg('decisions', '');
 // archive = data.binance.vision, for networks where fapi.binance.com is blocked (HTTP 451); it lags by about a day
-const source = arg('source', 'api');
+const source = arg('source', 'api') as KlineSource;
 if (!['api', 'archive'].includes(source)) throw new Error('--source must be api or archive');
 const positionManagerArg = arg('position-manager', '');
 if (positionManagerArg && !['on', 'off'].includes(positionManagerArg)) throw new Error('--position-manager must be on or off');
-
-async function fetchKlines(symbol: string, interval: NativeTimeframe, fromMs: number, toMs: number): Promise<Candle[]> {
-  const out: Candle[] = [];
-  let cursor = fromMs;
-  for (;;) {
-    const url = `${BASE}/fapi/v1/klines?symbol=${symbol}&interval=${interval}&startTime=${cursor}&endTime=${toMs}&limit=1500`;
-    const response = await fetch(url);
-    if (!response.ok) throw new Error(`klines ${interval} failed: HTTP ${response.status}`);
-    const raw = (await response.json()) as unknown[][];
-    for (const k of raw) {
-      out.push({ openTime: Number(k[0]), open: Number(k[1]), high: Number(k[2]), low: Number(k[3]), close: Number(k[4]), volume: Number(k[5]) });
-    }
-    if (raw.length < 1500) break;
-    cursor = Number(raw[raw.length - 1][0]) + INTERVAL_MS[interval];
-  }
-  return out;
-}
 
 function row(label: string, value: string): void {
   console.log(`  ${label.padEnd(26)} ${value}`);
@@ -74,17 +57,9 @@ const fromMs = toMs - days * 86_400_000;
 console.log(`Backtesting ${symbol} over ${days} day(s) ending ${endDaysAgo === 0 ? 'now' : `${endDaysAgo} day(s) ago`} from public Binance USD-M klines...`);
 const data: ReplayData = { [symbol]: {} };
 for (const timeframe of TIMEFRAMES) {
-  let candles: Candle[];
-  if (source === 'archive') {
-    const archive = await fetchArchiveKlines(symbol, timeframe, fromMs, toMs);
-    candles = archive.candles;
-    if (archive.missingDays.length) console.log(`  ${timeframe}: no archive file for ${archive.missingDays.length} day(s): ${archive.missingDays.join(', ')}`);
-  } else {
-    candles = await fetchKlines(symbol, timeframe, fromMs, toMs);
-  }
-  if (candles.length === 0) throw new Error(`no ${timeframe} candles for ${symbol} in the requested window`);
+  const { candles } = await loadValidatedKlines({ symbol, interval: timeframe, fromMs, toMs, source });
   data[symbol][timeframe] = candles;
-  console.log(`  ${timeframe}: ${candles.length} candles (${new Date(candles[0].openTime).toISOString()} -> ${new Date(candles[candles.length - 1].openTime).toISOString()})`);
+  console.log(`  ${timeframe}: ${candles.length} candles (${new Date(candles[0]!.openTime).toISOString()} -> ${new Date(candles[candles.length - 1]!.openTime).toISOString()}), integrity gate passed`);
 }
 
 const service = new ReplayService({

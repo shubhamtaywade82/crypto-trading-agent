@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { deflateRawSync } from 'node:zlib';
-import { fetchArchiveKlines, parseKlineCsv, readFirstZipEntry, type FetchLike } from '../src/backtesting/archiveKlines.js';
+import { fetchArchiveKlines, parseKlineCsv, readFirstZipEntry, validateCandles, type FetchLike } from '../src/backtesting/archiveKlines.js';
 
 const DAY = 86_400_000;
 const T = (y: number, m: number, d: number, h = 0, min = 0) => Date.UTC(y, m - 1, d, h, min);
@@ -103,4 +103,81 @@ test('should never ask for today or the future and should report gaps instead of
 test('should surface a server error instead of treating it as a gap', async () => {
   const fetchImpl: FetchLike = async () => ({ ok: false, status: 503, arrayBuffer: async () => new ArrayBuffer(0) });
   await assert.rejects(fetchArchiveKlines('BTCUSDT', '15m', T(2026, 10, 1), T(2026, 10, 2), fetchImpl, T(2026, 10, 5)), /HTTP 503/);
+});
+
+
+const INTERVAL = 900_000;
+const candleAt = (openTime: number, overrides: Partial<{ open: number; high: number; low: number; close: number; volume: number }> = {}) => ({
+  openTime,
+  open: overrides.open ?? 100,
+  high: overrides.high ?? 101,
+  low: overrides.low ?? 99,
+  close: overrides.close ?? 100,
+  volume: overrides.volume ?? 1,
+});
+
+test('validateCandles accepts a complete, aligned OHLCV window and reports its count', () => {
+  const from = T(2026, 10, 1);
+  const candles = [candleAt(from), candleAt(from + INTERVAL), candleAt(from + INTERVAL * 2)];
+  assert.deepEqual(validateCandles(candles, INTERVAL, from, from + INTERVAL * 3), {
+    intervalMs: INTERVAL,
+    expectedBars: 3,
+    actualBars: 3,
+    firstOpenTime: from,
+    lastOpenTime: from + INTERVAL * 2,
+  });
+});
+
+test('validateCandles rejects impossible OHLC and negative volume', () => {
+  const from = T(2026, 10, 1);
+  assert.throws(
+    () => validateCandles([candleAt(from, { open: 102, high: 101 })], INTERVAL, from, from + INTERVAL),
+    /high is below open\/close/,
+  );
+  assert.throws(
+    () => validateCandles([candleAt(from, { volume: -0.01 })], INTERVAL, from, from + INTERVAL),
+    /volume must be non-negative/,
+  );
+});
+
+test('validateCandles rejects missing bars and irregular interval steps', () => {
+  const from = T(2026, 10, 1);
+  assert.throws(
+    () => validateCandles([candleAt(from), candleAt(from + INTERVAL * 2)], INTERVAL, from, from + INTERVAL * 3),
+    /expected 3 bars.*received 2/,
+  );
+  assert.throws(
+    () => validateCandles([candleAt(from), candleAt(from + INTERVAL * 2)], INTERVAL, from, from + INTERVAL * 2),
+    /expected interval step/,
+  );
+});
+
+test('validateCandles rejects duplicates, out-of-order and misaligned timestamps', () => {
+  const from = T(2026, 10, 1);
+  assert.throws(
+    () => validateCandles([candleAt(from), candleAt(from), candleAt(from + INTERVAL)], INTERVAL, from, from + INTERVAL * 2),
+    /duplicate openTime/,
+  );
+  assert.throws(
+    () => validateCandles([candleAt(from + INTERVAL), candleAt(from)], INTERVAL, from, from + INTERVAL * 2),
+    /not strictly increasing/,
+  );
+  assert.throws(
+    () => validateCandles([candleAt(from + 1)], INTERVAL, from, from + INTERVAL),
+    /not aligned/,
+  );
+});
+
+test('validateCandles rejects out-of-window and non-finite fields and invalid configuration', () => {
+  const from = T(2026, 10, 1);
+  assert.throws(
+    () => validateCandles([candleAt(from + INTERVAL)], INTERVAL, from, from + INTERVAL),
+    /outside requested window/,
+  );
+  assert.throws(
+    () => validateCandles([candleAt(from, { close: Number.NaN })], INTERVAL, from, from + INTERVAL),
+    /must all be finite/,
+  );
+  assert.throws(() => validateCandles([], 0, from, from + INTERVAL), /positive integer intervalMs/);
+  assert.throws(() => validateCandles([], INTERVAL, from + INTERVAL, from), /invalid window/);
 });

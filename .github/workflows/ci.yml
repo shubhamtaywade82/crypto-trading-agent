@@ -7,6 +7,7 @@ on:
       - develop
       - "feat/**"
       - "feature/**"
+      - "fix/**"
   pull_request:
 
 jobs:
@@ -36,7 +37,7 @@ jobs:
   # One-off empirical validation for the integrity-gate PR. Produces journals as artifacts;
   # does not promote strategies or enable live trading.
   research-sol:
-    if: github.event_name == 'pull_request' && github.head_ref == 'fix/kline-integrity-gate'
+    if: github.ref == 'refs/heads/fix/kline-integrity-gate' || (github.event_name == 'pull_request' && github.head_ref == 'fix/kline-integrity-gate')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

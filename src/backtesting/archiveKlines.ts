@@ -10,7 +10,7 @@ const BASE = 'https://data.binance.vision/data/futures/um';
 const DAY_MS = 86_400_000;
 const BATCH = 6;
 
-export type FetchLike = (url: string) => Promise<{ ok: boolean; status: number; arrayBuffer(): Promise<ArrayBuffer> }>;
+export type FetchLike = (url: string, init?: { signal?: AbortSignal }) => Promise<{ ok: boolean; status: number; arrayBuffer(): Promise<ArrayBuffer> }>;
 
 const EOCD_SIGNATURE = 0x06054b50;
 const CENTRAL_SIGNATURE = 0x02014b50;
@@ -166,7 +166,7 @@ const startOfDay = (ms: number): number => Math.floor(ms / DAY_MS) * DAY_MS;
 const startOfNextMonth = (ms: number): number => { const d = new Date(ms); return Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 1); };
 
 async function fetchZip(url: string, fetchImpl: FetchLike): Promise<Candle[] | null> {
-  const response = await fetchImpl(url);
+  const response = await fetchImpl(url, { signal: AbortSignal.timeout(20_000) });
   if (response.status === 404) return null;
   if (!response.ok) throw new Error(`${url}: HTTP ${response.status}`);
   return parseKlineCsv(readFirstZipEntry(Buffer.from(await response.arrayBuffer())));

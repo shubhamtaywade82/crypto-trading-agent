@@ -32,3 +32,49 @@ jobs:
 
       - name: Test (full suite)
         run: npm test
+
+  # One-off empirical validation for the integrity-gate PR. Produces journals as artifacts;
+  # does not promote strategies or enable live trading.
+  research-sol:
+    if: github.event_name == 'pull_request' && github.head_ref == 'fix/kline-integrity-gate'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: SOLUSDT 90-day integrity-gated backtest
+        run: |
+          mkdir -p data/research
+          npm run backtest -- --symbol SOLUSDT --days 90 --decisions data/research/solusdt-backtest-decisions.jsonl | tee data/research/solusdt-backtest-report.txt
+
+      - name: SOLUSDT STRUCT-LIQ sweep and journaled fleet replays
+        run: |
+          npm run sweep:struct-liq -- --symbols SOLUSDT --days 90 --warmup 300 --fleet 6:1.5,12:1.2,24:1.0,48:0.8 --journal-dir data/research/struct-liq | tee data/research/solusdt-struct-liq-report.txt
+
+      - name: Conditional edge — baseline SOLUSDT backtest
+        run: |
+          npm run research:conditional -- --decisions data/research/solusdt-backtest-decisions.jsonl --dims strategy,phase,side --min-n 30 --iterations 5000 | tee data/research/solusdt-conditional-edge.txt
+
+      - name: Conditional edge — STRUCT-LIQ replay journals
+        run: |
+          files=$(printf '%s,' data/research/struct-liq/*.jsonl)
+          files=${files%,}
+          npm run research:conditional -- --decisions "$files" --dims strategy,phase,side --min-n 30 --iterations 5000 | tee data/research/solusdt-struct-liq-conditional-edge.txt
+
+      - name: Upload research reports and journals
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: solusdt-integrity-research
+          path: data/research/
+          if-no-files-found: warn
+          retention-days: 30
+

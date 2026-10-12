@@ -37,6 +37,7 @@ jobs:
   # One-off empirical validation for the integrity-gate PR. Produces journals as artifacts;
   # does not promote strategies or enable live trading.
   research-sol:
+    timeout-minutes: 10
     if: github.ref == 'refs/heads/fix/kline-integrity-gate' || (github.event_name == 'pull_request' && github.head_ref == 'fix/kline-integrity-gate')
     runs-on: ubuntu-latest
     steps:

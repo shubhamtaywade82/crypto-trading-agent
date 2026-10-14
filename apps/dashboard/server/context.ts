@@ -72,7 +72,7 @@ export interface DashboardContext {
     killSwitch: KillSwitch;
     equityHwm: EquityHwmStore;
     performance: PerformanceEngine;
-    riskOps: typeof RiskOps;
+    riskOps: RiskOps;
     limits: ReturnType<typeof riskLimitsFromConfig>;
     loadApprovals: typeof loadApprovals;
     loadRrProfile: typeof loadRrProfile;
@@ -111,28 +111,37 @@ export async function createDashboardContext(
   // BinanceService is constructed the same way the agent constructs it.
   // Public market data does not require API keys; the dashboard will not
   // place orders, so we never load trading-capable credentials here.
-  const binance = new BinanceService(symbols, agentConfig);
+  const binance = new BinanceService();
   await binance.initVenue?.();
 
   const marketStateBuilder = new MarketStateBuilder();
-  const marketDataService = new MarketDataService(binance);
+  const marketDataService = (binance as unknown as { marketDataV2: MarketDataService }).marketDataV2;
 
   const killSwitch = new KillSwitch(path.join(dataDir, "kill-switch.json"));
   const equityHwm = new EquityHwmStore(path.join(dataDir, "risk-hwm.json"));
-  const performance = new PerformanceEngine();
+  const performance = new PerformanceEngine(100_000);
 
   const champion = new ChampionRegistry(path.join(dataDir, "champion-registry.json"));
   const experiments = new ExperimentStore(path.join(dataDir, "experiments.jsonl"));
 
   const paper = new PaperEngine(path.join(dataDir, "paper-state.json"));
-  const remote = new RemoteStore(path.join(dataDir, "remote-state.json"));
-  const liveBook = new LiveBook(path.join(dataDir, "live-state.json"));
+  const remote = new RemoteStore(
+    path.join(dataDir, "remote-state.json"),
+    agentConfig.paperExchange?.accountId ?? "default",
+  );
+  const liveBook = binance.createLiveBook("shadow", () => {});
   const positionManager = new PositionManagerStore(
+    agentConfig.mode,
     path.join(dataDir, "position-manager.json"),
   );
   const pmConfig = pmConfigFromEnv();
 
-  const limits = riskLimitsFromConfig(agentConfig);
+  const limits = riskLimitsFromConfig(agentConfig.risk, agentConfig.portfolioRiskPct);
+  const riskOps = new RiskOps(() => {}, {
+    limits,
+    killSwitch,
+    hwm: equityHwm.forMode(agentConfig.mode),
+  });
 
   const readJsonFile = <T>(relativePath: string): T | null => {
     const full = path.join(dataDir, relativePath);
@@ -179,7 +188,7 @@ export async function createDashboardContext(
       killSwitch,
       equityHwm,
       performance,
-      riskOps: RiskOps,
+      riskOps,
       limits,
       loadApprovals,
       loadRrProfile,

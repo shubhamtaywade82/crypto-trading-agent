@@ -10,12 +10,38 @@
 import type { Express } from "express";
 import type { DashboardContext } from "../context.js";
 
+const CACHE_TTL_MS = 5000;
+let cachedOverview: { data: any; at: number; key: string } | null = null;
+let cachedSnapshot: { data: any; at: number; key: string } | null = null;
+
+async function getCachedOverview(ctx: DashboardContext, symbols: string[]) {
+  const key = symbols.slice().sort().join(",");
+  const now = Date.now();
+  if (cachedOverview && cachedOverview.key === key && now - cachedOverview.at < CACHE_TTL_MS) {
+    return cachedOverview.data;
+  }
+  const data = await ctx.binance.getMarketOverview(symbols);
+  cachedOverview = { data, at: now, key };
+  return data;
+}
+
+async function getCachedSnapshot(ctx: DashboardContext, symbols: string[]) {
+  const key = symbols.slice().sort().join(",");
+  const now = Date.now();
+  if (cachedSnapshot && cachedSnapshot.key === key && now - cachedSnapshot.at < CACHE_TTL_MS) {
+    return cachedSnapshot.data;
+  }
+  const data = await ctx.marketDataService.snapshot(symbols);
+  cachedSnapshot = { data, at: now, key };
+  return data;
+}
+
 export function registerMarketRoutes(app: Express, ctx: DashboardContext): void {
   // /api/market/snapshot?symbols=BTCUSDT,ETHUSDT — MarketDataService.snapshot
   app.get("/api/market/snapshot", async (req, res, next) => {
     try {
       const symbols = parseSymbols(req.query.symbols as string, ctx.symbols);
-      const result = await ctx.marketDataService.snapshot(symbols);
+      const result = await getCachedSnapshot(ctx, symbols);
       res.json(result);
     } catch (err) {
       next(err);
@@ -26,13 +52,13 @@ export function registerMarketRoutes(app: Express, ctx: DashboardContext): void 
   app.get("/api/market/state", async (req, res, next) => {
     try {
       const symbols = parseSymbols(req.query.symbols as string, ctx.symbols);
-      const overview = await ctx.binance.getMarketOverview(symbols);
+      const overview = await getCachedOverview(ctx, symbols);
       const inputs = symbols.map((sym) => ({
         symbol: sym,
-        candles: overview.candles[sym] ?? overview.marketDataV2[sym]?.candles ?? {},
+        candles: overview.candles[sym] ?? [],
         derivatives: overview.marketDataV2[sym]?.derivatives ?? null,
-        markPrice: overview.marks[sym] ?? null,
-        funding: overview.funding[sym] ?? null,
+        mark: overview.marks[sym] ?? 0,
+        fundingRate: overview.funding[sym] ?? 0,
       }));
       const states = ctx.marketStateBuilder.buildAll(inputs);
       res.json(states);
@@ -45,7 +71,7 @@ export function registerMarketRoutes(app: Express, ctx: DashboardContext): void 
   app.get("/api/market/safety", async (req, res, next) => {
     try {
       const symbols = parseSymbols(req.query.symbols as string, ctx.symbols);
-      const overview = await ctx.binance.getMarketOverview(symbols);
+      const overview = await getCachedOverview(ctx, symbols);
       const verdicts: Record<string, unknown> = {};
       for (const sym of symbols) {
         const data = overview.marketDataV2[sym];
@@ -71,7 +97,7 @@ export function registerMarketRoutes(app: Express, ctx: DashboardContext): void 
   app.get("/api/market/derivatives", async (req, res, next) => {
     try {
       const symbols = parseSymbols(req.query.symbols as string, ctx.symbols);
-      const overview = await ctx.binance.getMarketOverview(symbols);
+      const overview = await getCachedOverview(ctx, symbols);
       const out: Record<string, unknown> = {};
       for (const sym of symbols) {
         out[sym] = overview.marketDataV2[sym]?.derivatives ?? null;

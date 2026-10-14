@@ -20,49 +20,16 @@ export function registerStateRoutes(app: Express, ctx: DashboardContext): void {
       const venue = ctx.binance.getVenueStatus?.() ?? null;
       const wsStatus = ctx.binance.getWsStatus?.() ?? null;
       const apiWeight = ctx.binance.getApiWeight?.() ?? 0;
+      const { account, positions, mode } = resolveAccountAndPositions(ctx);
+      const decisions = ctx.decisions.loadDecisionFiles(ctx.decisions.defaultSpec());
+      const agents = buildFleetAgents(decisions);
 
-      // Account: prefer remote (live) > paper > zero
-      let account: { equity: number; marginUsed: number; initialEquity: number } = {
-        equity: 0,
-        marginUsed: 0,
-        initialEquity: 0,
-      };
-      let positions: unknown[] = [];
-      let mode: string = ctx.config.mode;
-
-      const liveState = ctx.readJsonFile<{
-        positions?: unknown[];
-        mode?: string;
-      }>("live-state.json");
-      const paperState = ctx.readJsonFile<{
-        account?: { equity: number; marginUsed: number; initialEquity: number };
-        positions?: unknown[];
-        mode?: string;
-      }>("paper-state.json");
-      const remoteState = ctx.readJsonFile<{
-        positions?: Record<string, unknown>;
-        closedTrades?: unknown[];
-      }>("remote-state.json");
-
-      if (paperState?.account) {
-        account = paperState.account;
-      }
-      if (Array.isArray(liveState?.positions) && liveState.positions.length) {
-        positions = liveState.positions;
-        mode = "live";
-      } else if (Array.isArray(paperState?.positions)) {
-        positions = paperState.positions;
-        mode = "paper";
-      } else if (remoteState?.positions) {
-        positions = Object.values(remoteState.positions);
-      }
-
-      const state = {
+      res.json({
         mode,
         ...account,
-        upnl: 0, // requires mark price sync; future iteration
+        upnl: 0,
         positions,
-        agents: [], // populated in-process
+        agents,
         logs: [],
         killSwitch,
         venue,
@@ -70,8 +37,7 @@ export function registerStateRoutes(app: Express, ctx: DashboardContext): void {
         apiWeight,
         serverTime: Date.now(),
         symbols: ctx.symbols,
-      };
-      res.json(state);
+      });
     } catch (err) {
       next(err);
     }
@@ -143,3 +109,62 @@ export function attachStateWebSocket(
 function clamp(n: number, min: number, max: number): number {
   return Number.isFinite(n) ? Math.min(max, Math.max(min, n)) : min;
 }
+
+function resolveAccountAndPositions(ctx: DashboardContext) {
+  let account = { equity: 0, marginUsed: 0, initialEquity: 0 };
+  let positions: unknown[] = [];
+  let mode: string = ctx.config.mode;
+
+  const liveState = ctx.readJsonFile<{ positions?: unknown[]; mode?: string }>("live-state.json");
+  const paperState = ctx.readJsonFile<{
+    account?: { equity: number; marginUsed: number; initialEquity: number };
+    positions?: unknown[];
+  }>("paper-state.json");
+  const remoteState = ctx.readJsonFile<{ positions?: Record<string, unknown> }>("remote-state.json");
+
+  if (paperState?.account) account = paperState.account;
+  if (Array.isArray(liveState?.positions) && liveState.positions.length) {
+    positions = liveState.positions;
+    mode = "live";
+  } else if (Array.isArray(paperState?.positions)) {
+    positions = paperState.positions;
+    mode = "paper";
+  } else if (remoteState?.positions) {
+    positions = Object.values(remoteState.positions);
+  }
+  return { account, positions, mode };
+}
+
+function buildFleetAgents(decisions: any[]) {
+  const fleetOrder = [
+    "MOMENTUM-γ", "MEAN-REVERT-θ", "STRUCTURE-TREND-η",
+    "STRUCT-LIQ-η", "CROWDING-ι", "FUNDING-ARB-α", "ADAPTIVE-ST-ζ",
+  ];
+  const seen = new Set([...fleetOrder, ...decisions.map((d) => d.strategy).filter(Boolean)]);
+  return Array.from(seen).map((id) => {
+    const strat = decisions.filter((d) => d.strategy === id);
+    const executed = strat.filter((d) => d.status === "EXECUTED");
+    const withOutcomes = executed.filter((d) => d.outcome && Number.isFinite(d.outcome.pnl));
+    const wins = withOutcomes.filter((d) => (d.outcome?.pnl ?? 0) > 0);
+    const winRate = withOutcomes.length > 0 ? (wins.length / withOutcomes.length) * 100 : null;
+    const newest = [...strat].sort((a, b) => b.timestamp - a.timestamp)[0];
+    return {
+      id,
+      status: "RUNNING" as const,
+      totalDecisions: strat.length,
+      executed: executed.length,
+      rejected: strat.length - executed.length,
+      winRate,
+      lastSignal: newest
+        ? {
+            side: newest.side ?? newest.signalType ?? "—",
+            symbol: newest.symbol,
+            confidence: newest.confidence,
+            timestamp: newest.timestamp,
+            status: newest.status,
+          }
+        : null,
+    };
+  });
+}
+

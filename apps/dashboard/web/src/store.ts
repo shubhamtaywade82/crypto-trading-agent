@@ -50,6 +50,22 @@ export interface PositionRow {
   decisionId?: string;
 }
 
+export interface AgentRow {
+  id: string;
+  status: "RUNNING" | "PAUSED" | "IDLE";
+  totalDecisions: number;
+  executed: number;
+  rejected: number;
+  winRate: number | null;
+  lastSignal?: {
+    side: string;
+    symbol: string;
+    confidence: number;
+    timestamp: number;
+    status: string;
+  } | null;
+}
+
 export interface ResearchSummary {
   champion?: { id: string; version: number };
   challengers?: Array<{ id: string; version: number; stage: string }>;
@@ -92,9 +108,13 @@ interface WsState {
   venue?: unknown;
 }
 
+export const DEFAULT_SYMBOLS = ["BTCUSDT", "ETHUSDT", "SOLUSDT"];
+
 interface DashboardStore {
   // connectivity / status
   health: { ok: boolean; mode: string; dataDir: string; symbols: string[] } | null;
+  symbols: string[];
+  setSymbols: (s: string[]) => void;
   ws: WsState;
   setWs: (partial: Partial<WsState>) => void;
   setHealth: (h: DashboardStore["health"]) => void;
@@ -106,6 +126,7 @@ interface DashboardStore {
   // market state
   symbolsState: Record<string, SymbolState>;
   setSymbolState: (s: string, v: SymbolState) => void;
+  setSymbolStates: (states: Record<string, SymbolState>) => void;
   marketState: Record<string, unknown> | null;
   setMarketState: (m: Record<string, unknown> | null) => void;
 
@@ -114,6 +135,8 @@ interface DashboardStore {
   setAccount: (a: DashboardStore["account"]) => void;
   positions: PositionRow[];
   setPositions: (p: PositionRow[]) => void;
+  agents: AgentRow[];
+  setAgents: (a: AgentRow[]) => void;
 
   // risk
   risk: RiskSnapshot | null;
@@ -142,9 +165,15 @@ interface DashboardStore {
 
 export const useDashboardStore = create<DashboardStore>((set) => ({
   health: null,
+  symbols: DEFAULT_SYMBOLS,
+  setSymbols: (symbols) => set({ symbols }),
   ws: { connected: false },
   setWs: (partial) => set((s) => ({ ws: { ...s.ws, ...partial } })),
-  setHealth: (h) => set({ health: h }),
+  setHealth: (h) =>
+    set((s) => ({
+      health: h,
+      symbols: h?.symbols && h.symbols.length > 0 ? h.symbols : s.symbols,
+    })),
 
   selectedSymbol: "BTCUSDT",
   setSelectedSymbol: (symbol) => set({ selectedSymbol: symbol }),
@@ -152,6 +181,8 @@ export const useDashboardStore = create<DashboardStore>((set) => ({
   symbolsState: {},
   setSymbolState: (symbol, v) =>
     set((s) => ({ symbolsState: { ...s.symbolsState, [symbol]: v } })),
+  setSymbolStates: (states) =>
+    set((s) => ({ symbolsState: { ...s.symbolsState, ...states } })),
   marketState: null,
   setMarketState: (marketState) => set({ marketState }),
 
@@ -159,6 +190,8 @@ export const useDashboardStore = create<DashboardStore>((set) => ({
   setAccount: (account) => set({ account }),
   positions: [],
   setPositions: (positions) => set({ positions }),
+  agents: [],
+  setAgents: (agents) => set({ agents }),
 
   risk: null,
   setRisk: (risk) => set({ risk }),

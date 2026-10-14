@@ -24,52 +24,53 @@ type WsMessage =
   | { type: "hello"; at: number; mode: string; symbols: string[] }
   | { type: "tick"; at: number; wsStatus: unknown; apiWeight: number; venue: unknown };
 
+function handleWsMessage(data: string): void {
+  try {
+    const msg = JSON.parse(data) as WsMessage;
+    if (msg.type === "hello") {
+      useDashboardStore.getState().setWs({
+        connected: true,
+        mode: msg.mode,
+        symbols: msg.symbols,
+        lastAt: msg.at,
+      });
+    } else if (msg.type === "tick") {
+      useDashboardStore.getState().setWs({
+        connected: true,
+        lastAt: msg.at,
+        apiWeight: msg.apiWeight,
+        wsStatus: msg.wsStatus,
+        venue: msg.venue,
+      });
+    }
+  } catch {
+    // ignore malformed frames
+  }
+}
+
 export function startWebSocket(): () => void {
   let closed = false;
-  let reconnectDelayMs = 500;
+  let delayMs = 500;
   let timer: ReturnType<typeof setTimeout> | null = null;
   let socket: WebSocket | null = null;
-
   const url = `${location.protocol === "https:" ? "wss:" : "ws:"}//${location.host}/ws/state`;
 
   const connect = () => {
     if (closed) return;
     socket = new WebSocket(url);
     socket.onopen = () => {
-      reconnectDelayMs = 500;
+      delayMs = 500;
       useDashboardStore.getState().setWs({ connected: true, mode: "connecting" });
     };
-    socket.onmessage = (ev) => {
-      try {
-        const msg = JSON.parse(ev.data) as WsMessage;
-        if (msg.type === "hello") {
-          useDashboardStore.getState().setWs({
-            connected: true,
-            mode: msg.mode,
-            symbols: msg.symbols,
-            lastAt: msg.at,
-          });
-        } else if (msg.type === "tick") {
-          useDashboardStore.getState().setWs({
-            connected: true,
-            lastAt: msg.at,
-            apiWeight: msg.apiWeight,
-            wsStatus: msg.wsStatus,
-            venue: msg.venue,
-          });
-        }
-      } catch {
-        // ignore malformed frames
-      }
-    };
+    socket.onmessage = (ev) => handleWsMessage(ev.data);
     socket.onclose = () => {
-      useDashboardStore.getState().setWs({ connected: false });
       if (closed) return;
-      timer = setTimeout(connect, reconnectDelayMs);
-      reconnectDelayMs = Math.min(8000, reconnectDelayMs * 2);
+      useDashboardStore.getState().setWs({ connected: false });
+      timer = setTimeout(connect, delayMs);
+      delayMs = Math.min(8000, delayMs * 2);
     };
     socket.onerror = () => {
-      socket?.close();
+      if (!closed) socket?.close();
     };
   };
   connect();
@@ -77,6 +78,12 @@ export function startWebSocket(): () => void {
   return () => {
     closed = true;
     if (timer) clearTimeout(timer);
-    socket?.close();
+    if (socket) {
+      socket.onopen = null;
+      socket.onmessage = null;
+      socket.onclose = null;
+      socket.onerror = null;
+      socket.close();
+    }
   };
 }

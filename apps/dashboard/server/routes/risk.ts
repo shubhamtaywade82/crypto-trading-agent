@@ -9,7 +9,7 @@
 
 import path from "node:path";
 import type { Express } from "express";
-import type { DashboardContext } from "../context.js";
+import type { DashboardContext, TradeRecord } from "../context.js";
 
 export function registerRiskRoutes(app: Express, ctx: DashboardContext): void {
   // /api/risk/snapshot — circuit, performance snapshot, peak equity, limits
@@ -22,13 +22,11 @@ export function registerRiskRoutes(app: Express, ctx: DashboardContext): void {
 
       // Trades — pull from disk + remote
       const remoteState = ctx.readJsonFile<{
-        closedTrades?: unknown[];
+        closedTrades?: TradeRecord[];
       }>("remote-state.json");
-      const trades = (remoteState?.closedTrades ?? []) as Parameters<
-        typeof ctx.risk.performance.snapshot
-      >[0];
+      const trades = remoteState?.closedTrades ?? [];
 
-      const account = ctx.binance.getAccount?.() ?? { equity: 0 };
+      const account = (await ctx.binance.getAccount?.()) ?? { equity: 0, initialEquity: 100_000 };
       const built = ctx.risk.riskOps.build(trades, account);
       const snapshot = ctx.risk.performance.snapshot(account.equity);
 
@@ -38,7 +36,7 @@ export function registerRiskRoutes(app: Express, ctx: DashboardContext): void {
         peak,
         peakResetAt,
         limits: ctx.risk.limits,
-        circuit: built.circuit,
+        circuit: built?.circuit ?? "NORMAL",
         performance: snapshot,
       });
     } catch (err) {
@@ -74,7 +72,8 @@ export function registerRiskRoutes(app: Express, ctx: DashboardContext): void {
     try {
       const pct = clamp(Number(req.query.pct ?? 2.5), 0, 100);
       const positions = (await ctx.binance.getPositions(false)) ?? [];
-      const equity = ctx.binance.getAccount?.()?.equity ?? 0;
+      const account = await ctx.binance.getAccount?.();
+      const equity = account?.equity ?? 0;
       const result = ctx.risk.findUnprotected(positions, equity, pct / 100);
       res.json({ pct, positions: result, equity });
     } catch (err) {

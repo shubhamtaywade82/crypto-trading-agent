@@ -34,7 +34,15 @@ export class OrderNotFilledError extends Error {
   }
 }
 
-export const errorText = (err: unknown): string => (err instanceof Error ? err.message : String(err));
+export const errorText = (err: unknown): string => {
+  if (err instanceof Error) return err.message;
+  if (err && typeof err === 'object') {
+    const o = err as Record<string, unknown>;
+    if (typeof o.message === 'string') return o.message;
+    if (typeof o.msg === 'string') return o.msg;
+  }
+  return String(err);
+};
 
 /** A venue or ownership rule said no before any order changed the account: a decision to report, not a fault. */
 export const isRefusal = (err: unknown): boolean =>

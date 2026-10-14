@@ -7,27 +7,24 @@
  * iteration).
  */
 
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import { useDashboardStore } from "./store.js";
 import { requestJson, startWebSocket } from "./api.js";
 import StatusBar from "./components/StatusBar.js";
-import ChartWidget from "./components/ChartWidget.js";
+import AgentFleetPanel from "./components/AgentFleetPanel.js";
 import MarketPanel from "./components/MarketPanel.js";
-import DecisionJournalPanel from "./components/DecisionJournalPanel.js";
+import PositionsPanel from "./components/PositionsPanel.js";
 import RiskPanel from "./components/RiskPanel.js";
+import DecisionJournalPanel from "./components/DecisionJournalPanel.js";
 
-const POLL_MS = 1000;
+const POLL_MS = 4000;
 
 export default function App() {
   const setHealth = useDashboardStore((s) => s.setHealth);
   const setError = useDashboardStore((s) => s.setError);
-  const symbols = useDashboardStore((s) => s.health?.symbols ?? ["BTCUSDT", "ETHUSDT", "SOLUSDT"]);
 
-  // Start WebSocket once.
-  const wsStarted = useRef(false);
+  // Stream WebSocket state ticks.
   useEffect(() => {
-    if (wsStarted.current) return;
-    wsStarted.current = true;
     return startWebSocket();
   }, []);
 
@@ -43,9 +40,10 @@ export default function App() {
     let cancelled = false;
     const poll = async () => {
       try {
+        const currentSymbols = useDashboardStore.getState().symbols;
         await Promise.allSettled([
           refreshState(),
-          refreshMarket(symbols),
+          refreshMarket(currentSymbols),
           refreshRisk(),
           refreshDecisions(),
           refreshPositions(),
@@ -66,17 +64,18 @@ export default function App() {
       cancelled = true;
       clearInterval(t);
     };
-  }, [symbols, setError]);
+  }, [setError]);
 
   return (
     <div className="app">
       <Header />
       <StatusBar />
       <div className="workspace">
+        <AgentFleetPanel className="panel-fleet" />
         <MarketPanel className="panel-market" />
-        <ChartWidget className="panel-chart" />
-        <DecisionJournalPanel className="panel-decisions" />
+        <PositionsPanel className="panel-positions" />
         <RiskPanel className="panel-risk" />
+        <DecisionJournalPanel className="panel-decisions" />
       </div>
     </div>
   );
@@ -90,7 +89,7 @@ function Header() {
   const connected = ws.connected;
   return (
     <div className="app-header">
-      <h1>cta · cockpit</h1>
+      <h1>crypto trading agent · flight deck</h1>
       <span className="badge read-only" title="This dashboard is read-only. No orders can be placed from the UI.">
         READ-ONLY
       </span>
@@ -113,6 +112,9 @@ async function refreshState() {
     const state = await requestJson<Record<string, unknown>>("/api/state");
     const account = (state.account as never) ?? null;
     useDashboardStore.getState().setAccount(account);
+    if (Array.isArray(state.agents)) {
+      useDashboardStore.getState().setAgents(state.agents as never);
+    }
   } catch {
     // non-fatal; other panels still refresh
   }
@@ -122,31 +124,31 @@ async function refreshMarket(symbols: string[]) {
   if (symbols.length === 0) return;
   try {
     const sym = symbols.join(",");
-    const [snapshot, safetyRes] = await Promise.all([
+    const [snapshot, safetyRes, stateRes] = await Promise.all([
       requestJson<Record<string, any>>(`/api/market/snapshot?symbols=${sym}`),
       requestJson<Record<string, any>>(`/api/market/safety?symbols=${sym}`),
+      requestJson<Record<string, any>>(`/api/market/state?symbols=${sym}`).catch(() => ({})),
     ]);
+    const updates: Record<string, any> = {};
     for (const s of symbols) {
       const data = snapshot[s];
-      const safety = safetyRes[s];
-      const candles1m = data?.candles?.["1m"] ?? data?.candles?.["1h"] ?? [];
-      const last = candles1m.at(-1)?.close ?? null;
-      const first = candles1m[0]?.open ?? last;
-      const changePct = last && first ? ((last - first) / first) * 100 : null;
-      const spark = candles1m.slice(-30).map((c: any) => c.close);
-      useDashboardStore.getState().setSymbolState(s, {
+      const candles = data?.candles?.["1m"] ?? data?.candles?.["1h"] ?? [];
+      const last = candles.at(-1)?.close ?? null;
+      const first = candles[0]?.open ?? last;
+      updates[s] = {
         symbol: s,
         lastPrice: last,
-        changePct,
-        sparkline: spark,
+        changePct: last && first ? ((last - first) / first) * 100 : null,
+        sparkline: candles.slice(-30).map((c: any) => c.close),
         fundingPct: data?.derivatives?.fundingRatePct ?? null,
         spreadBps: data?.derivatives?.spreadBps ?? null,
-        safetyLevel: safety?.level ?? null,
-        safetyReasons: safety?.reasons ?? [],
-        stale: !data || !data.generatedAt || Date.now() - data.generatedAt > 60_000,
-      });
+        safetyLevel: safetyRes[s]?.level ?? null,
+        safetyReasons: safetyRes[s]?.reasons ?? [],
+        stale: !data?.generatedAt || Date.now() - data.generatedAt > 60_000,
+      };
     }
-    useDashboardStore.getState().setMarketState(snapshot);
+    useDashboardStore.getState().setSymbolStates(updates);
+    useDashboardStore.getState().setMarketState(stateRes ?? snapshot);
   } catch {
     // non-fatal
   }

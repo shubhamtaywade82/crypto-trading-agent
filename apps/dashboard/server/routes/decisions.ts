@@ -9,8 +9,8 @@
 
 import type { Express } from "express";
 import type { DashboardContext } from "../context.js";
-import type { DecisionRecord, DecisionStatus } from "../../../src/decision/DecisionJournal.js";
-import { classifyRiskRefusal, NO_TRADE_REASONS } from "../../../src/decision/NoTrade.js";
+import type { DecisionRecord, DecisionStatus } from "../../../../src/decision/DecisionJournal.js";
+import { classifyRiskRefusal, NO_TRADE_REASONS } from "../../../../src/decision/NoTrade.js";
 
 export function registerDecisionRoutes(app: Express, ctx: DashboardContext): void {
   // /api/decisions?status=&strategy=&symbol=&limit=&spec=
@@ -27,8 +27,8 @@ export function registerDecisionRoutes(app: Express, ctx: DashboardContext): voi
 
       let filtered = all;
       if (status) filtered = filtered.filter((d) => d.status === status);
-      if (strategy) filtered = filtered.filter((d) => d.signal.strategy === strategy);
-      if (symbol) filtered = filtered.filter((d) => d.signal.symbol === symbol);
+      if (strategy) filtered = filtered.filter((d) => d.strategy === strategy);
+      if (symbol) filtered = filtered.filter((d) => d.symbol === symbol);
 
       // newest first
       const sorted = [...filtered].sort((a, b) => b.timestamp - a.timestamp);
@@ -61,13 +61,13 @@ export function registerDecisionRoutes(app: Express, ctx: DashboardContext): voi
           d.status === "EQ_REJECTED" ||
           d.status === "EXECUTION_REFUSED" ||
           d.status === "EXECUTION_FAILED",
-      ) as (DecisionRecord & { reason?: string })[];
+      );
 
       const counts: Record<string, number> = {};
       for (const reason of NO_TRADE_REASONS) counts[reason] = 0;
       counts.OTHER = 0;
       for (const r of rejected) {
-        const code = classifyRiskRefusal(r);
+        const code = classifyRiskRefusal(r.rejectionReason ?? "");
         counts[code] = (counts[code] ?? 0) + 1;
       }
       res.json({ total: rejected.length, counts });

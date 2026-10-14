@@ -13,7 +13,7 @@ export function registerAccountRoutes(app: Express, ctx: DashboardContext): void
   // /api/account — live account (equity, marginUsed, initialEquity)
   app.get("/api/account", async (_req, res, next) => {
     try {
-      const account = ctx.binance.getAccount?.() ?? null;
+      const account = (await ctx.binance.getAccount?.()) ?? null;
       res.json(account);
     } catch (err) {
       next(err);

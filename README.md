@@ -412,6 +412,41 @@ With `MODE=live` (without `PAPER_EXCHANGE_URL`) the venue keeps no per-strategy 
 
 ---
 
+## Web Dashboard (read-only operator cockpit)
+
+A separate Vite + React 18 application under `apps/dashboard/` provides a
+browser-based cockpit that visualizes the existing trading engine — it never
+replaces it. The dashboard is the implementation of the OpenTerminal reuse
+audit: adopt OpenTerminal as a reference for the charting + workspace UX,
+but keep `crypto-trading-agent` as the sole source of truth for trading
+decisions and execution.
+
+Highlights:
+
+- **Read-only by construction.** No order-placement endpoints, no
+  kill-switch toggle, no HWM reset. Operators must use the authenticated CLI
+  for any write action.
+- **One authoritative futures-data pipeline.** The dashboard re-instantiates
+  the agent's `BinanceService` (USD-M perpetual futures). It does NOT use
+  spot endpoints. The chart and the strategy engine see the same candles,
+  mark prices, and derivatives.
+- **Stale data is visibly marked.** Every market panel shows a `STALE`
+  banner when the last tick is older than 60 seconds; the `assessSafety`
+  verdict still applies and is never silently downgraded.
+- **First milestone:** futures chart + market-safety panel + decision
+  journal + risk + live-readiness panel. See
+  [`apps/dashboard/README.md`](apps/dashboard/README.md) for the full
+  architecture, API surface, and roadmap.
+
+```bash
+cd apps/dashboard
+npm install
+npm run dev:server   # port 4101 — read-only HTTP + WS
+npm run dev:web      # port 5173 — Vite dev server, proxies /api → 4101
+```
+
+---
+
 ## Architecture
 
 ```

@@ -30,7 +30,7 @@ export function setSymbolRules(symbol: string, rules: SymbolRules): void {
 }
 
 export function getSymbolRules(symbol: string): SymbolRules {
-  return rulesBySymbol.get(symbol) ?? DEFAULT_RULES;
+  return rulesBySymbol.get(symbol) ?? rulesBySymbol.get(symbol + 'USDT') ?? DEFAULT_RULES;
 }
 
 /** Builds rules from a Binance USD-M exchangeInfo symbol entry. */

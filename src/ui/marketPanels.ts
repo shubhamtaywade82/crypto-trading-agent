@@ -69,8 +69,10 @@ function symbolTrend(p: CockpitProps, symbol: string, info: MarketPriceInfo | un
 
 function assetCells(symbol: string, info: MarketPriceInfo | undefined, trend?: string) {
   const chgCol = !info ? chalk.gray : info.changePct < 0 ? chalk.red : chalk.green;
+  const priceCol = !info ? chalk.gray : info.tickDirection === 'UP' ? chalk.green.bold : info.tickDirection === 'DOWN' ? chalk.red.bold : chalk.white;
   return {
     name: shortName(symbol),
+    priceCol,
     price: (info ? `$${formatPrice(symbol, info.price)}` : '—').padStart(11),
     chgCol,
     chg: (info ? `${signedDp(info.changePct)}%` : '—').padStart(8),
@@ -84,12 +86,12 @@ const WIDE_HEADER = ` ${chalk.gray('ASSET'.padEnd(5))} ${chalk.gray('PRICE'.padS
 
 function wideAssetRow(symbol: string, info: MarketPriceInfo | undefined, trend?: string): string {
   const c = assetCells(symbol, info, trend);
-  return ` ${chalk.yellow.bold(c.name.padEnd(5))} ${chalk.white(c.price)}  ${c.chgCol(c.chg)}  ${chalk.gray('│ ')}${chalk.white(c.range.padEnd(23))} ${chalk.gray('│ ')}${chalk.cyan(c.vol.padStart(10))}  ${chalk.gray('│ ')}${c.trend}`;
+  return ` ${chalk.yellow.bold(c.name.padEnd(5))} ${c.priceCol(c.price)}  ${c.chgCol(c.chg)}  ${chalk.gray('│ ')}${chalk.white(c.range.padEnd(23))} ${chalk.gray('│ ')}${chalk.cyan(c.vol.padStart(10))}  ${chalk.gray('│ ')}${c.trend}`;
 }
 
 function narrowAssetRows(symbol: string, info: MarketPriceInfo | undefined, trend: string | undefined, width: number): string[] {
   const c = assetCells(symbol, info, trend);
-  const l1 = ` ${chalk.yellow.bold(c.name.padEnd(4))} ${chalk.white(c.price.trim().padStart(9))} ${c.chgCol(c.chg)} ${chalk.gray('│ ')}${c.trend}`;
+  const l1 = ` ${chalk.yellow.bold(c.name.padEnd(4))} ${c.priceCol(c.price.trim().padStart(9))} ${c.chgCol(c.chg)} ${chalk.gray('│ ')}${c.trend}`;
   const l2 = `   ${chalk.gray('24h')} ${chalk.white(c.range.padEnd(24))} ${chalk.gray('│ ')}${chalk.cyan(('Vol ' + c.vol).padStart(11))}`;
   return [padLine(l1, width), padLine(l2, width)];
 }

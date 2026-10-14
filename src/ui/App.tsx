@@ -1,9 +1,68 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Box, Text, useInput, useStdout } from 'ink';
 import { Orchestrator } from '../runtime/Orchestrator.js';
 import { useStore } from '../store.js';
 import { clampSelection, MIN_COLS, MIN_ROWS, renderCockpit, ResizeWarning } from './panels.js';
 import { formatLocalTime } from './format.js';
+import { getSymbolRules, roundPrice } from '../binance/symbolRules.js';
+import type { MarketPriceInfo } from '../types.js';
+
+export function nextLerpPrice(sym: string, curr: number, target: number, tickSize: number): number {
+  const diff = target - curr;
+  if (Math.abs(diff) <= tickSize) return target;
+  const step = diff * 0.35;
+  const clamped = Math.abs(step) < tickSize ? Math.sign(diff) * tickSize : step;
+  return roundPrice(sym, curr + clamped);
+}
+
+export function updatePrices(
+  prev: Record<string, MarketPriceInfo>,
+  targets: Record<string, MarketPriceInfo>,
+  flashes: Record<string, number>,
+  now: number,
+): Record<string, MarketPriceInfo> | null {
+  let changed = false;
+  const next: Record<string, MarketPriceInfo> = { ...prev };
+  for (const [sym, target] of Object.entries(targets)) {
+    if (!target) continue;
+    if (!prev[sym]) {
+      next[sym] = target;
+      changed = true;
+      continue;
+    }
+    const curr = prev[sym];
+    const diff = target.price - curr.price;
+    if (diff !== 0) {
+      const { tickSize } = getSymbolRules(sym);
+      flashes[sym] = now;
+      const price = nextLerpPrice(sym, curr.price, target.price, tickSize);
+      next[sym] = { ...target, price, tickDirection: diff > 0 ? 'UP' : 'DOWN' };
+      changed = true;
+    } else if (curr.tickDirection && now - (flashes[sym] ?? 0) > 250) {
+      next[sym] = { ...curr, tickDirection: undefined };
+      changed = true;
+    }
+  }
+  return changed ? next : null;
+}
+
+function useLerpPrices(targetPrices: Record<string, MarketPriceInfo> | undefined): Record<string, MarketPriceInfo> | undefined {
+  const [displayed, setDisplayed] = useState(targetPrices);
+  const flashes = useRef<Record<string, number>>({});
+  const targetsRef = useRef(targetPrices);
+  targetsRef.current = targetPrices;
+
+  useEffect(() => {
+    // Fixed 20 FPS ticker steps smoothly towards current targets and decays color flashes
+    const timer = setInterval(() => {
+      if (!targetsRef.current) return;
+      setDisplayed((prev) => updatePrices(prev ?? {}, targetsRef.current!, flashes.current, Date.now()) ?? prev);
+    }, 50);
+    return () => clearInterval(timer);
+  }, []);
+
+  return displayed;
+}
 
 export default function App() {
   const { stdout } = useStdout();
@@ -95,7 +154,8 @@ export default function App() {
     return <ResizeWarning cols={cols} rows={rows} />;
   }
 
-  const cockpitLines = renderCockpit({ ...state, time, localTime, selPos: selectedIndex, isSyncing, totalWidth: cols, totalHeight: rows });
+  const lerpPrices = useLerpPrices(state.spotPrices);
+  const cockpitLines = renderCockpit({ ...state, spotPrices: lerpPrices, time, localTime, selPos: selectedIndex, isSyncing, totalWidth: cols, totalHeight: rows });
 
   return (
     <Box flexDirection="column" width={cols}>

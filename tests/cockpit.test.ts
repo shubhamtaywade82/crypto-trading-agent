@@ -6,6 +6,7 @@ import stringWidth from 'string-width';
 import { useStore } from '../src/store.js';
 import { formatLocalTime } from '../src/ui/format.js';
 import { clampSelection, MIN_COLS, MIN_ROWS, renderCockpit, type CockpitProps } from '../src/ui/panels.js';
+import { nextLerpPrice, updatePrices } from '../src/ui/App.js';
 import type { AgentId, AgentState, Position, StrategyMetrics } from '../src/types.js';
 
 export const strip = (line: string) => line.replace(/\x1b\[[0-9;]*m/g, '');
@@ -348,4 +349,44 @@ test('should render MTF trend confluence states including 3/3 and pullback in as
   assert.ok(text.includes('▲ BULLISH 3/3'), 'expected 3/3 bullish MTF confluence');
   assert.ok(text.includes('▼ PULLBACK'), 'expected pullback trend in output');
 });
+
+test('should render price with tickDirection color when ticking UP or DOWN', () => {
+  const [first, second] = config.symbols;
+  const props = baseProps({
+    spotPrices: {
+      [first.replace('USDT', '')]: { price: 80_000, changePct: 1.5, tickDirection: 'UP' },
+      [second.replace('USDT', '')]: { price: 2_500, changePct: -2.0, tickDirection: 'DOWN' },
+    },
+  });
+  const text = render(props);
+  assert.ok(text.includes('$80,000'), 'expected formatted price for first symbol');
+  assert.ok(text.includes('$2,500'), 'expected formatted price for second symbol');
+});
+
+test('nextLerpPrice: smoothly interpolates price snapped to symbol precision and tick size', () => {
+  setSymbolRules('BTCUSDT', { pricePrecision: 1, quantityPrecision: 3, tickSize: 0.1, stepSize: 0.001, minQty: 0, minNotional: 0 });
+
+  const step1 = nextLerpPrice('BTC', 65000.0, 65010.0, 0.1);
+  assert.equal(step1, 65003.5);
+
+  const snapped = nextLerpPrice('BTC', 65009.95, 65010.0, 0.1);
+  assert.equal(snapped, 65010.0);
+});
+
+test('updatePrices: sets tickDirection UP on increase, DOWN on decrease, and clears after decay', () => {
+  const prev = { BTC: { price: 65000.0, changePct: 1.0 } };
+  const targets = { BTC: { price: 65010.0, changePct: 1.0 } };
+  const flashes: Record<string, number> = {};
+
+  const next1 = updatePrices(prev, targets, flashes, 1000);
+  assert.ok(next1);
+  assert.equal(next1.BTC?.tickDirection, 'UP');
+
+  const settledPrev = { BTC: { price: 65010.0, changePct: 1.0, tickDirection: 'UP' as const } };
+  const next2 = updatePrices(settledPrev, targets, flashes, 1300);
+  assert.ok(next2);
+  assert.equal(next2.BTC?.tickDirection, undefined);
+});
+
+
 

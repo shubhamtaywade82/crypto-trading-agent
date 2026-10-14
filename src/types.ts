@@ -126,6 +126,7 @@ export interface MarketPriceInfo {
   volumeQuote?: number;
   sparkline?: string;
   trend?: string;
+  tickDirection?: 'UP' | 'DOWN';
 }
 
 export interface FundingInfo { rate: number; apr: number } // apr in % (rate × 3 × 365 × 100)

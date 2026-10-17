@@ -85,3 +85,78 @@ Playbooks arm on 15m or 1h context. A setup becomes ENTRY_ELIGIBLE only when all
 - The SDK's `syncTime` path is confirmed (§2). **Open.**
 
 Phase 2 then implements the playbook registry and the rule evaluator, each rule returning `{ ruleId, passed, reason, observedValue, threshold, evidenceTime }`, with NO_TRADE as an explicit outcome.
+
+---
+
+## 7. Phase 2: playbook registry and rule evaluator (implemented 2026-10-18)
+
+Code is in `src/playbooks/`. Tests are in `tests/playbooks.test.ts`. Nothing is wired to the orchestrator, replay or orders yet: that is Phase 4.
+
+### Pipeline
+
+1. **`buildPlaybookContext`** keeps closed bars only (`openTime + interval <= now`), sorted and unique. It refuses invalid OHLC, gaps and conflicting duplicates, and runs `analyzeSmcFrame` on exactly those bars. FVG, order-block and break indices therefore always refer to the candles the rules read. A frame with a data problem is left out, and its problem is recorded in `dataIssues`.
+2. **`deriveFacts`** locates, for one playbook and one direction: the zone-frame break, the entry zone, the structural stop, the arming event, the first 5m trigger after arming, the target, and the plan. It never reads the SMC outcome fields (`retestOutcome`, `followThroughOutcome`), because they resolve with later candles.
+3. **Rules** (`RULES`) judge the facts. Each has a stage.
+4. **`evaluatePlaybook`** applies the stages in order:
+   - Any CONTEXT or SETUP failure gives NO_TRADE.
+   - Otherwise, any TRIGGER failure gives WATCH. EXECUTION rules are then listed as `pending`, not failed.
+   - Otherwise, any EXECUTION failure gives NO_TRADE.
+   - Otherwise the result is ENTRY_ELIGIBLE, with the plan.
+   - It never throws. A rule or derivation error fails closed with its message.
+5. **Registry** (`PLAYBOOK_REGISTRY_VERSION = 1`) holds the three playbooks, each at version 1. It is validated at load:
+   - no unknown or duplicate rule;
+   - every stage present;
+   - the mandatory rules present (`frames_present`, `data_fresh`, `structural_stop_defined`, `setup_not_invalidated`, `trigger_confirmed`, `stop_geometry_valid`, `net_reward_risk_above_minimum`);
+   - params consistent.
+
+### Frames and arming
+
+All three playbooks use bias frames 4h and 1h, zone frame 15m, and trigger frame 5m.
+
+| Playbook | Zone | Armed when | Stop |
+| --- | --- | --- | --- |
+| `sweep_mss_fvg_reversal` | FVG of the displacement leg (between the protected swing and the break) | The 15m CHOCH candle closes | Protected swing − 0.2 ATR |
+| `bos_fvg_ob_continuation` | That FVG, else the break's order block | The first 5m bar after the break trades into the zone | Protected swing − 0.2 ATR |
+| `breakout_retest` | The broken level ± 0.15 ATR | The first 5m bar after the break touches the band and closes back beyond the level | min(retest extreme, band far edge) − 0.2 ATR |
+
+Common to all three:
+
+- **Trigger.** The first 5m break in the trade direction whose bar opened at or after arming. This is the approved §5 definition: a closed 5m bar beyond the last 5m swing.
+- **Entry.** The trigger's close.
+- **Target.** The nearest untaken liquidity beyond the entry: the 15m frame first, then 4h, then 1h.
+
+### Rule definitions (thresholds in the registry; all are starting values, not calibrated)
+
+| Rule | Stage | Passes when |
+| --- | --- | --- |
+| `frames_present` | CONTEXT | 4h, 1h, 15m and 5m all analysed |
+| `data_fresh` | CONTEXT | Every frame's last closed bar is less than 1 bar behind the clock |
+| `htf_not_opposed` / `htf_aligned` | CONTEXT | No bias frame trends against the direction / every bias frame trends with it |
+| `structure_break_in_direction` | SETUP | The latest 15m break is in the direction and of the required type (CHOCH, BOS, or ANY) |
+| `liquidity_swept_before_break` | SETUP | The break's leg took the prior opposing swing (`sweptLiquidityFirst`) |
+| `displacement_confirmed` | SETUP | Break body ÷ 15m ATR14 at the break ≥ 1.0 |
+| `breakout_volume` | SETUP | Break volume ÷ mean of the prior 20 bars ≥ 1.5 |
+| `entry_zone_present`, `zone_unmitigated` | SETUP | A zone exists, and no 15m bar has closed through its far edge since the break |
+| `structural_stop_defined`, `setup_not_invalidated` | SETUP | A stop exists, and no 15m or 5m bar has closed beyond it (for a breakout, beyond the level band) since the break |
+| `setup_fresh` | SETUP | Break age ≤ 16 bars of 15m |
+| `target_liquidity_available` | SETUP | Untaken liquidity exists beyond the reference price |
+| `trigger_window_open` | SETUP | The trigger closed within 6 bars of 5m after arming, or no trigger yet and fewer than 6 bars have passed. A failure means expired: NO_TRADE |
+| `armed`, `trigger_confirmed` | TRIGGER | The arming event and the 5m trigger have printed |
+| `spread_within_limit` | EXECUTION | Spread known and ≤ 5 bps |
+| `stop_geometry_valid` | EXECUTION | Stop on the correct side; risk between 0.25 and 4 ATR |
+| `entry_not_chased` | EXECUTION | Entry ≤ 0.5 ATR beyond the zone's near edge |
+| `entry_in_discount` | EXECUTION | Continuation only: entry in the lower half of the displacement leg for a LONG, the upper half for a SHORT |
+| `net_reward_risk_above_minimum` | EXECUTION | (reward − cost) ÷ (risk + cost) ≥ 1.5, with cost = entry × 2 × (taker fee + slippage) |
+
+### Interpretations taken
+
+- **"Not past the far edge of the zone" (§5)** is implemented as the chase gate (`entry_not_chased`). Read literally, a LONG 5m trigger that closes above its swing would almost always be past the top of the zone.
+- **Displacement** is the break candle's body, not its range.
+- **Order blocks** have no mitigation filter in the SMC engine, so `zone_unmitigated` applies one: no 15m close through the far edge.
+
+### Not done in Phase 2
+
+- Risk budget and sizing stay with `RiskEngine`. They are not duplicated here.
+- No setup grade, no calibrated probability (Phase 3), no OTE and no derivatives or flow context.
+- No live data adapter, replay integration or orders (Phase 4).
+- The SDK `syncTime` question (§2) is still open. It matters only when Phase 4 adds the SDK data adapter.

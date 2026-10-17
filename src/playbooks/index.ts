@@ -9,3 +9,6 @@ export type { AdmissionPolicy, BucketDimension, CalibrationReport, CalibrationSa
 export { bandOf, gradeVerdict, GRADE_VERSION, type SetupGrade } from './grade.js';
 export { PlaybookJournal, setupIdOf, type PlaybookDecisionRecord, type PlaybookOutcomeRecord } from './journal.js';
 export { DEFAULT_OUTCOME_POLICY, resolveOutcome, type OutcomeLabel, type OutcomePolicy, type ResolvedOutcome } from './outcome.js';
+export { createReadOnlyMarketClient, fetchSdkCandles, sdkKlineSource, type KlineSource } from './marketData.js';
+export { replayPlaybooks, type ReplayInput, type ReplaySummary } from './replay.js';
+export { walkForward, type WalkForwardFold, type WalkForwardReport } from './walkForward.js';

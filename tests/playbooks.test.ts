@@ -269,7 +269,7 @@ test('breakout retest: a 5m touch that does not close back above the level does 
 
 test('the registry is versioned, covers every stage, and refuses unsafe definitions', () => {
   const playbooks = listPlaybooks();
-  assert.deepEqual(playbooks.map((p) => `${p.id}@${p.version}`), ['sweep_mss_fvg_reversal@1', 'bos_fvg_ob_continuation@1', 'breakout_retest@1']);
+  assert.deepEqual(playbooks.map((p) => `${p.id}@${p.version}`), ['sweep_mss_fvg_reversal@2', 'bos_fvg_ob_continuation@2', 'breakout_retest@2']);
   for (const pb of playbooks) assert.equal(pb.params.maxTriggerBars, 6);
 
   assert.throws(() => validateRegistry([REVERSAL, REVERSAL]), /duplicate playbook/);
@@ -277,6 +277,7 @@ test('the registry is versioned, covers every stage, and refuses unsafe definiti
   assert.throws(() => validateRegistry([{ ...REVERSAL, rules: REVERSAL.rules.filter((r) => r !== 'net_reward_risk_above_minimum') }]), /mandatory rule net_reward_risk_above_minimum/);
   assert.throws(() => validateRegistry([{ ...REVERSAL, version: 0 }]), /version/);
   assert.throws(() => validateRegistry([withParams(CONTINUATION, { maxLegPosition: undefined })]), /maxLegPosition/);
+  assert.throws(() => validateRegistry([withParams(REVERSAL, { maxTriggerBars: 3 })]), /trigger swing length 3 must be below maxTriggerBars 3/);
 });
 
 test('closedBars drops the forming bar and refuses gaps, invalid bars and conflicting duplicates', () => {

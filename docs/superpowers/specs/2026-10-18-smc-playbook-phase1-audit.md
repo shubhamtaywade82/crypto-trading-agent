@@ -22,7 +22,7 @@ Every claim below was checked against source or the installed SDK typings on thi
 | `futures.market.klines(symbol, interval, options)` | Confirmed | SDK typings line 2796 |
 | `futures.data.openInterestHist(symbol, period, limit)` | Confirmed | SDK typings line 4365 |
 | `futures.data.fundingRateHistory(symbol, options)` | Confirmed | SDK typings line 4358 |
-| `client.syncTime()` on the top-level client | **Not confirmed.** Only `core.syncTime()` appears in the typings (line 1292 and the module docs). Check before use. | SDK typings |
+| `client.syncTime()` on the top-level client | **Confirmed (corrected in Phase 4).** `declare class BinanceClient { … syncTime(): Promise<void> }` in `dist/index.d.ts`. The Phase 1 grep missed it. | SDK typings |
 | "Read-only during research" | Supported by `safety.readOnly`. Not yet applied in this repo. | `SmcMlRuntime.ts:124` constructs the client with no `safety` option |
 
 ## 3. Findings in the existing code
@@ -82,7 +82,7 @@ Playbooks arm on 15m or 1h context. A setup becomes ENTRY_ELIGIBLE only when all
 
 - The owner has accepted §3A, the plan for the SMC-ML order path. Either it goes through the risk gate, or it is paused as MiniCPM was. **Approved 2026-10-18: paused.** `SmcMlRuntimeOptions.entriesEnabled` defaults to false. OPEN and ADD are refused before any venue call, and EXIT still runs (`tests/smcMlEntryPause.test.ts`).
 - The owner has accepted the 5m trigger definition in §5, or has set different parameters. **Approved 2026-10-18 as proposed.** The 6-bar age and the displacement threshold remain uncalibrated parameters.
-- The SDK's `syncTime` path is confirmed (§2). **Open.**
+- The SDK's `syncTime` path is confirmed (§2). **Resolved in Phase 4:** `BinanceClient.syncTime()` exists.
 
 Phase 2 then implements the playbook registry and the rule evaluator, each rule returning `{ ruleId, passed, reason, observedValue, threshold, evidenceTime }`, with NO_TRADE as an explicit outcome.
 
@@ -214,3 +214,67 @@ The grade has five components: context, break quality, location, reward and exec
 
 - The journal is not fed yet. Until Phase 4 runs the playbooks through replay and live data, every bucket has n = 0, and the gate refuses every setup. That is the intended starting state.
 - There are no derivatives or volatility bucket dimensions, and funding is not modelled in outcomes.
+
+---
+
+## 9. Phase 4: market data, causal replay and walk-forward (2026-10-18)
+
+### Built
+
+| Module | What it does |
+| --- | --- |
+| `src/playbooks/marketData.ts` | SDK history adapter. `fetchSdkCandles` pages `client.futures.market.klines` 1500 bars at a time, keeps closed bars only, and refuses a page that does not advance. `createReadOnlyMarketClient` builds a `BinanceClient` with `safety: { readOnly: true, allowedSymbols }` and calls `syncTime()`. |
+| `src/playbooks/replay.ts` | Causal replay. It steps every 5m close and gives each frame only the bars closed by then, in a 300-bar window (the live candle limit). It re-analyses a frame only when that frame has a new bar, and records a decision only at its own trigger close. Outcomes are resolved afterwards. A gap in any series aborts the replay. |
+| `src/playbooks/walkForward.ts` | Admits buckets using only what was known at each fold's start, then compares the admitted setups' E[R] in the fold against all setups. |
+| `scripts/playbook-replay.ts` | CLI: `--symbol --days --source archive\|sdk --spread-bps --folds --journal`. |
+
+**Tests** (`tests/playbookReplay.test.ts`) cover:
+
+- SDK pagination, and the error on a page that does not advance.
+- Stepping, trigger-close-only recording, and idempotency.
+- A causality test: inverting every bar after time X changes no verdict at or before X.
+- Refusal of a series with a gap.
+- The walk-forward admission order.
+
+**Not run against the venue.** `fapi.binance.com` answers HTTP 451 from the build environment, so the SDK path is covered by unit tests with a fake source only. Replays used `data.binance.vision` archives.
+
+### Defect found and fixed: registry v2
+
+On 30 days of real SOLUSDT, registry v1 produced 19 valid setups, and not one received a 5m trigger inside its 6-bar window. The cause: the 5m frame was analysed with the SMC engine's default `swingLength` of 10. A 10-bar swing is confirmed only 10 bars after it forms, which does not fit a 6-bar window, and §5 had said the trigger swing length is its own parameter.
+
+Registry v2 (`PLAYBOOK_REGISTRY_VERSION = 2`, every playbook at version 2) sets the 5m swing length to 3 (`src/playbooks/frameConfig.ts`). Validation now refuses any playbook whose trigger swing length is not below its `maxTriggerBars`.
+
+### Real-data result: SOLUSDT, registry v2, archive, assumed spread 1 bps
+
+| Window | Steps | ENTRY_ELIGIBLE | WATCH | NO_TRADE |
+| --- | --- | --- | --- | --- |
+| 30 days to 2026-10-16 | 8,641 | 0 | 434 | 51,412 |
+| 90 days to 2026-10-16 | 25,921 | 0 | 1,252 | 154,274 |
+
+**Why nothing triggers.** I inspected the 5m structure around each WATCH setup (30 days, swing length 3):
+
+- The 5m break in the trade direction usually prints 2 to 5 bars **before** the setup arms. It belongs to the same impulse that closes the 15m break.
+- A further break after arming needs a pullback, a new confirmed swing, and a break of it, all inside 6 bars. That almost never happens.
+
+**Sensitivity to the trigger window.** Counts of decisions only; no outcome was inspected:
+
+| `maxTriggerBars` | Valid setups whose trigger fired in time | ENTRY_ELIGIBLE | Execution gates that refused them |
+| --- | --- | --- | --- |
+| 6 (approved) | 0 | 0 | n/a |
+| 12 | 4 | 0 | `entry_not_chased` 4, `stop_geometry_valid` 3, `net_reward_risk_above_minimum` 3 |
+| 24 | 9 | 0 | `entry_not_chased` 9, `net_reward_risk_above_minimum` 6, `stop_geometry_valid` 4, `entry_in_discount` 1 |
+
+Even with a 24-bar window, every triggered setup is refused at execution, most often as a chase. A break that comes after a pullback closes far from the zone.
+
+### Decision required (owner)
+
+The definitions, not the code, produce no trades. Any change below is a new registry version, and it must be judged on replay outcomes it has not been tuned on:
+
+1. **Trigger on the arming impulse.** Accept a 5m break inside the 15m arming bar. The trigger then confirms nothing beyond the 15m break itself.
+2. **Enter at the zone, not at the trigger close.** A limit at the zone's near edge after the 5m trigger removes the chase by construction, but adds fill risk. The outcome model would need a limit-fill rule for it.
+3. **Keep v2 as is.** It is a valid finding: these three playbooks, as defined, do not offer tradeable SOLUSDT setups over the last 90 days.
+
+### Not done in Phase 4
+
+- **Paper execution through the orchestrator is not wired.** With zero eligible setups and an empty journal, the calibration gate refuses everything, so the wiring cannot place an order yet. It is the first task once the decision above produces journal entries.
+- No other symbols replayed yet.

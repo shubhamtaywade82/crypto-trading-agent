@@ -1,6 +1,7 @@
 import type { Candle } from '../types.js';
 import { analyzeSmcFrame } from '../strategies/smc-ml/SmcMlEngine.js';
 import { DEFAULT_SMC_CONFIG, type SMCConfig, type SMCFrame, type SMCFrameAnalysis } from '../strategies/smc-ml/types.js';
+import { frameConfig, PLAYBOOK_FRAME_OVERRIDES } from './frameConfig.js';
 import type { ExecutionSnapshot, PlaybookContext } from './types.js';
 
 export const FRAME_MS: Readonly<Record<SMCFrame, number>> = {
@@ -52,15 +53,17 @@ export function buildPlaybookContext(
   rawCandles: Partial<Record<SMCFrame, readonly Candle[]>>,
   execution: ExecutionSnapshot,
   smcConfig: SMCConfig = DEFAULT_SMC_CONFIG,
+  overrides: Partial<Record<SMCFrame, Partial<SMCConfig>>> = PLAYBOOK_FRAME_OVERRIDES,
 ): PlaybookContext {
   const candles: Partial<Record<SMCFrame, Candle[]>> = {};
   const frames: Partial<Record<SMCFrame, SMCFrameAnalysis>> = {};
   const dataIssues: Partial<Record<SMCFrame, string>> = {};
   for (const frame of Object.keys(rawCandles) as SMCFrame[]) {
     try {
+      const cfg = frameConfig(smcConfig, frame, overrides);
       const bars = closedBars(frame, rawCandles[frame] ?? [], now);
-      if (bars.length < smcConfig.swingLength * 2 + 1) throw new Error(`${bars.length} closed ${frame} bars, need ${smcConfig.swingLength * 2 + 1}`);
-      frames[frame] = analyzeSmcFrame(frame, bars, smcConfig);
+      if (bars.length < cfg.swingLength * 2 + 1) throw new Error(`${bars.length} closed ${frame} bars, need ${cfg.swingLength * 2 + 1}`);
+      frames[frame] = analyzeSmcFrame(frame, bars, cfg);
       candles[frame] = bars;
     } catch (err) {
       dataIssues[frame] = err instanceof Error ? err.message : String(err);

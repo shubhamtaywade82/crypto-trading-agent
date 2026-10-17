@@ -1,3 +1,5 @@
+import { DEFAULT_SMC_CONFIG } from '../strategies/smc-ml/types.js';
+import { frameConfig, PLAYBOOK_FRAME_OVERRIDES } from './frameConfig.js';
 import { RULES } from './rules.js';
 import type { PlaybookDefinition, PlaybookId, PlaybookParams } from './types.js';
 
@@ -6,7 +8,8 @@ import type { PlaybookDefinition, PlaybookId, PlaybookParams } from './types.js'
  * always names the exact definition it was judged by. Every threshold here is a starting value, not a calibrated one
  * (spec 2026-10-18 §5 and §6): calibration is Phase 3.
  */
-export const PLAYBOOK_REGISTRY_VERSION = 1;
+/** v2 (2026-10-18): the 5m trigger swing length is 3, not the engine default 10 (frameConfig.ts). */
+export const PLAYBOOK_REGISTRY_VERSION = 2;
 
 const FRAMES = { bias: ['4h', '1h'], zone: '15m', trigger: '5m' } as const;
 
@@ -26,7 +29,7 @@ const BASE_PARAMS: Omit<PlaybookParams, 'requiredBreakType'> = {
 const PLAYBOOKS: readonly PlaybookDefinition[] = [
   {
     id: 'sweep_mss_fvg_reversal',
-    version: 1,
+    version: 2,
     kind: 'REVERSAL',
     thesis: 'Price takes opposing liquidity, then shifts structure (CHOCH) with displacement that leaves an FVG; enter on a 5m confirmation near the FVG.',
     frames: FRAMES,
@@ -42,7 +45,7 @@ const PLAYBOOKS: readonly PlaybookDefinition[] = [
   },
   {
     id: 'bos_fvg_ob_continuation',
-    version: 1,
+    version: 2,
     kind: 'CONTINUATION',
     thesis: 'With 4h and 1h aligned, a displacing BOS leaves an FVG or order block; enter when price pulls back into it and 5m confirms.',
     frames: FRAMES,
@@ -58,7 +61,7 @@ const PLAYBOOKS: readonly PlaybookDefinition[] = [
   },
   {
     id: 'breakout_retest',
-    version: 1,
+    version: 2,
     kind: 'CONTINUATION',
     thesis: 'A displacing, high-volume close through a structure level is retested on 5m and holds; enter on the 5m confirmation.',
     frames: FRAMES,
@@ -96,6 +99,11 @@ export function validateRegistry(playbooks: readonly PlaybookDefinition[]): void
       throw new Error(`${pb.id}: breakout_volume needs minBreakoutVolumeMultiple and volumeLookback`);
     }
     if (pb.params.minStopAtr >= pb.params.maxStopAtr) throw new Error(`${pb.id}: minStopAtr must be below maxStopAtr`);
+    // A trigger swing is confirmed only swingLength bars after it forms: it must fit inside the trigger window
+    const triggerSwing = frameConfig(DEFAULT_SMC_CONFIG, pb.frames.trigger, PLAYBOOK_FRAME_OVERRIDES).swingLength;
+    if (triggerSwing >= pb.params.maxTriggerBars) {
+      throw new Error(`${pb.id}: trigger swing length ${triggerSwing} must be below maxTriggerBars ${pb.params.maxTriggerBars}`);
+    }
   }
 }
 

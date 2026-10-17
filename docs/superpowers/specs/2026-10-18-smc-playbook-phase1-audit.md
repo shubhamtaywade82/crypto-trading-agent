@@ -160,3 +160,57 @@ Common to all three:
 - No setup grade, no calibrated probability (Phase 3), no OTE and no derivatives or flow context.
 - No live data adapter, replay integration or orders (Phase 4).
 - The SDK `syncTime` question (§2) is still open. It matters only when Phase 4 adds the SDK data adapter.
+
+---
+
+## 8. Phase 3: outcomes, calibrated probability and grade (implemented 2026-10-18)
+
+Code is in `src/playbooks/` (`grade.ts`, `outcome.ts`, `journal.ts`, `calibration.ts`), with a report script at `scripts/playbook-calibration.ts`. Tests are in `tests/playbookCalibration.test.ts`. Nothing is wired into the trading loop or replay yet (Phase 4), so the journal starts empty.
+
+### Three separate outputs
+
+| Output | Source | Used for |
+| --- | --- | --- |
+| Rule verdict | Phase 2 rule engine | Whether the setup is permitted |
+| Grade (0 to 100, band A/B/C) | `gradeVerdict`, from the evidence the rules recorded | Ranking only. It is never a probability and never an input to one. It reaches the estimate only when the grade band is chosen as a bucket dimension, which is how one tests whether it ranks |
+| Calibrated estimate | `estimateOutcome`, from resolved outcomes | The admission gate |
+
+The grade has five components: context, break quality, location, reward and execution. Displacement, the sweep and the FVG are one event, so they form one component (break quality) rather than three votes.
+
+### Outcome definition (fixed before any outcome is collected)
+
+- **Outcome.** TARGET (TP before SL), STOP, or TIMEOUT within 48 bars of 5m (4 h), after taker fee and slippage on both legs. Funding is not modelled.
+- **Fill.** Counted only when the first 5m bar after the trigger opens at or better than the limit, at that open. Live entries rest only 120 s, less than one bar, so a later touch inside the bar cannot be attributed. This undercounts fills, and the fill rate is reported with every estimate.
+- **Exit.** Within a bar, the stop is tested before the target. A gap through the stop exits at the open.
+- **Missing data.** Any gap, a missing first bar, or candles ending early gives UNRESOLVED. It is never written and never counted.
+
+### Calibration
+
+- **Buckets.** `playbook@version|direction` by default. The grade band can be added as a dimension.
+- **No look-ahead.** An estimate at time *t* uses only setups decided before *t* and resolved by *t* (`knownAt`).
+- **Estimate.** Over filled setups:
+  - the probabilities of TARGET, STOP and TIMEOUT;
+  - a Wilson interval on p(TARGET);
+  - the mean net R per outcome;
+  - E[R], with a one-sided lower bound from a day-clustered bootstrap at 95%. This reuses `src/research/Bootstrap.ts`.
+- **Gate (`gateVerdict`).** An ENTRY_ELIGIBLE setup becomes NO_TRADE unless all of these hold:
+  - at least 200 filled outcomes;
+  - at least 20 distinct decision days;
+  - an E[R] lower bound above 0.05 R at confidence 0.95.
+
+  The day minimum is an added safeguard: with a single day, the day-clustered bootstrap collapses to the sample mean. The other values are the v1 contract's §8.
+- **Calibration check (`prequentialCalibration`).** Walks setups in decision order and scores each against the rate known just before it, using a Beta(1,1) prior. It reports the Brier score of the bucket rate against the pooled rate, plus reliability bins. A bucket rate is informative only if it beats the pooled rate out of sample.
+
+### Journal
+
+`PlaybookJournal` is append-only JSONL.
+
+- Each ENTRY_ELIGIBLE decision is stored once, keyed `playbook@version:symbol:direction:triggeredAt`, with the full rule evidence, the grade and the bucket.
+- Each outcome is stored once.
+- Reloading folds the file back, so a restart never records a setup or outcome twice.
+- Unreadable lines are counted, not ignored.
+
+### Not done in Phase 3
+
+- The journal is not fed yet. Until Phase 4 runs the playbooks through replay and live data, every bucket has n = 0, and the gate refuses every setup. That is the intended starting state.
+- There are no derivatives or volatility bucket dimensions, and funding is not modelled in outcomes.

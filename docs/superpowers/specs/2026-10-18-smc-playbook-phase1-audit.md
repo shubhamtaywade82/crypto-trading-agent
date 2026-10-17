@@ -1,6 +1,6 @@
 # SMC/ICT Playbook Engine: Phase 1 audit
 
-**Status:** audit complete, no trading code changed. **Date:** 2026-10-18. **Scope:** Phase 1 of the playbook plan only: audit the existing SMC modules, fix one feature schema, define explicit 5m confirmation. Phases 2 to 5 wait for review of this document.
+**Status:** audit complete; Phase 1 decisions approved 2026-10-18 (§6). The only code change is the SMC-ML entry pause. **Date:** 2026-10-18. **Scope:** Phase 1 of the playbook plan only: audit the existing SMC modules, fix one feature schema, define explicit 5m confirmation. Phases 2 to 5 wait for review of this document.
 
 Every claim below was checked against source or the installed SDK typings on this branch. Items marked UNVERIFIED were not checked.
 
@@ -80,8 +80,8 @@ Playbooks arm on 15m or 1h context. A setup becomes ENTRY_ELIGIBLE only when all
 
 ## 6. Phase 2 entry criteria
 
-- The owner has accepted §3A, the plan for the SMC-ML order path. Either it goes through the risk gate, or it is paused as MiniCPM was.
-- The owner has accepted the 5m trigger definition in §5, or has set different parameters.
-- The SDK's `syncTime` path is confirmed (§2).
+- The owner has accepted §3A, the plan for the SMC-ML order path. Either it goes through the risk gate, or it is paused as MiniCPM was. **Approved 2026-10-18: paused.** `SmcMlRuntimeOptions.entriesEnabled` defaults to false. OPEN and ADD are refused before any venue call, and EXIT still runs (`tests/smcMlEntryPause.test.ts`).
+- The owner has accepted the 5m trigger definition in §5, or has set different parameters. **Approved 2026-10-18 as proposed.** The 6-bar age and the displacement threshold remain uncalibrated parameters.
+- The SDK's `syncTime` path is confirmed (§2). **Open.**
 
 Phase 2 then implements the playbook registry and the rule evaluator, each rule returning `{ ruleId, passed, reason, observedValue, threshold, evidenceTime }`, with NO_TRADE as an explicit outcome.

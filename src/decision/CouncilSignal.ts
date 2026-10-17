@@ -26,18 +26,17 @@ function matchingScenario(setup: SetupMap, scenarioId: string | null): SetupScen
  * result still passes through RiskAgent.gate() like every other signal.
  *
  * Returns null (no trade) for anything short of that: WATCH/NO_TRADE
- * verdicts, a NEUTRAL stance, a scenario that is only FORMING/ARMED, a
- * mismatched direction, or a probability below the configured floor.
+ * verdicts, a NEUTRAL stance, a scenario that is only FORMING/ARMED, or a
+ * mismatched direction. The chair's stated probability is never a gate (an
+ * LLM's own number is not calibrated); it is carried as `confidence` for the log.
  */
 export function buildCouncilSignal(
   state: MarketState,
   setup: SetupMap,
   result: CouncilResult,
-  minProbability: number,
 ): Signal | null {
   const { chair } = result;
   if (chair.action !== 'TRADE' || chair.stance === 'NEUTRAL') return null;
-  if (chair.probability < minProbability) return null;
 
   const scenario = matchingScenario(setup, chair.scenarioId);
   if (!scenario || scenario.state !== 'TRIGGERED') return null;

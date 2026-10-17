@@ -19,8 +19,8 @@ export const EnvSchema = z.object({
   OLLAMA_SKEPTIC_MODEL: z.string().optional(),
   OLLAMA_CHAIR_MODEL: z.string().optional(),
   LLM_COUNCIL: z.enum(['off', 'on']).default('on'),
-  LLM_COUNCIL_AUTOTRADE: z.enum(['off', 'on']).default('on'),
-  LLM_COUNCIL_MIN_PROBABILITY: z.coerce.number().min(0.5).max(0.95).default(0.65),
+  /** Refused when on (see superRefine): an LLM-selected entry needs the expectancy gate, not a stated probability. */
+  LLM_COUNCIL_AUTOTRADE: z.enum(['off', 'on']).default('off'),
   OLLAMA_API_KEY_1: z.string().optional(),
   OLLAMA_API_KEY_2: z.string().optional(),
   OLLAMA_API_KEY_3: z.string().optional(),
@@ -67,6 +67,8 @@ export const EnvSchema = z.object({
   PM_TRAIL_ATR_MEDIUM: z.coerce.number().positive().default(2.5),
   PM_TRAIL_ATR_HIGH: z.coerce.number().positive().default(3.2),
 
+  /** Live entries rest as GTC limits and are cancelled after this long unfilled (spec: docs/superpowers/specs/2026-10-17-intraday-decision-contract-design.md). */
+  ENTRY_ORDER_TTL_MS: z.coerce.number().int().min(10_000).max(900_000).default(120_000),
   SAFETY: z.enum(['off', 'on']).default('on'),
   SAFETY_TICK_STALE_MS: z.coerce.number().int().positive().default(15_000),
   SAFETY_MARK_STALE_MS: z.coerce.number().int().positive().default(30_000),
@@ -132,6 +134,13 @@ export const EnvSchema = z.object({
   if (env.PM_TP1_FRACTION + env.PM_TP2_FRACTION >= 1) {
     ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['PM_TP2_FRACTION'], message: 'PM_TP1_FRACTION + PM_TP2_FRACTION must be below 1 so a runner remains' });
   }
+  if (env.LLM_COUNCIL_AUTOTRADE === 'on') {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['LLM_COUNCIL_AUTOTRADE'],
+      message: 'LLM_COUNCIL_AUTOTRADE=on is refused: LLM-selected entries need the expectancy gate (docs/superpowers/specs/2026-10-17-intraday-decision-contract-design.md, section 5), which is not implemented yet',
+    });
+  }
   if (env.MODE !== 'paper' || !env.PAPER_EXCHANGE_URL || env.PAPER_EXCHANGE_ACCOUNT_ID) return;
   ctx.addIssue({
     code: z.ZodIssueCode.custom,
@@ -191,6 +200,7 @@ export const config = {
   },
   risk: riskFromEnv(env),
   riskEngine: env.RISK_ENGINE,
+  entryOrderTtlMs: env.ENTRY_ORDER_TTL_MS,
   /** Cap on summed loss-at-stop of open positions plus the new trade, % of equity. */
   portfolioRiskPct: env.MAX_PORTFOLIO_RISK_PCT,
   sizing: {
@@ -219,9 +229,8 @@ export const config = {
   },
   llmCouncil: {
     enabled: env.LLM_COUNCIL === 'on',
-    /** When on, a chair TRADE verdict on a TRIGGERED setup becomes a real Signal through the normal risk gate. Off by default: the council stays advisory-only. */
+    /** Always false today: superRefine refuses LLM_COUNCIL_AUTOTRADE=on until the expectancy gate exists. The council stays advisory-only. */
     autoTrade: env.LLM_COUNCIL_AUTOTRADE === 'on',
-    minProbability: env.LLM_COUNCIL_MIN_PROBABILITY,
   },
   marketDataV2: {
     enabled: true,

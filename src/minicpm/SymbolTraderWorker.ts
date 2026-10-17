@@ -13,6 +13,8 @@ export interface SymbolWorkerConfig {
   apiKey: string;
   marginPerPosition: number;
   leverage: number;
+  /** When false, no entry is submitted: this path sizes by fixed margin and takes the LLM's stop distance unbounded (spec section 2, R1). Exits still run. */
+  entriesEnabled: boolean;
 }
 
 export interface WorkerStatus {
@@ -135,6 +137,11 @@ export class SymbolTraderWorker {
       return;
     }
 
+    if (!this.config.entriesEnabled) {
+      this.status.state = 'IDLE';
+      this.status.lastDecision = 'ENTRIES PAUSED: this order path bypasses RiskEngine (spec section 2, R1)';
+      return;
+    }
     const input = this.buildPromptInput(params);
     if (!input) return;
 
@@ -167,6 +174,8 @@ export class SymbolTraderWorker {
   }
 
   private async executeEntry(rec: LlmTradeRecommendation, markPrice: number): Promise<void> {
+    // The only entry submission: refused while paused, even if evaluate() were ever changed to reach it
+    if (!this.config.entriesEnabled) return;
     const notional = this.config.marginPerPosition * 0.98 * this.config.leverage;
     const quantity = Number((notional / markPrice).toFixed(4));
     const side = rec.action === 'ENTER_LONG' ? 'buy' : 'sell';

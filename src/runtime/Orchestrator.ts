@@ -140,6 +140,7 @@ export class Orchestrator extends EventEmitter {
       throw new Error(`live start blocked: ${blockers.join('; ')}`);
     }
     if (this.requireApproval) this.log('SYSTEM', `LIVE: ${this.approved.size === 0 ? 'no strategies approved, nothing will trade (run scripts/live-readiness.ts)' : `approved strategies: ${[...this.approved].join(', ')}`}`, this.approved.size === 0 ? 'warn' : 'info');
+    this.binance.setEntryLog((message, level) => this.log('SYSTEM', message, level));
     this.log('SYSTEM', `Orchestrator started in ${config.mode.toUpperCase()} mode`, 'info');
     announceStartup({ killSwitch: this.killSwitch, hooks: this.hooks, warn: (message) => this.log('SYSTEM', message, 'warn') });
     const dropped = this.binance.dropUnlistedPositions(config.symbols);
@@ -397,7 +398,7 @@ export class Orchestrator extends EventEmitter {
       const votes = result.opinions.map((opinion) => opinion.persona + '=' + opinion.stance).join(' ');
       this.log('SYSTEM', 'AI-COUNCIL ' + state.symbol + ': ' + votes + ' | CHAIR=' + result.chair.action + '/' + result.chair.stance + ' ' + result.chair.rationale, 'info');
       if (!config.llmCouncil.autoTrade) return;
-      const signal = buildCouncilSignal(state, setup, result, config.llmCouncil.minProbability);
+      const signal = buildCouncilSignal(state, setup, result);
       if (signal) {
         this.pendingCouncilSignals.push(signal);
         this.log('SYSTEM', `AI-COUNCIL queued ${signal.type} ${signal.symbol} for the next risk gate pass (${signal.reason})`, 'info');

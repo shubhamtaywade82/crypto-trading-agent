@@ -1,6 +1,6 @@
 # Intraday Decision Contract, v1
 
-**Status:** proposed, not implemented. **Date:** 2026-10-17. **Scope:** SOLUSDT on Binance USD-M perpetuals (see §11.1 before implementing).
+**Status:** decisions taken 2026-10-17; the live-path changes are on the branch (§13). Not implemented: the expectancy gate (§5), TIME_STOP (§6), replay limit fills (G8). **Not safe for live use until §13 open item 1 is fixed.** **Date:** 2026-10-17. **Scope:** SOLUSDT on Binance USD-M perpetuals (§11.1).
 
 This is the contract between the deterministic decision layer, the LLM, the risk gate and the order manager. §2 records what the code does today, checked against source on this branch. Anything marked **PROPOSED** is not in code and needs calibration before it is used.
 
@@ -20,13 +20,13 @@ This is the contract between the deterministic decision layer, the LLM, the risk
 
 | # | Requirement | What the code does | Status |
 | --- | --- | --- | --- |
-| R1 | LLM cannot place or size orders | MiniCPM worker: the LLM returns `ENTER_LONG` / `ENTER_SHORT` with stop and target. `SymbolTraderWorker.executeEntry` calls `client.submitOrder` directly (`src/minicpm/SymbolTraderWorker.ts:176`). Nothing under `src/minicpm` references `RiskEngine`, `RiskAgent`, `MarketSafety`, the kill switch or `findUnprotected`. The client is typed as `PaperExchangeClient`, so the path is paper-only today, but it bypasses the gate for any venue. | **VIOLATED** |
-| R2 | Trade gated by calibrated probability | `CouncilSignal.ts:40` compares the chair's raw `probability` (LLM-stated, clamped to 0.05–0.95 in `TradingCouncil.ts`) with `LLM_COUNCIL_MIN_PROBABILITY` (0.65). `LLM_COUNCIL_AUTOTRADE` defaults to `on` in `config.ts`, so the default configuration trades on this number. Brier scores are computed (`AgentLedger.ts:156`) and fed into prompts, not into the gate. | **VIOLATED** |
+| R1 | LLM cannot place or size orders | MiniCPM worker: the LLM returns `ENTER_LONG` / `ENTER_SHORT` with stop and target. `SymbolTraderWorker.executeEntry` calls `client.submitOrder` directly (`src/minicpm/SymbolTraderWorker.ts:176`). Nothing under `src/minicpm` references `RiskEngine`, `RiskAgent`, `MarketSafety`, the kill switch or `findUnprotected`. The client is typed as `PaperExchangeClient`, so the path is paper-only today, but it bypasses the gate for any venue. | **CONTAINED** (entries paused, §13) |
+| R2 | Trade gated by calibrated probability | `CouncilSignal.ts:40` compares the chair's raw `probability` (LLM-stated, clamped to 0.05–0.95 in `TradingCouncil.ts`) with `LLM_COUNCIL_MIN_PROBABILITY` (0.65). `LLM_COUNCIL_AUTOTRADE` defaults to `on` in `config.ts`, so the default configuration trades on this number. Brier scores are computed (`AgentLedger.ts:156`) and fed into prompts, not into the gate. | **FIXED** (§13) |
 | R3 | Prices come from deterministic code | Council path: stop and target come from the SetupEngine scenario. MiniCPM path: the LLM's stop and target are used as returned. `MiniCpmService.ts:89-94` checks only that the stop is on the correct side of entry; the 0.5% minimum target and the swing-low rule exist only in the prompt (`MiniCpmPrompt.ts:38-42`). `SymbolTraderWorker.ensureRecoveryLevels` invents a 1.5% stop and a 1% target when levels are missing. | **VIOLATED** (MiniCPM) |
 | R4 | Expectancy gate | `riskEngine.ts` checks sizing, risk per trade, leverage, position count, daily loss, loss streak, portfolio limits, portfolio risk and circuit state. The geometric `min_rr` check runs only when `MIN_RR > 0`, and its default is 0. No expectancy check exists. | **MISSING** |
-| R5 | Limit entries with TTL and optional post-only | Live entries are `type: 'MARKET'` (`client.ts:214`). No TTL, no post-only. Repricing exists only for exit stop orders (`remoteOrders.ts:247`). | **MISSING** |
-| R6 | Protection confirmed before OPEN | Live: protection is placed immediately after the entry call returns (`client.ts:218`). The entry call uses the default ACK response, which the code's own comment (`client.ts:261`) says is not enough to know the executed quantity. There is no fill or protection-ack state. | **PARTIAL** |
-| R7 | Partial entry fills | `submitLiveOrder` returns `{orderId, status}` only; executed quantity is not read. Protection uses `closePosition`, so it covers whatever fills, but no state records a partial entry. | **MISSING** |
+| R5 | Limit entries with TTL and optional post-only | Live entries are `type: 'MARKET'` (`client.ts:214`). No TTL, no post-only. Repricing exists only for exit stop orders (`remoteOrders.ts:247`). | **IMPLEMENTED**, live only (§13) |
+| R6 | Protection confirmed before OPEN | Live: protection is placed immediately after the entry call returns (`client.ts:218`). The entry call uses the default ACK response, which the code's own comment (`client.ts:261`) says is not enough to know the executed quantity. There is no fill or protection-ack state. | **IMPLEMENTED**, live only (§13) |
+| R7 | Partial entry fills | `submitLiveOrder` returns `{orderId, status}` only; executed quantity is not read. Protection uses `closePosition`, so it covers whatever fills, but no state records a partial entry. | **IMPLEMENTED**, live only (§13) |
 | R8 | Exchange-side stops | Live: `STOP_MARKET` / `TAKE_PROFIT_MARKET` with `closePosition` (`placeServerProtectionOrders`). paper_exchange: exits are agent-side, and the README states that if the agent is offline nothing exits. | **PARTIAL** (paper path violates) |
 | R9 | Stale data blocks entries | `MarketSafety` returns NO_ENTRY or HALT on stale ticks or marks (`SAFETY_TICK_STALE_MS` 15 s, `SAFETY_MARK_STALE_MS` 30 s). | **EXISTS** |
 | R10 | Kill switch and drawdown circuit | `src/ops/killSwitch.ts`; `riskConfig.ts` circuit states NORMAL → CAUTION → REDUCED → HALTED → EMERGENCY. | **EXISTS** |
@@ -224,15 +224,15 @@ Any (state, event) pair not listed is rejected and journaled as `INVALID_TRANSIT
 | `SLIPPAGE_BUFFER_RATE` | 0.0002 | Slippage in the cost model |
 | `SAFETY_TICK_STALE_MS` / `SAFETY_MARK_STALE_MS` | 15000 / 30000 | Stale-data gate |
 | `MIN_LIQ_BUFFER_ATR` | 1.2 | **README says 2; the schema default is 1.2. Resolve before implementing.** |
-| `LLM_COUNCIL_MIN_PROBABILITY` | 0.65 | **Remove from the gate (R2).** |
-| `LLM_COUNCIL_AUTOTRADE` | on | **Default on, so the LLM probability gate is live by default.** |
+| `LLM_COUNCIL_MIN_PROBABILITY` | removed | Done (R2). |
+| `LLM_COUNCIL_AUTOTRADE` | off | Done: `on` is refused at startup until the expectancy gate exists. |
+| `ENTRY_ORDER_TTL_MS` | 120000 | Implemented. Live entry TTL, bounded 10 s to 15 min. |
 
 **PROPOSED** (not in config; values need calibration unless stated):
 
 | Variable | Proposed value | Purpose |
 | --- | --- | --- |
-| `ENTRY_ORDER_TYPE` | `LIMIT` | `LIMIT` or `MARKET`. `MARKET` is used only for EMERGENCY_FLATTEN. |
-| `ENTRY_ORDER_TTL_MS` | 120000 | About two one-minute bars |
+| `ENTRY_ORDER_TYPE` | dropped | Live entries are LIMIT only in v1 (decision 4). Reduce-only MARKET remains for flattening. |
 | `ENTRY_MAX_REPRICES` | 0 | No chasing in v1 |
 | `MAKER_FEE_RATE` | none; set from the account tier | Required before post-only EV |
 | `EV_CONFIDENCE` | 0.95 | One-sided confidence for the EV lower bound |
@@ -300,10 +300,10 @@ With 30 trades, the smallest hit rate detected reliably is ≈ 0.86. Variable pa
 
 ## 11. Decisions needed from the owner
 
-1. **Venue and market.** This spec follows the pasted document and the repo: Binance USD-M SOLUSDT, long and short. The user preference file says NSE / DhanHQ / options buying only. Options have premium decay and no funding, so the EV model would need to change. Confirm before implementation.
-2. **Remove the LLM probability gate.** Recommended. It is on by default today (R2).
-3. **Stop the MiniCPM order path until it goes through `RiskEngine`.** Recommended (R1, I1).
-4. **Entry order type.** Recommended: LIMIT with TTL in v1. The alternative is keeping MARKET and adding TTL later, which leaves I3 and I5 unmet on the live path.
+1. **Venue and market.** This spec follows the pasted document and the repo: Binance USD-M SOLUSDT, long and short. The user preference file says NSE / DhanHQ / options buying only. Options have premium decay and no funding, so the EV model would need to change. **Resolved 2026-10-17:** taken as Binance USD-M, the reading used throughout. The preference-file note was not applied to this work; if NSE options is the target, this spec does not apply.
+2. **Remove the LLM probability gate.** Recommended. It is on by default today (R2). **Resolved:** done (§13).
+3. **Stop the MiniCPM order path until it goes through `RiskEngine`.** Recommended (R1, I1). **Resolved:** entries paused (§13). Exits still run.
+4. **Entry order type.** Recommended: LIMIT with TTL in v1. The alternative is keeping MARKET and adding TTL later, which leaves I3 and I5 unmet on the live path. **Resolved:** LIMIT with TTL on the live path (§13).
 
 ---
 
@@ -339,3 +339,39 @@ With 30 trades, the smallest hit rate detected reliably is ≈ 0.86. Variable pa
 ```
 
 **Shadow (G10):** the same decisions run on the live feed for at least four weeks with no orders. The journal records predicted fill, realized fill, and the realized R of each simulated trade.
+
+---
+
+## 13. Implementation status (2026-10-17)
+
+Decisions 2 to 4 of §11 are implemented on the live path. Paper, paper_exchange and replay are unchanged, except that the council signal no longer has a probability floor in any mode.
+
+| Item | Result | Where |
+| --- | --- | --- |
+| R1, MiniCPM | Entries paused. `entriesEnabled` is false in the runner, and both `evaluate` and `executeEntry` refuse. Open positions are still managed, and their exits still submit orders. | `src/minicpm/SymbolTraderWorker.ts`, `scripts/run-minicpm-fleet.ts` |
+| R2, council gate | Probability threshold removed from `buildCouncilSignal`; the stated probability is carried as `confidence`. `LLM_COUNCIL_AUTOTRADE` defaults to off, and `on` is refused at startup. `LLM_COUNCIL_MIN_PROBABILITY` removed. | `src/decision/CouncilSignal.ts`, `src/config.ts` |
+| R5, limit entries | Live entries are GTC LIMIT orders at the signal price, cancelled after `ENTRY_ORDER_TTL_MS` (120 s). No post-only, no reprice. | `src/binance/client.ts` (`submitLiveEntry`) |
+| R6, protection before OPEN | The tracker places STOP_MARKET and TAKE_PROFIT_MARKET `closePosition` legs on the first poll that shows a venue position. An entry resolves only when its order is terminal and the legs match the final position. | `src/binance/liveEntry.ts` |
+| R7, partial fills | Legs are re-placed whenever the venue position size changes: new legs go up first, old ones are cancelled after. A leg that already triggered is not an error. | `src/binance/liveEntry.ts` |
+| Failed protection | Cancel every open order on the symbol, then a reduce-only market close. If the close fails, the tracker stays busy and retries. | `liveEntry.ts` |
+| Lost submit answer | A refusal (a Binance error code) releases the slot. Any other failure is tracked. The venue's unknown-order answer (-2013) resolves it with nothing placed. | `client.ts`, `venueRejected` |
+| Entry without stop | Refused before any venue call. | `client.ts` |
+| Single-flight | One live entry at a time. A second is refused with `OrderInFlightError`, because a resting entry is exposure that the risk gate does not count. | `liveEntry.ts` |
+
+**Deviations from §7**
+
+- States are not persisted. The tracker keeps its state in memory (`EntryContext`). The named ENTRY_* states exist only in this document.
+- There is no UNPROTECTED_MAX_MS timer. Protection is attempted on the first poll (1 s) that sees a position, and a failed protection flattens at once.
+- The `entriesBlocked` flag from §7 is not built. A halt still stops new entries through the existing risk gate and kill switch. The tracker also blocks new entries while an entry is unresolved.
+
+**Open before any live use**
+
+1. **Restart while an entry rests. Blocker.** The tracker's state is in memory. After a restart, a resting GTC order stays on the venue with nothing managing it. If it fills, nothing places its protection, and the existing live book protects only positions it recorded. Needs startup reconciliation: find entry orders (client ids starting `e`), cancel or adopt them, and protect any position without legs.
+2. **Not verified against Binance.** The `getOrder` and `cancelOrder` calls by `origClientOrderId`, the -2013 code for an unknown order, the status a LIMIT GTC with `newOrderRespType: RESULT` returns, and the `closePosition` leg rules are taken from the library typings and Binance's documented behaviour. Verify them on testnet or in shadow mode before enabling live entries.
+3. Each live entry reads all positions (`getPositionsV3`) once per second until it resolves, at most about 120 s. Watch the rate-limit weight.
+4. One-way position mode only, as before.
+5. Still missing from §5, §6 and §9: the EV gate, TIME_STOP, EV_DETERIORATION, and the replay limit-fill model (G8). Backtests still model market fills, so replay results do not represent the new live entry type.
+6. MiniCPM exits still submit orders without a gate. Only its entries are paused.
+7. Live signals without a stop-loss are refused. Check whether any strategy emits such a signal for live.
+
+Tests: `tests/liveEntry.test.ts` covers the tracker against a fake venue (fills, partials, TTL, fills racing a cancel, failed and retried protection, orphaned and uncancellable legs, lost submits, single-flight) and the client-order-id and side helpers. `tests/config.entry.test.ts` covers the council default, the startup refusal, and the TTL bounds. `tests/councilSignal.test.ts` now asserts that the stated probability is not a gate.

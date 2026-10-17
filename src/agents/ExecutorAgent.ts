@@ -38,7 +38,9 @@ export class ExecutorAgent extends BaseAgent {
         entryPrice: roundOptionalPrice(signal.symbol, signal.entry),
         ...(decisionId === undefined ? {} : { decisionId }),
       });
-      return this.log(`FILLED ${side} ${signal.symbol} qty=${formatQty(signal.symbol, qty)} orderId=${res.orderId} SL=${stopLoss === undefined ? '—' : formatPrice(signal.symbol, stopLoss)} ${stopPlacement(config.mode)}`, 'success');
+      // A live entry rests as a limit until the venue reports it filled; the entry tracker logs the outcome afterwards
+      const verb = config.mode === 'live' && res.status !== 'FILLED' ? 'SUBMITTED' : 'FILLED';
+      return this.log(`${verb} ${side} ${signal.symbol} qty=${formatQty(signal.symbol, qty)} orderId=${res.orderId} SL=${stopLoss === undefined ? '—' : formatPrice(signal.symbol, stopLoss)} ${stopPlacement(config.mode)}`, 'success');
     } catch (err: any) {
       if (isRefusal(err)) return this.log(`EXECUTION REFUSED: ${err.message}`, 'warn');
       return this.log(`EXECUTION FAILED: ${err.message}`, 'error');

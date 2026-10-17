@@ -38,6 +38,8 @@ async function main() {
         apiKey: API_KEY,
         marginPerPosition: 1000,
         leverage: 10,
+        // Paused until entries go through RiskEngine (spec section 11, decision 3). Exits of open positions still run.
+        entriesEnabled: false,
       },
       llm,
     );

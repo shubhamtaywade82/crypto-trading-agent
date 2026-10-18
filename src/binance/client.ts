@@ -10,6 +10,7 @@ import type { AgentId, Candle, Position, Side, TradeRecord, WsStatus } from '../
 import { MarketDataService } from '../market/MarketDataService.js';
 import type { MarketDataSnapshot } from '../market/MarketDataTypes.js';
 import { LiveBook, LiveStateStore, type LiveManagerMode, type LiveOrderPort } from './liveBook.js';
+import { LiveEntryTracker, LIVE_ENTRY_POLL_MS, liveEntryClientOrderId, orderSideOf, venueRejected, type LiveEntryPort } from './liveEntry.js';
 
 const KLINE_INTERVAL = '15m';
 const KLINE_LIMIT = 300;
@@ -46,6 +47,8 @@ export class BinanceService {
   private readonly symbolStatus = new Map<string, string>();
   private markAt = 0;
   private liveBook: LiveBook | null = null;
+  private entries: LiveEntryTracker | null = null;
+  private entryLog: (message: string, level: 'info' | 'warn' | 'error') => void = () => undefined;
 
   constructor(private readonly broker: RemoteBroker | null = remoteBrokerFromConfig()) {
     this.futures = new USDMClient({ api_key: config.binance.apiKey, api_secret: config.binance.apiSecret });
@@ -208,24 +211,109 @@ export class BinanceService {
   }
 
   private async submitLiveOrder(params: OpenPositionParams): Promise<{ orderId: number | string; status: string }> {
+    if (!params.reduceOnly) return this.submitLiveEntry(params);
     await this.futures.setLeverage({ symbol: params.symbol, leverage: params.leverage });
     await this.futures.setMarginType({ symbol: params.symbol, marginType: 'ISOLATED' }).catch(() => undefined);
     const order = await this.futures.submitNewOrder({
       symbol: params.symbol, side: params.side, type: 'MARKET',
       quantity: roundQty(params.symbol, params.qty),
-      reduceOnly: params.reduceOnly ? 'true' : 'false',
+      reduceOnly: 'true',
     });
-    const protection = await this.placeServerProtectionOrders(params);
-    if (this.liveBook && !params.reduceOnly && params.stopLoss) {
-      this.liveBook.recordEntry({
-        symbol: params.symbol, side: params.side === 'BUY' ? 'LONG' : 'SHORT', strategy: params.strategy,
-        stopLoss: params.stopLoss, takeProfit: params.takeProfit ?? null,
-        ...(protection.stopOrderId === undefined ? {} : { stopOrderId: protection.stopOrderId }),
-        ...(protection.tpOrderId === undefined ? {} : { tpOrderId: protection.tpOrderId }),
-        ...(params.decisionId === undefined ? {} : { decisionId: params.decisionId }),
-      });
-    }
     return { orderId: order.orderId, status: order.status };
+  }
+
+  /**
+   * A live entry rests as a GTC limit at the signal price and is cancelled after ENTRY_ORDER_TTL_MS. Nothing here assumes the
+   * order filled: the entry tracker places protection once the venue shows a position, and resolves the entry.
+   */
+  private async submitLiveEntry(params: OpenPositionParams): Promise<{ orderId: number | string; status: string }> {
+    if (params.stopLoss === undefined) throw new Error(`Refusing live ${params.side} ${params.symbol}: an entry must carry a stop-loss`);
+    const tracker = this.entryTracker();
+    tracker.reserve(params.symbol);
+    try {
+      await this.futures.setLeverage({ symbol: params.symbol, leverage: params.leverage });
+      await this.futures.setMarginType({ symbol: params.symbol, marginType: 'ISOLATED' }).catch(() => undefined);
+      const limitPrice = roundPrice(params.symbol, params.entryPrice ?? (await this.getPremiumIndex(params.symbol)).markPrice);
+      const quantity = roundQty(params.symbol, params.qty);
+      const clientOrderId = liveEntryClientOrderId(Date.now());
+      const job = {
+        symbol: params.symbol, side: params.side === 'BUY' ? 'LONG' as const : 'SHORT' as const, clientOrderId,
+        strategy: params.strategy, stopLoss: params.stopLoss, takeProfit: params.takeProfit ?? null,
+        ...(params.decisionId === undefined ? {} : { decisionId: params.decisionId }),
+        submittedAt: Date.now(),
+      };
+      let order: { orderId: number; status: string };
+      try {
+        order = await this.futures.submitNewOrder({
+          symbol: params.symbol, side: params.side, type: 'LIMIT', timeInForce: 'GTC',
+          price: limitPrice, quantity, reduceOnly: 'false',
+          newClientOrderId: clientOrderId, newOrderRespType: 'RESULT',
+        });
+      } catch (err) {
+        // A refused order never reached the book. Anything else (timeout, dropped connection) may have, so it is tracked:
+        // the tracker finds the order by its client id, or sees it is unknown to the venue and resolves.
+        if (!venueRejected(err)) {
+          tracker.track(job);
+          this.entryLog(`${params.symbol} entry ${clientOrderId}: no answer to the submit; tracking it until the venue says what happened`, 'warn');
+        }
+        throw err;
+      }
+      tracker.track(job);
+      this.entryLog(`${params.symbol} ${params.side} LIMIT ${quantity} @ ${limitPrice} submitted (clientOrderId ${clientOrderId}, TTL ${config.entryOrderTtlMs} ms)`, 'info');
+      return { orderId: order.orderId, status: order.status };
+    } catch (err) {
+      tracker.release(params.symbol);
+      throw err;
+    }
+  }
+
+  /** Where live entry progress is reported (submitted, protected, cancelled, unresolved); the orchestrator sets it to its log. */
+  setEntryLog(log: (message: string, level: 'info' | 'warn' | 'error') => void): void {
+    this.entryLog = log;
+  }
+
+  private entryTracker(): LiveEntryTracker {
+    return (this.entries ??= new LiveEntryTracker(this.liveEntryPort(), {
+      ttlMs: config.entryOrderTtlMs,
+      pollMs: LIVE_ENTRY_POLL_MS,
+      log: (message, level) => this.entryLog(message, level),
+    }));
+  }
+
+  private liveEntryPort(): LiveEntryPort {
+    const futures = this.futures;
+    return {
+      orderState: async (symbol, clientOrderId) => {
+        try {
+          const order = await futures.getOrder({ symbol, origClientOrderId: clientOrderId });
+          return { status: order.status, executedQty: Number(order.executedQty) };
+        } catch (err) {
+          // -2013: the venue has no such order, so the submit never reached it and nothing can fill
+          if (typeof err === 'object' && err !== null && (err as { code?: unknown }).code === -2013) return { status: 'UNKNOWN_ORDER', executedQty: 0 };
+          throw err;
+        }
+      },
+      cancelOrder: async (symbol, clientOrderId) => { await futures.cancelOrder({ symbol, origClientOrderId: clientOrderId }); },
+      positionQty: async (symbol) => {
+        const row = (await futures.getPositionsV3()).find((p) => p.symbol === symbol && p.positionSide === 'BOTH');
+        return row ? Math.abs(Number(row.positionAmt)) : 0;
+      },
+      placeLegs: (job, qty) => this.placeServerProtectionOrders({
+        symbol: job.symbol, side: orderSideOf(job.side), qty, stopLoss: job.stopLoss, takeProfit: job.takeProfit ?? undefined,
+      }),
+      cancelLegs: async (symbol, legs) => {
+        // A leg that already triggered closed the position and is no longer open: nothing to cancel, and not an error
+        const open = new Set((await futures.getAllOpenOrders({ symbol })).map((o) => o.orderId));
+        for (const orderId of [legs.stopOrderId, legs.tpOrderId]) {
+          if (orderId !== undefined && open.has(orderId)) await futures.cancelOrder({ symbol, orderId });
+        }
+      },
+      cancelAllOpen: async (symbol) => { await futures.cancelAllOpenOrders({ symbol }); },
+      flatten: async (symbol, side, qty) => {
+        await futures.submitNewOrder({ symbol, side: side === 'LONG' ? 'SELL' : 'BUY', type: 'MARKET', quantity: roundQty(symbol, qty), reduceOnly: 'true' });
+      },
+      recordEntry: (entry) => this.liveBook?.recordEntry(entry),
+    };
   }
 
   /** Live position manager: builds the exchange adapter and the book that reconciles positions with their recorded entries. */
@@ -366,7 +454,7 @@ export class BinanceService {
     return this.isRemoteActive() ? this.broker!.observeFunding(market) : [];
   }
 
-  private async placeServerProtectionOrders(params: OpenPositionParams): Promise<{ stopOrderId?: number; tpOrderId?: number }> {
+  private async placeServerProtectionOrders(params: Pick<OpenPositionParams, 'symbol' | 'side' | 'qty' | 'stopLoss' | 'takeProfit'>): Promise<{ stopOrderId?: number; tpOrderId?: number }> {
     const { symbol, side, qty, stopLoss, takeProfit } = params;
     const exitSide = side === 'BUY' ? 'SELL' : 'BUY';
     const levels = [{ type: 'STOP_MARKET', price: stopLoss }, { type: 'TAKE_PROFIT_MARKET', price: takeProfit }] as const;

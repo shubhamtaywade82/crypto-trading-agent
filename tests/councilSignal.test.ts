@@ -6,7 +6,6 @@ import type { CouncilResult, ChairDecision } from '../src/llm/types.js';
 import { buildCouncilSignal } from '../src/decision/CouncilSignal.js';
 
 const T0 = 1_000_000;
-const MIN_PROBABILITY = 0.65;
 
 function state(over: Partial<MarketState> = {}): MarketState {
   return { symbol: 'BTCUSDT', generatedAt: T0, mark: 100, ...over } as MarketState;
@@ -80,7 +79,7 @@ function chair(over: Partial<ChairDecision> = {}): CouncilResult {
 }
 
 test('council TRADE on a TRIGGERED, direction-matched scenario becomes a Signal sourced from the scenario', () => {
-  const signal = buildCouncilSignal(state(), setup([scenario()]), chair(), MIN_PROBABILITY);
+  const signal = buildCouncilSignal(state(), setup([scenario()]), chair());
   assert.ok(signal);
   assert.equal(signal?.agent, 'AI-COUNCIL-κ');
   assert.equal(signal?.type, 'OPEN_LONG');
@@ -91,54 +90,56 @@ test('council TRADE on a TRIGGERED, direction-matched scenario becomes a Signal 
 });
 
 test('council WATCH never becomes a Signal', () => {
-  assert.equal(buildCouncilSignal(state(), setup([scenario()]), chair({ action: 'WATCH' }), MIN_PROBABILITY), null);
+  assert.equal(buildCouncilSignal(state(), setup([scenario()]), chair({ action: 'WATCH' })), null);
 });
 
 test('council NO_TRADE never becomes a Signal', () => {
-  assert.equal(buildCouncilSignal(state(), setup([scenario()]), chair({ action: 'NO_TRADE' }), MIN_PROBABILITY), null);
+  assert.equal(buildCouncilSignal(state(), setup([scenario()]), chair({ action: 'NO_TRADE' })), null);
 });
 
 test('a TRADE verdict on a scenario that is only ARMED (not yet TRIGGERED) is refused', () => {
   const map = setup([scenario({ state: 'ARMED' })]);
-  assert.equal(buildCouncilSignal(state(), map, chair(), MIN_PROBABILITY), null);
+  assert.equal(buildCouncilSignal(state(), map, chair()), null);
 });
 
 test('a TRADE verdict referencing an unknown scenario id is refused', () => {
   const map = setup([scenario()]);
-  assert.equal(buildCouncilSignal(state(), map, chair({ scenarioId: 'does-not-exist' }), MIN_PROBABILITY), null);
+  assert.equal(buildCouncilSignal(state(), map, chair({ scenarioId: 'does-not-exist' })), null);
 });
 
-test('a TRADE verdict below the probability floor is refused', () => {
+test('the stated probability is not a gate: a low number still yields the deterministic signal, carried as confidence', () => {
   const map = setup([scenario()]);
-  assert.equal(buildCouncilSignal(state(), map, chair({ probability: 0.5 }), MIN_PROBABILITY), null);
+  const signal = buildCouncilSignal(state(), map, chair({ probability: 0.5 }));
+  assert.ok(signal);
+  assert.equal(signal?.confidence, 0.5);
 });
 
 test('a TRADE verdict whose stance does not match the scenario direction is refused', () => {
   const map = setup([scenario({ direction: 'SHORT' })]);
-  assert.equal(buildCouncilSignal(state(), map, chair({ stance: 'LONG' }), MIN_PROBABILITY), null);
+  assert.equal(buildCouncilSignal(state(), map, chair({ stance: 'LONG' })), null);
 });
 
 test('a NEUTRAL stance is never tradeable even with action TRADE', () => {
   const map = setup([scenario()]);
-  assert.equal(buildCouncilSignal(state(), map, chair({ stance: 'NEUTRAL' }), MIN_PROBABILITY), null);
+  assert.equal(buildCouncilSignal(state(), map, chair({ stance: 'NEUTRAL' })), null);
 });
 
 test('a triggered scenario the quality gate only rates WATCH (entry not yet in zone) is never executed', () => {
   const base = scenario();
   const map = setup([scenario({ quality: { ...base.quality!, verdict: 'WATCH' } })]);
-  assert.equal(buildCouncilSignal(state(), map, chair(), MIN_PROBABILITY), null);
+  assert.equal(buildCouncilSignal(state(), map, chair()), null);
 });
 
 test('a NO_TRADE quality verdict overrides a council TRADE', () => {
   const base = scenario();
   const map = setup([scenario({ quality: { ...base.quality!, verdict: 'NO_TRADE', reasons: ['COST_ADJUSTED_EDGE_TOO_LOW'] } })]);
-  assert.equal(buildCouncilSignal(state(), map, chair(), MIN_PROBABILITY), null);
+  assert.equal(buildCouncilSignal(state(), map, chair()), null);
 });
 
 test('a COMPETING-thesis scenario is never executed', () => {
-  assert.equal(buildCouncilSignal(state(), setup([scenario({ thesisRole: 'COMPETING' })]), chair(), MIN_PROBABILITY), null);
+  assert.equal(buildCouncilSignal(state(), setup([scenario({ thesisRole: 'COMPETING' })]), chair()), null);
 });
 
 test('a scenario that never went through the quality pipeline fails closed', () => {
-  assert.equal(buildCouncilSignal(state(), setup([scenario({ quality: undefined })]), chair(), MIN_PROBABILITY), null);
+  assert.equal(buildCouncilSignal(state(), setup([scenario({ quality: undefined })]), chair()), null);
 });

@@ -30,6 +30,12 @@ export interface SmcMlRuntimeOptions {
   riskPct: number;
   leverage: number;
   lifecycle?: Partial<SmcTradeLifecycleConfig>;
+  /**
+   * When false, OPEN and ADD decisions are refused before any venue call: this path sizes and places bracket orders
+   * through the SDK without the repo's RiskEngine or kill switch (docs/superpowers/specs/2026-10-18-smc-playbook-phase1-audit.md,
+   * finding A). EXIT still runs, so an open position can always be closed.
+   */
+  entriesEnabled: boolean;
 }
 
 export const DEFAULT_SMC_RUNTIME_OPTIONS: SmcMlRuntimeOptions = {
@@ -39,6 +45,7 @@ export const DEFAULT_SMC_RUNTIME_OPTIONS: SmcMlRuntimeOptions = {
   riskPct: 1,
   leverage: 5,
   lifecycle: { ...DEFAULT_SMC_TRADE_LIFECYCLE_CONFIG },
+  entriesEnabled: false,
 };
 
 export interface SmcMlCycle {
@@ -225,6 +232,9 @@ export class SmcMlRuntime {
   async execute(cycle: SmcMlCycle): Promise<unknown> {
     const { analysis, decision, selectedCandidate } = cycle;
     if (decision.action === 'HOLD') return { executed: false, reason: decision.reason };
+    if (decision.action !== 'EXIT' && !this.options.entriesEnabled) {
+      return { executed: false, action: decision.action, reason: 'SMC-ML entries paused: this order path bypasses RiskEngine' };
+    }
 
     const currentPosition = await this.getPosition(analysis.symbol);
     const currentState: PortfolioState =

@@ -33,7 +33,11 @@ export interface ReplayInput {
   from: number;
   to: number;
   execution: ExecutionSnapshot;
-  journal: PlaybookJournal;
+  /**
+   * The journal for every playbook that `journalFor` (below) does not cover. Required unless `journalFor` is given:
+   * an ablation study passes one journal per variant instead.
+   */
+  journal?: PlaybookJournal;
   /**
    * One journal per playbook, for an ablation study that replays many variants of the same playbooks in one pass
    * (setup ids collide when variants share a journal). Defaults to `journal` for every playbook.
@@ -64,6 +68,7 @@ export interface ReplaySummary {
 interface FrameCache { lastOpen: number; analysis: SMCFrameAnalysis; bars: Candle[] }
 
 export function replayPlaybooks(input: ReplayInput): ReplaySummary {
+  if (!input.journal && !input.journalFor) throw new Error('replay needs a journal or a journalFor');
   const playbooks = input.playbooks ?? listPlaybooks();
   const smcConfig = input.smcConfig ?? DEFAULT_SMC_CONFIG;
   const window = input.windowBars ?? 300;
@@ -88,7 +93,7 @@ export function replayPlaybooks(input: ReplayInput): ReplaySummary {
   let warmupSteps = 0;
   const journalOf = input.journalFor ? new Map<PlaybookDefinition, PlaybookJournal>() : null;
   const journalFor = (pb: PlaybookDefinition): PlaybookJournal => {
-    if (!journalOf) return input.journal;
+    if (!journalOf) return input.journal!; // guarded at entry: journal or journalFor is required
     let j = journalOf.get(pb);
     if (!j) { j = input.journalFor!(pb); journalOf.set(pb, j); }
     return j;

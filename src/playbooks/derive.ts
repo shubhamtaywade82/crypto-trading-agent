@@ -2,7 +2,7 @@ import type { Candle } from '../types.js';
 import { atrSeries } from '../strategies/smc-ml/math.js';
 import type { SMCFrame, StructureBreak } from '../strategies/smc-ml/types.js';
 import { closeTimeOf } from './context.js';
-import type { EntryZone, PlaybookContext, PlaybookDefinition, SetupFacts, TradeDirection } from './types.js';
+import type { EntryZone, PlaybookContext, PlaybookDefinition, SetupFacts, TradeDirection, ZoneKind } from './types.js';
 
 /**
  * Facts each playbook derives before any rule runs. Derivation never judges: it locates the break, zone, stop, arming
@@ -14,12 +14,29 @@ import type { EntryZone, PlaybookContext, PlaybookDefinition, SetupFacts, TradeD
 
 export const dirOf = (direction: TradeDirection): 1 | -1 => (direction === 'LONG' ? 1 : -1);
 
+/** Zone kinds the arming rules may use when the playbook defines none: FVG first, then the order block (registry v3). */
+export const DEFAULT_ZONE_KINDS: readonly ZoneKind[] = ['FVG', 'ORDER_BLOCK'];
+
+const zoneKindsOf = (pb: PlaybookDefinition): readonly ZoneKind[] => pb.params.zoneKinds ?? DEFAULT_ZONE_KINDS;
+
+/**
+ * ATR memo per candle-slice object. In an ablation replay every variant re-derives the same facts on the same cached
+ * slice at the same step; the ATR of a slice at a given open time is a pure function of the slice, so it is computed
+ * once per slice and reused. The WeakMap keys on the slice identity, so memory follows the replay's frame cache.
+ */
+const atrMemo = new WeakMap<readonly Candle[], Map<number, number | null>>();
+
 /** ATR14 of `candles` at the bar that opened at `openTime`, using the same ATR the SMC engine uses. */
 export function atrAt(candles: readonly Candle[], openTime: number): number | null {
+  let byOpen = atrMemo.get(candles);
+  if (!byOpen) { byOpen = new Map(); atrMemo.set(candles, byOpen); }
+  const cached = byOpen.get(openTime);
+  if (cached !== undefined) return cached;
   const index = candles.findIndex((c) => c.openTime === openTime);
-  if (index < 0) return null;
-  const value = atrSeries([...candles])[index];
-  return value === null || value === undefined || !(value > 0) ? null : value;
+  const value = index < 0 ? null : atrSeries([...candles])[index];
+  const result = value === null || value === undefined || !(value > 0) ? null : value;
+  byOpen.set(openTime, result);
+  return result;
 }
 
 /** Nearest untaken liquidity beyond `reference` in the trade direction: zone frame first, then the bias frames in order. */
@@ -54,9 +71,12 @@ const protectedStop = (b: StructureBreak, dir: 1 | -1, buffer: number): number =
 /** Sweep reversal: the zone is the FVG left by the displacement leg; the setup arms when the break candle closes. */
 const sweepReversal: ArmingRule = (ctx, pb, f) => {
   const b = f.zoneBreak;
-  const fvg = (ctx.frames[pb.frames.zone]?.fairValueGaps ?? [])
-    .filter((g) => g.direction === f.dir && g.index >= b.protectedSwingIndex && g.index <= b.index)
-    .sort((x, y) => y.index - x.index)[0];
+  const fvgAllowed = zoneKindsOf(pb).includes('FVG');
+  const fvg = fvgAllowed
+    ? (ctx.frames[pb.frames.zone]?.fairValueGaps ?? [])
+      .filter((g) => g.direction === f.dir && g.index >= b.protectedSwingIndex && g.index <= b.index)
+      .sort((x, y) => y.index - x.index)[0]
+    : undefined;
   return {
     zone: fvg ? { kind: 'FVG', top: fvg.top, bottom: fvg.bottom } : null,
     stop: protectedStop(b, f.dir, pb.params.stopBufferAtr * f.zoneAtr),
@@ -68,13 +88,18 @@ const sweepReversal: ArmingRule = (ctx, pb, f) => {
 const continuation: ArmingRule = (ctx, pb, f) => {
   const b = f.zoneBreak;
   const frame = ctx.frames[pb.frames.zone];
-  const fvg = (frame?.fairValueGaps ?? [])
-    .filter((g) => g.direction === f.dir && g.index >= b.protectedSwingIndex && g.index <= b.index)
-    .sort((x, y) => y.index - x.index)[0];
+  const kinds = zoneKindsOf(pb);
+  const fvg = kinds.includes('FVG')
+    ? (frame?.fairValueGaps ?? [])
+      .filter((g) => g.direction === f.dir && g.index >= b.protectedSwingIndex && g.index <= b.index)
+      .sort((x, y) => y.index - x.index)[0]
+    : undefined;
   // orderBlockForBreak searches up to 3 bars before the protected swing
-  const ob = (frame?.orderBlocks ?? [])
-    .filter((o) => o.direction === f.dir && o.index >= b.protectedSwingIndex - 3 && o.index <= b.protectedSwingIndex)
-    .sort((x, y) => y.index - x.index)[0];
+  const ob = kinds.includes('ORDER_BLOCK')
+    ? (frame?.orderBlocks ?? [])
+      .filter((o) => o.direction === f.dir && o.index >= b.protectedSwingIndex - 3 && o.index <= b.protectedSwingIndex)
+      .sort((x, y) => y.index - x.index)[0]
+    : undefined;
   const zone: EntryZone | null = fvg
     ? { kind: 'FVG', top: fvg.top, bottom: fvg.bottom }
     : ob ? { kind: 'ORDER_BLOCK', top: ob.top, bottom: ob.bottom } : null;

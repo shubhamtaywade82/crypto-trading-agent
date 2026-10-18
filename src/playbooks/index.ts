@@ -1,8 +1,8 @@
 export { buildPlaybookContext, closedBars, closeTimeOf, FRAME_MS } from './context.js';
-export { deriveFacts } from './derive.js';
+export { atrAt, DEFAULT_ZONE_KINDS, deriveFacts, dirOf } from './derive.js';
 export { evaluateAllPlaybooks, evaluatePlaybook } from './evaluate.js';
 export { getPlaybook, listPlaybooks, PLAYBOOK_REGISTRY_VERSION, validateRegistry } from './registry.js';
-export { RULES } from './rules.js';
+export { RULES, utcMinutesOfDay } from './rules.js';
 export type * from './types.js';
 export { admit, bucketOf, DEFAULT_ADMISSION_POLICY, estimateOutcome, gateVerdict, knownAt, prequentialCalibration, wilson } from './calibration.js';
 export type { AdmissionPolicy, BucketDimension, CalibrationReport, CalibrationSample, OutcomeEstimate } from './calibration.js';

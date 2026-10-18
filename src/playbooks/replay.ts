@@ -34,6 +34,11 @@ export interface ReplayInput {
   to: number;
   execution: ExecutionSnapshot;
   journal: PlaybookJournal;
+  /**
+   * One journal per playbook, for an ablation study that replays many variants of the same playbooks in one pass
+   * (setup ids collide when variants share a journal). Defaults to `journal` for every playbook.
+   */
+  journalFor?: (pb: PlaybookDefinition) => PlaybookJournal;
   outcomePolicy: OutcomePolicy;
   playbooks?: readonly PlaybookDefinition[];
   windowBars?: number;
@@ -81,6 +86,13 @@ export function replayPlaybooks(input: ReplayInput): ReplaySummary {
   const verdicts: Record<SetupVerdict, number> = { ENTRY_ELIGIBLE: 0, WATCH: 0, NO_TRADE: 0 };
   let decisionsRecorded = 0;
   let warmupSteps = 0;
+  const journalOf = input.journalFor ? new Map<PlaybookDefinition, PlaybookJournal>() : null;
+  const journalFor = (pb: PlaybookDefinition): PlaybookJournal => {
+    if (!journalOf) return input.journal;
+    let j = journalOf.get(pb);
+    if (!j) { j = input.journalFor!(pb); journalOf.set(pb, j); }
+    return j;
+  };
   const first = Math.ceil(input.from / step) * step;
   const total = first > input.to ? 0 : Math.floor((input.to - first) / step) + 1;
 
@@ -108,19 +120,22 @@ export function replayPlaybooks(input: ReplayInput): ReplaySummary {
     if (Object.keys(ctx.dataIssues).length > 0) warmupSteps += 1;
 
     for (const pb of playbooks) {
+      const journal = journalFor(pb);
       for (const direction of ['LONG', 'SHORT'] as const) {
         const v = evaluatePlaybook(pb, ctx, direction);
         verdicts[v.verdict] += 1;
         input.onVerdict?.(v);
         if (v.verdict !== 'ENTRY_ELIGIBLE' || v.triggeredAt !== now) continue;
         const grade = gradeVerdict(v, pb);
-        if (input.journal.recordDecision(v, pb.frames.trigger, grade, bucketOf(v, grade, input.bucketDims))) decisionsRecorded += 1;
+        if (journal.recordDecision(v, pb.frames.trigger, grade, bucketOf(v, grade, input.bucketDims))) decisionsRecorded += 1;
       }
     }
     input.onProgress?.(i + 1, total);
   }
 
   const triggerBars = series.get(triggerFrames[0])!;
-  const outcomesWritten = input.journal.resolvePending((symbol, frame) => (symbol === input.symbol && frame === triggerFrames[0] ? triggerBars : []), input.outcomePolicy);
-  return { steps: total, verdicts, decisionsRecorded, outcomesWritten, pendingAfter: input.journal.pending().length, warmupSteps };
+  const candlesFor = (symbol: string, frame: SMCFrame) => (symbol === input.symbol && frame === triggerFrames[0] ? triggerBars : []);
+  const used = [...new Set(playbooks.map(journalFor))];
+  const outcomesWritten = used.reduce((sum, j) => sum + j.resolvePending(candlesFor, input.outcomePolicy), 0);
+  return { steps: total, verdicts, decisionsRecorded, outcomesWritten, pendingAfter: used.reduce((sum, j) => sum + j.pending().length, 0), warmupSteps };
 }

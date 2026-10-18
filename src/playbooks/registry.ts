@@ -103,6 +103,24 @@ export function validateRegistry(playbooks: readonly PlaybookDefinition[]): void
       throw new Error(`${pb.id}: breakout_volume needs minBreakoutVolumeMultiple and volumeLookback`);
     }
     if (pb.params.minStopAtr >= pb.params.maxStopAtr) throw new Error(`${pb.id}: minStopAtr must be below maxStopAtr`);
+    if (pb.rules.includes('session_in_window')) {
+      const windows = pb.params.sessionWindows;
+      if (!windows || windows.length === 0) throw new Error(`${pb.id}: session_in_window needs sessionWindows`);
+      for (const w of windows) {
+        const start = w.startHourUtc * 60 + (w.startMinuteUtc ?? 0);
+        const end = w.endHourUtc * 60 + (w.endMinuteUtc ?? 0);
+        if (!Number.isInteger(w.startHourUtc) || !Number.isInteger(w.endHourUtc) || w.startHourUtc < 0 || w.startHourUtc > 23 || w.endHourUtc < 0 || w.endHourUtc > 24) {
+          throw new Error(`${pb.id}: session window ${w.name} has invalid UTC hours`);
+        }
+        if (start >= end) throw new Error(`${pb.id}: session window ${w.name} must start before it ends (UTC, within one day)`);
+      }
+    }
+    if (pb.params.zoneKinds !== undefined) {
+      if (pb.params.zoneKinds.length === 0) throw new Error(`${pb.id}: zoneKinds cannot be empty`);
+      if (pb.params.zoneKinds.some((k) => k !== 'FVG' && k !== 'ORDER_BLOCK')) throw new Error(`${pb.id}: zoneKinds may only contain FVG or ORDER_BLOCK`);
+      // The sweep-reversal arming rule can only build an FVG zone: an order-block-only sweep setup could never arm
+      if (pb.id === 'sweep_mss_fvg_reversal' && !pb.params.zoneKinds.includes('FVG')) throw new Error(`${pb.id}: sweep reversal needs an FVG zone, zoneKinds must include FVG`);
+    }
     // A trigger swing is confirmed only swingLength bars after it forms: it must fit inside the trigger window
     const triggerSwing = frameConfig(DEFAULT_SMC_CONFIG, pb.frames.trigger, PLAYBOOK_FRAME_OVERRIDES).swingLength;
     if (triggerSwing >= pb.params.maxTriggerBars) {

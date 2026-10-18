@@ -1,0 +1,77 @@
+{
+  "schemaVersion": 1,
+  "name": "solusdt-alma-event-study",
+  "status": "workspace-only",
+  "instrument": {
+    "symbol": "SOLUSDT",
+    "venue": "BINANCE_USDM_PERPETUAL",
+    "marketDataType": "CONTRACT_KLINES",
+    "readOnly": true
+  },
+  "sdk": {
+    "package": "@nemesis-oss/binance-sdk",
+    "version": "3.0.0",
+    "client": "BinanceClient",
+    "method": "client.futures.market.klines"
+  },
+  "nativeTimeframes": [
+    "1m", "3m", "5m", "15m", "30m",
+    "1h", "2h", "4h", "6h", "8h", "12h",
+    "1d", "3d", "1w", "1M"
+  ],
+  "defaultSmokeTestTimeframes": ["15m", "1h", "2h", "4h", "1d"],
+  "historyDaysByTimeframe": {
+    "1m": 180,
+    "3m": 365,
+    "5m": 365,
+    "15m": 730,
+    "30m": 1095,
+    "1h": 1460,
+    "2h": 1460,
+    "4h": 1460,
+    "6h": 1460,
+    "8h": 1460,
+    "12h": 1460,
+    "1d": 1825,
+    "3d": 1825,
+    "1w": 1825,
+    "1M": 2500
+  },
+  "dataQuality": {
+    "dropOpenCandle": true,
+    "validateOhlcEnvelope": true,
+    "rejectDuplicates": true,
+    "rejectNonMonotonicTimestamps": true,
+    "rejectInternalGaps": true,
+    "rejectNonProgressingPages": true,
+    "preserveRawSnapshot": true,
+    "sha256Manifest": true
+  },
+  "executionAssumptionsForLaterPhase": {
+    "signalAvailability": "CLOSED_CANDLE_ONLY",
+    "entryFill": "NEXT_CANDLE_OPEN",
+    "feeRatePerSide": 0.0004,
+    "slippageRatePerSide": 0.0002,
+    "intrabarStopTargetPriority": "STOP_FIRST",
+    "funding": "ACTUAL_HISTORICAL_SETTLEMENTS",
+    "positionSizing": "FIXED_INITIAL_RISK_R"
+  },
+  "validationProtocol": {
+    "split": "CHRONOLOGICAL_WALK_FORWARD",
+    "trainFraction": 0.6,
+    "validationFraction": 0.2,
+    "lockedFinalHoldoutFraction": 0.2,
+    "purgeAtLeastMaxOutcomeHorizon": true,
+    "clusterBootstrapBy": "UTC_DAY",
+    "multipleTestingCorrection": "HOLM_OR_PREDECLARED_BLOCK_BOOTSTRAP",
+    "minimumTradeCountForStrategyPromotion": 100,
+    "minimumOutOfSampleFolds": 4
+  },
+  "artifactDirectories": {
+    "raw": "data/research/alma/raw",
+    "manifests": "data/research/alma/manifests",
+    "events": "data/research/alma/events",
+    "results": "data/research/alma/results",
+    "reports": "data/research/alma/reports"
+  }
+}

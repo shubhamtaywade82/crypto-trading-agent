@@ -1,0 +1,106 @@
+{
+  "schemaVersion": 1,
+  "status": "predeclared-candidates-not-yet-enumerated",
+  "notes": [
+    "Do not run one giant Cartesian product across every axis.",
+    "Enumerate every valid combination within each predeclared stage and record the candidate count before computing results.",
+    "Fast length must be strictly less than slow length.",
+    "Start with shared offset/sigma, then refine independently for fast and slow ALMAs around stable coarse-grid neighborhoods.",
+    "Use a locked chronological final holdout only once after research choices are frozen."
+  ],
+  "alma": {
+    "fastLength": [3, 5, 7, 9, 11, 14, 18, 21, 28, 34],
+    "slowLength": [9, 11, 14, 18, 21, 28, 34, 42, 50, 65, 80, 100, 150, 200],
+    "offsetCoarseShared": [0.5, 0.65, 0.75, 0.85, 0.95, 0.99],
+    "sigmaCoarseShared": [2, 3, 4, 5, 6, 8, 10],
+    "offsetRefineIndependent": [0.55, 0.65, 0.75, 0.8, 0.85, 0.9, 0.95],
+    "sigmaRefineIndependent": [3, 4, 5, 6, 8, 10],
+    "source": ["close", "hl2", "hlc3", "ohlc4"],
+    "formula": "GAUSSIAN_ALMA"
+  },
+  "eventDefinitions": {
+    "eventType": [
+      "cross_only",
+      "cross_with_slope",
+      "cross_with_expansion",
+      "pullback_fast_reject",
+      "pullback_slow_reject",
+      "pullback_either_reject",
+      "pullback_reclaim",
+      "failed_reclaim",
+      "compression_breakout",
+      "cross_then_pullback_then_reject"
+    ],
+    "slopeLookbackBars": [0, 1, 2, 3, 5],
+    "minimumSpreadAtr": [0, 0.05, 0.1, 0.2, 0.35],
+    "minimumExpansionAtr": [0, 0.05, 0.1, 0.2, 0.35, 0.5],
+    "minimumPrePullbackExtensionAtr": [0.25, 0.5, 0.75, 1.0],
+    "touchToleranceAtr": [0, 0.1, 0.25, 0.5],
+    "maximumBarsFromCrossToPullback": [3, 6, 9, 12, 18, 24],
+    "reclaimCloseRequired": [true, false],
+    "minimumCloseLocationForLong": [0.5, 0.55, 0.6, 0.65, 0.7],
+    "maximumCloseLocationForShort": [0.5, 0.45, 0.4, 0.35, 0.3],
+    "crossBackInvalidates": [true, false]
+  },
+  "volatilityAndContextFilters": {
+    "atrLength": [7, 14, 21],
+    "atrPercentileLookbackBars": [50, 100, 200],
+    "volatilityRegime": ["none", "low", "normal", "high"],
+    "trendSlopeFilter": ["none", "slow_alma_slope", "price_and_slow_slope"],
+    "minimumHigherTimeframeAlignment": [0, 1, 2, "all"]
+  },
+  "mtf": {
+    "entryTimeframes": ["1m", "3m", "5m", "15m", "30m"],
+    "setupTimeframes": ["5m", "15m", "30m", "1h", "2h", "4h"],
+    "regimeTimeframes": ["1h", "2h", "4h", "6h", "8h", "12h", "1d", "3d", "1w", "1M"],
+    "ordering": "regime_duration_ms > setup_duration_ms > entry_duration_ms",
+    "asOfJoin": "LAST_FULLY_CLOSED_BAR",
+    "evaluateSingleTimeframesFirst": true,
+    "evaluateAllValidOrderedTriplesOnlyAfterSingleTfScreen": true
+  },
+  "executionModelForLaterPhase": {
+    "stopType": ["structure", "atr"],
+    "atrStopMultiple": [0.75, 1.0, 1.25, 1.5, 2.0, 2.5, 3.0],
+    "targetMultipleR": [1.0, 1.25, 1.5, 2.0, 2.5, 3.0],
+    "maxHoldingBars": [3, 6, 12, 24, 48, 96],
+    "exitType": ["stop_target", "opposite_cross", "close_through_slow", "time_stop", "atr_trailing", "structure_invalidation"]
+  },
+  "searchSchedule": [
+    {
+      "stage": 1,
+      "name": "coarse_same_timeframe",
+      "axes": ["fastLength", "slowLength", "offsetCoarseShared", "sigmaCoarseShared", "source"],
+      "sourceSubset": ["close", "hlc3"],
+      "allNativeTimeframes": true,
+      "purpose": "Identify stable length/offset/sigma/source neighborhoods, not a final winner."
+    },
+    {
+      "stage": 2,
+      "name": "offset_sigma_refinement",
+      "axes": ["offsetRefineIndependent", "sigmaRefineIndependent"],
+      "candidateSelection": "top_stable_neighborhoods_from_stage_1",
+      "purpose": "Measure whether independent fast/slow ALMA settings add robust value."
+    },
+    {
+      "stage": 3,
+      "name": "event_and_context",
+      "axes": ["eventDefinitions", "volatilityAndContextFilters"],
+      "candidateSelection": "survivors_from_stages_1_2",
+      "purpose": "Compare cross, expansion, pullback and rejection events."
+    },
+    {
+      "stage": 4,
+      "name": "mtf_topology",
+      "axes": ["mtf"],
+      "candidateSelection": "stable_single_timeframe_candidates",
+      "purpose": "Test whether higher-timeframe regime and setup alignment improve out-of-sample results."
+    },
+    {
+      "stage": 5,
+      "name": "exit_and_risk",
+      "axes": ["executionModelForLaterPhase"],
+      "candidateSelection": "frozen_entry_hypotheses",
+      "purpose": "Evaluate executable net R after realistic costs, fees and funding."
+    }
+  ]
+}

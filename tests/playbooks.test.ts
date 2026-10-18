@@ -92,7 +92,7 @@ test('sweep reversal: a swept, displacing CHOCH with an FVG and a 5m trigger nea
   assert.deepEqual(v.failed, []);
   assert.deepEqual(v.pending, []);
   assert.equal(v.evaluations.length, REVERSAL.rules.length);
-  near(v.plan?.entry, 101.9);
+  near(v.plan?.entry, 101.5); // v3: limit at the FVG's near edge, not the 5m trigger close (101.9)
   near(v.plan?.stop, 98.8); // protected swing 99 minus 0.2 ATR
   near(v.plan?.target, 110);
   assert.equal(v.armedAt, T - M15);
@@ -114,7 +114,7 @@ test('no 5m trigger yet inside the window: WATCH, and the execution gates are pe
 
   assert.equal(v.verdict, 'WATCH');
   assert.deepEqual(failedIds(v), ['trigger_confirmed']);
-  assert.deepEqual(v.pending, ['spread_within_limit', 'stop_geometry_valid', 'entry_not_chased', 'net_reward_risk_above_minimum']);
+  assert.deepEqual(v.pending, ['spread_within_limit', 'stop_geometry_valid', 'net_reward_risk_above_minimum']);
   assert.equal(v.plan, null);
 });
 
@@ -125,12 +125,12 @@ test('no trigger and the window has run out: NO_TRADE as expired', () => {
   assert.ok(failedIds(v).includes('trigger_window_open'));
 });
 
-test('a 5m trigger that closed too far beyond the zone is a chase: NO_TRADE without a plan', () => {
+test('v3: a 5m trigger that closed far beyond the zone still enters with a limit at the zone edge; there is no chase gate', () => {
   const v = evaluatePlaybook(REVERSAL, baseContext({ trigger: { breakClose: 104 } }), 'LONG');
 
-  assert.equal(v.verdict, 'NO_TRADE');
-  assert.ok(failedIds(v).includes('entry_not_chased'));
-  assert.equal(v.plan, null);
+  assert.equal(v.verdict, 'ENTRY_ELIGIBLE', JSON.stringify(v.failed));
+  near(v.plan?.entry, 101.5);
+  assert.equal(v.evaluations.some((e) => e.ruleId === 'entry_not_chased'), false);
 });
 
 test('a close beyond the stop after the break invalidates the setup, with the offending bar as evidence', () => {
@@ -208,11 +208,13 @@ test('evaluation never throws: a context that breaks derivation is NO_TRADE with
 
 test('continuation arms on the first 5m bar into the zone and is ENTRY_ELIGIBLE from the discount half of the leg', () => {
   const ctx = baseContext({ breakType: 'BOS', trend: 'LONG', trigger: { breakClose: 101.0 } });
+  // A taller leg (extreme 106) puts the FVG top, 101.5, in its lower half: (101.5 - 99) / (106 - 99) = 0.36
+  ctx.candles['15m']![39] = { ...ctx.candles['15m']![39], high: 106 };
   const v = evaluatePlaybook(CONTINUATION, ctx, 'LONG');
 
   assert.equal(v.verdict, 'ENTRY_ELIGIBLE', JSON.stringify(v.failed));
   assert.equal(v.armedAt, T - M15 + M5, 'the first 5m bar after the break trades down to the FVG top');
-  near(v.plan?.entry, 101.0);
+  near(v.plan?.entry, 101.5);
 });
 
 test('continuation refuses an entry in the premium half of the leg and refuses when the higher frames are not aligned', () => {
@@ -220,7 +222,9 @@ test('continuation refuses an entry in the premium half of the leg and refuses w
   assert.equal(premium.verdict, 'NO_TRADE');
   assert.deepEqual(failedIds(premium), ['entry_in_discount']);
 
-  const unaligned = evaluatePlaybook(CONTINUATION, baseContext({ breakType: 'BOS', trend: 'NEUTRAL', trigger: { breakClose: 101.0 } }), 'LONG');
+  const unalignedCtx = baseContext({ breakType: 'BOS', trend: 'NEUTRAL', trigger: { breakClose: 101.0 } });
+  unalignedCtx.candles['15m']![39] = { ...unalignedCtx.candles['15m']![39], high: 106 };
+  const unaligned = evaluatePlaybook(CONTINUATION, unalignedCtx, 'LONG');
   assert.equal(unaligned.verdict, 'NO_TRADE');
   assert.deepEqual(failedIds(unaligned), ['htf_aligned']);
 });
@@ -228,6 +232,7 @@ test('continuation refuses an entry in the premium half of the leg and refuses w
 test('continuation falls back to the order block of the break when it left no FVG', () => {
   const ctx = baseContext({ breakType: 'BOS', trend: 'LONG', trigger: { breakClose: 101.0 }, fvg: false });
   ctx.frames['15m']!.orderBlocks = [{ direction: 1, top: 101.5, bottom: 100.2, index: 33 }];
+  ctx.candles['15m']![39] = { ...ctx.candles['15m']![39], high: 106 };
   const v = evaluatePlaybook(CONTINUATION, ctx, 'LONG');
   assert.equal(v.evaluations.find((e) => e.ruleId === 'entry_zone_present')!.observedValue, 'ORDER_BLOCK');
   assert.equal(v.verdict, 'ENTRY_ELIGIBLE', JSON.stringify(v.failed));
@@ -269,7 +274,7 @@ test('breakout retest: a 5m touch that does not close back above the level does 
 
 test('the registry is versioned, covers every stage, and refuses unsafe definitions', () => {
   const playbooks = listPlaybooks();
-  assert.deepEqual(playbooks.map((p) => `${p.id}@${p.version}`), ['sweep_mss_fvg_reversal@2', 'bos_fvg_ob_continuation@2', 'breakout_retest@2']);
+  assert.deepEqual(playbooks.map((p) => `${p.id}@${p.version}`), ['sweep_mss_fvg_reversal@3', 'bos_fvg_ob_continuation@3', 'breakout_retest@3']);
   for (const pb of playbooks) assert.equal(pb.params.maxTriggerBars, 6);
 
   assert.throws(() => validateRegistry([REVERSAL, REVERSAL]), /duplicate playbook/);

@@ -278,3 +278,51 @@ The definitions, not the code, produce no trades. Any change below is a new regi
 
 - **Paper execution through the orchestrator is not wired.** With zero eligible setups and an empty journal, the calibration gate refuses everything, so the wiring cannot place an order yet. It is the first task once the decision above produces journal entries.
 - No other symbols replayed yet.
+
+---
+
+## 10. Registry v3: limit entry at the zone edge (owner decision: option 2, 2026-10-18)
+
+### Change
+
+- **Plan.** After the 5m trigger confirms, the entry is a limit at the zone's near edge: the top of a bullish FVG or order block, the bottom of a bearish one, or the edge of the level band. Stop and target are unchanged (`derive.ts`).
+- **Gate.** `entry_not_chased` is dropped from every playbook, because the entry is the zone edge by construction. The rule stays defined, but no playbook lists it.
+- **Fill model (`outcome.ts`).** It is fixed before any v3 outcome was seen:
+  - The limit rests `entryTtlBars` = 6 bars of 5m (30 minutes, the approved trigger window).
+  - A bar that opens at or through the limit fills at its open. Otherwise, the limit fills at its price only on a strict trade-through.
+  - A bar that reaches the target before any fill makes the setup NOT_FILLED, even if it also dipped through the limit. Candles cannot show the order, and a missed move must never count as a win.
+  - A bar that fills intrabar and also reaches the stop is a STOP.
+- **Grade v2.** With no chase measurement, proximity is 1 by construction, so location rests on the leg position where the playbook measures it.
+- **Versions.** The registry is at v3, and each playbook is at version 3.
+
+### Result (archive data, assumed spread 1 bps)
+
+| Window | ENTRY_ELIGIBLE verdicts | Decisions (at trigger close) | Filled |
+| --- | --- | --- | --- |
+| SOLUSDT, 90 days to 2026-10-17 (design window) | 0 | 0 | 0 |
+| SOLUSDT, 90 days to 2026-07-19 (holdout) | 91 | 3 | 0 |
+| ETHUSDT, 90 days to 2026-10-17 (holdout) | 39 | 1 | 0 |
+
+The four decisions:
+
+| Setup | Limit vs trigger close | Outcome |
+| --- | --- | --- |
+| SOL continuation LONG | 1.65 ATR | Target reached first (missed move) |
+| SOL breakout LONG | 1.85 ATR | TTL expired |
+| SOL breakout LONG | 0.79 ATR | Target reached first (missed move) |
+| ETH breakout SHORT | 1.30 ATR | TTL expired |
+
+### What this shows
+
+- **Option 2 did what it was meant to.** There are no chase entries.
+- **It cannot fix the trigger.** In the design window the 5m trigger still never fires inside 6 bars, so v3 there is identical to v2: zero decisions.
+- **The resting limit then rarely fills.** The 5m break that confirms the setup has, by definition, moved price away from the zone, usually 1 to 2 ATR. In 2 of 4 cases, price went to the target without coming back.
+- **The rate is too low to calibrate.** Four decisions in 270 symbol-days, at this rate, will never reach the gate's 200 outcomes. The playbooks are effectively inactive. They do not trade, so they lose nothing, but they also cannot earn the evidence the gate requires.
+
+### Open decisions (owner)
+
+Each is a new registry version, and none may be tuned on these four outcomes:
+
+- **Wider replay.** More symbols and years, to establish whether any edge exists before any further change. This is the only option that adds evidence without changing definitions.
+- **A longer limit TTL.** For example, 24 bars. This would fill more setups, but also more of the adverse ones (adverse selection).
+- **A longer trigger window.** The sensitivity table in §9 applies.

@@ -13,7 +13,7 @@ import {
 const M5 = 5 * 60_000;
 const DAY = 24 * 60 * 60_000;
 const T0 = 1_700_006_400_000;
-const POLICY: OutcomePolicy = { horizonBars: 48, takerFeeRate: 0.0004, slippageRate: 0.0002 };
+const POLICY: OutcomePolicy = { entryTtlBars: 6, horizonBars: 48, takerFeeRate: 0.0004, slippageRate: 0.0002 };
 const COST = POLICY.takerFeeRate + POLICY.slippageRate;
 const LONG_PLAN = { entry: 100, stop: 98, target: 104 };
 
@@ -33,11 +33,36 @@ test('outcome: a fill at the next open at or below the limit, then the target, i
   assert.ok(Math.abs(o.netR! - expected) < 1e-12);
 });
 
-test('outcome: a next open worse than the limit is NOT_FILLED, known at that open', () => {
-  const o = resolveLong([bar(0, 100.3, 101, 99, 100.5)]);
+test('outcome: a resting limit that price only touches, never trades through, is NOT_FILLED at the end of its TTL', () => {
+  const o = resolveLong([bar(0, 100.3, 101, 100, 100.5), bar(1, 100.5, 101, 100.1, 100.6)], { ...POLICY, entryTtlBars: 2 });
   assert.equal(o.label, 'NOT_FILLED');
-  assert.equal(o.resolvedAt, T0);
+  assert.equal(o.resolvedAt, T0 + 2 * M5);
   assert.equal(o.netR, null);
+});
+
+test('outcome: a strict trade-through fills at the limit price, not at the bar low', () => {
+  const o = resolveLong([bar(0, 100.6, 101, 101.2 - 0.6, 100.8), bar(1, 100.8, 101.5, 99.9, 100.2), bar(2, 100.2, 104.1, 100.1, 104)]);
+  assert.equal(o.label, 'TARGET');
+  assert.equal(o.fillPrice, 100);
+  assert.equal(o.filledAt, T0 + M5);
+  assert.equal(o.barsHeld, 2);
+});
+
+test('outcome: price reaching the target before any fill is a missed move, NOT_FILLED, even if that bar also dipped through', () => {
+  const o = resolveLong([bar(0, 100.5, 104.2, 99.8, 104)]);
+  assert.equal(o.label, 'NOT_FILLED');
+  assert.equal(o.resolvedAt, T0 + M5);
+});
+
+test('outcome: a bar that fills intrabar and also reaches the stop is a STOP', () => {
+  const o = resolveLong([bar(0, 100.5, 100.8, 97.9, 98.2)]);
+  assert.equal(o.label, 'STOP');
+  assert.equal(o.fillPrice, 100);
+  assert.equal(o.exitPrice, 98);
+});
+
+test('outcome: a limit that has not filled and whose TTL has not ended yet is UNRESOLVED', () => {
+  assert.equal(resolveLong([bar(0, 100.3, 101, 100.1, 100.5)]).label, 'UNRESOLVED');
 });
 
 test('outcome: a bar that touches both stop and target counts as STOP', () => {

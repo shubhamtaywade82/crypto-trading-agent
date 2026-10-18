@@ -137,8 +137,10 @@ export function deriveFacts(ctx: PlaybookContext, pb: PlaybookDefinition, direct
   const reference = facts.trigger?.breakClose ?? zoneFrame?.lastPrice ?? null;
   const targetFrames = [pb.frames.zone, ...pb.frames.bias];
   facts.target = reference === null ? null : nearestTarget(ctx, targetFrames, dir, reference);
-  if (facts.trigger && facts.stop !== null && facts.target !== null) {
-    facts.plan = { entry: facts.trigger.breakClose, stop: facts.stop, target: facts.target };
+  // Registry v3: after the trigger confirms, the entry is a limit at the zone's near edge, not the trigger close. A trigger
+  // usually closes away from the zone, and entering at that close was a chase on every triggered setup in replay
+  if (facts.trigger && facts.zone && facts.stop !== null && facts.target !== null) {
+    facts.plan = { entry: dir === 1 ? facts.zone.top : facts.zone.bottom, stop: facts.stop, target: facts.target };
   }
   return facts;
 }

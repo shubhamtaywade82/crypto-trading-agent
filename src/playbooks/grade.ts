@@ -8,7 +8,8 @@ import type { PlaybookDefinition, PlaybookVerdict, RuleId } from './types.js';
  * The break's displacement, the sweep before it and the FVG it left are one event, so they form one component (break
  * quality) instead of three independent votes.
  */
-export const GRADE_VERSION = 1;
+/** v2: with the entry at the zone edge (registry v3) proximity is 1 by construction; location then rests on the leg position. */
+export const GRADE_VERSION = 2;
 
 export interface GradeComponent {
   name: 'context' | 'break' | 'location' | 'reward' | 'execution';
@@ -56,7 +57,7 @@ export function gradeVerdict(v: PlaybookVerdict, pb: PlaybookDefinition): SetupG
   // Location: how close the entry is to the zone, averaged with the leg position when the playbook measures it
   const chase = numeric('entry_not_chased');
   const legPosition = numeric('entry_in_discount');
-  const proximity = chase === null ? 0 : clamp01(1 - Math.max(0, chase) / pb.params.maxChaseAtr);
+  const proximity = chase === null ? 1 : clamp01(1 - Math.max(0, chase) / pb.params.maxChaseAtr);
   const location = legPosition === null ? proximity : (proximity + clamp01(1 - legPosition)) / 2;
 
   const rr = numeric('net_reward_risk_above_minimum');

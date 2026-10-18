@@ -45,8 +45,8 @@ async function load(): Promise<Partial<Record<SMCFrame, Candle[]>>> {
   const out: Partial<Record<SMCFrame, Candle[]>> = {};
   for (const frame of FRAMES) {
     const fetchFrom = from - WINDOW * FRAME_MS[frame];
-    // 5m also covers the outcome horizon after the last decision
-    const fetchTo = frame === '5m' ? to + (policy.horizonBars + 1) * FRAME_MS['5m'] : to;
+    // 5m also covers the entry TTL and the outcome horizon after the last decision
+    const fetchTo = frame === '5m' ? to + (policy.entryTtlBars + policy.horizonBars + 1) * FRAME_MS['5m'] : to;
     if (client) {
       out[frame] = await fetchSdkCandles(client, symbol, frame, fetchFrom, fetchTo);
     } else {

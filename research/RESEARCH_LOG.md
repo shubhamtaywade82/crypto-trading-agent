@@ -25,11 +25,22 @@ Key methodological findings so far:
   (2023-10-19 → 2024-10-18) were NEVER consumed: Stage C had zero survivors,
   so per the survivors-only protocol they remain untouched.
 
-## In flight
+## Stage D (this branch)
 
 | # | Study | Branch | Status |
 |---|---|---|---|
-| 6 | Sweep-and-reclaim Stage D — limit-at-level (retest) execution model: resting limit at the swept level, maker entry fees, fill window 6/12 bars, both sides, stop buffers 0.25/0.5/1.0 ATR, stop-or-2R / stop-or-time48 exits (24 configs). Train → test → replication discipline identical to Stage C. | `research/sweep-stage-d` | predeclared; results pending |
+| 6 | Sweep-and-reclaim Stage D — limit-at-level (retest) execution model: resting limit at the swept level, maker entry fees, fill window 6/12 bars, both sides, stop buffers 0.25/0.5/1.0 ATR, stop-or-2R / stop-or-time48 exits (24 configs). Train → test → replication discipline identical to Stage C. | `research/sweep-stage-d` | **REJECTED** — 0/24 train-gate passes (best raw p = 0.0502; Holm needs 0.00208). All 24 configs positive under the optimistic intrabar convention — the first uniformly positive family — but a sensitivity audit showed the near-miss cells are convention-fragile (short buf0.25 W12: +0.253 → −0.024 under the conservative bound). Convention-robust no-target cells stay positive under both bounds but never approach significance (p 0.17–0.31; lottery profiles). Holdouts preserved. Verdict: `research/alma/reports/sweep-staged-verdict.md` |
+
+## Program status
+
+Sweep-and-reclaim on SOLUSDT is **closed**: descriptive promise (A) was a
+stopless-measurement artifact; chase entry (B), stop placement (C) and the
+retest entry model (D) all fail the predeclared train gates. ALMA event
+families and the ablation grid are null (1, 2). The only unconsumed assets
+are the 146d test window and the 365d replication window — reserved for the
+next predeclared family that survives a train gate. The written hypothesis
+for any future study is cross-sectional (pooled symbols/meta-analysis),
+not more parameter tuning on this instrument.
 
 ## Standing conventions
 

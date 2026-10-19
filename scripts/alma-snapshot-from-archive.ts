@@ -35,8 +35,9 @@ const endDaysAgo = Number(arg('end-days-ago', '1'));
 const to = Date.now() - endDaysAgo * 86_400_000;
 const from = to - days * 86_400_000;
 
-const outDir = resolve('data/research/alma/raw');
-const manifestDir = resolve('data/research/alma/manifests');
+const outRoot = arg('out-root', 'data/research/alma');
+const outDir = resolve(outRoot, 'raw');
+const manifestDir = resolve(outRoot, 'manifests');
 mkdirSync(outDir, { recursive: true });
 mkdirSync(manifestDir, { recursive: true });
 

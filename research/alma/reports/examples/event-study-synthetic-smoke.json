@@ -1,0 +1,125 @@
+{
+  "schemaVersion": 1,
+  "kind": "ALMA_EVENT_STUDY",
+  "status": "DESCRIPTIVE_NOT_COST_ADJUSTED",
+  "generatedAt": "2026-10-19T03:04:44.377Z",
+  "instrument": {
+    "symbol": "SOLUSDT",
+    "venue": "BINANCE_USDM_PERPETUAL"
+  },
+  "config": {
+    "fastLength": 9,
+    "slowLength": 21,
+    "offset": 0.85,
+    "sigma": 6,
+    "source": "close",
+    "atrLength": 14,
+    "horizon": 6,
+    "slopeLookback": 1,
+    "requireSlowSlope": true,
+    "extendAtr": 0.25,
+    "touchTolAtr": 0.05,
+    "maxBarsAfterCross": 12,
+    "pullbackLine": "fast",
+    "eventFamilies": [
+      "cross_only",
+      "cross_with_slope",
+      "cross_then_pullback_then_reject"
+    ],
+    "negativeControl": "inverted_direction_on_cross_only",
+    "executionReference": "next_bar_open_to_close_N_bars_later"
+  },
+  "datasets": {
+    "15m": {
+      "file": "/home/z/my-project/alma-workspace/data/research/alma/raw/SOLUSDT-15m.json",
+      "bars": 2880,
+      "manifestSha256": "2b51463066fb8544b0e52a905858ad9205439d354bb6fc27a5d8824a4f102410"
+    }
+  },
+  "results": {
+    "15m": {
+      "bars": 2880,
+      "firstOpenTime": 1789776000000,
+      "lastOpenTime": 1792367100000,
+      "manifestSha256": "2b51463066fb8544b0e52a905858ad9205439d354bb6fc27a5d8824a4f102410",
+      "crossOnly": {
+        "events": 206,
+        "longs": 103,
+        "shorts": 103,
+        "scored": 205,
+        "excludedTail": 1,
+        "hits": 100,
+        "hitRate": 0.4878048780487805,
+        "medianPct": -0.00017687817707812137,
+        "meanPct": -0.0001278070892048409,
+        "p25Pct": -0.0027519601645672465,
+        "p75Pct": 0.0026068370788598916,
+        "minPct": -0.008761662651908031,
+        "maxPct": 0.00756575593277431,
+        "meanMfePct": 0.004336617547113869,
+        "meanMaePct": 0.004445803181191364
+      },
+      "crossWithSlope": {
+        "events": 141,
+        "longs": 70,
+        "shorts": 71,
+        "scored": 140,
+        "excludedTail": 1,
+        "hits": 82,
+        "hitRate": 0.5857142857142857,
+        "medianPct": 0.0008723868194087103,
+        "meanPct": 0.0005220691281484081,
+        "p25Pct": -0.001996040850229308,
+        "p75Pct": 0.0033538703371001066,
+        "minPct": -0.008761662651908031,
+        "maxPct": 0.00756575593277431,
+        "meanMfePct": 0.004721328616421114,
+        "meanMaePct": 0.004021872637844375
+      },
+      "crossThenPullbackThenReject": {
+        "events": 177,
+        "longs": 88,
+        "shorts": 89,
+        "scored": 175,
+        "excludedTail": 2,
+        "hits": 95,
+        "hitRate": 0.5428571428571428,
+        "medianPct": 0.0004863734236671968,
+        "meanPct": 0.0002946517411354188,
+        "p25Pct": -0.0025716616588541408,
+        "p75Pct": 0.003233694585652036,
+        "minPct": -0.008983925320666164,
+        "maxPct": 0.00848499743636466,
+        "meanMfePct": 0.004614948232089803,
+        "meanMaePct": 0.004213858629130026
+      },
+      "crossOnlyInverted": {
+        "events": 206,
+        "longs": 103,
+        "shorts": 103,
+        "scored": 205,
+        "excludedTail": 1,
+        "hits": 105,
+        "hitRate": 0.5121951219512195,
+        "medianPct": 0.00017687817707812137,
+        "meanPct": 0.0001278070892048409,
+        "p25Pct": -0.0026068370788598916,
+        "p75Pct": 0.0027519601645672465,
+        "minPct": -0.00756575593277431,
+        "maxPct": 0.008761662651908031,
+        "meanMfePct": 0.004445803181191364,
+        "meanMaePct": 0.004336617547113869
+      },
+      "baselineLongDrift": {
+        "bars": 2874,
+        "medianPct": 0.0003333629236210722,
+        "meanPct": 0.0001949901052458899
+      }
+    }
+  },
+  "caveats": [
+    "Descriptive event statistics only; no fills, stops, fees, slippage or funding.",
+    "A positive hit rate does not imply a profitable strategy.",
+    "Small event counts are not evidence of anything; require many events before drawing conclusions."
+  ]
+}

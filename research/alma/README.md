@@ -153,6 +153,6 @@ Next phase, only after real data collection passes: run the event study across a
 - [x] Stage B (cost-adjusted) — predeclared 24-config trade family committed before results (`sweep-eval.ts`, `src/trade-sim.ts`); verdict: rejected, no Holm-significant config
 - [x] Stage C (wider-stop family) — predeclared 30-config short-side family + train/confirmation gates committed before results (`sweep-eval-stagec.ts`, `src/eval-lib.ts`); train-first, survivors must also pass the untouched test window and a fresh earlier-history replication window
 - [x] Stage D (retest execution model) — predeclared 24-config limit-at-level family + pessimistic-convention audit committed before results (`sweep-eval-staged.ts`, `src/retest-sim.ts`); verdict: rejected at the train gate
-- [x] Stage E (cross-asset BTC+ETH pooled replication) — predeclared 48-config family (Stage-B + Stage-D verbatim) on fresh BTCUSDT/ETHUSDT windows, pooled permutation + chronological folds + pessimistic clause (`src/stagee-lib.ts`, `sweep-eval-stagee.ts`); family committed before any cross-asset run
+- [x] Stage E (cross-asset BTC+ETH pooled replication) — predeclared 48-config family (Stage-B + Stage-D verbatim) on fresh BTCUSDT/ETHUSDT windows, pooled permutation + chronological folds + pessimistic clause (`src/stagee-lib.ts`, `sweep-eval-stagee.ts`); family committed before any cross-asset run; verdict: rejected, 0/48 at the train gate
 - [ ] Phase 2 — stage-1 grid run on real data
 - [ ] Phases 3-6 — refinement, MTF topology, execution model, promotion gate

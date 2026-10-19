@@ -37,18 +37,20 @@ Key methodological findings so far:
 |---|---|---|---|
 | 7 | Sweep-and-reclaim Stage E — cross-asset replication: the Stage-B market-entry family (24) and the Stage-D retest-entry family (24) applied VERBATIM to fresh BTCUSDT + ETHUSDT windows and pooled per config (48 tested configs, Holm over all). Windows mirror the SOL discipline to the day: train 584d (2024-10-18 → 2026-05-25), test 146d, replication 365d (2023-10-19 → 2024-10-18) — all virgin on BTC/ETH. Pooled permutation (seed 20261021), 4 chronological folds over the shared UTC timeline, per-symbol splits as diagnostics. Predeclared addition from the Stage-D lesson: retest configs must also show net E[R] > 0 under the pessimistic fill-bar convention at every window. Mechanistic rationale: liquidation/stop-run cascades beyond pivot extremes are a market mechanism, not a SOL quirk; if real-but-underpowered, ~2x pooled events sharpen inference; if noise, nothing replicates. | `research/sweep-crossasset` | **PREDECLARED** — family committed and pushed before any BTC/ETH data run |
 
-Update after the train run (do not edit this cell before the run completes): _pending_.
+Update after the train run: **REJECTED — 0/48 train-gate passes** (best raw pooled p = 0.0852, retest 4h short buf0.5 W6 stop_or_2R, +0.158 opt / +0.101 pess; Holm across 48 needs ≤ 0.00104). The Stage-B short-side candidate does NOT transfer: BTC −0.136 vs ETH +0.126 at buf0.25 (opposite signs — noise signature); pooled ≈ 0. The 1h market family is uniformly toxic on BTC+ETH (all 12 cells negative, mean −0.195R, every fold negative, 850–870 events per side — a well-powered negative). Strongest remaining pattern in the program (recorded as an untested observation only): retest 4h short buf0.5 stop_or_2R is positive on BOTH symbols individually (BTC n=85 +0.157, ETH n=74 +0.159) and under BOTH intrabar conventions, yet far from significance (p 0.17–0.23 per symbol, median −1R). Zero survivors → BTC/ETH test + replication windows untouched. Verdict: `research/alma/reports/sweep-stagee-verdict.md`. Program conclusion: the family is now rejected on three instruments across seven predeclared studies — **accept the null and close the family**.
 
 ## Program status
 
-Sweep-and-reclaim on SOLUSDT is **closed**: descriptive promise (A) was a
-stopless-measurement artifact; chase entry (B), stop placement (C) and the
-retest entry model (D) all fail the predeclared train gates. ALMA event
-families and the ablation grid are null (1, 2). The only unconsumed assets
-are the 146d test window and the 365d replication window — reserved for the
-next predeclared family that survives a train gate. The written hypothesis
-for any future study is cross-sectional (pooled symbols/meta-analysis),
-not more parameter tuning on this instrument.
+Sweep-and-reclaim is **closed on all tested instruments**: descriptive promise (A) was a
+stopless-measurement artifact; chase entry (B), stop placement (C) and the retest entry
+model (D) all fail the predeclared train gates on SOLUSDT, and the cross-asset pooled
+replication (E) fails on BTC+ETH (0/48) — the direction this program had reserved as its
+final legitimate test. ALMA event families and the ablation grid are null (1, 2).
+Seven predeclared studies, seven rejections; no gate survivor ever opened a holdout.
+Virgin resources preserved for any genuinely new predeclared hypothesis: the SOL 146d test
+window, the SOL 365d replication window, and the BTC/ETH test + replication windows.
+Any future work must declare a new mechanism (not a parameter variant) before touching
+them.
 
 ## Standing conventions
 

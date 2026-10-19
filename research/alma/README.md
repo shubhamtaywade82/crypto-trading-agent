@@ -30,13 +30,19 @@ research/alma/
 │   └── examples/           # committed example report (synthetic smoke run)
 ├── scripts/
 │   ├── event-study.ts
-│   └── fetch-klines.ts
+│   ├── fetch-klines.ts
+│   ├── sweep-study.ts
+│   ├── sweep-eval.ts
+│   └── sweep-eval-stagec.ts
 ├── src/
 │   ├── alma.ts
 │   ├── atr.ts
 │   ├── data-quality.ts
+│   ├── eval-lib.ts
 │   ├── events.ts
 │   ├── grid.ts
+│   ├── sweeps.ts
+│   ├── trade-sim.ts
 │   └── types.ts
 └── tests/
     ├── alma.test.ts
@@ -142,6 +148,9 @@ Next phase, only after real data collection passes: run the event study across a
 - [x] Phase 0b — ALMA/ATR/event-label/grid unit tests (37 passing), typecheck clean
 - [x] Phase 1 — event definitions fixed in code before any result inspection
 - [x] Offline pipeline smoke test (synthetic deterministic fixture, inverted control behaves as expected)
-- [ ] Real-data ingestion smoke test (blocked in the build sandbox by a Binance IP ban; run locally with the commands above)
+- [x] Real-data ingestion (fapi IP-banned in sandbox; data.binance.vision archive path with manifests, 730d + train/test windows)
+- [x] Stage A (sweep family) — sweep-and-reclaim definitions committed before results (`sweep-study.ts`); 730d multi-regime descriptive study with train/test split
+- [x] Stage B (cost-adjusted) — predeclared 24-config trade family committed before results (`sweep-eval.ts`, `src/trade-sim.ts`); verdict: rejected, no Holm-significant config
+- [x] Stage C (wider-stop family) — predeclared 30-config short-side family + train/confirmation gates committed before results (`sweep-eval-stagec.ts`, `src/eval-lib.ts`); train-first, survivors must also pass the untouched test window and a fresh earlier-history replication window
 - [ ] Phase 2 — stage-1 grid run on real data
 - [ ] Phases 3-6 — refinement, MTF topology, execution model, promotion gate

@@ -17,25 +17,33 @@
  * (one-sided, mean > 0), Holm step-down across the whole family, and E[R] per
  * chronological quarter (4 folds) as the continuity check.
  *
+ * Data/statistics plumbing now lives in src/eval-lib.ts (shared with Stage C);
+ * this file keeps the frozen Stage-B family and report shape unchanged.
+ *
  * Usage:
  *   npx tsx research/alma/scripts/sweep-eval.ts --symbol SOLUSDT \
  *     --timeframes 4h,1h --raw-dir data/research/alma/raw
  */
 import { createHash } from 'node:crypto';
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { readFirstZipEntry } from '../../../src/backtesting/archiveKlines.js';
-import { validateCandles } from '../src/data-quality.js';
 import { atrWilder } from '../src/atr.js';
-import type { Direction } from '../src/events.js';
+import {
+  fundingSumBetween,
+  holmRejects,
+  loadFundingHistory,
+  loadSnapshot,
+  manifestSha256,
+  permutationP,
+  summarizeR,
+  type FundingPoint,
+} from '../src/eval-lib.js';
 import { detectSweepReclaim } from '../src/sweeps.js';
 import { costsInR, fundingInR, simulateTrade } from '../src/trade-sim.js';
-import { NATIVE_TIMEFRAMES, type Candle, type NativeTimeframe } from '../src/types.js';
+import { NATIVE_TIMEFRAMES, type NativeTimeframe } from '../src/types.js';
 
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
-const ARCHIVE_BASE = 'https://data.binance.vision/data/futures/um';
-const DAY_MS = 86_400_000;
 
 function arg(name: string, fallback: string): string {
   const index = process.argv.indexOf('--' + name);
@@ -46,143 +54,6 @@ function num(name: string, fallback: number, min: number): number {
   const value = Number(raw);
   if (!Number.isFinite(value) || value < min) throw new Error('--' + name + ' must be >= ' + min);
   return value;
-}
-
-function loadSnapshot(path: string, timeframe: NativeTimeframe, symbol: string): Candle[] {
-  if (!existsSync(path)) throw new Error('missing snapshot ' + path);
-  const parsed: unknown = JSON.parse(readFileSync(path, 'utf8'));
-  if (!Array.isArray(parsed)) throw new Error('snapshot ' + path + ' is not a candle array');
-  const candles = parsed as Candle[];
-  const report = validateCandles(candles, timeframe);
-  if (!report.valid) throw new Error('snapshot ' + symbol + ' ' + timeframe + ' failed validation: ' + report.issues.slice(0, 5).join('; '));
-  return candles;
-}
-
-function manifestSha256(manifestDir: string, symbol: string, timeframe: NativeTimeframe): string | null {
-  const path = resolve(manifestDir, symbol + '-' + timeframe + '.manifest.json');
-  if (!existsSync(path)) return null;
-  const parsed = JSON.parse(readFileSync(path, 'utf8')) as { sha256?: unknown };
-  return typeof parsed.sha256 === 'string' ? parsed.sha256 : null;
-}
-
-interface FundingPoint { time: number; rate: number }
-
-function monthKeys(fromMs: number, toMs: number): string[] {
-  const out: string[] = [];
-  const start = new Date(fromMs);
-  const end = new Date(toMs);
-  for (let y = start.getUTCFullYear(), m = start.getUTCMonth(); ; ) {
-    const key = y + '-' + String(m + 1).padStart(2, '0');
-    const monthStart = Date.UTC(y, m, 1);
-    const nextMonth = Date.UTC(y, m + 1, 1);
-    if (monthStart < toMs && nextMonth > fromMs) out.push(key);
-    if (nextMonth > toMs || (y === end.getUTCFullYear() && m === end.getUTCMonth())) break;
-    m += 1;
-    if (m > 11) { m = 0; y += 1; }
-  }
-  return out;
-}
-
-function dayKeysNotInMonths(fromMs: number, toMs: number, months: Set<string>): string[] {
-  const out: string[] = [];
-  for (let t = fromMs; t < toMs; t += DAY_MS) {
-    const d = new Date(t);
-    const key = d.getUTCFullYear() + '-' + String(d.getUTCMonth() + 1).padStart(2, '0');
-    if (months.has(key)) continue;
-    out.push(d.getUTCFullYear() + '-' + String(d.getUTCMonth() + 1).padStart(2, '0') + '-' + String(d.getUTCDate()).padStart(2, '0'));
-  }
-  return out;
-}
-
-function parseFundingCsv(text: string): FundingPoint[] {
-  const out: FundingPoint[] = [];
-  for (const line of text.split('\n')) {
-    const cells = line.trim().split(',').map(Number);
-    if (cells.length < 2) continue;
-    const time = cells[0];
-    const rate = cells[cells.length - 1];
-    if (!Number.isFinite(time) || !Number.isFinite(rate)) continue; // header row
-    out.push({ time: time < 1e12 ? time * 1000 : time, rate });
-  }
-  return out;
-}
-
-async function fetchZipText(url: string): Promise<string | null> {
-  const res = await fetch(url);
-  if (res.status === 404) return null;
-  if (!res.ok) throw new Error('archive fetch failed HTTP ' + res.status + ' for ' + url);
-  const zip = Buffer.from(new Uint8Array(await res.arrayBuffer()));
-  return readFirstZipEntry(zip);
-}
-
-async function loadFundingHistory(symbol: string, fromMs: number, toMs: number): Promise<{ points: FundingPoint[]; missingFiles: string[] }> {
-  const points: FundingPoint[] = [];
-  const missingFiles: string[] = [];
-  const months = monthKeys(fromMs, toMs);
-  for (const key of months) {
-    const url = ARCHIVE_BASE + '/monthly/fundingRate/' + symbol + '/' + symbol + '-fundingRate-' + key + '.zip';
-    const text = await fetchZipText(url);
-    if (text === null) { missingFiles.push(key); continue; }
-    points.push(...parseFundingCsv(text));
-  }
-  for (const key of dayKeysNotInMonths(fromMs, toMs, new Set(months))) {
-    const url = ARCHIVE_BASE + '/daily/fundingRate/' + symbol + '/' + symbol + '-fundingRate-' + key + '.zip';
-    const text = await fetchZipText(url);
-    if (text === null) { missingFiles.push(key); continue; }
-    points.push(...parseFundingCsv(text));
-  }
-  points.sort((a, b) => a.time - b.time);
-  const deduped: FundingPoint[] = [];
-  for (const point of points) {
-    if (deduped.length > 0 && deduped[deduped.length - 1].time === point.time) continue;
-    deduped.push(point);
-  }
-  return { points: deduped, missingFiles };
-}
-
-function fundingSumBetween(points: readonly FundingPoint[], fromTime: number, toTime: number): number[] {
-  const rates: number[] = [];
-  for (const point of points) {
-    if (point.time > fromTime && point.time <= toTime) rates.push(point.rate);
-  }
-  return rates;
-}
-
-function mulberry32(seed: number): () => number {
-  let a = seed >>> 0;
-  return () => {
-    a |= 0; a = (a + 0x6d2b79f5) | 0;
-    let t = Math.imul(a ^ (a >>> 15), 1 | a);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
-
-function permutationP(netR: readonly number[], seed: number, iterations: number): number {
-  if (netR.length === 0) return 1;
-  const observed = netR.reduce((s, r) => s + r, 0) / netR.length;
-  const rand = mulberry32(seed);
-  let exceed = 0;
-  const signs = netR.map(() => 1);
-  for (let it = 0; it < iterations; it++) {
-    for (let i = 0; i < netR.length; i++) {
-      signs[i] = rand() < 0.5 ? 1 : -1;
-    }
-    let sum = 0;
-    for (let i = 0; i < netR.length; i++) sum += signs[i] * netR[i];
-    if (sum / netR.length >= observed) exceed++;
-  }
-  return (1 + exceed) / (1 + iterations);
-}
-
-function holmRejects(pValues: readonly number[], alpha = 0.05): boolean[] {
-  const order = pValues.map((p, i) => ({ p, i })).sort((a, b) => a.p - b.p);
-  const rejected = new Array<boolean>(pValues.length).fill(false);
-  let active = pValues.length;
-  for (const { p, i } of order) {
-    if (p <= alpha / active) { rejected[i] = true; active--; } else break;
-  }
-  return rejected;
 }
 
 interface ConfigRow {
@@ -203,25 +74,6 @@ interface ConfigRow {
   fundingMeanR: number | null;
   permutationP: number;
   holmSignificant: boolean;
-}
-
-function summarize(netR: readonly number[]): { mean: number | null; median: number | null; win: number | null; pf: number | null; maxDD: number | null } {
-  if (netR.length === 0) return { mean: null, median: null, win: null, pf: null, maxDD: null };
-  const sorted = [...netR].sort((a, b) => a - b);
-  const mean = netR.reduce((s, r) => s + r, 0) / netR.length;
-  const wins = netR.filter((r) => r > 0);
-  const losses = netR.filter((r) => r < 0);
-  const grossWin = wins.reduce((s, r) => s + r, 0);
-  const grossLoss = Math.abs(losses.reduce((s, r) => s + r, 0));
-  let cum = 0; let peak = 0; let maxDD = 0;
-  for (const r of netR) { cum += r; if (cum > peak) peak = cum; if (peak - cum > maxDD) maxDD = peak - cum; }
-  return {
-    mean,
-    median: sorted[Math.floor(0.5 * (sorted.length - 1))],
-    win: wins.length / netR.length,
-    pf: grossLoss > 0 ? grossWin / grossLoss : null,
-    maxDD,
-  };
 }
 
 const FOLDS = 4;
@@ -313,7 +165,7 @@ async function main(): Promise<void> {
           for (let f = 0; f < FOLDS; f++) {
             foldR[f] = foldAccum[f].length > 0 ? foldAccum[f].reduce((s, r) => s + r, 0) / foldAccum[f].length : null;
           }
-          const s = summarize(netR);
+          const s = summarizeR(netR);
           rows.push({
             timeframe, side, bufferAtr, exit: exit.name,
             n: netR.length, excluded,

@@ -103,6 +103,38 @@ removing it entirely admits 12x — the diagnostic ceiling of every other gate c
 
 See `src/backtesting/` and `tests/replayService.test.ts` for the engine itself.
 
+### SMC/ICT component-ablation studies
+
+```bash
+npm run research:ablation -- --symbol SOLUSDT --days 90 [--source archive|sdk] [--spread-bps 1]
+                            [--param maxTriggerBars=12] [--pairs sweep,displacement|none] [--no-session]
+```
+
+A versioned, reproducible component-ablation experiment framework around the SMC playbook replay engine
+(`src/research/ablation/`, spec `docs/superpowers/specs/2026-10-19-smc-component-ablation-framework.md`).
+It replays every variant of the three playbooks — `core`, `full`, each component isolated (`iso:`), each
+component ablated from the full definition (`abl:`), and configured pairs — in **one causal pass**, then
+answers which SMC/ICT components carry the edge: does a liquidity sweep help, does an FVG add value over
+an order block, does a killzone/session filter improve expectancy, does a pair beat its parts after costs?
+
+- **Components are rule-set toggles** over the mandatory core (htf bias strictness, liquidity sweep,
+  displacement, zone mitigation, setup freshness, breakout volume, premium/discount, zone kind via
+  `params.zoneKinds`, and a new `session_in_window` rule with ICT killzones in UTC).
+- **Chronological train/validation/holdout** (50/25/25, day-floored): selection ranks candidates by the
+  train day-clustered bootstrap lower bound, validation must confirm, and the holdout is read **once per
+  config hash** — the study id embeds the config sha256, so a changed config starts a new study instead of
+  silently re-reading the holdout.
+- **Family correction and negative controls:** Holm across every tested variant's holdout p-value, plus a
+  mirror (flip) null, a seeded sign-flip permutation test, delayed entries and a 0.5×–3× cost curve for
+  every selected candidate.
+- **Reproducible:** `manifest.json` pins the framework version, playbook registry version, git sha, node
+  version, seeds, config hash and per-frame dataset sha256; the same study id resumes its per-variant
+  JSONL journals idempotently.
+
+Outputs land in `data/ablation/<studyId>/` (`REPORT.md`, `results.json`, `manifest.json`, `config.json`,
+one journal per variant). A PROMOTED variant is a research candidate only — the live calibration gate
+(200 outcomes, 20 days, lower bound > 0.05 R) still applies before anything trades.
+
 ---
 
 ## Decision lineage

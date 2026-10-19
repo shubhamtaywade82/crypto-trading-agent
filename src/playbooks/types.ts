@@ -50,9 +50,23 @@ export type RuleId =
   | 'stop_geometry_valid'
   | 'entry_not_chased'
   | 'entry_in_discount'
-  | 'net_reward_risk_above_minimum';
+  | 'net_reward_risk_above_minimum'
+  /** Session filter (experiment rule): the trigger close must fall inside `params.sessionWindows` (UTC). */
+  | 'session_in_window';
 
 export type PlaybookId = 'sweep_mss_fvg_reversal' | 'bos_fvg_ob_continuation' | 'breakout_retest';
+
+/** A named UTC intraday window, used by the session_in_window experiment rule. ICT killzones are a research preset (src/research/ablation/variants.ts). */
+export interface SessionWindow {
+  name: string;
+  startHourUtc: number;
+  startMinuteUtc?: number;
+  endHourUtc: number;
+  endMinuteUtc?: number;
+}
+
+/** The zone kinds the arming rule may use. Defaults to FVG, then ORDER_BLOCK (registry v3 behaviour). */
+export type ZoneKind = 'FVG' | 'ORDER_BLOCK';
 
 /** Every threshold a rule reads. Values in the registry are proposals until calibrated; they are versioned with the playbook. */
 export interface PlaybookParams {
@@ -80,6 +94,10 @@ export interface PlaybookParams {
   /** Breakout only: break candle volume over the mean of the previous `volumeLookback` bars. */
   minBreakoutVolumeMultiple?: number;
   volumeLookback?: number;
+  /** session_in_window only: the trigger close must fall inside one of these UTC windows. */
+  sessionWindows?: readonly SessionWindow[];
+  /** Arming only: which zone kinds are eligible, in preference order. Default: FVG first, then ORDER_BLOCK. */
+  zoneKinds?: readonly ZoneKind[];
 }
 
 export interface PlaybookFrames {

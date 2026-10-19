@@ -256,4 +256,26 @@ export const RULES: Readonly<Record<RuleId, RuleDefinition>> = {
       return { passed, reason: passed ? 'net reward:risk after fees and slippage clears the minimum' : 'net reward:risk after fees and slippage is below the minimum', observedValue: round(rr, 3), threshold: pb.params.minNetRewardRisk };
     },
   },
+  session_in_window: {
+    stage: 'CONTEXT',
+    evaluate: (f, ctx, pb) => {
+      const windows = pb.params.sessionWindows;
+      if (!windows || windows.length === 0) return fail('playbook defines no session windows');
+      const minutes = utcMinutesOfDay(ctx.now);
+      const hit = windows.find((w) => {
+        const start = w.startHourUtc * 60 + (w.startMinuteUtc ?? 0);
+        const end = w.endHourUtc * 60 + (w.endMinuteUtc ?? 0);
+        return minutes >= start && minutes < end;
+      });
+      return hit
+        ? { passed: true, reason: `trigger close is inside the ${hit.name} session`, observedValue: minutes, threshold: hit.name, evidenceTime: ctx.now }
+        : { passed: false, reason: `trigger close is outside every session window (${windows.map((w) => w.name).join(', ')})`, observedValue: minutes, threshold: windows.map((w) => w.name).join(','), evidenceTime: ctx.now };
+    },
+  },
 };
+
+/** Minutes since UTC midnight; the session rule judges the trigger close (`ctx.now`) by time of day. */
+export function utcMinutesOfDay(t: number): number {
+  const d = new Date(t);
+  return d.getUTCHours() * 60 + d.getUTCMinutes();
+}

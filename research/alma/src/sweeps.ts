@@ -54,6 +54,8 @@ export interface SweepEvent {
   direction: 1 | -1;
   pivotIndex: number;
   level: number;
+  /** Bar whose extreme was swept (episode start; needed for structure stops). */
+  sweepIndex: number;
   /** True when the sweep bar itself closed back across the level. */
   sameBarReclaim: boolean;
 }
@@ -148,12 +150,12 @@ function finishReclaim(
   const sweepBar = candles[sweepIndex];
   const reclaimedNow = bullish ? sweepBar.close > level : sweepBar.close < level;
   if (reclaimedNow) {
-    return makeEvent(sweepIndex, sweepBar.openTime, direction, pivotIndex, level, true);
+    return makeEvent(sweepIndex, sweepBar.openTime, direction, pivotIndex, level, sweepIndex, true);
   }
   for (let m = sweepIndex + 1; m <= sweepIndex + options.reclaimWithinBars && m < candles.length; m++) {
     const close = candles[m].close;
     if (bullish ? close > level : close < level) {
-      return makeEvent(m, candles[m].openTime, direction, pivotIndex, level, false);
+      return makeEvent(m, candles[m].openTime, direction, pivotIndex, level, sweepIndex, false);
     }
   }
   return null;
@@ -165,7 +167,8 @@ function makeEvent(
   direction: 1 | -1,
   pivotIndex: number,
   level: number,
+  sweepIndex: number,
   sameBarReclaim: boolean,
 ): SweepEvent {
-  return { index, openTime, direction, pivotIndex, level, sameBarReclaim };
+  return { index, openTime, direction, pivotIndex, level, sweepIndex, sameBarReclaim };
 }

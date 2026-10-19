@@ -29,7 +29,15 @@ Key methodological findings so far:
 
 | # | Study | Branch | Status |
 |---|---|---|---|
-| 6 | Sweep-and-reclaim Stage D — limit-at-level (retest) execution model: resting limit at the swept level, maker entry fees, fill window 6/12 bars, both sides, stop buffers 0.25/0.5/1.0 ATR, stop-or-2R / stop-or-time48 exits (24 configs). Train → test → replication discipline identical to Stage C. | `research/sweep-stage-d` | **REJECTED** — 0/24 train-gate passes (best raw p = 0.0502; Holm needs 0.00208). All 24 configs positive under the optimistic intrabar convention — the first uniformly positive family — but a sensitivity audit showed the near-miss cells are convention-fragile (short buf0.25 W12: +0.253 → −0.024 under the conservative bound). Convention-robust no-target cells stay positive under both bounds but never approach significance (p 0.17–0.31; lottery profiles). Holdouts preserved. Verdict: `research/alma/reports/sweep-staged-verdict.md` |
+| 6 | Sweep-and-reclaim Stage D — limit-at-level (retest) execution model: resting limit at the swept level, maker entry fees, fill window 6/12 bars, both sides, stop buffers 0.25/0.5/1.0 ATR, stop-or-2R / stop-or-time48 exits (24 configs). Train → test → replication discipline identical to Stage C. | `research/sweep-stage-d` (PR #44, merged) | **REJECTED** — 0/24 train-gate passes (best raw p = 0.0502; Holm needs 0.00208). All 24 configs positive under the optimistic intrabar convention — the first uniformly positive family — but a sensitivity audit showed the near-miss cells are convention-fragile (short buf0.25 W12: +0.253 → −0.024 under the conservative bound). Convention-robust no-target cells stay positive under both bounds but never approach significance (p 0.17–0.31; lottery profiles). Holdouts preserved. Verdict: `research/alma/reports/sweep-staged-verdict.md` |
+
+## Stage E (this branch)
+
+| # | Study | Branch | Status |
+|---|---|---|---|
+| 7 | Sweep-and-reclaim Stage E — cross-asset replication: the Stage-B market-entry family (24) and the Stage-D retest-entry family (24) applied VERBATIM to fresh BTCUSDT + ETHUSDT windows and pooled per config (48 tested configs, Holm over all). Windows mirror the SOL discipline to the day: train 584d (2024-10-18 → 2026-05-25), test 146d, replication 365d (2023-10-19 → 2024-10-18) — all virgin on BTC/ETH. Pooled permutation (seed 20261021), 4 chronological folds over the shared UTC timeline, per-symbol splits as diagnostics. Predeclared addition from the Stage-D lesson: retest configs must also show net E[R] > 0 under the pessimistic fill-bar convention at every window. Mechanistic rationale: liquidation/stop-run cascades beyond pivot extremes are a market mechanism, not a SOL quirk; if real-but-underpowered, ~2x pooled events sharpen inference; if noise, nothing replicates. | `research/sweep-crossasset` | **PREDECLARED** — family committed and pushed before any BTC/ETH data run |
+
+Update after the train run (do not edit this cell before the run completes): _pending_.
 
 ## Program status
 

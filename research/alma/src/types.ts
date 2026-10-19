@@ -8,6 +8,8 @@ export type NativeTimeframe = (typeof NATIVE_TIMEFRAMES)[number];
 
 export type AlmaSource = 'open' | 'high' | 'low' | 'close' | 'hl2' | 'hlc3' | 'ohlc4';
 
+export const ALMA_SOURCES: readonly AlmaSource[] = ['open', 'high', 'low', 'close', 'hl2', 'hlc3', 'ohlc4'];
+
 export interface Candle {
   openTime: number;
   closeTime: number;

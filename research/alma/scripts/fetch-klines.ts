@@ -120,8 +120,12 @@ async function main(): Promise<void> {
   const manifestRoot = resolve(arg('manifest-out', 'data/research/alma/manifests'));
   const force = hasFlag('force');
 
-  const client = new BinanceClient({});
-  console.log('Fetching public Binance USD-M contract klines for ' + symbol + ' (SDK v' + SDK_VERSION + ')');
+  const apiBase = arg('api-base', '').trim();
+  const client = new BinanceClient(apiBase ? { apiBase } : {});
+  console.log(
+    'Fetching public Binance USD-M contract klines for ' + symbol + ' (SDK v' + SDK_VERSION + ')' +
+    (apiBase ? ' via apiBase ' + apiBase : ''),
+  );
 
   for (const timeframe of timeframes) {
     const startTime = explicitStart

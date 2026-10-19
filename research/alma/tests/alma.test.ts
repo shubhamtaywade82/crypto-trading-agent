@@ -28,7 +28,7 @@ test('offset changes the weighting location and changes response to a step', () 
   const values = [10, 10, 10, 10, 20];
   const slow = alma(values, { length: 5, offset: 0.5, sigma: 6 }).at(-1);
   const fast = alma(values, { length: 5, offset: 0.99, sigma: 6 }).at(-1);
-  assert.ok(slow !== null && fast !== null);
+  assert.ok(typeof slow === 'number' && typeof fast === 'number');
   assert.ok(fast > slow);
 });
 

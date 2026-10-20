@@ -187,6 +187,7 @@ export function renderFooterLines(p: CockpitProps, width: number = 128): string[
   const l1 = ' ' + spinner + chalk.gray(' orchestrator' + orchestrator) + chalk.white(`${p.apiWeight}/${API_WEIGHT_LIMIT}`) + chalk.gray(' │ ws ') + WS_COLOR[p.wsStatus](`●${p.wsStatus}`)
     + chalk.gray(' │ mode ') + chalk.yellow.bold(p.mode.toUpperCase()) + venueLabel(p.venue);
   const commands = [
+    chalk.yellow.bold('Tab/m') + ' ' + chalk.gray('mtf-view'),
     chalk.white.bold('↑↓') + ' ' + chalk.gray('nav'),
     chalk.yellow.bold('c') + ' ' + chalk.gray('close-pos'),
     chalk.yellow.bold('x') + ' ' + chalk.gray('cancel'),

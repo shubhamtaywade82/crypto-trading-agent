@@ -37,6 +37,8 @@ export const useStore = create<Store>((set) => ({
   minLiqDistancePct: null,
   corrBtcEth: null,
   marketIntel: undefined,
+  marketStates: undefined,
+  mtfCandles: undefined,
   serverTime: Date.now(),
   set: (partial) => set((state) => {
     let changed = false;

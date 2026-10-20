@@ -1,3 +1,6 @@
+import type { MarketState } from './market/types.js';
+import type { NativeTimeframe } from './market/MarketDataTypes.js';
+
 export type Side = 'LONG' | 'SHORT';
 export type Mode = 'paper' | 'live';
 export type AgentId =
@@ -178,6 +181,8 @@ export interface AppState {
   minLiqDistancePct: number | null;
   corrBtcEth: number | null;
   marketIntel?: Record<string, MarketIntelSummary>;
+  marketStates?: Record<string, MarketState>;
+  mtfCandles?: Record<string, Partial<Record<NativeTimeframe, Candle[]>>>;
 }
 
 /** Flat, display-ready summary of per-symbol market intelligence for the cockpit. */

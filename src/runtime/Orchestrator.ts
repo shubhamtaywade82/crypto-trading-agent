@@ -558,12 +558,27 @@ export class Orchestrator extends EventEmitter {
     }
   }
 
+  private extractRecentMtfCandles(v2?: Record<string, import('../market/MarketDataTypes.js').MarketDataSnapshot>) {
+    if (!v2) return undefined;
+    const result: Record<string, Partial<Record<import('../market/MarketDataTypes.js').NativeTimeframe, Candle[]>>> = {};
+    for (const [sym, snap] of Object.entries(v2)) {
+      result[sym] = {};
+      for (const [tf, candles] of Object.entries(snap.candles)) {
+        if (candles) result[sym][tf as import('../market/MarketDataTypes.js').NativeTimeframe] = candles.slice(-25);
+      }
+    }
+    return result;
+  }
+
   private async emitState(ctx: CycleContext): Promise<void> {
     const [positions, account] = await Promise.all([this.binance.getPositions(false), this.binance.getAccount()]);
     this.refreshLiveTickers(ctx);
     this.emit('state', {
       mode: config.mode, ...accountFields(account, positions), funding: ctx.funding,
-      spotPrices: { ...this.liveTickers }, ...this.telemetryFor(ctx, account, positions), serverTime: Date.now(),
+      spotPrices: { ...this.liveTickers }, ...this.telemetryFor(ctx, account, positions),
+      marketStates: ctx.marketState,
+      mtfCandles: this.extractRecentMtfCandles(ctx.marketDataV2),
+      serverTime: Date.now(),
     });
   }
 

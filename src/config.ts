@@ -32,7 +32,7 @@ export const EnvSchema = z.object({
   RISK_PER_TRADE_PCT: z.coerce.number().default(1),
   MAX_DRAWDOWN_PCT: z.coerce.number().default(5),
   MIN_LIQ_BUFFER_ATR: z.coerce.number().default(1.2),
-  SYMBOLS: z.string().default('BTCUSDT,ETHUSDT,SOLUSDT,AVAXUSDT'),
+  SYMBOLS: z.string().default('BTCUSDT,ETHUSDT,SOLUSDT,XRPUSDT'),
   MAX_DAILY_LOSS_PCT: z.coerce.number().positive().default(3),
   MAX_LOSS_STREAK: z.coerce.number().int().positive().default(4),
   MAX_CONCURRENT_POSITIONS: z.coerce.number().int().positive().optional(),

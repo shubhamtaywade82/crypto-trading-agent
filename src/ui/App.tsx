@@ -3,9 +3,14 @@ import { Box, Text, useInput, useStdout } from 'ink';
 import { Orchestrator } from '../runtime/Orchestrator.js';
 import { useStore } from '../store.js';
 import { clampSelection, MIN_COLS, MIN_ROWS, renderCockpit, ResizeWarning } from './panels.js';
+import { renderMtfScreen } from './mtfPanels.js';
 import { formatLocalTime } from './format.js';
 import { getSymbolRules, roundPrice } from '../binance/symbolRules.js';
+import { config } from '../config.js';
 import type { MarketPriceInfo } from '../types.js';
+import type { NativeTimeframe } from '../market/MarketDataTypes.js';
+
+const TIMEFRAMES: NativeTimeframe[] = ['5m', '15m', '1h', '4h'];
 
 export function nextLerpPrice(sym: string, curr: number, target: number, tickSize: number): number {
   const diff = target - curr;
@@ -91,6 +96,9 @@ export default function App() {
   const [time, setTime] = useState(() => new Date().toISOString().slice(11, 19));
   const [localTime, setLocalTime] = useState(() => formatLocalTime());
   const [selPos, setSelPos] = useState(0);
+  const [view, setView] = useState<'cockpit' | 'mtf'>('cockpit');
+  const [mtfPairIndex, setMtfPairIndex] = useState(0);
+  const [mtfTimeframe, setMtfTimeframe] = useState<NativeTimeframe>('15m');
 
   const state = useStore();
   const { positions } = state;
@@ -132,8 +140,30 @@ export default function App() {
   }, [orchestrator, set, pushLog]);
 
   useInput((input, key) => {
-    if (key.upArrow) setSelPos(clampSelection(selectedIndex - 1, positions.length));
-    if (key.downArrow) setSelPos(clampSelection(selectedIndex + 1, positions.length));
+    if (key.tab || input === 'm') {
+      setView((v) => (v === 'cockpit' ? 'mtf' : 'cockpit'));
+      return;
+    }
+    if (view === 'mtf') {
+      const symList = config.symbols;
+      if (key.upArrow) setMtfPairIndex((i) => Math.max(0, i - 1));
+      if (key.downArrow) setMtfPairIndex((i) => Math.min(symList.length - 1, i + 1));
+      if (key.leftArrow) {
+        setMtfTimeframe((tf) => {
+          const idx = TIMEFRAMES.indexOf(tf);
+          return TIMEFRAMES[(idx - 1 + TIMEFRAMES.length) % TIMEFRAMES.length];
+        });
+      }
+      if (key.rightArrow) {
+        setMtfTimeframe((tf) => {
+          const idx = TIMEFRAMES.indexOf(tf);
+          return TIMEFRAMES[(idx + 1) % TIMEFRAMES.length];
+        });
+      }
+    } else {
+      if (key.upArrow) setSelPos(clampSelection(selectedIndex - 1, positions.length));
+      if (key.downArrow) setSelPos(clampSelection(selectedIndex + 1, positions.length));
+    }
     if (input === 'c' && selectedPosition) orchestrator.closePosition(selectedPosition);
     if (input === 'x') orchestrator.cancelAll();
     if (input === 'k') orchestrator.toggleKillSwitch();
@@ -142,7 +172,7 @@ export default function App() {
       pushLog({
         ts: Date.now(),
         agent: 'SYSTEM',
-        msg: 'COMMANDS: ↑↓ select pos │ c close pos │ x cancel all │ k kill-switch │ a advisor audit │ s stop',
+        msg: 'COMMANDS: Tab/m toggle view │ ↑↓ select │ ←→ timeframe │ c close pos │ x cancel all │ k kill-switch │ a advisor audit │ s stop',
         level: 'info',
       });
     }
@@ -155,11 +185,29 @@ export default function App() {
   }
 
   const lerpPrices = useLerpPrices(state.spotPrices);
-  const cockpitLines = renderCockpit({ ...state, spotPrices: lerpPrices, time, localTime, selPos: selectedIndex, isSyncing, totalWidth: cols, totalHeight: rows });
+  const symbols = config.symbols;
+  const selectedSymbol = symbols[Math.max(0, Math.min(mtfPairIndex, symbols.length - 1))] ?? 'BTCUSDT';
+  const displayLines = view === 'cockpit'
+    ? renderCockpit({ ...state, spotPrices: lerpPrices, time, localTime, selPos: selectedIndex, isSyncing, totalWidth: cols, totalHeight: rows })
+    : renderMtfScreen({
+        symbols,
+        selectedSymbol,
+        selectedTimeframe: mtfTimeframe,
+        marketStates: state.marketStates,
+        mtfCandles: state.mtfCandles,
+        spotPrices: lerpPrices,
+        funding: state.funding,
+        time,
+        localTime,
+        totalWidth: cols,
+        totalHeight: rows,
+        wsStatus: state.wsStatus,
+        mode: state.mode,
+      });
 
   return (
     <Box flexDirection="column" width={cols}>
-      {cockpitLines.map((line, idx) => (
+      {displayLines.map((line, idx) => (
         <Text key={idx}>{line + '\x1b[K'}</Text>
       ))}
     </Box>

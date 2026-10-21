@@ -17,7 +17,7 @@ export { OrderInFlightError, OrderNotFilledError, OwnershipError, type OpenParam
 export type VenueState = 'connected' | 'degraded' | 'down';
 
 export interface VenueStatus {
-  name: 'paper_exchange';
+  name: string;
   accountId: string;
   state: VenueState;
   lastError: string | null;
@@ -30,6 +30,7 @@ export interface RemoteBrokerDeps {
   accountId: string;
   symbols: string[];
   initialMargin: number;
+  venueName?: string;
   now?: () => number;
 }
 
@@ -126,7 +127,7 @@ export class RemoteBroker {
 
   status(): VenueStatus {
     const state: VenueState = this.consecutiveFailures === 0 ? 'connected' : this.consecutiveFailures < DOWN_AFTER_FAILURES ? 'degraded' : 'down';
-    return { name: 'paper_exchange', accountId: this.deps.accountId, state, lastError: this.lastError, lastSyncAt: this.lastSyncAt };
+    return { name: this.deps.venueName ?? 'paper_exchange', accountId: this.deps.accountId, state, lastError: this.lastError, lastSyncAt: this.lastSyncAt };
   }
 
   /** Opens, scales into or flips a position the strategy owns; refuses symbols owned by anyone else before any order is sent. */

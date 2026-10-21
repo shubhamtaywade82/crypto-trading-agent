@@ -1,4 +1,6 @@
 import { USDMClient, WebsocketClient } from 'binance';
+import { CoinDCXClient } from '@nemesis-oss/coindcx-sdk';
+import { CoinDcxExchangeApi, type CoinDcxOrderClient } from '../coindcx/coindcxClient.js';
 import { config } from '../config.js';
 import { PaperEngine } from './paperEngine.js';
 import { PaperExchangeClient } from './paperExchangeClient.js';
@@ -23,6 +25,8 @@ type OpenPositionParams = {
 
 const REMOTE_STATE_FILE = 'data/remote-state.json';
 const REMOTE_INITIAL_MARGIN = 1_150;
+const COINDCX_STATE_FILE = 'data/coindcx-state.json';
+const COINDCX_BASELINE_FILE = 'data/coindcx-baseline.json';
 
 function remoteBrokerFromConfig(): RemoteBroker | null {
   const remote = config.paperExchange;
@@ -33,7 +37,34 @@ function remoteBrokerFromConfig(): RemoteBroker | null {
     accountId: remote.accountId,
     symbols: config.symbols,
     initialMargin: REMOTE_INITIAL_MARGIN,
+    venueName: 'paper_exchange',
   });
+}
+
+function coinDcxBrokerFromConfig(): RemoteBroker | null {
+  const cx = config.coindcx;
+  if (config.mode !== 'live' || !cx?.apiKey || !cx?.apiSecret) return null;
+  const api = new CoinDcxExchangeApi({
+    client: new CoinDCXClient({ apiKey: cx.apiKey, apiSecret: cx.apiSecret, paperMode: cx.paperMode }) as unknown as CoinDcxOrderClient,
+    quotePreference: cx.quotePreference,
+    baselinePath: COINDCX_BASELINE_FILE,
+    accountId: 'coindcx',
+    maxOrderNotional: cx.maxOrderNotional,
+    maxOrderQuantity: cx.maxOrderQuantity,
+  });
+  void api.warmSymbols(config.symbols).catch(() => {});
+  return new RemoteBroker({
+    api,
+    store: new RemoteStore(COINDCX_STATE_FILE, 'coindcx'),
+    accountId: 'coindcx',
+    symbols: config.symbols,
+    initialMargin: cx.initialBalance,
+    venueName: 'CoinDCX',
+  });
+}
+
+function brokerFromConfig(): RemoteBroker | null {
+  return remoteBrokerFromConfig() ?? coinDcxBrokerFromConfig();
 }
 
 export class BinanceService {
@@ -50,7 +81,7 @@ export class BinanceService {
   private entries: LiveEntryTracker | null = null;
   private entryLog: (message: string, level: 'info' | 'warn' | 'error') => void = () => undefined;
 
-  constructor(private readonly broker: RemoteBroker | null = remoteBrokerFromConfig()) {
+  constructor(private readonly broker: RemoteBroker | null = brokerFromConfig()) {
     this.futures = new USDMClient({ api_key: config.binance.apiKey, api_secret: config.binance.apiSecret });
     this.marketDataV2 = new MarketDataService(this.futures);
   }
@@ -201,6 +232,7 @@ export class BinanceService {
   }
 
   async openFuturesPosition(params: OpenPositionParams): Promise<{ orderId: number | string; status: string }> {
+    if (config.alertOnly) throw new Error(`Refusing order in ALERT_ONLY mode: ${params.side} ${params.symbol}`);
     if (!(params.qty > 0)) throw new Error(`Refusing ${params.side} ${params.symbol} with non-positive quantity ${params.qty}`);
     if (this.isRemoteActive()) {
       const entryPrice = params.entryPrice ?? (await this.getPremiumIndex(params.symbol)).markPrice;
@@ -354,7 +386,7 @@ export class BinanceService {
   }
 
   async cancelAll(symbol: string): Promise<void> {
-    if (config.mode === 'paper') return;
+    if (config.alertOnly || config.mode === 'paper' || this.broker) return;
     await this.futures.cancelAllOpenOrders({ symbol });
   }
 
@@ -363,6 +395,7 @@ export class BinanceService {
   }
 
   async closePosition(pos: Position): Promise<void> {
+    if (config.alertOnly) return;
     if (this.isRemoteActive()) return this.broker!.close(pos, 'CLOSE');
     if (config.mode === 'paper') {
       this.paper.openPosition({

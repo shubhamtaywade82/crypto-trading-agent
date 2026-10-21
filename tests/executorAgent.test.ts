@@ -145,3 +145,16 @@ test('should not start the cooldown for a refusal while the venue is degraded or
   assert.equal(startsCooldown('success', 'down'), true);
   assert.equal(startsCooldown('error', 'connected'), false);
 });
+
+test('should suppress order execution when alertOnly is on', async () => {
+  const { captured, executor } = stubService();
+  (config as any).alertOnly = true;
+  try {
+    const log = await executor.execute(signal({ entry: 100 }), risk);
+    assert.equal(log.level, 'warn');
+    assert.match(log.msg, /\[ALERT ONLY\].*suppressed/);
+    assert.equal(captured.length, 0);
+  } finally {
+    (config as any).alertOnly = false;
+  }
+});

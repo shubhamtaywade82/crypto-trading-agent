@@ -37,3 +37,13 @@ test('COINDCX_PAPER_MODE=off is honored', async () => {
   const { config } = await loadConfig({ MODE: 'live', COINDCX_API_KEY: 'a', COINDCX_API_SECRET: 'b', COINDCX_PAPER_MODE: 'off' });
   assert.equal(config.coindcx?.paperMode, false);
 });
+
+test('ALERT_ONLY=on sets config.alertOnly true', async () => {
+  const { config } = await loadConfig({ MODE: 'live', ALERT_ONLY: 'on' });
+  assert.equal(config.alertOnly, true);
+});
+
+test('ALERT_ONLY defaults to off', async () => {
+  const { config } = await loadConfig({});
+  assert.equal(config.alertOnly, false);
+});

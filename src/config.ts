@@ -117,6 +117,7 @@ export const EnvSchema = z.object({
   PAPER_EXCHANGE_URL: z.string().optional(),
   PAPER_EXCHANGE_ACCOUNT_ID: z.string().trim().optional(),
   PAPER_EXCHANGE_API_KEY: z.string().trim().optional(),
+  ALERT_ONLY: z.enum(['off', 'on']).default('off'),
   COINDCX_API_KEY: z.string().default(''),
   COINDCX_API_SECRET: z.string().default(''),
   COINDCX_PAPER_MODE: z.enum(['off', 'on']).default('on'),
@@ -287,8 +288,7 @@ export const config = {
         apiKey: env.PAPER_EXCHANGE_API_KEY,
       }
     : null,
-  // CoinDCX live-execution migration is in progress but not wired into BinanceService yet (issue #31):
-  // built whenever MODE=live so the adapter can pick it up once wired, but never required to start.
+  alertOnly: env.ALERT_ONLY === 'on',
   coindcx: env.MODE === 'live' ? {
     apiKey: env.COINDCX_API_KEY,
     apiSecret: env.COINDCX_API_SECRET,
@@ -300,6 +300,6 @@ export const config = {
   } : null,
 } as const;
 
-if (config.mode === 'live' && (!config.binance.apiKey || !config.binance.apiSecret)) {
-  throw new Error('LIVE mode requires BINANCE_API_KEY and BINANCE_API_SECRET');
+if (config.mode === 'live' && !config.coindcx?.apiKey && (!config.binance.apiKey || !config.binance.apiSecret)) {
+  throw new Error('LIVE mode requires BINANCE_API_KEY and BINANCE_API_SECRET (or COINDCX_API_KEY and COINDCX_API_SECRET)');
 }

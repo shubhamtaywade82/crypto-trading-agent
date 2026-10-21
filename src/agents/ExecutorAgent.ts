@@ -24,6 +24,9 @@ export class ExecutorAgent extends BaseAgent {
 
   /** The optional decisionId threads the decision lineage through the venue into the trade journal. */
   async execute(signal: Signal, risk: RiskDecision, decisionId?: string): Promise<LogEntry> {
+    if (config.alertOnly) {
+      return this.log(`[ALERT ONLY] ${signal.type} ${signal.symbol} suppressed — alert sent to Telegram`, 'warn');
+    }
     try {
       const { side, qty } = await this.buildOrder(signal, risk);
       const stopLoss = roundOptionalPrice(signal.symbol, signal.stopLoss);

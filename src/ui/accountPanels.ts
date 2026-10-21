@@ -185,7 +185,7 @@ export function renderFooterLines(p: CockpitProps, width: number = 128): string[
   const spinner = p.isSyncing ? chalk.yellow('⠋') : chalk.yellow('⠴');
   const orchestrator = ` │ ${runningCount(p.agents)} agents autonomous │ eval ${LOOP_INTERVAL_MS / 1000}s │ api weight `;
   const l1 = ' ' + spinner + chalk.gray(' orchestrator' + orchestrator) + chalk.white(`${p.apiWeight}/${API_WEIGHT_LIMIT}`) + chalk.gray(' │ ws ') + WS_COLOR[p.wsStatus](`●${p.wsStatus}`)
-    + chalk.gray(' │ mode ') + chalk.yellow.bold(p.mode.toUpperCase()) + venueLabel(p.venue);
+    + chalk.gray(' │ mode ') + chalk.yellow.bold(config.alertOnly ? `${p.mode.toUpperCase()} (ALERT-ONLY)` : p.mode.toUpperCase()) + venueLabel(p.venue);
   const commands = [
     chalk.yellow.bold('Tab/m') + ' ' + chalk.gray('mtf-view'),
     chalk.white.bold('↑↓') + ' ' + chalk.gray('nav'),

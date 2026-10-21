@@ -101,6 +101,7 @@ export default function App() {
   const [mtfTimeframe, setMtfTimeframe] = useState<NativeTimeframe>('15m');
 
   const state = useStore();
+  const lerpPrices = useLerpPrices(state.spotPrices);
   const { positions } = state;
   const set = useStore((s) => s.set);
   const pushLog = useStore((s) => s.pushLog);
@@ -184,7 +185,6 @@ export default function App() {
     return <ResizeWarning cols={cols} rows={rows} />;
   }
 
-  const lerpPrices = useLerpPrices(state.spotPrices);
   const symbols = config.symbols;
   const selectedSymbol = symbols[Math.max(0, Math.min(mtfPairIndex, symbols.length - 1))] ?? 'BTCUSDT';
   const displayLines = view === 'cockpit'

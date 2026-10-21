@@ -83,7 +83,7 @@ export class SymbolRouter {
     throw new Error(`no CoinDCX futures market for ${base}USDT`);
   }
 
-  private async getFxRate(now: number): Promise<number> {
+  async getFxRate(now: number = Date.now()): Promise<number> {
     const age = now - this.fxRateTime;
     // Fresh: use cached value without refetch
     if (age < 30 * 1000) return this.fxRate;
@@ -99,7 +99,7 @@ export class SymbolRouter {
     }
 
     // Validate result (outside try/catch so validation errors always throw)
-    const usdtInr = ticker.find((t) => t.pair === 'USDTINR');
+    const usdtInr = ticker.find((t) => t.pair === 'USDTINR' || (t as any).market === 'USDTINR');
     if (!usdtInr?.last_price) {
       if (age < 120 * 1000) return this.fxRate;
       throw new Error('USDTINR rate unavailable or unusable');

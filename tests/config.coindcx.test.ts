@@ -4,7 +4,15 @@ import { test } from 'node:test';
 // Each case re-imports config.ts fresh under mutated env, mirroring tests/config.test.ts's existing pattern.
 async function loadConfig(env: Record<string, string>) {
   const prior = { ...process.env };
-  Object.assign(process.env, { MODE: 'paper', BINANCE_API_KEY: 'k', BINANCE_API_SECRET: 's', ...env });
+  Object.assign(process.env, {
+    MODE: 'paper',
+    BINANCE_API_KEY: 'k',
+    BINANCE_API_SECRET: 's',
+    COINDCX_API_KEY: '',
+    COINDCX_API_SECRET: '',
+    ALERT_ONLY: 'off',
+    ...env,
+  });
   try {
     return await import(`../src/config.js?t=${Date.now()}-${Math.random()}`);
   } finally {

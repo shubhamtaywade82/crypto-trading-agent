@@ -288,7 +288,7 @@ export const config = {
         apiKey: env.PAPER_EXCHANGE_API_KEY,
       }
     : null,
-  alertOnly: env.ALERT_ONLY === 'on',
+  alertOnly: env.MODE === 'live' && env.ALERT_ONLY === 'on',
   coindcx: env.MODE === 'live' ? {
     apiKey: env.COINDCX_API_KEY,
     apiSecret: env.COINDCX_API_SECRET,

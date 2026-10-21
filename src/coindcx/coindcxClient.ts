@@ -10,36 +10,20 @@
 import { mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import {
-  OrderRejectedError,
-  VenueUnavailableError,
-  type ExchangeApi,
-  type ExchangeRiskEvent,
-  type PaperExchangeAccountSnapshot,
-  type PaperExchangePosition,
-  type SubmitOrderParams,
-  type SubmitOrderResult,
+  OrderRejectedError, VenueUnavailableError, type ExchangeApi, type ExchangeRiskEvent,
+  type PaperExchangeAccountSnapshot, type PaperExchangePosition, type SubmitOrderParams, type SubmitOrderResult,
 } from '../binance/paperExchangeClient.js';
 import { ContractSpecCache, floorToLot } from './contractSpec.js';
 import { SymbolRouter } from './symbolRouter.js';
 
 interface CoinDcxOrderRaw {
-  id: string | number;
-  client_order_id: string | undefined;
-  status: string;
-  filled_quantity: number | undefined;
-  price: number | undefined;
+  id: string | number; client_order_id?: string; status: string;
+  filled_quantity?: number; price?: number;
 }
 
 interface CoinDcxPositionRaw {
-  id: string | number;
-  pair: string;
-  side: 'long' | 'short';
-  size: number;
-  entry_price: number;
-  mark_price?: number;
-  liquidation_price?: number | null;
-  leverage?: number;
-  margin_type?: 'isolated' | 'cross';
+  id: string | number; pair: string; side: 'long' | 'short'; size: number; entry_price: number;
+  mark_price?: number; liquidation_price?: number | null; leverage?: number; margin_type?: 'isolated' | 'cross';
 }
 
 export interface CoinDcxOrderClient {
@@ -160,15 +144,26 @@ export class CoinDcxExchangeApi implements ExchangeApi {
 
   async getAccount(): Promise<PaperExchangeAccountSnapshot | null> {
     return this.guarded(async () => {
-      const wallets = (await this.deps.client.futures.account.getWallet()).filter((w) => w.currency === 'USDT');
-      const equity = sumBy(wallets, (w) => w.balance);
+      const rawWallets = await this.deps.client.futures.account.getWallet();
+      const isINR = this.deps.quotePreference === 'INR';
+      const fxRate = isINR ? await this.router.getFxRate().catch(() => 1) : 1;
+      const wallets = rawWallets.map((w: any) => {
+        const curr = String(w.currency ?? w.currency_short_name ?? '').toUpperCase();
+        const rawBal = Number(w.balance ?? 0);
+        const rawLocked = Number(w.locked_balance ?? 0);
+        const rawAvail = Number(w.available_balance ?? Math.max(0, rawBal - rawLocked));
+        const rate = curr === 'INR' && fxRate > 0 ? fxRate : 1;
+        return { currency: curr, balance: rawBal / rate, locked_balance: rawLocked / rate, available_balance: rawAvail / rate };
+      });
+      const targetWallets = wallets.filter((w) => w.currency === 'USDT' || (isINR && w.currency === 'INR' && w.balance > 0));
+      const equity = round8(sumBy(targetWallets, (w) => w.balance));
       const positions = await this.getPositions();
       return {
         accountId: this.deps.accountId,
         currency: 'USDT',
         margin: this.baseline.getOrSeed(equity),
-        availableBalance: sumBy(wallets, (w) => w.available_balance),
-        lockedMargin: sumBy(wallets, (w) => w.locked_balance),
+        availableBalance: round8(sumBy(targetWallets, (w) => w.available_balance)),
+        lockedMargin: round8(sumBy(targetWallets, (w) => w.locked_balance)),
         equity,
         unrealizedPnl: 0,
         realizedPnl: 0,

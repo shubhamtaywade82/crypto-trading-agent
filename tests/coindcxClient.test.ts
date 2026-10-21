@@ -288,3 +288,16 @@ test('submitOrder above maxOrderNotional (INR-routed): the cap is checked agains
   );
   assert.equal(calls.createOrder, 0);
 });
+
+test('getAccount with quotePreference INR converts INR wallet rows via FX rate', async () => {
+  const { client } = fakeClient({
+    wallet: [{ currency: 'INR', balance: 8700, locked_balance: 870, available_balance: 7830 }],
+    ticker: [{ pair: 'USDTINR', last_price: '87' }],
+  });
+  const api = makeApi(client, { quotePreference: 'INR' });
+  const account = await api.getAccount();
+  assert.equal(account?.currency, 'USDT');
+  assert.equal(account?.equity, 100);
+  assert.equal(account?.availableBalance, 90);
+  assert.equal(account?.lockedMargin, 10);
+});

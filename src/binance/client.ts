@@ -41,11 +41,27 @@ function remoteBrokerFromConfig(): RemoteBroker | null {
   });
 }
 
+// Published SDK v1.2.0 omits config.data on signed GETs; CoinDCX requires body matching X-AUTH-SIGNATURE.
+function patchCoinDcxGet(client: any): void {
+  const modules = [client?.futures?.account, client?.futures?.trading, client?.futures?.market];
+  for (const m of modules) {
+    m?.axiosInstance?.interceptors?.request?.use((c: any) => {
+      if (c?.headers?.['X-AUTH-SIGNATURE'] && c.params) {
+        c.data = c.params;
+        c.headers['Content-Type'] = 'application/json';
+      }
+      return c;
+    });
+  }
+}
+
 function coinDcxBrokerFromConfig(): RemoteBroker | null {
   const cx = config.coindcx;
   if (config.mode !== 'live' || !cx?.apiKey || !cx?.apiSecret) return null;
+  const rawClient = new CoinDCXClient({ apiKey: cx.apiKey, apiSecret: cx.apiSecret, paperMode: cx.paperMode });
+  patchCoinDcxGet(rawClient);
   const api = new CoinDcxExchangeApi({
-    client: new CoinDCXClient({ apiKey: cx.apiKey, apiSecret: cx.apiSecret, paperMode: cx.paperMode }) as unknown as CoinDcxOrderClient,
+    client: rawClient as unknown as CoinDcxOrderClient,
     quotePreference: cx.quotePreference,
     baselinePath: COINDCX_BASELINE_FILE,
     accountId: 'coindcx',

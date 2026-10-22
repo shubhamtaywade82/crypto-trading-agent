@@ -203,6 +203,7 @@ function shouldAnalyze(
 
 export class TradingCouncil {
   private readonly lastAnalyzed = new Map<string, number>();
+  private readonly inFlight = new Set<string>();
 
   constructor(
     private readonly generator: StructuredGenerator,
@@ -212,8 +213,18 @@ export class TradingCouncil {
   ) {}
 
   async analyze(state: MarketState, setup: SetupMap): Promise<CouncilResult | null> {
-    if (!this.enabled || !shouldAnalyze(this.lastAnalyzed, state.symbol, state.generatedAt)) return null;
+    // The loop starts a run every cycle; a model slower than the loop would otherwise stack concurrent runs per symbol
+    if (!this.enabled || this.inFlight.has(state.symbol)) return null;
+    if (!shouldAnalyze(this.lastAnalyzed, state.symbol, state.generatedAt)) return null;
+    this.inFlight.add(state.symbol);
+    try {
+      return await this.deliberate(state, setup);
+    } finally {
+      this.inFlight.delete(state.symbol);
+    }
+  }
 
+  private async deliberate(state: MarketState, setup: SetupMap): Promise<CouncilResult | null> {
     const evidence = evidencePacket(state, setup);
     const scenarioIds = new Set(setup.scenarios.map((s) => s.id));
     const opinions = await this.collectOpinions(state.symbol, state, evidence, scenarioIds);

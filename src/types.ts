@@ -62,6 +62,8 @@ export interface Position {
   marginType: 'ISOLATED' | 'CROSS';
   liqDistancePct: number | null;
   liquidationPrice?: number | null;
+  /** True when the venue reported no liquidation price and `liquidationPrice` is an isolated-margin estimate. */
+  isLiqEstimated?: boolean;
   serverSl: string;
   serverTp: string;
   initialRisk?: number; // |entry - first SL| in price units; the 1R used for breakeven trailing

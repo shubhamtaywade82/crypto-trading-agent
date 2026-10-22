@@ -242,9 +242,11 @@ export class RemoteBroker {
     try {
       result = await submitEntry(this.deps.api, params, this.now());
     } catch (err) {
-      if (err instanceof VenueUnavailableError && !isScaleIn) this.reconciler.expectOpen(params);
       // A lost or unfilled order may have changed the account; a 4xx rejection changed nothing, so it skips the refresh.
-      if (err instanceof VenueUnavailableError || err instanceof OrderNotFilledError) await this.afterOrder();
+      const mayHaveFilled = err instanceof VenueUnavailableError || err instanceof OrderNotFilledError;
+      // An async venue (CoinDCX) can acknowledge a market order before it fills: a late fill keeps its owner and stop
+      if (mayHaveFilled && !isScaleIn) this.reconciler.expectOpen(params);
+      if (mayHaveFilled) await this.afterOrder();
       throw err;
     }
     this.reconciler.forgetOpen(params.symbol);

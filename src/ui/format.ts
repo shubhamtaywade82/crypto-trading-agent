@@ -16,15 +16,18 @@ const inrShort = (n: number) => {
   return `₹${abs.toLocaleString('en-IN')}`;
 };
 
-export function fmtCurrency(amount: number, mode: CurrencyMode = 'USD', fxRate = 100): string {
+// Without a venue-reported USDT/INR rate there is no honest rupee figure, so every mode shows dollars
+export function fmtCurrency(amount: number, mode: CurrencyMode = 'USD', fxRate?: number): string {
+  if (fxRate === undefined) return `$${usd(amount)}`;
   if (mode === 'INR') return `₹${Math.round(amount * fxRate).toLocaleString('en-IN')}`;
   if (mode === 'BOTH') return `$${usd(amount)} (${inrShort(amount * fxRate)})`;
   return `$${usd(amount)}`;
 }
 
-export function fmtSignedCurrency(amount: number, mode: CurrencyMode = 'USD', fxRate = 100): string {
+export function fmtSignedCurrency(amount: number, mode: CurrencyMode = 'USD', fxRate?: number): string {
   const sign = isNegative(amount) ? '-' : '+';
   const abs = Math.abs(amount);
+  if (fxRate === undefined) return `${sign}$${usd(abs)}`;
   if (mode === 'INR') return `${sign}₹${Math.round(abs * fxRate).toLocaleString('en-IN')}`;
   if (mode === 'BOTH') return `${sign}$${usd(abs)} (${inrShort(abs * fxRate)})`;
   return `${sign}$${usd(abs)}`;
@@ -36,7 +39,7 @@ export const dp = (n: number, digits = 2) => (isNegative(n, digits) ? n : Math.a
 export const signedDp = (n: number, digits = 2) => `${isNegative(n, digits) ? '-' : '+'}${Math.abs(n).toFixed(digits)}`;
 export const signedUsd = (n: number) => `${isNegative(n) ? '-' : '+'}$${usd(Math.abs(n))}`;
 export const pnlColor = (n: number) => (isNegative(n) ? chalk.red : chalk.green);
-export const coloredPnl = (n: number | null, mode: CurrencyMode = 'USD', fx = 100) =>
+export const coloredPnl = (n: number | null, mode: CurrencyMode = 'USD', fx?: number) =>
   (n === null ? chalk.gray('—') : pnlColor(n)(fmtSignedCurrency(n, mode, fx)));
 // Repeat counts come from terminal size, so they must never go negative
 export const rule = (char: string, count: number) => char.repeat(Math.max(0, count));

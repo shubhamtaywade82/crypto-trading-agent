@@ -5,7 +5,8 @@ import path from 'node:path';
 import { test } from 'node:test';
 import { BinanceService } from '../src/binance/client.js';
 import { VenueUnavailableError } from '../src/binance/paperExchangeClient.js';
-import { OwnershipError, RemoteBroker } from '../src/binance/remoteBroker.js';
+import { OrderNotFilledError, OwnershipError, RemoteBroker } from '../src/binance/remoteBroker.js';
+import { config } from '../src/config.js';
 import { FundingBoundaryWatcher } from '../src/binance/remoteFunding.js';
 import { RemoteStore } from '../src/binance/remoteState.js';
 import { FakeExchange } from './support/fakeExchange.js';
@@ -96,7 +97,7 @@ test('should report the venue state and data availability from the broker', asyn
   await service.getPositions();
   assert.equal(service.getVenueStatus()?.state, 'degraded');
   await service.getPositions();
-  await service.getPositions();
+  await assert.rejects(service.getPositions(), VenueUnavailableError);
   assert.equal(service.getVenueStatus()?.state, 'down');
   assert.equal(service.hasVenueData(), true, 'the cache survives the outage');
 });
@@ -206,4 +207,98 @@ test('should journal the strategy initial risk on a stop-loss exit and on an off
   await fake.injectExternalOrder({ symbol: 'BTCUSDT', side: 'sell', quantity: 0.1, executionPrice: 66_000, leverage: 5 });
   await service.getPositions();
   assert.deepEqual(service.getTrades().map((t) => [t.reason, t.initialRisk]), [['STOP LOSS', 1_000], ['CLOSE', 1_000]]);
+});
+
+/** Replaces the Binance REST client with one that records every call, so a test can prove Binance was never touched. */
+function recordBinanceCalls(service: BinanceService): string[] {
+  const calls: string[] = [];
+  (service as unknown as { futures: unknown }).futures = new Proxy({}, {
+    get: (_target, name) => async () => { calls.push(String(name)); return { orderId: 1, status: 'NEW', positions: [], symbols: [] }; },
+  });
+  return calls;
+}
+
+async function withMode<T>(mode: 'paper' | 'live', alertOnly: boolean, run: () => Promise<T>): Promise<T> {
+  const saved = { mode: config.mode, alertOnly: config.alertOnly };
+  Object.assign(config, { mode, alertOnly });
+  try {
+    return await run();
+  } finally {
+    Object.assign(config, saved);
+  }
+}
+
+async function downService() {
+  const { fake, service } = await setup();
+  fake.down = true;
+  for (let i = 0; i < 3; i++) await service.getPositions().catch(() => undefined);
+  assert.equal(service.getVenueStatus()?.state, 'down');
+  return { fake, service };
+}
+
+test('should refuse an entry while the broker is down instead of routing it to Binance', async () => {
+  const { service } = await downService();
+  const binance = recordBinanceCalls(service);
+
+  await withMode('live', false, async () => {
+    await assert.rejects(service.openFuturesPosition(BTC_LONG), VenueUnavailableError);
+    await assert.rejects(service.getAccount(), VenueUnavailableError);
+  });
+
+  assert.deepEqual(binance, []);
+});
+
+test('should refuse an entry while the broker is down instead of opening it in the local paper engine', async () => {
+  const { fake, service } = await downService();
+
+  await assert.rejects(service.openFuturesPosition(BTC_LONG), VenueUnavailableError);
+
+  fake.down = false;
+  await service.getPositions();
+  assert.deepEqual(await service.getPositions(), []);
+  assert.deepEqual(service.dropUnlistedPositions([]), [], 'no local paper book was started');
+});
+
+test('should keep stop updates in the broker sidecar and never cancel or place Binance orders', async () => {
+  const { service } = await setup();
+  await service.openFuturesPosition(BTC_LONG);
+  const binance = recordBinanceCalls(service);
+
+  for (const alertOnly of [false, true]) {
+    await withMode('live', alertOnly, async () => service.updateStops('BTCUSDT', 'MOMENTUM-γ', 64_500, 69_000, 'LONG'));
+  }
+  await new Promise((resolve) => setImmediate(resolve));
+
+  assert.deepEqual(binance, []);
+  assert.equal((await service.getPositions())[0].serverSl, '64500');
+});
+
+test('should send no Binance stop orders in ALERT_ONLY live mode without a broker', async () => {
+  const service = new BinanceService(null);
+  const binance = recordBinanceCalls(service);
+
+  await withMode('live', true, async () => service.updateStops('BTCUSDT', 'MOMENTUM-γ', 64_500, 69_000, 'LONG'));
+  await new Promise((resolve) => setImmediate(resolve));
+
+  assert.deepEqual(binance, []);
+});
+
+test('should refuse a live broker entry that carries no stop-loss before any order is sent', async () => {
+  const { fake, service } = await setup();
+
+  await withMode('live', false, async () => {
+    await assert.rejects(service.openFuturesPosition({ ...BTC_LONG, stopLoss: undefined }), /must carry a stop-loss/);
+  });
+
+  assert.deepEqual(await fake.getPositions(), []);
+});
+
+test('should adopt an entry the venue only acknowledged with its owner and stop once it shows up filled', async () => {
+  const { fake, service } = await setup();
+  fake.ackBeforeFill = true;
+
+  await assert.rejects(service.openFuturesPosition(BTC_LONG), OrderNotFilledError);
+
+  const [position] = await service.getPositions();
+  assert.deepEqual([position.strategy, position.serverSl], ['MOMENTUM-γ', '64000']);
 });

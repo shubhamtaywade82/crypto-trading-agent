@@ -3,7 +3,7 @@ import stringWidth from 'string-width';
 import { config, LOOP_INTERVAL_MS } from '../config.js';
 import { formatPrice, formatQty } from '../binance/symbolRules.js';
 import type { AgentState, Position, WsStatus } from '../types.js';
-import { coloredPnl, dp, fmtCurrency, fmtSignedCurrency, orDash, padLine, pnlColor, rule, runningCount, signedDp, signedUsd, usd } from './format.js';
+import { coloredPnl, dp, fmtCurrency, fmtSignedCurrency, orDash, padLine, pnlColor, rule, runningCount, signedDp, signedUsd } from './format.js';
 import type { CockpitProps } from './panels.js';
 
 const API_WEIGHT_LIMIT = 2400; // Binance USD-M request-weight ceiling per minute
@@ -67,7 +67,7 @@ function agentRows(a: AgentState, isFull: boolean, width: number): string[] {
 
 function equityRows(p: CockpitProps, width: number): string[] {
   const mode = p.currencyMode ?? 'USD';
-  const fx = p.fxRate ?? 100;
+  const fx = p.fxRate;
   const since = pnlSinceStart(p);
   const equity = since ? chalk.white.bold(fmtCurrency(p.equity, mode, fx)) : chalk.gray('—');
   const basis = p.mode === 'live' ? 'session' : 'total'; // live has no history, so its baseline is the first balance this process saw
@@ -78,7 +78,7 @@ function equityRows(p: CockpitProps, width: number): string[] {
 
 export function renderCol1Lines(p: CockpitProps, width = 40, rowCount = 29): string[] {
   const mode = p.currencyMode ?? 'USD';
-  const fx = p.fxRate ?? 100;
+  const fx = p.fxRate;
   const rows: string[] = [
     ...equityRows(p, width),
     padLine(' ' + chalk.gray('uPnL    ') + pnlColor(p.upnl).bold(fmtSignedCurrency(p.upnl, mode, fx)), width),
@@ -110,23 +110,23 @@ function positionCard(pos: Position, isSelected: boolean, width: number, pnl: st
   const l2 = width >= 52
     ? `   ${chalk.gray('Entry ')}${chalk.white(ePrice)}  ${chalk.gray('Mark ')}${chalk.white(mPrice)}  ${chalk.gray('Sz ')}${chalk.white(qty)}`
     : `   ${chalk.gray('e ')}${chalk.white(ePrice)}  ${chalk.gray('m ')}${chalk.white(mPrice)}  ${chalk.gray('sz ')}${chalk.white(qty)}`;
+  return [padLine(l1, width), padLine(l2, width), padLine(cardLevelsLine(pos, width), width)];
+}
 
-  const formatLevel = (lvl: string) => {
-    const num = Number(lvl);
-    return lvl && lvl !== '—' ? (Number.isFinite(num) ? formatPrice(pos.symbol, num) : lvl) : '—';
-  };
-  const slVal = formatLevel(pos.serverSl);
-  const tpVal = formatLevel(pos.serverTp);
-  const sl = slVal !== '—' ? chalk.white(slVal) : chalk.gray('—');
-  const tp = tpVal !== '—' ? chalk.white(tpVal) : chalk.gray('—');
-  const liqVal = pos.liquidationPrice ? formatPrice(pos.symbol, pos.liquidationPrice) : null;
+function levelText(pos: Position, level: string): string {
+  if (!level || level === '—') return chalk.gray('—');
+  const price = Number(level);
+  return chalk.white(Number.isFinite(price) ? formatPrice(pos.symbol, price) : level);
+}
+
+/** SL, TP and liquidation; an estimated liquidation (the venue reported none) is marked with "~". */
+function cardLevelsLine(pos: Position, width: number): string {
+  const levels = `   ${chalk.gray('SL ')}${levelText(pos, pos.serverSl)} ${chalk.gray('│ TP ')}${levelText(pos, pos.serverTp)}`;
+  const liqVal = pos.liquidationPrice ? `${pos.isLiqEstimated ? '~' : ''}${formatPrice(pos.symbol, pos.liquidationPrice)}` : null;
+  if (width < 54) return levels + (liqVal ? ` ${chalk.gray('│ Liq ')}${chalk.yellow(liqVal)}` : '');
   const liqDist = pos.liqDistancePct !== null ? `${dp(pos.liqDistancePct)}%` : null;
-  const liqText = liqVal && liqDist ? `${liqVal} (${liqDist})` : liqVal ?? liqDist ?? '—';
-  const liq = liqText !== '—' ? chalk.yellow(liqText) : chalk.gray('—');
-  const l3 = width >= 54
-    ? `   ${chalk.gray('SL ')}${sl} ${chalk.gray('│ TP ')}${tp} ${chalk.gray('│ Liq ')}${liq}`
-    : `   ${chalk.gray('SL ')}${sl} ${chalk.gray('│ TP ')}${tp}${liqVal ? ` ${chalk.gray('│ Liq ')}${chalk.yellow(liqVal)}` : ''}`;
-  return [padLine(l1, width), padLine(l2, width), padLine(l3, width)];
+  const liqText = liqVal && liqDist ? `${liqVal} (${liqDist})` : liqVal ?? liqDist;
+  return `${levels} ${chalk.gray('│ Liq ')}${liqText ? chalk.yellow(liqText) : chalk.gray('—')}`;
 }
 
 function positionRow(pos: Position, isSelected: boolean, width: number, pnl: string): string {
@@ -141,7 +141,7 @@ function positionRow(pos: Position, isSelected: boolean, width: number, pnl: str
 
 export function renderCol3Lines(p: CockpitProps, width = 34, rowCount = 29): string[] {
   const mode = p.currencyMode ?? 'USD';
-  const fx = p.fxRate ?? 100;
+  const fx = p.fxRate;
   const isFull = p.positions.length <= 6 && width >= 46 && rowCount - 4 >= p.positions.length * 3;
   const rows: string[] = [];
   if (p.positions.length === 0) {
@@ -194,7 +194,7 @@ function actionRows(p: CockpitProps, width: number): string[] {
 
 export function renderCol4Lines(p: CockpitProps, width = 30, rowCount = 29): string[] {
   const mode = p.currencyMode ?? 'USD';
-  const fx = p.fxRate ?? 100;
+  const fx = p.fxRate;
   const rows: string[] = [
     padLine(` ${chalk.cyan.bold('ACCOUNT & MARGIN')}`, width),
     padLine(`   ${chalk.gray('Unrealized ')}${pnlColor(p.upnl).bold(fmtSignedCurrency(p.upnl, mode, fx))}`, width),
@@ -222,7 +222,7 @@ export function renderPerfLines(p: CockpitProps, width: number = 128): string[] 
   ].join(sep);
   const results = [
     chalk.white(`${scope} `) + chalk.white.bold(orDash(p.successRate, (rate) => `${dp(rate)}%`)) + chalk.gray(' win'),
-    coloredPnl(since?.usd ?? null, p.currencyMode, p.fxRate ?? 100) + chalk.gray(' PnL'),
+    coloredPnl(since?.usd ?? null, p.currencyMode, p.fxRate) + chalk.gray(' PnL'),
     chalk.gray('Sharpe ') + chalk.white.bold(orDash(p.sharpe, dp)),
     chalk.gray('MaxDD ') + chalk.yellow.bold(`${dp(p.maxDd)}%`),
     chalk.gray('liq events ') + liq,

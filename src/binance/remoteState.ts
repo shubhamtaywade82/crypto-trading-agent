@@ -219,10 +219,19 @@ export function walletEquity(account: PaperExchangeAccountSnapshot, positions: P
   return account.availableBalance + account.lockedMargin + unrealized;
 }
 
+// Typical isolated maintenance-margin rate; only used when the venue reports no liquidation price
+const ESTIMATE_MAINTENANCE_MARGIN_RATE = 0.005;
+
+function estimatedLiquidation(p: PaperExchangePosition, side: Side): number | null {
+  if (!(p.leverage > 1)) return null;
+  const buffer = 1 / p.leverage - ESTIMATE_MAINTENANCE_MARGIN_RATE;
+  return p.averagePrice * (side === 'LONG' ? 1 - buffer : 1 + buffer);
+}
+
 export function toPosition(p: PaperExchangePosition, meta: PositionMeta | undefined, localMark: number | undefined): Position {
   const side = sideOf(p);
   const mark = localMark ?? p.currentPrice;
-  const liq = p.liquidationPrice ?? (p.leverage > 1 ? (side === 'LONG' ? p.averagePrice * (1 - (1 / p.leverage - 0.005)) : p.averagePrice * (1 + (1 / p.leverage - 0.005))) : null);
+  const liq = p.liquidationPrice ?? estimatedLiquidation(p, side);
   return {
     id: `${p.symbol}_${side}`,
     symbol: p.symbol,
@@ -237,6 +246,7 @@ export function toPosition(p: PaperExchangePosition, meta: PositionMeta | undefi
     marginType: p.marginType === 'isolated' ? 'ISOLATED' : 'CROSS',
     liqDistancePct: liq !== null && liq > 0 ? (Math.abs(mark - liq) / mark) * 100 : null,
     liquidationPrice: liq !== null && liq > 0 ? liq : null,
+    ...(p.liquidationPrice === null && liq !== null ? { isLiqEstimated: true } : {}),
     serverSl: levelLabel(meta?.stopLoss ?? p.stopLoss),
     serverTp: levelLabel(meta?.takeProfit ?? p.takeProfit),
     initialRisk: meta?.initialRisk ?? undefined,

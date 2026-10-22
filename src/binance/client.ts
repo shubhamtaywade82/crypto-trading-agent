@@ -3,7 +3,7 @@ import { CoinDCXClient } from '@nemesis-oss/coindcx-sdk';
 import { CoinDcxExchangeApi, type CoinDcxOrderClient } from '../coindcx/coindcxClient.js';
 import { config } from '../config.js';
 import { PaperEngine } from './paperEngine.js';
-import { PaperExchangeClient } from './paperExchangeClient.js';
+import { PaperExchangeClient, VenueUnavailableError } from './paperExchangeClient.js';
 import { RemoteBroker, type VenueStatus } from './remoteBroker.js';
 import type { FundingLine, FundingObservation } from './remoteFunding.js';
 import { RemoteStore } from './remoteState.js';
@@ -215,30 +215,48 @@ export class BinanceService {
     return { marks, funding, nextFundingTime };
   }
 
-  private isRemoteActive(): boolean {
-    return this.broker !== null && this.broker.hasData() && this.broker.status().state !== 'down';
+  /**
+   * A configured broker is the only venue. Without data or while it is down this throws: falling back would trade
+   * another venue (live: real Binance orders sized from Binance equity) or a local paper book the broker never sees.
+   */
+  private usableBroker(): RemoteBroker | null {
+    if (!this.broker) return null;
+    if (this.isVenueUp()) return this.broker;
+    const status = this.broker.status();
+    throw new VenueUnavailableError(`${status.name} unavailable (${status.lastError ?? 'no account data yet'})`);
+  }
+
+  /** False only while a configured broker has no data or is down. */
+  isVenueUp(): boolean {
+    return this.broker === null || (this.broker.hasData() && this.broker.status().state !== 'down');
+  }
+
+  /** Re-syncs a configured broker so an outage can recover; outages only flip its status. */
+  async syncVenue(): Promise<void> {
+    await this.broker?.sync();
   }
 
   /** Live PnL is measured from the first balance this session saw: the exchange keeps no baseline. */
   async getAccount(): Promise<{ equity: number; marginUsed: number; initialEquity: number; fxRate?: number }> {
-    if (this.isRemoteActive()) return this.broker!.getAccount();
+    const broker = this.usableBroker();
+    if (broker) return broker.getAccount();
     if (config.mode === 'paper') return this.paper.getAccount();
     const info = await this.futures.getAccountInformation();
-    const equity = Number(info.totalWalletBalance);
+    // Margin balance includes unrealized PnL; the wallet balance would hide open losses from the drawdown guard
+    const equity = Number(info.totalMarginBalance);
     this.liveStartEquity ??= equity;
     return { equity, marginUsed: Number(info.totalInitialMargin), initialEquity: this.liveStartEquity };
   }
 
   getTrades(): TradeRecord[] {
-    if (this.isRemoteActive()) return this.broker!.getTrades();
+    if (this.broker) return this.broker.getTrades();
     return config.mode === 'paper' ? this.paper.getTrades() : [];
   }
 
-  /** Serves remote when available; otherwise falls back to local paper engine. */
   async getPositions(fresh = true): Promise<Position[]> {
     if (this.broker) {
-      if (fresh) await this.broker.sync().catch(() => undefined);
-      if (this.isRemoteActive()) return this.broker.getPositions();
+      if (fresh) await this.broker.sync();
+      return this.usableBroker()!.getPositions();
     }
     if (config.mode === 'paper') return this.paper.getPositions();
     const info = await this.futures.getAccountInformation();
@@ -250,9 +268,13 @@ export class BinanceService {
   async openFuturesPosition(params: OpenPositionParams): Promise<{ orderId: number | string; status: string }> {
     if (config.alertOnly) throw new Error(`Refusing order in ALERT_ONLY mode: ${params.side} ${params.symbol}`);
     if (!(params.qty > 0)) throw new Error(`Refusing ${params.side} ${params.symbol} with non-positive quantity ${params.qty}`);
-    if (this.isRemoteActive()) {
+    if (config.mode === 'live' && !params.reduceOnly && params.stopLoss === undefined) {
+      throw new Error(`Refusing live ${params.side} ${params.symbol}: an entry must carry a stop-loss`);
+    }
+    const broker = this.usableBroker();
+    if (broker) {
       const entryPrice = params.entryPrice ?? (await this.getPremiumIndex(params.symbol)).markPrice;
-      return this.broker!.open({ ...params, entryPrice });
+      return broker.open({ ...params, entryPrice });
     }
     if (config.mode === 'paper') return this.paper.openPosition(params);
     return this.submitLiveOrder(params);
@@ -401,9 +423,11 @@ export class BinanceService {
     };
   }
 
-  async cancelAll(symbol: string): Promise<void> {
-    if (config.alertOnly || config.mode === 'paper' || this.broker) return;
+  /** Cancels resting Binance orders; false when this venue has none to cancel (paper, alert-only, broker market orders). */
+  async cancelAll(symbol: string): Promise<boolean> {
+    if (config.alertOnly || config.mode === 'paper' || this.broker) return false;
     await this.futures.cancelAllOpenOrders({ symbol });
+    return true;
   }
 
   flushPaperEngine(): void {
@@ -412,7 +436,8 @@ export class BinanceService {
 
   async closePosition(pos: Position): Promise<void> {
     if (config.alertOnly) return;
-    if (this.isRemoteActive()) return this.broker!.close(pos, 'CLOSE');
+    const broker = this.usableBroker();
+    if (broker) return broker.close(pos, 'CLOSE');
     if (config.mode === 'paper') {
       this.paper.openPosition({
         symbol: pos.symbol,
@@ -438,7 +463,8 @@ export class BinanceService {
   /** Reduce-only partial take-profit. Paper and remote only: live keeps its server-side stops until the manager supports it. */
   async reducePosition(pos: Position, qty: number): Promise<void> {
     if (!(qty > 0) || qty >= pos.qty) throw new Error(`Refusing partial ${qty} of ${pos.qty} ${pos.symbol}`);
-    if (this.isRemoteActive()) return this.broker!.reduce(pos, qty);
+    const broker = this.usableBroker();
+    if (broker) return broker.reduce(pos, qty);
     if (config.mode !== 'paper') throw new Error('Partial exits are not supported in live mode');
     this.paper.openPosition({
       symbol: pos.symbol, side: pos.side === 'LONG' ? 'SELL' : 'BUY', qty, leverage: pos.leverage,
@@ -447,9 +473,11 @@ export class BinanceService {
   }
 
   updateStops(symbol: string, strategy: AgentId, stopLoss: number, takeProfit: number | null, side?: Side): void {
-    if (this.broker) this.broker.updateStops(symbol, strategy, stopLoss, takeProfit);
-    if (config.mode === 'paper') this.paper.updateStops(symbol, strategy, stopLoss, takeProfit);
-    if (config.mode === 'live' && side) {
+    // A broker's levels live in its sidecar; the Binance branch below would cancel and replace orders on the wrong venue
+    if (this.broker) return this.broker.updateStops(symbol, strategy, stopLoss, takeProfit);
+    if (config.mode === 'paper') return this.paper.updateStops(symbol, strategy, stopLoss, takeProfit);
+    if (config.alertOnly) return;
+    if (side) {
       const exitSide = side === 'LONG' ? 'SELL' : 'BUY';
       // Cancelling every open order also cancels the take-profit, so both protection orders are re-placed together
       void this.futures.cancelAllOpenOrders({ symbol }).then(async () => {
@@ -460,12 +488,13 @@ export class BinanceService {
   }
 
   dropUnlistedPositions(symbols: string[]): string[] {
-    if (config.mode !== 'paper' || this.isRemoteActive()) return [];
+    if (config.mode !== 'paper' || this.broker) return [];
     return this.paper.dropUnlistedSymbols(symbols);
   }
 
   markAll(prices: Record<string, number>): string[] {
-    if (this.isRemoteActive()) return this.broker!.markAll(prices);
+    // Even while down: queued exits retry from here
+    if (this.broker) return this.broker.markAll(prices);
     return config.mode === 'paper' ? this.paper.markAll(prices) : [];
   }
 
@@ -500,7 +529,7 @@ export class BinanceService {
   }
 
   async settleFunding(market: FundingObservation): Promise<FundingLine[]> {
-    return this.isRemoteActive() ? this.broker!.observeFunding(market) : [];
+    return this.broker && this.isVenueUp() ? this.broker.observeFunding(market) : [];
   }
 
   private async placeServerProtectionOrders(params: Pick<OpenPositionParams, 'symbol' | 'side' | 'qty' | 'stopLoss' | 'takeProfit'>): Promise<{ stopOrderId?: number; tpOrderId?: number }> {
@@ -530,14 +559,22 @@ export class BinanceService {
       } catch (err: any) {
         if (attempt === 2) {
           // Emergency close: never leave a filled live position without stop-loss protection
-          if (type === 'STOP_MARKET') {
-            await this.futures.submitNewOrder({ symbol, side, type: 'MARKET', quantity: roundQty(symbol, qty), reduceOnly: 'true' }).catch(() => undefined);
-          }
-          throw new Error(`Protection order failed (${type} for ${symbol}): ${err.message}`);
+          const closeFailure = type === 'STOP_MARKET' ? await this.emergencyClose(symbol, side, qty) : '';
+          throw new Error(`Protection order failed (${type} for ${symbol}): ${err.message}${closeFailure}`);
         }
       }
     }
     throw new Error(`Protection order failed (${type} for ${symbol})`); // unreachable: the last attempt throws above
+  }
+
+  /** Returns '' once closed, or the failure text: the position is then open WITHOUT a stop and the caller must say so. */
+  private async emergencyClose(symbol: string, side: 'BUY' | 'SELL', qty: number): Promise<string> {
+    try {
+      await this.futures.submitNewOrder({ symbol, side, type: 'MARKET', quantity: roundQty(symbol, qty), reduceOnly: 'true' });
+      return '';
+    } catch (err) {
+      return `; EMERGENCY CLOSE FAILED, position open without a stop: ${err instanceof Error ? err.message : String(err)}`;
+    }
   }
 
   private mapPosition(p: any): Position {
@@ -546,7 +583,7 @@ export class BinanceService {
     return {
       id: `${p.symbol}_${side}`, symbol: p.symbol, side, strategy: 'EXECUTOR-ε',
       entry, qty, mark, upnl: Number(p.unRealizedProfit),
-      upnlPct: entry ? ((mark - entry) / entry) * 100 : 0,
+      upnlPct: entry ? ((mark - entry) / entry) * 100 * (side === 'LONG' ? 1 : -1) : 0,
       leverage: Number(p.leverage), marginType: p.marginType === 'isolated' ? 'ISOLATED' : 'CROSS',
       liqDistancePct: liqPrice > 0 ? Math.abs((liqPrice - mark) / mark) * 100 : null,
       serverSl: 'server', serverTp: 'server',

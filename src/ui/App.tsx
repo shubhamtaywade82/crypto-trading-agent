@@ -126,18 +126,16 @@ export default function App() {
       setLocalTime(formatLocalTime(now));
     }, 1000);
 
-    // Issue #5: synchronously flush the local PaperEngine's debounced state
-    // on SIGINT/SIGTERM before the process exits, so the 250ms debounce
-    // timer can't drop the last state.
+    // Issue #5: synchronously flush the local PaperEngine's debounced state before the process exits, so the 250ms
+    // debounce timer can't drop the last state. On 'exit', not SIGINT: index.tsx's SIGINT handler registers first and
+    // calls process.exit(), so a SIGINT listener added here never ran. 'exit' fires for every path and allows sync work.
     const flush = () => orchestrator.flushOnShutdown();
-    process.on('SIGINT', flush);
-    process.on('SIGTERM', flush);
+    process.on('exit', flush);
 
     return () => {
       orchestrator.stop();
       clearInterval(clockTimer);
-      process.off('SIGINT', flush);
-      process.off('SIGTERM', flush);
+      process.off('exit', flush);
     };
   }, [orchestrator, set, pushLog]);
 

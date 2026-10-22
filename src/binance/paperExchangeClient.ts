@@ -52,7 +52,8 @@ export interface SubmitOrderParams {
 }
 
 export interface SubmitOrderResult {
-  orderId: number;
+  /** paper_exchange uses integers; CoinDCX uses UUIDs. */
+  orderId: number | string;
   status: string;
   /** Present when the broker reports it; the journal prefers it over the requested quantity. */
   filledQuantity?: number;

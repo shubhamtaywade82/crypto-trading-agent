@@ -20,7 +20,7 @@ interface FakeOptions {
   markets?: { pair: string; status?: string }[];
   instruments?: Record<string, { lot_size?: number; min_quantity?: number; min_price?: number; max_leverage?: number }>;
   ticker?: { pair?: string; last_price?: string | number }[];
-  createOrder?: (req: CreateOrderReq) => Promise<OrderRow>;
+  createOrder?: (req: CreateOrderReq) => Promise<OrderRow | OrderRow[]>;
   updateLeverage?: () => Promise<unknown>;
   listOrders?: (params: { pair?: string; status?: string; limit?: number }) => Promise<OrderRow[]>;
   getPositions?: () => Promise<PositionRow[]>;
@@ -201,7 +201,7 @@ test('findOrder finds a match in the open-orders pass when the recent pass misse
   });
   const api = makeApi(client);
   const found = await api.findOrder('oid-9');
-  assert.equal(found?.orderId, 9);
+  assert.equal(found?.orderId, '9');
 });
 
 test('findOrder returns null when neither pass has it', async () => {
@@ -300,4 +300,35 @@ test('getAccount with quotePreference INR converts INR wallet rows via FX rate',
   assert.equal(account?.equity, 100);
   assert.equal(account?.availableBalance, 90);
   assert.equal(account?.lockedMargin, 10);
+  assert.equal(account?.fxRate, 87);
+});
+
+test('getAccount with quotePreference INR fails instead of counting rupees as dollars when the FX rate is unavailable', async () => {
+  const baselinePath = tmpBaselinePath();
+  const { client } = fakeClient({ wallet: [{ currency: 'INR', balance: 8700, locked_balance: 0, available_balance: 8700 }], ticker: [] });
+  const api = makeApi(client, { quotePreference: 'INR', baselinePath });
+
+  await assert.rejects(api.getAccount(), VenueUnavailableError);
+  assert.equal(existsSync(baselinePath), false, 'no baseline is seeded from an unconverted balance');
+});
+
+test('getAccount reports no FX rate outside INR mode, so the cockpit never shows a made-up rupee figure', async () => {
+  const account = await makeApi(fakeClient().client).getAccount();
+  assert.equal(account?.fxRate, undefined);
+});
+
+test('submitOrder unwraps the array the create endpoint answers with and keeps the UUID order id', async () => {
+  const uuid = '3f1e2d4c-aaaa-bbbb-cccc-000000000001';
+  const { client } = fakeClient({ createOrder: async (req) => [{ id: uuid, client_order_id: req.client_order_id, status: 'initial', filled_quantity: undefined, price: req.price }] });
+
+  const result = await makeApi(client).submitOrder(orderParams());
+
+  assert.deepEqual([result.orderId, result.status], [uuid, 'initial']);
+});
+
+test('submitOrder refuses a quantity that floors below the CoinDCX minimum, before any network call', async () => {
+  const { client, calls } = fakeClient({ instruments: { 'B-BTC_USDT': { lot_size: 0.01, min_quantity: 0.01, min_price: 1, max_leverage: 20 } } });
+
+  await assert.rejects(makeApi(client).submitOrder(orderParams({ quantity: 0.009 })), OrderRejectedError);
+  assert.deepEqual([calls.updateLeverage, calls.createOrder], [0, 0]);
 });

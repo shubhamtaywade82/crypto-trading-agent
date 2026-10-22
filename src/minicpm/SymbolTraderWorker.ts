@@ -192,7 +192,7 @@ export class SymbolTraderWorker {
         clientOrderId: `minicpm-${this.config.symbol}-${Date.now()}`,
       });
 
-      if (order.status === 'FILLED' || order.orderId > 0) {
+      if (order.status === 'FILLED' || Number(order.orderId) > 0) {
         this.currentSl = rec.stopLoss;
         this.currentTp = rec.takeProfit;
         this.breakEvenMoved = false;

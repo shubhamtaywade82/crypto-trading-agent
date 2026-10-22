@@ -137,7 +137,7 @@ export class RiskAgent extends BaseAgent {
       return this.reject('stop loss matches entry');
     }
 
-    if (this.isEngineOn() && isStopOnWrongSide(signal)) {
+    if (isStopOnWrongSide(signal)) {
       return this.reject('stop on wrong side of entry');
     }
 

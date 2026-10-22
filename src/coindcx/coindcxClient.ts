@@ -32,7 +32,7 @@ export interface CoinDcxOrderClient {
         side: 'buy' | 'sell'; order_type: 'market_order'; base_currency: string; quote_currency: string;
         target_quantity: number; price: number | undefined; leverage: number | undefined;
         client_order_id: string | undefined; time_in_force: 'ioc'; margin_type: 'isolated' | 'cross' | undefined;
-      }): Promise<CoinDcxOrderRaw>;
+      }): Promise<CoinDcxOrderRaw | CoinDcxOrderRaw[]>;
       listOrders(params: { pair?: string; status?: string; limit?: number }): Promise<CoinDcxOrderRaw[]>;
     };
     account: {
@@ -64,7 +64,7 @@ const sumBy = <T,>(items: T[], pick: (item: T) => number): number => items.reduc
 
 function toOrderResult(raw: CoinDcxOrderRaw): SubmitOrderResult {
   const filled = typeof raw.filled_quantity === 'number' && raw.filled_quantity > 0 ? raw.filled_quantity : undefined;
-  return { orderId: Number(raw.id), status: raw.status, ...(filled !== undefined ? { filledQuantity: filled } : {}) };
+  return { orderId: String(raw.id), status: raw.status, ...(filled !== undefined ? { filledQuantity: filled } : {}) };
 }
 
 function toPosition(p: CoinDcxPositionRaw, symbol: string): PaperExchangePosition {
@@ -146,20 +146,21 @@ export class CoinDcxExchangeApi implements ExchangeApi {
     return this.guarded(async () => {
       const rawWallets = await this.deps.client.futures.account.getWallet();
       const isINR = this.deps.quotePreference === 'INR';
-      const fxRate = isINR ? await this.router.getFxRate().catch(() => 1) : 1;
+      // No fallback rate: 1 would count rupees as dollars (~85x equity) in sizing and in the persisted baseline
+      const fxRate = isINR ? await this.router.getFxRate() : undefined;
       const wallets = rawWallets.map((w: any) => {
         const curr = String(w.currency ?? w.currency_short_name ?? '').toUpperCase();
         const rawLocked = Number(w.locked_balance ?? 0);
         const rawAvail = w.available_balance !== undefined ? Number(w.available_balance) : Number(w.balance ?? 0);
         const rawTotal = w.available_balance !== undefined ? Number(w.balance ?? 0) : rawAvail + rawLocked;
-        const rate = curr === 'INR' && fxRate > 0 ? fxRate : 1;
+        const rate = curr === 'INR' && fxRate !== undefined ? fxRate : 1;
         return { currency: curr, balance: rawTotal / rate, locked_balance: rawLocked / rate, available_balance: rawAvail / rate };
       });
       const targetWallets = wallets.filter((w) => w.currency === 'USDT' || (isINR && w.currency === 'INR' && w.balance > 0));
       const equity = round8(sumBy(targetWallets, (w) => w.balance));
       const positions = await this.getPositions();
       return {
-        accountId: this.deps.accountId, currency: 'USDT', fxRate,
+        accountId: this.deps.accountId, currency: 'USDT', ...(fxRate === undefined ? {} : { fxRate }),
         margin: this.baseline.getOrSeed(equity),
         availableBalance: round8(sumBy(targetWallets, (w) => w.available_balance)),
         lockedMargin: round8(sumBy(targetWallets, (w) => w.locked_balance)),
@@ -202,6 +203,7 @@ export class CoinDcxExchangeApi implements ExchangeApi {
       const spec = await this.specs.get(resolved.pair);
       const quantity = round8(floorToLot(params.quantity, spec.lotSize));
       // Client-side hard stop before any order-mutating call — including the leverage set below.
+      this.enforceMinimum(quantity, params, spec.minQty);
       this.enforceCaps(quantity, params.executionPrice);
       await this.setLeverage(resolved.pair, params.leverage, params.reduceOnly ?? false);
       const price = round8(resolved.quote === 'INR' ? params.executionPrice * resolved.fxRate : params.executionPrice);
@@ -217,7 +219,8 @@ export class CoinDcxExchangeApi implements ExchangeApi {
         time_in_force: 'ioc',
         margin_type: params.marginType ?? 'isolated',
       });
-      return toOrderResult(raw);
+      // The REST create endpoint answers with an array of the orders it created
+      return toOrderResult(Array.isArray(raw) ? raw[0] : raw);
     });
   }
 
@@ -257,6 +260,12 @@ export class CoinDcxExchangeApi implements ExchangeApi {
       // A reduce-only close must never be blocked by a stale-leverage rejection; it only shrinks the existing position.
       if (!reduceOnly) throw err;
     }
+  }
+
+  // Binance lot rules sized the order; CoinDCX's own lot can floor it to zero or below the pair's minimum
+  private enforceMinimum(quantity: number, params: SubmitOrderParams, minQty: number): void {
+    if (quantity > 0 && quantity >= minQty) return;
+    throw new OrderRejectedError(`${params.symbol} quantity ${params.quantity} floors to ${quantity}, below the CoinDCX minimum ${minQty}`, 400, '');
   }
 
   private enforceCaps(quantity: number, executionPrice: number): void {

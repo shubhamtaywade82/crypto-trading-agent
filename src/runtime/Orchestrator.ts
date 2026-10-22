@@ -179,7 +179,7 @@ export class Orchestrator extends EventEmitter {
   private putTicker(sym: string, info: MarketPriceInfo): void { this.liveTickers[sym.replace('USDT', '')] = this.liveTickers[sym] = info; }
   private async flushRealtimeTick(): Promise<void> {
     this.logExits();
-    if (config.mode !== 'paper' && !this.binance.hasVenueData()) return;
+    if (!this.binance.isVenueUp()) return;
     const positions = await this.binance.getPositions(false);
     await this.positionDriver?.manage(this.liveBook ? this.liveBook.positions(this.livePrices) : positions);
     const account = await this.binance.getAccount();
@@ -189,7 +189,11 @@ export class Orchestrator extends EventEmitter {
     this.log('SYSTEM', `Manual close ${pos.symbol} ${pos.side}`, 'warn');
     await this.binance.closePosition(pos).catch((err: unknown) => this.logFailure(`Close ${pos.symbol} failed`, err));
   }
-  async cancelAll() { for (const sym of config.symbols) await this.binance.cancelAll(sym); this.log('SYSTEM', 'All pending orders cancelled', 'warn'); }
+  async cancelAll() {
+    let isSent = false;
+    for (const sym of config.symbols) isSent = (await this.binance.cancelAll(sym)) || isSent;
+    this.log('SYSTEM', isSent ? 'All pending orders cancelled' : 'Cancel all: this venue has no resting orders to cancel', 'warn');
+  }
   pauseAgent(id: string) {
     const agent = [...this.agents, this.risk, this.executor].find((a) => a.id === id);
     if (!agent) return;
@@ -197,7 +201,7 @@ export class Orchestrator extends EventEmitter {
     this.log('SYSTEM', `${id} ${agent.status}`, 'info');
   }
   async askAdvisor(question = 'Assess current portfolio risk and position exposures'): Promise<void> {
-    if (!this.binance.hasVenueData()) return this.log('SYSTEM', 'Advisor unavailable: the venue has not returned account data yet', 'warn');
+    if (!this.binance.isVenueUp()) return this.log('SYSTEM', 'Advisor unavailable: the venue has no usable account data', 'warn');
     const positions = await this.binance.getPositions(false);
     const account = await this.binance.getAccount();
     const entry = await this.advisor.ask(question, { positions, equity: account.equity });
@@ -240,8 +244,10 @@ export class Orchestrator extends EventEmitter {
     }
   }
   private async isVenueReady(): Promise<boolean> {
+    // A down venue is still synced every cycle: nothing else would notice it has recovered
     if (!this.binance.hasVenueData()) await this.initVenue();
-    return config.mode === 'paper' || this.binance.hasVenueData();
+    else await this.binance.syncVenue();
+    return this.binance.isVenueUp();
   }
   private async initVenue(): Promise<void> {
     try { await this.binance.initVenue(); this.lastInitError = null; }

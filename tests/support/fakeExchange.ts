@@ -48,6 +48,8 @@ function isLiquidated(row: Row, mark: number): boolean {
 export class FakeExchange implements ExchangeApi {
   down = false;
   failNextPostAfterFill = false;
+  /** Like CoinDCX: the order fills, but the submit response only acknowledges it. */
+  ackBeforeFill = false;
 
   private account: { margin: number; available: number; realized: number } | null = null;
   private readonly rows = new Map<string, Row>();
@@ -87,7 +89,7 @@ export class FakeExchange implements ExchangeApi {
     const replay = this.orders.get(params.clientOrderId);
     if (replay) return replay;
     if (params.quantity <= 0) throw new OrderRejectedError('quantity must be greater than 0', 422, 'quantity must be greater than 0');
-    const result: SubmitOrderResult = { orderId: this.nextId++, status: 'filled' };
+    const result: SubmitOrderResult = { orderId: this.nextId++, status: this.ackBeforeFill ? 'initial' : 'filled' };
     this.fill(params);
     this.orders.set(params.clientOrderId, result);
     if (this.failNextPostAfterFill) {

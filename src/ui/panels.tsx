@@ -42,12 +42,13 @@ export function computeRowHeights(totalHeight: number) {
   return { tableRows, logRows: Math.max(MIN_LOG_ROWS, available - tableRows) };
 }
 
-export function renderCockpitTable(cols: [string[], string[], string[], string[]], widths: [number, number, number, number], counts: { running: number; open: number }): string[] {
+export function renderCockpitTable(cols: [string[], string[], string[], string[]], widths: [number, number, number, number], counts: { running: number; open: number; venueName?: string }): string[] {
   const [c1, c2, c3, c4] = cols;
   const [w1, w2, w3, w4] = widths;
   const bar = (l: string, m: string, r: string) => chalk.cyan(l + rule('─', w1) + m + rule('─', w2) + m + rule('─', w3) + m + rule('─', w4) + r);
+  const centerTitle = counts.venueName === 'CoinDCX' ? 'COINDCX PERPETUAL FUTURES' : 'BINANCE USDT-M PERPETUAL FUTURES';
   const title = chalk.cyan('│') + padLine(' ' + chalk.cyan.bold(`AGENT FLEET (${counts.running} active)`), w1) +
-    chalk.cyan('│') + padLine(' ' + chalk.cyan.bold('BINANCE USDT-M PERPETUAL FUTURES'), w2) +
+    chalk.cyan('│') + padLine(' ' + chalk.cyan.bold(centerTitle), w2) +
     chalk.cyan('│') + padLine(' ' + chalk.cyan.bold(`POSITIONS (${counts.open} open)`), w3) +
     chalk.cyan('│') + padLine(' ' + chalk.cyan.bold('RISK & ACCOUNT'), w4) + chalk.cyan('│');
   const rows = [bar('┌', '┬', '┐'), title, bar('├', '┼', '┤')];
@@ -75,7 +76,7 @@ export function renderCockpit(input: CockpitProps): string[] {
   const width = Math.max(MIN_COLS, props.totalWidth ?? MIN_COLS); // callers show ResizeWarning below the minimum; this only stops a bad size from throwing
   const { c1, c2, c3, c4 } = computeColWidths(width);
   const { tableRows, logRows } = computeRowHeights(props.totalHeight ?? MIN_ROWS);
-  const counts = { running: runningCount(props.agents), open: props.positions.length };
+  const counts = { running: runningCount(props.agents), open: props.positions.length, venueName: props.venue?.name };
 
   const columns: [string[], string[], string[], string[]] = [
     renderCol1Lines(props, c1, tableRows), renderCol2Lines(props, c2, tableRows),

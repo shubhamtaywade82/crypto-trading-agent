@@ -22,7 +22,8 @@ interface CoinDcxOrderRaw {
 }
 
 interface CoinDcxPositionRaw {
-  id: string | number; pair: string; side: 'long' | 'short'; size: number; entry_price: number;
+  id: string | number; pair: string; side?: 'long' | 'short' | 'buy' | 'sell';
+  size?: number; active_pos?: number; entry_price?: number; avg_price?: number;
   mark_price?: number; liquidation_price?: number | null; leverage?: number; margin_type?: 'isolated' | 'cross';
 }
 
@@ -69,16 +70,18 @@ function toOrderResult(raw: CoinDcxOrderRaw): SubmitOrderResult {
 }
 
 function toPosition(p: CoinDcxPositionRaw, symbol: string): PaperExchangePosition {
+  const rawPos = Number(p.active_pos ?? p.size ?? 0);
+  const entryPrice = Number(p.avg_price ?? p.entry_price ?? 0);
   return {
-    id: Number(p.id),
+    id: Number(p.id) || 1,
     symbol,
-    side: p.side,
-    netQuantity: p.size,
-    averagePrice: p.entry_price,
-    currentPrice: p.mark_price ?? p.entry_price,
-    leverage: p.leverage ?? 1,
+    side: rawPos < 0 || p.side === 'sell' || p.side === 'short' ? 'short' : 'long',
+    netQuantity: Math.abs(rawPos),
+    averagePrice: entryPrice,
+    currentPrice: Number(p.mark_price ?? entryPrice),
+    leverage: Number(p.leverage ?? 1),
     marginType: p.margin_type === 'cross' ? 'cross' : 'isolated',
-    liquidationPrice: p.liquidation_price ?? null,
+    liquidationPrice: p.liquidation_price ? Number(p.liquidation_price) : null,
     unrealizedPnl: 0,
   };
 }
@@ -149,11 +152,11 @@ export class CoinDcxExchangeApi implements ExchangeApi {
       const fxRate = isINR ? await this.router.getFxRate().catch(() => 1) : 1;
       const wallets = rawWallets.map((w: any) => {
         const curr = String(w.currency ?? w.currency_short_name ?? '').toUpperCase();
-        const rawBal = Number(w.balance ?? 0);
         const rawLocked = Number(w.locked_balance ?? 0);
-        const rawAvail = Number(w.available_balance ?? Math.max(0, rawBal - rawLocked));
+        const rawAvail = w.available_balance !== undefined ? Number(w.available_balance) : Number(w.balance ?? 0);
+        const rawTotal = w.available_balance !== undefined ? Number(w.balance ?? 0) : rawAvail + rawLocked;
         const rate = curr === 'INR' && fxRate > 0 ? fxRate : 1;
-        return { currency: curr, balance: rawBal / rate, locked_balance: rawLocked / rate, available_balance: rawAvail / rate };
+        return { currency: curr, balance: rawTotal / rate, locked_balance: rawLocked / rate, available_balance: rawAvail / rate };
       });
       const targetWallets = wallets.filter((w) => w.currency === 'USDT' || (isINR && w.currency === 'INR' && w.balance > 0));
       const equity = round8(sumBy(targetWallets, (w) => w.balance));
@@ -181,10 +184,14 @@ export class CoinDcxExchangeApi implements ExchangeApi {
 
   async getPositions(): Promise<PaperExchangePosition[]> {
     return this.guarded(async () => {
-      const raw = await this.deps.client.futures.account.getPositions({ status: 'open' });
+      const isINR = this.deps.quotePreference === 'INR';
+      const raw = await this.deps.client.futures.account.getPositions({
+        page: '1', size: '50', ...(isINR ? { margin_currency_short_name: ['INR', 'USDT'] } : {}),
+      } as any);
       const positions: PaperExchangePosition[] = [];
-      for (const p of raw) {
-        if (!(p.size > 0)) continue;
+      for (const p of (raw as any[])) {
+        const rawPos = Number(p.active_pos ?? p.size ?? 0);
+        if (!(Math.abs(rawPos) > 0)) continue;
         const symbol = this.router.pairToSymbol(p.pair);
         if (!symbol) {
           this.warnUnresolved(p.pair);

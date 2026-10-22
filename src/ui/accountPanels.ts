@@ -35,7 +35,8 @@ function pnlSinceStart(p: CockpitProps): { usd: number; pct: number } | null {
 export function renderHeaderLines(p: CockpitProps, width: number = 128): string[] {
   const innerW = width - 2;
   const tag = p.mode === 'paper' ? chalk.yellow.bold('◉ PAPER') : chalk.green.bold('● LIVE');
-  const left = ' ' + chalk.green.bold('⬡ INKUI AGENT TRADE') + chalk.gray(' v2.4.1 ') + tag + '  ' + chalk.cyan.bold('◆ BINANCE FUTURES');
+  const venueTitle = p.venue?.name === 'CoinDCX' ? '◆ COINDCX FUTURES' : '◆ BINANCE FUTURES';
+  const left = ' ' + chalk.green.bold('⬡ INKUI AGENT TRADE') + chalk.gray(' v2.4.1 ') + tag + '  ' + chalk.cyan.bold(venueTitle);
   const timeDisplay = p.localTime && p.localTime !== `${p.time} UTC` ? `${p.time} UTC │ ${p.localTime}` : `${p.time} UTC`;
   const right = chalk.gray(`${timeDisplay} `) + chalk.green(`●${runningCount(p.agents)} ag `) + chalk.cyan('●auto');
   const midSpace = Math.max(0, innerW - stringWidth(left) - stringWidth(right));

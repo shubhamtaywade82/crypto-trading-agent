@@ -1,15 +1,23 @@
 import { Box, Text } from 'ink';
 import chalk from 'chalk';
 import type { AppState } from '../types.js';
-import { padLine, rule, runningCount } from './format.js';
+import { padLine, rule, runningCount, type CurrencyMode } from './format.js';
 import { renderHeaderLines, renderCol1Lines, renderCol3Lines, renderCol4Lines, renderPerfLines, renderFooterLines } from './accountPanels.js';
 import { renderCol2Lines, renderMetricsLines, renderDetailLines, renderLogLines } from './marketPanels.js';
 
 type StoreFields = 'mode' | 'equity' | 'upnl' | 'marginUsed' | 'positions' | 'agents' | 'logs' | 'spotPrices' | 'initialEquity' | 'totalPnl' | 'totalPnlPct'
   | 'successRate' | 'sharpe' | 'maxDd' | 'var95' | 'liqEvents' | 'sessionDecisions' | 'sessionExecuted' | 'sessionMonitored' | 'apiWeight' | 'wsStatus'
-  | 'venue' | 'exposurePct' | 'minLiqDistancePct' | 'corrBtcEth' | 'funding' | 'strategyMetrics' | 'marketIntel';
+  | 'venue' | 'exposurePct' | 'minLiqDistancePct' | 'corrBtcEth' | 'funding' | 'strategyMetrics' | 'marketIntel' | 'fxRate';
 
-export type CockpitProps = Pick<AppState, StoreFields> & { time: string; localTime?: string; selPos: number; isSyncing: boolean; totalWidth?: number; totalHeight?: number };
+export type CockpitProps = Pick<AppState, StoreFields> & {
+  time: string;
+  localTime?: string;
+  selPos: number;
+  isSyncing: boolean;
+  totalWidth?: number;
+  totalHeight?: number;
+  currencyMode?: CurrencyMode;
+};
 
 // Each floor is the widest realistic content of its column, so nothing is ellipsized at MIN_COLS; c1 fits `pos 12 win 100.00% pnl -$12,345.67`
 const COL_FLOORS = { c1: 37, c2: 46, c3: 36, c4: 36 };
@@ -46,7 +54,7 @@ export function renderCockpitTable(cols: [string[], string[], string[], string[]
   const [c1, c2, c3, c4] = cols;
   const [w1, w2, w3, w4] = widths;
   const bar = (l: string, m: string, r: string) => chalk.cyan(l + rule('─', w1) + m + rule('─', w2) + m + rule('─', w3) + m + rule('─', w4) + r);
-  const centerTitle = counts.venueName === 'CoinDCX' ? 'COINDCX PERPETUAL FUTURES' : 'BINANCE USDT-M PERPETUAL FUTURES';
+  const centerTitle = counts.venueName?.startsWith('CoinDCX') ? 'COINDCX PERPETUAL FUTURES' : 'BINANCE USDT-M PERPETUAL FUTURES';
   const title = chalk.cyan('│') + padLine(' ' + chalk.cyan.bold(`AGENT FLEET (${counts.running} active)`), w1) +
     chalk.cyan('│') + padLine(' ' + chalk.cyan.bold(centerTitle), w2) +
     chalk.cyan('│') + padLine(' ' + chalk.cyan.bold(`POSITIONS (${counts.open} open)`), w3) +
@@ -85,7 +93,7 @@ export function renderCockpit(input: CockpitProps): string[] {
   return [
     ...renderHeaderLines(props, width),
     ...renderCockpitTable(columns, [c1, c2, c3, c4], counts),
-    ...renderDetailLines(props.positions[props.selPos], width),
+    ...renderDetailLines(props.positions[props.selPos], width, props.currencyMode, props.fxRate),
     ...renderMetricsLines(props.strategyMetrics, width, props.mode),
     ...renderLogLines(props.logs, logRows, width),
     ...renderPerfLines(props, width),

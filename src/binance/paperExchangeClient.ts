@@ -18,6 +18,7 @@ export interface PaperExchangeAccountSnapshot {
   unrealizedPnl: number;
   realizedPnl: number;
   positionsCount: number;
+  fxRate?: number;
 }
 
 export interface PaperExchangePosition {
@@ -31,6 +32,8 @@ export interface PaperExchangePosition {
   marginType: 'cross' | 'isolated';
   liquidationPrice: number | null;
   unrealizedPnl: number;
+  stopLoss?: number | null;
+  takeProfit?: number | null;
 }
 
 export interface SubmitOrderParams {

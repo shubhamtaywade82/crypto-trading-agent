@@ -61,6 +61,7 @@ export interface Position {
   leverage: number;
   marginType: 'ISOLATED' | 'CROSS';
   liqDistancePct: number | null;
+  liquidationPrice?: number | null;
   serverSl: string;
   serverTp: string;
   initialRisk?: number; // |entry - first SL| in price units; the 1R used for breakeven trailing
@@ -183,6 +184,7 @@ export interface AppState {
   marketIntel?: Record<string, MarketIntelSummary>;
   marketStates?: Record<string, MarketState>;
   mtfCandles?: Record<string, Partial<Record<NativeTimeframe, Candle[]>>>;
+  fxRate?: number;
 }
 
 /** Flat, display-ready summary of per-symbol market intelligence for the cockpit. */

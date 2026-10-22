@@ -7,13 +7,37 @@ import type { AgentState } from '../types.js';
 // Prices and quantities use each symbol's own precision; every other figure is 2dp
 export const usd = (n: number) => n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
+export type CurrencyMode = 'USD' | 'INR' | 'BOTH';
+
+const inrShort = (n: number) => {
+  const abs = Math.abs(Math.round(n));
+  if (abs >= 100_000) return `₹${(abs / 100_000).toFixed(1)}L`;
+  if (abs >= 1_000) return `₹${(abs / 1_000).toFixed(1)}k`;
+  return `₹${abs.toLocaleString('en-IN')}`;
+};
+
+export function fmtCurrency(amount: number, mode: CurrencyMode = 'USD', fxRate = 100): string {
+  if (mode === 'INR') return `₹${Math.round(amount * fxRate).toLocaleString('en-IN')}`;
+  if (mode === 'BOTH') return `$${usd(amount)} (${inrShort(amount * fxRate)})`;
+  return `$${usd(amount)}`;
+}
+
+export function fmtSignedCurrency(amount: number, mode: CurrencyMode = 'USD', fxRate = 100): string {
+  const sign = isNegative(amount) ? '-' : '+';
+  const abs = Math.abs(amount);
+  if (mode === 'INR') return `${sign}₹${Math.round(abs * fxRate).toLocaleString('en-IN')}`;
+  if (mode === 'BOTH') return `${sign}$${usd(abs)} (${inrShort(abs * fxRate)})`;
+  return `${sign}$${usd(abs)}`;
+}
+
 // Rounds before testing the sign so a tiny loss never renders as "-0.00"
 const isNegative = (n: number, digits = 2) => Number(n.toFixed(digits)) < 0;
 export const dp = (n: number, digits = 2) => (isNegative(n, digits) ? n : Math.abs(n)).toFixed(digits);
 export const signedDp = (n: number, digits = 2) => `${isNegative(n, digits) ? '-' : '+'}${Math.abs(n).toFixed(digits)}`;
 export const signedUsd = (n: number) => `${isNegative(n) ? '-' : '+'}$${usd(Math.abs(n))}`;
 export const pnlColor = (n: number) => (isNegative(n) ? chalk.red : chalk.green);
-export const coloredPnl = (n: number | null) => (n === null ? chalk.gray('—') : pnlColor(n)(signedUsd(n)));
+export const coloredPnl = (n: number | null, mode: CurrencyMode = 'USD', fx = 100) =>
+  (n === null ? chalk.gray('—') : pnlColor(n)(fmtSignedCurrency(n, mode, fx)));
 // Repeat counts come from terminal size, so they must never go negative
 export const rule = (char: string, count: number) => char.repeat(Math.max(0, count));
 export const orDash = (n: number | null | undefined, format: (value: number) => string) => (n === null || n === undefined ? '—' : format(n));

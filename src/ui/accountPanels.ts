@@ -3,7 +3,7 @@ import stringWidth from 'string-width';
 import { config, LOOP_INTERVAL_MS } from '../config.js';
 import { formatPrice, formatQty } from '../binance/symbolRules.js';
 import type { AgentState, Position, WsStatus } from '../types.js';
-import { coloredPnl, dp, orDash, padLine, pnlColor, rule, runningCount, signedDp, signedUsd, usd } from './format.js';
+import { coloredPnl, dp, fmtCurrency, fmtSignedCurrency, orDash, padLine, pnlColor, rule, runningCount, signedDp, signedUsd, usd } from './format.js';
 import type { CockpitProps } from './panels.js';
 
 const API_WEIGHT_LIMIT = 2400; // Binance USD-M request-weight ceiling per minute
@@ -35,7 +35,7 @@ function pnlSinceStart(p: CockpitProps): { usd: number; pct: number } | null {
 export function renderHeaderLines(p: CockpitProps, width: number = 128): string[] {
   const innerW = width - 2;
   const tag = p.mode === 'paper' ? chalk.yellow.bold('◉ PAPER') : chalk.green.bold('● LIVE');
-  const venueTitle = p.venue?.name === 'CoinDCX' ? '◆ COINDCX FUTURES' : '◆ BINANCE FUTURES';
+  const venueTitle = p.venue?.name?.startsWith('CoinDCX') ? '◆ COINDCX FUTURES' : '◆ BINANCE FUTURES';
   const left = ' ' + chalk.green.bold('⬡ INKUI AGENT TRADE') + chalk.gray(' v2.4.1 ') + tag + '  ' + chalk.cyan.bold(venueTitle);
   const timeDisplay = p.localTime && p.localTime !== `${p.time} UTC` ? `${p.time} UTC │ ${p.localTime}` : `${p.time} UTC`;
   const right = chalk.gray(`${timeDisplay} `) + chalk.green(`●${runningCount(p.agents)} ag `) + chalk.cyan('●auto');
@@ -66,20 +66,24 @@ function agentRows(a: AgentState, isFull: boolean, width: number): string[] {
 }
 
 function equityRows(p: CockpitProps, width: number): string[] {
+  const mode = p.currencyMode ?? 'USD';
+  const fx = p.fxRate ?? 100;
   const since = pnlSinceStart(p);
-  const equity = since ? chalk.white.bold(`$${usd(p.equity)}`) : chalk.gray('—');
+  const equity = since ? chalk.white.bold(fmtCurrency(p.equity, mode, fx)) : chalk.gray('—');
   const basis = p.mode === 'live' ? 'session' : 'total'; // live has no history, so its baseline is the first balance this process saw
-  const change = since ? pnlColor(since.usd)(`${signedUsd(since.usd)} (${signedDp(since.pct)}% ${basis})`) : chalk.gray('—');
+  const change = since ? pnlColor(since.usd)(`${fmtSignedCurrency(since.usd, mode, fx)} (${signedDp(since.pct)}% ${basis})`) : chalk.gray('—');
   const stale = p.venue.state === 'degraded' || p.venue.state === 'down' ? chalk.red(' stale') : ''; // a failing venue means these figures are the last ones it gave
   return [padLine(' ' + chalk.gray('Equity  ') + equity + chalk.gray(` (${p.mode})`) + stale, width), padLine(' ' + change, width)];
 }
 
 export function renderCol1Lines(p: CockpitProps, width = 40, rowCount = 29): string[] {
+  const mode = p.currencyMode ?? 'USD';
+  const fx = p.fxRate ?? 100;
   const rows: string[] = [
     ...equityRows(p, width),
-    padLine(' ' + chalk.gray('uPnL    ') + pnlColor(p.upnl).bold(signedUsd(p.upnl)), width),
-    padLine(' ' + chalk.gray('Margin  ') + chalk.white(`$${usd(p.marginUsed)}`) + chalk.gray(` (${marginPct(p)}% used)`), width),
-    padLine(' ' + chalk.gray('Free    ') + chalk.white(`$${usd(freeMargin(p))}`), width),
+    padLine(' ' + chalk.gray('uPnL    ') + pnlColor(p.upnl).bold(fmtSignedCurrency(p.upnl, mode, fx)), width),
+    padLine(' ' + chalk.gray('Margin  ') + chalk.white(fmtCurrency(p.marginUsed, mode, fx)) + chalk.gray(` (${marginPct(p)}% used)`), width),
+    padLine(' ' + chalk.gray('Free    ') + chalk.white(fmtCurrency(freeMargin(p), mode, fx)), width),
     padLine(' ' + chalk.gray(`Lev ${config.risk.minLeverage}-${config.risk.maxLeverage}x │ Margin `) + chalk.yellow('ISOLATED'), width),
   ];
   const fleet = p.agents.slice(0, MAX_FLEET_AGENTS);
@@ -89,11 +93,46 @@ export function renderCol1Lines(p: CockpitProps, width = 40, rowCount = 29): str
   return fillRows(rows, width, rowCount);
 }
 
-function positionRow(pos: Position, isSelected: boolean, width: number): string {
+function positionCard(pos: Position, isSelected: boolean, width: number, pnl: string): string[] {
+  const cursor = isSelected ? chalk.yellow.bold('▸') : ' ';
+  const sym = isSelected ? chalk.yellow.bold(pos.symbol) : chalk.white.bold(pos.symbol);
+  const side = pos.side === 'LONG' ? chalk.green.bold(pos.side) : chalk.red.bold(pos.side);
+  const roe = pos.upnlPct * (pos.leverage || 1);
+  const pnlPct = pnlColor(pos.upnl)(`(${signedDp(roe)}%)`);
+  const headLeft = ` ${cursor} ${sym} ${side} ${chalk.yellow(`${pos.leverage}x`)}`;
+  const headRight = `${pnl} ${pnlPct}`;
+  const gap = Math.max(1, width - stringWidth(headLeft) - stringWidth(headRight));
+  const l1 = headLeft + ' '.repeat(gap) + headRight;
+
+  const ePrice = formatPrice(pos.symbol, pos.entry);
+  const mPrice = formatPrice(pos.symbol, pos.mark);
+  const qty = formatQty(pos.symbol, pos.qty);
+  const l2 = width >= 52
+    ? `   ${chalk.gray('Entry ')}${chalk.white(ePrice)}  ${chalk.gray('Mark ')}${chalk.white(mPrice)}  ${chalk.gray('Sz ')}${chalk.white(qty)}`
+    : `   ${chalk.gray('e ')}${chalk.white(ePrice)}  ${chalk.gray('m ')}${chalk.white(mPrice)}  ${chalk.gray('sz ')}${chalk.white(qty)}`;
+
+  const formatLevel = (lvl: string) => {
+    const num = Number(lvl);
+    return lvl && lvl !== '—' ? (Number.isFinite(num) ? formatPrice(pos.symbol, num) : lvl) : '—';
+  };
+  const slVal = formatLevel(pos.serverSl);
+  const tpVal = formatLevel(pos.serverTp);
+  const sl = slVal !== '—' ? chalk.white(slVal) : chalk.gray('—');
+  const tp = tpVal !== '—' ? chalk.white(tpVal) : chalk.gray('—');
+  const liqVal = pos.liquidationPrice ? formatPrice(pos.symbol, pos.liquidationPrice) : null;
+  const liqDist = pos.liqDistancePct !== null ? `${dp(pos.liqDistancePct)}%` : null;
+  const liqText = liqVal && liqDist ? `${liqVal} (${liqDist})` : liqVal ?? liqDist ?? '—';
+  const liq = liqText !== '—' ? chalk.yellow(liqText) : chalk.gray('—');
+  const l3 = width >= 54
+    ? `   ${chalk.gray('SL ')}${sl} ${chalk.gray('│ TP ')}${tp} ${chalk.gray('│ Liq ')}${liq}`
+    : `   ${chalk.gray('SL ')}${sl} ${chalk.gray('│ TP ')}${tp}${liqVal ? ` ${chalk.gray('│ Liq ')}${chalk.yellow(liqVal)}` : ''}`;
+  return [padLine(l1, width), padLine(l2, width), padLine(l3, width)];
+}
+
+function positionRow(pos: Position, isSelected: boolean, width: number, pnl: string): string {
   const cursor = isSelected ? chalk.yellow.bold('▸') : ' ';
   const symbol = isSelected ? chalk.white.bold(pos.symbol.padEnd(9)) : chalk.white(pos.symbol.padEnd(9));
   const type = chalk.gray((pos.posType ?? pos.side).padEnd(11));
-  const pnl = pnlColor(pos.upnl)(signedUsd(pos.upnl));
   const entry = chalk.white(formatPrice(pos.symbol, pos.entry).padEnd(11));
   const wide = ` ${cursor} ${symbol} ${type} ${chalk.gray('e ')}${entry} ${chalk.gray('sz ')}${chalk.white(formatQty(pos.symbol, pos.qty).padEnd(8))} ${pnl}`;
   // Choose by measured width so the uPnL is never the part that gets cut
@@ -101,13 +140,26 @@ function positionRow(pos: Position, isSelected: boolean, width: number): string 
 }
 
 export function renderCol3Lines(p: CockpitProps, width = 34, rowCount = 29): string[] {
-  const rows = p.positions.length === 0
-    ? [padLine(`   ${chalk.gray('no open positions')}`, width)]
-    : p.positions.map((pos, i) => positionRow(pos, i === p.selPos, width));
+  const mode = p.currencyMode ?? 'USD';
+  const fx = p.fxRate ?? 100;
+  const isFull = p.positions.length <= 6 && width >= 46 && rowCount - 4 >= p.positions.length * 3;
+  const rows: string[] = [];
+  if (p.positions.length === 0) {
+    rows.push(padLine(`   ${chalk.gray('no open positions')}`, width));
+  } else {
+    p.positions.forEach((pos, i) => {
+      const pnl = pnlColor(pos.upnl)(fmtSignedCurrency(pos.upnl, mode, fx));
+      const isSel = i === p.selPos;
+      rows.push(...(isFull ? positionCard(pos, isSel, width, pnl) : [positionRow(pos, isSel, width, pnl)]));
+      if (isFull && i < p.positions.length - 1 && rows.length + 3 < rowCount - 3) {
+        rows.push(separator(width));
+      }
+    });
+  }
   if (rows.length < rowCount) {
     const totalUpnl = p.positions.reduce((sum, pos) => sum + pos.upnl, 0);
     rows.push(separator(width));
-    rows.push(padLine(`   ${chalk.gray('Total uPnL: ')}${pnlColor(totalUpnl).bold(signedUsd(totalUpnl))}`, width));
+    rows.push(padLine(`   ${chalk.gray('Total uPnL: ')}${pnlColor(totalUpnl).bold(fmtSignedCurrency(totalUpnl, mode, fx))}`, width));
     rows.push(padLine(`   ${chalk.gray('Positions:  ')}${chalk.white(`${p.positions.length} active`)}`, width));
   }
   return fillRows(rows, width, rowCount);
@@ -141,11 +193,13 @@ function actionRows(p: CockpitProps, width: number): string[] {
 }
 
 export function renderCol4Lines(p: CockpitProps, width = 30, rowCount = 29): string[] {
+  const mode = p.currencyMode ?? 'USD';
+  const fx = p.fxRate ?? 100;
   const rows: string[] = [
     padLine(` ${chalk.cyan.bold('ACCOUNT & MARGIN')}`, width),
-    padLine(`   ${chalk.gray('Unrealized ')}${pnlColor(p.upnl).bold(signedUsd(p.upnl))}`, width),
-    padLine(`   ${chalk.gray('Margin     ')}${chalk.white(`$${usd(p.marginUsed)}`)}${chalk.gray(` (${marginPct(p)}%)`)}`, width),
-    padLine(`   ${chalk.gray('Free       ')}${chalk.white(`$${usd(freeMargin(p))}`)}`, width),
+    padLine(`   ${chalk.gray('Unrealized ')}${pnlColor(p.upnl).bold(fmtSignedCurrency(p.upnl, mode, fx))}`, width),
+    padLine(`   ${chalk.gray('Margin     ')}${chalk.white(fmtCurrency(p.marginUsed, mode, fx))}${chalk.gray(` (${marginPct(p)}%)`)}`, width),
+    padLine(`   ${chalk.gray('Free       ')}${chalk.white(fmtCurrency(freeMargin(p), mode, fx))}`, width),
     separator(width),
     ...riskRows(p, width),
     separator(width),
@@ -168,7 +222,7 @@ export function renderPerfLines(p: CockpitProps, width: number = 128): string[] 
   ].join(sep);
   const results = [
     chalk.white(`${scope} `) + chalk.white.bold(orDash(p.successRate, (rate) => `${dp(rate)}%`)) + chalk.gray(' win'),
-    coloredPnl(since?.usd ?? null) + chalk.gray(' PnL'),
+    coloredPnl(since?.usd ?? null, p.currencyMode, p.fxRate ?? 100) + chalk.gray(' PnL'),
     chalk.gray('Sharpe ') + chalk.white.bold(orDash(p.sharpe, dp)),
     chalk.gray('MaxDD ') + chalk.yellow.bold(`${dp(p.maxDd)}%`),
     chalk.gray('liq events ') + liq,
@@ -187,9 +241,11 @@ export function renderFooterLines(p: CockpitProps, width: number = 128): string[
   const orchestrator = ` │ ${runningCount(p.agents)} agents autonomous │ eval ${LOOP_INTERVAL_MS / 1000}s │ api weight `;
   const l1 = ' ' + spinner + chalk.gray(' orchestrator' + orchestrator) + chalk.white(`${p.apiWeight}/${API_WEIGHT_LIMIT}`) + chalk.gray(' │ ws ') + WS_COLOR[p.wsStatus](`●${p.wsStatus}`)
     + chalk.gray(' │ mode ') + chalk.yellow.bold(config.alertOnly ? `${p.mode.toUpperCase()} (ALERT-ONLY)` : p.mode.toUpperCase()) + venueLabel(p.venue);
+  const currTag = p.currencyMode ?? 'USD';
   const commands = [
     chalk.yellow.bold('Tab/m') + ' ' + chalk.gray('mtf-view'),
     chalk.white.bold('↑↓') + ' ' + chalk.gray('nav'),
+    chalk.yellow.bold('u') + ' ' + chalk.cyan(currTag),
     chalk.yellow.bold('c') + ' ' + chalk.gray('close-pos'),
     chalk.yellow.bold('x') + ' ' + chalk.gray('cancel'),
     chalk.yellow.bold('k') + ' ' + chalk.gray('kill-switch'),

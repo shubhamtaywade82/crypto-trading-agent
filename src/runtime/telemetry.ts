@@ -9,7 +9,7 @@ import { inferTrend } from '../market/RegimeEngine.js';
 export interface AgentRuntime { id: AgentId; status: 'RUNNING' | 'PAUSED' | 'WATCHING'; strategy: string; note?: string; edgeMultiplier?: number }
 export interface SessionCounters { decisions: number; executed: number; monitored: number }
 export interface TelemetryInput {
-  account: { equity: number; marginUsed: number; initialEquity: number };
+  account: { equity: number; marginUsed: number; initialEquity: number; fxRate?: number };
   positions: Position[]; trades: TradeRecord[];
   candles: Record<string, Candle[]>; funding: Record<string, number>; nextFundingTime: number;
   adaptive: Record<string, AdaptiveSuperTrendBar | undefined>;
@@ -18,8 +18,18 @@ export interface TelemetryInput {
   attributable: boolean; // live positions are all tagged EXECUTOR-ε, so per-strategy figures cannot be measured
   marketStates?: Record<string, MarketState>;
 }
-export function accountFields(account: TelemetryInput['account'], positions: Position[]) {
-  return { equity: account.equity, marginUsed: account.marginUsed, positions, upnl: positions.reduce((sum, p) => sum + p.upnl, 0) };
+export function accountFields(account: TelemetryInput['account'], positions: Position[], trades: TradeRecord[] = []) {
+  const perf = summarizePerformance(trades, account.initialEquity, account.equity, Date.now());
+  return {
+    equity: account.equity, marginUsed: account.marginUsed, positions,
+    upnl: positions.reduce((sum, p) => sum + p.upnl, 0),
+    exposurePct: exposurePct(positions, account.equity),
+    minLiqDistancePct: minLiqDistancePct(positions),
+    maxDd: perf.maxDrawdownPct,
+    totalPnl: perf.totalPnl,
+    totalPnlPct: perf.totalPnlPct,
+    ...(account.fxRate !== undefined ? { fxRate: account.fxRate } : {}),
+  };
 }
 
 export type Telemetry = Pick<AppState, 'initialEquity' | 'totalPnl' | 'totalPnlPct' | 'successRate' | 'sharpe' | 'maxDd' | 'var95' | 'liqEvents' | 'sessionDecisions' | 'sessionExecuted' | 'sessionMonitored' | 'apiWeight' | 'wsStatus' | 'exposurePct' | 'minLiqDistancePct' | 'corrBtcEth' | 'agents' | 'strategyMetrics' | 'marketIntel'>;

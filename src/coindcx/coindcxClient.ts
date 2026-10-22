@@ -16,15 +16,13 @@ import {
 import { ContractSpecCache, floorToLot } from './contractSpec.js';
 import { SymbolRouter } from './symbolRouter.js';
 
-interface CoinDcxOrderRaw {
-  id: string | number; client_order_id?: string; status: string;
-  filled_quantity?: number; price?: number;
-}
+interface CoinDcxOrderRaw { id: string | number; client_order_id?: string; status: string; filled_quantity?: number; price?: number }
 
 interface CoinDcxPositionRaw {
   id: string | number; pair: string; side?: 'long' | 'short' | 'buy' | 'sell';
   size?: number; active_pos?: number; entry_price?: number; avg_price?: number;
   mark_price?: number; liquidation_price?: number | null; leverage?: number; margin_type?: 'isolated' | 'cross';
+  stop_loss?: number | string | null; take_profit?: number | string | null;
 }
 
 export interface CoinDcxOrderClient {
@@ -73,16 +71,15 @@ function toPosition(p: CoinDcxPositionRaw, symbol: string): PaperExchangePositio
   const rawPos = Number(p.active_pos ?? p.size ?? 0);
   const entryPrice = Number(p.avg_price ?? p.entry_price ?? 0);
   return {
-    id: Number(p.id) || 1,
-    symbol,
+    id: Number(p.id) || 1, symbol,
     side: rawPos < 0 || p.side === 'sell' || p.side === 'short' ? 'short' : 'long',
-    netQuantity: Math.abs(rawPos),
-    averagePrice: entryPrice,
-    currentPrice: Number(p.mark_price ?? entryPrice),
-    leverage: Number(p.leverage ?? 1),
+    netQuantity: Math.abs(rawPos), averagePrice: entryPrice,
+    currentPrice: Number(p.mark_price ?? entryPrice), leverage: Number(p.leverage ?? 1),
     marginType: p.margin_type === 'cross' ? 'cross' : 'isolated',
     liquidationPrice: p.liquidation_price ? Number(p.liquidation_price) : null,
     unrealizedPnl: 0,
+    ...(p.stop_loss ? { stopLoss: Number(p.stop_loss) } : {}),
+    ...(p.take_profit ? { takeProfit: Number(p.take_profit) } : {}),
   };
 }
 
@@ -162,15 +159,11 @@ export class CoinDcxExchangeApi implements ExchangeApi {
       const equity = round8(sumBy(targetWallets, (w) => w.balance));
       const positions = await this.getPositions();
       return {
-        accountId: this.deps.accountId,
-        currency: 'USDT',
+        accountId: this.deps.accountId, currency: 'USDT', fxRate,
         margin: this.baseline.getOrSeed(equity),
         availableBalance: round8(sumBy(targetWallets, (w) => w.available_balance)),
         lockedMargin: round8(sumBy(targetWallets, (w) => w.locked_balance)),
-        equity,
-        unrealizedPnl: 0,
-        realizedPnl: 0,
-        positionsCount: positions.length,
+        equity, unrealizedPnl: 0, realizedPnl: 0, positionsCount: positions.length,
       };
     });
   }

@@ -3,7 +3,7 @@ import stringWidth from 'string-width';
 import { config } from '../config.js';
 import { formatPrice, formatQty } from '../binance/symbolRules.js';
 import type { AdaptiveInfo, LogEntry, MarketIntelSummary, MarketPriceInfo, Mode, Position, StrategyMetrics } from '../types.js';
-import { boxLines, dp, fmtRange, fmtVol, orDash, padLine, pnlColor, rule, signedDp, signedUsd, usd, wrapTokens } from './format.js';
+import { boxLines, dp, fmtCurrency, fmtRange, fmtSignedCurrency, fmtVol, orDash, padLine, pnlColor, rule, signedDp, signedUsd, usd, wrapTokens, type CurrencyMode } from './format.js';
 import type { CockpitProps } from './panels.js';
 
 // Training period (100) plus ATR length (10) minus the first bar, which has no previous close
@@ -174,15 +174,24 @@ function levelText(symbol: string, level: string): string {
   return isNumeric ? `$${formatPrice(symbol, Number(level))}` : level || '—';
 }
 
-export function renderDetailLines(pos: Position | undefined, width: number = 128): string[] {
+export function renderDetailLines(
+  pos: Position | undefined,
+  width: number = 128,
+  mode: CurrencyMode = 'USD',
+  fx = 100,
+): string[] {
   if (!pos) return boxLines('POSITION DETAIL (selected)', [' ' + chalk.gray('no open position selected'), ' ' + chalk.gray('—')], width);
   const { symbol } = pos;
+  const roe = pos.upnlPct * (pos.leverage || 1);
   const l1 = ' ' + chalk.yellow.bold(`${symbol} ${pos.side}`) + ' · ' + chalk.cyan(pos.strategy) + chalk.gray(' │ entry ') + chalk.white(`$${formatPrice(symbol, pos.entry)}`)
     + chalk.gray(' │ size ') + chalk.white(formatQty(symbol, pos.qty)) + chalk.gray(' │ mark ') + chalk.white(`$${formatPrice(symbol, pos.mark)}`)
-    + chalk.gray(' │ uPnL ') + pnlColor(pos.upnl)(`${signedUsd(pos.upnl)} (${signedDp(pos.upnlPct)}%)`) + chalk.gray(' │ lev ') + chalk.yellow(`${pos.leverage}x ${pos.marginType}`);
-  const margin = pos.leverage > 0 ? `$${usd((pos.qty * pos.mark) / pos.leverage)}` : '—';
-  const oneR = orDash(pos.initialRisk, (risk) => `$${usd(risk * pos.qty)}`);
-  const l2 = ' ' + chalk.gray('liq dist ') + chalk.cyan(orDash(pos.liqDistancePct, (d) => `${dp(d)}%`)) + chalk.gray(' │ SL ') + chalk.white(levelText(symbol, pos.serverSl))
+    + chalk.gray(' │ uPnL ') + pnlColor(pos.upnl)(`${fmtSignedCurrency(pos.upnl, mode, fx)} (${signedDp(roe)}%)`) + chalk.gray(' │ lev ') + chalk.yellow(`${pos.leverage}x ${pos.marginType}`);
+  const margin = pos.leverage > 0 ? fmtCurrency((pos.qty * pos.mark) / pos.leverage, mode, fx) : '—';
+  const oneR = orDash(pos.initialRisk, (risk) => fmtCurrency(risk * pos.qty, mode, fx));
+  const liqVal = pos.liquidationPrice
+    ? `$${formatPrice(symbol, pos.liquidationPrice)} (${orDash(pos.liqDistancePct, (d) => `${dp(d)}%`)})`
+    : orDash(pos.liqDistancePct, (d) => `${dp(d)}%`);
+  const l2 = ' ' + chalk.gray('liq ') + chalk.yellow(liqVal) + chalk.gray(' │ SL ') + chalk.white(levelText(symbol, pos.serverSl))
     + chalk.gray(' │ TP ') + chalk.white(levelText(symbol, pos.serverTp)) + chalk.gray(' │ margin ') + chalk.white(margin) + chalk.gray(' │ 1R ') + chalk.white(oneR);
   return boxLines('POSITION DETAIL (selected)', [l1, l2], width);
 }

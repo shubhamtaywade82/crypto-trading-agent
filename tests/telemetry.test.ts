@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import type { Candle, Position, TradeRecord } from '../src/types.js';
-import { buildTelemetry, fleetRuntimes, singleFlight, venueInfo, type TelemetryInput } from '../src/runtime/telemetry.js';
+import { accountFields, buildTelemetry, fleetRuntimes, singleFlight, venueInfo, type TelemetryInput } from '../src/runtime/telemetry.js';
 import type { VenueStatus } from '../src/binance/remoteBroker.js';
 
 const closes = (values: number[]): Candle[] => values.map((c, i) => ({ openTime: i, open: c, high: c + 1, low: c - 1, close: c, volume: 1 }));
@@ -154,4 +154,17 @@ test('should pass edgeMultiplier through to agent state', () => {
   const running = [{ id: 'MOMENTUM-γ' as const, status: 'RUNNING' as const, strategy: 'test', edgeMultiplier: 1.15 }];
   const t = buildTelemetry(input({ agents: running }));
   assert.equal(t.agents[0].edgeMultiplier, 1.15);
+});
+
+test('accountFields derives live equity, margin, exposure, liq distance and drawdown consistently', () => {
+  const acct = { equity: 78.85, marginUsed: 101.44, initialEquity: 125.87, fxRate: 90 };
+  const pos = [position({ symbol: 'SOLUSDT', qty: 9.28, mark: 104.55, upnl: -22.64, liqDistancePct: 7.39 })];
+  const fields = accountFields(acct, pos);
+  assert.equal(fields.equity, 78.85);
+  assert.equal(fields.marginUsed, 101.44);
+  assert.equal(fields.upnl, -22.64);
+  assert.equal(fields.minLiqDistancePct, 7.39);
+  assert.ok(Math.abs(fields.exposurePct - (9.28 * 104.55 / 78.85) * 100) < 0.01);
+  assert.ok(Math.abs(fields.maxDd - ((78.85 - 125.87) / 125.87) * 100) < 0.01);
+  assert.equal(fields.fxRate, 90);
 });

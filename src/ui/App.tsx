@@ -4,7 +4,7 @@ import { Orchestrator } from '../runtime/Orchestrator.js';
 import { useStore } from '../store.js';
 import { clampSelection, MIN_COLS, MIN_ROWS, renderCockpit, ResizeWarning } from './panels.js';
 import { renderMtfScreen } from './mtfPanels.js';
-import { formatLocalTime } from './format.js';
+import { formatLocalTime, type CurrencyMode } from './format.js';
 import { getSymbolRules, roundPrice } from '../binance/symbolRules.js';
 import { config } from '../config.js';
 import type { MarketPriceInfo } from '../types.js';
@@ -96,6 +96,7 @@ export default function App() {
   const [time, setTime] = useState(() => new Date().toISOString().slice(11, 19));
   const [localTime, setLocalTime] = useState(() => formatLocalTime());
   const [selPos, setSelPos] = useState(0);
+  const [currencyMode, setCurrencyMode] = useState<CurrencyMode>(() => (Boolean(config.coindcx?.apiKey) ? 'BOTH' : 'USD'));
   const [view, setView] = useState<'cockpit' | 'mtf'>('cockpit');
   const [mtfPairIndex, setMtfPairIndex] = useState(0);
   const [mtfTimeframe, setMtfTimeframe] = useState<NativeTimeframe>('15m');
@@ -168,12 +169,13 @@ export default function App() {
     if (input === 'c' && selectedPosition) orchestrator.closePosition(selectedPosition);
     if (input === 'x') orchestrator.cancelAll();
     if (input === 'k') orchestrator.toggleKillSwitch();
+    if (input === 'u') setCurrencyMode((m) => (m === 'USD' ? 'INR' : m === 'INR' ? 'BOTH' : 'USD'));
     if (input === 'a' || input === 'i') orchestrator.askAdvisor();
     if (input === '?') {
       pushLog({
         ts: Date.now(),
         agent: 'SYSTEM',
-        msg: 'COMMANDS: Tab/m toggle view │ ↑↓ select │ ←→ timeframe │ c close pos │ x cancel all │ k kill-switch │ a advisor audit │ s stop',
+        msg: 'COMMANDS: Tab/m toggle view │ ↑↓ select │ u currency (USD/INR/BOTH) │ c close pos │ x cancel all │ k kill-switch │ a advisor audit │ s stop',
         level: 'info',
       });
     }
@@ -188,7 +190,7 @@ export default function App() {
   const symbols = config.symbols;
   const selectedSymbol = symbols[Math.max(0, Math.min(mtfPairIndex, symbols.length - 1))] ?? 'BTCUSDT';
   const displayLines = view === 'cockpit'
-    ? renderCockpit({ ...state, spotPrices: lerpPrices, time, localTime, selPos: selectedIndex, isSyncing, totalWidth: cols, totalHeight: rows })
+    ? renderCockpit({ ...state, spotPrices: lerpPrices, time, localTime, selPos: selectedIndex, isSyncing, totalWidth: cols, totalHeight: rows, currencyMode })
     : renderMtfScreen({
         symbols,
         selectedSymbol,

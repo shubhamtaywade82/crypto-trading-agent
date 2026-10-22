@@ -388,5 +388,31 @@ test('updatePrices: sets tickDirection UP on increase, DOWN on decrease, and cle
   assert.equal(next2.BTC?.tickDirection, undefined);
 });
 
+test('currencyMode: renders USD, INR and BOTH formats in cockpit', () => {
+  const fxRate = 100;
+  const usdText = render({ ...realisticProps(), currencyMode: 'USD', fxRate });
+  assert.ok(usdText.includes('$100,012.34'), 'expected USD equity in USD mode');
+  assert.ok(usdText.includes('u USD'), 'expected u USD in footer');
+
+  const inrText = render({ ...realisticProps(), currencyMode: 'INR', fxRate });
+  assert.ok(inrText.includes('₹1,00,01,234'), 'expected INR equity in INR mode');
+  assert.ok(inrText.includes('+₹1,234'), 'expected INR pnl in INR mode');
+  assert.ok(inrText.includes('u INR'), 'expected u INR in footer');
+
+  const bothText = render({ ...realisticProps(), currencyMode: 'BOTH', fxRate });
+  assert.ok(bothText.includes('$100,012.34 (₹100.0L)'), 'expected dual equity in BOTH mode');
+  assert.ok(bothText.includes('+$12.34 (₹1.2k)'), 'expected dual pnl in BOTH mode');
+  assert.ok(bothText.includes('u BOTH'), 'expected u BOTH in footer');
+});
+
+test('positions: renders liquidation price alongside distance', () => {
+  const props = realisticProps();
+  const [pos] = props.positions;
+  const text = render({ ...props, positions: [{ ...pos, liquidationPrice: 65_200.5, liqDistancePct: 19.5 }] });
+  assert.ok(text.includes('65,200.50'), 'expected liquidation price in output');
+  assert.ok(text.includes('19.50%'), 'expected liq distance in output');
+});
+
+
 
 

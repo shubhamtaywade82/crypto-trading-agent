@@ -1,10 +1,7 @@
 import type { AgentId, ExitReason, Position, TradeRecord } from '../types.js';
 import {
-  VenueUnavailableError,
-  type ExchangeApi,
-  type PaperExchangeAccountSnapshot,
-  type PaperExchangePosition,
-  type SubmitOrderResult,
+  VenueUnavailableError, type ExchangeApi, type PaperExchangeAccountSnapshot,
+  type PaperExchangePosition, type SubmitOrderResult,
 } from './paperExchangeClient.js';
 import { entryMeta, entrySide, errorText, OrderInFlightError, OrderNotFilledError, OwnershipError, RemoteExits, scaledMeta, submitEntry, type OpenParams } from './remoteOrders.js';
 import { FundingBoundaryWatcher, type FundingLine, type FundingObservation } from './remoteFunding.js';
@@ -104,16 +101,15 @@ export class RemoteBroker {
     }
   }
 
-  hasData(): boolean {
-    return this.account !== null;
-  }
+  hasData(): boolean { return this.account !== null; }
 
-  getAccount(): { equity: number; marginUsed: number; initialEquity: number } {
+  getAccount(): { equity: number; marginUsed: number; initialEquity: number; fxRate?: number } {
     if (this.account === null) throw new Error('RemoteBroker has no account data yet: call init() first');
     return {
       equity: walletEquity(this.account, this.positions, this.marks),
       marginUsed: this.account.lockedMargin,
       initialEquity: this.account.margin,
+      fxRate: this.account.fxRate,
     };
   }
 
@@ -121,9 +117,7 @@ export class RemoteBroker {
     return this.positions.map((p) => toPosition(p, this.deps.store.getMeta(p.symbol), this.marks.get(p.symbol)));
   }
 
-  getTrades(): TradeRecord[] {
-    return this.deps.store.trades();
-  }
+  getTrades(): TradeRecord[] { return this.deps.store.trades(); }
 
   status(): VenueStatus {
     const state: VenueState = this.consecutiveFailures === 0 ? 'connected' : this.consecutiveFailures < DOWN_AFTER_FAILURES ? 'degraded' : 'down';

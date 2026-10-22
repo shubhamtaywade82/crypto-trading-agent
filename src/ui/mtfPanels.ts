@@ -1,4 +1,5 @@
 import chalk from 'chalk';
+import stringWidth from 'string-width';
 import type { Candle, MarketPriceInfo, Mode, WsStatus } from '../types.js';
 import type { MarketState, Timeframe, TrendDirection } from '../market/types.js';
 import type { NativeTimeframe } from '../market/MarketDataTypes.js';
@@ -78,10 +79,10 @@ function renderMtfHeader(p: MtfScreenProps, w: number): string[] {
   const modeTag = chalk.yellow.bold(`[${p.mode.toUpperCase()}]`);
   const left = ` ⬡ INKUI AGENT TRADE │ ${chalk.cyan.bold('MTF CANDLES & MARKET ALIGNMENT')} │ ${chalk.white.bold('[Tab] Cockpit')} `;
   const right = `${modeTag} ${wsTag} │ ${p.time} UTC ${p.localTime ? `(${p.localTime}) ` : ''}`;
-  const gap = Math.max(1, w - 2 - chalk.reset(left).length - chalk.reset(right).length);
+  const midSpace = Math.max(1, w - 2 - stringWidth(left) - stringWidth(right));
   return [
     chalk.cyan('┌' + rule('─', w - 2) + '┐'),
-    chalk.cyan('│') + left + ' '.repeat(gap) + right + chalk.cyan('│'),
+    chalk.cyan('│') + padLine(left + rule(' ', midSpace) + right, w - 2) + chalk.cyan('│'),
     chalk.cyan('├' + rule('─', w - 2) + '┤'),
   ];
 }
@@ -169,7 +170,14 @@ function buildChartRow(candles: Candle[], r: number, rows: number, minP: number,
 
 function renderAsciiCandleChart(candles: Candle[], sym: string, tf: NativeTimeframe, w: number, h = 9): string[] {
   if (candles.length === 0) {
-    return [chalk.cyan('│') + padLine(` No ${tf} candle history available for ${sym}`, w - 2) + chalk.cyan('│')];
+    const emptyRows: string[] = [];
+    const mid = Math.floor(h / 2);
+    for (let r = 0; r < h; r++) {
+      const msg = r === mid ? ` No ${tf} candle history available for ${sym}` : '';
+      emptyRows.push(chalk.cyan('│') + padLine(msg, w - 2) + chalk.cyan('│'));
+    }
+    emptyRows.push(chalk.cyan('│') + padLine(' ' + chalk.gray('Volume     │ —'), w - 2) + chalk.cyan('│'));
+    return emptyRows;
   }
   const maxBars = Math.max(6, Math.floor((w - 18) / 3));
   const slice = candles.slice(-maxBars);
@@ -180,7 +188,9 @@ function renderAsciiCandleChart(candles: Candle[], sym: string, tf: NativeTimefr
   const lines: string[] = [];
   for (let r = 0; r < h; r++) {
     const pVal = maxP - (r / (h - 1)) * span;
-    const label = (r === 0 || r === Math.floor(h / 2) || r === h - 1)
+    const isMajor = r === 0 || r === Math.floor(h / 2) || r === h - 1;
+    const isQuarter = h >= 16 && (r === Math.floor(h / 4) || r === Math.floor((3 * h) / 4));
+    const label = (isMajor || isQuarter)
       ? `$${formatPrice(sym, pVal)}`.padStart(11) + ' │'
       : ' '.repeat(11) + ' │';
     const body = buildChartRow(slice, r, h, minP, span);
@@ -230,12 +240,16 @@ export function renderMtfScreen(p: MtfScreenProps): string[] {
   const curState = p.marketStates?.[p.selectedSymbol] ?? p.marketStates?.[shortName(p.selectedSymbol)];
   const candles = p.mtfCandles?.[p.selectedSymbol]?.[p.selectedTimeframe] ?? [];
 
+  // Overhead: header (3), anchor (4), matrix (2 + syms), microFooter (3), footer (2) + volume row (1)
+  const overhead = 15 + p.symbols.length;
+  const chartHeight = Math.max(8, (p.totalHeight ?? 30) - 1 - overhead);
+
   return [
     ...renderMtfHeader(p, w),
     ...renderAnchorCard(w, btcState, btcTick),
     ...renderMatrixTable(p, w),
     ...renderMicroFooter(p.selectedSymbol, p.selectedTimeframe, w, curState),
-    ...renderAsciiCandleChart(candles, p.selectedSymbol, p.selectedTimeframe, w, 8),
+    ...renderAsciiCandleChart(candles, p.selectedSymbol, p.selectedTimeframe, w, chartHeight),
     ...renderMtfFooter(w),
   ];
 }

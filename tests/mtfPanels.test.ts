@@ -207,3 +207,26 @@ test('renderMtfScreen: correctly switches timeframe and selected symbol', () => 
   assert.ok(text.includes('[1h*]'), 'Should show 1h as selected timeframe');
   assert.ok(text.includes('[LIVE]'), 'Should show LIVE mode');
 });
+
+test('renderMtfScreen: fills full terminal height and width dynamically', () => {
+  const symbols = ['BTCUSDT', 'ETHUSDT', 'SOLUSDT', 'XRPUSDT'];
+  const totalHeight = 55;
+  const totalWidth = 150;
+  const props: MtfScreenProps = {
+    symbols,
+    selectedSymbol: 'BTCUSDT',
+    selectedTimeframe: '15m',
+    time: '12:00:00',
+    totalWidth,
+    totalHeight,
+    wsStatus: 'connected',
+    mode: 'live',
+  };
+
+  const lines = renderMtfScreen(props);
+  // Total lines should equal totalHeight - 1 to prevent Ink from scrolling/clearing viewport
+  assert.equal(lines.length, totalHeight - 1);
+  for (const line of lines) {
+    assert.equal(strip(line).length, totalWidth);
+  }
+});

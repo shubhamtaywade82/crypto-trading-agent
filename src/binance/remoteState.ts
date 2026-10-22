@@ -222,7 +222,7 @@ export function walletEquity(account: PaperExchangeAccountSnapshot, positions: P
 export function toPosition(p: PaperExchangePosition, meta: PositionMeta | undefined, localMark: number | undefined): Position {
   const side = sideOf(p);
   const mark = localMark ?? p.currentPrice;
-  const liq = p.liquidationPrice;
+  const liq = p.liquidationPrice ?? (p.leverage > 1 ? (side === 'LONG' ? p.averagePrice * (1 - (1 / p.leverage - 0.005)) : p.averagePrice * (1 + (1 / p.leverage - 0.005))) : null);
   return {
     id: `${p.symbol}_${side}`,
     symbol: p.symbol,
@@ -236,8 +236,9 @@ export function toPosition(p: PaperExchangePosition, meta: PositionMeta | undefi
     leverage: p.leverage,
     marginType: p.marginType === 'isolated' ? 'ISOLATED' : 'CROSS',
     liqDistancePct: liq !== null && liq > 0 ? (Math.abs(mark - liq) / mark) * 100 : null,
-    serverSl: levelLabel(meta?.stopLoss),
-    serverTp: levelLabel(meta?.takeProfit),
+    liquidationPrice: liq !== null && liq > 0 ? liq : null,
+    serverSl: levelLabel(meta?.stopLoss ?? p.stopLoss),
+    serverTp: levelLabel(meta?.takeProfit ?? p.takeProfit),
     initialRisk: meta?.initialRisk ?? undefined,
   };
 }

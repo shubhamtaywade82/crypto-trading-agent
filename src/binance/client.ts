@@ -220,7 +220,7 @@ export class BinanceService {
   }
 
   /** Live PnL is measured from the first balance this session saw: the exchange keeps no baseline. */
-  async getAccount(): Promise<{ equity: number; marginUsed: number; initialEquity: number }> {
+  async getAccount(): Promise<{ equity: number; marginUsed: number; initialEquity: number; fxRate?: number }> {
     if (this.isRemoteActive()) return this.broker!.getAccount();
     if (config.mode === 'paper') return this.paper.getAccount();
     const info = await this.futures.getAccountInformation();

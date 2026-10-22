@@ -183,7 +183,7 @@ export class Orchestrator extends EventEmitter {
     const positions = await this.binance.getPositions(false);
     await this.positionDriver?.manage(this.liveBook ? this.liveBook.positions(this.livePrices) : positions);
     const account = await this.binance.getAccount();
-    this.emit('state', { ...accountFields(account, positions), spotPrices: { ...this.liveTickers }, wsStatus: this.binance.getWsStatus() });
+    this.emit('state', { ...accountFields(account, positions, this.binance.getTrades()), spotPrices: { ...this.liveTickers }, wsStatus: this.binance.getWsStatus() });
   }
   async closePosition(pos: Position) {
     this.log('SYSTEM', `Manual close ${pos.symbol} ${pos.side}`, 'warn');
@@ -564,7 +564,7 @@ export class Orchestrator extends EventEmitter {
     for (const [sym, snap] of Object.entries(v2)) {
       result[sym] = {};
       for (const [tf, candles] of Object.entries(snap.candles)) {
-        if (candles) result[sym][tf as import('../market/MarketDataTypes.js').NativeTimeframe] = candles.slice(-25);
+        if (candles) result[sym][tf as import('../market/MarketDataTypes.js').NativeTimeframe] = candles.slice(-100);
       }
     }
     return result;
@@ -574,7 +574,7 @@ export class Orchestrator extends EventEmitter {
     const [positions, account] = await Promise.all([this.binance.getPositions(false), this.binance.getAccount()]);
     this.refreshLiveTickers(ctx);
     this.emit('state', {
-      mode: config.mode, ...accountFields(account, positions), funding: ctx.funding,
+      mode: config.mode, ...accountFields(account, positions, this.binance.getTrades()), funding: ctx.funding,
       spotPrices: { ...this.liveTickers }, ...this.telemetryFor(ctx, account, positions),
       marketStates: ctx.marketState,
       mtfCandles: this.extractRecentMtfCandles(ctx.marketDataV2),

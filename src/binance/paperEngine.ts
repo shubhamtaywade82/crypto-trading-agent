@@ -4,10 +4,23 @@ import type { AgentId, ExitReason, Position, Side, TradeRecord } from '../types.
 import { formatPrice } from './symbolRules.js';
 import { OwnershipError } from './remoteOrders.js';
 import { directionOf, findStopExit } from './stopRules.js';
+import { config } from '../config.js';
 
 interface PaperPosition extends Position {
   orderId: string;
+  /** Taker fee paid on the open portion, charged against the position's PnL as it closes. */
+  openFee?: number;
+  /** Funding accrued on the position so far; negative when paid, positive when received. */
+  funding?: number;
 }
+
+/** What a paper fill costs the way the live account pays it: a taker fee on notional, and slippage that works against the trader. */
+export interface PaperCosts {
+  takerFeeRate: number;
+  slippageRate: number;
+}
+
+const FUNDING_INTERVAL_MS = 8 * 60 * 60 * 1000;
 
 interface FillParams {
   symbol: string;
@@ -43,7 +56,7 @@ function liquidationPrice(side: Side, entry: number, leverage: number): number |
 function refreshMetrics(pos: PaperPosition): void {
   const direction = directionOf(pos.side);
   const liqPrice = liquidationPrice(pos.side, pos.entry, pos.leverage);
-  pos.upnl = (pos.mark - pos.entry) * pos.qty * direction;
+  pos.upnl = (pos.mark - pos.entry) * pos.qty * direction - (pos.openFee ?? 0) + (pos.funding ?? 0);
   pos.upnlPct = pos.entry ? ((pos.mark - pos.entry) / pos.entry) * 100 * direction : 0;
   pos.liqDistancePct = liqPrice ? (Math.abs(pos.mark - liqPrice) / pos.mark) * 100 : null;
 }
@@ -72,8 +85,45 @@ export class PaperEngine {
   private lastPrices: Record<string, number> = {};
   private saveTimer: NodeJS.Timeout | null = null;
 
-  constructor(private readonly filePath = path.resolve('data/paper-state.json')) {
+  /** Boundary index of the last funding accrual; -1 until the clock is set by the first call. */
+  private fundingSlot = -1;
+
+  constructor(
+    private readonly filePath = path.resolve('data/paper-state.json'),
+    private readonly costs: PaperCosts = { takerFeeRate: config.risk.takerFeeRate, slippageRate: config.risk.slippageBufferRate },
+  ) {
     this.loadState();
+  }
+
+  /** The price a fill gets: slippage moves it against the trader, on entries and on exits alike. */
+  private fillPrice(side: Side, price: number, opening: boolean): number {
+    const against = opening ? directionOf(side) : -directionOf(side);
+    return price * (1 + against * this.costs.slippageRate);
+  }
+
+  /**
+   * Charges funding for each 8-hour (UTC) boundary crossed since the last call: a long pays a positive rate and a short
+   * receives it, on the position's mark notional. The first call only sets the clock, so a position is never charged for a
+   * boundary that passed before the engine saw it. The clock is not persisted: a boundary crossed while the process is
+   * down is not charged. Several boundaries crossed at once use the current rate for each.
+   */
+  accrueFunding(rates: Record<string, number>, now = Date.now()): void {
+    const slot = Math.floor(now / FUNDING_INTERVAL_MS);
+    if (this.fundingSlot < 0) {
+      this.fundingSlot = slot;
+      return;
+    }
+    const crossed = slot - this.fundingSlot;
+    if (crossed <= 0) return;
+    this.fundingSlot = slot;
+    for (const pos of this.positions) {
+      const rate = rates[pos.symbol];
+      if (!Number.isFinite(rate)) continue;
+      pos.funding = (pos.funding ?? 0) - directionOf(pos.side) * rate * pos.qty * pos.mark * crossed;
+      refreshMetrics(pos);
+    }
+    this.syncEquity();
+    this.persist();
   }
 
   private loadState(): void {
@@ -145,13 +195,13 @@ export class PaperEngine {
     if (params.reduceOnly) {
       if (existing) this.reduce(existing, params.qty, price, params.exitReason ?? 'CLOSE');
     } else if (!existing) {
-      this.positions.push(this.createPosition(params, side, price, params.qty));
+      this.positions.push(this.createPosition(params, side, this.fillPrice(side, price, true), params.qty));
     } else if (existing.side === side) {
-      this.scaleIn(existing, params, price);
+      this.scaleIn(existing, params, this.fillPrice(side, price, true));
     } else {
       // An opposite entry is a full reversal: netting by qty could silently drop the new side when it is the smaller order
       this.reduce(existing, existing.qty, price, 'FLIP');
-      this.positions.push(this.createPosition(params, side, price, params.qty));
+      this.positions.push(this.createPosition(params, side, this.fillPrice(side, price, true), params.qty));
     }
     this.syncEquity();
     this.persist();
@@ -164,11 +214,22 @@ export class PaperEngine {
     if (holder) throw new OwnershipError(`${params.symbol} is held by ${holder.strategy}; ${params.strategy} may not trade it`);
   }
 
-  /** Books realized PnL on up to qty of pos and journals it; returns the unfilled remainder. */
-  private reduce(pos: PaperPosition, qty: number, price: number, reason: ExitReason): number {
+  /**
+   * Books realized PnL on up to qty of pos and journals it; returns the unfilled remainder. The closed portion carries its
+   * share of the open fee and of the funding, and pays the exit fee, so the journal's PnL is the account's net result.
+   */
+  private reduce(pos: PaperPosition, qty: number, rawPrice: number, reason: ExitReason): number {
     const closeQty = Math.min(pos.qty, qty);
-    const pnl = (price - pos.entry) * closeQty * directionOf(pos.side);
+    const share = pos.qty > 0 ? closeQty / pos.qty : 0;
+    const price = this.fillPrice(pos.side, rawPrice, false);
+    const openFee = (pos.openFee ?? 0) * share;
+    const funding = (pos.funding ?? 0) * share;
+    const exitFee = price * closeQty * this.costs.takerFeeRate;
+    const gross = (price - pos.entry) * closeQty * directionOf(pos.side);
+    const pnl = gross - openFee - exitFee + funding;
     this.startEquity += pnl;
+    pos.openFee = (pos.openFee ?? 0) - openFee;
+    pos.funding = (pos.funding ?? 0) - funding;
     this.trades.push({
       symbol: pos.symbol, strategy: pos.strategy, side: pos.side, entry: pos.entry,
       exit: price, qty: closeQty, pnl, reason, closedAt: Date.now(),
@@ -186,6 +247,7 @@ export class PaperEngine {
   private scaleIn(pos: PaperPosition, params: FillParams, price: number): void {
     const totalQty = pos.qty + params.qty;
     pos.entry = (pos.entry * pos.qty + price * params.qty) / totalQty;
+    pos.openFee = (pos.openFee ?? 0) + price * params.qty * this.costs.takerFeeRate;
     pos.qty = totalQty;
     pos.mark = price;
     pos.leverage = params.leverage;
@@ -205,6 +267,7 @@ export class PaperEngine {
       entry: price,
       qty,
       mark: price,
+      openFee: price * qty * this.costs.takerFeeRate,
       initialRisk: params.stopLoss ? Math.abs(price - params.stopLoss) : undefined,
       upnl: 0,
       upnlPct: 0,

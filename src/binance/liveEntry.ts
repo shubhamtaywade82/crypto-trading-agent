@@ -2,6 +2,7 @@ import { randomBytes } from 'node:crypto';
 import type { AgentId, Side } from '../types.js';
 import type { EntryRecord } from './liveBook.js';
 import { OrderInFlightError } from './remoteOrders.js';
+import { ENTRY_ORDER_PREFIX } from './liveProtection.js';
 
 /** How often a live entry is polled while it works. */
 export const LIVE_ENTRY_POLL_MS = 1_000;
@@ -21,7 +22,7 @@ export const venueRejected = (err: unknown): boolean =>
 
 /** Binance caps newClientOrderId at 36 characters. Epoch milliseconds plus random bytes keep it unique across restarts. */
 export function liveEntryClientOrderId(nowMs: number): string {
-  return `e${nowMs.toString(36)}${randomBytes(6).toString('hex')}`;
+  return `${ENTRY_ORDER_PREFIX}${nowMs.toString(36)}${randomBytes(6).toString('hex')}`;
 }
 
 /** Binance side of an entry: LONG buys, SHORT sells. */
@@ -104,11 +105,35 @@ export class LiveEntryTracker {
 
   constructor(private readonly port: LiveEntryPort, private readonly options: LiveEntryOptions) {
     this.now = options.now ?? Date.now;
-    this.sleep = options.sleep ?? ((ms) => new Promise((resolve) => setTimeout(resolve, ms)));
+    this.sleep = options.sleep ?? ((ms) => this.interruptible(ms));
   }
 
   get busy(): boolean {
     return this.holder !== null;
+  }
+
+  /** True while an entry on `symbol` is being followed. */
+  holds(symbol: string): boolean {
+    return this.holder?.symbol === symbol;
+  }
+
+  /** Ends the current poll wait early, so a venue fill event is acted on at once instead of at the next poll. */
+  wake(): void {
+    this.wakeNow?.();
+  }
+
+  private wakeNow: (() => void) | null = null;
+
+  private interruptible(ms: number): Promise<void> {
+    return new Promise((resolve) => {
+      const done = (): void => {
+        clearTimeout(timer);
+        this.wakeNow = null;
+        resolve();
+      };
+      const timer = setTimeout(done, ms);
+      this.wakeNow = done;
+    });
   }
 
   /** Claims the slot before any await, so two concurrent entries cannot both pass the check. */

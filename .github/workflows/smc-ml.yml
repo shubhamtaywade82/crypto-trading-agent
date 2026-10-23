@@ -12,6 +12,7 @@ on:
       - "tests/smc-ml.test.ts"
       - "tests/smc-ml-lifecycle.test.ts"
       - "tests/smc-ml-lifecycle-coordinator.test.ts"
+      - "tests/ollamaSdkWire.test.ts"
       - "package.json"
       - ".github/workflows/smc-ml.yml"
 
@@ -47,7 +48,7 @@ jobs:
           zod@3.23.0
           @types/node@22.10.2
           dotenv@16.4.5
-          @nemesis-oss/ollama-sdk@1.8.0
+          @nemesis-oss/ollama-sdk@1.20.0
           @nemesis-oss/binance-sdk@3.0.0
 
       - name: Typecheck SMC ML slice
@@ -74,4 +75,4 @@ jobs:
           src/strategies/smc-ml/index.ts
 
       - name: Run SMC ML tests
-        run: npx tsx --test tests/smc-ml.test.ts tests/smc-ml-lifecycle.test.ts tests/smc-ml-lifecycle-coordinator.test.ts
+        run: npx tsx --test tests/smc-ml.test.ts tests/smc-ml-lifecycle.test.ts tests/smc-ml-lifecycle-coordinator.test.ts tests/ollamaSdkWire.test.ts

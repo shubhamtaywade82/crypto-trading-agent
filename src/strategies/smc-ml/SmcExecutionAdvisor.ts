@@ -11,6 +11,8 @@ export interface SmcExecutionAdvisorOptions {
   host: string;
   model: string;
   timeoutMs?: number;
+  /** Bearer token for a cloud host (Ollama Cloud requires an account key); the SDK falls back to OLLAMA_API_KEY when unset. */
+  apiKey?: string;
   /** Injectable for tests; defaults to an SDK client on `host` with the SDK's own retry and timeout disabled (the advisor is fail-closed and bounded here). */
   client?: Pick<OllamaClient, 'generateText'>;
 }
@@ -32,7 +34,7 @@ export class SmcExecutionAdvisor {
 
   constructor(options: SmcExecutionAdvisorOptions) {
     this.timeoutMs = options.timeoutMs ?? TIMEOUT_MS;
-    this.client = options.client ?? new OllamaClient({ baseUrl: options.host, timeoutMs: this.timeoutMs, retries: 0 });
+    this.client = options.client ?? new OllamaClient({ baseUrl: options.host, timeoutMs: this.timeoutMs, retries: 0, apiKey: options.apiKey });
     this.model = options.model;
     this.host = options.host;
   }

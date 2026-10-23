@@ -22,6 +22,7 @@ async function main() {
 
   const marketData = new MarketDataService(futuresClient, DEFAULT_MARKET_DATA_OPTIONS);
   const marketStateBuilder = new MarketStateBuilder();
+  // Pinned to the local daemon that serves the MiniCPM model; OLLAMA_HOST and the trading advisor's key pool do not apply here.
   const llm = new MiniCpmService({
     host: 'http://127.0.0.1:11434',
     model: 'openbmb/minicpm5-2b:latest',

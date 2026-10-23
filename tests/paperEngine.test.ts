@@ -9,8 +9,10 @@ const base = { symbol: 'BTCUSDT', leverage: 5, strategy: 'MOMENTUM-γ' as const 
 const near = (actual: number, expected: number) => assert.ok(Math.abs(actual - expected) < 1e-6, `${actual} != ${expected}`);
 
 // Each engine persists to its own temp file so tests never touch data/paper-state.json
+// These tests pin fill mechanics at exact prices, so they run without fees or slippage; tests/paperEngine.costs.test.ts covers the costs
+const GROSS = { takerFeeRate: 0, slippageRate: 0 };
 function freshEngine(): PaperEngine {
-  return new PaperEngine(path.join(mkdtempSync(path.join(tmpdir(), 'paper-')), 'state.json'));
+  return new PaperEngine(path.join(mkdtempSync(path.join(tmpdir(), 'paper-')), 'state.json'), GROSS);
 }
 
 test('should merge same-side fills into one position with weighted-average entry', () => {

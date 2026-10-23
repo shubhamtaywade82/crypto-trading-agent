@@ -12,6 +12,8 @@ interface PaperPosition extends Position {
   openFee?: number;
   /** Funding accrued on the position so far; negative when paid, positive when received. */
   funding?: number;
+  /** Epoch ms the position opened, quantity-weighted across scale-ins. Funding is charged only for boundaries after it. */
+  openedAt?: number;
 }
 
 /** What a paper fill costs the way the live account pays it: a taker fee on notional, and slippage that works against the trader. */
@@ -91,6 +93,7 @@ export class PaperEngine {
   constructor(
     private readonly filePath = path.resolve('data/paper-state.json'),
     private readonly costs: PaperCosts = { takerFeeRate: config.risk.takerFeeRate, slippageRate: config.risk.slippageBufferRate },
+    private readonly now: () => number = Date.now,
   ) {
     this.loadState();
   }
@@ -102,26 +105,29 @@ export class PaperEngine {
   }
 
   /**
-   * Charges funding for each 8-hour (UTC) boundary crossed since the last call: a long pays a positive rate and a short
-   * receives it, on the position's mark notional. The first call only sets the clock, so a position is never charged for a
-   * boundary that passed before the engine saw it. The clock is not persisted: a boundary crossed while the process is
-   * down is not charged. Several boundaries crossed at once use the current rate for each.
+   * Charges funding at each 8-hour (UTC) boundary a position was open through: a long pays a positive rate and a short
+   * receives it, on the position's mark notional. A boundary at or before the position's open time is not charged to it.
+   * The first call only sets the clock. The clock is saved with the book, so a boundary crossed while the process was down
+   * is charged on the next call. Several boundaries crossed at once each use the current rate, an approximation.
    */
-  accrueFunding(rates: Record<string, number>, now = Date.now()): void {
+  accrueFunding(rates: Record<string, number>, now = this.now()): void {
     const slot = Math.floor(now / FUNDING_INTERVAL_MS);
     if (this.fundingSlot < 0) {
       this.fundingSlot = slot;
       return;
     }
-    const crossed = slot - this.fundingSlot;
-    if (crossed <= 0) return;
-    this.fundingSlot = slot;
+    if (slot <= this.fundingSlot) return;
     for (const pos of this.positions) {
       const rate = rates[pos.symbol];
       if (!Number.isFinite(rate)) continue;
+      const openedSlot = pos.openedAt === undefined ? -1 : Math.floor(pos.openedAt / FUNDING_INTERVAL_MS);
+      const first = Math.max(this.fundingSlot, openedSlot) + 1;
+      const crossed = slot - first + 1;
+      if (crossed <= 0) continue;
       pos.funding = (pos.funding ?? 0) - directionOf(pos.side) * rate * pos.qty * pos.mark * crossed;
       refreshMetrics(pos);
     }
+    this.fundingSlot = slot;
     this.syncEquity();
     this.persist();
   }
@@ -136,6 +142,7 @@ export class PaperEngine {
         this.equity = data.equity;
         this.startEquity = data.startEquity ?? data.equity;
         this.trades = Array.isArray(data.closedTrades) ? data.closedTrades : [];
+        this.fundingSlot = Number.isInteger(data.fundingSlot) ? data.fundingSlot : -1;
       }
     } catch {
       // Best-effort load; fall back to an empty book on parse error
@@ -154,6 +161,7 @@ export class PaperEngine {
           savedAt: Date.now(),
           equity: this.equity,
           startEquity: this.startEquity,
+          fundingSlot: this.fundingSlot,
           positions: this.positions,
           closedTrades: this.trades,
         }, null, 2);
@@ -248,6 +256,7 @@ export class PaperEngine {
     const totalQty = pos.qty + params.qty;
     pos.entry = (pos.entry * pos.qty + price * params.qty) / totalQty;
     pos.openFee = (pos.openFee ?? 0) + price * params.qty * this.costs.takerFeeRate;
+    pos.openedAt = ((pos.openedAt ?? this.now()) * pos.qty + this.now() * params.qty) / totalQty;
     pos.qty = totalQty;
     pos.mark = price;
     pos.leverage = params.leverage;
@@ -268,6 +277,7 @@ export class PaperEngine {
       qty,
       mark: price,
       openFee: price * qty * this.costs.takerFeeRate,
+      openedAt: this.now(),
       initialRisk: params.stopLoss ? Math.abs(price - params.stopLoss) : undefined,
       upnl: 0,
       upnlPct: 0,

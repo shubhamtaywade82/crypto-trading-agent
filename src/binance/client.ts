@@ -1,7 +1,5 @@
 import path from 'node:path';
 import { USDMClient, WebsocketClient, type FuturesPositionTrade, type OrderResult } from 'binance';
-import { CoinDCXClient } from '@nemesis-oss/coindcx-sdk';
-import { CoinDcxExchangeApi, type CoinDcxOrderClient } from '../coindcx/coindcxClient.js';
 import { config } from '../config.js';
 import { PaperEngine } from './paperEngine.js';
 import { PaperExchangeClient, VenueUnavailableError } from './paperExchangeClient.js';
@@ -59,8 +57,6 @@ type OpenPositionParams = {
 
 const REMOTE_STATE_FILE = 'data/remote-state.json';
 const REMOTE_INITIAL_MARGIN = 1_150;
-const COINDCX_STATE_FILE = 'data/coindcx-state.json';
-const COINDCX_BASELINE_FILE = 'data/coindcx-baseline.json';
 
 function remoteBrokerFromConfig(): RemoteBroker | null {
   const remote = config.paperExchange;
@@ -75,46 +71,9 @@ function remoteBrokerFromConfig(): RemoteBroker | null {
   });
 }
 
-// Published SDK v1.2.0 omits config.data on signed GETs; CoinDCX requires body matching X-AUTH-SIGNATURE.
-function patchCoinDcxGet(client: any): void {
-  const modules = [client?.futures?.account, client?.futures?.trading, client?.futures?.market];
-  for (const m of modules) {
-    m?.axiosInstance?.interceptors?.request?.use((c: any) => {
-      if (c?.headers?.['X-AUTH-SIGNATURE'] && c.params) {
-        c.data = c.params;
-        c.headers['Content-Type'] = 'application/json';
-      }
-      return c;
-    });
-  }
-}
-
-function coinDcxBrokerFromConfig(): RemoteBroker | null {
-  const cx = config.coindcx;
-  if (config.mode !== 'live' || !cx?.apiKey || !cx?.apiSecret) return null;
-  const rawClient = new CoinDCXClient({ apiKey: cx.apiKey, apiSecret: cx.apiSecret, paperMode: cx.paperMode });
-  patchCoinDcxGet(rawClient);
-  const api = new CoinDcxExchangeApi({
-    client: rawClient as unknown as CoinDcxOrderClient,
-    quotePreference: cx.quotePreference,
-    baselinePath: COINDCX_BASELINE_FILE,
-    accountId: 'coindcx',
-    maxOrderNotional: cx.maxOrderNotional,
-    maxOrderQuantity: cx.maxOrderQuantity,
-  });
-  void api.warmSymbols(config.symbols).catch(() => {});
-  return new RemoteBroker({
-    api,
-    store: new RemoteStore(COINDCX_STATE_FILE, 'coindcx'),
-    accountId: 'coindcx',
-    symbols: config.symbols,
-    initialMargin: cx.initialBalance,
-    venueName: 'CoinDCX',
-  });
-}
-
+// Live Binance is not a broker: BinanceService talks to USD-M directly. Only the paper exchange goes through a RemoteBroker.
 function brokerFromConfig(): RemoteBroker | null {
-  return remoteBrokerFromConfig() ?? coinDcxBrokerFromConfig();
+  return remoteBrokerFromConfig();
 }
 
 export class BinanceService {
@@ -151,7 +110,7 @@ export class BinanceService {
     futures?: USDMClient,
     private readonly stateDir = 'data',
   ) {
-    this.futures = futures ?? new USDMClient({ api_key: config.binance.apiKey, api_secret: config.binance.apiSecret });
+    this.futures = futures ?? new USDMClient({ api_key: config.binance.apiKey, api_secret: config.binance.apiSecret }, undefined, config.binance.testnet);
     this.marketDataV2 = new MarketDataService(this.futures);
   }
 
@@ -660,7 +619,7 @@ export class BinanceService {
     });
     ws.on('error', (err: unknown) => this.entryLog(`user data stream: ${errorText(err)}`, 'warn'));
     this.userStream = ws;
-    ws.subscribeUsdFuturesUserDataStream().catch((err: unknown) => {
+    ws.subscribeUsdFuturesUserDataStream(config.binance.testnet).catch((err: unknown) => {
       this.userStream = null;
       this.entryLog(`user data stream did not start: ${errorText(err)}; entries fall back to polling`, 'warn');
     });

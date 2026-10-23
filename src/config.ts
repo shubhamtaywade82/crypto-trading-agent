@@ -10,6 +10,8 @@ export const EnvSchema = z.object({
   MODE: z.enum(['paper', 'live']).default('paper'),
   BINANCE_API_KEY: z.string().default(''),
   BINANCE_API_SECRET: z.string().default(''),
+  // Testnet REST and user-data stream. Only scripts/binance-testnet-verify.ts may run with it: the cockpit's market feed is production
+  BINANCE_TESTNET: z.enum(['off', 'on']).default('off'),
   OLLAMA_HOST: z.string().default('http://127.0.0.1:11434'),
   OLLAMA_MODEL: z.string().default('gemma4:31b'),
   OLLAMA_TECHNICAL_MODEL: z.string().optional(),
@@ -203,7 +205,7 @@ const env = EnvSchema.parse(process.env);
 
 export const config = {
   mode: env.MODE as Mode,
-  binance: { apiKey: env.BINANCE_API_KEY, apiSecret: env.BINANCE_API_SECRET },
+  binance: { apiKey: env.BINANCE_API_KEY, apiSecret: env.BINANCE_API_SECRET, testnet: env.BINANCE_TESTNET === 'on' },
   ollama: {
     host: env.OLLAMA_HOST,
     model: env.OLLAMA_MODEL,

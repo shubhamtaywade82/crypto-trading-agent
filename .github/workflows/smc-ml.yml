@@ -53,6 +53,8 @@ jobs:
           @nemesis-oss/ollama-sdk@1.20.0
           @nemesis-oss/binance-sdk@3.0.0
 
+      # --skipLibCheck matches tsconfig.json. The explicit file list below bypasses that config, and the installed SDK
+      # declarations reference packages this slice does not install (ws types, @opentelemetry/api) and zod 4 types under the zod 3 pin.
       - name: Typecheck SMC ML slice
         run: >
           npx tsc --noEmit
@@ -60,6 +62,7 @@ jobs:
           --module NodeNext
           --moduleResolution NodeNext
           --strict
+          --skipLibCheck
           --skipLibCheck
           src/types.ts
           src/config.ts

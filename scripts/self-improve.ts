@@ -32,7 +32,7 @@
 
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
-import { OllamaAdvisor } from '../src/ollama/advisor.js';
+import { OllamaAdvisor, type AdvisorClient } from '../src/ollama/advisor.js';
 import { SetupOutcomeLedger, type SetupOutcomeRecord } from '../src/learning/SetupOutcomeLedger.js';
 import { ChampionRegistry } from '../src/research/ChampionRegistry.js';
 import { ExperimentStore, type ExperimentRecord } from '../src/research/ExperimentStore.js';
@@ -128,6 +128,10 @@ async function main(): Promise<void> {
   const bus = new ResearchEventBus();
   const jsonlSub = new JsonlEventSubscriber(path.resolve('data/research-events.jsonl'));
   bus.subscribe(jsonlSub.toSubscriber());
+  // The agent falls back to the deterministic proposer on LLM failure; surface that live so a run is never silently deterministic.
+  bus.subscribe((e) => {
+    if (e.type === 'llm_call_failed') console.warn(`[llm] ${e.payload.model} failed, using deterministic fallback: ${e.payload.error}`);
+  });
 
   // Attach the metrics collector as a bus subscriber. It auto-tracks every event published during this run.
   // For --metrics, we also replay persisted events from disk so the snapshot reflects the full history, not
@@ -215,20 +219,13 @@ async function main(): Promise<void> {
   console.log(`Loaded ${ledger.length} setup outcomes from ${ledgerPath}`);
   console.log('');
 
-  // Build the LLM client if requested. The OllamaAdvisor exposes a private client; we wrap it via a small adapter.
+  // Build the LLM client if requested. The advisor owns the SDK client, key pool and timeouts; ResearchAgent only needs generateText.
   let agent: ResearchAgent;
   if (useLlm) {
     const advisor = new OllamaAdvisor();
-    // The advisor wraps the SDK; we re-implement a minimal AdvisorClient that delegates to it via the same path.
-    const client = {
+    const client: AdvisorClient = {
       listModels: async () => [],
-      generateText: async (req: { model: string; prompt: string; format?: 'json' }) => {
-        // Use the advisor's generate path via reflection; for a CLI demo this is acceptable.
-        // In production, the advisor should expose a typed generateText method on its public API.
-        const anyAdvisor = advisor as unknown as { generateText?: (req: { model: string; prompt: string }) => Promise<string> };
-        if (typeof anyAdvisor.generateText === 'function') return anyAdvisor.generateText(req);
-        throw new Error('OllamaAdvisor does not expose generateText');
-      },
+      generateText: (req) => advisor.generateText(req),
     };
     agent = new ResearchAgent(client, 'qwen2.5:7b', undefined, bus, memory);
     console.log('ResearchAgent: LLM mode (Ollama qwen2.5:7b). Will fall back to deterministic proposer on any LLM failure.');
@@ -302,6 +299,8 @@ function summaryOf(e: ResearchEvent): string {
       return `${e.payload.ok ? 'repaired' : 'repair failed'} after ${e.payload.attempts} attempt(s); ${e.payload.errorCount} error(s)${e.payload.firstError ? ` — ${e.payload.firstError}` : ''}`;
     case 'model_routed':
       return `${e.payload.kind} → ${e.payload.model} (score=${e.payload.score.toFixed(3)}${e.payload.reasons.length > 0 ? `; ${e.payload.reasons.join('; ')}` : ''})`;
+    case 'llm_call_failed':
+      return `${e.payload.model} — ${e.payload.error}`;
     case 'patch_applied':
       return `${e.payload.ok ? 'succeeded' : 'failed'} — ${e.payload.filesChanged} file(s), ${e.payload.verifyPassed}/${e.payload.verifyCommandCount} validations passed${e.payload.commitSha ? `; commit ${e.payload.commitSha.slice(0, 7)}` : ''}${e.payload.error ? `; ${e.payload.error}` : ''}`;
   }

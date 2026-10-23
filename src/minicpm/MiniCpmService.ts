@@ -1,56 +1,40 @@
+import { OllamaClient } from '@nemesis-oss/ollama-sdk';
+import { jsonFormatFor } from '../ollama/jsonMode.js';
 import { buildTradingPrompt, type LlmTradeRecommendation, type PromptInput } from './MiniCpmPrompt.js';
 
 export interface OllamaClientOptions {
   host?: string;
   model?: string;
   timeoutMs?: number;
+  /** Bearer token for a cloud host; the SDK falls back to OLLAMA_API_KEY when unset. */
+  apiKey?: string;
 }
 
 export class MiniCpmService {
   private readonly host: string;
   private readonly model: string;
-  private readonly timeoutMs: number;
+  private readonly client: OllamaClient;
 
   constructor(options: OllamaClientOptions = {}) {
     this.host = options.host ?? 'http://127.0.0.1:11434';
     this.model = options.model ?? 'openbmb/minicpm5-2b:latest';
-    this.timeoutMs = options.timeoutMs ?? 30_000;
+    // One attempt bounded by timeoutMs: a failed call returns null and the worker treats the tick as no-signal.
+    this.client = new OllamaClient({ baseUrl: this.host, timeoutMs: options.timeoutMs ?? 30_000, retries: 0, apiKey: options.apiKey });
   }
 
   async analyze(input: PromptInput): Promise<LlmTradeRecommendation | null> {
     const prompt = buildTradingPrompt(input);
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), this.timeoutMs);
-
     try {
-      const response = await fetch(`${this.host}/api/generate`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          model: this.model,
-          prompt,
-          format: 'json',
-          stream: false,
-          options: {
-            temperature: 0.2,
-            top_p: 0.9,
-          },
-        }),
-        signal: controller.signal,
+      const rawText = await this.client.generateText({
+        model: this.model,
+        prompt,
+        ...jsonFormatFor(this.host),
+        options: { temperature: 0.2, top_p: 0.9 },
       });
-
-      if (!response.ok) {
-        throw new Error(`Ollama HTTP ${response.status}: ${await response.text()}`);
-      }
-
-      const payload = (await response.json()) as { response?: string };
-      const rawText = payload.response?.trim() ?? '';
-      return this.parseAndValidate(rawText, input.symbolContext.price);
+      return this.parseAndValidate(rawText.trim(), input.symbolContext.price);
     } catch (err) {
       console.error(`[MiniCPM] Error evaluating ${input.symbol}:`, (err as Error).message);
       return null;
-    } finally {
-      clearTimeout(timeout);
     }
   }
 

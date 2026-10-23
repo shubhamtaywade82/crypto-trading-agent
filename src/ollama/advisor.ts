@@ -9,12 +9,14 @@ export interface VetoVerdict {
 }
 
 const VETO_TIMEOUT_MS = 5000;
+/** Research budget: a local model reasoning over a hypothesis prompt routinely outlasts the 5s veto bound. Untuned; measure against the research model. */
+const RESEARCH_TIMEOUT_MS = 60_000;
 const PING_INTERVAL_MS = 60_000;
 
 /** The slice of `OllamaClient` the advisor uses; injectable so tests never open a socket. */
 export interface AdvisorClient {
   listModels(): Promise<unknown>;
-  generateText(request: { model: string; prompt: string; format?: 'json' }): Promise<string>;
+  generateText(request: { model: string; prompt: string; format?: 'json'; timeoutMs?: number }): Promise<string>;
 }
 
 type GenerateRequest = Parameters<AdvisorClient['generateText']>[0];
@@ -72,6 +74,8 @@ export class OllamaAdvisor {
   private lastPingAt = 0;
   private clients: AdvisorClient[] = [];
   private keyIndex = 0;
+  /** The constructor's probe. Research calls await it so a request is not refused while the first probe is still in flight. */
+  private readonly initialPing: Promise<void>;
 
   constructor(clientOverride?: AdvisorClient) {
     if (clientOverride) {
@@ -81,7 +85,7 @@ export class OllamaAdvisor {
     } else {
       this.clients = [clientFor()];
     }
-    this.ping();
+    this.initialPing = this.ping();
   }
 
   get isOnline(): boolean {
@@ -103,13 +107,25 @@ export class OllamaAdvisor {
     }
   }
 
-  private async executeGenerate(request: GenerateRequest): Promise<string> {
+  /**
+   * Text generation for the research layer. Shares the key pool and failover with the veto path, but throws instead of
+   * failing open (the caller owns the fallback) and takes its budget from the request, defaulting to RESEARCH_TIMEOUT_MS.
+   */
+  async generateText(request: GenerateRequest): Promise<string> {
+    await this.initialPing;
+    if (!this.available && Date.now() - this.lastPingAt >= PING_INTERVAL_MS) await this.ping();
+    if (!this.available) throw new Error('advisor offline');
+    const { format, ...rest } = request;
+    return this.executeGenerate({ ...rest, ...(format ? jsonFormatFor(config.ollama.host) : {}) }, request.timeoutMs ?? RESEARCH_TIMEOUT_MS);
+  }
+
+  private async executeGenerate(request: GenerateRequest, timeoutMs = VETO_TIMEOUT_MS): Promise<string> {
     let lastErr: Error | null = null;
     const count = this.clients.length;
     for (let attempt = 0; attempt < count; attempt++) {
       const idx = (this.keyIndex + attempt) % count;
       try {
-        const res = await withTimeout(this.clients[idx].generateText(request), VETO_TIMEOUT_MS);
+        const res = await withTimeout(this.clients[idx].generateText({ ...request, timeoutMs }), timeoutMs);
         this.keyIndex = (idx + 1) % count;
         return res;
       } catch (err: any) {

@@ -286,8 +286,10 @@ export class ResearchAgent {
         if (result.ok && result.hypotheses.length > 0) {
           return result.hypotheses.map((h) => ({ ...h, model: choice.model }));
         }
-      } catch {
-        // Network error, timeout — fall through to fallback
+      } catch (err) {
+        // Network error, timeout, advisor offline: publish why, then fall through to the deterministic proposer.
+        const error = err instanceof Error ? err.message : String(err);
+        this.emit({ type: 'llm_call_failed', payload: { model: choice.model, error: error.slice(0, 200) } });
       }
     }
 

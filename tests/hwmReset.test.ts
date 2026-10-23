@@ -86,12 +86,12 @@ test('should leave EMERGENCY once the baseline is reset, which resetting only th
     peak: () => peaks.stored, observe: (equity: number) => (peaks.stored = Math.max(peaks.stored, equity)),
     reset: () => { peaks.stored = 0; }, resetAt: () => peaks.resetAt,
   };
-  const ops = new RiskOps(() => undefined, { isEnabled: true, limits, hwm });
+  const ops = new RiskOps(() => undefined, { limits, hwm });
   assert.equal(ops.build(journal, account)?.circuit, 'EMERGENCY');
   peaks.stored = 0; // only the stored peak cleared: the journal still shows the 19% drawdown
-  assert.equal(new RiskOps(() => undefined, { isEnabled: true, limits, hwm }).build(journal, account)?.circuit, 'EMERGENCY');
+  assert.equal(new RiskOps(() => undefined, { limits, hwm }).build(journal, account)?.circuit, 'EMERGENCY');
   peaks.resetAt = 30; // the baseline reset
-  assert.equal(new RiskOps(() => undefined, { isEnabled: true, limits, hwm }).build(journal, account)?.circuit, 'NORMAL');
+  assert.equal(new RiskOps(() => undefined, { limits, hwm }).build(journal, account)?.circuit, 'NORMAL');
 });
 
 // ---- CLI core ----

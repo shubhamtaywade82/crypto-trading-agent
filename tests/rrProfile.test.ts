@@ -1,3 +1,4 @@
+import { REPLAY_MAINTENANCE_TIERS } from '../src/risk/liquidation.js';
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import type { BinanceService } from '../src/binance/client.js';
@@ -96,7 +97,7 @@ test('minRrFor falls back when the strategy has no calibrated floor', () => {
 
 // --- RiskAgent integration -------------------------------------------------------------------
 const risk = {
-  minLeverage: 5, maxLeverage: 10, maxExposurePct: 80, riskPerTradePct: 1, maxDrawdownPct: 5, minLiqBufferAtr: 2,
+  minLeverage: 5, maxLeverage: 10, maxExposurePct: 80, riskPerTradePct: 1, maxDrawdownPct: 5, minLiqBufferAtr: 2, minStopAtr: 1.2,
   maxDailyLossPct: 3, maxLossStreak: 4, maxConcurrentPositions: 4, maxSymbolExposurePct: 80, maxCorrelatedExposurePct: 80,
   minRr: 0, takerFeeRate: 0.0004, slippageBufferRate: 0.0002,
 };
@@ -108,7 +109,7 @@ const candles: Candle[] = Array.from({ length: 30 }, (_, i) => ({ openTime: i, o
 const engine = new PerformanceEngine(EQUITY, () => 0);
 engine.onEquity(EQUITY);
 const ctx = (over: Partial<MarketContext> = {}): MarketContext => ({
-  candles: { BTCUSDT: candles }, funding: {}, marks: {}, spot: {}, equity: EQUITY, positions: [],
+  candles: { BTCUSDT: candles }, funding: {}, marks: {}, spot: {}, equity: EQUITY, positions: [], maintenance: { BTCUSDT: REPLAY_MAINTENANCE_TIERS },
   performance: { circuit: 'NORMAL', snapshot: engine.snapshot(EQUITY) }, ...over,
 });
 const signal = (over: Partial<Signal> = {}): Signal =>
@@ -116,12 +117,12 @@ const signal = (over: Partial<Signal> = {}): Signal =>
 const profile: RrProfile = { version: 1, generatedAt: 0, floors: { 'MOMENTUM-γ': { minRr: 1.5, n: 50, meanNetR: 0.4, lcbNetR: 0.1 } } };
 
 test('without a profile the RR gate stays off exactly as before (MIN_RR=0)', () => {
-  const agent = new RiskAgent({} as BinanceService, { riskEngine: 'on', limits });
+  const agent = new RiskAgent({} as BinanceService, { limits });
   assert.equal(agent.gate(signal({ takeProfit: 100.06 }), ctx()).approved, true);
 });
 
 test('a calibrated floor refuses a low-RR signal and reports cost-adjusted RR', () => {
-  const agent = new RiskAgent({} as BinanceService, { riskEngine: 'on', limits, rrProfile: profile });
+  const agent = new RiskAgent({} as BinanceService, { limits, rrProfile: profile });
   const low = agent.gate(signal({ takeProfit: 100.06 }), ctx());
   assert.equal(low.approved, false);
   assert.match(low.reason, /min_rr: rr -?\d/);
@@ -129,14 +130,14 @@ test('a calibrated floor refuses a low-RR signal and reports cost-adjusted RR', 
 });
 
 test('raw RR 1.25 passes a raw 1.2 floor but fails a 1.2 floor once costs are charged', () => {
-  const agent = new RiskAgent({} as BinanceService, { riskEngine: 'on', limits, rrProfile: { ...profile, floors: { 'MOMENTUM-γ': { ...profile.floors['MOMENTUM-γ'], minRr: 1.2 } } } });
+  const agent = new RiskAgent({} as BinanceService, { limits, rrProfile: { ...profile, floors: { 'MOMENTUM-γ': { ...profile.floors['MOMENTUM-γ'], minRr: 1.2 } } } });
   // entry 100 sl 99.5 tp 100.625: raw 1.25; cost 0.12 => (0.625-0.12)/(0.5+0.12) = 0.81
   assert.equal(agent.gate(signal({ stopLoss: 99.5, takeProfit: 100.625 }), ctx()).approved, false);
   assert.equal(agent.gate(signal({ stopLoss: 98, takeProfit: 104 }), ctx()).approved, true);
 });
 
 test('a strategy without a floor keeps the global limit', () => {
-  const agent = new RiskAgent({} as BinanceService, { riskEngine: 'on', limits, rrProfile: profile });
+  const agent = new RiskAgent({} as BinanceService, { limits, rrProfile: profile });
   assert.equal(agent.gate(signal({ agent: 'CROWDING-ε' as never, takeProfit: 100.06 }), ctx()).approved, true);
 });
 

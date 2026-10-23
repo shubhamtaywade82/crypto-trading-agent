@@ -8,6 +8,7 @@ import { MomentumAgent } from '../agents/MomentumAgent.js';
 import { StructureTrendAgent } from '../agents/StructureTrendAgent.js';
 import { StructureLiquidityAgent } from '../agents/StructureLiquidityAgent.js';
 import { RiskAgent } from '../agents/RiskAgent.js';
+import { REPLAY_MAINTENANCE_TIERS } from '../risk/liquidation.js';
 import { RiskOps } from '../runtime/opsHooks.js';
 import { riskLimitsFromConfig, type RiskLimits } from '../risk/riskConfig.js';
 import { MarketStateBuilder } from '../market/MarketStateBuilder.js';
@@ -114,9 +115,8 @@ export class ReplayService {
     let peakEquity = 0;
     const hwm = { peak: () => peakEquity, observe: (equity: number) => (peakEquity = Math.max(peakEquity, equity)), reset: () => { peakEquity = 0; } };
 
-    const riskOps = new RiskOps(() => undefined, { isEnabled: true, limits, hwm });
+    const riskOps = new RiskOps(() => undefined, { limits, hwm });
     const risk = new RiskAgent({} as BinanceService, {
-      riskEngine: cfg.riskEngine,
       limits,
       killSwitch: { state: () => NOT_HALTED },
       hwm,
@@ -397,6 +397,7 @@ export class ReplayService {
       equity: account.equity,
       positions: portfolio.toPositions(),
       marketState,
+      maintenance: Object.fromEntries(Object.keys(candles).map((symbol) => [symbol, REPLAY_MAINTENANCE_TIERS])),
       performance: riskOps.build(portfolio.getTrades(), account),
     };
   }

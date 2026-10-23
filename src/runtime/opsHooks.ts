@@ -17,7 +17,6 @@ const DEFAULT_INITIAL_EQUITY = 100_000;
 interface AccountReading { equity: number; initialEquity: number }
 
 export interface RiskOpsOptions {
-  isEnabled?: boolean;
   limits?: RiskLimits;
   /** While halted the fleet row shows KILL-SWITCH instead of the circuit state. */
   killSwitch?: Pick<KillSwitch, 'isHalted'>;
@@ -35,23 +34,20 @@ export class RiskOps {
   private engine = new PerformanceEngine(DEFAULT_INITIAL_EQUITY);
   private initialEquity = DEFAULT_INITIAL_EQUITY;
   private circuit: CircuitState = 'NORMAL';
-  private readonly isEnabled: boolean;
   private readonly limits: RiskLimits;
 
   constructor(private readonly warn: (message: string) => void, private readonly options: RiskOpsOptions = {}) {
-    this.isEnabled = options.isEnabled ?? config.riskEngine === 'on';
     this.limits = options.limits ?? riskLimitsFromConfig();
   }
 
-  /** The cockpit's fleet-row suffix: empty while everything is normal or the engine is off. */
+  /** The cockpit's fleet-row suffix: empty while everything is normal. */
   get note(): string | undefined {
     if (this.options.killSwitch?.isHalted()) return 'KILL-SWITCH';
     return this.circuit === 'NORMAL' ? undefined : this.circuit;
   }
 
-  /** The per-loop performance context, or undefined when the engine is off. */
+  /** The per-loop performance context: the circuit state and the snapshot it was derived from. */
   build(trades: TradeRecord[], account: AccountReading): MarketContext['performance'] {
-    if (!this.isEnabled) return undefined;
     this.adoptInitialEquity(account.initialEquity);
     // The persisted peak outlives the journal (which is capped and only realized):
     // seed it first so the drawdown governor starts where the last session ended.
@@ -96,18 +92,17 @@ export interface StartupOptions {
   hooks: Pick<OpsHooks, 'onKillSwitch'>;
   warn: (message: string) => void;
   mode?: Mode;
-  isEngineOn?: boolean;
 }
 
-/** Says out loud what would otherwise be silent: a halt left by a previous session, and a live circuit breaker that cannot see losses. */
-export function announceStartup({ killSwitch, hooks, warn, mode = config.mode, isEngineOn = config.riskEngine === 'on' }: StartupOptions): void {
+/** Says out loud what would otherwise be silent: a halt left by a previous session, and what gates live entries at startup. */
+export function announceStartup({ killSwitch, hooks, warn, mode = config.mode }: StartupOptions): void {
   const state = killSwitch.state();
   if (state.halted) {
     warn(`KILL-SWITCH ON (persisted): ${state.reason} — press k to resume`);
     hooks.onKillSwitch(state);
   }
-  // getTrades() is empty in live mode, which starves the daily-loss and loss-streak governors
-  if (mode === 'live' && isEngineOn) warn('RISK_ENGINE: live mode has no trade journal — daily-loss and loss-streak limits are inactive (drawdown still applies)');
+  // Live entries wait for the journal's first sync and for startup reconciliation; the venue then decides the rest
+  if (mode === 'live') warn('LIVE: entries wait until the trade journal syncs from Binance fills and startup reconciliation completes');
 }
 
 interface PortfolioSource {

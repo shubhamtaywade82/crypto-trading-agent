@@ -1,3 +1,4 @@
+import { REPLAY_MAINTENANCE_TIERS } from '../src/risk/liquidation.js';
 import assert from 'node:assert/strict';
 import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -102,7 +103,7 @@ test('values between the pass and fail limits warn without blocking', () => {
 });
 
 test('live start is blocked without the risk engine or alerts; paper never is', () => {
-  assert.deepEqual(liveStartBlockers({ mode: 'paper', riskEngine: 'off', alerts: 'off' }), []);
+  assert.deepEqual(liveStartBlockers({ mode: 'paper', riskEngine: 'on', alerts: 'off' }), []);
   assert.equal(liveStartBlockers({ mode: 'live', riskEngine: 'on', alerts: 'on' }).length, 0);
   assert.equal(liveStartBlockers({ mode: 'live', riskEngine: 'off', alerts: 'on' }).length, 1);
   assert.equal(liveStartBlockers({ mode: 'live', riskEngine: 'off', alerts: 'off' }).length, 2);
@@ -127,7 +128,7 @@ test('approvals round-trip, and anything missing or malformed approves nothing',
 
 // --- the live gate in RiskAgent -----------------------------------------------------------------
 const risk = {
-  minLeverage: 5, maxLeverage: 10, maxExposurePct: 80, riskPerTradePct: 1, maxDrawdownPct: 5, minLiqBufferAtr: 2,
+  minLeverage: 5, maxLeverage: 10, maxExposurePct: 80, riskPerTradePct: 1, maxDrawdownPct: 5, minLiqBufferAtr: 2, minStopAtr: 1.2,
   maxDailyLossPct: 3, maxLossStreak: 4, maxConcurrentPositions: 4, maxSymbolExposurePct: 80, maxCorrelatedExposurePct: 80,
   minRr: 0, takerFeeRate: 0.0004, slippageBufferRate: 0.0002,
 };
@@ -137,12 +138,12 @@ setSymbolRules('BTCUSDT', { pricePrecision: 2, quantityPrecision: 3, tickSize: 0
 const candles: Candle[] = Array.from({ length: 30 }, (_, i) => ({ openTime: i, open: 100, high: 100.25, low: 99.75, close: 100, volume: 1 }));
 const perf = new PerformanceEngine(100_000, () => 0);
 perf.onEquity(100_000);
-const ctx = (): MarketContext => ({ candles: { BTCUSDT: candles }, funding: {}, marks: {}, spot: {}, equity: 100_000, positions: [], performance: { circuit: 'NORMAL', snapshot: perf.snapshot(100_000) } });
+const ctx = (): MarketContext => ({ candles: { BTCUSDT: candles }, funding: {}, marks: {}, spot: {}, equity: 100_000, positions: [], maintenance: { BTCUSDT: REPLAY_MAINTENANCE_TIERS }, performance: { circuit: 'NORMAL', snapshot: perf.snapshot(100_000) } });
 const sig = (agent: string, type: Signal['type'] = 'OPEN_LONG'): Signal =>
   ({ id: 's', agent: agent as never, symbol: 'BTCUSDT', type, confidence: 0.75, entry: 100, stopLoss: 98, takeProfit: 106, reason: '', ts: 0 });
 
 test('in live mode an unapproved strategy is refused, an approved one is gated normally', () => {
-  const agent = new RiskAgent({} as BinanceService, { riskEngine: 'on', limits, requireApproval: true, approvedStrategies: new Set(['MOMENTUM-γ']) });
+  const agent = new RiskAgent({} as BinanceService, { limits, requireApproval: true, approvedStrategies: new Set(['MOMENTUM-γ']) });
   const refused = agent.gate(sig('CROWDING-ι'), ctx());
   assert.equal(refused.approved, false);
   assert.match(refused.reason, /not approved for live trading/);
@@ -151,12 +152,12 @@ test('in live mode an unapproved strategy is refused, an approved one is gated n
 });
 
 test('with no approvals file live refuses every entry but never blocks a close', () => {
-  const agent = new RiskAgent({} as BinanceService, { riskEngine: 'on', limits, requireApproval: true, approvedStrategies: loadApprovals('/nonexistent/approvals.json') });
+  const agent = new RiskAgent({} as BinanceService, { limits, requireApproval: true, approvedStrategies: loadApprovals('/nonexistent/approvals.json') });
   assert.equal(agent.gate(sig('MOMENTUM-γ'), ctx()).approved, false);
   assert.equal(agent.gate(sig('MOMENTUM-γ', 'CLOSE' as Signal['type']), ctx()).reason.includes('not approved'), false);
 });
 
 test('paper mode is unaffected by the approval gate', () => {
-  const agent = new RiskAgent({} as BinanceService, { riskEngine: 'on', limits });
+  const agent = new RiskAgent({} as BinanceService, { limits });
   assert.equal(agent.gate(sig('CROWDING-ι'), ctx()).approved, true);
 });

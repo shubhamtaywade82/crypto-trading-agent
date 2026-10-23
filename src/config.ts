@@ -31,7 +31,12 @@ export const EnvSchema = z.object({
   MAX_EXPOSURE_PCT: z.coerce.number().default(80),
   RISK_PER_TRADE_PCT: z.coerce.number().default(1),
   MAX_DRAWDOWN_PCT: z.coerce.number().default(5),
-  MIN_LIQ_BUFFER_ATR: z.coerce.number().default(1.2),
+  /** Minimum stop width in ATR. The stop must be at least this wide so normal noise does not stop the trade out. */
+  MIN_STOP_ATR: z.coerce.number().positive().default(1.2),
+  /** Minimum clearance in ATR between the stop and the liquidation price. Leverage is lowered until it holds. */
+  MIN_LIQ_BUFFER_ATR: z.coerce.number().positive().default(1),
+  /** What an account drawdown past MAX_DRAWDOWN_PCT does: flatten and halt (default), or only block new entries. */
+  DRAWDOWN_BREACH_ACTION: z.enum(['block', 'flatten']).default('flatten'),
   SYMBOLS: z.string().default('BTCUSDT,ETHUSDT,SOLUSDT,XRPUSDT'),
   MAX_DAILY_LOSS_PCT: z.coerce.number().positive().default(3),
   MAX_LOSS_STREAK: z.coerce.number().int().positive().default(4),
@@ -47,6 +52,7 @@ export const EnvSchema = z.object({
   MIN_RR: z.coerce.number().nonnegative().default(0),
   TAKER_FEE_RATE: z.coerce.number().nonnegative().default(0.0004),
   SLIPPAGE_BUFFER_RATE: z.coerce.number().nonnegative().default(0.0002),
+  /** Only 'on' is accepted: the risk engine is the single sizing path, and 'off' (the removed legacy sizing) is refused at startup. */
   RISK_ENGINE: z.enum(['off', 'on']).default('on'),
   MAX_PORTFOLIO_RISK_PCT: z.coerce.number().positive().default(3),
   SIZE_VOL_SCALING: z.enum(['off', 'on']).default('on'),
@@ -132,6 +138,23 @@ export const EnvSchema = z.object({
   if (env.REGIME_TREND_EXIT >= env.REGIME_TREND_ENTER) {
     ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['REGIME_TREND_EXIT'], message: 'REGIME_TREND_EXIT must be below REGIME_TREND_ENTER (that gap is the hysteresis)' });
   }
+  if (env.RISK_ENGINE === 'off') {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['RISK_ENGINE'],
+      message: 'RISK_ENGINE=off is refused: the legacy sizing path skipped fee netting, margin, reward-to-risk and portfolio caps. Remove the setting; the risk engine always runs.',
+    });
+  }
+  if (env.MODE === 'live' && (env.COINDCX_API_KEY !== '' || env.COINDCX_API_SECRET !== '')) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['COINDCX_API_KEY'],
+      message: 'MODE=live trades Binance only: CoinDCX execution is not wired to the live guards (trade journal, startup reconciliation, entry tracker), so CoinDCX credentials would route live orders around them. Unset COINDCX_API_KEY and COINDCX_API_SECRET',
+    });
+  }
+  if (env.MIN_LEVERAGE < 1 || env.MIN_LEVERAGE > env.MAX_LEVERAGE) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['MIN_LEVERAGE'], message: 'MIN_LEVERAGE must be at least 1 and no greater than MAX_LEVERAGE' });
+  }
   if (env.PM_TP1_FRACTION + env.PM_TP2_FRACTION >= 1) {
     ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['PM_TP2_FRACTION'], message: 'PM_TP1_FRACTION + PM_TP2_FRACTION must be below 1 so a runner remains' });
   }
@@ -163,6 +186,7 @@ export function riskFromEnv(env: Env) {
     maxExposurePct: env.MAX_EXPOSURE_PCT,
     riskPerTradePct: env.RISK_PER_TRADE_PCT,
     maxDrawdownPct: env.MAX_DRAWDOWN_PCT,
+    minStopAtr: env.MIN_STOP_ATR,
     minLiqBufferAtr: env.MIN_LIQ_BUFFER_ATR,
     maxDailyLossPct: env.MAX_DAILY_LOSS_PCT,
     maxLossStreak: env.MAX_LOSS_STREAK,
@@ -201,6 +225,7 @@ export const config = {
   },
   risk: riskFromEnv(env),
   riskEngine: env.RISK_ENGINE,
+  drawdownBreachAction: env.DRAWDOWN_BREACH_ACTION,
   entryOrderTtlMs: env.ENTRY_ORDER_TTL_MS,
   /** Cap on summed loss-at-stop of open positions plus the new trade, % of equity. */
   portfolioRiskPct: env.MAX_PORTFOLIO_RISK_PCT,
@@ -300,6 +325,6 @@ export const config = {
   } : null,
 } as const;
 
-if (config.mode === 'live' && !config.coindcx?.apiKey && (!config.binance.apiKey || !config.binance.apiSecret)) {
-  throw new Error('LIVE mode requires BINANCE_API_KEY and BINANCE_API_SECRET (or COINDCX_API_KEY and COINDCX_API_SECRET)');
+if (config.mode === 'live' && (!config.binance.apiKey || !config.binance.apiSecret)) {
+  throw new Error('LIVE mode requires BINANCE_API_KEY and BINANCE_API_SECRET');
 }

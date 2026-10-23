@@ -8,6 +8,7 @@ import type { CircuitState } from '../risk/riskConfig.js';
 import type { MarketState } from '../market/types.js';
 import type { MarketDataSnapshot } from '../market/MarketDataTypes.js';
 import type { SafetyVerdict } from '../market/MarketSafety.js';
+import type { MaintenanceTier } from '../risk/liquidation.js';
 
 export interface MarketContext {
   candles: Record<string, any[]>;
@@ -20,6 +21,8 @@ export interface MarketContext {
   marketDataV2?: Record<string, MarketDataSnapshot>;
   /** Per-symbol market-safety verdict for the cycle; absent (replay) means the gate does not apply. */
   safety?: Record<string, SafetyVerdict>;
+  /** Venue leverage brackets per symbol. Entries are refused for a symbol whose brackets are not loaded. */
+  maintenance?: Record<string, readonly MaintenanceTier[]>;
   performance?: { circuit: CircuitState; snapshot: PerformanceSnapshot };
 }
 

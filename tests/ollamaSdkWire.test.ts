@@ -7,6 +7,8 @@ import { OllamaAdvisor } from '../src/ollama/advisor.js';
 import { config } from '../src/config.js';
 import { SmcExecutionAdvisor } from '../src/strategies/smc-ml/SmcExecutionAdvisor.js';
 import { SmcMlRuntime } from '../src/strategies/smc-ml/SmcMlRuntime.js';
+import { MiniCpmService } from '../src/minicpm/MiniCpmService.js';
+import type { PromptInput } from '../src/minicpm/MiniCpmPrompt.js';
 import type { SMCDecisionContext } from '../src/strategies/smc-ml/types.js';
 import type { VetoSnapshot } from '../src/types.js';
 
@@ -278,6 +280,71 @@ test('SmcMlRuntime.fromConfig hands the configured Ollama key to the SMC advisor
       assert.equal((await advisor.decide(smcContext())).action, 'OPEN');
       assert.equal(daemon.generates()[0]?.authorization, 'Bearer k-runtime');
     });
+  } finally {
+    await daemon.close();
+  }
+});
+
+// ---- MiniCpm fleet: its calls go through the same SDK surface as the advisor ----
+
+const MINICPM_LONG = '{"action":"ENTER_LONG","entry":100,"stopLoss":98,"takeProfit":103,"confidence":0.8,"reason":"reclaimed support"}';
+
+const minicpmInput = (): PromptInput => ({
+  symbol: 'ETHUSDT',
+  currentPrice: 100,
+  btcContext: { price: 60_000, trend1h: 'BULLISH', trend15m: 'SIDEWAYS', change24hPct: 1.2 },
+  symbolContext: { price: 100, trend1h: 'BULLISH', trend15m: 'BULLISH', change24hPct: 2.5, atr14: 1, support: 98, resistance: 104, recentHigh: 104, recentLow: 97 },
+});
+
+test('MiniCpm analyze sends the trading prompt in JSON mode with its sampling options, and parses a thinking-wrapped reply', async () => {
+  const daemon = await startFakeOllama('127.0.0.1', () => ollamaReply(`<think>weighing support</think>${MINICPM_LONG}`));
+  try {
+    const rec = await new MiniCpmService({ host: daemon.url, model: 'openbmb/minicpm5-2b:latest' }).analyze(minicpmInput());
+    assert.deepEqual(rec, { action: 'ENTER_LONG', confidence: 0.8, entry: 100, stopLoss: 98, takeProfit: 103, reason: 'reclaimed support' });
+    const [generate] = daemon.generates();
+    assert.equal(generate?.body?.model, 'openbmb/minicpm5-2b:latest');
+    assert.equal(generate?.body?.format, 'json');
+    assert.equal(generate?.body?.stream, false);
+    assert.deepEqual(generate?.body?.options, { temperature: 0.2, top_p: 0.9 });
+    assert.match(String(generate?.body?.prompt), /ETHUSDT/);
+  } finally {
+    await daemon.close();
+  }
+});
+
+test('MiniCpm analyze returns null on a daemon error and makes exactly one attempt', async (t: TestContext) => {
+  t.mock.method(console, 'error', () => {});
+  const daemon = await startFakeOllama('127.0.0.1', () => ({ status: 404, body: { error: 'model not found' } }));
+  try {
+    assert.equal(await new MiniCpmService({ host: daemon.url }).analyze(minicpmInput()), null);
+    assert.equal(daemon.generates().length, 1);
+  } finally {
+    await daemon.close();
+  }
+});
+
+test('MiniCpm analyze gives up near its timeout when the daemon never answers', async (t: TestContext) => {
+  t.mock.method(console, 'error', () => {});
+  const daemon = await startFakeOllama('127.0.0.1', () => 'hang');
+  try {
+    const started = Date.now();
+    assert.equal(await new MiniCpmService({ host: daemon.url, timeoutMs: 150 }).analyze(minicpmInput()), null);
+    assert.ok(Date.now() - started < 2000, 'must give up near the configured timeout');
+  } finally {
+    await daemon.close();
+  }
+});
+
+test('MiniCpm analyze against a cloud-classified host sends its key and no format', async (t: TestContext) => {
+  const daemon = await startCloudLikeDaemon((request) =>
+    request.authorization === 'Bearer k-minicpm' ? ollamaReply(MINICPM_LONG) : { status: 401, body: { error: 'unauthorized' } });
+  if (!daemon) return t.skip(CLOUD_SKIP);
+  try {
+    const rec = await new MiniCpmService({ host: daemon.url, apiKey: 'k-minicpm' }).analyze(minicpmInput());
+    assert.equal(rec?.action, 'ENTER_LONG');
+    const [generate] = daemon.generates();
+    assert.equal(generate?.authorization, 'Bearer k-minicpm');
+    assert.equal(generate?.body?.format, undefined);
   } finally {
     await daemon.close();
   }

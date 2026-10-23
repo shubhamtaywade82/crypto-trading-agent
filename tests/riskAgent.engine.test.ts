@@ -9,9 +9,10 @@ import { PerformanceEngine } from '../src/risk/performanceEngine.js';
 import { refreshPortfolio } from '../src/runtime/opsHooks.js';
 import { deriveCircuitState, riskLimitsFromConfig, type RiskLimits } from '../src/risk/riskConfig.js';
 import type { Candle, Position, Signal, TradeRecord } from '../src/types.js';
+import { isolatedLiquidationPrice, REPLAY_MAINTENANCE_TIERS, stopClearsLiquidation, type MaintenanceTier } from '../src/risk/liquidation.js';
 
 const risk = {
-  minLeverage: 5, maxLeverage: 10, maxExposurePct: 80, riskPerTradePct: 1, maxDrawdownPct: 5, minLiqBufferAtr: 2,
+  minLeverage: 5, maxLeverage: 10, maxExposurePct: 80, riskPerTradePct: 1, maxDrawdownPct: 5, minLiqBufferAtr: 2, minStopAtr: 1.2,
   maxDailyLossPct: 3, maxLossStreak: 4, maxConcurrentPositions: 4, maxSymbolExposurePct: 80, maxCorrelatedExposurePct: 80,
   minRr: 0, takerFeeRate: 0.0004, slippageBufferRate: 0.0002,
 };
@@ -38,20 +39,33 @@ function performanceFor(trades: TradeRecord[], equity = INITIAL_EQUITY, lim: Ris
   return { circuit: deriveCircuitState(snapshot.dailyLossPercent, snapshot.drawdownPercent, snapshot.lossStreak, lim), snapshot };
 }
 
+// Every symbol gets the replay stand-in brackets: the gate refuses entries whose symbol has none
+const TIERS_FOR_ANY_SYMBOL: Record<string, readonly MaintenanceTier[]> = new Proxy({}, { get: () => REPLAY_MAINTENANCE_TIERS });
 const ctx = (over: Partial<MarketContext> = {}): MarketContext => ({
   candles: { BTCUSDT: candles(0.5), AVAXUSDT: candles(0.5), SOLUSDT: candles(0.5), XRPUSDT: candles(0.5) }, funding: {}, marks: {}, spot: {}, equity: INITIAL_EQUITY,
-  positions: [], performance: performanceFor([]), ...over,
+  positions: [], performance: performanceFor([]), maintenance: TIERS_FOR_ANY_SYMBOL, ...over,
 });
 const signal = (over: Partial<Signal> = {}): Signal =>
   ({ id: 's', agent: 'MOMENTUM-γ', symbol: 'BTCUSDT', type: 'OPEN_LONG', confidence: 0.75, entry: 100, stopLoss: 98, takeProfit: 106, reason: '', ts: 0, ...over });
 const hedge = (notionalUsdt?: number): Signal =>
   signal({ type: 'OPEN_HEDGE', agent: 'FUNDING-ARB-α', entry: undefined, stopLoss: undefined, takeProfit: undefined, notionalUsdt });
+const FUNDING_REFUSED = 'funding harvest needs a delta-neutral leg (spot long + perp short), which is not implemented; refused';
 const position = (symbol: string, qty: number, mark = 100, leverage = 5): Position => ({
   id: symbol, symbol, side: 'LONG', strategy: 'MOMENTUM-γ', entry: mark, qty, mark, upnl: 0, upnlPct: 0, leverage,
   marginType: 'ISOLATED', liqDistancePct: null, serverSl: '', serverTp: '',
 });
 const agentWith = (over: Partial<RiskLimits> = {}) =>
-  new RiskAgent({} as BinanceService, { riskEngine: 'on', limits: { ...limits, ...over } });
+  new RiskAgent({} as BinanceService, { limits: { ...limits, ...over } });
+
+test('should lower leverage until liquidation clears the stop, instead of sizing at the requested leverage', () => {
+  // Stop 91.5 with a 1-ATR clearance (ATR 0.5, minLiqBufferAtr 2): 10x liquidates at 90.91, inside the clearance; 9x at 89.79 clears
+  const atTen = isolatedLiquidationPrice({ side: 'LONG', entry: 100, qty: 1, leverage: 10, tiers: REPLAY_MAINTENANCE_TIERS });
+  assert.ok(atTen !== null && !stopClearsLiquidation('LONG', 91.5, atTen, 1), 'the premise: 10x does not clear');
+  const decision = agentWith().gate(signal({ confidence: 1, stopLoss: 91.5, takeProfit: 110 }), ctx());
+  assert.equal(decision.approved, true, decision.reason);
+  assert.equal(decision.leverage, 9);
+  assert.match(decision.reason, /lev 9x liq 89\.79 clear 3\.4xATR/);
+});
 
 test('should size by budget over effective risk per unit including fees and slippage', () => {
   // budget 1000 = 1% of 100k; stop distance 2 + fees 100 * (0.0004 + 0.0002) * 2 legs = 0.12 -> 2.12 per unit; 1000 / 2.12 floors to 471.698
@@ -60,8 +74,10 @@ test('should size by budget over effective risk per unit including fees and slip
   assert.ok(Math.abs(decision.positionSizeUsdt - 47_169.8) < 1e-6);
   assert.equal(decision.leverage, 9);
   assert.equal(decision.marginType, 'ISOLATED');
-  assert.equal(decision.liqBufferAtr, 4);
-  assert.equal(decision.reason, 'qty 471.698 notional $47170 lev 9x circuit NORMAL');
+  // liqBufferAtr is the clearance between the stop and liquidation, in ATR: liquidation ~89.79 vs stop 98, ATR 0.5
+  assert.ok(decision.liqBufferAtr >= config.risk.minLiqBufferAtr);
+  assert.ok(Math.abs(decision.liqBufferAtr - (98 - 89.79) / 0.5) < 0.1);
+  assert.match(decision.reason, /^qty 471\.698 notional \$47170 lev 9x liq 89\.79 clear 16\.4xATR circuit NORMAL$/);
 });
 
 test('should scale the risk budget down in a REDUCED circuit', () => {
@@ -85,10 +101,10 @@ test('should reject a stop on the wrong side of entry before sizing', () => {
   assert.equal(agent.gate(signal({ type: 'OPEN_SHORT', stopLoss: 102 }), ctx()).approved, true);
 });
 
-test('should keep the ATR liquidation buffer check as an additional guard', () => {
+test('should keep the minimum stop-width guard as an additional check', () => {
   const decision = agentWith().gate(signal({ stopLoss: 99.9 }), ctx());
   assert.equal(decision.approved, false);
-  assert.match(decision.reason, /^liq buffer/);
+  assert.match(decision.reason, /^stop 0\.2x ATR < 1\.2x/);
 });
 
 test('should keep the drawdown kill-switch as an additional guard', () => {
@@ -97,37 +113,23 @@ test('should keep the drawdown kill-switch as an additional guard', () => {
   assert.match(agent.gate(signal(), ctx({ equity: 94_000 })).reason, /^drawdown kill-switch/);
 });
 
-test('should reject entries and hedges with a named reason when the circuit is HALTED', () => {
+test('should reject entries with a named reason when the circuit is HALTED', () => {
   const performance = performanceFor([lossToday(-3_100)]);
   assert.equal(performance.circuit, 'HALTED');
-  const agent = agentWith();
-  const entry = agent.gate(signal(), ctx({ performance }));
+  const entry = agentWith().gate(signal(), ctx({ performance }));
   assert.equal(entry.approved, false);
   assert.equal(entry.reason, 'risk-engine: circuit_breaker: circuit state HALTED');
-  const harvest = agent.gate(hedge(5_000), ctx({ performance }));
-  assert.equal(harvest.approved, false);
-  assert.equal(harvest.reason, 'risk-engine: circuit_breaker: circuit state HALTED');
 });
 
-test('should reject hedges in an EMERGENCY circuit', () => {
-  const performance = performanceFor([], 94_000);
-  assert.equal(performance.circuit, 'EMERGENCY');
-  assert.equal(agentWith().gate(hedge(5_000), ctx({ equity: 94_000, performance })).reason, 'risk-engine: circuit_breaker: circuit state EMERGENCY');
+test('should refuse a funding-harvest short in every circuit state: it has no delta-neutral leg', () => {
+  const performance = performanceFor([lossToday(-3_100)]);
+  assert.equal(agentWith().gate(hedge(5_000), ctx()).reason, FUNDING_REFUSED);
+  assert.equal(agentWith().gate(hedge(5_000), ctx({ performance })).reason, FUNDING_REFUSED);
 });
 
-test('should approve a hedge on its own notional path when the circuit and limits allow it', () => {
-  const decision = agentWith().gate(hedge(5_000), ctx());
-  assert.deepEqual(
-    { approved: decision.approved, size: decision.positionSizeUsdt, leverage: decision.leverage, reason: decision.reason },
-    { approved: true, size: 5_000, leverage: 5, reason: 'funding harvest 5x isolated' },
-  );
-});
-
-test('should reject a hedge that breaches the exposure or position-count limits', () => {
+test('should refuse a funding-harvest short before any portfolio check, even on a crowded book', () => {
   const crowded = ctx({ positions: [position('SOLUSDT', 1), position('ETHUSDT', 1), position('XRPUSDT', 1), position('ADAUSDT', 1)] });
-  assert.match(agentWith().gate(hedge(5_000), crowded).reason, /^risk-engine: position_count: 5 of max 4/);
-  const loaded = ctx({ positions: [position('ETHUSDT', 700)] });
-  assert.match(agentWith().gate(hedge(20_000), loaded).reason, /portfolio_limits: .*gross 90%/);
+  assert.equal(agentWith().gate(hedge(5_000), crowded).reason, FUNDING_REFUSED);
 });
 
 test('should reject an entry when the open position count is at the limit', () => {
@@ -165,7 +167,7 @@ test('should enforce the minimum reward:risk only when configured and derivable'
   assert.equal(agent.gate(signal({ takeProfit: 104 }), ctx()).approved, true); // rr 2
   assert.match(agent.gate(signal({ takeProfit: 101 }), ctx()).reason, /min_rr: rr 0\.50/);
   assert.match(agent.gate(signal({ takeProfit: undefined }), ctx()).reason, /min_rr: rr unavailable/);
-  assert.equal(agent.gate(hedge(5_000), ctx()).approved, true); // a hedge has no stop, so rr does not apply
+  assert.equal(agent.gate(hedge(5_000), ctx()).reason, FUNDING_REFUSED); // a hedge is refused outright, so rr never applies to it
 });
 
 test('should fail closed when the flag is on but no performance snapshot is present', () => {
@@ -182,8 +184,8 @@ test('should give the same decision after a restart that re-hydrates the same jo
 });
 
 test('should read the limits from config at call time when none are injected', () => {
-  const decision = new RiskAgent({} as BinanceService, { riskEngine: 'on' }).gate(signal(), ctx());
-  assert.equal(decision.reason, 'qty 471.698 notional $47170 lev 9x circuit NORMAL');
+  const decision = new RiskAgent({} as BinanceService, {  }).gate(signal(), ctx());
+  assert.match(decision.reason, /^qty 471\.698 notional \$47170 lev 9x liq /);
 });
 
 // Stands in for the broker: `fill` is what the executor does between two gates of the same cycle
@@ -236,7 +238,7 @@ test('should not touch the broker when the engine is off', async () => {
 const volState = (percentile: number | null) =>
   ({ BTCUSDT: { timeframes: { '15m': { atr14: null } }, regime: { volatilityPercentile: percentile } } }) as unknown as MarketContext['marketState'];
 const sizeScaling = { volatility: true, score: true };
-const scaledAgent = () => new RiskAgent({} as BinanceService, { riskEngine: 'on', limits, sizeScaling });
+const scaledAgent = () => new RiskAgent({} as BinanceService, { limits, sizeScaling });
 const qtyOf = (reason: string): number => Number(/^qty ([\d.]+) /.exec(reason)?.[1]);
 
 test('should reject new entries while the symbol is not NORMAL for safety, naming the reasons', () => {
@@ -278,14 +280,14 @@ test('should combine the volatility and score multipliers', () => {
 });
 
 test('should leave size untouched when both scalers are disabled', () => {
-  const off = new RiskAgent({} as BinanceService, { riskEngine: 'on', limits, sizeScaling: { volatility: false, score: false } });
+  const off = new RiskAgent({} as BinanceService, { limits, sizeScaling: { volatility: false, score: false } });
   const base = qtyOf(agentWith().gate(signal(), ctx()).reason);
   assert.equal(qtyOf(off.gate(signal(), ctx({ marketState: volState(99) }), { evidenceScore: 10 }).reason), base);
 });
 
 test('should reject an entry that would push total open risk past the portfolio cap', () => {
   const capped = { ...limits, maxPortfolioRiskPercent: 1.5 };
-  const agent = new RiskAgent({} as BinanceService, { riskEngine: 'on', limits: capped, sizeScaling: { volatility: false, score: false } });
+  const agent = new RiskAgent({} as BinanceService, { limits: capped, sizeScaling: { volatility: false, score: false } });
   // 1% new trade risk + an open position risking 600 (0.6%) at its stop, 3 * ... = 1.6% > 1.5%
   const open = { ...position('SOLUSDT', 100, 100), entry: 100, serverSl: '94' };
   const decision = agent.gate(signal(), ctx({ positions: [open] }));
@@ -298,14 +300,14 @@ const withState = (atr14: number): Partial<MarketContext> =>
   ({ marketState: { BTCUSDT: { timeframes: { '15m': { atr14 } } } } as unknown as MarketContext['marketState'] });
 
 test('a stop at exactly the minimum ATR multiple passes when measured with the state ATR', () => {
-  const min = config.risk.minLiqBufferAtr;
+  const min = config.risk.minStopAtr;
   // state ATR 1.0: stop distance = min * 1.0 exactly; candle ATR in ctx is 0.5, which alone would make it look 2x wider
   const agent = agentWith();
   const ok = agent.gate(signal({ stopLoss: 100 - min * 1.0000001 }), ctx(withState(1)));
   assert.equal(ok.approved, true, ok.reason);
   const tight = agent.gate(signal({ stopLoss: 100 - min * 0.9 }), ctx(withState(1)));
   assert.equal(tight.approved, false);
-  assert.match(tight.reason, /^liq buffer /);
+  assert.match(tight.reason, /^stop /);
 });
 
 test('without a state ATR the gate falls back to the candle ATR exactly as before', () => {

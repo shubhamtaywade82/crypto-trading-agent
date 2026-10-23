@@ -9,6 +9,7 @@ import {
   type ResearchDiagnostics,
 } from '../src/research/ResearchAgent.js';
 import { seedStructLiqSpec } from '../src/research/StrategySpec.js';
+import { ResearchEventBus } from '../src/research/Events.js';
 import type { CellStat } from '../src/research/ConditionalEdge.js';
 
 const cellStat = (key: string, mean: number, n: number, significant = false): CellStat => ({
@@ -101,6 +102,22 @@ test('ResearchAgent.propose falls back when the LLM throws', async () => {
   const agent = new ResearchAgent(failingClient, 'test');
   const hs = await agent.propose(baseDiagnostics);
   assert.ok(hs.every((h) => h.source === 'fallback'));
+});
+
+test('ResearchAgent.propose publishes llm_call_failed with the error before falling back', async () => {
+  const bus = new ResearchEventBus();
+  const failures: Array<{ model: string; error: string }> = [];
+  bus.subscribe((e) => { if (e.type === 'llm_call_failed') failures.push(e.payload); });
+  const offlineClient = {
+    listModels: async () => [],
+    generateText: async () => { throw new Error('advisor offline'); },
+  };
+  const agent = new ResearchAgent(offlineClient, 'test', undefined, bus);
+  const hs = await agent.propose(baseDiagnostics);
+  assert.ok(hs.length > 0 && hs.every((h) => h.source === 'fallback'));
+  assert.equal(failures.length, 1);
+  assert.equal(failures[0]?.error, 'advisor offline');
+  assert.ok((failures[0]?.model ?? '').length > 0);
 });
 
 test('ResearchAgent.propose falls back when the LLM returns an empty array', async () => {

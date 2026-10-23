@@ -106,10 +106,27 @@ test('should apply explicit overrides for every new variable', () => {
   assert.equal(derived.slippageBufferRate, 0.001);
 });
 
-test('should run the risk engine unless RISK_ENGINE=off', () => {
+test('should always run the risk engine: RISK_ENGINE=off is refused, the legacy path is gone', () => {
   assert.equal(EnvSchema.parse({}).RISK_ENGINE, 'on');
-  assert.equal(EnvSchema.parse({ RISK_ENGINE: 'off' }).RISK_ENGINE, 'off');
   assert.ok(!EnvSchema.safeParse({ RISK_ENGINE: 'yes' }).success);
+  const off = EnvSchema.safeParse({ RISK_ENGINE: 'off' });
+  assert.equal(off.success, false);
+  assert.match(off.error?.issues.map((i) => i.message).join(' ') ?? '', /RISK_ENGINE=off is refused/);
+});
+
+test('should refuse a leverage floor above the ceiling and default to a sane range', () => {
+  assert.equal(EnvSchema.parse({}).MIN_LEVERAGE, 5);
+  assert.equal(EnvSchema.parse({}).MAX_LEVERAGE, 10);
+  const inverted = EnvSchema.safeParse({ MIN_LEVERAGE: '12', MAX_LEVERAGE: '10' });
+  assert.equal(inverted.success, false);
+  assert.match(inverted.error?.issues.map((i) => i.message).join(' ') ?? '', /MIN_LEVERAGE must be at least 1/);
+});
+
+test('should default the drawdown breach to flatten and the liquidation clearance to 1 ATR', () => {
+  assert.equal(EnvSchema.parse({}).DRAWDOWN_BREACH_ACTION, 'flatten');
+  assert.equal(EnvSchema.parse({}).MIN_LIQ_BUFFER_ATR, 1);
+  assert.equal(EnvSchema.parse({}).MIN_STOP_ATR, 1.2);
+  assert.ok(!EnvSchema.safeParse({ DRAWDOWN_BREACH_ACTION: 'hope' }).success);
 });
 
 test('should reject limits that would halt trading permanently', () => {

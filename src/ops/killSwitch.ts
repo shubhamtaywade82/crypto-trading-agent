@@ -15,14 +15,25 @@ function isKillSwitchState(value: unknown): value is KillSwitchState {
   return typeof state.halted === 'boolean' && typeof state.reason === 'string' && typeof state.at === 'number';
 }
 
+/** A missing file means nobody halted the agent. An unreadable or malformed one may hide a halt, so it fails closed. */
 function loadState(filePath: string): KillSwitchState {
+  let raw: string;
   try {
-    const parsed: unknown = JSON.parse(readFileSync(filePath, 'utf-8'));
-    return isKillSwitchState(parsed) ? parsed : NOT_HALTED;
-  } catch {
-    // A missing or corrupt file means nobody halted the agent, so trading must not be blocked by it
-    return NOT_HALTED;
+    raw = readFileSync(filePath, 'utf-8');
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === 'ENOENT') return NOT_HALTED;
+    return unreadable(`cannot read: ${(err as Error).message}`);
   }
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    return isKillSwitchState(parsed) ? parsed : unreadable('malformed state');
+  } catch {
+    return unreadable('malformed state');
+  }
+}
+
+function unreadable(detail: string): KillSwitchState {
+  return { halted: true, reason: `kill-switch file ${detail}; press k to resume once it is repaired or removed`, at: 0 };
 }
 
 /** Operator halt for new entries, persisted so a restart cannot silently resume trading. */

@@ -31,7 +31,8 @@ import type { ResearchDiagnostics } from './ResearchAgent.js';
 
 /**
  * The embedding function interface. Implementations:
- *   - OllamaEmbedder: uses `nomic-embed-text` via the AdvisorClient (production).
+ *   - No Ollama embedder ships yet. A vector embedder (for example `nomic-embed-text` through the SDK's `embed`) plugs in
+ *     here; until one is wired, production memory uses Jaccard similarity.
  *   - null: the memory uses Jaccard text similarity instead of vector similarity (tests, offline).
  */
 export interface Embedder {

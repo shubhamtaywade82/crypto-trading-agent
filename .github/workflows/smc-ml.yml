@@ -12,6 +12,9 @@ on:
       - "tests/smc-ml.test.ts"
       - "tests/smc-ml-lifecycle.test.ts"
       - "tests/smc-ml-lifecycle-coordinator.test.ts"
+      - "tests/ollamaSdkWire.test.ts"
+      - "src/ollama/**"
+      - "src/minicpm/MiniCpmService.ts"
       - "package.json"
       - ".github/workflows/smc-ml.yml"
 
@@ -47,9 +50,11 @@ jobs:
           zod@3.23.0
           @types/node@22.10.2
           dotenv@16.4.5
-          @nemesis-oss/ollama-sdk@1.8.0
+          @nemesis-oss/ollama-sdk@1.20.0
           @nemesis-oss/binance-sdk@3.0.0
 
+      # --skipLibCheck matches tsconfig.json. The explicit file list below bypasses that config, and the installed SDK
+      # declarations reference packages this slice does not install (ws types, @opentelemetry/api) and zod 4 types under the zod 3 pin.
       - name: Typecheck SMC ML slice
         run: >
           npx tsc --noEmit
@@ -57,6 +62,7 @@ jobs:
           --module NodeNext
           --moduleResolution NodeNext
           --strict
+          --skipLibCheck
           --skipLibCheck
           src/types.ts
           src/config.ts
@@ -74,4 +80,4 @@ jobs:
           src/strategies/smc-ml/index.ts
 
       - name: Run SMC ML tests
-        run: npx tsx --test tests/smc-ml.test.ts tests/smc-ml-lifecycle.test.ts tests/smc-ml-lifecycle-coordinator.test.ts
+        run: npx tsx --test tests/smc-ml.test.ts tests/smc-ml-lifecycle.test.ts tests/smc-ml-lifecycle-coordinator.test.ts tests/ollamaSdkWire.test.ts

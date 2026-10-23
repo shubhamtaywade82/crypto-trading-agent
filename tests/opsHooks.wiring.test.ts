@@ -198,7 +198,7 @@ for (const [flags, expectAudit] of [[{}, false], [{ audit: true }, true]] as con
     const killSwitch = new KillSwitch(path.join(path.dirname(cfg.eventsPath), 'kill-switch.json'), () => T0);
     killSwitch.toggle('manual');
     const ops = buildOps({ log: () => {}, seedTrades: [], config: cfg, now: () => T0 });
-    announceStartup({ killSwitch, hooks: ops, warn: () => {}, mode: 'paper', isEngineOn: false });
+    announceStartup({ killSwitch, hooks: ops, warn: () => {}, mode: 'paper' });
     assert.equal(existsSync(cfg.eventsPath), expectAudit);
     if (expectAudit) assert.equal((JSON.parse(readFileSync(cfg.eventsPath, 'utf-8').trim()) as { type: string }).type, 'killswitch');
   });

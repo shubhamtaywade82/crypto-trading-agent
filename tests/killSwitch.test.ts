@@ -1,11 +1,12 @@
 import assert from 'node:assert/strict';
-import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { test } from 'node:test';
 import type { BinanceService } from '../src/binance/client.js';
 import type { MarketContext } from '../src/agents/BaseAgent.js';
 import { RiskAgent } from '../src/agents/RiskAgent.js';
+import { REPLAY_MAINTENANCE_TIERS } from '../src/risk/liquidation.js';
 import { config } from '../src/config.js';
 import { KillSwitch } from '../src/ops/killSwitch.js';
 import { RiskOps, toggleKillSwitch } from '../src/runtime/opsHooks.js';
@@ -14,6 +15,7 @@ import type { Candle, Signal } from '../src/types.js';
 // Pinned so the approvals below do not depend on a local .env
 Object.assign(config.risk, { minLeverage: 5, maxLeverage: 10, maxExposurePct: 80, riskPerTradePct: 1, maxDrawdownPct: 5, minLiqBufferAtr: 2 });
 
+const NORMAL_PERFORMANCE = { circuit: 'NORMAL' as const, snapshot: { dailyLossPercent: 0, drawdownPercent: 0, lossStreak: 0, winStreak: 0, realizedToday: 0, profitFactor: 0, expectancy: 0 } };
 const tempFile = (): string => path.join(mkdtempSync(path.join(tmpdir(), 'kill-switch-')), 'kill-switch.json');
 
 test('should start not halted when the file is missing', () => {
@@ -48,17 +50,31 @@ test('should write the state atomically as JSON with no leftover temp file', () 
 });
 
 for (const [name, content] of [['garbage', '{not json'], ['wrong shape', '{"halted":"yes"}'], ['null', 'null'], ['empty', '']] as const) {
-  test(`should treat a corrupt file (${name}) as not halted`, () => {
+  test(`should fail closed on a corrupt file (${name}): a damaged file may hide a halt`, () => {
     const file = tempFile();
     writeFileSync(file, content);
-    assert.equal(new KillSwitch(file).isHalted(), false);
+    const ks = new KillSwitch(file);
+    assert.equal(ks.isHalted(), true);
+    assert.match(ks.state().reason, /malformed state/);
   });
 }
 
+test('should fail closed when the file exists but cannot be read', () => {
+  const dir = tempFile();
+  mkdirSync(dir);
+  const ks = new KillSwitch(dir);
+  assert.equal(ks.isHalted(), true);
+  assert.match(ks.state().reason, /cannot read/);
+});
+
+/** A path whose directory is missing when the switch is built, then turned into a plain file so the save must fail. */
+const unsaveable = (): string => path.join(mkdtempSync(path.join(tmpdir(), 'kill-switch-')), 'nested', 'kill-switch.json');
+const blockDirectory = (file: string): void => writeFileSync(path.dirname(file), 'a file where a directory is needed');
+
 test('should stay halted in memory and report the error when the state cannot be saved', () => {
-  const blocker = tempFile();
-  writeFileSync(blocker, 'a file where a directory is needed');
-  const ks = new KillSwitch(path.join(blocker, 'kill-switch.json'));
+  const file = unsaveable();
+  const ks = new KillSwitch(file);
+  blockDirectory(file);
   ks.toggle('manual');
   assert.equal(ks.isHalted(), true);
   assert.ok(ks.lastError, 'a lost halt must be visible to the operator');
@@ -66,7 +82,7 @@ test('should stay halted in memory and report the error when the state cannot be
 
 const flatCandles = (): Candle[] =>
   Array.from({ length: 30 }, (_, i) => ({ openTime: i, open: 100, high: 100.75, low: 99.25, close: 100, volume: 1 }));
-const ctx = (): MarketContext => ({ candles: { BTCUSDT: flatCandles() }, funding: {}, marks: {}, spot: {}, equity: 100_000 });
+const ctx = (): MarketContext => ({ candles: { BTCUSDT: flatCandles() }, funding: {}, marks: {}, spot: {}, equity: 100_000, maintenance: { BTCUSDT: REPLAY_MAINTENANCE_TIERS }, performance: NORMAL_PERFORMANCE });
 const signal = (over: Partial<Signal> = {}): Signal =>
   ({ id: 's', agent: 'MOMENTUM-γ', symbol: 'BTCUSDT', type: 'OPEN_LONG', confidence: 0.75, entry: 100, stopLoss: 96, takeProfit: 110, reason: '', ts: 0, ...over });
 const OPEN_TYPES = ['OPEN_LONG', 'OPEN_SHORT', 'OPEN_HEDGE'] as const;
@@ -78,19 +94,17 @@ const halted = (): KillSwitch => {
   return ks;
 };
 
-for (const riskEngine of ['off', 'on'] as const) {
-  for (const type of OPEN_TYPES) {
-    test(`should refuse ${type} while halted with RISK_ENGINE=${riskEngine}`, () => {
-      const decision = new RiskAgent({} as BinanceService, { riskEngine, killSwitch: halted() }).gate(openSignal(type), ctx());
-      assert.equal(decision.approved, false);
-      assert.equal(decision.reason, 'kill-switch: manual');
-    });
-  }
+for (const type of OPEN_TYPES) {
+  test(`should refuse ${type} while halted`, () => {
+    const decision = new RiskAgent({} as BinanceService, { killSwitch: halted() }).gate(openSignal(type), ctx());
+    assert.equal(decision.approved, false);
+    assert.equal(decision.reason, 'kill-switch: manual');
+  });
 }
 
 test('should approve again once the kill-switch is toggled off', () => {
   const ks = halted();
-  const agent = new RiskAgent({} as BinanceService, { riskEngine: 'off', killSwitch: ks });
+  const agent = new RiskAgent({} as BinanceService, { killSwitch: ks });
   assert.equal(agent.gate(openSignal('OPEN_LONG'), ctx()).approved, false);
   ks.toggle('manual');
   assert.equal(agent.gate(openSignal('OPEN_LONG'), ctx()).approved, true);
@@ -103,15 +117,15 @@ test('should name the kill-switch even when the drawdown breaker would also refu
 
 test('should leave non-entry signals exactly as they are while halted', () => {
   const close = signal({ type: 'CLOSE' });
-  const plain = new RiskAgent({} as BinanceService, { riskEngine: 'off' }).gate(close, ctx());
-  const withSwitch = new RiskAgent({} as BinanceService, { riskEngine: 'off', killSwitch: halted() }).gate(close, ctx());
+  const plain = new RiskAgent({} as BinanceService, {  }).gate(close, ctx());
+  const withSwitch = new RiskAgent({} as BinanceService, { killSwitch: halted() }).gate(close, ctx());
   assert.deepEqual(withSwitch, plain);
   assert.ok(!withSwitch.reason.startsWith('kill-switch'));
 });
 
 test('should show KILL-SWITCH as the fleet note while halted, taking precedence over the circuit', () => {
   const ks = new KillSwitch(tempFile());
-  const ops = new RiskOps(() => {}, { isEnabled: false, killSwitch: ks });
+  const ops = new RiskOps(() => {}, { killSwitch: ks });
   assert.equal(ops.note, undefined);
   ks.toggle('manual');
   assert.equal(ops.note, 'KILL-SWITCH');
@@ -133,9 +147,10 @@ test('should toggle, log a warning and hand the new state to the hooks', () => {
 });
 
 test('should warn that the halt was not saved when the disk write fails', () => {
-  const blocker = tempFile();
-  writeFileSync(blocker, 'x');
+  const file = unsaveable();
+  const ks = new KillSwitch(file);
+  blockDirectory(file);
   const warnings: string[] = [];
-  toggleKillSwitch(new KillSwitch(path.join(blocker, 'k.json')), { onKillSwitch: () => {} }, (m) => warnings.push(m));
+  toggleKillSwitch(ks, { onKillSwitch: () => {} }, (m) => warnings.push(m));
   assert.match(warnings[0], /KILL-SWITCH ON.*not saved/);
 });

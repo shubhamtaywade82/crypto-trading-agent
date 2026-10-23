@@ -44,6 +44,7 @@ import { SetupOutcomeLedger } from '../learning/SetupOutcomeLedger.js';
 import { buildCouncilSignal, COUNCIL_SIGNAL_TTL_MS } from '../decision/CouncilSignal.js';
 import { TradingCouncil } from '../llm/TradingCouncil.js';
 import { assessSafety, type SafetyVerdict } from '../market/MarketSafety.js';
+import { drawdownResponse } from '../risk/drawdownResponse.js';
 import { ShockDetector } from '../market/ShockDetector.js';
 import { PositionDriver } from '../position/PositionDriver.js';
 import type { LiveBook } from '../binance/liveBook.js';
@@ -91,6 +92,10 @@ export class Orchestrator extends EventEmitter {
   private ops = new RiskOps((message) => this.log('SYSTEM', message, 'warn'), { killSwitch: this.killSwitch, onCircuit: (from, to, snapshot) => this.hooks.onCircuit(from, to, snapshot), hwm: this.hwm.forMode(config.mode) });
   private executor = new ExecutorAgent(this.binance);
   private advisor = new OllamaAdvisor();
+  /** Symbols whose protective legs a trail update is moving; a second update on the same symbol waits for the first. */
+  private readonly stopsInFlight = new Set<string>();
+  private liveStateError: string | null = null;
+  private drawdownBreached = false;
   private timer: NodeJS.Timeout | null = null;
   private livePrices: Record<string, number> = {};
   private liveTickers: Record<string, MarketPriceInfo> = {};
@@ -134,6 +139,7 @@ export class Orchestrator extends EventEmitter {
     : null;
 
   start() {
+    if (config.binance.testnet) throw new Error('BINANCE_TESTNET=on is for scripts/binance-testnet-verify.ts only: the cockpit market feed is production');
     const blockers = liveStartBlockers({ mode: config.mode, riskEngine: config.riskEngine, alerts: config.alerts });
     if (blockers.length > 0) {
       for (const b of blockers) this.log('SYSTEM', `LIVE START BLOCKED: ${b}`, 'error');
@@ -165,7 +171,10 @@ export class Orchestrator extends EventEmitter {
   }
   stop() { if (this.timer) clearInterval(this.timer); this.stopWs?.(); this.stopWs = null; this.hooks.stop(); }
   flushOnShutdown(): void { this.binance.flushPaperEngine(); }
-  toggleKillSwitch(): void { flipKillSwitch(this.killSwitch, this.hooks, (message) => this.log('SYSTEM', message, 'warn')); }
+  toggleKillSwitch(): void {
+    flipKillSwitch(this.killSwitch, this.hooks, (message) => this.log('SYSTEM', message, 'warn'));
+    if (this.killSwitch.isHalted()) void this.cancelRestingEntries('kill-switch');
+  }
   private handleRealtimeTick(sym: string, price: number): void {
     this.livePrices[sym] = price;
     this.putTicker(sym, { ...(this.liveTickers[sym] ?? { changePct: 0 }), price });
@@ -190,9 +199,10 @@ export class Orchestrator extends EventEmitter {
     await this.binance.closePosition(pos).catch((err: unknown) => this.logFailure(`Close ${pos.symbol} failed`, err));
   }
   async cancelAll() {
-    let isSent = false;
-    for (const sym of config.symbols) isSent = (await this.binance.cancelAll(sym)) || isSent;
-    this.log('SYSTEM', isSent ? 'All pending orders cancelled' : 'Cancel all: this venue has no resting orders to cancel', 'warn');
+    try {
+      const symbols = await this.binance.cancelAllResting();
+      this.log('SYSTEM', symbols > 0 ? `All pending orders cancelled on ${symbols} symbol(s)` : 'Cancel all: this venue has no resting orders to cancel', 'warn');
+    } catch (err: unknown) { this.logFailure('Cancel all failed', err); }
   }
   pauseAgent(id: string) {
     const agent = [...this.agents, this.risk, this.executor].find((a) => a.id === id);
@@ -221,8 +231,10 @@ export class Orchestrator extends EventEmitter {
   }
 
   private async runCycle(): Promise<void> {
+    await this.refreshLiveState();
     const ctx = await this.gatherContext();
     await this.guardEmergencyDrawdown(ctx);
+    await this.guardAccountDrawdown(ctx);
     for (const { message, isFailure } of await this.binance.settleFunding(ctx)) this.log('SYSTEM', message, isFailure ? 'error' : 'info');
     for (const resolved of this.ledger.resolvePredictions(ctx.marks)) {
       this.log('SYSTEM', 'LEARNING ' + resolved.actorId + ' ' + resolved.symbol + ': ' + (resolved.correct ? 'correct' : 'incorrect') + ' after ' + resolved.horizonMinutes + 'm (' + resolved.realizedReturnPct?.toFixed(2) + '%)', 'info');
@@ -234,6 +246,57 @@ export class Orchestrator extends EventEmitter {
     await this.consultAdvisor(signals, ctx.positions ?? []);
     await this.emitState(ctx);
   }
+  /** Live housekeeping (journal, brackets, startup reconciliation). Failures are logged once per distinct error; entries stop when a guard it feeds goes stale. */
+  private async refreshLiveState(): Promise<void> {
+    try {
+      await this.binance.refreshLiveState(config.symbols);
+      if (this.liveStateError !== null) this.log('SYSTEM', 'live venue state refresh recovered', 'info');
+      this.liveStateError = null;
+    } catch (err: unknown) {
+      const text = errorText(err);
+      if (text !== this.liveStateError) this.log('SYSTEM', `live venue state refresh failed: ${text}`, 'error');
+      this.liveStateError = text;
+    }
+  }
+
+  /**
+   * Account drawdown against the same persisted peak the risk gate reads. A breach refuses new entries and cancels resting ones.
+   * `flatten` also halts, once, on the breach; it then closes every position until the book is flat, since a drawdown spread
+   * over several positions trips no per-position stop.
+   */
+  private async guardAccountDrawdown(ctx: CycleContext): Promise<void> {
+    const verdict = drawdownResponse({
+      equity: ctx.equity,
+      peak: this.hwm.forMode(config.mode).observe(ctx.equity),
+      maxPct: config.risk.maxDrawdownPct,
+      action: config.drawdownBreachAction,
+    });
+    if (!verdict.breached) {
+      if (this.drawdownBreached) this.log('SYSTEM', 'account drawdown is back within its limit', 'info');
+      this.drawdownBreached = false;
+      return;
+    }
+    const transition = !this.drawdownBreached;
+    this.drawdownBreached = true;
+    if (transition) this.log('SYSTEM', `DRAWDOWN ${verdict.reason}: ${verdict.closeAll ? 'halting and flattening' : 'refusing new entries'}`, 'error');
+    await this.cancelRestingEntries('drawdown');
+    if (transition && verdict.halt && !this.killSwitch.isHalted()) {
+      this.hooks.onKillSwitch(this.killSwitch.toggle(`drawdown: ${verdict.reason}`));
+      if (this.killSwitch.lastError) this.log('SYSTEM', `kill-switch not saved, a restart will forget the drawdown halt: ${this.killSwitch.lastError}`, 'error');
+    }
+    if (!verdict.closeAll) return;
+    for (const pos of ctx.positions ?? []) {
+      await this.binance.closePosition(pos).catch((err: unknown) => this.logFailure(`Drawdown close ${pos.symbol} failed`, err));
+    }
+  }
+
+  private async cancelRestingEntries(why: string): Promise<void> {
+    try {
+      const cancelled = await this.binance.cancelEntryOrders();
+      if (cancelled > 0) this.log('SYSTEM', `${why}: cancelled ${cancelled} resting entr${cancelled === 1 ? 'y' : 'ies'}`, 'warn');
+    } catch (err: unknown) { this.logFailure(`${why}: cancelling resting entries failed`, err); }
+  }
+
   private async guardEmergencyDrawdown(ctx: CycleContext): Promise<void> {
     const maxLoss = ctx.equity * (config.risk.maxDrawdownPct / 100);
     for (const pos of ctx.positions ?? []) {
@@ -379,6 +442,8 @@ export class Orchestrator extends EventEmitter {
       return;
     }
     for (const pos of positions) {
+      // A live entry still in flight owns its legs, and a trail update already moving this symbol's legs is not doubled
+      if (this.stopsInFlight.has(pos.symbol) || this.binance.entryInFlight(pos.symbol)) continue;
       const adaptiveState = this.adaptive.stateFor(pos.symbol);
       const atr = adaptiveState?.assignedAtr ?? ctx.marketState?.[pos.symbol]?.timeframes?.['15m']?.atr14;
       if (!atr || atr <= 0) continue;
@@ -391,8 +456,11 @@ export class Orchestrator extends EventEmitter {
       const stopLoss = roundPrice(pos.symbol, next.stopLoss);
       const takeProfit = roundPrice(pos.symbol, next.takeProfit);
       if (stopLoss === Number(pos.serverSl) && takeProfit === Number(pos.serverTp)) continue;
-      this.binance.updateStops(pos.symbol, pos.strategy, stopLoss, takeProfit, pos.side);
-      this.log(pos.strategy, `TRAIL ${pos.symbol} SL ${formatPrice(pos.symbol, stopLoss)} TP ${formatPrice(pos.symbol, takeProfit)}`, 'info');
+      this.stopsInFlight.add(pos.symbol);
+      this.binance.updateStops(pos.symbol, pos.strategy, stopLoss, takeProfit, pos.side)
+        .then(() => this.log(pos.strategy, `TRAIL ${pos.symbol} SL ${formatPrice(pos.symbol, stopLoss)} TP ${formatPrice(pos.symbol, takeProfit)}`, 'info'))
+        .catch((err: unknown) => this.logFailure(`Trail ${pos.symbol} failed`, err))
+        .finally(() => this.stopsInFlight.delete(pos.symbol));
     }
   }
   private logExits(): void { for (const line of this.binance.markAll(this.livePrices)) this.log('SYSTEM', line, 'warn'); this.hooks.onExit(this.binance.getTrades()); }
@@ -464,8 +532,25 @@ export class Orchestrator extends EventEmitter {
     }
     await this.refreshLiveBook();
     this.refreshPositionFeatures(marketState);
-    const safety = config.safety.enabled ? this.assessSafety(market) : undefined;
-    return { ...market, spot: this.livePrices, equity: account.equity, positions, marketState, ...(safety ? { safety } : {}), performance: this.ops.build(this.binance.getTrades(), account) };
+    const safety = this.safetyVerdicts(market);
+    // No performance snapshot while the journal is stale: the risk gate then refuses entries instead of sizing on old data
+    const performance = this.binance.journalReady() ? this.ops.build(this.binance.getTrades(), account) : undefined;
+    return { ...market, spot: this.livePrices, equity: account.equity, positions, marketState, safety, maintenance: this.binance.maintenanceTiers(), performance };
+  }
+
+  /**
+   * The risk gate's per-symbol entry verdicts: market safety when enabled, then the venue's entry blocks, which hold whether or
+   * not market safety is on. A venue block never downgrades a HALT.
+   */
+  private safetyVerdicts(market: Awaited<ReturnType<BinanceService['getMarketOverview']>>): Record<string, SafetyVerdict> {
+    const verdicts: Record<string, SafetyVerdict> = config.safety.enabled ? this.assessSafety(market) : {};
+    for (const symbol of config.symbols) {
+      const blocked = this.binance.entryBlockReason(symbol);
+      if (blocked === undefined) continue;
+      const current = verdicts[symbol] ?? { level: 'NORMAL' as const, reasons: [] };
+      verdicts[symbol] = { level: current.level === 'NORMAL' ? 'NO_ENTRY' : current.level, reasons: [...current.reasons, blocked] };
+    }
+    return verdicts;
   }
 
   /** Priority-0 market safety per symbol; transitions are logged once. Entries only: open positions keep their stops and manager. */

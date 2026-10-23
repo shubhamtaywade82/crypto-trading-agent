@@ -135,6 +135,7 @@ export class SmcMlRuntime {
     const advisor = new SmcExecutionAdvisor({
       host: config.ollama.host,
       model: config.ollama.model,
+      apiKey: config.ollama.apiKeys[0],
     });
     return new SmcMlRuntime(client, advisor, options);
   }

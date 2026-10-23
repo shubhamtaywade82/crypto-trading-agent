@@ -9,12 +9,16 @@ const base = { symbol: 'BTCUSDT', leverage: 5, strategy: 'MOMENTUM-γ' as const 
 const near = (actual: number, expected: number) => assert.ok(Math.abs(actual - expected) < 1e-9, `${actual} != ${expected}`);
 const HOUR = 60 * 60 * 1000;
 const SLOT = 8 * HOUR;
-const engineWith = (costs: PaperCosts): PaperEngine =>
-  new PaperEngine(path.join(mkdtempSync(path.join(tmpdir(), 'paper-costs-')), 'state.json'), costs);
+const stateFile = (): string => path.join(mkdtempSync(path.join(tmpdir(), 'paper-costs-')), 'state.json');
+
+interface Clock { t: number }
+const engineWith = (costs: PaperCosts, clock: Clock = { t: Date.now() }, file = stateFile()): PaperEngine =>
+  new PaperEngine(file, costs, () => clock.t);
 
 const FEE_ONLY: PaperCosts = { takerFeeRate: 0.001, slippageRate: 0 };
 const SLIPPAGE_ONLY: PaperCosts = { takerFeeRate: 0, slippageRate: 0.01 };
 const NO_COSTS: PaperCosts = { takerFeeRate: 0, slippageRate: 0 };
+const RATE = { BTCUSDT: 0.0001 };
 
 test('a long pays the taker fee on its entry and on its exit, and the journal PnL is net of both', () => {
   const engine = engineWith(FEE_ONLY);
@@ -38,45 +42,88 @@ test('slippage moves each fill against the trader, for a long and for a short', 
   near(short.getTrades()[0].pnl, 8.1);
 });
 
-test('a long pays a positive funding rate at each 8-hour boundary, and a short receives it', () => {
-  const longs = engineWith(NO_COSTS);
+test('a long pays a positive funding rate at each 8-hour boundary it is held through, and a short receives it', () => {
+  const longClock = { t: 5 * SLOT + 500 };
+  const longs = engineWith(NO_COSTS, longClock);
   longs.openPosition({ ...base, side: 'BUY', qty: 2, entryPrice: 100 });
-  longs.accrueFunding({ BTCUSDT: 0.0001 }, 5 * SLOT + 1_000);
-  longs.accrueFunding({ BTCUSDT: 0.0001 }, 6 * SLOT + 1_000);
+  longs.accrueFunding(RATE, 5 * SLOT + 1_000);
+  longs.accrueFunding(RATE, 6 * SLOT + 1_000);
   near(longs.getPositions()[0].upnl, -0.02);
 
-  const shorts = engineWith(NO_COSTS);
+  const shortClock = { t: 5 * SLOT + 500 };
+  const shorts = engineWith(NO_COSTS, shortClock);
   shorts.openPosition({ ...base, side: 'SELL', qty: 2, entryPrice: 100 });
-  shorts.accrueFunding({ BTCUSDT: 0.0001 }, 5 * SLOT + 1_000);
-  shorts.accrueFunding({ BTCUSDT: 0.0001 }, 6 * SLOT + 1_000);
+  shorts.accrueFunding(RATE, 5 * SLOT + 1_000);
+  shorts.accrueFunding(RATE, 6 * SLOT + 1_000);
   near(shorts.getPositions()[0].upnl, 0.02);
 });
 
 test('funding is charged once per boundary, not once per call inside the same 8-hour slot', () => {
-  const engine = engineWith(NO_COSTS);
+  const clock = { t: 5 * SLOT + 500 };
+  const engine = engineWith(NO_COSTS, clock);
   engine.openPosition({ ...base, side: 'BUY', qty: 2, entryPrice: 100 });
-  engine.accrueFunding({ BTCUSDT: 0.0001 }, 5 * SLOT + 1_000);
-  engine.accrueFunding({ BTCUSDT: 0.0001 }, 5 * SLOT + 2 * HOUR);
-  engine.accrueFunding({ BTCUSDT: 0.0001 }, 5 * SLOT + 7 * HOUR);
+  engine.accrueFunding(RATE, 5 * SLOT + 1_000);
+  engine.accrueFunding(RATE, 5 * SLOT + 2 * HOUR);
+  engine.accrueFunding(RATE, 5 * SLOT + 7 * HOUR);
   assert.equal(engine.getPositions()[0].upnl, 0, 'no boundary has been crossed yet');
-  engine.accrueFunding({ BTCUSDT: 0.0001 }, 6 * SLOT + 1_000);
+  engine.accrueFunding(RATE, 6 * SLOT + 1_000);
   near(engine.getPositions()[0].upnl, -0.02);
 });
 
 test('the first accrual only sets the clock, so a boundary that passed before the engine saw the position is not charged', () => {
-  const engine = engineWith(NO_COSTS);
+  const clock = { t: 5 * SLOT + 500 };
+  const engine = engineWith(NO_COSTS, clock);
   engine.openPosition({ ...base, side: 'BUY', qty: 2, entryPrice: 100 });
-  engine.accrueFunding({ BTCUSDT: 0.0001 }, 6 * SLOT + 1_000);
+  engine.accrueFunding(RATE, 6 * SLOT + 1_000);
   assert.equal(engine.getPositions()[0].upnl, 0);
 });
 
-test('funding accrued before a close is carried into that close\'s PnL', () => {
-  const engine = engineWith(NO_COSTS);
+test('a boundary at or before the open time is not charged to the position, even when the first accrual comes late', () => {
+  const clock = { t: 4 * SLOT + 1_000 };
+  const engine = engineWith(NO_COSTS, clock);
+  engine.accrueFunding(RATE, 4 * SLOT + 1_000);
+  clock.t = 5 * SLOT + 500;
+  engine.openPosition({ ...base, side: 'BUY', qty: 2, entryPrice: 100 });
+  engine.accrueFunding(RATE, 5 * SLOT + 1_000);
+  assert.equal(engine.getPositions()[0].upnl, 0, 'the 5 boundary was before the open');
+  engine.accrueFunding(RATE, 6 * SLOT + 1_000);
+  near(engine.getPositions()[0].upnl, -0.02);
+});
+
+test('several boundaries crossed in one call are each charged at the current rate', () => {
+  const clock = { t: 4 * SLOT + 500 };
+  const engine = engineWith(NO_COSTS, clock);
   engine.openPosition({ ...base, side: 'BUY', qty: 1, entryPrice: 100 });
-  engine.accrueFunding({ BTCUSDT: 0.0001 }, 5 * SLOT + 1_000);
-  engine.accrueFunding({ BTCUSDT: 0.0001 }, 6 * SLOT + 1_000);
+  engine.accrueFunding(RATE, 4 * SLOT + 1_000);
+  engine.accrueFunding(RATE, 7 * SLOT + 1_000);
+  near(engine.getPositions()[0].upnl, -0.03);
+});
+
+test('funding accrued before a close is carried into that close\'s PnL', () => {
+  const clock = { t: 5 * SLOT + 500 };
+  const engine = engineWith(NO_COSTS, clock);
+  engine.openPosition({ ...base, side: 'BUY', qty: 1, entryPrice: 100 });
+  engine.accrueFunding(RATE, 5 * SLOT + 1_000);
+  engine.accrueFunding(RATE, 6 * SLOT + 1_000);
   engine.openPosition({ ...base, side: 'SELL', qty: 1, reduceOnly: true, entryPrice: 110 });
   near(engine.getTrades()[0].pnl, 10 - 0.01);
+});
+
+test('the funding clock and the charges survive a restart, so each boundary is charged once across restarts', async () => {
+  const file = stateFile();
+  const clock = { t: 5 * SLOT + 500 };
+  const before = engineWith(NO_COSTS, clock, file);
+  before.openPosition({ ...base, side: 'BUY', qty: 2, entryPrice: 100 });
+  before.accrueFunding(RATE, 5 * SLOT + 1_000);
+  before.accrueFunding(RATE, 6 * SLOT + 1_000);
+  await new Promise((resolve) => setTimeout(resolve, 300)); // the book saves on a 250 ms debounce
+
+  const after = engineWith(NO_COSTS, clock, file);
+  near(after.getPositions()[0].upnl, -0.02);
+  after.accrueFunding(RATE, 6 * SLOT + 2 * HOUR);
+  near(after.getPositions()[0].upnl, -0.02);
+  after.accrueFunding(RATE, 7 * SLOT + 1_000);
+  near(after.getPositions()[0].upnl, -0.04);
 });
 
 test('a partial close carries its share of the open fee, and the remainder keeps the rest', () => {

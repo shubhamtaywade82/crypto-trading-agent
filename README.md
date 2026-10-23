@@ -39,6 +39,26 @@ present, but no `MODE=live` path reaches it. Enabling CoinDCX live needs the gua
 
 ---
 
+## Verifying the live path on the Binance testnet
+
+The live path (entry tracker, protective legs, journal, startup reconciliation) is covered by unit tests against a
+scripted venue, not against Binance. `scripts/binance-testnet-verify.ts` runs the same code against the USD-M testnet:
+
+```bash
+# Read-only: response shapes the bot parses, and the startup path
+MODE=live ALERT_ONLY=off BINANCE_TESTNET=on BINANCE_API_KEY=<testnet key> BINANCE_API_SECRET=<testnet secret> \
+  npx tsx scripts/binance-testnet-verify.ts
+
+# Also sends testnet orders: a resting entry cancelled, a protected fill with its stop moved and closed,
+# and a stop the venue refuses, which must end flat
+... npx tsx scripts/binance-testnet-verify.ts --place-orders
+```
+
+Keys come from testnet.binancefuture.com, and the account must be in One-way mode. The script refuses to run without
+`BINANCE_TESTNET=on`, and the cockpit refuses to start with it because its market feed is production. The harness is not
+run in CI, since it needs testnet keys. Run it before enabling live trading and keep its output: that output is the
+evidence for the venue assumptions in `src/binance/`, which the unit tests cannot provide.
+
 ## Quick start
 
 ```bash

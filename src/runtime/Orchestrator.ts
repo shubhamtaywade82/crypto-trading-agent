@@ -146,6 +146,7 @@ export class Orchestrator extends EventEmitter {
     : null;
 
   start() {
+    if (config.binance.testnet) throw new Error('BINANCE_TESTNET=on is for scripts/binance-testnet-verify.ts only: the cockpit market feed is production');
     const blockers = liveStartBlockers({ mode: config.mode, riskEngine: config.riskEngine, alerts: config.alerts });
     if (blockers.length > 0) {
       for (const b of blockers) this.log('SYSTEM', `LIVE START BLOCKED: ${b}`, 'error');

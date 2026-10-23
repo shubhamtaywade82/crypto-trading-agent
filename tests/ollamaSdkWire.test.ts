@@ -19,7 +19,7 @@ interface RecordedRequest {
   body: Record<string, unknown> | null;
 }
 
-type Reply = { status: number; body: unknown } | 'hang';
+type Reply = { status: number; body: unknown; delayMs?: number } | 'hang';
 type Handler = (request: RecordedRequest) => Reply;
 
 interface FakeOllama {
@@ -45,8 +45,12 @@ async function startFakeOllama(host: string, handler: Handler): Promise<FakeOlla
       requests.push(request);
       const reply: Reply = request.path === '/api/tags' ? { status: 200, body: { models: [{ name: config.ollama.model }] } } : handler(request);
       if (reply === 'hang') return; // never answer: the SDK timeout must abort the socket
-      res.writeHead(reply.status, { 'content-type': 'application/json' });
-      res.end(JSON.stringify(reply.body));
+      const send = () => {
+        res.writeHead(reply.status, { 'content-type': 'application/json' });
+        res.end(JSON.stringify(reply.body));
+      };
+      if (reply.delayMs) setTimeout(send, reply.delayMs);
+      else send();
     });
   });
   await new Promise<void>((resolve, reject) => {
@@ -77,7 +81,7 @@ async function startCloudLikeDaemon(handler: Handler): Promise<FakeOllama | null
 
 const CLOUD_SKIP = '127.0.0.2 is not bindable on this host; the cloud-branch wire test needs Linux loopback';
 
-const ollamaReply = (response: string): Reply => ({ status: 200, body: { model: config.ollama.model, response, done: true } });
+const ollamaReply = (response: string): { status: number; body: unknown } => ({ status: 200, body: { model: config.ollama.model, response, done: true } });
 
 /** Points the shared config at one daemon and key pool for a single test, restoring it afterwards. */
 async function withOllama(host: string, apiKeys: string[], run: () => Promise<void>): Promise<void> {
@@ -171,6 +175,19 @@ test('a 500 from the daemon is not retried by the SDK, and the veto fails open w
       assert.equal(verdict.verdict, 'PROCEED');
       assert.match(verdict.reason, /^advisor error: /);
       assert.equal(daemon.generates().length, 1, 'retries: 0 must mean exactly one attempt');
+    });
+  } finally {
+    await daemon.close();
+  }
+});
+
+test('research generateText keeps its own budget past the 5s veto bound, and the SDK enforces it', async () => {
+  const daemon = await startFakeOllama('127.0.0.1', () => ({ ...ollamaReply('slow but fine'), delayMs: 5200 }));
+  try {
+    await withOllama(daemon.url, [], async () => {
+      const advisor = new OllamaAdvisor();
+      await untilOnline(advisor);
+      assert.equal(await advisor.generateText({ model: config.ollama.model, prompt: 'research' }), 'slow but fine');
     });
   } finally {
     await daemon.close();

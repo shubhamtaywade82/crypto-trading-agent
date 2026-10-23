@@ -126,3 +126,30 @@ test('should round-robin across clients so one rate-limited key is not hammered'
   await advisor.ask('q');
   assert.deepEqual(calls, ['k1', 'k2']);
 });
+
+test('generateText throws when the advisor is offline, so research callers can fall back', async () => {
+  const client: AdvisorClient = { listModels: async () => { throw new Error('down'); }, generateText: async () => 'never' };
+  const advisor = new OllamaAdvisor(client);
+  await ready();
+  await assert.rejects(advisor.generateText({ model: 'm', prompt: 'p' }), /advisor offline/);
+});
+
+test('generateText drops format for a cloud host and gives the call the research budget, not the veto bound', async () => {
+  const seen: Array<Parameters<AdvisorClient['generateText']>[0]> = [];
+  await withHost('https://ollama.com', async () => {
+    const advisor = new OllamaAdvisor(onlineClient('ok', seen));
+    await ready();
+    assert.equal(await advisor.generateText({ model: 'm', prompt: 'p', format: 'json' }), 'ok');
+  });
+  assert.equal(seen[0]?.format, undefined);
+  assert.ok((seen[0]?.timeoutMs ?? 0) > 5000, 'research calls must not inherit the 5s veto bound');
+});
+
+test('generateText waits for the constructor probe instead of refusing while it is in flight', async () => {
+  const client: AdvisorClient = {
+    listModels: async () => { await new Promise((resolve) => setTimeout(resolve, 20)); return {}; },
+    generateText: async () => 'answered after the probe',
+  };
+  const advisor = new OllamaAdvisor(client);
+  assert.equal(await advisor.generateText({ model: 'm', prompt: 'p' }), 'answered after the probe');
+});

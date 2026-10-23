@@ -154,6 +154,16 @@ export interface PatchApplied extends ResearchEventBase {
   };
 }
 
+/** A ResearchAgent LLM proposal call failed (advisor offline, timeout, transport error); the deterministic proposer ran instead. */
+export interface LlmCallFailed extends ResearchEventBase {
+  type: 'llm_call_failed';
+  payload: {
+    model: string;
+    /** A short sample of the error message. */
+    error: string;
+  };
+}
+
 /** Union of all research-plane events. */
 export type ResearchEvent =
   | SpecRegistered
@@ -168,6 +178,7 @@ export type ResearchEvent =
   | HypothesisProposed
   | HypothesisRepaired
   | ModelRouted
+  | LlmCallFailed
   | PatchApplied;
 
 export type ResearchEventType = ResearchEvent['type'];

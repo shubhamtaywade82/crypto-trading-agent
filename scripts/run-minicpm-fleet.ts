@@ -4,15 +4,23 @@ import { MarketStateBuilder } from '../src/market/MarketStateBuilder.js';
 import { MiniCpmService } from '../src/minicpm/MiniCpmService.js';
 import { SymbolTraderWorker } from '../src/minicpm/SymbolTraderWorker.js';
 import { renderDashboard } from '../src/minicpm/MiniCpmDashboard.js';
+import { resolveFleetPaperExchange, type FleetPaperExchange } from '../src/minicpm/fleetPaperExchange.js';
 import { config } from '../src/config.js';
 
-const PAPER_URL = process.env.PAPER_EXCHANGE_URL || 'http://127.0.0.1:3100';
-const API_KEY = process.env.PAPER_EXCHANGE_API_KEY || 'b9a74aa1e560e92842e308e40391044968709d39c03e97c40d0b39f4eb8f7242';
 const SYMBOLS = ['ETHUSDT', 'SOLUSDT', 'XRPUSDT'];
 const ANCHOR = 'BTCUSDT';
 const ALL_SYMBOLS = [ANCHOR, ...SYMBOLS];
 
 async function main() {
+  // Refuse to start without the broker token, before any broker or market-feed call.
+  let paperExchange: FleetPaperExchange;
+  try {
+    paperExchange = resolveFleetPaperExchange(process.env);
+  } catch (err) {
+    console.error(`[MiniCPM fleet] ${(err as Error).message}`);
+    process.exit(1);
+  }
+
   console.log('Initializing Real-Time MiniCPM-2B Multi-Symbol Trader Fleet...');
 
   const futuresClient = new USDMClient({
@@ -35,8 +43,8 @@ async function main() {
       {
         symbol,
         accountId: `crypto-minicpm-${symKey}`,
-        paperExchangeUrl: PAPER_URL,
-        apiKey: API_KEY,
+        paperExchangeUrl: paperExchange.url,
+        apiKey: paperExchange.apiKey,
         marginPerPosition: 1000,
         leverage: 10,
         // Paused until entries go through RiskEngine (spec section 11, decision 3). Exits of open positions still run.

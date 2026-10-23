@@ -28,19 +28,14 @@ A dedicated, real-time autonomous trading system powered by local **`openbmb/min
 
 | `MODE` | Backend | SL/TP/trailing exits | Per-strategy attribution |
 | --- | --- | --- | --- |
-| `paper` (default, no `PAPER_EXCHANGE_URL`) | Local in-memory `PaperEngine` | Agent-side, checked on every price tick | Yes (positions keyed by `symbol+strategy`) |
+| `paper` (default, no `PAPER_EXCHANGE_URL`) | Local in-memory `PaperEngine`: `TAKER_FEE_RATE` on every fill, `SLIPPAGE_BUFFER_RATE` against the trader on entries and exits, funding at each 8 h UTC boundary on mark notional at the current rate | Agent-side, checked on every price tick | Yes (positions keyed by `symbol+strategy`) |
 | `paper` + `PAPER_EXCHANGE_URL` | Remote `paper_exchange` Rails broker via `RemoteBroker` | Agent-side reduce-only market orders (the broker never evaluates resting orders and has no price feed). Liquidation, fees and funding are exchange-side | Yes: one account, a symbol is owned by the strategy that opened it |
-| `live` | Live Binance | Entries are GTC LIMIT orders at the signal price, cancelled after `ENTRY_ORDER_TTL_MS` (default 120 s). Protection is exchange-side STOP_MARKET / TAKE_PROFIT_MARKET, placed once the venue shows a position and re-sized to any partial fill. A live entry without a stop-loss is refused | No — Binance positions are per-symbol |
+| `live` | Live Binance USD-M (one-way mode) | Entries are GTC LIMIT orders at the signal price, cancelled after `ENTRY_ORDER_TTL_MS` (default 120 s). Protection is exchange-side `closePosition` STOP_MARKET / TAKE_PROFIT_MARKET, placed once the venue shows a position and re-sized to any partial fill. The new stop is placed before an old one is cancelled, and a stop the venue refuses closes the position. Entries wait for startup reconciliation, a trade journal synced from Binance fills within the last 3 minutes, venue leverage brackets loaded within the last hour, and a stop resting on every open position. Hedge mode refuses all entries. A live entry without a stop-loss is refused | Yes: each entry is recorded with its strategy, and closes are attributed to the strategy that opened the symbol |
 
-**A CoinDCX live-execution migration is in progress but not live yet.** `src/coindcx/coindcxClient.ts`
-already implements a full `ExchangeApi` adapter for CoinDCX, but it is not wired into `BinanceService` —
-`MODE=live` still executes exclusively through `BinanceService.submitLiveOrder()` (raw Binance) exactly as
-the table above describes, and only needs `BINANCE_API_KEY`/`BINANCE_API_SECRET` to start. An earlier commit
-added a startup check requiring `COINDCX_API_KEY`/`COINDCX_API_SECRET` for `MODE=live` even though nothing
-used them yet; that check has been removed (see issue #31) until the wiring
-(`docs/superpowers/plans/2026-09-22-coindcx-live-execution.md`, Task 5) actually lands — finishing it needs
-the private `@nemesis-oss/coindcx-sdk` package (a `file:` dependency never added to `package.json`), which
-isn't published anywhere a CI runner or a fresh clone can install it from.
+**CoinDCX is not a live venue.** `MODE=live` trades Binance only and needs `BINANCE_API_KEY`/`BINANCE_API_SECRET`.
+Setting `COINDCX_API_KEY` or `COINDCX_API_SECRET` with `MODE=live` is refused at startup, because a CoinDCX broker
+would take the live path and skip the Binance guards. `src/coindcx/coindcxClient.ts` (an `ExchangeApi` adapter) is
+present, but no `MODE=live` path reaches it. Enabling CoinDCX live needs the guard set ported to that venue first (issue #31).
 
 ---
 
@@ -293,10 +288,10 @@ was fixed.
 | --- | --- | --- |
 | `MODE` | `paper` | `paper` or `live` |
 | `BINANCE_API_KEY` / `BINANCE_API_SECRET` | (empty) | Required for `MODE=live` (market data always, and today's only order execution path) |
-| `COINDCX_API_KEY` / `COINDCX_API_SECRET` / `COINDCX_PAPER_MODE` / `COINDCX_QUOTE_PREFERENCE` / `COINDCX_MAX_ORDER_NOTIONAL` / `COINDCX_MAX_ORDER_QUANTITY` / `COINDCX_INITIAL_BALANCE` | see `.env.example` | Optional, reserved for the CoinDCX execution path (see "Modes" above and issue #31); not required to start `MODE=live`, and currently unused even when set |
+| `COINDCX_API_KEY` / `COINDCX_API_SECRET` / `COINDCX_PAPER_MODE` / `COINDCX_QUOTE_PREFERENCE` / `COINDCX_MAX_ORDER_NOTIONAL` / `COINDCX_MAX_ORDER_QUANTITY` / `COINDCX_INITIAL_BALANCE` | see `.env.example` | The key and secret are refused when `MODE=live` (see "Modes" and issue #31). No other code path reads them |
 | `OLLAMA_HOST` | `http://127.0.0.1:11434` | Ollama daemon URL (`https://ollama.com` for cloud). The advisor, council, research and MiniCpm fleet layers all call Ollama through [`@nemesis-oss/ollama-sdk`](https://github.com/shubhamtaywade82/ollama-sdk); JSON mode (`format: "json"`) is requested only from local hosts because the SDK refuses `format` requests against cloud endpoints, so elsewhere the prompts demand JSON and replies are parsed tolerantly (code fences / prose around the object) |
 | `OLLAMA_MODEL` | `gemma4:31b` | Model used for veto/advise/ask |
-| `MIN_LEVERAGE` | `5` | Floor for the dynamic-leverage calculation |
+| `MIN_LEVERAGE` | `5` | Floor for the dynamic-leverage calculation; at least 1 and no greater than `MAX_LEVERAGE`. Leverage is lowered from the requested value until the isolated liquidation price clears the stop, and an entry is refused if even this floor does not |
 | `MAX_LEVERAGE` | `10` | Ceiling for the dynamic-leverage calculation |
 | `MAX_EXPOSURE_PCT` | `80` | Cap on notional as a % of equity |
 | `RISK_PER_TRADE_PCT` | `1` | Risk budget per trade as a % of equity |
@@ -304,8 +299,10 @@ was fixed.
 | `POSITION_MANAGER` | `off` | Partials + breakeven + adaptive trail (paper / remote paper; live via `LIVE_POSITION_MANAGER`). **Off by default: it did not beat the fixed stop/target in replay**, see [Position manager](#position-manager--market-safety) |
 | `MAX_PORTFOLIO_RISK_PCT` | `3` | Cap on summed loss-at-stop of open positions + the new trade, % of equity |
 | `SAFETY` | `on` | Market-safety / shock gate on new entries |
-| `MAX_DRAWDOWN_PCT` | `5` | **Kill-switch** (issue #10): once drawdown from session peak exceeds this, all OPEN signals are rejected until recovery |
-| `MIN_LIQ_BUFFER_ATR` | `2` | Minimum SL distance as a multiple of ATR(14) |
+| `MAX_DRAWDOWN_PCT` | `5` | **Drawdown limit** (issue #10): once drawdown from session peak exceeds this, all OPEN signals are rejected until recovery, and `DRAWDOWN_BREACH_ACTION` decides whether open positions are also flattened |
+| `MIN_LIQ_BUFFER_ATR` | `1` | Required clearance between the stop and the isolated liquidation price, in ATR(14) |
+| `MIN_STOP_ATR` | `1.2` | Stops closer than this many ATR(14) to entry are refused as noise |
+| `DRAWDOWN_BREACH_ACTION` | `flatten` | What a drawdown past `MAX_DRAWDOWN_PCT` does. `block`: refuse new entries and cancel resting ones. `flatten`: also halt the kill-switch once on the breach and close every position until the book is flat |
 | `SYMBOLS` | `BTCUSDT,ETHUSDT,SOLUSDT,AVAXUSDT` | Universe |
 | `STRUCT_LIQ` | `on` | `off` removes the STRUCT-LIQ-η agent from the fleet (shown paused in the cockpit) |
 | `STRUCT_LIQ_MAX_SWEEP_AGE_CANDLES` | `6` | How old (15m candles) the STRUCT-LIQ trigger sweep may be |
@@ -389,7 +386,7 @@ to send to.
 
 **Enable it:** both are already on; add `TELEGRAM_CHAT_ID` plus a bot token (`TELEGRAM_BOT_TOKEN`, or the two
 per-channel tokens) to `.env` to let `ALERTS` actually send. Try it first with `TELEGRAM_DRY_RUN=1`. Tokens are
-never logged. The audit trail and the alerts are independent of `RISK_ENGINE`. Set `AUDIT=off` / `ALERTS=off` to
+never logged. The audit trail and the alerts are independent of the risk gate. Set `AUDIT=off` / `ALERTS=off` to
 disable either.
 
 **Audit trail.** Each signal keeps one `decisionId` (the signal's `id`) from `signal` through `gate`, `veto`,
@@ -435,11 +432,12 @@ symbols or a minimum severity off, for example `{"notifications": {"signal": fal
 (SYSTEM CRITICAL alerts are never suppressed).
 
 **Kill-switch.** Press `k` in the cockpit to halt new entries: every OPEN is refused with `kill-switch: manual`,
-whatever `RISK_ENGINE` says, and the risk row of the fleet panel shows `KILL-SWITCH`. Exits, stops and manual closes
+and the risk row of the fleet panel shows `KILL-SWITCH`. Exits, stops and manual closes
 are never affected. Press `k` again to resume. The state is saved to `data/kill-switch.json`, so a restart does not
-resume trading by itself (press `k` or delete the file to clear it). A circuit-breaker HALTED/EMERGENCY (`RISK_ENGINE`,
-on by default) refuses entries on its own and is announced as a SYSTEM alert; it does not touch the kill-switch.
-Set `RISK_ENGINE=off` to fall back to the legacy sizing path (no fee netting, exposure caps or circuit breaker).
+resume trading by itself (press `k` or delete the file to clear it). A circuit-breaker HALTED/EMERGENCY refuses entries on its own and is announced as a SYSTEM alert; it does not touch the kill-switch.
+The drawdown guard halts the kill-switch once on a breach when `DRAWDOWN_BREACH_ACTION=flatten` (the default) and closes
+positions until the book is flat. A kill-switch file that cannot be read halts trading until it is repaired or removed.
+`RISK_ENGINE=off` is refused at startup: the risk engine always runs.
 
 With `MODE=live` (without `PAPER_EXCHANGE_URL`) the venue keeps no per-strategy trade journal, so the risk engine cannot see realized losses there: the daily-loss and loss-streak limits stay inactive (only drawdown applies) and a warning is logged at start.
 
@@ -647,12 +645,12 @@ underlying BTC/ETH divergence z-score is still shown in the cockpit as an inform
 **Fixed.** The trade journal lives in the sidecar (`data/remote-state.json`); the agent computes its own
 statistics from it instead of the exchange's `/api/performance`.
 
-### #31 — MODE=live required CoinDCX credentials it never used
+### #31 — CoinDCX credentials could route MODE=live around the Binance guards
 
-**Fixed (interim).** The fail-closed check requiring `COINDCX_API_KEY`/`COINDCX_API_SECRET` for `MODE=live`
-has been removed — see "Modes" above. `MODE=live` needs only Binance credentials again until the CoinDCX
-wiring (Task 5 of `docs/superpowers/plans/2026-09-22-coindcx-live-execution.md`) actually lands, which needs
-the private `@nemesis-oss/coindcx-sdk` package this environment cannot install.
+**Fixed.** With `MODE=live`, CoinDCX credentials used to build a CoinDCX broker in place of the Binance path, and that
+path has none of the live guards (trade journal, startup reconciliation, entry tracker, leverage brackets). Config now
+refuses CoinDCX credentials in live mode, so live orders can only reach Binance. Porting those guards to a second venue
+is the remaining work before CoinDCX live execution can be enabled.
 
 ---
 
@@ -707,7 +705,7 @@ of equity raise a CRITICAL system alert, since a strategy cannot enforce a stop 
 ## Live gate
 
 `MODE=live` trades only strategies listed in `data/strategy-approvals.json` (`APPROVALS_PATH`); with no file, nothing trades, and the
-process refuses to start live without `RISK_ENGINE=on` and `ALERTS=on`. Approvals come from measured evidence, never by hand:
+process refuses to start live without `ALERTS=on`. Approvals come from measured evidence, never by hand:
 
 ```bash
 npx tsx scripts/live-readiness.ts                      # checklist: evidence, forward paper, setup safety; exit 1 if not ready

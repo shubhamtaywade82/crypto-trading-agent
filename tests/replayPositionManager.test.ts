@@ -170,7 +170,7 @@ class OneShotLong extends BaseAgent {
 async function run(positionManager: boolean) {
   const service = new ReplayService({
     agents: [new OneShotLong({} as BinanceService)],
-    config: { warmupBars: 60, decisionsPath: null, learning: true, positionManager, riskEngine: 'off', costs: { takerFeeBps: 4, spreadBps: 2, slippageBps: 3 } },
+    config: { warmupBars: 60, decisionsPath: null, learning: true, positionManager, costs: { takerFeeBps: 4, spreadBps: 2, slippageBps: 3 } },
   });
   return service.run({ BTCUSDT: { '15m': risingCandles(160) } });
 }

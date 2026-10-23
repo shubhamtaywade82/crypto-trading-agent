@@ -20,36 +20,26 @@ async function loadConfig(env: Record<string, string>) {
   }
 }
 
-// CoinDCX execution isn't wired into BinanceService yet (issue #31), so MODE=live must not
-// depend on CoinDCX credentials to start — only config.coindcx itself is optionally populated.
-test('MODE=live without CoinDCX credentials still starts', async () => {
+// MODE=live trades Binance only. CoinDCX credentials are refused in live mode: a CoinDCX broker would take the live
+// path and skip the Binance guards (journal, startup reconciliation, entry tracker), so they cannot be set alongside it.
+test('MODE=live without CoinDCX credentials starts on Binance credentials alone', async () => {
   const { config } = await loadConfig({ MODE: 'live' });
   assert.equal(config.coindcx?.apiKey, '');
   assert.equal(config.coindcx?.apiSecret, '');
 });
 
-test('MODE=live with CoinDCX credentials builds config.coindcx', async () => {
-  const { config } = await loadConfig({ MODE: 'live', COINDCX_API_KEY: 'a', COINDCX_API_SECRET: 'b' });
-  assert.equal(config.coindcx?.apiKey, 'a');
-  assert.equal(config.coindcx?.paperMode, true); // default 'on'
-  assert.equal(config.coindcx?.isLiveExecutionArmed, false); // default 'off'
-  assert.equal(config.coindcx?.quotePreference, 'auto');
-  assert.equal(config.coindcx?.initialBalance, 1_150);
+test('MODE=live refuses CoinDCX credentials instead of routing live orders around the Binance guards', async () => {
+  await assert.rejects(loadConfig({ MODE: 'live', COINDCX_API_KEY: 'a', COINDCX_API_SECRET: 'b' }), /Unset COINDCX_API_KEY/);
+  await assert.rejects(loadConfig({ MODE: 'live', COINDCX_API_SECRET: 'b' }), /Unset COINDCX_API_KEY/);
+});
+
+test('MODE=live requires Binance credentials even when CoinDCX ones are present', async () => {
+  await assert.rejects(loadConfig({ MODE: 'live', BINANCE_API_KEY: '', BINANCE_API_SECRET: '' }), /LIVE mode requires BINANCE_API_KEY/);
 });
 
 test('MODE=paper never requires CoinDCX credentials, config.coindcx is null', async () => {
   const { config } = await loadConfig({});
   assert.equal(config.coindcx, null);
-});
-
-test('COINDCX_PAPER_MODE=off is honored', async () => {
-  const { config } = await loadConfig({ MODE: 'live', COINDCX_API_KEY: 'a', COINDCX_API_SECRET: 'b', COINDCX_PAPER_MODE: 'off' });
-  assert.equal(config.coindcx?.paperMode, false);
-});
-
-test('COINDCX_LIVE_EXECUTION_ARMED=on is honored', async () => {
-  const { config } = await loadConfig({ MODE: 'live', COINDCX_API_KEY: 'a', COINDCX_API_SECRET: 'b', COINDCX_LIVE_EXECUTION_ARMED: 'on' });
-  assert.equal(config.coindcx?.isLiveExecutionArmed, true);
 });
 
 test('ALERT_ONLY=on sets config.alertOnly true', async () => {

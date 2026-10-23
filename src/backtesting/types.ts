@@ -38,8 +38,6 @@ export interface ReplayConfig {
   warmupBars: number;
   costs: ReplayCosts;
   funding: ReplayFundingConfig;
-  /** Formal risk engine path (Decimal sizer + circuit breaker) — the recommended replay default. */
-  riskEngine: 'on' | 'off';
   riskLimits?: RiskLimits;
   /** Where the decision journal is written; null keeps the lineage in memory only. */
   decisionsPath: string | null;
@@ -99,7 +97,6 @@ export const DEFAULT_REPLAY_CONFIG: ReplayConfig = {
   warmupBars: 300,
   costs: { takerFeeBps: 4, spreadBps: 2, slippageBps: 3 },
   funding: { enabled: false, intervalHours: 8, rate: 0 },
-  riskEngine: 'on',
   decisionsPath: null,
   learning: true,
 };

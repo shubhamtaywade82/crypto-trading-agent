@@ -58,6 +58,17 @@ export function roundPrice(symbol: string, price: number): number {
   return Number((Math.round(price / tickSize) * tickSize).toFixed(pricePrecision));
 }
 
+/**
+ * Tick for a protective stop. A stop rounds toward the market, so it never sits looser than the stop the risk gate sized:
+ * a sell stop (protecting a long) rounds up, a buy stop (protecting a short) rounds down.
+ */
+export function roundStopPrice(symbol: string, price: number, exitSide: 'BUY' | 'SELL'): number {
+  const { tickSize, pricePrecision } = getSymbolRules(symbol);
+  const ticks = price / tickSize;
+  const snapped = exitSide === 'SELL' ? Math.ceil(ticks - STEP_EPSILON) : Math.floor(ticks + STEP_EPSILON);
+  return Number((snapped * tickSize).toFixed(pricePrecision));
+}
+
 /** Rounds down to the lot step so an order never exceeds its intended size. */
 export function roundQty(symbol: string, qty: number): number {
   const { stepSize, quantityPrecision } = getSymbolRules(symbol);

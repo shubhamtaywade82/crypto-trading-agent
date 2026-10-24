@@ -455,6 +455,8 @@ export class Orchestrator extends EventEmitter {
     for (const pos of positions) {
       // A live entry still in flight owns its legs, and a trail update already moving this symbol's legs is not doubled
       if (this.stopsInFlight.has(pos.symbol) || this.binance.entryInFlight(pos.symbol)) continue;
+      // v13 exit study: tiers and TP extensions cut the ensemble's winners; it keeps its fixed stop and own exit
+      if (pos.strategy === this.trendEnsemble.id) continue;
       const adaptiveState = this.adaptive.stateFor(pos.symbol);
       const atr = adaptiveState?.assignedAtr ?? ctx.marketState?.[pos.symbol]?.timeframes?.['15m']?.atr14;
       if (!atr || atr <= 0) continue;

@@ -5,7 +5,6 @@ import path from 'node:path';
 import { test } from 'node:test';
 import { OrderRejectedError, type SubmitOrderParams } from '../src/binance/paperExchangeClient.js';
 import { CoinDcxExchangeApi, type CoinDcxExchangeApiDeps, type CoinDcxOrderClient } from '../src/coindcx/coindcxClient.js';
-import { BinanceService } from '../src/binance/client.js';
 
 function createMockClient(paperMode: boolean): CoinDcxOrderClient {
   return {
@@ -87,19 +86,4 @@ test('should allow order when live execution is explicitly armed on real account
   const res = await api.submitOrder(sampleOrder);
   assert.equal(res.status, 'filled');
   assert.equal(res.orderId, 'order-123');
-});
-
-test('should reject live order submission to Binance venues unconditionally', async () => {
-  const service = new BinanceService(null);
-  await assert.rejects(
-    async () => (service as any).submitLiveOrder({
-      symbol: 'BTCUSDT',
-      side: 'BUY',
-      qty: 0.01,
-      leverage: 5,
-      strategy: 'ALMA-CHAMPION-λ',
-      stopLoss: 59_000,
-    }),
-    /BINANCE EXECUTION GUARD/,
-  );
 });

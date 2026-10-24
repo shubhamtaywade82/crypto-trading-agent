@@ -11,6 +11,8 @@ process.env.MODE = 'live';
 process.env.ALERT_ONLY = 'off';
 process.env.BINANCE_API_KEY ??= 'test-key';
 process.env.BINANCE_API_SECRET ??= 'test-secret';
+process.env.COINDCX_API_KEY = '';
+process.env.COINDCX_API_SECRET = '';
 const { BinanceService } = await import('../src/binance/client.js');
 
 interface FakeOrder {

@@ -26,6 +26,7 @@ interface CoinDcxPositionRaw {
 }
 
 export interface CoinDcxOrderClient {
+  paperMode?: boolean;
   futures: {
     trading: {
       createOrder(req: {
@@ -57,6 +58,7 @@ export interface CoinDcxExchangeApiDeps {
   accountId: string;
   maxOrderNotional?: number;
   maxOrderQuantity?: number;
+  isLiveExecutionArmed?: boolean;
 }
 
 const round8 = (value: number): number => Number(value.toFixed(8));
@@ -91,10 +93,7 @@ class CoinDcxBaseline {
   getOrSeed(observedEquity: number): number {
     if (this.cached !== undefined) return this.cached;
     const persisted = this.read();
-    if (persisted !== undefined) {
-      this.cached = persisted;
-      return this.cached;
-    }
+    if (persisted !== undefined) return (this.cached = persisted);
     // A non-positive first observation (e.g. an all-INR wallet with no USDT rows yet) must not be seeded permanently:
     // initialEquity=0 would divide-by-zero every pnl%/drawdown/sharpe stat downstream. Leave uncached so the next
     // getAccount() call retries seeding once a real balance is observed.
@@ -199,6 +198,13 @@ export class CoinDcxExchangeApi implements ExchangeApi {
 
   async submitOrder(params: SubmitOrderParams): Promise<SubmitOrderResult> {
     return this.guarded(async () => {
+      if (!this.deps.client.paperMode && !this.deps.isLiveExecutionArmed) {
+        throw new OrderRejectedError(
+          '[COINDCX READONLY GUARD] Real order submission blocked: COINDCX_LIVE_EXECUTION_ARMED is off. System is in monitor/read-only mode.',
+          403,
+          '',
+        );
+      }
       const resolved = await this.router.resolve(params.symbol);
       const spec = await this.specs.get(resolved.pair);
       const quantity = round8(floorToLot(params.quantity, spec.lotSize));
@@ -232,21 +238,12 @@ export class CoinDcxExchangeApi implements ExchangeApi {
     });
   }
 
-  // CoinDCX runs its own risk engine; this agent has no channel to it yet. Known limitation (documented in the task
-  // report): a real liquidation is journaled as a generic CLOSE rather than LIQUIDATED until this is wired up.
-  async getRiskEvents(): Promise<ExchangeRiskEvent[]> {
-    return this.guarded(async () => []);
-  }
+  // CoinDCX runs its own risk engine; liquidations are journaled as generic CLOSE until risk events are wired.
+  async getRiskEvents(): Promise<ExchangeRiskEvent[]> { return this.guarded(async () => []); }
 
-  // CoinDCX is a real exchange with its own live prices and its own liquidation/funding engine; these calls exist
-  // only for paper_exchange, which has neither.
-  async pushMarkPrices(_prices: Record<string, number>): Promise<void> {
-    return this.guarded(async () => {});
-  }
-
-  async pushFundingEvent(_symbol: string, _fundingRate: number, _markPrice: number, _fundingTime: number): Promise<void> {
-    return this.guarded(async () => {});
-  }
+  // CoinDCX has live prices and funding engine; mark/funding pushes exist only for paper_exchange.
+  async pushMarkPrices(_prices: Record<string, number>): Promise<void> { return this.guarded(async () => {}); }
+  async pushFundingEvent(_s: string, _r: number, _p: number, _t: number): Promise<void> { return this.guarded(async () => {}); }
 
   private async findOpen(clientOrderId: string): Promise<CoinDcxOrderRaw | undefined> {
     const open = await this.deps.client.futures.trading.listOrders({ status: 'open', limit: 100 });

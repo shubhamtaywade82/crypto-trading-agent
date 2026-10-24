@@ -32,6 +32,7 @@ test('MODE=live with CoinDCX credentials builds config.coindcx', async () => {
   const { config } = await loadConfig({ MODE: 'live', COINDCX_API_KEY: 'a', COINDCX_API_SECRET: 'b' });
   assert.equal(config.coindcx?.apiKey, 'a');
   assert.equal(config.coindcx?.paperMode, true); // default 'on'
+  assert.equal(config.coindcx?.isLiveExecutionArmed, false); // default 'off'
   assert.equal(config.coindcx?.quotePreference, 'auto');
   assert.equal(config.coindcx?.initialBalance, 1_150);
 });
@@ -44,6 +45,11 @@ test('MODE=paper never requires CoinDCX credentials, config.coindcx is null', as
 test('COINDCX_PAPER_MODE=off is honored', async () => {
   const { config } = await loadConfig({ MODE: 'live', COINDCX_API_KEY: 'a', COINDCX_API_SECRET: 'b', COINDCX_PAPER_MODE: 'off' });
   assert.equal(config.coindcx?.paperMode, false);
+});
+
+test('COINDCX_LIVE_EXECUTION_ARMED=on is honored', async () => {
+  const { config } = await loadConfig({ MODE: 'live', COINDCX_API_KEY: 'a', COINDCX_API_SECRET: 'b', COINDCX_LIVE_EXECUTION_ARMED: 'on' });
+  assert.equal(config.coindcx?.isLiveExecutionArmed, true);
 });
 
 test('ALERT_ONLY=on sets config.alertOnly true', async () => {

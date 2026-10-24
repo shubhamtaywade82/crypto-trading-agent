@@ -67,6 +67,7 @@ function coinDcxBrokerFromConfig(): RemoteBroker | null {
     accountId: 'coindcx',
     maxOrderNotional: cx.maxOrderNotional,
     maxOrderQuantity: cx.maxOrderQuantity,
+    isLiveExecutionArmed: cx.isLiveExecutionArmed,
   });
   void api.warmSymbols(config.symbols).catch(() => {});
   return new RemoteBroker({
@@ -280,16 +281,9 @@ export class BinanceService {
     return this.submitLiveOrder(params);
   }
 
-  private async submitLiveOrder(params: OpenPositionParams): Promise<{ orderId: number | string; status: string }> {
-    if (!params.reduceOnly) return this.submitLiveEntry(params);
-    await this.futures.setLeverage({ symbol: params.symbol, leverage: params.leverage });
-    await this.futures.setMarginType({ symbol: params.symbol, marginType: 'ISOLATED' }).catch(() => undefined);
-    const order = await this.futures.submitNewOrder({
-      symbol: params.symbol, side: params.side, type: 'MARKET',
-      quantity: roundQty(params.symbol, params.qty),
-      reduceOnly: 'true',
-    });
-    return { orderId: order.orderId, status: order.status };
+  private async submitLiveOrder(_params: OpenPositionParams): Promise<{ orderId: number | string; status: string }> {
+    // Live execution on Binance venues is disabled; only CoinDCX or paper venues are permitted.
+    throw new Error('[BINANCE EXECUTION GUARD] Live order submission to Binance is disabled. Execution is only permitted on CoinDCX or paper venues.');
   }
 
   /**

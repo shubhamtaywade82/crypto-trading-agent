@@ -117,10 +117,11 @@ export const EnvSchema = z.object({
   PAPER_EXCHANGE_URL: z.string().optional(),
   PAPER_EXCHANGE_ACCOUNT_ID: z.string().trim().optional(),
   PAPER_EXCHANGE_API_KEY: z.string().trim().optional(),
-  ALERT_ONLY: z.enum(['off', 'on']).default('off'),
+  ALERT_ONLY: z.enum(['off', 'on']).default('on'),
   COINDCX_API_KEY: z.string().default(''),
   COINDCX_API_SECRET: z.string().default(''),
   COINDCX_PAPER_MODE: z.enum(['off', 'on']).default('on'),
+  COINDCX_LIVE_EXECUTION_ARMED: z.enum(['off', 'on']).default('off'),
   COINDCX_QUOTE_PREFERENCE: z.enum(['auto', 'USDT', 'INR']).default('auto'),
   COINDCX_MAX_ORDER_NOTIONAL: z.coerce.number().positive().optional(),
   COINDCX_MAX_ORDER_QUANTITY: z.coerce.number().positive().optional(),
@@ -191,13 +192,8 @@ export const config = {
       skeptic: env.OLLAMA_SKEPTIC_MODEL?.trim() || env.OLLAMA_MODEL,
       chair: env.OLLAMA_CHAIR_MODEL?.trim() || env.OLLAMA_MODEL,
     },
-    apiKeys: [
-      env.OLLAMA_API_KEY_1,
-      env.OLLAMA_API_KEY_2,
-      env.OLLAMA_API_KEY_3,
-      env.OLLAMA_API_KEY_4,
-      env.OLLAMA_API_KEY_5,
-    ].map((k) => k?.trim()).filter((k): k is string => Boolean(k)),
+    apiKeys: [env.OLLAMA_API_KEY_1, env.OLLAMA_API_KEY_2, env.OLLAMA_API_KEY_3, env.OLLAMA_API_KEY_4, env.OLLAMA_API_KEY_5]
+      .map((k) => k?.trim()).filter((k): k is string => Boolean(k)),
   },
   risk: riskFromEnv(env),
   riskEngine: env.RISK_ENGINE,
@@ -282,17 +278,14 @@ export const config = {
   },
   symbols: parseSymbols(env.SYMBOLS),
   paperExchange: env.PAPER_EXCHANGE_URL && env.PAPER_EXCHANGE_ACCOUNT_ID
-    ? {
-        url: env.PAPER_EXCHANGE_URL.replace(/\/+$/, ''),
-        accountId: env.PAPER_EXCHANGE_ACCOUNT_ID,
-        apiKey: env.PAPER_EXCHANGE_API_KEY,
-      }
+    ? { url: env.PAPER_EXCHANGE_URL.replace(/\/+$/, ''), accountId: env.PAPER_EXCHANGE_ACCOUNT_ID, apiKey: env.PAPER_EXCHANGE_API_KEY }
     : null,
   alertOnly: env.MODE === 'live' && env.ALERT_ONLY === 'on',
   coindcx: env.MODE === 'live' ? {
     apiKey: env.COINDCX_API_KEY,
     apiSecret: env.COINDCX_API_SECRET,
     paperMode: env.COINDCX_PAPER_MODE === 'on',
+    isLiveExecutionArmed: env.COINDCX_LIVE_EXECUTION_ARMED === 'on',
     quotePreference: env.COINDCX_QUOTE_PREFERENCE,
     maxOrderNotional: env.COINDCX_MAX_ORDER_NOTIONAL,
     maxOrderQuantity: env.COINDCX_MAX_ORDER_QUANTITY,

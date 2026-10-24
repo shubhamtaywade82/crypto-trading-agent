@@ -76,7 +76,7 @@ function tmpBaselinePath(): string {
 }
 
 function makeApi(client: CoinDcxOrderClient, overrides: Partial<CoinDcxExchangeApiDeps> = {}): CoinDcxExchangeApi {
-  const deps: CoinDcxExchangeApiDeps = { client, quotePreference: 'auto', baselinePath: tmpBaselinePath(), accountId: 'acct1', ...overrides };
+  const deps: CoinDcxExchangeApiDeps = { client, quotePreference: 'auto', baselinePath: tmpBaselinePath(), accountId: 'acct1', isLiveExecutionArmed: true, ...overrides };
   return new CoinDcxExchangeApi(deps);
 }
 

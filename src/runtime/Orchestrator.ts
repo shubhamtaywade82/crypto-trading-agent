@@ -9,6 +9,7 @@ import { StructureTrendAgent } from '../agents/StructureTrendAgent.js';
 import { StructureLiquidityAgent } from '../agents/StructureLiquidityAgent.js';
 import { MeanReversionAgent } from '../agents/MeanReversionAgent.js';
 import { CrowdingAgent } from '../agents/CrowdingAgent.js';
+import { AlmaMtfChampionAgent } from '../agents/AlmaMtfChampionAgent.js';
 import { RiskAgent } from '../agents/RiskAgent.js';
 import { ExecutorAgent } from '../agents/ExecutorAgent.js';
 import { OllamaAdvisor } from '../ollama/advisor.js';
@@ -71,7 +72,9 @@ export class Orchestrator extends EventEmitter {
   );
   private meanRevert = new MeanReversionAgent(this.binance);
   private crowding = new CrowdingAgent(this.binance);
+  private almaChampion = new AlmaMtfChampionAgent(this.binance);
   private agents: BaseAgent[] = [
+    this.almaChampion,
     new FundingArbAgent(this.binance),
     new MomentumAgent(this.binance),
     ...(config.mode === 'paper' ? [this.adaptive] : []),

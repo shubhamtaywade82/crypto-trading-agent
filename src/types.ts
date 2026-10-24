@@ -14,7 +14,8 @@ export type AgentId =
   | 'CROWDING-ι'
   | 'STRUCT-LIQ-η'
   | 'AI-COUNCIL-κ'
-  | 'ALMA-CHAMPION-λ';
+  | 'ALMA-CHAMPION-λ'
+  | 'TREND-ENS-μ';
 export type SignalType = 'OPEN_LONG' | 'OPEN_SHORT' | 'OPEN_HEDGE' | 'OPEN_FUNDING_SHORT' | 'CLOSE' | 'MONITOR' | 'ALERT';
 
 export interface Candle {

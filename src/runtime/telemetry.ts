@@ -210,7 +210,7 @@ export function buildTelemetry(input: TelemetryInput): Telemetry {
 }
 
 const FLEET_ORDER: AgentId[] = [
-  'ALMA-CHAMPION-λ', 'FUNDING-ARB-α', 'MOMENTUM-γ', 'ADAPTIVE-ST-ζ',
+  'ALMA-CHAMPION-λ', 'TREND-ENS-μ', 'FUNDING-ARB-α', 'MOMENTUM-γ', 'ADAPTIVE-ST-ζ',
   'STRUCTURE-TREND-η', 'STRUCT-LIQ-η', 'MEAN-REVERT-θ', 'CROWDING-ι',
   'RISK-MGR-δ', 'EXECUTOR-ε',
 ];

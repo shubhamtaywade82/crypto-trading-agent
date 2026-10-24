@@ -10,6 +10,7 @@ import { StructureLiquidityAgent } from '../agents/StructureLiquidityAgent.js';
 import { MeanReversionAgent } from '../agents/MeanReversionAgent.js';
 import { CrowdingAgent } from '../agents/CrowdingAgent.js';
 import { AlmaMtfChampionAgent } from '../agents/AlmaMtfChampionAgent.js';
+import { TrendEnsembleAgent } from '../agents/TrendEnsembleAgent.js';
 import { RiskAgent } from '../agents/RiskAgent.js';
 import { ExecutorAgent } from '../agents/ExecutorAgent.js';
 import { OllamaAdvisor } from '../ollama/advisor.js';
@@ -73,8 +74,11 @@ export class Orchestrator extends EventEmitter {
   private meanRevert = new MeanReversionAgent(this.binance);
   private crowding = new CrowdingAgent(this.binance);
   private almaChampion = new AlmaMtfChampionAgent(this.binance);
+  private trendEnsemble = new TrendEnsembleAgent(this.binance);
   private agents: BaseAgent[] = [
     this.almaChampion,
+    // Research port awaiting forward evidence: paper only, like the adaptive SuperTrend
+    ...(config.mode === 'paper' ? [this.trendEnsemble] : []),
     new FundingArbAgent(this.binance),
     new MomentumAgent(this.binance),
     ...(config.mode === 'paper' ? [this.adaptive] : []),
@@ -381,7 +385,13 @@ export class Orchestrator extends EventEmitter {
       this.positionDriver.manage(this.liveBook ? this.liveBook.positions(this.livePrices) : positions).catch((err: unknown) => this.logFailure('Position manager failed', err));
       return;
     }
+    for (const exit of this.trendEnsemble.exitStops(positions, ctx.marks)) {
+      this.binance.updateStops(exit.symbol, exit.strategy, exit.stopLoss, exit.takeProfit);
+      this.log(exit.strategy, `EXIT ${exit.symbol}: ensemble left the position side, SL moved to mark ${formatPrice(exit.symbol, exit.stopLoss)}`, 'info');
+    }
     for (const pos of positions) {
+      // v13 exit study: tiers and TP extensions cut the ensemble's winners; it keeps its fixed stop and own exit
+      if (pos.strategy === this.trendEnsemble.id) continue;
       const adaptiveState = this.adaptive.stateFor(pos.symbol);
       const atr = adaptiveState?.assignedAtr ?? ctx.marketState?.[pos.symbol]?.timeframes?.['15m']?.atr14;
       if (!atr || atr <= 0) continue;

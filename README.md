@@ -24,18 +24,22 @@ A dedicated, real-time autonomous trading system powered by local **`openbmb/min
 
 ---
 
-## Crypto options buying (CE/PE, long only)
+## Futures + options in one cockpit
 
-`npm run options:run` buys calls on an aligned uptrend and puts on an aligned downtrend, on Binance Options contracts.
-It never sells an option to open.
-- Market data comes from binance-sdk (Options chain plus USD-M klines).
-- The Ollama advisor may veto an entry.
-- Execution goes to a local paper venue, to paper_exchange (`CRYPTO_OPTION`), or to a CoinDCX monitor that only alerts.
-  coindcx-sdk has no options endpoints, so CoinDCX and Binance live execution are refused at startup.
+`npm run dev:paper` runs the futures fleet and a long-only options desk together. The desk buys calls on an aligned
+uptrend and puts on an aligned downtrend, on Binance Options contracts. It never sells an option to open.
 
-Every position carries a premium stop, a target, a trailing stop, a max hold and a pre-expiry exit. The shared kill
-switch halts new entries. Details: [docs/OPTIONS_BUYING.md](docs/OPTIONS_BUYING.md). No edge has been established
-yet; backtesting on historical option prices comes next.
+The options venue follows `MODE`:
+
+| Command | Options venue |
+| --- | --- |
+| `dev:paper` | local options book |
+| `dev:paper` + `PAPER_EXCHANGE_URL` | paper_exchange `<account>-options` wallet |
+| `dev:live` / `dev:alert` | monitor only (no live options execution) |
+
+Options keep their own wallet, share the kill switch and the Ollama veto with futures, and appear in the POSITIONS
+column. `OPTIONS=off` turns the desk off. Details: [docs/OPTIONS_BUYING.md](docs/OPTIONS_BUYING.md). No edge has
+been established yet; backtesting on historical option prices comes next.
 
 ---
 

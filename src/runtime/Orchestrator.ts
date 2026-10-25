@@ -54,6 +54,9 @@ import { featuresFromState } from '../position/features.js';
 import { PositionManagerStore } from '../position/PositionManagerStore.js';
 import { pmConfigFromEnv } from '../position/pmConfig.js';
 import { getSymbolRules } from '../binance/symbolRules.js';
+import { optionsConfigFromEnv, type OptionsConfig } from '../options/config.js';
+import { OptionsDesk } from '../options/OptionsDesk.js';
+import { ZodError } from 'zod';
 
 type CycleContext = MarketContext & { tickers: Record<string, MarketPriceInfo>; nextFundingTime: number };
 
@@ -104,6 +107,9 @@ export class Orchestrator extends EventEmitter {
   private liveStateError: string | null = null;
   private drawdownBreached = false;
   private timer: NodeJS.Timeout | null = null;
+  /** Long CE/PE book beside the futures fleet (src/options); null when OPTIONS=off or its configuration was refused. */
+  private optionsDesk: OptionsDesk | null = null;
+  private optionsTimer: NodeJS.Timeout | null = null;
   private livePrices: Record<string, number> = {};
   private liveTickers: Record<string, MarketPriceInfo> = {};
   private stopWs: (() => void) | null = null;
@@ -175,8 +181,42 @@ export class Orchestrator extends EventEmitter {
     this.timer = setInterval(runLoop, LOOP_INTERVAL_MS);
     this.stopWs = this.binance.startRealtimeStream(config.symbols, (sym, price) => this.handleRealtimeTick(sym, price));
     this.hooks.start(this.binance);
+    this.startOptionsDesk();
   }
-  stop() { if (this.timer) clearInterval(this.timer); this.stopWs?.(); this.stopWs = null; this.hooks.stop(); }
+  stop() { if (this.timer) clearInterval(this.timer); if (this.optionsTimer) clearInterval(this.optionsTimer); this.stopWs?.(); this.stopWs = null; this.hooks.stop(); }
+
+  /**
+   * Options run on their own timer so a slow option chain or a down options venue can never stall the futures loop.
+   * The venue follows MODE (see src/options/config.ts); the kill switch and the Ollama advisor are shared with futures.
+   */
+  private startOptionsDesk(): void {
+    let cfg: OptionsConfig;
+    try {
+      cfg = optionsConfigFromEnv(process.env);
+    } catch (err) {
+      const reason = err instanceof ZodError ? err.issues.map((i) => i.message).join('; ') : errorText(err);
+      this.log('SYSTEM', `OPTIONS desk disabled, configuration refused: ${reason}`, 'error');
+      return;
+    }
+    if (!cfg.enabled) {
+      this.log('SYSTEM', 'OPTIONS desk off (OPTIONS=off): futures only', 'info');
+      return;
+    }
+    const desk = new OptionsDesk({
+      config: cfg,
+      killSwitch: this.killSwitch,
+      vetoer: cfg.llmVeto ? this.advisor : null,
+      log: (level, message) => this.log('SYSTEM', `OPTIONS ${message}`, level),
+    });
+    this.optionsDesk = desk;
+    this.log('SYSTEM', `OPTIONS desk on ${cfg.venue}${cfg.venue === 'monitor' ? ' (signals only: no live options execution)' : ''} for ${cfg.underlyings.join(', ')}, every ${cfg.loopMs / 1000}s`, cfg.venue === 'monitor' ? 'warn' : 'info');
+    const run = singleFlight(async () => {
+      await desk.tick();
+      this.emit('state', { options: desk.view() });
+    });
+    void run();
+    this.optionsTimer = setInterval(run, cfg.loopMs);
+  }
   flushOnShutdown(): void { this.binance.flushPaperEngine(); }
   toggleKillSwitch(): void {
     flipKillSwitch(this.killSwitch, this.hooks, (message) => this.log('SYSTEM', message, 'warn'));
@@ -683,6 +723,7 @@ export class Orchestrator extends EventEmitter {
       marketStates: ctx.marketState,
       mtfCandles: this.extractRecentMtfCandles(ctx.marketDataV2),
       serverTime: Date.now(),
+      ...(this.optionsDesk ? { options: this.optionsDesk.view() } : {}),
     });
   }
 

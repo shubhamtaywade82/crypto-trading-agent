@@ -1,15 +1,34 @@
 # Crypto options buying (long CE / PE only)
 
-`scripts/run-options-buyer.ts` buys calls (CE) on an aligned uptrend and puts (PE) on an aligned downtrend, on Binance
-Options contracts (`BTC-261030-81000-C`). It never sells an option to open. The most a position can lose is the
-premium it paid plus fees.
+The cockpit trades futures and options together. `npm run dev:paper` (and `dev`, `dev:live`, `dev:alert`) starts the
+futures fleet and, beside it, an options desk. The desk buys calls (CE) on an aligned uptrend and puts (PE) on an
+aligned downtrend, on Binance Options contracts (`BTC-261030-81000-C`). It never sells an option to open. The most a
+position can lose is the premium it paid plus fees.
 
-```bash
-npm run options:run                                   # OPTIONS_VENUE=local (in-process paper venue)
-OPTIONS_VENUE=paper_exchange PAPER_EXCHANGE_URL=http://localhost:3000 \
-  OPTIONS_PAPER_EXCHANGE_ACCOUNT_ID=crypto-options PAPER_EXCHANGE_API_KEY=... npm run options:run
-OPTIONS_VENUE=coindcx_monitor npm run options:run     # signals and WOULD_BUY alerts only
-```
+| Command | Futures | Options (`OPTIONS_VENUE=auto`) |
+| --- | --- | --- |
+| `npm run dev:paper` | local paper engine | `local`: in-process options book, `data/options-state-local.json` |
+| `npm run dev:paper` + `PAPER_EXCHANGE_URL` | paper_exchange account `PAPER_EXCHANGE_ACCOUNT_ID` | paper_exchange account `<PAPER_EXCHANGE_ACCOUNT_ID>-options` (`CRYPTO_OPTION`) |
+| `npm run dev:live` / `dev:alert` | live Binance USD-M | `monitor`: signals and alerts only; no live options execution exists |
+| any, `OPTIONS=off` | as above | off |
+
+- **Separate wallet.** Options use their own wallet, like Binance's Options wallet. Futures margin and option premium
+  never mix, and the perpetual broker path never sees an option position. Sharing the futures paper_exchange account
+  is refused.
+- **Shared controls.** The kill switch (`k`, or `data/kill-switch.json`) halts option entries too, and a futures
+  drawdown halt halts them as well. Option exits keep running during a halt. The Ollama advisor and its key pool are
+  shared with futures.
+- **Independent timer.** The desk runs every `OPTIONS_LOOP_MS` (15 s) on its own timer. A slow option chain or a down
+  options venue cannot stall the futures loop. A failed start (Binance unreachable, paper_exchange down) is logged once
+  and retried every tick.
+- **Cockpit view.** The POSITIONS column shows an `OPTIONS` block under the futures positions: venue, equity, any halt,
+  and one line per underlying. Each option log line is prefixed `OPTIONS`.
+
+**No CoinDCX execution.** `npm run dev:coindcx` no longer exists (removed in d9c7ce8), and CoinDCX live execution is
+refused for futures (issue #31). For options, `@nemesis-oss/coindcx-sdk` 1.3.0 has no options endpoints, so
+`OPTIONS_VENUE=coindcx` is refused and `coindcx_monitor` is an alias of `monitor`.
+
+`npm run options:run` runs the same desk headless, without the TUI or the futures fleet.
 
 ## Components
 
@@ -22,7 +41,8 @@ OPTIONS_VENUE=coindcx_monitor npm run options:run     # signals and WOULD_BUY al
 | Exits | premium stop, target, trailing stop, max hold, pre-expiry, thesis flip | `ExitPolicy.ts` |
 | Lifecycle | finite state machine per underlying, persisted | `OptionPositionMachine.ts`, `OptionsBuyingEngine.ts`, `stateStore.ts` |
 | AI | `OllamaAdvisor.vetoOption` (ollama-sdk): can block an entry, can never originate one or set a price | `src/ollama/advisor.ts` |
-| Execution | `local`, `paper_exchange` (`CRYPTO_OPTION`), `coindcx_monitor` | `venues.ts` |
+| Execution | `local`, `paper_exchange` (`CRYPTO_OPTION`), `monitor` | `venues.ts` |
+| Cockpit wiring | started by the Orchestrator, rendered in the POSITIONS column | `OptionsDesk.ts`, `src/runtime/Orchestrator.ts`, `src/ui/accountPanels.ts` |
 
 ## State machine
 
@@ -99,8 +119,8 @@ Evaluated every cycle on the executable **bid**:
   and sends the walked size at its VWAP as `execution_price`, and pushes the underlying index and option marks to
   `/api/mark_prices`. The broker refuses option writing (a sell must be `reduce_only`), leverage other than 1, and buys
   from 08:00 UTC on expiry. It settles leftover positions at intrinsic value against the underlying mark.
-- **coindcx_monitor**: CoinDCX lists crypto options, but `@nemesis-oss/coindcx-sdk` 1.3.0 exposes no options endpoints.
-  This venue therefore only journals `WOULD_BUY` and logs the alert. `OPTIONS_VENUE=coindcx` is refused at startup.
+- **monitor** (alias `coindcx_monitor`): journals `WOULD_BUY` and logs the alert; nothing is traded. This is the only
+  options venue under `MODE=live`.
 - **Binance live** is refused at startup. It needs the live guard set used for perpetuals (reconciliation from fills, a
   trade journal, protection) ported to eapi first.
 

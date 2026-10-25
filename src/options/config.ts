@@ -4,9 +4,17 @@ const onOff = (fallback: 'on' | 'off') => z.enum(['off', 'on']).default(fallback
 const pct = (fallback: number) => z.coerce.number().gt(0).lt(100).default(fallback);
 const positive = (fallback: number) => z.coerce.number().positive().default(fallback);
 
-/** Venues that can hold a long option position for this process. CoinDCX and Binance live execution are refused below. */
-const VENUES = ['local', 'paper_exchange', 'coindcx_monitor'] as const;
+/**
+ * Where option positions live. `auto` (the default) follows the cockpit's MODE, so `npm run dev:paper` trades futures and
+ * options together:
+ *   MODE=paper                       -> local    (in-process options book)
+ *   MODE=paper + PAPER_EXCHANGE_URL  -> paper_exchange, on its own `<PAPER_EXCHANGE_ACCOUNT_ID>-options` wallet
+ *   MODE=live                        -> monitor  (signals and alerts; no live options execution exists)
+ * CoinDCX and Binance live execution are refused below.
+ */
+const VENUES = ['local', 'paper_exchange', 'monitor'] as const;
 export type OptionsVenueKind = (typeof VENUES)[number];
+const ALIASES: Record<string, OptionsVenueKind> = { coindcx_monitor: 'monitor' };
 
 const REFUSED_VENUES: Record<string, string> = {
   coindcx: 'CoinDCX options execution is refused: @nemesis-oss/coindcx-sdk 1.3.0 exposes no options endpoints. Use OPTIONS_VENUE=coindcx_monitor for signals and alerts only',
@@ -15,14 +23,35 @@ const REFUSED_VENUES: Record<string, string> = {
   binance_live: 'Binance live options execution is not wired: it needs the live guard set (startup reconciliation, trade journal, exchange-side protection) ported first. Use OPTIONS_VENUE=local or paper_exchange',
 };
 
+/** The venue `auto` and an explicit OPTIONS_VENUE resolve to under the cockpit's MODE; a string is a refusal reason. */
+export function resolveVenue(env: { OPTIONS_VENUE: string; MODE: 'paper' | 'live'; PAPER_EXCHANGE_URL?: string }): OptionsVenueKind | { refused: string } {
+  const raw = env.OPTIONS_VENUE.toLowerCase();
+  if (REFUSED_VENUES[raw]) return { refused: REFUSED_VENUES[raw] };
+  if (raw === 'auto') return env.MODE === 'live' ? 'monitor' : env.PAPER_EXCHANGE_URL ? 'paper_exchange' : 'local';
+  const venue = ALIASES[raw] ?? raw;
+  if (!(VENUES as readonly string[]).includes(venue)) return { refused: `OPTIONS_VENUE must be one of auto, ${VENUES.join(', ')}` };
+  if (env.MODE === 'live' && venue !== 'monitor') {
+    return { refused: `MODE=live runs options monitor-only (no live options execution is wired); OPTIONS_VENUE=${raw} would paper-trade options beside live futures. Use OPTIONS_VENUE=auto or monitor` };
+  }
+  return venue as OptionsVenueKind;
+}
+
 export const OptionsEnvSchema = z.object({
-  OPTIONS_VENUE: z.string().trim().default('local'),
+  /** Options run beside futures in the cockpit; off disables the options desk entirely. */
+  OPTIONS: onOff('on'),
+  MODE: z.enum(['paper', 'live']).default('paper'),
+  OPTIONS_VENUE: z.string().trim().default('auto'),
   OPTIONS_UNDERLYINGS: z.string().default('BTCUSDT,ETHUSDT,SOLUSDT,XRPUSDT'),
   /** Starting USDT balance of the in-process paper venue. */
   OPTIONS_LOCAL_EQUITY: positive(1_000),
   PAPER_EXCHANGE_URL: z.string().trim().optional(),
   PAPER_EXCHANGE_API_KEY: z.string().trim().optional(),
-  /** A dedicated USDT account: option premiums must not share a wallet with the perpetual fleet. */
+  /** The futures account; the options wallet defaults to `<this>-options`. */
+  PAPER_EXCHANGE_ACCOUNT_ID: z.string().trim().optional(),
+  /**
+   * A dedicated USD/USDT account, like Binance's separate Options wallet. Sharing the futures account is refused: the
+   * perpetual broker path would read option positions as perpetuals.
+   */
   OPTIONS_PAPER_EXCHANGE_ACCOUNT_ID: z.string().trim().optional(),
   OPTIONS_LOOP_MS: z.coerce.number().int().min(5_000).default(15_000),
 
@@ -71,15 +100,20 @@ export const OptionsEnvSchema = z.object({
   OPTIONS_FEE_RATE: z.coerce.number().min(0).lt(0.01).default(0.0003),
   OPTIONS_FEE_CAP: z.coerce.number().min(0).max(1).default(0.1),
   OPTIONS_LLM_VETO: onOff('on'),
-  OPTIONS_STATE_PATH: z.string().trim().default('data/options-state.json'),
-  OPTIONS_JOURNAL_PATH: z.string().trim().default('data/options-journal.jsonl'),
+  /** Blank derives a per-venue path, so switching MODE never reconciles one venue's positions against another's. */
+  OPTIONS_STATE_PATH: z.string().trim().default(''),
+  OPTIONS_JOURNAL_PATH: z.string().trim().default(''),
 }).superRefine((env, ctx) => {
   const issue = (path: string, message: string) => ctx.addIssue({ code: z.ZodIssueCode.custom, path: [path], message });
-  const venue = env.OPTIONS_VENUE.toLowerCase();
-  if (REFUSED_VENUES[venue]) issue('OPTIONS_VENUE', REFUSED_VENUES[venue]);
-  else if (!(VENUES as readonly string[]).includes(venue)) issue('OPTIONS_VENUE', `OPTIONS_VENUE must be one of ${VENUES.join(', ')}`);
-  if (venue === 'paper_exchange' && (!env.PAPER_EXCHANGE_URL || !env.OPTIONS_PAPER_EXCHANGE_ACCOUNT_ID)) {
-    issue('OPTIONS_PAPER_EXCHANGE_ACCOUNT_ID', 'OPTIONS_VENUE=paper_exchange needs PAPER_EXCHANGE_URL and OPTIONS_PAPER_EXCHANGE_ACCOUNT_ID (a USDT account)');
+  const venue = resolveVenue(env);
+  if (typeof venue !== 'string') issue('OPTIONS_VENUE', venue.refused);
+  if (venue === 'paper_exchange') {
+    const account = optionsAccountId(env);
+    if (!env.PAPER_EXCHANGE_URL || !account) {
+      issue('OPTIONS_PAPER_EXCHANGE_ACCOUNT_ID', 'options on paper_exchange need PAPER_EXCHANGE_URL and OPTIONS_PAPER_EXCHANGE_ACCOUNT_ID (or PAPER_EXCHANGE_ACCOUNT_ID, from which `<id>-options` is derived)');
+    } else if (account === env.PAPER_EXCHANGE_ACCOUNT_ID) {
+      issue('OPTIONS_PAPER_EXCHANGE_ACCOUNT_ID', 'OPTIONS_PAPER_EXCHANGE_ACCOUNT_ID must differ from PAPER_EXCHANGE_ACCOUNT_ID: the futures broker path would read option positions as perpetuals');
+    }
   }
   if (!(env.OPTIONS_MIN_DELTA < env.OPTIONS_TARGET_DELTA && env.OPTIONS_TARGET_DELTA < env.OPTIONS_MAX_DELTA)) {
     issue('OPTIONS_TARGET_DELTA', 'OPTIONS_MIN_DELTA < OPTIONS_TARGET_DELTA < OPTIONS_MAX_DELTA must hold');
@@ -100,7 +134,12 @@ export const OptionsEnvSchema = z.object({
 
 export type OptionsEnv = z.infer<typeof OptionsEnvSchema>;
 
+function optionsAccountId(env: { OPTIONS_PAPER_EXCHANGE_ACCOUNT_ID?: string; PAPER_EXCHANGE_ACCOUNT_ID?: string }): string | undefined {
+  return env.OPTIONS_PAPER_EXCHANGE_ACCOUNT_ID || (env.PAPER_EXCHANGE_ACCOUNT_ID ? `${env.PAPER_EXCHANGE_ACCOUNT_ID}-options` : undefined);
+}
+
 export interface OptionsConfig {
+  enabled: boolean;
   venue: OptionsVenueKind;
   underlyings: string[];
   localEquity: number;
@@ -149,13 +188,15 @@ export interface OptionsConfig {
 
 export function optionsConfigFromEnv(source: NodeJS.ProcessEnv | Record<string, string | undefined>): OptionsConfig {
   const env = OptionsEnvSchema.parse(source);
-  const venue = env.OPTIONS_VENUE.toLowerCase() as OptionsVenueKind;
+  const venue = resolveVenue(env) as OptionsVenueKind;
+  const venueTag = venue === 'paper_exchange' ? `paper_exchange-${optionsAccountId(env)!.replace(/[^A-Za-z0-9_-]/g, '_')}` : venue;
   return {
+    enabled: env.OPTIONS === 'on',
     venue,
     underlyings: env.OPTIONS_UNDERLYINGS.split(',').map((s) => s.trim()).filter(Boolean),
     localEquity: env.OPTIONS_LOCAL_EQUITY,
     paperExchange: venue === 'paper_exchange'
-      ? { url: env.PAPER_EXCHANGE_URL!.replace(/\/+$/, ''), accountId: env.OPTIONS_PAPER_EXCHANGE_ACCOUNT_ID!, apiKey: env.PAPER_EXCHANGE_API_KEY }
+      ? { url: env.PAPER_EXCHANGE_URL!.replace(/\/+$/, ''), accountId: optionsAccountId(env)!, apiKey: env.PAPER_EXCHANGE_API_KEY }
       : null,
     loopMs: env.OPTIONS_LOOP_MS,
     selection: {
@@ -199,7 +240,7 @@ export function optionsConfigFromEnv(source: NodeJS.ProcessEnv | Record<string, 
     cooldownMs: env.OPTIONS_COOLDOWN_MINUTES * 60_000,
     fees: { rate: env.OPTIONS_FEE_RATE, cap: env.OPTIONS_FEE_CAP },
     llmVeto: env.OPTIONS_LLM_VETO === 'on',
-    statePath: env.OPTIONS_STATE_PATH,
-    journalPath: env.OPTIONS_JOURNAL_PATH,
+    statePath: env.OPTIONS_STATE_PATH || `data/options-state-${venueTag}.json`,
+    journalPath: env.OPTIONS_JOURNAL_PATH || `data/options-journal-${venueTag}.jsonl`,
   };
 }

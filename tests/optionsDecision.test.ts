@@ -212,8 +212,9 @@ test('time exits fire without a price; price exits wait for a fresh quote', () =
 
 // ---- config ------------------------------------------------------------------------------------------------------
 
-test('config defaults to the local paper venue with every risk control on', () => {
+test('config defaults (MODE=paper) to the local paper venue with every risk control on', () => {
   const c = optionsConfigFromEnv({});
+  assert.equal(c.enabled, true);
   assert.equal(c.venue, 'local');
   assert.deepEqual(c.underlyings, ['BTCUSDT', 'ETHUSDT', 'SOLUSDT', 'XRPUSDT']);
   assert.deepEqual([c.exits.stopPct, c.risk.riskPerTradePct, c.risk.maxPremiumPct, c.llmVeto], [30, 1, 2, true]);
@@ -225,7 +226,7 @@ test('config refuses venues that cannot execute options and inconsistent limits'
   refuse({ OPTIONS_VENUE: 'coindcx' }, /coindcx-sdk 1\.3\.0 exposes no options endpoints/);
   refuse({ OPTIONS_VENUE: 'coindcx_live' }, /coindcx_monitor/);
   refuse({ OPTIONS_VENUE: 'binance_live' }, /Binance live options execution is not wired/);
-  refuse({ OPTIONS_VENUE: 'kraken' }, /must be one of local, paper_exchange, coindcx_monitor/);
+  refuse({ OPTIONS_VENUE: 'kraken' }, /must be one of auto, local, paper_exchange, monitor/);
   refuse({ OPTIONS_VENUE: 'paper_exchange' }, /OPTIONS_PAPER_EXCHANGE_ACCOUNT_ID/);
   refuse({ OPTIONS_EXIT_BEFORE_EXPIRY_HOURS: '30' }, /force-exited at once/);
   refuse({ OPTIONS_RISK_PER_TRADE_PCT: '3' }, /cannot exceed OPTIONS_MAX_PREMIUM_PCT/);

@@ -53,3 +53,21 @@ test('should read minQty and minNotional from exchange info, defaulting to no li
   assert.equal(rules.minQty, 0);
   assert.equal(rules.minNotional, 0);
 });
+
+test('should derive price precision from tickSize when tickSize has fewer decimals than exchange pricePrecision', () => {
+  const solInfo = {
+    symbol: 'SOLUSDT',
+    pricePrecision: 4,
+    quantityPrecision: 2,
+    filters: [
+      { filterType: 'PRICE_FILTER', minPrice: '0.4200', maxPrice: '6857', tickSize: '0.0100' },
+      { filterType: 'LOT_SIZE', minQty: '0.01', maxQty: '1000000', stepSize: '0.01' },
+      { filterType: 'MIN_NOTIONAL', notional: '5' },
+    ],
+  } as unknown as FuturesSymbolExchangeInfo;
+  const rules = rulesFromExchangeInfo(solInfo);
+  assert.equal(rules.pricePrecision, 2);
+  assert.equal(rules.tickSize, 0.01);
+  setSymbolRules('SOLUSDT', rules);
+  assert.equal(formatPrice('SOLUSDT', 100.81), '100.81');
+});

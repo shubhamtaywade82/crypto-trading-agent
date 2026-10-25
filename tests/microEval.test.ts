@@ -73,3 +73,33 @@ test('bootstrap confidence intervals are deterministic for a fixed seed', () => 
   assert.equal(a.n, 120);
   assert.ok(a.low !== null && a.high !== null && a.low <= a.mean && a.mean <= a.high);
 });
+
+import { evaluateRecordings } from '../scripts/micro-eval.js';
+
+test('evaluation separates train from holdout and groups complete windows by phase, bias and OFI bucket', () => {
+  const rows = Array.from({ length: 120 }, (_, i) => reading(i * 1000, 100 + i * 0.002, {
+    windows: [
+      { ms: 5_000, complete: true, trades: 12, delta: 0.2, ofi: 0.6, priceBps: 2, phase: 'INITIATIVE_BUYING' },
+      { ms: 30_000, complete: true, trades: 60, delta: 0.2, ofi: 0.6, priceBps: 2, phase: 'INITIATIVE_BUYING' },
+      { ms: 120_000, complete: true, trades: 100, delta: 0.2, ofi: 0.6, priceBps: 2, phase: 'INITIATIVE_BUYING' },
+    ],
+  }));
+  const result = evaluateRecordings(rows, {
+    sampleMs: 1000,
+    feeBpsPerLeg: 4,
+    trainFraction: 0.7,
+    horizonsMs: [1000],
+    bootstrapIterations: 100,
+    blockMs: 10_000,
+    seed: 7,
+    confidence: 0.95,
+    minN: 5,
+  });
+  assert.ok(result.rows.some((r) => r.split === 'TRAIN'));
+  assert.ok(result.rows.some((r) => r.split === 'HOLDOUT'));
+  assert.ok(result.rows.some((r) => r.dimension === 'window-ofi' && r.key === '5s STRONG_POS'));
+  assert.ok(result.rows.some((r) => r.dimension === 'phase' && r.key === 'INITIATIVE_BUYING'));
+  assert.ok(result.rows.some((r) => r.dimension === 'bias' && r.key === 'LONG'));
+  assert.ok(result.diagnostics.skipped['crosses-train-holdout-boundary'] > 0);
+  assert.ok(result.rows.every((r) => r.n > 0));
+});

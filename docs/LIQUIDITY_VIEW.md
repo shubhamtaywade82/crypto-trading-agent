@@ -125,3 +125,45 @@ execution-friction verdict gates anything (above), because it measures cost, not
 
 Recorded readings (`MICRO_RECORD=on`) now include every window and the bias state, so the multi-window rules can be
 tested offline against what followed.
+
+
+## Offline microstructure evaluation
+
+Use `MICRO_RECORD=on` to collect one JSONL reading per symbol per second, then evaluate whether recorded features are associated with subsequent mid-price movement:
+
+```bash
+npm run research:micro-eval
+npm run research:micro-eval -- --input data/microstructure --sample-ms 1000
+npm run research:micro-eval -- --fee-bps-per-leg 4 --train-fraction 0.7 --min-n 30
+```
+
+The evaluator:
+
+- Reads the recorder's `data/microstructure/<UTC-date>/<SYMBOL>.jsonl` files; reports malformed records, duplicate timestamps, recording gaps, estimated missing samples and non-live readings.
+- Rejects an outcome interval if its entry/exit book is not live, any intervening sample is non-live, the sample path has a gap, or the requested future timestamp is not observed within the sampling tolerance.
+- Labels each eligible reading at 1 s, 5 s, 30 s and 1 m by default, for both LONG and SHORT. Net mid-to-mid movement subtracts configurable fees per leg and the entry-side plus exit-side depth-walked slippage measured from mid. Because these slippage figures already include spread, the spread is reported separately and is not charged a second time. The recorded friction uses the configured `MICRO_ORDER_NOTIONAL`, not an inferred fill size.
+- Reports means and time-block bootstrap confidence intervals by flow window, phase, bias, OFI bucket and volatility regime. Five-minute realized volatility tertiles are fitted on the training period only, then applied to the holdout.
+- Splits each symbol chronologically (70% train / 30% holdout by default). Labels that cross the split boundary are excluded. The holdout is for evaluation only; do not tune thresholds against it.
+
+Useful options:
+
+| Option | Default | Meaning |
+| --- | --- | --- |
+| `--input` | `data/microstructure` | Directory or comma-separated JSONL files |
+| `--sample-ms` | `1000` | Expected recorder cadence; set this to match `MICRO_SAMPLE_MS` |
+| `--horizons` | `1000,5000,30000,60000` | Future label horizons in milliseconds |
+| `--fee-bps-per-leg` | `4` | Fee charged on each entry/exit leg |
+| `--train-fraction` | `0.7` | Chronological training share per symbol |
+| `--bootstrap-iterations` | `2000` | Bootstrap repetitions |
+| `--block-seconds` | `30` | Time-block size for bootstrap resampling |
+| `--confidence` | `0.95` | Confidence interval level |
+| `--min-n` | `30` | Minimum sample size before reporting a CI |
+| `--max-rows` | `500` | Maximum output rows to print |
+
+The confidence interval describes uncertainty in the mean cost-adjusted move, **not** the probability that a trade wins. Highly overlapping 1-second labels are serially dependent, so the evaluator uses time-block bootstrap resampling rather than treating every sample as independent. Thin buckets are displayed without a confidence interval. This tool is research-only and does not change the micro-bias, execution gate, or order path.
+
+Run the full repository check after changes:
+
+```bash
+npm run check
+```

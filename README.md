@@ -34,8 +34,14 @@ tape are doing:
 - execution friction for your order size;
 - wall events (WALL / ABSORB / EATEN / PULLED).
 
-It runs on a sequence-checked local order book from binance-sdk USD-M streams. It is display and recording only
-(`MICRO_RECORD=on`), not wired to orders. Details: [docs/LIQUIDITY_VIEW.md](docs/LIQUIDITY_VIEW.md).
+It runs on a sequence-checked local order book from binance-sdk USD-M streams. The directional readings are display
+and recording only (`MICRO_RECORD=on`).
+
+The **execution-friction gate** (`MICRO_ENTRY_GATE=on`, the default) refuses a futures entry when the live book
+cannot take that entry's side and size within `MICRO_MAX_SPREAD_BPS` / `MICRO_MAX_SLIP_BPS`. It fails closed while the
+book is not live, journals `FRICTION_REJECTED`, and never gates exits.
+
+Details: [docs/LIQUIDITY_VIEW.md](docs/LIQUIDITY_VIEW.md).
 
 ---
 

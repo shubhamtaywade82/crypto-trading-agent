@@ -58,6 +58,7 @@ import { optionsConfigFromEnv, type OptionsConfig } from '../options/config.js';
 import { OptionsDesk } from '../options/OptionsDesk.js';
 import { BinanceClient } from '@nemesis-oss/binance-sdk';
 import { MicrostructureFeed, microConfigFromEnv, sdkMicroSource } from '../microstructure/MicrostructureFeed.js';
+import { entrySide, frictionVerdict, type FrictionGateMode } from '../microstructure/FrictionGate.js';
 import { ZodError } from 'zod';
 
 type CycleContext = MarketContext & { tickers: Record<string, MarketPriceInfo>; nextFundingTime: number };
@@ -114,6 +115,8 @@ export class Orchestrator extends EventEmitter {
   private optionsTimer: NodeJS.Timeout | null = null;
   /** Local order books and trade tape for the LIQUIDITY view (src/microstructure); display and recording only. */
   private microFeed: MicrostructureFeed | null = null;
+  /** Pre-trade execution-cost gate on entries. Starts 'on' so a refused or missing configuration fails closed. */
+  private frictionGate: FrictionGateMode = 'on';
   private livePrices: Record<string, number> = {};
   private liveTickers: Record<string, MarketPriceInfo> = {};
   private stopWs: (() => void) | null = null;
@@ -192,7 +195,8 @@ export class Orchestrator extends EventEmitter {
 
   /**
    * Feeds the LIQUIDITY view: a sequence-checked local book and the aggressor tape per symbol, sampled once a second.
-   * It does not gate or size orders: its features are unvalidated (MICRO_RECORD=on records them for that).
+   * Its directional features are display only (unvalidated; MICRO_RECORD=on records them). Its execution-friction verdict
+   * gates entries when MICRO_ENTRY_GATE is on: see processSignals.
    */
   private startMicrostructure(): void {
     let micro;
@@ -200,9 +204,11 @@ export class Orchestrator extends EventEmitter {
       micro = microConfigFromEnv(process.env);
     } catch (err) {
       const reason = err instanceof ZodError ? err.issues.map((i) => `${i.path.join('.')}: ${i.message}`).join('; ') : errorText(err);
-      this.log('SYSTEM', `MICRO disabled, configuration refused: ${reason}`, 'error');
+      this.log('SYSTEM', `MICRO disabled, configuration refused: ${reason}. The friction gate stays on with no feed, so new entries are refused until this is fixed`, 'error');
       return;
     }
+    this.frictionGate = micro.entryGate;
+    if (micro.entryGate !== 'off') this.log('SYSTEM', `FRICTION gate ${micro.entryGate}: entries ${micro.entryGate === 'on' ? 'are refused' : 'would be refused (shadow)'} above ${micro.options.maxSpreadBps}bps spread or ${micro.options.maxSlipBps}bps slippage for their size, or while the order book is not live`, 'info');
     if (!micro.enabled) return;
     this.microFeed = new MicrostructureFeed(config.symbols, {
       source: sdkMicroSource(new BinanceClient({ safety: { readOnly: true } })),
@@ -474,10 +480,25 @@ export class Orchestrator extends EventEmitter {
         this.counters.monitored += 1;
         continue;
       }
+      // Last check before the order: the freshest book, this entry's own side and size. Exits never reach this gate.
+      const friction = signal.type.startsWith('OPEN_')
+        ? frictionVerdict({ mode: this.frictionGate, source: this.microFeed, symbol: signal.symbol, side: entrySide(signal.type), notional: decision.positionSizeUsdt, now: Date.now() })
+        : null;
+      const frictionLabel = friction && `${signal.symbol} ${entrySide(signal.type)} $${decision.positionSizeUsdt.toFixed(0)}: ${friction.reason}`;
+      if (friction && !friction.allowed) {
+        this.journal.record({ ...record, status: 'FRICTION_REJECTED', rejectionReason: `friction: ${friction.reason}`, execution: { ts: Date.now(), spreadBps: friction.spreadBps, slippageBps: friction.slipBps, effectiveCostBps: null, friction: { status: friction.status, spreadBps: friction.spreadBps, slipBps: friction.slipBps } } });
+        this.log(signal.agent, `FRICTION BLOCK ${frictionLabel}`, 'warn');
+        this.counters.monitored += 1;
+        continue;
+      }
+      if (friction?.mode === 'shadow' && friction.status === 'BLOCK') this.log(signal.agent, `FRICTION (shadow) would block ${frictionLabel}`, 'info');
       const log = await this.executor.execute(signal, decision, decisionId);
       const executed: import('../decision/DecisionJournal.js').DecisionRecord = {
         ...record,
-        execution: { ts: Date.now(), spreadBps: eq.spreadBps, slippageBps: eq.estimatedSlippageBps, effectiveCostBps: eq.effectiveCostBps },
+        execution: {
+          ts: Date.now(), spreadBps: eq.spreadBps, slippageBps: eq.estimatedSlippageBps, effectiveCostBps: eq.effectiveCostBps,
+          ...(friction && friction.mode !== 'off' ? { friction: { status: friction.status, spreadBps: friction.spreadBps, slipBps: friction.slipBps } } : {}),
+        },
         ...(log.level === 'success' ? { status: 'EXECUTED' as const } : {
           status: log.level === 'warn' ? 'EXECUTION_REFUSED' as const : 'EXECUTION_FAILED' as const,
           rejectionReason: log.msg,

@@ -43,13 +43,42 @@ buyers lift price. It is not live market data.*
   liquidity.
 - Terminals without truecolor get a density ramp (`░▒▓█`) instead of background shading.
 
-## Validating before it ever gates a trade
+## Execution-friction entry gate
+
+`MICRO_ENTRY_GATE` (default `on`) wires the friction verdict into futures entries. It is the last check before an
+order is sent, after risk, the LLM veto and the execution-quality check.
+
+- **What it measures.** Each `OPEN_*` entry is graded on the live local book for **its own side and size**. A long walks
+  the asks for its notional, a short walks the bids. The grade covers:
+  - the spread against `MICRO_MAX_SPREAD_BPS`;
+  - the depth-walked VWAP slippage from mid against `MICRO_MAX_SLIP_BPS`.
+- **Outcomes.**
+  - `on`: a `BLOCK` verdict refuses the entry. It is journaled as `FRICTION_REJECTED` with the reason and the measured
+    spread/slippage, and logged as `FRICTION BLOCK SOLUSDT sell $5000: sell slippage 13.0bps > 10`.
+  - `ELEVATED` (above half a limit) passes.
+  - `shadow`: blocks are only logged (`FRICTION (shadow) would block …`).
+  - `off`: nothing is measured.
+- **Fails closed.** With the gate on, these all refuse entries with that reason:
+  - a book that is syncing, resyncing or stale (no diff for 5 s);
+  - a missing feed, or a symbol with no book;
+  - an order the known book cannot fill.
+
+  A refused feed configuration leaves the gate on with no feed, so entries stop rather than trade unchecked.
+- **Never gates exits.** `CLOSE` and every protective exit skip the gate.
+- **Recorded on every entry.** Executed entries carry the measured friction in `execution.friction` of the decision
+  journal, so the gate's thresholds can be reviewed against real fills.
+- **Cannot be on without the feed.** `MICRO_ENTRY_GATE=on` (or `shadow`) with `MICROSTRUCTURE=off` is refused at
+  startup.
+- **Options are out of scope.** Option entries are not routed through this gate; they have their own spread and
+  book-walk checks on the option book.
+
+## Validating the directional features
 
 `MICRO_RECORD=on` appends one reading per symbol per second to `data/microstructure/<date>/<SYMBOL>.jsonl`. Each reading
 contains the phase, imbalance, flow, friction, evidence and events emitted that second. Outcomes (the mid N seconds
 later) can be joined offline, then tested over 1 s / 5 s / 30 s / 1 m horizons, after fees and slippage, per volatility
-regime. Until that shows value, the feed is display and recording only. The execution-friction verdict is the first
-candidate to wire in as an entry guard, because it measures cost, not direction.
+regime. Until that shows value, the phase, imbalance and evidence are display and recording only. Only the
+execution-friction verdict gates anything (above), because it measures cost, not direction.
 
 ## Settings
 
@@ -62,3 +91,4 @@ candidate to wire in as an entry guard, because it measures cost, not direction.
 | `MICRO_MAX_SLIP_BPS` | `10` | Slippage above which friction is BLOCK (ELEVATED above half). |
 | `MICRO_SAMPLE_MS` | `1000` | Sampling cadence (one field column per sample). |
 | `MICRO_RECORD` / `MICRO_RECORD_DIR` | `off` / `data/microstructure` | Reading recorder. |
+| `MICRO_ENTRY_GATE` | `on` | `on` refuses entries the book cannot absorb (fails closed), `shadow` only logs, `off` disables. |

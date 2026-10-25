@@ -307,7 +307,7 @@ test('a feed that cannot subscribe reports itself down instead of throwing', asy
   assert.deepEqual([handle.state, handle.lastError], ['down', 'Unexpected server response: 451']);
   assert.equal(logs.length, 1);
   assert.throws(() => microConfigFromEnv({ MICRO_BUCKET_BPS: '0' }));
-  assert.equal(microConfigFromEnv({ MICROSTRUCTURE: 'off' }).enabled, false);
+  assert.equal(microConfigFromEnv({ MICROSTRUCTURE: 'off', MICRO_ENTRY_GATE: 'off' }).enabled, false); // the gate cannot be on without the feed
 });
 
 // ---- renderer ----------------------------------------------------------------------------------------------------

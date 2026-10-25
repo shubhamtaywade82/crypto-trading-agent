@@ -10,6 +10,8 @@ export type DecisionStatus =
   | 'RISK_REJECTED'
   | 'VETOED'
   | 'EQ_REJECTED'
+  /** The live order book could not take the entry at an acceptable spread/slippage (MICRO_ENTRY_GATE). */
+  | 'FRICTION_REJECTED'
   | 'EXECUTION_REFUSED'
   | 'EXECUTION_FAILED';
 
@@ -38,6 +40,8 @@ export interface DecisionExecution {
   spreadBps: number | null;
   slippageBps: number | null;
   effectiveCostBps: number | null;
+  /** Pre-trade friction measured on the live local book for this entry's side and size; absent when the gate is off. */
+  friction?: { status: string; spreadBps: number | null; slipBps: number | null };
 }
 
 export interface DecisionOutcome {

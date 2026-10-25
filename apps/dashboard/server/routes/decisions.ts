@@ -1,6 +1,6 @@
 /**
  * Decision routes — the decision journal is the canonical audit trail of
- * every gated signal (EXECUTED, RISK_REJECTED, VETOED, EQ_REJECTED,
+ * every gated signal (EXECUTED, RISK_REJECTED, VETOED, EQ_REJECTED, FRICTION_REJECTED,
  * EXECUTION_REFUSED, EXECUTION_FAILED).
  *
  * Filters mirror scripts/analyze-decisions.ts. Refusal summary mirrors
@@ -59,6 +59,7 @@ export function registerDecisionRoutes(app: Express, ctx: DashboardContext): voi
           d.status === "RISK_REJECTED" ||
           d.status === "VETOED" ||
           d.status === "EQ_REJECTED" ||
+          d.status === "FRICTION_REJECTED" ||
           d.status === "EXECUTION_REFUSED" ||
           d.status === "EXECUTION_FAILED",
       );

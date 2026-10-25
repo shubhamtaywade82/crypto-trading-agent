@@ -5,6 +5,7 @@ import { z } from 'zod';
 import type { LiquidityEvent } from './LiquidityEvents.js';
 import { DEFAULT_MICRO_OPTIONS, MicrostructureEngine, type MicroOptions, type MicroView } from './MicrostructureEngine.js';
 import type { DepthDiff, DepthSnapshot } from './LocalOrderBook.js';
+import type { FrictionGateMode } from './FrictionGate.js';
 
 const onOff = (fallback: 'on' | 'off') => z.enum(['off', 'on']).default(fallback);
 
@@ -18,10 +19,21 @@ export const MicroEnvSchema = z.object({
   /** Write one reading per symbol per sample to MICRO_RECORD_DIR, for validating the features offline. */
   MICRO_RECORD: onOff('off'),
   MICRO_RECORD_DIR: z.string().trim().default('data/microstructure'),
+  /** Execution-friction gate on futures entries: on refuses BLOCK verdicts, shadow only logs them. Fails closed. */
+  MICRO_ENTRY_GATE: z.enum(['off', 'shadow', 'on']).default('on'),
+}).superRefine((env, ctx) => {
+  if (env.MICRO_ENTRY_GATE !== 'off' && env.MICROSTRUCTURE === 'off') {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['MICRO_ENTRY_GATE'],
+      message: `MICRO_ENTRY_GATE=${env.MICRO_ENTRY_GATE} needs the order-book feed: set MICROSTRUCTURE=on, or MICRO_ENTRY_GATE=off to trade without a pre-trade cost check`,
+    });
+  }
 });
 
 export interface MicroConfig {
   enabled: boolean;
+  entryGate: FrictionGateMode;
   sampleMs: number;
   record: boolean;
   recordDir: string;
@@ -32,6 +44,7 @@ export function microConfigFromEnv(env: NodeJS.ProcessEnv | Record<string, strin
   const e = MicroEnvSchema.parse(env);
   return {
     enabled: e.MICROSTRUCTURE === 'on',
+    entryGate: e.MICRO_ENTRY_GATE,
     sampleMs: e.MICRO_SAMPLE_MS,
     record: e.MICRO_RECORD === 'on',
     recordDir: e.MICRO_RECORD_DIR,

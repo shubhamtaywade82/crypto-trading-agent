@@ -55,6 +55,17 @@ export interface MicrostructureReading {
   evidenceReasons: string[];
 }
 
+/** Friction for one specific order: its side and notional walked through the live book. */
+export interface EntryFriction {
+  status: FrictionStatus;
+  reasons: string[];
+  spreadBps: number | null;
+  /** Depth-walked VWAP slippage from mid for this order; null when the book is not live or cannot fill it. */
+  slipBps: number | null;
+  bookStatus: FeedBookStatus;
+  bookAgeMs: number | null;
+}
+
 export interface FieldCell {
   /**
    * Displayed liquidity 0..1 on a log scale anchored to the visible window: the median cell reads about 0.2 and the
@@ -267,6 +278,22 @@ export class MicrostructureEngine {
     };
   }
 
+  /** Grades one order: spread and the slippage of walking `notional` on its side, against the same limits as the view. */
+  entryFriction(side: 'buy' | 'sell', notional: number, now: number): EntryFriction {
+    const book = this.bookStatus(now);
+    const base = { bookStatus: book.status, bookAgeMs: book.ageMs };
+    const bid = book.status === 'LIVE' ? this.book.bestBid() : null;
+    const ask = book.status === 'LIVE' ? this.book.bestAsk() : null;
+    if (bid === null || ask === null) {
+      return { ...base, status: 'BLOCK', reasons: [`book ${book.status.toLowerCase()}${book.reason ? `: ${book.reason}` : ''}`], spreadBps: null, slipBps: null };
+    }
+    const mid = (bid + ask) / 2;
+    const spreadBps = bps(ask, bid);
+    const slipBps = notional > 0 ? slippageBps(this.book.levels(side === 'buy' ? 'asks' : 'bids'), notional, mid, side) : 0;
+    const { status, reasons } = this.grade([[spreadBps, this.opts.maxSpreadBps, 'spread'], [slipBps, this.opts.maxSlipBps, `${side} slippage`]]);
+    return { ...base, status, reasons, spreadBps, slipBps };
+  }
+
   /** Render-ready field, `rows` tall (odd counts center the mid) and the last `cols` samples wide. */
   view(now: number, rows: number, cols: number, ladderLevels = 10): MicroView {
     const reading = this.reading(now);
@@ -360,22 +387,25 @@ export class MicrostructureEngine {
     return 'BALANCED';
   }
 
-  private friction(status: FeedBookStatus, mid: number | null, spreadBps: number | null): MicrostructureReading['friction'] {
+  private friction(bookStatus: FeedBookStatus, mid: number | null, spreadBps: number | null): MicrostructureReading['friction'] {
     const base = { spreadBps, buySlipBps: null as number | null, sellSlipBps: null as number | null, orderNotional: this.opts.orderNotional };
-    if (status !== 'LIVE' || mid === null || spreadBps === null) return { ...base, status: 'BLOCK', reasons: [`book ${status.toLowerCase()}`] };
+    if (bookStatus !== 'LIVE' || mid === null || spreadBps === null) return { ...base, status: 'BLOCK', reasons: [`book ${bookStatus.toLowerCase()}`] };
     const buySlipBps = slippageBps(this.book.levels('asks'), this.opts.orderNotional, mid, 'buy');
     const sellSlipBps = slippageBps(this.book.levels('bids'), this.opts.orderNotional, mid, 'sell');
-    const reasons: string[] = [];
-    let status_: FrictionStatus = 'OK';
-    const grade = (value: number | null, limit: number, label: string) => {
-      if (value === null) { reasons.push(`${label}: known book too thin`); status_ = 'BLOCK'; return; }
-      if (value > limit) { reasons.push(`${label} ${value.toFixed(1)}bps > ${limit}`); status_ = 'BLOCK'; return; }
-      if (value > limit / 2 && status_ === 'OK') { reasons.push(`${label} ${value.toFixed(1)}bps`); status_ = 'ELEVATED'; }
-    };
-    grade(spreadBps, this.opts.maxSpreadBps, 'spread');
-    grade(buySlipBps, this.opts.maxSlipBps, 'buy slippage');
-    grade(sellSlipBps, this.opts.maxSlipBps, 'sell slippage');
-    return { ...base, buySlipBps, sellSlipBps, status: status_, reasons };
+    const { status, reasons } = this.grade([[spreadBps, this.opts.maxSpreadBps, 'spread'], [buySlipBps, this.opts.maxSlipBps, 'buy slippage'], [sellSlipBps, this.opts.maxSlipBps, 'sell slippage']]);
+    return { ...base, buySlipBps, sellSlipBps, status, reasons };
+  }
+
+  /** BLOCK above a limit or when the known book cannot fill; ELEVATED above half a limit; otherwise OK. Blockers are listed first. */
+  private grade(checks: Array<[number | null, number, string]>): { status: FrictionStatus; reasons: string[] } {
+    const blockers: string[] = [];
+    const warnings: string[] = [];
+    for (const [value, limit, label] of checks) {
+      if (value === null) blockers.push(`${label}: known book too thin`);
+      else if (value > limit) blockers.push(`${label} ${value.toFixed(1)}bps > ${limit}`);
+      else if (value > limit / 2) warnings.push(`${label} ${value.toFixed(1)}bps`);
+    }
+    return { status: blockers.length ? 'BLOCK' : warnings.length ? 'ELEVATED' : 'OK', reasons: [...blockers, ...warnings] };
   }
 
   private evidence(status: FeedBookStatus, phase: FlowPhase, imbalance25: number | null, events: LiquidityEvent[], now: number): { evidence: Evidence; reasons: string[] } {

@@ -104,11 +104,43 @@ order is sent, after risk, the LLM veto and the execution-quality check.
 
 ## Validating the directional features
 
-`MICRO_RECORD=on` appends one reading per symbol per second to `data/microstructure/<date>/<SYMBOL>.jsonl`. Each reading
-contains the phase, imbalance, flow, friction, evidence and events emitted that second. Outcomes (the mid N seconds
-later) can be joined offline, then tested over 1 s / 5 s / 30 s / 1 m horizons, after fees and slippage, per volatility
-regime. Until that shows value, the phase, imbalance and evidence are display and recording only. Only the
-execution-friction verdict gates anything (above), because it measures cost, not direction.
+1. **Record.** `MICRO_RECORD=on` appends one reading per symbol per second to
+   `data/microstructure/<date>/<SYMBOL>.jsonl`. Each reading carries every window, OFI, phase, evidence, bias,
+   friction and the events emitted that second. Recording runs inside the cockpit (`npm run dev:paper`); leave it on
+   for days, not hours.
+2. **Evaluate** with `npm run micro:eval`, which writes `REPORT.md` and `results.json` to
+   `data/micro-eval/<timestamp>/`:
+
+   ```bash
+   npm run micro:eval                                     # everything recorded
+   npm run micro:eval -- --from 2026-10-26 --to 2026-11-02 --symbols SOLUSDT,ETHUSDT
+   npm run micro:eval -- --horizons 5,30,60 --fee-bps 5 --stride 30 --holdout 0.3
+   ```
+
+### What the evaluator does
+
+| Step | Rule |
+| --- | --- |
+| Integrity | Per symbol: lines, malformed, duplicate and out-of-order readings, share LIVE, status counts, live segments, gaps over 3 s, the longest gap. A gap or a non-live book ends a segment. |
+| Labels | Each LIVE reading gets the mid move to the first reading at or after t + horizon (1 s / 5 s / 30 s / 60 s by default). The forward reading must be at most 1.5 s late and in the same live segment, otherwise there is no label. |
+| Costs | Round trip from mid: the recorded buy plus sell slippage for `MICRO_ORDER_NOTIONAL` (spread if slippage is missing), plus 2 × `--fee-bps` (default 4). The gross mean is shown next to the net, so "a real move that costs eat" is visible. |
+| Directions | Fixed in code before any outcome is seen. **LONG:** bias LONG, evidence SUPPORTS_LONG, per-window phase INITIATIVE_BUYING or SELL_ABSORBED, OFI top quintile. **SHORT:** the mirrors, OFI bottom quintile. Everything else (NEUTRAL, balanced, drift, thin, middle OFI quintiles) is an undirected baseline, never a test. Bias onsets (the first second after a change) are tested separately, as the least overlapping observations. |
+| Splits | Chronological. The last `--holdout` share of the time range (default 30%) is the holdout. OFI quintile cuts and volatility-regime terciles come from training only. |
+| Inference | Cluster bootstrap of the net mean, with clusters of symbol × 15-minute block (`--block-min`), because one-second readings overlap. `--stride N` keeps one reading per N seconds (plus onsets) for a non-overlapping check. |
+| Verdict | **PASS:** train 90% CI above 0 **and** holdout CI above 0 **and** holdout significance after Holm correction across every tested directional cell. **INSUFFICIENT:** fewer than 30 readings or 5 clusters in either split. **FAIL:** everything else. |
+| Regimes | The holdout is split by realized-volatility tercile (5-minute look-back) for PASS cells, or for the best five holdout means when nothing passes. |
+| Costs by status | p50 / p90 / p99 round-trip cost per friction status: the data for tuning `MICRO_MAX_SPREAD_BPS` / `MICRO_MAX_SLIP_BPS`. |
+
+### Reading the result
+
+- **PASS** makes a condition a candidate for a pre-registered forward test on new recordings. It is not a trading rule.
+- **Each re-run spends the holdout.** Tuning thresholds and re-running on the same holdout uses it up, so evaluate
+  changed rules on later recordings.
+- **Scale.** One day of 4 symbols (about 350k readings) evaluates in about 30 s. Use `--from/--to` or `--symbols` to
+  keep multi-week runs within memory.
+
+Until a condition passes on fresh data, the phase, imbalance, evidence and bias stay display and recording only. Only
+the execution-friction verdict gates anything (above), because it measures cost, not direction.
 
 ## Settings
 

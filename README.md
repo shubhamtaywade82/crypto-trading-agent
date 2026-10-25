@@ -44,6 +44,10 @@ The **execution-friction gate** (`MICRO_ENTRY_GATE=on`, the default) refuses a f
 cannot take that entry's side and size within `MICRO_MAX_SPREAD_BPS` / `MICRO_MAX_SLIP_BPS`. It fails closed while the
 book is not live, journals `FRICTION_REJECTED`, and never gates exits.
 
+`npm run micro:eval` evaluates recorded readings against what price did next. It checks recording integrity, labels
+1 s to 60 s forward moves net of measured costs, applies fixed-in-code directions, and uses a chronological holdout with
+a cluster bootstrap and Holm correction.
+
 Details: [docs/LIQUIDITY_VIEW.md](docs/LIQUIDITY_VIEW.md).
 
 ---

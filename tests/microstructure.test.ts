@@ -319,20 +319,20 @@ function renderedEngineHandle() {
     engine.onDepth(diff(1_002 + i, 1_002 + i, 1_001 + i, []), T0 + i * 1_000);
     engine.sample(T0 + i * 1_000);
   }
-  return { tick: 1, state: 'live' as const, lastError: null, symbols: ['BTCUSDT', 'SOLUSDT'], view: (_s: string, rows: number, cols: number) => engine.view(T0 + 39_000, rows, cols) };
+  return { tick: 1, state: 'live' as const, lastError: null, symbols: ['BTCUSDT', 'SOLUSDT'], view: (_s: string, rows: number, cols: number, spanMs?: number) => engine.view(T0 + 39_000, rows, cols, spanMs) };
 }
 
 test('the liquidity screen fills the terminal exactly at every size and shows the derived reading', () => {
   for (const [w, h] of [[160, 53], [200, 60], [240, 80]] as const) {
-    const lines = renderLiquidityScreen({ feed: renderedEngineHandle(), symbols: ['BTCUSDT', 'SOLUSDT'], selectedSymbol: 'SOLUSDT', showLadder: false, time: '06:00:39', totalWidth: w, totalHeight: h });
+    const lines = renderLiquidityScreen({ feed: renderedEngineHandle(), symbols: ['BTCUSDT', 'SOLUSDT'], selectedSymbol: 'SOLUSDT', showLadder: false, spanMs: 120_000, time: '06:00:39', totalWidth: w, totalHeight: h });
     assert.equal(lines.length, h - 1, `${w}x${h}`);
     for (const line of lines) assert.equal(stringWidth(strip(line)), w, `${w}x${h}: ${strip(line)}`);
     const text = lines.map(strip).join('\n');
-    for (const label of ['LIQUIDITY PRESSURE FIELD', 'ORDER-FLOW PHASE', 'DISPLAYED DEPTH', 'AGGRESSOR FLOW', 'EXECUTION FRICTION', 'MICRO EVIDENCE', 'LIQUIDITY EVENTS', 'BOOK LIVE', '━']) {
+    for (const label of ['LIQUIDITY PRESSURE FIELD', 'ORDER FLOW', 'OFI/depth', 'DISPLAYED DEPTH', 'AGGRESSOR FLOW', 'EXECUTION FRICTION', 'MICRO BIAS', 'LIQUIDITY EVENTS', 'BOOK LIVE', '━']) {
       assert.ok(text.includes(label), `${label} missing at ${w}x${h}`);
     }
   }
-  const ladder = renderLiquidityScreen({ feed: renderedEngineHandle(), symbols: ['SOLUSDT'], selectedSymbol: 'SOLUSDT', showLadder: true, time: '', totalWidth: 160, totalHeight: 53 }).map(strip).join('\n');
+  const ladder = renderLiquidityScreen({ feed: renderedEngineHandle(), symbols: ['SOLUSDT'], selectedSymbol: 'SOLUSDT', showLadder: true, spanMs: 120_000, time: '', totalWidth: 160, totalHeight: 53 }).map(strip).join('\n');
   assert.match(ladder, /LADDER/);
   assert.match(ladder, /100\.02/);
 });
@@ -340,10 +340,11 @@ test('the liquidity screen fills the terminal exactly at every size and shows th
 test('the screen withholds the field while the book syncs, and says when the feed is down or off', () => {
   const engine = new MicrostructureEngine('SOLUSDT');
   engine.invalidate('initial sync');
-  const syncing = { tick: 0, state: 'live' as const, lastError: null, symbols: ['SOLUSDT'], view: (_s: string, r: number, c: number) => engine.view(T0, r, c) };
-  const text = (feed: any) => renderLiquidityScreen({ feed, symbols: ['SOLUSDT'], selectedSymbol: 'SOLUSDT', showLadder: false, time: '', totalWidth: 160, totalHeight: 53 }).map(strip).join('\n');
+  const syncing = { tick: 0, state: 'live' as const, lastError: null, symbols: ['SOLUSDT'], view: (_s: string, r: number, c: number, span?: number) => engine.view(T0, r, c, span) };
+  const text = (feed: any) => renderLiquidityScreen({ feed, symbols: ['SOLUSDT'], selectedSymbol: 'SOLUSDT', showLadder: false, spanMs: 120_000, time: '', totalWidth: 160, totalHeight: 53 }).map(strip).join('\n');
   assert.match(text(syncing), /field withheld — book syncing: initial sync/);
-  assert.match(text(syncing), /MICRO EVIDENCE +INVALID/);
+  assert.match(text(syncing), /MICRO BIAS +NEUTRAL/);
+  assert.match(text(syncing), /this second: invalid/);
   assert.match(text({ ...syncing, state: 'down', lastError: '451' }), /FEED DOWN +451/);
   assert.match(text(undefined), /MICROSTRUCTURE OFF/);
   assert.equal(strip(gauge(0.5, 10)), 'bid  ███│     ask +0.50'); // 2.5 cells rounds up
@@ -380,7 +381,7 @@ test('below truecolor the whole field uses the density ramp, never a downsampled
   const saved = chalk.level;
   chalk.level = 1;
   try {
-    const lines = renderLiquidityScreen({ feed: renderedEngineHandle(), symbols: ['SOLUSDT'], selectedSymbol: 'SOLUSDT', showLadder: false, time: '', totalWidth: 160, totalHeight: 53 });
+    const lines = renderLiquidityScreen({ feed: renderedEngineHandle(), symbols: ['SOLUSDT'], selectedSymbol: 'SOLUSDT', showLadder: false, spanMs: 120_000, time: '', totalWidth: 160, totalHeight: 53 });
     // Each body line is │ field │ side panel │; keep only the field column
     const field = lines.slice(5, 20).map((l) => l.split('\x1b[36m│')[1] ?? '').join('');
     assert.ok(!/\x1b\[4[0-7]m/.test(field) && !/\x1b\[48;/.test(field), 'no background colours in the field');

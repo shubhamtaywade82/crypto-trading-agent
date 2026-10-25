@@ -28,8 +28,11 @@ A dedicated, real-time autonomous trading system powered by local **`openbmb/min
 
 `Tab` cycles the cockpit → MTF → **LIQUIDITY**. The liquidity view replaces a bid/ask ladder with what the book and the
 tape are doing:
-- a time × price liquidity pressure field (depth heat, mid path, trade pulses);
-- the order-flow phase (initiative vs absorbed);
+- a time × price liquidity pressure field over 2m / 5m / 30m / 2h (depth heat time-averaged for persistence, mid
+  path, trade pulses);
+- order flow over 5s / 30s / 2m / 5m side by side (trade delta, top-of-book OFI, price response, phase);
+- a persisted micro bias (10 s confirmation, 30 s release, cleared at once on bad data) read against closed
+  15m / 1h / 4h context;
 - displayed-depth imbalance and CVD;
 - execution friction for your order size;
 - wall events (WALL / ABSORB / EATEN / PULLED).

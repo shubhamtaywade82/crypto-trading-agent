@@ -3,6 +3,7 @@
 `Tab` cycles the cockpit views: **cockpit → MTF → LIQUIDITY**. In the liquidity view:
 
 - `↑` / `↓` select the symbol;
+- `w` cycles the field span (2m / **5m** / 30m / 2h);
 - `d` toggles the raw ladder, kept only as a diagnostic drill-down.
 
 The view shows what the order book and the tape are *doing*. You don't have to rebuild that state from 100 price levels.
@@ -10,19 +11,48 @@ The view shows what the order book and the tape are *doing*. You don't have to r
 ![Liquidity view, simulated SOLUSDT data](images/liquidity-view-simulated.png)
 
 *The screenshot uses simulated data: price drifts into a 101.40 bid wall, sellers hit it and it holds (ABSORB), then
-buyers lift price. It is not live market data.*
+buyers lift price and the micro bias confirms LONG. The 5m column still shows the earlier selling into the wall. It is
+not live market data.*
+
+## Time horizons
+
+Data is processed at stream cadence, while every opinion has its own, slower horizon:
+
+| Layer | Horizon | Updates |
+| --- | --- | --- |
+| Book, spread, friction | live (100 ms depth diffs) | the entry gate reads it at order time; the screen samples it once a second |
+| Order flow | rolling 5s · 30s · 2m · 5m, side by side | every second; a window longer than the unbroken live stretch is marked `*` |
+| Pressure field | 2m / 5m / 30m / 2h (`w`) | 1 s columns (kept 5 m), 10 s columns (30 m), 60 s columns (2 h). Wider columns hold the time-averaged depth, so the shade shows persistence |
+| Micro bias | persisted state | changes only by its confirmation rules (below) |
+| Context | 15m / 1h / 4h closed candles | from the MarketState; never from the forming candle |
+
+Risk is not delayed by any of this. The friction gate and the book-integrity checks act on the live book, and a book
+that stops being live clears the bias at once.
 
 ## What each panel answers
 
 | Panel | Question | Built from |
 | --- | --- | --- |
 | **Liquidity pressure field** (left) | Where is liquidity, and is price moving through it? | Time × price grid, one column per second. **Background:** displayed depth, green for bids and red for asks, on a log scale from the window's median to its 99th percentile, so walls stand out at any liquidity regime. **Overlays:** `━` is the mid path; `●`/`•` are executed aggressor volume (green buy, red sell); `·` is a cell never measured. |
-| **Order-flow phase** | What are aggressors doing to price? | 30 s signed notional delta vs 30 s mid change. The four quadrants are initiative buying, buying absorbed, initiative selling and selling absorbed. Drift, balanced and thin are reported in words. |
+| **Order flow** (table) | What are aggressors doing to price, now and over the backdrop? | One column per window (5s / 30s / 2m / 5m). **Trade Δ:** signed aggressor notional. **OFI/depth:** top-of-book order-flow imbalance (Cont–Kukanov–Stoikov), which counts limit adds and cancels, normalized by the average touch depth. **Price:** mid change in bp. **Phase:** `BUY↑` initiative buying, `BUY=` buying absorbed, `SELL↓`, `SELL=`, drift, balanced, thin. The price-move threshold scales with √window. A 5s burst against a 2m/5m backdrop reads as exactly that. |
 | **Displayed depth** | How is resting size skewed? | Bid/ask quantity imbalance within ±10 and ±25 bps. It is labelled cancellable, because displayed depth costs nothing to pull. |
 | **Aggressor flow** | Who is crossing the spread? | 30 s buy/sell notional and a CVD sparkline. |
 | **Execution friction** | Can the planned size trade at an acceptable cost now? | Spread, plus depth-walked slippage for `MICRO_ORDER_NOTIONAL` on each side. OK / ELEVATED / BLOCK against `MICRO_MAX_SPREAD_BPS` and `MICRO_MAX_SLIP_BPS`. A book that is not live is always BLOCK. |
 | **Liquidity events** | What happened to the walls? | `WALL`: a concentration that persisted for at least 3 s, so flicker is filtered out. `ABSORB`: aggressors traded at least the wall's size into it, the wall held at 70% or more of its peak, and price stayed on its side. `EATEN`: it shrank with matching executed volume, optionally with "price through". `PULLED`: it shrank without trades, i.e. it was cancelled. |
-| **Micro evidence** | Do these line up? | SUPPORTS LONG / SUPPORTS SHORT / MIXED / NONE / INVALID. A case needs flow or absorption; depth imbalance can support a case but never make one. It is **evidence only**: not a probability, and **not wired to orders**. |
+| **Micro bias** | What does the microstructure persistently support? | LONG / SHORT / NEUTRAL, how long it has been held, any pending change with its progress (`→ LONG 6/10s`), this second's raw evidence, and the closed-candle context with a conflict flag (`1h opposes bias`). Rules below. **Not a probability and not wired to orders.** |
+
+## Micro bias rules (persistence and hysteresis)
+
+| Change | Needs |
+| --- | --- |
+| NEUTRAL → LONG | 30 s window shows initiative buying, or selling absorbed at a bid wall, **and** the 2 m trade delta ≥ +0.10. Must hold continuously for **10 s**; any gap restarts the clock. |
+| LONG held | Only the looser rule: 2 m delta > −0.10 and no initiative selling on 30 s. |
+| LONG → NEUTRAL | The hold rule failing continuously for **30 s**. |
+| LONG → SHORT | The SHORT entry rule holding continuously for 10 s. |
+| Any → NEUTRAL immediately | The book is not live (syncing, resync, stale). |
+
+SHORT mirrors LONG. Entry is stricter than hold, so the state does not flicker when one metric crosses zero. These
+thresholds are starting points. Record readings and test them before giving the bias any role in trading.
 
 ## Data integrity
 
@@ -92,3 +122,6 @@ execution-friction verdict gates anything (above), because it measures cost, not
 | `MICRO_SAMPLE_MS` | `1000` | Sampling cadence (one field column per sample). |
 | `MICRO_RECORD` / `MICRO_RECORD_DIR` | `off` / `data/microstructure` | Reading recorder. |
 | `MICRO_ENTRY_GATE` | `on` | `on` refuses entries the book cannot absorb (fails closed), `shadow` only logs, `off` disables. |
+
+Recorded readings (`MICRO_RECORD=on`) now include every window and the bias state, so the multi-window rules can be
+tested offline against what followed.

@@ -79,7 +79,8 @@ export interface MicroFeedHandle {
   state: FeedState;
   lastError: string | null;
   symbols: string[];
-  view(symbol: string, rows: number, cols: number): MicroView | null;
+  /** `spanMs` picks the field's time span (see FIELD_SPANS_MS); omitted, one sample per column. */
+  view(symbol: string, rows: number, cols: number, spanMs?: number): MicroView | null;
 }
 
 export interface FeedDeps {
@@ -105,6 +106,8 @@ export class MicrostructureFeed {
   private readonly resyncing = new Set<string>();
   /** Last snapshot error per symbol, so a retry loop logs a failure once, not on every attempt. */
   private readonly snapshotErrors = new Map<string, string>();
+  /** Views computed since the last sample: the cockpit re-renders far more often than the analysis changes. */
+  private readonly viewCache = new Map<string, MicroView | null>();
   private timer: NodeJS.Timeout | null = null;
   private retryTimer: NodeJS.Timeout | null = null;
   private tick = 0;
@@ -142,13 +145,18 @@ export class MicrostructureFeed {
       state: this.state,
       lastError: this.lastError,
       symbols: this.symbols,
-      view: (symbol, rows, cols) => this.engines.get(symbol)?.view(this.now(), rows, cols) ?? null,
+      view: (symbol, rows, cols, spanMs) => {
+        const key = `${symbol}|${rows}|${cols}|${spanMs ?? ''}`;
+        if (!this.viewCache.has(key)) this.viewCache.set(key, this.engines.get(symbol)?.view(this.now(), rows, cols, spanMs) ?? null);
+        return this.viewCache.get(key) ?? null;
+      },
     };
   }
 
   /** One sampling pass; public so tests drive it without timers. */
   sampleAll(): void {
     const now = this.now();
+    this.viewCache.clear();
     const events: Array<{ symbol: string; event: LiquidityEvent }> = [];
     for (const [symbol, engine] of this.engines) {
       for (const event of engine.sample(now)) events.push({ symbol, event });

@@ -108,6 +108,16 @@ export class LocalOrderBook {
     return best;
   }
 
+  /** Best bid and ask with their quantities, in one pass; null unless both sides exist. */
+  top(): { bid: number; bidQty: number; ask: number; askQty: number } | null {
+    let bid: number | null = null;
+    let ask: number | null = null;
+    for (const p of this.bids.keys()) if (bid === null || p > bid) bid = p;
+    for (const p of this.asks.keys()) if (ask === null || p < ask) ask = p;
+    if (bid === null || ask === null) return null;
+    return { bid, bidQty: this.bids.get(bid) as number, ask, askQty: this.asks.get(ask) as number };
+  }
+
   mid(): number | null {
     const bid = this.bestBid();
     const ask = this.bestAsk();

@@ -5,6 +5,7 @@ import { useStore } from '../store.js';
 import { clampSelection, MIN_COLS, MIN_ROWS, renderCockpit, ResizeWarning } from './panels.js';
 import { renderMtfScreen } from './mtfPanels.js';
 import { renderLiquidityScreen } from './liquidityPanels.js';
+import { FIELD_SPANS_MS } from '../microstructure/MicrostructureEngine.js';
 import { formatLocalTime, type CurrencyMode } from './format.js';
 import { getSymbolRules, roundPrice } from '../binance/symbolRules.js';
 import { config } from '../config.js';
@@ -102,6 +103,7 @@ export default function App() {
   const [currencyMode, setCurrencyMode] = useState<CurrencyMode>(() => (Boolean(config.coindcx?.apiKey) ? 'BOTH' : 'USD'));
   const [view, setView] = useState<View>('cockpit');
   const [showLadder, setShowLadder] = useState(false);
+  const [spanIndex, setSpanIndex] = useState(1); // 5m
   const [mtfPairIndex, setMtfPairIndex] = useState(0);
   const [mtfTimeframe, setMtfTimeframe] = useState<NativeTimeframe>('15m');
 
@@ -152,6 +154,7 @@ export default function App() {
       if (key.upArrow) setMtfPairIndex((i) => Math.max(0, i - 1));
       if (key.downArrow) setMtfPairIndex((i) => Math.min(config.symbols.length - 1, i + 1));
       if (input === 'd') setShowLadder((v) => !v);
+      if (input === 'w') setSpanIndex((i) => (i + 1) % FIELD_SPANS_MS.length);
     } else if (view === 'mtf') {
       const symList = config.symbols;
       if (key.upArrow) setMtfPairIndex((i) => Math.max(0, i - 1));
@@ -181,7 +184,7 @@ export default function App() {
       pushLog({
         ts: Date.now(),
         agent: 'SYSTEM',
-        msg: 'COMMANDS: Tab/m cycle view (cockpit → MTF → liquidity) │ liquidity: ↑↓ symbol, d ladder │ ↑↓ select │ u currency (USD/INR/BOTH) │ c close pos │ x cancel all │ k kill-switch │ a advisor audit │ s stop',
+        msg: 'COMMANDS: Tab/m cycle view (cockpit → MTF → liquidity) │ liquidity: ↑↓ symbol, w span, d ladder │ ↑↓ select │ u currency (USD/INR/BOTH) │ c close pos │ x cancel all │ k kill-switch │ a advisor audit │ s stop',
         level: 'info',
       });
     }
@@ -196,7 +199,7 @@ export default function App() {
   const symbols = config.symbols;
   const selectedSymbol = symbols[Math.max(0, Math.min(mtfPairIndex, symbols.length - 1))] ?? 'BTCUSDT';
   const displayLines = view === 'liquidity'
-    ? renderLiquidityScreen({ feed: state.microstructure, symbols, selectedSymbol, showLadder, time, totalWidth: cols, totalHeight: rows })
+    ? renderLiquidityScreen({ feed: state.microstructure, symbols, selectedSymbol, showLadder, spanMs: FIELD_SPANS_MS[spanIndex], marketStates: state.marketStates, time, totalWidth: cols, totalHeight: rows })
     : view === 'cockpit'
     ? renderCockpit({ ...state, spotPrices: lerpPrices, time, localTime, selPos: selectedIndex, isSyncing, totalWidth: cols, totalHeight: rows, currencyMode })
     : renderMtfScreen({

@@ -1,7 +1,8 @@
 import chalk from 'chalk';
 import { formatPrice, formatQty } from '../binance/symbolRules.js';
 import type { LiquidityEvent } from '../microstructure/LiquidityEvents.js';
-import type { FieldCell, FieldView, FlowPhase, MicrostructureReading, MicroView } from '../microstructure/MicrostructureEngine.js';
+import type { FieldCell, FieldView, FlowPhase, MicrostructureReading, MicroView, WindowFlow } from '../microstructure/MicrostructureEngine.js';
+import type { MarketState, TrendDirection } from '../market/types.js';
 import type { MicroFeedHandle } from '../microstructure/MicrostructureFeed.js';
 import { padLine, rule } from './format.js';
 
@@ -11,6 +12,10 @@ export interface LiquidityScreenProps {
   selectedSymbol: string;
   /** Raw ladder drill-down instead of the event timeline. */
   showLadder: boolean;
+  /** Field time span (FIELD_SPANS_MS); `w` cycles it. */
+  spanMs: number;
+  /** Closed-candle market state per symbol, for the 15m / 1h / 4h context line. */
+  marketStates?: Record<string, MarketState>;
   time: string;
   totalWidth: number;
   totalHeight: number;
@@ -60,37 +65,49 @@ export function renderCell(c: FieldCell, colorLevel: number = chalk.level): stri
   return paint(' ');
 }
 
+export const spanLabel = (ms: number) => (ms >= 3_600_000 ? `${ms / 3_600_000}h` : ms >= 60_000 ? `${ms / 60_000}m` : `${Math.round(ms / 1000)}s`);
+
 function fieldLines(symbol: string, field: FieldView, width: number): string[] {
   const lines = field.cells.map((row, r) => {
     const label = formatPrice(symbol, field.rowPrices[r]).padStart(PRICE_LABEL - 2);
     const marker = r === field.midRow ? chalk.whiteBright('▶') : ' ';
-    return padLine(`${r === field.midRow ? chalk.whiteBright(label) : chalk.gray(label)}${marker} ${row.map((cell) => renderCell(cell)).join('')}`, width);
+    // A wide column repeats its depth and path; the trade pulse is drawn once, so pulse counts stay readable.
+    const cells = row.map((cell, i) => renderCell(cell) + (field.cellWidths[i] > 1 ? renderCell({ ...cell, buy: 0, sell: 0 }).repeat(field.cellWidths[i] - 1) : '')).join('');
+    return padLine(`${r === field.midRow ? chalk.whiteBright(label) : chalk.gray(label)}${marker} ${cells}`, width);
   });
-  const span = field.columnTimes.filter((t) => t !== null) as number[];
-  const seconds = span.length > 1 ? Math.round((span[span.length - 1] - span[0]) / 1000) : 0;
-  const axisWidth = field.cols;
-  const left = `◀ ${seconds}s`;
-  lines.push(padLine(`${' '.repeat(PRICE_LABEL)}${chalk.gray(left + rule('─', axisWidth - left.length - 4) + ' now')}`, width));
+  const axisWidth = field.cellWidths.reduce((a, b) => a + b, 0);
+  const left = `◀ ${spanLabel(field.spanMs)}`;
+  const right = `${spanLabel(field.resolutionMs)}/col · now`;
+  lines.push(padLine(`${' '.repeat(PRICE_LABEL)}${chalk.gray(left + ' ' + rule('─', axisWidth - left.length - right.length - 2) + ' ' + right)}`, width));
   return lines;
 }
 
-const PHASE_CELLS: Array<[FlowPhase, string]> = [['INITIATIVE_BUYING', 'BUY + PRICE UP'], ['BUY_ABSORBED', 'BUY + PRICE FLAT'], ['INITIATIVE_SELLING', 'SELL + PRICE DOWN'], ['SELL_ABSORBED', 'SELL + PRICE FLAT']];
 const PHASE_NAME: Record<FlowPhase, string> = {
   INITIATIVE_BUYING: 'initiative buying', BUY_ABSORBED: 'buying absorbed', INITIATIVE_SELLING: 'initiative selling', SELL_ABSORBED: 'selling absorbed',
   DRIFT_UP: 'drift up, no dominant flow', DRIFT_DOWN: 'drift down, no dominant flow', BALANCED: 'balanced', THIN: 'too few trades to read',
 };
+const PHASE_SHORT: Record<FlowPhase, [string, (s: string) => string]> = {
+  INITIATIVE_BUYING: ['BUY↑', chalk.green], BUY_ABSORBED: ['BUY=', chalk.yellow], INITIATIVE_SELLING: ['SELL↓', chalk.red], SELL_ABSORBED: ['SELL=', chalk.yellow],
+  DRIFT_UP: ['drift↑', chalk.gray], DRIFT_DOWN: ['drift↓', chalk.gray], BALANCED: ['bal', chalk.gray], THIN: ['thin', chalk.gray],
+};
+const COL = 8;
+const LABEL = 11;
 
-function phaseLines(r: MicrostructureReading, w: number): string[] {
-  const cell = ([phase, label]: [FlowPhase, string]) => {
-    const text = ` ${label}`.padEnd(Math.floor((w - 3) / 2));
-    if (phase !== r.phase) return chalk.gray(text);
-    return phase.startsWith('INITIATIVE_BUY') || phase === 'SELL_ABSORBED' ? chalk.black.bgGreen(text) : chalk.black.bgRed(text);
-  };
+/** One column per rolling window: short bursts read against the longer backdrop instead of replacing it. */
+function flowTableLines(r: MicrostructureReading, w: number): string[] {
+  const ws = r.windows;
+  const cell = (text: string, color: (s: string) => string = chalk.white) => color(text.padStart(COL));
+  const tone = (n: number | null) => (n === null ? chalk.gray : n > 0 ? chalk.green : n < 0 ? chalk.red : chalk.white);
+  const row = (label: string, value: (x: WindowFlow) => [string, (s: string) => string]) =>
+    padLine(` ${chalk.gray(label.padEnd(LABEL))}${ws.map((x) => { const [t, c] = value(x); return cell(t, c); }).join('')}`, w);
   return [
-    padLine(` ${head('ORDER-FLOW PHASE')} ${chalk.white(PHASE_NAME[r.phase])}`, w),
-    padLine(` ${cell(PHASE_CELLS[0])}${chalk.gray('│')}${cell(PHASE_CELLS[1])}`, w),
-    padLine(` ${cell(PHASE_CELLS[2])}${chalk.gray('│')}${cell(PHASE_CELLS[3])}`, w),
-    padLine(chalk.gray(` Δ30s ${signed(r.flow.delta30s)}  Δ5s ${signed(r.flow.delta5s)}  px ${signed(r.priceResponseBps30s, 1, 'bp')}  n ${r.flow.trades30s}`), w),
+    padLine(` ${head('ORDER FLOW')} ${chalk.gray('30s')} ${chalk.white(PHASE_NAME[r.phase])}`, w),
+    padLine(` ${' '.repeat(LABEL)}${ws.map((x) => cell(`${spanLabel(x.ms)}${x.complete ? '' : '*'}`, x.complete ? chalk.cyan : chalk.gray)).join('')}`, w),
+    row('trade Δ', (x) => [signed(x.delta), tone(x.delta)]),
+    row('OFI/depth', (x) => [signed(x.ofi, 1), tone(x.ofi)]),
+    row('price bp', (x) => [signed(x.priceBps, 1), tone(x.priceBps)]),
+    row('phase', (x) => PHASE_SHORT[x.phase]),
+    padLine(chalk.gray(` * window longer than the live stretch`), w),
   ];
 }
 
@@ -115,10 +132,10 @@ function sparkline(series: number[], cells: number): string {
 
 const usdShort = (n: number) => (n >= 1e6 ? `$${(n / 1e6).toFixed(2)}M` : n >= 1e3 ? `$${(n / 1e3).toFixed(1)}k` : `$${n.toFixed(0)}`);
 
-function flowLines(r: MicrostructureReading, cvd: number[], w: number): string[] {
+function flowLines(r: MicrostructureReading, cvd: number[], spanMs: number, w: number): string[] {
   return [
     padLine(` ${head('AGGRESSOR FLOW')} ${chalk.gray('30s')} ${chalk.green(`buy ${usdShort(r.flow.buyNotional30s)}`)} ${chalk.red(`sell ${usdShort(r.flow.sellNotional30s)}`)}`, w),
-    padLine(` ${chalk.gray('CVD')} ${sparkline(cvd, w - 6)}`, w),
+    padLine(` ${chalk.gray(`CVD ${spanLabel(spanMs).padEnd(3)}`)} ${sparkline(cvd, w - 10)}`, w),
   ];
 }
 
@@ -141,14 +158,38 @@ function frictionLines(symbol: string, r: MicrostructureReading, w: number): str
   ];
 }
 
-function evidenceLines(r: MicrostructureReading, w: number): string[] {
-  const colors: Record<MicrostructureReading['evidence'], (s: string) => string> = {
-    SUPPORTS_LONG: chalk.black.bgGreen, SUPPORTS_SHORT: chalk.white.bgRed, MIXED: chalk.black.bgYellow, NONE: chalk.black.bgWhite, INVALID: chalk.white.bgGray,
-  };
+const age = (ms: number) => (ms >= 3_600_000 ? `${Math.floor(ms / 3_600_000)}h${Math.floor((ms % 3_600_000) / 60_000)}m` : ms >= 60_000 ? `${Math.floor(ms / 60_000)}m${Math.floor((ms % 60_000) / 1000)}s` : `${Math.floor(ms / 1000)}s`);
+
+function trend4h(state: MarketState): TrendDirection {
+  const tf = state.timeframes['4h'];
+  if (!tf || tf.lastClose <= 0 || tf.ema50 === null) return 'NEUTRAL';
+  return tf.lastClose > tf.ema50 ? 'BULLISH' : tf.lastClose < tf.ema50 ? 'BEARISH' : 'NEUTRAL';
+}
+
+const trendText = (t: TrendDirection) => (t === 'BULLISH' ? chalk.green('▲') : t === 'BEARISH' ? chalk.red('▼') : chalk.gray('■'));
+
+/** Closed-candle structure the micro bias is read against. A conflict is shown, never resolved here. */
+function contextLine(r: MicrostructureReading, state: MarketState | undefined, w: number): string {
+  if (!state) return padLine(chalk.gray(' context 15m/1h/4h: waiting for closed candles'), w);
+  const h1 = state.htfStructure.trend;
+  const opposes = (r.bias.bias === 'LONG' && h1 === 'BEARISH') || (r.bias.bias === 'SHORT' && h1 === 'BULLISH');
+  return padLine(` ${chalk.gray('context')} 15m ${trendText(state.ltfStructure.trend)} 1h ${trendText(h1)} 4h ${trendText(trend4h(state))} ${chalk.gray('closed')}${opposes ? chalk.yellow(' · 1h opposes bias') : ''}`, w);
+}
+
+function biasLines(r: MicrostructureReading, state: MarketState | undefined, w: number): string[] {
+  const b = r.bias;
+  const badge = b.bias === 'LONG' ? chalk.black.bgGreen(' LONG ') : b.bias === 'SHORT' ? chalk.white.bgRed(' SHORT ') : chalk.black.bgWhite(' NEUTRAL ');
+  const held = b.since > 0 ? chalk.gray(` held ${age(Math.max(0, r.t - b.since))}`) : '';
+  const pending = b.candidate
+    ? chalk.yellow(` → ${b.candidate.bias} ${Math.min(Math.floor((r.t - b.candidate.since) / 1000), b.candidate.needMs / 1000)}/${b.candidate.needMs / 1000}s`)
+    : '';
+  const raw = r.evidence === 'INVALID' ? chalk.gray('invalid') : r.evidence === 'SUPPORTS_LONG' ? chalk.green('long') : r.evidence === 'SUPPORTS_SHORT' ? chalk.red('short') : chalk.gray(r.evidence.toLowerCase());
   return [
-    padLine(` ${head('MICRO EVIDENCE')} ${colors[r.evidence](` ${r.evidence.replace('_', ' ')} `)}`, w),
-    padLine(chalk.gray(` ${r.evidenceReasons.join(' · ') || 'nothing notable'}`), w),
-    padLine(chalk.gray.italic(' evidence only: not a probability, not wired to orders'), w),
+    padLine(` ${head('MICRO BIAS')} ${badge}${held}${pending}`, w),
+    padLine(chalk.gray(` ${b.reasons.join(' · ') || '—'}`), w),
+    padLine(` ${chalk.gray('this second:')} ${raw}${chalk.gray(r.evidenceReasons.length ? ` · ${r.evidenceReasons.join(' · ')}` : '')}`, w),
+    contextLine(r, state, w),
+    padLine(chalk.gray.italic(' confirmed 10s, released 30s · not a probability, not wired to orders'), w),
   ];
 }
 
@@ -178,11 +219,11 @@ function ladderLines(symbol: string, view: MicroView, rows: number, w: number): 
   return out;
 }
 
-function sidePanel(symbol: string, view: MicroView | null, showLadder: boolean, rows: number, w: number): string[] {
+function sidePanel(symbol: string, view: MicroView | null, showLadder: boolean, spanMs: number, state: MarketState | undefined, rows: number, w: number): string[] {
   if (!view) return [padLine(chalk.gray(' no engine for this symbol'), w)];
   const r = view.reading;
   const sep = padLine(chalk.gray(` ${rule('─', w - 2)}`), w);
-  const top = [...phaseLines(r, w), sep, ...depthLines(r, w), sep, ...flowLines(r, view.cvdSeries, w), sep, ...frictionLines(symbol, r, w), sep, ...evidenceLines(r, w), sep];
+  const top = [...biasLines(r, state, w), sep, ...flowTableLines(r, w), sep, ...depthLines(r, w), sep, ...flowLines(r, view.cvdSeries, spanMs, w), sep, ...frictionLines(symbol, r, w), sep];
   const remaining = Math.max(2, rows - top.length);
   return [...top, ...(showLadder ? ladderLines(symbol, view, remaining, w) : eventLines(symbol, r.events, remaining, w))];
 }
@@ -198,7 +239,7 @@ export function renderLiquidityScreen(p: LiquidityScreenProps): string[] {
   const height = Math.max(30, p.totalHeight) - 1;
   const leftW = width - RIGHT_WIDTH - 3;
   const bodyRows = height - 3 - 2 - 2;
-  const view = p.feed ? p.feed.view(p.selectedSymbol, bodyRows - 3 - ((bodyRows - 3) % 2 === 0 ? 1 : 0), leftW - PRICE_LABEL - 1) : null;
+  const view = p.feed ? p.feed.view(p.selectedSymbol, bodyRows - 3 - ((bodyRows - 3) % 2 === 0 ? 1 : 0), leftW - PRICE_LABEL - 1, p.spanMs) : null;
   const r = view?.reading;
 
   const chips = p.symbols.map((s) => (s === p.selectedSymbol ? chalk.black.bgCyan(` ${short(s)} `) : chalk.gray(` ${short(s)} `))).join('');
@@ -218,12 +259,12 @@ export function renderLiquidityScreen(p: LiquidityScreenProps): string[] {
     left = [padLine(` ${head('LIQUIDITY PRESSURE FIELD')}`, leftW), padLine(chalk.yellow(`  field withheld — ${why}`), leftW)];
   } else {
     left = [
-      padLine(` ${head('LIQUIDITY PRESSURE FIELD')} ${chalk.gray(`bucket ${formatPrice(p.selectedSymbol, view.field.bucketSize)} · log depth, median→p99`)}`, leftW),
+      padLine(` ${head('LIQUIDITY PRESSURE FIELD')} ${chalk.cyan(spanLabel(p.spanMs))} ${chalk.gray(`bucket ${formatPrice(p.selectedSymbol, view.field.bucketSize)} · log depth, median→p99${view.field.resolutionMs > 1_000 ? ' · time-averaged (persistence)' : ''}`)}`, leftW),
       ...fieldLines(p.selectedSymbol, view.field, leftW),
       padLine(` ${chalk.bgRgb(0, 150, 90)(' ')} ${chalk.gray('bid depth')}  ${chalk.bgRgb(190, 0, 60)(' ')} ${chalk.gray('ask depth')}  ${chalk.whiteBright('━')} ${chalk.gray('mid')}  ${chalk.greenBright('●')} ${chalk.gray('buy')}  ${chalk.redBright('●')} ${chalk.gray('sell aggressor')}  ${chalk.gray('· unknown')}`, leftW),
     ];
   }
-  const right = sidePanel(p.selectedSymbol, view, p.showLadder, bodyRows, RIGHT_WIDTH);
+  const right = sidePanel(p.selectedSymbol, view, p.showLadder, p.spanMs, p.marketStates?.[p.selectedSymbol], bodyRows, RIGHT_WIDTH);
   const body = [border('┌' + rule('─', leftW) + '┬' + rule('─', RIGHT_WIDTH) + '┐')];
   for (let i = 0; i < bodyRows; i += 1) {
     body.push(border('│') + padLine(left[i] ?? '', leftW) + border('│') + padLine(right[i] ?? '', RIGHT_WIDTH) + border('│'));
@@ -231,7 +272,7 @@ export function renderLiquidityScreen(p: LiquidityScreenProps): string[] {
   body.push(border('└' + rule('─', leftW) + '┴' + rule('─', RIGHT_WIDTH) + '┘'));
 
   const footer = [
-    padLine(chalk.gray(' Tab view │ ↑↓ symbol │ d ladder drill-down │ k kill-switch │ ? help'), width),
+    padLine(chalk.gray(` Tab view │ ↑↓ symbol │ w span (${spanLabel(p.spanMs)}) │ d ladder drill-down │ k kill-switch │ ? help`), width),
     padLine(chalk.gray(' Field and evidence are derived from the local order book and trade tape; they describe, they do not predict.'), width),
   ];
   return [...header, ...body, ...footer];

@@ -221,17 +221,12 @@ export class PaperExchangeOptionsClient extends PaperExchangeClient {
 
   /** Walks up to `maxPages` pages of recent orders for one client order id. */
   async findOptionOrder(clientOrderId: string, maxPages = 5): Promise<Raw | null> {
-    let cursor: string | null = null;
-    for (let page = 0; page < maxPages; page += 1) {
-      const path: string = cursor ? `/api/orders?limit=500&cursor=${encodeURIComponent(cursor)}` : '/api/orders?limit=500';
-      const reply: Raw[] | { data: Raw[]; next_cursor: string | null } = await this.request('GET', path);
-      const rows: Raw[] = Array.isArray(reply) ? reply : reply.data;
-      const match = rows.find((o: Raw) => o.client_order_id === clientOrderId);
-      if (match) return match;
-      cursor = Array.isArray(reply) ? null : reply.next_cursor;
-      if (!cursor) return null;
-    }
-    return null;
+    let match: Raw | undefined;
+    await this.walkPages('/api/orders', maxPages, (rows) => {
+      match = rows.find((o) => o.client_order_id === clientOrderId);
+      return match !== undefined;
+    });
+    return match ?? null;
   }
 }
 

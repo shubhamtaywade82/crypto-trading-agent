@@ -291,7 +291,8 @@ export class RemoteBroker {
     const [account, fetched] = await Promise.all([this.deps.api.getAccount(), this.deps.api.getPositions()]);
     if (account === null) throw new Error(`paper_exchange account ${this.deps.accountId} does not exist`);
     const positions = fetched.filter((p) => p.netQuantity > 0);
-    const events = this.reconciler.hasVanished(positions) ? await this.deps.api.getRiskEvents() : [];
+    const since = this.reconciler.riskEventsSince(positions);
+    const events = since === null ? [] : await this.deps.api.getRiskEvents(since);
     // The order that bumped the epoch refreshes the cache itself; applying this older snapshot would undo or misjournal it.
     if (epoch !== this.orderEpoch) return;
     // No await from here to the cache swap: reconcile journals from the previous cache, and an overlapping sync must not see it half-updated.

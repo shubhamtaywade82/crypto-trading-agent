@@ -73,7 +73,8 @@ export interface ExchangeApi {
   getPositions(): Promise<PaperExchangePosition[]>;
   submitOrder(params: SubmitOrderParams): Promise<SubmitOrderResult>;
   findOrder(clientOrderId: string): Promise<SubmitOrderResult | null>;
-  getRiskEvents(): Promise<ExchangeRiskEvent[]>;
+  /** Newest first; with `sinceMs`, paging stops once events older than it are reached. */
+  getRiskEvents(sinceMs?: number): Promise<ExchangeRiskEvent[]>;
   pushMarkPrices(prices: Record<string, number>): Promise<void>;
   pushFundingEvent(symbol: string, fundingRate: number, markPrice: number, fundingTime: number): Promise<void>;
 }
@@ -105,6 +106,16 @@ export interface PaperExchangeClientOptions {
 }
 
 type Raw = Record<string, unknown>;
+
+/** Keyset envelope of the broker's list endpoints ({ data, next_cursor }, newest first); a bare array is a pre-pagination broker build. */
+type ListReply = Raw[] | { data?: unknown; next_cursor?: unknown };
+
+/** The broker's maximum page size (Api::CursorPagination::MAX_LIMIT). */
+const PAGE_LIMIT = 500;
+/** A lost submission is recent, so 2,500 orders back is ample; an older one is reported as not found. */
+const MAX_ORDER_PAGES = 5;
+/** 10,000 events back. Hitting it returns what was read: liquidation lookups keep the newest events, which is what they need. */
+const MAX_RISK_EVENT_PAGES = 20;
 
 function toAccount(raw: Raw): PaperExchangeAccountSnapshot {
   return {
@@ -196,21 +207,33 @@ export class PaperExchangeClient implements ExchangeApi {
     return toOrderResult(raw);
   }
 
-  /** Recovers the outcome of a submission whose response was lost; the broker lists only its latest 200 orders. */
+  /** Recovers the outcome of a submission whose response was lost, searching the newest MAX_ORDER_PAGES pages. */
   async findOrder(clientOrderId: string): Promise<SubmitOrderResult | null> {
-    const orders = await this.request<Raw[]>('GET', '/api/orders');
-    const match = orders.find((o) => o.client_order_id === clientOrderId);
+    let match: Raw | undefined;
+    await this.walkPages('/api/orders', MAX_ORDER_PAGES, (rows) => {
+      match = rows.find((o) => o.client_order_id === clientOrderId);
+      return match !== undefined;
+    });
     return match ? toOrderResult(match) : null;
   }
 
-  async getRiskEvents(): Promise<ExchangeRiskEvent[]> {
-    const raw = await this.request<Raw[]>('GET', '/api/risk_events');
-    return raw.map((e) => ({
-      id: Number(e.id),
-      eventType: String(e.event_type),
-      details: (e.details ?? {}) as Record<string, unknown>,
-      createdAt: String(e.created_at),
-    }));
+  async getRiskEvents(sinceMs?: number): Promise<ExchangeRiskEvent[]> {
+    const events: ExchangeRiskEvent[] = [];
+    await this.walkPages('/api/risk_events', MAX_RISK_EVENT_PAGES, (rows) => {
+      for (const e of rows) {
+        events.push({
+          id: Number(e.id),
+          eventType: String(e.event_type),
+          details: (e.details ?? {}) as Record<string, unknown>,
+          createdAt: String(e.created_at),
+        });
+      }
+      if (sinceMs === undefined || events.length === 0) return false;
+      // Pages are newest first: once the oldest event read predates `sinceMs`, every later page does too.
+      const oldest = Date.parse(events[events.length - 1].createdAt);
+      return Number.isFinite(oldest) && oldest < sinceMs;
+    });
+    return events;
   }
 
   /** Bulk mark-price push — drives the broker's liquidation checks. Safe to call repeatedly (idempotent per symbol). */
@@ -227,6 +250,23 @@ export class PaperExchangeClient implements ExchangeApi {
       // The broker stores a datetime column; a bare epoch number would not parse and would silently disable the dedupe.
       funding_time: new Date(fundingTime).toISOString(),
     });
+  }
+
+  /**
+   * Walks a newest-first list endpoint until `visit` returns true, the last page, or `maxPages`.
+   * A reply that is neither an envelope nor an array throws VenueUnavailableError: "not found" must never be inferred from an unreadable list.
+   */
+  protected async walkPages(path: string, maxPages: number, visit: (rows: Raw[]) => boolean): Promise<void> {
+    let cursor: string | null = null;
+    for (let page = 0; page < maxPages; page += 1) {
+      const query: string = cursor === null ? `limit=${PAGE_LIMIT}` : `limit=${PAGE_LIMIT}&cursor=${encodeURIComponent(cursor)}`;
+      const reply: ListReply | undefined = await this.request<ListReply | undefined>('GET', `${path}?${query}`);
+      const rows = Array.isArray(reply) ? reply : reply?.data;
+      if (!Array.isArray(rows)) throw new VenueUnavailableError(`paper_exchange GET ${path} returned an unrecognised list body`);
+      if (visit(rows as Raw[])) return;
+      if (Array.isArray(reply) || typeof reply?.next_cursor !== 'string' || reply.next_cursor === '') return;
+      cursor = reply.next_cursor;
+    }
   }
 
   /** Retries only VenueUnavailableError. POSTs are safe to repeat because each carries a client_order_id or funding_time the broker dedupes. */

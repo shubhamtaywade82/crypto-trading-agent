@@ -2,7 +2,7 @@ import type { ExitReason } from '../types.js';
 import type { ExchangeRiskEvent, PaperExchangePosition } from './paperExchangeClient.js';
 import { entryMeta, entrySide, type OpenParams } from './remoteOrders.js';
 import {
-  closedTrade, EXTERNAL_OWNER, liquidationMarkSince, seenFrom, sideOf,
+  CLOCK_SKEW_MS, closedTrade, EXTERNAL_OWNER, liquidationMarkSince, seenFrom, sideOf,
   type LastSeen, type PositionMeta, type RemoteStore,
 } from './remoteState.js';
 
@@ -14,7 +14,7 @@ export interface ReconcileHost {
   isBusy(symbol: string): boolean;
 }
 
-// The broker lists only its latest 200 orders, so an order that looked lost may still land much later.
+// A submission whose reply was lost can land after the lookup that missed it.
 const EXPECTED_OPEN_TTL_MS = 10 * 60_000;
 
 interface ExpectedOpen {
@@ -37,10 +37,19 @@ export class RemoteReconciler {
     this.expectedOpens.delete(symbol);
   }
 
-  /** True when a sidecar position is missing from `positions`: only then is the exchange's risk-event list worth fetching. */
-  hasVanished(positions: PaperExchangePosition[]): boolean {
+  /**
+   * Epoch ms from which risk events can explain a sidecar position missing from `positions`, or null when none is missing:
+   * only then is the exchange's risk-event list worth fetching, and only back to the oldest such position's open.
+   */
+  riskEventsSince(positions: PaperExchangePosition[]): number | null {
     const open = new Set(positions.map((p) => p.symbol));
-    return Object.keys(this.host.store.metas()).some((symbol) => !open.has(symbol));
+    let since: number | null = null;
+    for (const [symbol, meta] of Object.entries(this.host.store.metas())) {
+      if (open.has(symbol)) continue;
+      const from = meta.openedAt - CLOCK_SKEW_MS;
+      since = since === null ? from : Math.min(since, from);
+    }
+    return since;
   }
 
   /** `previous` is the snapshot applied before this one; call with no await between it and the cache swap. */

@@ -168,18 +168,18 @@ test('should ignore a liquidation event older than the position and journal CLOS
   assert.equal(broker.getTrades()[0].exit, 65_000);
 });
 
-test('should fetch risk events only when a sidecar position vanished', async () => {
+test('should fetch risk events only when a sidecar position vanished, back to its open minus clock skew', async () => {
   const { fake, broker } = await ownedBtcLong();
-  let riskFetches = 0;
+  const sinceArgs: Array<number | undefined> = [];
   const original = fake.getRiskEvents.bind(fake);
-  fake.getRiskEvents = async () => { riskFetches++; return original(); };
+  fake.getRiskEvents = async (sinceMs?: number) => { sinceArgs.push(sinceMs); return original(sinceMs); };
 
   await broker.sync();
-  assert.equal(riskFetches, 0);
+  assert.deepEqual(sinceArgs, []);
 
   await closeBtcExternally(fake);
   await broker.sync();
-  assert.equal(riskFetches, 1);
+  assert.deepEqual(sinceArgs, [OWNED.openedAt - 5_000]);
 });
 
 test('should never expose or adopt zero-quantity rows', async () => {

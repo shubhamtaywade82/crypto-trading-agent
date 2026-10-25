@@ -57,7 +57,7 @@ const MAX_TRADES = 1000;
 // Mark drift below this is not worth a disk write: lastSeen only prices a close the agent never observed.
 const LAST_SEEN_MARK_DRIFT = 0.005;
 // Exchange event stamps and the agent's openedAt come from different clocks.
-const CLOCK_SKEW_MS = 5_000;
+export const CLOCK_SKEW_MS = 5_000;
 const SIDES: readonly unknown[] = ['LONG', 'SHORT'];
 
 const isRecord = (raw: unknown): raw is Record<string, unknown> => typeof raw === 'object' && raw !== null && !Array.isArray(raw);

@@ -165,29 +165,97 @@ test('the client no longer exposes server-side protection orders', () => {
   assert.equal('submitProtectionOrder' in client, false);
 });
 
-test('findOrder returns the order matching client_order_id, or null when absent', async () => {
+test('findOrder reads the broker\'s { data, next_cursor } envelope', async () => {
   const calls: Call[] = [];
-  const list = [
+  const page = { data: [
     { id: 3, client_order_id: 'other', status: 'filled' },
-    { id: 4, client_order_id: 'abc-123', status: 'filled' },
-  ];
-  const client = clientFor([{ status: 200, json: list }], calls);
+    { id: 4, client_order_id: 'abc-123', status: 'filled', filled_quantity: '0.5' },
+  ], next_cursor: null };
+  const client = clientFor([{ status: 200, json: page }], calls);
 
-  assert.deepEqual(await client.findOrder('abc-123'), { orderId: 4, status: 'filled' });
+  assert.deepEqual(await client.findOrder('abc-123'), { orderId: 4, status: 'filled', filledQuantity: 0.5 });
   assert.equal(await client.findOrder('missing'), null);
-  assert.equal(calls[0].url, 'http://localhost:3000/api/orders');
+  assert.equal(calls[0].url, 'http://localhost:3000/api/orders?limit=500');
+  assert.equal(calls.length, 2, 'a null next_cursor ends the walk after one page');
 });
 
-test('getRiskEvents maps id, event_type, details and created_at', async () => {
+test('findOrder follows next_cursor (URL-encoded) to an order beyond the first page', async () => {
   const calls: Call[] = [];
-  const client = clientFor([{ status: 200, json: [
+  const client = clientFor([
+    { status: 200, json: { data: [{ id: 1, client_order_id: 'newer', status: 'filled' }], next_cursor: 'MjAyNi0xMC0yNVQw+/=' } },
+    { status: 200, json: { data: [{ id: 2, client_order_id: 'lost-reply', status: 'filled' }], next_cursor: 'c2' } },
+  ], calls);
+
+  assert.deepEqual(await client.findOrder('lost-reply'), { orderId: 2, status: 'filled' });
+  assert.deepEqual(calls.map((c) => c.url), [
+    'http://localhost:3000/api/orders?limit=500',
+    'http://localhost:3000/api/orders?limit=500&cursor=MjAyNi0xMC0yNVQw%2B%2F%3D',
+  ]);
+});
+
+test('findOrder gives up as not found after 5 pages instead of walking the whole history', async () => {
+  const calls: Call[] = [];
+  const client = clientFor([{ status: 200, json: { data: [{ id: 1, client_order_id: 'x', status: 'filled' }], next_cursor: 'more' } }], calls);
+
+  assert.equal(await client.findOrder('ancient'), null);
+  assert.equal(calls.length, 5);
+});
+
+test('findOrder still reads a bare array from a pre-pagination broker', async () => {
+  const calls: Call[] = [];
+  const client = clientFor([{ status: 200, json: [{ id: 7, client_order_id: 'abc', status: 'filled' }] }], calls);
+
+  assert.deepEqual(await client.findOrder('abc'), { orderId: 7, status: 'filled' });
+  assert.equal(calls.length, 1);
+});
+
+test('an unreadable list body is VenueUnavailableError, never "not found"', async () => {
+  for (const json of [{ error: 'maintenance' }, { data: 'nope', next_cursor: null }, null]) {
+    const client = clientFor([{ status: 200, json, text: json === null ? '' : undefined }], []);
+    await assert.rejects(client.findOrder('abc'), VenueUnavailableError);
+    await assert.rejects(client.getRiskEvents(), VenueUnavailableError);
+  }
+});
+
+test('getRiskEvents maps id, event_type, details and created_at from the envelope', async () => {
+  const calls: Call[] = [];
+  const client = clientFor([{ status: 200, json: { data: [
     { id: 9, event_type: 'liquidation', details: { symbol: 'BTCUSDT' }, created_at: '2026-09-21T10:00:00Z' },
-  ] }], calls);
+  ], next_cursor: null } }], calls);
 
   assert.deepEqual(await client.getRiskEvents(), [
     { id: 9, eventType: 'liquidation', details: { symbol: 'BTCUSDT' }, createdAt: '2026-09-21T10:00:00Z' },
   ]);
-  assert.equal(calls[0].url, 'http://localhost:3000/api/risk_events');
+  assert.equal(calls[0].url, 'http://localhost:3000/api/risk_events?limit=500');
+});
+
+test('getRiskEvents pages back until it has read past sinceMs, and no further', async () => {
+  const calls: Call[] = [];
+  const ev = (id: number, at: string) => ({ id, event_type: 'MARGIN_CALL', details: {}, created_at: at });
+  const client = clientFor([
+    { status: 200, json: { data: [ev(5, '2026-10-25T09:00:00Z'), ev(4, '2026-10-25T08:00:00Z')], next_cursor: 'p2' } },
+    { status: 200, json: { data: [ev(3, '2026-10-25T07:00:00Z'), ev(2, '2026-10-25T05:00:00Z')], next_cursor: 'p3' } },
+    { status: 200, json: { data: [ev(1, '2026-10-25T04:00:00Z')], next_cursor: null } },
+  ], calls);
+
+  const events = await client.getRiskEvents(Date.parse('2026-10-25T06:00:00Z'));
+
+  assert.deepEqual(events.map((e) => e.id), [5, 4, 3, 2]);
+  assert.equal(calls.length, 2);
+});
+
+test('getRiskEvents without sinceMs reads every page up to the 20-page cap', async () => {
+  const calls: Call[] = [];
+  const client = clientFor([
+    { status: 200, json: { data: [{ id: 2, event_type: 'A', details: {}, created_at: '2026-10-25T09:00:00Z' }], next_cursor: 'p2' } },
+    { status: 200, json: { data: [{ id: 1, event_type: 'B', details: {}, created_at: '2026-10-25T08:00:00Z' }], next_cursor: null } },
+  ], calls);
+  assert.deepEqual((await client.getRiskEvents()).map((e) => e.id), [2, 1]);
+
+  const endless: Call[] = [];
+  const capped = clientFor([{ status: 200, json: { data: [{ id: 1, event_type: 'A', details: {}, created_at: '2026-10-25T08:00:00Z' }], next_cursor: 'again' } }], endless);
+  assert.equal((await capped.getRiskEvents()).length, 20);
+  assert.equal(endless.length, 20);
 });
 
 test('pushMarkPrices posts the raw prices map', async () => {

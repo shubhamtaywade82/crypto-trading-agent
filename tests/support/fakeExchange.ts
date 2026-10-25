@@ -104,7 +104,8 @@ export class FakeExchange implements ExchangeApi {
     return this.orders.get(clientOrderId) ?? null;
   }
 
-  async getRiskEvents(): Promise<ExchangeRiskEvent[]> {
+  /** Returns every event: like the real broker's last page, events older than `sinceMs` may be included. */
+  async getRiskEvents(_sinceMs?: number): Promise<ExchangeRiskEvent[]> {
     this.assertUp();
     return [...this.riskEvents];
   }

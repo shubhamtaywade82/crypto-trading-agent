@@ -137,6 +137,7 @@ export interface MarketPriceInfo {
   sparkline?: string;
   trend?: string;
   tickDirection?: 'UP' | 'DOWN';
+  isFlashing?: boolean;
 }
 
 export interface FundingInfo { rate: number; apr: number } // apr in % (rate × 3 × 365 × 100)

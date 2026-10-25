@@ -24,6 +24,8 @@ export function nextLerpPrice(sym: string, curr: number, target: number, tickSiz
   return roundPrice(sym, curr + clamped);
 }
 
+const FLASH_DURATION_MS = 300;
+
 export function updatePrices(
   prev: Record<string, MarketPriceInfo>,
   targets: Record<string, MarketPriceInfo>,
@@ -45,11 +47,21 @@ export function updatePrices(
       const { tickSize } = getSymbolRules(sym);
       flashes[sym] = now;
       const price = nextLerpPrice(sym, curr.price, target.price, tickSize);
-      next[sym] = { ...target, price, tickDirection: diff > 0 ? 'UP' : 'DOWN' };
+      next[sym] = { ...target, price, tickDirection: diff > 0 ? 'UP' : 'DOWN', isFlashing: true };
       changed = true;
-    } else if (curr.tickDirection && now - (flashes[sym] ?? 0) > 250) {
-      next[sym] = { ...curr, tickDirection: undefined };
-      changed = true;
+    } else {
+      const isFlashing = Boolean(curr.isFlashing && now - (flashes[sym] ?? 0) <= FLASH_DURATION_MS);
+      const tickDirection = curr.tickDirection ?? target.tickDirection;
+      if (
+        curr.isFlashing !== isFlashing ||
+        curr.tickDirection !== tickDirection ||
+        target.changePct !== curr.changePct ||
+        target.volumeQuote !== curr.volumeQuote ||
+        target.trend !== curr.trend
+      ) {
+        next[sym] = { ...target, price: curr.price, tickDirection, isFlashing };
+        changed = true;
+      }
     }
   }
   return changed ? next : null;

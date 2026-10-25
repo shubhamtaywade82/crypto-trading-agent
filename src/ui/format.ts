@@ -2,7 +2,7 @@ import chalk from 'chalk';
 import cliTruncate from 'cli-truncate';
 import stringWidth from 'string-width';
 import { formatPrice } from '../binance/symbolRules.js';
-import type { AgentState } from '../types.js';
+import type { AgentState, MarketPriceInfo } from '../types.js';
 
 // Prices and quantities use each symbol's own precision; every other figure is 2dp
 export const usd = (n: number) => n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -39,6 +39,12 @@ export const dp = (n: number, digits = 2) => (isNegative(n, digits) ? n : Math.a
 export const signedDp = (n: number, digits = 2) => `${isNegative(n, digits) ? '-' : '+'}${Math.abs(n).toFixed(digits)}`;
 export const signedUsd = (n: number) => `${isNegative(n) ? '-' : '+'}$${usd(Math.abs(n))}`;
 export const pnlColor = (n: number) => (isNegative(n) ? chalk.red : chalk.green);
+export const priceColor = (info?: MarketPriceInfo) => {
+  if (!info) return chalk.gray;
+  if (!info.tickDirection) return chalk.white;
+  if (info.isFlashing) return info.tickDirection === 'UP' ? chalk.green.bold : chalk.red.bold;
+  return info.tickDirection === 'UP' ? chalk.green : chalk.red;
+};
 export const coloredPnl = (n: number | null, mode: CurrencyMode = 'USD', fx?: number) =>
   (n === null ? chalk.gray('—') : pnlColor(n)(fmtSignedCurrency(n, mode, fx)));
 // Repeat counts come from terminal size, so they must never go negative

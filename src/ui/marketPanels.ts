@@ -3,7 +3,7 @@ import stringWidth from 'string-width';
 import { config } from '../config.js';
 import { formatPrice, formatQty } from '../binance/symbolRules.js';
 import type { AdaptiveInfo, LogEntry, MarketIntelSummary, MarketPriceInfo, Mode, Position, StrategyMetrics } from '../types.js';
-import { boxLines, dp, fmtCurrency, fmtRange, fmtSignedCurrency, fmtVol, orDash, padLine, pnlColor, rule, signedDp, signedUsd, usd, wrapTokens, type CurrencyMode } from './format.js';
+import { boxLines, dp, fmtCurrency, fmtRange, fmtSignedCurrency, fmtVol, orDash, padLine, pnlColor, priceColor, rule, signedDp, signedUsd, usd, wrapTokens, type CurrencyMode } from './format.js';
 import type { CockpitProps } from './panels.js';
 
 // Training period (100) plus ATR length (10) minus the first bar, which has no previous close
@@ -69,7 +69,7 @@ function symbolTrend(p: CockpitProps, symbol: string, info: MarketPriceInfo | un
 
 function assetCells(symbol: string, info: MarketPriceInfo | undefined, trend?: string) {
   const chgCol = !info ? chalk.gray : info.changePct < 0 ? chalk.red : chalk.green;
-  const priceCol = !info ? chalk.gray : info.tickDirection === 'UP' ? chalk.green.bold : info.tickDirection === 'DOWN' ? chalk.red.bold : chalk.white;
+  const priceCol = priceColor(info);
   return {
     name: shortName(symbol),
     priceCol,

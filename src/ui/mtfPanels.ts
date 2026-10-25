@@ -4,7 +4,7 @@ import type { Candle, MarketPriceInfo, Mode, WsStatus } from '../types.js';
 import type { MarketState, Timeframe, TrendDirection } from '../market/types.js';
 import type { NativeTimeframe } from '../market/MarketDataTypes.js';
 import { formatPrice } from '../binance/symbolRules.js';
-import { fmtVol, padLine, rule, signedDp } from './format.js';
+import { fmtVol, padLine, priceColor, rule, signedDp } from './format.js';
 
 export interface MtfScreenProps {
   symbols: string[];
@@ -88,13 +88,14 @@ function renderMtfHeader(p: MtfScreenProps, w: number): string[] {
 }
 
 function renderAnchorCard(w: number, btcState?: MarketState, btcTick?: MarketPriceInfo): string[] {
-  const price = btcTick ? `$${formatPrice('BTCUSDT', btcTick.price)}` : '—';
+  const pxStr = btcTick ? `$${formatPrice('BTCUSDT', btcTick.price)}` : '—';
+  const price = priceColor(btcTick)(pxStr);
   const chg = btcTick ? `${signedDp(btcTick.changePct)}%` : '—';
   const chgCol = btcTick && btcTick.changePct >= 0 ? chalk.green : chalk.red;
   const reg = btcState?.regime.regime ?? 'RANGE';
   const conf = calcConfluence(btcState);
 
-  const l1 = ` ${chalk.yellow.bold('ANCHOR (BTCUSDT)')}  Price: ${chalk.white.bold(price)} (${chgCol(chg)})  Regime: ${chalk.cyan.bold(reg)}  Confluence: ${conf.color(conf.score)}`;
+  const l1 = ` ${chalk.yellow.bold('ANCHOR (BTCUSDT)')}  Price: ${price} (${chgCol(chg)})  Regime: ${chalk.cyan.bold(reg)}  Confluence: ${conf.color(conf.score)}`;
   const l2 = ` 15m Structure: ${btcState?.ltfStructure.trend ?? 'NEUTRAL'} │ BOS: ${btcState?.ltfStructure.lastBreak ? btcState.ltfStructure.lastBreak.direction : 'NONE'} │ Range: ${btcState?.pricing.premium ? 'PREMIUM' : 'DISCOUNT'}`;
   const allowLong = conf.score.includes('BULLISH');
   const l3 = allowLong
@@ -114,7 +115,8 @@ function matrixRow(sym: string, p: MtfScreenProps, isSelected: boolean): string 
   const tick = p.spotPrices?.[sym] ?? p.spotPrices?.[shortName(sym)];
   const cur = isSelected ? chalk.yellow.bold('►') : ' ';
   const name = isSelected ? chalk.yellow.bold(shortName(sym).padEnd(6)) : chalk.white(shortName(sym).padEnd(6));
-  const px = (tick ? `$${formatPrice(sym, tick.price)}` : '—').padStart(11);
+  const pxStr = (tick ? `$${formatPrice(sym, tick.price)}` : '—').padStart(11);
+  const px = priceColor(tick)(pxStr);
   const chg = tick ? signedDp(tick.changePct).padStart(7) + '%' : '—'.padStart(8);
   const chgCol = tick && tick.changePct >= 0 ? chalk.green : chalk.red;
 

@@ -1,10 +1,11 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
+import chalk from 'chalk';
 import { setSymbolRules } from '../src/binance/symbolRules.js';
 import { config } from '../src/config.js';
 import stringWidth from 'string-width';
 import { useStore } from '../src/store.js';
-import { formatLocalTime } from '../src/ui/format.js';
+import { formatLocalTime, priceColor } from '../src/ui/format.js';
 import { clampSelection, MIN_COLS, MIN_ROWS, renderCockpit, type CockpitProps } from '../src/ui/panels.js';
 import { nextLerpPrice, updatePrices } from '../src/ui/App.js';
 import type { AgentId, AgentState, Position, StrategyMetrics } from '../src/types.js';
@@ -373,7 +374,7 @@ test('nextLerpPrice: smoothly interpolates price snapped to symbol precision and
   assert.equal(snapped, 65010.0);
 });
 
-test('updatePrices: sets tickDirection UP on increase, DOWN on decrease, and clears after decay', () => {
+test('updatePrices: sets tickDirection and isFlashing on price change, retaining tickDirection after decay', () => {
   const prev = { BTC: { price: 65000.0, changePct: 1.0 } };
   const targets = { BTC: { price: 65010.0, changePct: 1.0 } };
   const flashes: Record<string, number> = {};
@@ -381,11 +382,28 @@ test('updatePrices: sets tickDirection UP on increase, DOWN on decrease, and cle
   const next1 = updatePrices(prev, targets, flashes, 1000);
   assert.ok(next1);
   assert.equal(next1.BTC?.tickDirection, 'UP');
+  assert.equal(next1.BTC?.isFlashing, true);
 
-  const settledPrev = { BTC: { price: 65010.0, changePct: 1.0, tickDirection: 'UP' as const } };
-  const next2 = updatePrices(settledPrev, targets, flashes, 1300);
+  const settledPrev = { BTC: { price: 65010.0, changePct: 1.0, tickDirection: 'UP' as const, isFlashing: true } };
+  const next2 = updatePrices(settledPrev, targets, flashes, 1350);
   assert.ok(next2);
-  assert.equal(next2.BTC?.tickDirection, undefined);
+  assert.equal(next2.BTC?.tickDirection, 'UP');
+  assert.equal(next2.BTC?.isFlashing, false);
+
+  const targetsDown = { BTC: { price: 65005.0, changePct: 1.0 } };
+  const next3 = updatePrices(next2, targetsDown, flashes, 2000);
+  assert.ok(next3);
+  assert.equal(next3.BTC?.tickDirection, 'DOWN');
+  assert.equal(next3.BTC?.isFlashing, true);
+});
+
+test('priceColor: bright bold when flashing, regular green/red when resting, white when neutral', () => {
+  assert.equal(priceColor(undefined)('100'), chalk.gray('100'));
+  assert.equal(priceColor({ price: 100, changePct: 0 })('100'), chalk.white('100'));
+  assert.equal(priceColor({ price: 100, changePct: 0, tickDirection: 'UP', isFlashing: true })('100'), chalk.green.bold('100'));
+  assert.equal(priceColor({ price: 100, changePct: 0, tickDirection: 'UP', isFlashing: false })('100'), chalk.green('100'));
+  assert.equal(priceColor({ price: 100, changePct: 0, tickDirection: 'DOWN', isFlashing: true })('100'), chalk.red.bold('100'));
+  assert.equal(priceColor({ price: 100, changePct: 0, tickDirection: 'DOWN', isFlashing: false })('100'), chalk.red('100'));
 });
 
 test('currencyMode: renders USD, INR and BOTH formats in cockpit', () => {

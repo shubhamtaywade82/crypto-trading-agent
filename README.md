@@ -24,6 +24,53 @@ A dedicated, real-time autonomous trading system powered by local **`openbmb/min
 
 ---
 
+## Liquidity view
+
+`Tab` cycles the cockpit → MTF → **LIQUIDITY**. The liquidity view replaces a bid/ask ladder with what the book and the
+tape are doing:
+- a time × price liquidity pressure field over 2m / 5m / 30m / 2h (depth heat time-averaged for persistence, mid
+  path, trade pulses);
+- order flow over 5s / 30s / 2m / 5m side by side (trade delta, top-of-book OFI, price response, phase);
+- a persisted micro bias (10 s confirmation, 30 s release, cleared at once on bad data) read against closed
+  15m / 1h / 4h context;
+- displayed-depth imbalance and CVD;
+- execution friction for your order size;
+- wall events (WALL / ABSORB / EATEN / PULLED).
+
+It runs on a sequence-checked local order book from binance-sdk USD-M streams. The directional readings are display
+and recording only (`MICRO_RECORD=on`).
+
+The **execution-friction gate** (`MICRO_ENTRY_GATE=on`, the default) refuses a futures entry when the live book
+cannot take that entry's side and size within `MICRO_MAX_SPREAD_BPS` / `MICRO_MAX_SLIP_BPS`. It fails closed while the
+book is not live, journals `FRICTION_REJECTED`, and never gates exits.
+
+`npm run micro:eval` evaluates recorded readings against what price did next. It checks recording integrity, labels
+1 s to 60 s forward moves net of measured costs, applies fixed-in-code directions, and uses a chronological holdout with
+a cluster bootstrap and Holm correction.
+
+Details: [docs/LIQUIDITY_VIEW.md](docs/LIQUIDITY_VIEW.md).
+
+---
+
+## Futures + options in one cockpit
+
+`npm run dev:paper` runs the futures fleet and a long-only options desk together. The desk buys calls on an aligned
+uptrend and puts on an aligned downtrend, on Binance Options contracts. It never sells an option to open.
+
+The options venue follows `MODE`:
+
+| Command | Options venue |
+| --- | --- |
+| `dev:paper` | local options book |
+| `dev:paper` + `PAPER_EXCHANGE_URL` | paper_exchange `<account>-options` wallet |
+| `dev:live` / `dev:alert` | monitor only (no live options execution) |
+
+Options keep their own wallet, share the kill switch and the Ollama veto with futures, and appear in the POSITIONS
+column. `OPTIONS=off` turns the desk off. Details: [docs/OPTIONS_BUYING.md](docs/OPTIONS_BUYING.md). No edge has
+been established yet; backtesting on historical option prices comes next.
+
+---
+
 ## Modes
 
 | `MODE` | Backend | SL/TP/trailing exits | Per-strategy attribution |

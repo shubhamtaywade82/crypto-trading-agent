@@ -2,6 +2,7 @@ import { OllamaClient } from '@nemesis-oss/ollama-sdk';
 import { config } from '../config.js';
 import { jsonFormatFor, parseJsonLoose } from './jsonMode.js';
 import type { Position, LogEntry, VetoSnapshot } from '../types.js';
+import type { OptionVetoSnapshot } from '../options/types.js';
 
 export interface VetoVerdict {
   verdict: 'PROCEED' | 'VETO';
@@ -156,6 +157,27 @@ export class OllamaAdvisor {
     const prompt = `You review a proposed crypto futures entry. Snapshot: ${JSON.stringify(snapshot)}. ` +
       'Reply with JSON only: {"verdict":"PROCEED"|"VETO","reason":"<max 15 words>"}. ' +
       'VETO only for a concrete reason such as an overextended entry or crowded funding.';
+    try {
+      const text = await this.executeGenerate({ model: config.ollama.model, prompt, ...jsonFormatFor(config.ollama.host) });
+      return parseVerdict(text);
+    } catch (err) {
+      return { verdict: 'PROCEED', reason: `advisor error: ${(err as Error).message}` };
+    }
+  }
+
+  /**
+   * Veto for a long option entry, with the same fail policy as `veto`: offline or a transport error proceeds, an
+   * unparseable or unknown verdict vetoes. The model sees only deterministic numbers and can only refuse; it never
+   * picks the contract, the size or any price.
+   */
+  async vetoOption(snapshot: OptionVetoSnapshot): Promise<VetoVerdict> {
+    if (!this.available && Date.now() - this.lastPingAt >= PING_INTERVAL_MS) await this.ping();
+    if (!this.available) return { verdict: 'PROCEED', reason: 'advisor offline' };
+    const prompt = `You review a proposed LONG crypto option purchase (buying a ${snapshot.right === 'CE' ? 'call' : 'put'}; ` +
+      `the most it can lose is the premium). Snapshot: ${JSON.stringify(snapshot)}. ` +
+      'Reply with JSON only: {"verdict":"PROCEED"|"VETO","reason":"<max 15 words>"}. ' +
+      'VETO only for a concrete reason such as an exhausted move, expensive implied volatility versus realized, ' +
+      'or a breakeven move the trend is unlikely to cover before expiry.';
     try {
       const text = await this.executeGenerate({ model: config.ollama.model, prompt, ...jsonFormatFor(config.ollama.host) });
       return parseVerdict(text);

@@ -230,7 +230,7 @@ export class PaperExchangeClient implements ExchangeApi {
   }
 
   /** Retries only VenueUnavailableError. POSTs are safe to repeat because each carries a client_order_id or funding_time the broker dedupes. */
-  private async request<T>(method: string, path: string, body?: unknown): Promise<T> {
+  protected async request<T>(method: string, path: string, body?: unknown): Promise<T> {
     let lastFailure: VenueUnavailableError | undefined;
     for (let attempt = 0; attempt <= this.retries; attempt++) {
       if (attempt > 0) await sleep(this.backoffMs * 2 ** (attempt - 1));

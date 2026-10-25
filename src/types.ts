@@ -1,5 +1,7 @@
 import type { MarketState } from './market/types.js';
 import type { NativeTimeframe } from './market/MarketDataTypes.js';
+import type { OptionsDeskView } from './options/OptionsDesk.js';
+import type { MicroFeedHandle } from './microstructure/MicrostructureFeed.js';
 
 export type Side = 'LONG' | 'SHORT';
 export type Mode = 'paper' | 'live';
@@ -189,6 +191,10 @@ export interface AppState {
   marketStates?: Record<string, MarketState>;
   mtfCandles?: Record<string, Partial<Record<NativeTimeframe, Candle[]>>>;
   fxRate?: number;
+  /** The options book running beside futures; absent when OPTIONS=off or its configuration was refused. */
+  options?: OptionsDeskView;
+  /** Live order-book/tape engine for the LIQUIDITY view; a new handle each sample. Absent when MICROSTRUCTURE=off. */
+  microstructure?: MicroFeedHandle;
 }
 
 /** Flat, display-ready summary of per-symbol market intelligence for the cockpit. */

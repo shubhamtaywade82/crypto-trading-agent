@@ -54,6 +54,12 @@ import { featuresFromState } from '../position/features.js';
 import { PositionManagerStore } from '../position/PositionManagerStore.js';
 import { pmConfigFromEnv } from '../position/pmConfig.js';
 import { getSymbolRules } from '../binance/symbolRules.js';
+import { optionsConfigFromEnv, type OptionsConfig } from '../options/config.js';
+import { OptionsDesk } from '../options/OptionsDesk.js';
+import { BinanceClient } from '@nemesis-oss/binance-sdk';
+import { MicrostructureFeed, microConfigFromEnv, sdkMicroSource } from '../microstructure/MicrostructureFeed.js';
+import { entrySide, frictionVerdict, type FrictionGateMode } from '../microstructure/FrictionGate.js';
+import { ZodError } from 'zod';
 
 type CycleContext = MarketContext & { tickers: Record<string, MarketPriceInfo>; nextFundingTime: number };
 
@@ -104,6 +110,13 @@ export class Orchestrator extends EventEmitter {
   private liveStateError: string | null = null;
   private drawdownBreached = false;
   private timer: NodeJS.Timeout | null = null;
+  /** Long CE/PE book beside the futures fleet (src/options); null when OPTIONS=off or its configuration was refused. */
+  private optionsDesk: OptionsDesk | null = null;
+  private optionsTimer: NodeJS.Timeout | null = null;
+  /** Local order books and trade tape for the LIQUIDITY view (src/microstructure); display and recording only. */
+  private microFeed: MicrostructureFeed | null = null;
+  /** Pre-trade execution-cost gate on entries. Starts 'on' so a refused or missing configuration fails closed. */
+  private frictionGate: FrictionGateMode = 'on';
   private livePrices: Record<string, number> = {};
   private liveTickers: Record<string, MarketPriceInfo> = {};
   private stopWs: (() => void) | null = null;
@@ -175,8 +188,75 @@ export class Orchestrator extends EventEmitter {
     this.timer = setInterval(runLoop, LOOP_INTERVAL_MS);
     this.stopWs = this.binance.startRealtimeStream(config.symbols, (sym, price) => this.handleRealtimeTick(sym, price));
     this.hooks.start(this.binance);
+    this.startOptionsDesk();
+    this.startMicrostructure();
   }
-  stop() { if (this.timer) clearInterval(this.timer); this.stopWs?.(); this.stopWs = null; this.hooks.stop(); }
+  stop() { if (this.timer) clearInterval(this.timer); if (this.optionsTimer) clearInterval(this.optionsTimer); this.microFeed?.stop(); this.stopWs?.(); this.stopWs = null; this.hooks.stop(); }
+
+  /**
+   * Feeds the LIQUIDITY view: a sequence-checked local book and the aggressor tape per symbol, sampled once a second.
+   * Its directional features are display only (unvalidated; MICRO_RECORD=on records them). Its execution-friction verdict
+   * gates entries when MICRO_ENTRY_GATE is on: see processSignals.
+   */
+  private startMicrostructure(): void {
+    let micro;
+    try {
+      micro = microConfigFromEnv(process.env);
+    } catch (err) {
+      const reason = err instanceof ZodError ? err.issues.map((i) => `${i.path.join('.')}: ${i.message}`).join('; ') : errorText(err);
+      this.log('SYSTEM', `MICRO disabled, configuration refused: ${reason}. The friction gate stays on with no feed, so new entries are refused until this is fixed`, 'error');
+      return;
+    }
+    this.frictionGate = micro.entryGate;
+    if (micro.entryGate !== 'off') this.log('SYSTEM', `FRICTION gate ${micro.entryGate}: entries ${micro.entryGate === 'on' ? 'are refused' : 'would be refused (shadow)'} above ${micro.options.maxSpreadBps}bps spread or ${micro.options.maxSlipBps}bps slippage for their size, or while the order book is not live`, 'info');
+    if (!micro.enabled) return;
+    this.microFeed = new MicrostructureFeed(config.symbols, {
+      source: sdkMicroSource(new BinanceClient({ safety: { readOnly: true } })),
+      config: micro,
+      log: (level, message) => this.log('SYSTEM', `MICRO ${message}`, level),
+      onSample: (handle, events) => {
+        this.emit('state', { microstructure: handle });
+        for (const { symbol, event } of events) {
+          if (event.kind === 'ABSORPTION') this.log('SYSTEM', `MICRO ${symbol}: ${event.side} wall ${event.price} absorbed ${event.executedQty.toFixed(3)} vs ${event.peakQty.toFixed(3)} shown, held`, 'info');
+          if (event.kind === 'CONSUMED' && event.priceThrough) this.log('SYSTEM', `MICRO ${symbol}: ${event.side} wall ${event.price} consumed, price traded through`, 'info');
+        }
+      },
+    });
+    void this.microFeed.start().catch((err: unknown) => this.log('SYSTEM', `MICRO start failed: ${errorText(err)}`, 'error'));
+  }
+
+  /**
+   * Options run on their own timer so a slow option chain or a down options venue can never stall the futures loop.
+   * The venue follows MODE (see src/options/config.ts); the kill switch and the Ollama advisor are shared with futures.
+   */
+  private startOptionsDesk(): void {
+    let cfg: OptionsConfig;
+    try {
+      cfg = optionsConfigFromEnv(process.env);
+    } catch (err) {
+      const reason = err instanceof ZodError ? err.issues.map((i) => i.message).join('; ') : errorText(err);
+      this.log('SYSTEM', `OPTIONS desk disabled, configuration refused: ${reason}`, 'error');
+      return;
+    }
+    if (!cfg.enabled) {
+      this.log('SYSTEM', 'OPTIONS desk off (OPTIONS=off): futures only', 'info');
+      return;
+    }
+    const desk = new OptionsDesk({
+      config: cfg,
+      killSwitch: this.killSwitch,
+      vetoer: cfg.llmVeto ? this.advisor : null,
+      log: (level, message) => this.log('SYSTEM', `OPTIONS ${message}`, level),
+    });
+    this.optionsDesk = desk;
+    this.log('SYSTEM', `OPTIONS desk on ${cfg.venue}${cfg.venue === 'monitor' ? ' (signals only: no live options execution)' : ''} for ${cfg.underlyings.join(', ')}, every ${cfg.loopMs / 1000}s`, cfg.venue === 'monitor' ? 'warn' : 'info');
+    const run = singleFlight(async () => {
+      await desk.tick();
+      this.emit('state', { options: desk.view() });
+    });
+    void run();
+    this.optionsTimer = setInterval(run, cfg.loopMs);
+  }
   flushOnShutdown(): void { this.binance.flushPaperEngine(); }
   toggleKillSwitch(): void {
     flipKillSwitch(this.killSwitch, this.hooks, (message) => this.log('SYSTEM', message, 'warn'));
@@ -400,10 +480,25 @@ export class Orchestrator extends EventEmitter {
         this.counters.monitored += 1;
         continue;
       }
+      // Last check before the order: the freshest book, this entry's own side and size. Exits never reach this gate.
+      const friction = signal.type.startsWith('OPEN_')
+        ? frictionVerdict({ mode: this.frictionGate, source: this.microFeed, symbol: signal.symbol, side: entrySide(signal.type), notional: decision.positionSizeUsdt, now: Date.now() })
+        : null;
+      const frictionLabel = friction && `${signal.symbol} ${entrySide(signal.type)} $${decision.positionSizeUsdt.toFixed(0)}: ${friction.reason}`;
+      if (friction && !friction.allowed) {
+        this.journal.record({ ...record, status: 'FRICTION_REJECTED', rejectionReason: `friction: ${friction.reason}`, execution: { ts: Date.now(), spreadBps: friction.spreadBps, slippageBps: friction.slipBps, effectiveCostBps: null, friction: { status: friction.status, spreadBps: friction.spreadBps, slipBps: friction.slipBps } } });
+        this.log(signal.agent, `FRICTION BLOCK ${frictionLabel}`, 'warn');
+        this.counters.monitored += 1;
+        continue;
+      }
+      if (friction?.mode === 'shadow' && friction.status === 'BLOCK') this.log(signal.agent, `FRICTION (shadow) would block ${frictionLabel}`, 'info');
       const log = await this.executor.execute(signal, decision, decisionId);
       const executed: import('../decision/DecisionJournal.js').DecisionRecord = {
         ...record,
-        execution: { ts: Date.now(), spreadBps: eq.spreadBps, slippageBps: eq.estimatedSlippageBps, effectiveCostBps: eq.effectiveCostBps },
+        execution: {
+          ts: Date.now(), spreadBps: eq.spreadBps, slippageBps: eq.estimatedSlippageBps, effectiveCostBps: eq.effectiveCostBps,
+          ...(friction && friction.mode !== 'off' ? { friction: { status: friction.status, spreadBps: friction.spreadBps, slipBps: friction.slipBps } } : {}),
+        },
         ...(log.level === 'success' ? { status: 'EXECUTED' as const } : {
           status: log.level === 'warn' ? 'EXECUTION_REFUSED' as const : 'EXECUTION_FAILED' as const,
           rejectionReason: log.msg,
@@ -683,6 +778,7 @@ export class Orchestrator extends EventEmitter {
       marketStates: ctx.marketState,
       mtfCandles: this.extractRecentMtfCandles(ctx.marketDataV2),
       serverTime: Date.now(),
+      ...(this.optionsDesk ? { options: this.optionsDesk.view() } : {}),
     });
   }
 

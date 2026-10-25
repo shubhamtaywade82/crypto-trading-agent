@@ -139,7 +139,40 @@ function positionRow(pos: Position, isSelected: boolean, width: number, pnl: str
   return padLine(stringWidth(wide) <= width ? wide : ` ${cursor} ${symbol} ${type} ${pnl}`, width);
 }
 
+const OPTION_STATE_LABEL: Record<string, string> = {
+  IDLE: 'idle', SIGNAL_DETECTED: 'signal', ENTRY_PENDING: 'entry…', POSITION_OPEN: 'open', EXIT_PENDING: 'exit…', POSITION_CLOSED: 'closed',
+};
+
+/** The options book under the futures positions: one header line, then one line per underlying. Empty when the desk is off. */
+export function renderOptionsBlock(p: Pick<CockpitProps, 'options'>, width: number): string[] {
+  const desk = p.options;
+  if (!desk) return [];
+  const stateColor = desk.state === 'running' ? chalk.green : desk.state === 'down' ? chalk.red : chalk.yellow;
+  const header = ` ${chalk.cyan.bold('OPTIONS')} ${stateColor(desk.venue)}${desk.executing ? '' : chalk.yellow(' monitor')}`;
+  // A halt leads its own line so a narrow column can never truncate it away
+  const status = `   ${desk.halt ? chalk.red(`HALT ${desk.halt} `) : ''}${chalk.gray(`eq ${desk.equity === null ? '—' : fmtCurrency(desk.equity, 'USD')}`)}`;
+  const rows = desk.rows.map((r) => {
+    const base = r.underlying.replace(/USDT$/, '').padEnd(4);
+    const label = (OPTION_STATE_LABEL[r.state] ?? r.state).padEnd(7);
+    if (r.position) {
+      const right = r.position.symbol.endsWith('-C') ? chalk.green('CE') : chalk.red('PE');
+      const strike = r.position.symbol.split('-')[2];
+      return padLine(`   ${chalk.white(base)}${right} ${strike} ${chalk.white(String(r.position.qty))} @${dp(r.position.entry)} ${chalk.gray(`SL ${dp(r.position.stop)} TP ${dp(r.position.target)}`)}`, width);
+    }
+    return padLine(`   ${chalk.white(base)}${chalk.gray(label)}${chalk.gray(r.note)}`, width);
+  });
+  return [separator(width), padLine(header, width), padLine(status, width), ...rows];
+}
+
 export function renderCol3Lines(p: CockpitProps, width = 34, rowCount = 29): string[] {
+  const optionsBlock = renderOptionsBlock(p, width);
+  if (optionsBlock.length === 0) return renderFuturesPositions(p, width, rowCount);
+  // Futures keep at least half the column; the options block takes what is left and is cut from the bottom if needed.
+  const futuresRows = Math.max(Math.ceil(rowCount / 2), rowCount - optionsBlock.length);
+  return fillRows([...renderFuturesPositions(p, width, futuresRows), ...optionsBlock], width, rowCount);
+}
+
+function renderFuturesPositions(p: CockpitProps, width: number, rowCount: number): string[] {
   const mode = p.currencyMode ?? 'USD';
   const fx = p.fxRate;
   const isFull = p.positions.length <= 6 && width >= 46 && rowCount - 4 >= p.positions.length * 3;

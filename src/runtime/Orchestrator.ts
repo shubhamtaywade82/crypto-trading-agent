@@ -56,6 +56,8 @@ import { pmConfigFromEnv } from '../position/pmConfig.js';
 import { getSymbolRules } from '../binance/symbolRules.js';
 import { optionsConfigFromEnv, type OptionsConfig } from '../options/config.js';
 import { OptionsDesk } from '../options/OptionsDesk.js';
+import { BinanceClient } from '@nemesis-oss/binance-sdk';
+import { MicrostructureFeed, microConfigFromEnv, sdkMicroSource } from '../microstructure/MicrostructureFeed.js';
 import { ZodError } from 'zod';
 
 type CycleContext = MarketContext & { tickers: Record<string, MarketPriceInfo>; nextFundingTime: number };
@@ -110,6 +112,8 @@ export class Orchestrator extends EventEmitter {
   /** Long CE/PE book beside the futures fleet (src/options); null when OPTIONS=off or its configuration was refused. */
   private optionsDesk: OptionsDesk | null = null;
   private optionsTimer: NodeJS.Timeout | null = null;
+  /** Local order books and trade tape for the LIQUIDITY view (src/microstructure); display and recording only. */
+  private microFeed: MicrostructureFeed | null = null;
   private livePrices: Record<string, number> = {};
   private liveTickers: Record<string, MarketPriceInfo> = {};
   private stopWs: (() => void) | null = null;
@@ -182,8 +186,38 @@ export class Orchestrator extends EventEmitter {
     this.stopWs = this.binance.startRealtimeStream(config.symbols, (sym, price) => this.handleRealtimeTick(sym, price));
     this.hooks.start(this.binance);
     this.startOptionsDesk();
+    this.startMicrostructure();
   }
-  stop() { if (this.timer) clearInterval(this.timer); if (this.optionsTimer) clearInterval(this.optionsTimer); this.stopWs?.(); this.stopWs = null; this.hooks.stop(); }
+  stop() { if (this.timer) clearInterval(this.timer); if (this.optionsTimer) clearInterval(this.optionsTimer); this.microFeed?.stop(); this.stopWs?.(); this.stopWs = null; this.hooks.stop(); }
+
+  /**
+   * Feeds the LIQUIDITY view: a sequence-checked local book and the aggressor tape per symbol, sampled once a second.
+   * It does not gate or size orders: its features are unvalidated (MICRO_RECORD=on records them for that).
+   */
+  private startMicrostructure(): void {
+    let micro;
+    try {
+      micro = microConfigFromEnv(process.env);
+    } catch (err) {
+      const reason = err instanceof ZodError ? err.issues.map((i) => `${i.path.join('.')}: ${i.message}`).join('; ') : errorText(err);
+      this.log('SYSTEM', `MICRO disabled, configuration refused: ${reason}`, 'error');
+      return;
+    }
+    if (!micro.enabled) return;
+    this.microFeed = new MicrostructureFeed(config.symbols, {
+      source: sdkMicroSource(new BinanceClient({ safety: { readOnly: true } })),
+      config: micro,
+      log: (level, message) => this.log('SYSTEM', `MICRO ${message}`, level),
+      onSample: (handle, events) => {
+        this.emit('state', { microstructure: handle });
+        for (const { symbol, event } of events) {
+          if (event.kind === 'ABSORPTION') this.log('SYSTEM', `MICRO ${symbol}: ${event.side} wall ${event.price} absorbed ${event.executedQty.toFixed(3)} vs ${event.peakQty.toFixed(3)} shown, held`, 'info');
+          if (event.kind === 'CONSUMED' && event.priceThrough) this.log('SYSTEM', `MICRO ${symbol}: ${event.side} wall ${event.price} consumed, price traded through`, 'info');
+        }
+      },
+    });
+    void this.microFeed.start().catch((err: unknown) => this.log('SYSTEM', `MICRO start failed: ${errorText(err)}`, 'error'));
+  }
 
   /**
    * Options run on their own timer so a slow option chain or a down options venue can never stall the futures loop.

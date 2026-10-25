@@ -24,6 +24,21 @@ A dedicated, real-time autonomous trading system powered by local **`openbmb/min
 
 ---
 
+## Liquidity view
+
+`Tab` cycles the cockpit → MTF → **LIQUIDITY**. The liquidity view replaces a bid/ask ladder with what the book and the
+tape are doing:
+- a time × price liquidity pressure field (depth heat, mid path, trade pulses);
+- the order-flow phase (initiative vs absorbed);
+- displayed-depth imbalance and CVD;
+- execution friction for your order size;
+- wall events (WALL / ABSORB / EATEN / PULLED).
+
+It runs on a sequence-checked local order book from binance-sdk USD-M streams. It is display and recording only
+(`MICRO_RECORD=on`), not wired to orders. Details: [docs/LIQUIDITY_VIEW.md](docs/LIQUIDITY_VIEW.md).
+
+---
+
 ## Futures + options in one cockpit
 
 `npm run dev:paper` runs the futures fleet and a long-only options desk together. The desk buys calls on an aligned

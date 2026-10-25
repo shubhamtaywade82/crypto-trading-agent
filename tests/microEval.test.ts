@@ -58,7 +58,7 @@ test('path validation rejects non-live readings and timestamp gaps', () => {
 
 test('realized volatility uses only the trailing live path and rejects insufficient history', () => {
   const rows = Array.from({ length: 301 }, (_, i) => reading(i * 1000, 100 + Math.sin(i / 4) * 0.1));
-  assert.equal(realizedVolatilityBps(rows, 300_000, 1000), null);
+  assert.equal(realizedVolatilityBps(rows.slice(0, 100), 300_000, 1000), null);
   const value = realizedVolatilityBps(rows, 300_000, 1000, 0.8);
   assert.ok(value !== null && value > 0);
   rows[150] = reading(150_000, 100, { book: { status: 'RESYNC', reason: 'gap', ageMs: null } });

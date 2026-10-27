@@ -75,8 +75,10 @@ export interface LabelledReading {
   split: Split;
   /** Forward mid move in bps per horizon; null when no forward mid exists inside the same live segment. */
   forwardBps: Array<number | null>;
-  /** Round-trip cost in bps; null when the reading carries neither slippage nor spread. */
+  /** Same-reading round-trip estimate for cost diagnostics. */
   costBps: number | null;
+  /** Direction-aware costs use entry-side slippage and the opposite exit-side slippage. */
+  costBpsByHorizon: Array<{ long: number | null; short: number | null }>;
   /** True for the first reading after the persisted bias changed. */
   biasOnset: boolean;
   /** Realized volatility before the reading, bps per sqrt-second; null with too little history. */
@@ -211,11 +213,24 @@ export function segmentReadings(symbol: string, readings: RecordedReading[], mal
 
 // ---- labelling ---------------------------------------------------------------------------------------------------
 
-/** Round trip from mid: measured buy + sell slippage for the recorded order size, else the spread; plus two fees. */
+/** Round trip at one reading for aggregate cost diagnostics; plus two taker fees. */
 export function roundTripCostBps(r: RecordedReading, feeBps: number): number | null {
   const f = r.friction;
-  if (f && f.buySlipBps !== null && f.sellSlipBps !== null && Number.isFinite(f.buySlipBps) && Number.isFinite(f.sellSlipBps)) return f.buySlipBps + f.sellSlipBps + 2 * feeBps;
-  if (r.spreadBps !== null && Number.isFinite(r.spreadBps)) return r.spreadBps + 2 * feeBps;
+  if (f && f.buySlipBps !== null && f.sellSlipBps !== null && Number.isFinite(f.buySlipBps) && Number.isFinite(f.sellSlipBps) && f.buySlipBps >= 0 && f.sellSlipBps >= 0) return f.buySlipBps + f.sellSlipBps + 2 * feeBps;
+  if (r.spreadBps !== null && Number.isFinite(r.spreadBps) && r.spreadBps >= 0) return r.spreadBps + 2 * feeBps;
+  return null;
+}
+
+/** Cost a directional round trip using entry-side and exit-side depth-walked slippage. */
+export function directionalRoundTripCostBps(entry: RecordedReading, exit: RecordedReading, direction: 1 | -1, feeBps: number): number | null {
+  const entrySlip = direction === 1 ? entry.friction?.buySlipBps : entry.friction?.sellSlipBps;
+  const exitSlip = direction === 1 ? exit.friction?.sellSlipBps : exit.friction?.buySlipBps;
+  if (typeof entrySlip === 'number' && Number.isFinite(entrySlip) && entrySlip >= 0 &&
+      typeof exitSlip === 'number' && Number.isFinite(exitSlip) && exitSlip >= 0) return entrySlip + exitSlip + 2 * feeBps;
+  const entrySpread = entry.spreadBps;
+  const exitSpread = exit.spreadBps;
+  if (typeof entrySpread === 'number' && Number.isFinite(entrySpread) && entrySpread >= 0 &&
+      typeof exitSpread === 'number' && Number.isFinite(exitSpread) && exitSpread >= 0) return (entrySpread + exitSpread) / 2 + 2 * feeBps;
   return null;
 }
 
@@ -246,12 +261,21 @@ export function labelSegment(segment: RecordedReading[], cfg: EvalConfig, splitA
   for (let i = 0; i < segment.length; i += 1) {
     const r = segment[i];
     const onset = i > 0 && r.bias?.bias !== undefined && segment[i - 1].bias?.bias !== undefined && r.bias.bias !== segment[i - 1].bias!.bias;
+    const exitIndices: Array<number | null> = [];
     const forwardBps = cfg.horizonsMs.map((h, k) => {
       let j = Math.max(pointers[k], i + 1);
       while (j < segment.length && segment[j].t < r.t + h) j += 1;
       pointers[k] = j;
-      if (j >= segment.length || segment[j].t - (r.t + h) > cfg.toleranceMs) return null;
+      if (j >= segment.length || segment[j].t - (r.t + h) > cfg.toleranceMs) { exitIndices[k] = null; return null; }
+      // Prevent train labels from using outcomes in the holdout period.
+      if (r.t < splitAt && segment[j].t >= splitAt) { exitIndices[k] = null; return null; }
+      exitIndices[k] = j;
       return (((segment[j].mid as number) - (r.mid as number)) / (r.mid as number)) * 10_000;
+    });
+    const costBpsByHorizon = cfg.horizonsMs.map((_, k) => {
+      const j = exitIndices[k];
+      if (j === null || j === undefined) return { long: null, short: null };
+      return { long: directionalRoundTripCostBps(r, segment[j], 1, cfg.feeBps), short: directionalRoundTripCostBps(r, segment[j], -1, cfg.feeBps) };
     });
     // Stride thinning keeps onsets as well: they are rare and the least overlapping observations there are. Only
     // readings kept on the stride grid move the grid, so onsets never shift it.
@@ -259,7 +283,7 @@ export function labelSegment(segment: RecordedReading[], cfg: EvalConfig, splitA
     if (!onGrid && !onset) continue;
     if (onGrid) lastKept = r.t;
     out.push({
-      r, forwardBps, biasOnset: onset, costBps: roundTripCostBps(r, cfg.feeBps), regime: null, vol: vol[i],
+      r, forwardBps, costBpsByHorizon, biasOnset: onset, costBps: roundTripCostBps(r, cfg.feeBps), regime: null, vol: vol[i],
       split: r.t < splitAt ? 'train' : 'holdout', cluster: `${r.symbol}:${Math.floor(r.t / cfg.blockMs)}`,
     });
   }
@@ -334,9 +358,10 @@ function stats(rows: LabelledReading[], k: number, direction: 1 | -1, cfg: EvalC
   const gross: number[] = [];
   for (const l of rows) {
     const fwd = l.forwardBps[k];
-    if (fwd === null || l.costBps === null) continue;
+    const cost = direction === 1 ? l.costBpsByHorizon[k]?.long : l.costBpsByHorizon[k]?.short;
+    if (fwd === null || cost === null || cost === undefined) continue;
     gross.push(direction * fwd);
-    net.push({ value: direction * fwd - l.costBps, cluster: l.cluster });
+    net.push({ value: direction * fwd - cost, cluster: l.cluster });
   }
   return { summary: bootstrapMean(net, { iterations: cfg.iterations, seed: cfg.seed, confidence: cfg.confidence }), grossMean: mean(gross) };
 }

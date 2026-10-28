@@ -407,10 +407,10 @@ function buildDecision(input: DecisionInput): Pick<MarketBrief, 'decision' | 'de
   const priceInNoEntry = price !== null
     && noEntryZone.low !== null && noEntryZone.high !== null
     && price >= noEntryZone.low && price <= noEntryZone.high;
-  const reclaimConfirmed = price !== null && reclaim !== null && confirmed15m !== null
-    && confirmed15m > reclaim.high && price > reclaim.high;
-  const breakdownConfirmed = price !== null && immediateSupport !== null && confirmed15m !== null
-    && confirmed15m < immediateSupport.low && price < immediateSupport.low;
+  // Confirmation is the CONFIRMED 15m close clearing a mapped level — never the live price, which
+  // can wick beyond a level and return within the same forming candle.
+  const reclaimConfirmed = reclaim !== null && confirmed15m !== null && confirmed15m > reclaim.high;
+  const breakdownConfirmed = immediateSupport !== null && confirmed15m !== null && confirmed15m < immediateSupport.low;
 
   let decision: BriefDecision;
   if (price === null) {
@@ -429,10 +429,10 @@ function buildDecision(input: DecisionInput): Pick<MarketBrief, 'decision' | 'de
       if (priceInNoEntry) {
         reasons.push(`price is inside the no-entry zone between support (${fmtPrice(noEntryZone.low)}) and the reclaim zone (${fmtPrice(noEntryZone.high)}) without a confirmed breakout or breakdown`);
       }
-      if (price < noEntryZone.low && !breakdownConfirmed && confirmed15m !== null && immediateSupport) {
+      if (price < noEntryZone.low && confirmed15m !== null && confirmed15m >= noEntryZone.low) {
         reasons.push(`price has dipped below ${fmtPrice(noEntryZone.low)} on a still-forming candle, which is not confirmation`);
       }
-      if (price > noEntryZone.high && !reclaimConfirmed && confirmed15m !== null && reclaim) {
+      if (price > noEntryZone.high && confirmed15m !== null && confirmed15m <= noEntryZone.high) {
         reasons.push(`price is above ${fmtPrice(noEntryZone.high)} but the confirming 15m candle has not closed there yet`);
       }
     } else if (price !== null) {
@@ -484,13 +484,16 @@ function buildDecision(input: DecisionInput): Pick<MarketBrief, 'decision' | 'de
 
 /**
  * Assembles the full brief. The executive call is conservative by construction: a directional
- * bias requires a CONFIRMED 15m close beyond a mapped zone AND the last price on the same side;
- * everything else — including a break that only a forming candle shows — stays NO_TRADE.
+ * bias requires a CONFIRMED 15m close beyond a mapped zone; everything else — including a break
+ * that only a forming candle shows — stays NO_TRADE.
  */
 export function buildMarketBrief(
   data: BriefMarketData,
-  options: BriefBuildOptions = DEFAULT_BRIEF_BUILD_OPTIONS,
+  overrides: Partial<BriefBuildOptions> = {},
 ): MarketBrief {
+  // Partial options merge over defaults so a caller passing only `now` or `history` cannot
+  // silently disable swing detection or clustering with undefined thresholds.
+  const options: BriefBuildOptions = { ...DEFAULT_BRIEF_BUILD_OPTIONS, ...overrides };
   const price = data.ticker?.lastPrice ?? data.mark?.markPrice ?? data.candles['5m']?.forming?.last ?? data.candles['1h']?.confirmed?.at(-1)?.close ?? null;
 
   const timeframes = Object.fromEntries(

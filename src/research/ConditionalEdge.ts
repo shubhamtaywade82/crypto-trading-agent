@@ -98,13 +98,18 @@ export interface WalkForwardOptions extends BootstrapOptions {
   stepDays?: number;
   /** Minimum train observations for a cell to be eligible. */
   minN?: number;
+  /** Embargo buffer (days) after trainTo before test starts, preventing autocorrelation leakage. */
+  embargoDays?: number;
+  /** When true, requires Holm-adjusted c.significant rather than raw c.stats.ciLow > 0. */
+  requireSignificant?: boolean;
 }
 
 export interface Fold {
   trainFrom: number;
   trainTo: number;
+  testFrom: number;
   testTo: number;
-  /** Cells whose train-window bootstrap lower bound was above zero. */
+  /** Cells selected on the training window. */
   selected: string[];
   testN: number;
   testMeanR: number | null;
@@ -124,15 +129,15 @@ const DAY = 86_400_000;
 const meanOf = (xs: readonly Observation[]): number | null => (xs.length > 0 ? xs.reduce((s, o) => s + o.netR, 0) / xs.length : null);
 
 /**
- * Rolling walk-forward selection. For each fold: pick cells with n >= minN and a bootstrap lower bound > 0 using only
- * decisions made in [trainFrom, trainTo) whose outcome closed before trainTo (no outcome from the future leaks in), then
- * collect every test-window decision in [trainTo, testTo) that falls in a selected cell. Test windows never overlap when
- * stepDays >= testDays, so no test trade is counted twice.
+ * Rolling walk-forward selection with optional embargo and Holm-selection gating.
+ * Purely past-only: decisions made in [trainFrom, trainTo) must have closed before trainTo.
+ * The test window starts at trainTo + embargoDays to prevent leakage across autoregressive features.
  */
 export function walkForward(obs: readonly Observation[], options: WalkForwardOptions): WalkForwardReport {
   const { trainDays, testDays } = options;
   const stepDays = options.stepDays ?? testDays;
   const minN = options.minN ?? 30;
+  const embargoMs = (options.embargoDays ?? 0) * DAY;
   if (!(trainDays > 0 && testDays > 0 && stepDays > 0)) throw new Error('trainDays, testDays and stepDays must be positive');
   const folds: Fold[] = [];
   const oos: Observation[] = [];
@@ -143,16 +148,32 @@ export function walkForward(obs: readonly Observation[], options: WalkForwardOpt
   const last = obs[obs.length - 1].t;
   for (let trainFrom = first; trainFrom + trainDays * DAY <= last; trainFrom += stepDays * DAY) {
     const trainTo = trainFrom + trainDays * DAY;
-    const testTo = trainTo + testDays * DAY;
+    const testFrom = trainTo + embargoMs;
+    const testTo = testFrom + testDays * DAY;
+    if (testTo > last + DAY) break;
+
     const train = obs.filter((o) => o.t >= trainFrom && o.closedAt < trainTo);
     const report = conditionalMatrix(train, { ...options, minN });
-    const selected = report.cells.filter((c) => c.stats !== null && c.stats.ciLow > 0).map((c) => c.key);
+    const selected = report.cells
+      .filter((c) => c.stats !== null && (options.requireSignificant ? c.significant : c.stats.ciLow > 0))
+      .map((c) => c.key);
+
     const chosen = new Set(selected);
-    const test = obs.filter((o) => o.t >= trainTo && o.t < testTo);
+    const test = obs.filter((o) => o.t >= testFrom && o.t < testTo);
     const picked = test.filter((o) => chosen.has(o.key));
     oos.push(...picked);
     baseline.push(...test);
-    folds.push({ trainFrom, trainTo, testTo, selected, testN: picked.length, testMeanR: meanOf(picked), baselineN: test.length, baselineMeanR: meanOf(test) });
+    folds.push({
+      trainFrom,
+      trainTo,
+      testFrom,
+      testTo,
+      selected,
+      testN: picked.length,
+      testMeanR: meanOf(picked),
+      baselineN: test.length,
+      baselineMeanR: meanOf(test),
+    });
   }
   return { folds, outOfSample: summarize(oos, options), baseline: summarize(baseline, options) };
 }

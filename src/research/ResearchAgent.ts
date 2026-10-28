@@ -25,6 +25,7 @@ import type { ResearchEventBus } from './Events.js';
 import type { ExperimentMemory } from './ExperimentMemory.js';
 import { formatSearchResults } from './ExperimentMemory.js';
 import { DEFAULT_MODEL_ROUTER_CONFIG, FixedModelRouter, ModelRouter, type ModelChoice, type ModelRouterConfig } from './ModelRouter.js';
+import { anonymizeForResearch } from './HypothesisRegistry.js';
 
 /** A natural-language hypothesis + the parameter mutation it implies. */
 export interface Hypothesis {
@@ -297,9 +298,12 @@ export class ResearchAgent {
     return this.filterAlreadyTried(fallback, priorExperiments);
   }
 
-  /** Build the LLM prompt. Includes diagnostics and (when available) prior experiments on similar cells. */
+  /** Build the LLM prompt. Includes anonymized diagnostics and prior experiments on similar cells. */
   private buildPrompt(diagnostics: ResearchDiagnostics, priorExperiments: Awaited<ReturnType<ExperimentMemory['search']>>): string {
-    const base = LLM_PROMPT_PREFIX + renderDiagnostics(diagnostics);
+    const rendered = renderDiagnostics(diagnostics);
+    const symbols = diagnostics.lastExperiment?.perSymbol.map((s) => s.key) ?? [];
+    const { anonymizedText } = anonymizeForResearch({ symbols, diagnostics: rendered });
+    const base = LLM_PROMPT_PREFIX + anonymizedText;
     if (priorExperiments.length === 0) return base;
     return base + '\n\n## Prior experiments on similar cells (DO NOT re-propose these)\n' + formatSearchResults(priorExperiments);
   }

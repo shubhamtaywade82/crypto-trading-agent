@@ -1,6 +1,9 @@
+import { escapeHtml, toTelegramPayload, type FormattedMessage } from '@nemesis-oss/tg-format';
 import { SEVERITY_RANK, type AlertEvent } from './alerts.js';
 
+export { escapeHtml };
 export type TelegramChannel = 'alert' | 'trading';
+export type TelegramContent = string | FormattedMessage;
 
 export interface TelegramOptions {
   readonly channel?: TelegramChannel;
@@ -32,9 +35,6 @@ const TOKEN_KEYS: Readonly<Record<TelegramChannel, readonly string[]>> = {
   alert: ['TELEGRAM_ALERTBOT_BOT_TOKEN', 'TELEGRAM_BOT_TOKEN'],
 };
 
-export const escapeHtml = (text: string): string =>
-  text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-
 /** True when a chat id and at least one bot token are present. */
 export const telegramConfigured = (env: Readonly<Record<string, string | undefined>> = process.env): boolean =>
   Boolean(firstValue(env, ['TELEGRAM_CHAT_ID']) && (firstValue(env, TOKEN_KEYS.alert) || firstValue(env, TOKEN_KEYS.trading)));
@@ -50,22 +50,25 @@ const safeLog = (log: (line: string) => void, line: string): void => {
   }
 };
 
-/** Sends an HTML card; resolves false (never throws) when unconfigured, rejected, timed out or unreachable. */
-export async function sendTelegram(text: string, opts: TelegramOptions = {}, deps: TelegramDeps = {}): Promise<boolean> {
+/** Sends an HTML card or FormattedMessage; resolves false (never throws) when unconfigured, rejected, timed out or unreachable. */
+export async function sendTelegram(text: TelegramContent, opts: TelegramOptions = {}, deps: TelegramDeps = {}): Promise<boolean> {
   const env = deps.env ?? process.env;
+  const isFormatted = typeof text === 'object' && text !== null && 'entities' in text;
+  const renderedText = isFormatted ? text.toHTML() : text;
   if (deps.dryRun ?? isDryRun(env)) {
-    safeLog(deps.log ?? console.log, `${DRY_RUN_PREFIX} ${text}`);
+    safeLog(deps.log ?? console.log, `${DRY_RUN_PREFIX} ${renderedText}`);
     return true;
   }
   const token = firstValue(env, TOKEN_KEYS[opts.channel ?? 'alert']);
   const chatId = firstValue(env, ['TELEGRAM_CHAT_ID']);
   if (!token || !chatId) return false;
   try {
+    const payload = isFormatted ? toTelegramPayload(text) : { text, parse_mode: 'HTML' };
     const response = await (deps.fetchImpl ?? fetch)(`https://api.telegram.org/bot${token}/sendMessage`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        chat_id: chatId, text, parse_mode: 'HTML', disable_web_page_preview: true, disable_notification: opts.silent ?? false,
+        chat_id: chatId, ...payload, disable_web_page_preview: true, disable_notification: opts.silent ?? false,
       }),
       signal: AbortSignal.timeout(SEND_TIMEOUT_MS),
     });

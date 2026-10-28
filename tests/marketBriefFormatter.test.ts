@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { formatMarketBriefCard } from '../src/marketBrief/MarketBriefFormatter.js';
+import { formatMarketBriefCard, formatMarketBriefMessage } from '../src/marketBrief/MarketBriefFormatter.js';
 import type { MarketBrief } from '../src/marketBrief/types.js';
 
 describe('MarketBriefFormatter', () => {
@@ -59,5 +59,10 @@ describe('MarketBriefFormatter', () => {
     assert.ok(card.includes('Flow: 5m buy-dominant · 15m buy-dominant · 1h unavailable'));
     assert.ok(card.includes('Key levels: Support $96.00–$98.00 · Resistance $104.00–$106.00'));
     assert.ok(card.includes('<b>Why no trade:</b> Conflicting short-term flow; neither entry trigger is confirmed'));
+
+    const msg = formatMarketBriefMessage(brief);
+    assert.ok(msg.entities.length >= 6);
+    assert.ok(!msg.text.includes('<b>'));
+    assert.ok(msg.text.includes('Price: $105.20 · 24h: +2.50%'));
   });
 });

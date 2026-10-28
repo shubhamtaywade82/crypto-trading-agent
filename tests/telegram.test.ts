@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { mock, test } from 'node:test';
+import { fmt, bold } from '@nemesis-oss/tg-format';
 import { makeAlert, type AlertEvent } from '../src/ops/alerts.js';
 import { escapeHtml, sendAlert, sendTelegram, telegramConfigured } from '../src/ops/telegram.js';
 
@@ -56,6 +57,22 @@ test('sendTelegram posts the exact sendMessage request', async () => {
   assert.deepEqual(bodyOf(calls[0]), {
     chat_id: '-100777', text: '<b>hi</b>', parse_mode: 'HTML',
     disable_web_page_preview: true, disable_notification: false,
+  });
+});
+
+test('sendTelegram posts native entities when passed a FormattedMessage', async () => {
+  const { calls, fetchImpl } = recorder();
+  const msg = fmt`Hello ${bold('world')}!`;
+  const sent = await sendTelegram(msg, {}, { fetchImpl, env: CONFIGURED });
+
+  assert.equal(sent, true);
+  assert.equal(calls.length, 1);
+  assert.deepEqual(bodyOf(calls[0]), {
+    chat_id: '-100777',
+    text: 'Hello world!',
+    entities: [{ type: 'bold', offset: 6, length: 5 }],
+    disable_web_page_preview: true,
+    disable_notification: false,
   });
 });
 

@@ -1,3 +1,4 @@
+import { fmt, bold, type FormattedMessage } from '@nemesis-oss/tg-format';
 import type { MarketBrief, TakerFlowBucket } from './types.js';
 
 function formatFlowLabel(bucket?: TakerFlowBucket): string {
@@ -20,8 +21,8 @@ function formatUtcStamp(timestamp: number): string {
   return `${hours}:${minutes} UTC`;
 }
 
-// Produces structured, copy-paste ready HTML cards for Telegram broadcast
-export function formatMarketBriefCard(brief: MarketBrief): string {
+// Builds typed FormattedMessage with native Telegram entities using @nemesis-oss/tg-format
+export function formatMarketBriefMessage(brief: MarketBrief): FormattedMessage {
   const { symbol, generatedAt, dataQuality, market, timeframes, derivatives, decision, levels, scenarios } = brief;
 
   const lastPrice = market.lastPrice ? `$${market.lastPrice.toFixed(2)}` : 'N/A';
@@ -56,22 +57,28 @@ export function formatMarketBriefCard(brief: MarketBrief): string {
     ? decision.reasonCodes.join('; ')
     : decision.confirmedTrigger ?? 'Trigger confirmed';
 
-  return [
-    `<b>## ${symbol} · USDⓈ-M</b>`,
-    `<b>${decision.action.replace('_', ' ')}</b>`,
-    ``,
-    `Generated at ${formatUtcStamp(generatedAt)} · Data quality: <b>${dataQuality.status}</b>`,
-    `Price: <b>${lastPrice}</b> · 24h: <b>${change24h}</b>`,
-    ``,
-    `Structure: ${structureLine}`,
-    `Derivatives: Funding ${fundingText} · OI Δ ${oiDeltaText} · Global L/S ${glsText}`,
-    `Flow: ${flowLine}`,
-    ``,
-    `Key levels: Support ${formatLevelRange(levels.support)} · Resistance ${formatLevelRange(levels.resistance)}`,
-    ``,
-    `<b>Bullish condition:</b> ${scenarios.bullishCondition}`,
-    `<b>Bearish condition:</b> ${scenarios.bearishCondition}`,
-    ``,
-    `<b>${decision.action === 'NO_TRADE' ? 'Why no trade:' : 'Trade context:'}</b> ${reasonLine}`,
-  ].join('\n');
+  const actionText = decision.action.replace('_', ' ');
+  const reasonHeading = decision.action === 'NO_TRADE' ? 'Why no trade:' : 'Trade context:';
+
+  return fmt`${bold(`## ${symbol} · USDⓈ-M`)}
+${bold(actionText)}
+
+Generated at ${formatUtcStamp(generatedAt)} · Data quality: ${bold(dataQuality.status)}
+Price: ${bold(lastPrice)} · 24h: ${bold(change24h)}
+
+Structure: ${structureLine}
+Derivatives: Funding ${fundingText} · OI Δ ${oiDeltaText} · Global L/S ${glsText}
+Flow: ${flowLine}
+
+Key levels: Support ${formatLevelRange(levels.support)} · Resistance ${formatLevelRange(levels.resistance)}
+
+${bold('Bullish condition:')} ${scenarios.bullishCondition}
+${bold('Bearish condition:')} ${scenarios.bearishCondition}
+
+${bold(reasonHeading)} ${reasonLine}`;
+}
+
+// Produces structured, copy-paste ready HTML cards for Telegram broadcast
+export function formatMarketBriefCard(brief: MarketBrief): string {
+  return formatMarketBriefMessage(brief).toHTML();
 }

@@ -1,9 +1,9 @@
-import { Box, Text } from 'ink';
+import { Box, Text } from '@nemesis-oss/termina-core';
 import chalk from 'chalk';
 import type { AppState } from '../types.js';
 import { padLine, rule, runningCount, type CurrencyMode } from './format.js';
 import { renderHeaderLines, renderCol1Lines, renderCol3Lines, renderCol4Lines, renderPerfLines, renderFooterLines } from './accountPanels.js';
-import { renderCol2Lines, renderMetricsLines, renderDetailLines, renderLogLines } from './marketPanels.js';
+import { renderCol2Lines, renderMetricsLines, renderDetailLines, renderLogLines, formatAllLogLines } from './marketPanels.js';
 
 type StoreFields = 'mode' | 'equity' | 'upnl' | 'marginUsed' | 'positions' | 'agents' | 'logs' | 'spotPrices' | 'initialEquity' | 'totalPnl' | 'totalPnlPct'
   | 'successRate' | 'sharpe' | 'maxDd' | 'var95' | 'liqEvents' | 'sessionDecisions' | 'sessionExecuted' | 'sessionMonitored' | 'apiWeight' | 'wsStatus'
@@ -76,6 +76,47 @@ export function ResizeWarning({ cols, rows }: { cols: number; rows: number }) {
       <Text color="cyan">Please enlarge your terminal window.</Text>
     </Box>
   );
+}
+
+export interface CockpitSections {
+  topLines: string[];
+  logHeader: string[];
+  logLines: string[];
+  logFooter: string;
+  bottomLines: string[];
+  logRows: number;
+}
+
+export function renderCockpitSections(input: CockpitProps): CockpitSections {
+  const props = { ...input, selPos: clampSelection(input.selPos, input.positions.length) };
+  const width = Math.max(MIN_COLS, props.totalWidth ?? MIN_COLS);
+  const { c1, c2, c3, c4 } = computeColWidths(width);
+  const { tableRows, logRows } = computeRowHeights(props.totalHeight ?? MIN_ROWS);
+  const counts = { running: runningCount(props.agents), open: props.positions.length, venueName: props.venue?.name };
+
+  const columns: [string[], string[], string[], string[]] = [
+    renderCol1Lines(props, c1, tableRows), renderCol2Lines(props, c2, tableRows),
+    renderCol3Lines(props, c3, tableRows), renderCol4Lines(props, c4, tableRows),
+  ];
+  const topLines = [
+    ...renderHeaderLines(props, width),
+    ...renderCockpitTable(columns, [c1, c2, c3, c4], counts),
+    ...renderDetailLines(props.positions[props.selPos], width, props.currencyMode, props.fxRate),
+    ...renderMetricsLines(props.strategyMetrics, width, props.mode),
+  ];
+  const innerW = width - 2;
+  const logHeader = [
+    chalk.cyan('┌' + rule('─', innerW) + '┐'),
+    chalk.cyan('│') + padLine(' ' + chalk.cyan.bold('AGENT REASONING LOG (autonomous · server-side SL/TP · isolated margin)'), innerW) + chalk.cyan('│'),
+    chalk.cyan('├' + rule('─', innerW) + '┤'),
+  ];
+  const logFooter = chalk.cyan('└' + rule('─', innerW) + '┘');
+  const logLines = formatAllLogLines(props.logs, width);
+  const bottomLines = [
+    ...renderPerfLines(props, width),
+    ...renderFooterLines(props, width),
+  ];
+  return { topLines, logHeader, logLines, logFooter, bottomLines, logRows };
 }
 
 export function renderCockpit(input: CockpitProps): string[] {

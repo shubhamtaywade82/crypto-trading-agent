@@ -25,7 +25,7 @@
  * `npm run self-improve`; view the results with `npm run research:dashboard`.
  */
 
-import { Box, Text } from 'ink';
+import { Box, Text } from '@nemesis-oss/termina-core';
 import chalk from 'chalk';
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';

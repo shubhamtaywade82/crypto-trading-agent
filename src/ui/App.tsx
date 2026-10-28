@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
-import { Box, Text, useInput, useStdout } from 'ink';
+import { Box, Text, useInput, useStdout } from '@nemesis-oss/termina-core';
+import { ScrollBox } from '@nemesis-oss/termina-ui';
 import { Orchestrator } from '../runtime/Orchestrator.js';
 import { useStore } from '../store.js';
-import { clampSelection, MIN_COLS, MIN_ROWS, renderCockpit, ResizeWarning } from './panels.js';
+import { clampSelection, MIN_COLS, MIN_ROWS, renderCockpit, renderCockpitSections, ResizeWarning } from './panels.js';
 import { renderMtfScreen } from './mtfPanels.js';
 import { renderLiquidityScreen } from './liquidityPanels.js';
 import { FIELD_SPANS_MS } from '../microstructure/MicrostructureEngine.js';
@@ -87,9 +88,10 @@ function useLerpPrices(targetPrices: Record<string, MarketPriceInfo> | undefined
 
 export default function App() {
   const { stdout } = useStdout();
+  const writeStream = stdout as NodeJS.WriteStream | undefined;
   const [terminalSize, setTerminalSize] = useState(() => ({
-    cols: stdout?.columns ?? process.stdout.columns ?? 128,
-    rows: stdout?.rows ?? process.stdout.rows ?? 58,
+    cols: writeStream?.columns ?? process.stdout.columns ?? 128,
+    rows: writeStream?.rows ?? process.stdout.rows ?? 58,
   }));
 
   useEffect(() => {
@@ -210,10 +212,42 @@ export default function App() {
 
   const symbols = config.symbols;
   const selectedSymbol = symbols[Math.max(0, Math.min(mtfPairIndex, symbols.length - 1))] ?? 'BTCUSDT';
+
+  if (view === 'cockpit') {
+    const sections = renderCockpitSections({
+      ...state,
+      spotPrices: lerpPrices,
+      time,
+      localTime,
+      selPos: selectedIndex,
+      isSyncing,
+      totalWidth: cols,
+      totalHeight: rows,
+      currencyMode,
+    });
+    return (
+      <Box flexDirection="column" width={cols}>
+        {sections.topLines.map((line, idx) => (
+          <Text key={`top-${idx}`}>{line + '\x1b[K'}</Text>
+        ))}
+        {sections.logHeader.map((line, idx) => (
+          <Text key={`lh-${idx}`}>{line + '\x1b[K'}</Text>
+        ))}
+        <ScrollBox height={sections.logRows} followTail showScrollbar={false} isActive={false}>
+          {sections.logLines.map((line, idx) => (
+            <Text key={`log-${idx}`}>{line + '\x1b[K'}</Text>
+          ))}
+        </ScrollBox>
+        <Text>{sections.logFooter + '\x1b[K'}</Text>
+        {sections.bottomLines.map((line, idx) => (
+          <Text key={`bot-${idx}`}>{line + '\x1b[K'}</Text>
+        ))}
+      </Box>
+    );
+  }
+
   const displayLines = view === 'liquidity'
     ? renderLiquidityScreen({ feed: state.microstructure, symbols, selectedSymbol, showLadder, spanMs: FIELD_SPANS_MS[spanIndex], marketStates: state.marketStates, time, totalWidth: cols, totalHeight: rows })
-    : view === 'cockpit'
-    ? renderCockpit({ ...state, spotPrices: lerpPrices, time, localTime, selPos: selectedIndex, isSyncing, totalWidth: cols, totalHeight: rows, currencyMode })
     : renderMtfScreen({
         symbols,
         selectedSymbol,

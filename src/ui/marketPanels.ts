@@ -234,6 +234,17 @@ export function renderMetricsLines(m: StrategyMetrics | null, width: number = 12
   return boxLines('STRATEGY METRICS (live agent telemetry · binance-only)', rows, width);
 }
 
+export function formatAllLogLines(logs: LogEntry[], width: number = 128): string[] {
+  const innerW = width - 2;
+  const reversed = logs.slice().reverse();
+  const lines = reversed.map((entry) => {
+    const time = new Date(entry.ts).toISOString().slice(11, 19);
+    const text = ' ' + chalk.gray(time) + ' ' + chalk.yellow.bold(entry.agent.padEnd(LOG_AGENT_WIDTH)) + ' ' + chalk.gray('├─ ') + LOG_LEVEL_COLOR[entry.level](entry.msg);
+    return chalk.cyan('│') + padLine(text, innerW) + chalk.cyan('│');
+  });
+  return lines.length > 0 ? lines : [chalk.cyan('│') + padLine(' ' + chalk.gray('no agent reasoning logs yet'), innerW) + chalk.cyan('│')];
+}
+
 export function renderLogLines(logs: LogEntry[], maxRows: number = 10, width: number = 128): string[] {
   const content: string[] = [];
   for (let i = 0; i < maxRows; i++) {

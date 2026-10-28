@@ -36,7 +36,7 @@ export function renderHeaderLines(p: CockpitProps, width: number = 128): string[
   const innerW = width - 2;
   const tag = p.mode === 'paper' ? chalk.yellow.bold('◉ PAPER') : chalk.green.bold('● LIVE');
   const venueTitle = p.venue?.name?.startsWith('CoinDCX') ? '◆ COINDCX FUTURES' : '◆ BINANCE FUTURES';
-  const left = ' ' + chalk.green.bold('⬡ INKUI AGENT TRADE') + chalk.gray(' v2.4.1 ') + tag + '  ' + chalk.cyan.bold(venueTitle);
+  const left = ' ' + chalk.green.bold('⬡ NEMESIS CRYPTO AGENT') + chalk.gray(' v2.4.1 ') + tag + '  ' + chalk.cyan.bold(venueTitle);
   const timeDisplay = p.localTime && p.localTime !== `${p.time} UTC` ? `${p.time} UTC │ ${p.localTime}` : `${p.time} UTC`;
   const right = chalk.gray(`${timeDisplay} `) + chalk.green(`●${runningCount(p.agents)} ag `) + chalk.cyan('●auto');
   const midSpace = Math.max(0, innerW - stringWidth(left) - stringWidth(right));

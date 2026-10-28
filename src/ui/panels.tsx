@@ -69,7 +69,7 @@ export function renderCockpitTable(cols: [string[], string[], string[], string[]
 export function ResizeWarning({ cols, rows }: { cols: number; rows: number }) {
   return (
     <Box flexDirection="column" borderStyle="round" borderColor="yellow" padding={1} width={60}>
-      <Text color="green" bold>⬡ INKUI AGENT TRADE v2.4.1</Text>
+      <Text color="green" bold>⬡ NEMESIS CRYPTO AGENT v2.4.1</Text>
       <Text color="yellow" bold>Terminal size too small for cockpit:</Text>
       <Text color="gray">  Required: <Text color="white">{MIN_COLS} cols x {MIN_ROWS} rows minimum</Text></Text>
       <Text color="gray">  Current:  <Text color="red">{cols} cols × {rows} rows</Text></Text>

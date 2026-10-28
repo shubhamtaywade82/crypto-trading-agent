@@ -77,7 +77,7 @@ function calcRelStr(sym: string, prices?: Record<string, MarketPriceInfo>): stri
 function renderMtfHeader(p: MtfScreenProps, w: number): string[] {
   const wsTag = p.wsStatus === 'connected' ? chalk.green('● LIVE') : chalk.red('○ DOWN');
   const modeTag = chalk.yellow.bold(`[${p.mode.toUpperCase()}]`);
-  const left = ` ⬡ INKUI AGENT TRADE │ ${chalk.cyan.bold('MTF CANDLES & MARKET ALIGNMENT')} │ ${chalk.white.bold('[Tab] Cockpit')} `;
+  const left = ` ⬡ NEMESIS CRYPTO AGENT │ ${chalk.cyan.bold('MTF CANDLES & MARKET ALIGNMENT')} │ ${chalk.white.bold('[Tab] Cockpit')} `;
   const right = `${modeTag} ${wsTag} │ ${p.time} UTC ${p.localTime ? `(${p.localTime}) ` : ''}`;
   const midSpace = Math.max(1, w - 2 - stringWidth(left) - stringWidth(right));
   return [

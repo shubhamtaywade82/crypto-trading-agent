@@ -69,7 +69,9 @@ function priceSection(brief: MarketBrief): string {
 function timeframeSection(brief: MarketBrief): string {
   const rows = BRIEF_TIMEFRAMES.map((tf) => {
     const read: BriefTimeframeRead = brief.timeframes[tf];
-    const confirmed = read.confirmedCloseTime !== null ? `${fmtUtcHm(read.confirmedCloseTime)} close: $${fmtPrice(read.confirmed?.close ?? null)}` : '—';
+    // Labels use the candle's OPEN time ("03:00 close: 101.99" = the candle that opened 03:00),
+    // so a confirmed candle and the forming candle after it can never share a label.
+    const confirmed = read.confirmed ? `${fmtUtcHm(read.confirmed.openTime)} close: $${fmtPrice(read.confirmed.close)}` : '—';
     const structure = `${read.confirmedNarrative} ${read.formingNarrative}`;
     return [tf, confirmed, structure];
   });
@@ -212,6 +214,8 @@ function noTradeSection(brief: MarketBrief): string {
 
   const conditions = [
     ...(brief.noTradeReasons.length > 0 ? brief.noTradeReasons.map((reason) => `- ${reason};`) : []),
+    '- 5m/15m selling persists while the 1h/4h structure remains bullish;',
+    '- the proposed entry depends on an unclosed candle;',
     '- price breaks a level but immediately reclaims it;',
     '- market data become stale or inconsistent.',
   ];

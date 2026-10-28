@@ -193,13 +193,21 @@ function assignZoneRoles(supports: ZoneCluster[], resistances: ZoneCluster[]): B
   return out;
 }
 
+/**
+ * How many confirmed candles each timeframe contributes to the zone map. Long histories bury the
+ * map under levels from weeks ago; these windows keep it on structure the operator can still trade.
+ */
+const ZONE_LOOKBACK: Record<'15m' | '1h' | '4h', number> = { '15m': 96, '1h': 72, '4h': 42 };
+/** Levels further than this from the last price are outside the brief's operating range. */
+const ZONE_RELEVANCE_PCT = 8;
+
 function buildZones(data: BriefMarketData, price: number, options: BriefBuildOptions): BriefZone[] {
   const lows: SwingLevel[] = [];
   const highs: SwingLevel[] = [];
 
   // 5m swings are noise at this scale; zones are built from 15m/1h/4h structure.
   for (const tf of ['15m', '1h', '4h'] as const) {
-    const candles = data.candles[tf]?.confirmed ?? [];
+    const candles = (data.candles[tf]?.confirmed ?? []).slice(-ZONE_LOOKBACK[tf]);
     lows.push(...findSwings(candles, options.swingLookback, tf, 'LOW'));
     highs.push(...findSwings(candles, options.swingLookback, tf, 'HIGH'));
   }
@@ -208,8 +216,14 @@ function buildZones(data: BriefMarketData, price: number, options: BriefBuildOpt
   const low24h = data.ticker?.low24h ?? null;
   if (high24h !== null) highs.push({ price: high24h, time: data.fetchedAt, timeframe: '1h', kind: 'HIGH' });
 
-  const supports = clusterLevels(lows, options.zoneTolerancePct, price).filter((z) => z.high <= price);
-  const resistances = clusterLevels(highs, options.zoneTolerancePct, price).filter((z) => z.low >= price);
+  const relevance = (level: number) => Math.abs(level - price) / price <= ZONE_RELEVANCE_PCT / 100;
+  const relevant = (levels: SwingLevel[]) => levels.filter((l) => relevance(l.price));
+
+  // A cluster that straddles the price stays on its natural side: a swing-high band containing
+  // price is resistance until a close clears its top, and a swing-low band containing price is
+  // support until a close loses its bottom.
+  const supports = clusterLevels(relevant(lows), options.zoneTolerancePct, price).filter((z) => z.low <= price);
+  const resistances = clusterLevels(relevant(highs), options.zoneTolerancePct, price).filter((z) => z.high >= price);
 
   const zones = assignZoneRoles(supports, resistances);
 
@@ -219,7 +233,13 @@ function buildZones(data: BriefMarketData, price: number, options: BriefBuildOpt
     zones.push({ role: 'MAJOR_REFERENCE', low: low24h, high: low24h, why: 'current 24-hour low' });
   }
 
-  return zones.sort((a, b) => b.high - a.high);
+  // Brief order: supports nearest-first, then resistances nearest-first. The stable sort keeps
+  // the proximity order assignZoneRoles already established inside each role group.
+  const roleOrder: Record<BriefZone['role'], number> = {
+    IMMEDIATE_SUPPORT: 0, NEXT_SUPPORT: 1, LOWER_SUPPORT: 2, MAJOR_REFERENCE: 3,
+    RECLAIM_ZONE: 4, NEAR_TERM_RESISTANCE: 5, HIGHER_RESISTANCE: 6,
+  };
+  return zones.sort((a, b) => roleOrder[a.role] - roleOrder[b.role]);
 }
 
 function buildPositioning(data: BriefMarketData, price: number | null): BriefPositioning {
@@ -359,6 +379,7 @@ export function buildSnapshotComparisons(
 
 interface DecisionInput {
   price: number | null;
+  high24h: number | null;
   timeframes: Record<BriefTimeframe, BriefTimeframeRead>;
   positioning: BriefPositioning;
   zones: BriefZone[];
@@ -444,7 +465,8 @@ function buildDecision(input: DecisionInput): Pick<MarketBrief, 'decision' | 'de
   const summary: string[] = [];
   const htfPhrase = `The 1h and 4h structures are ${trendWord(htf)}`;
   const ltfPhrase = ltf === 'DOWN' ? 'the shorter timeframes are pulling back' : ltf === 'UP' ? 'the shorter timeframes are advancing' : 'the shorter timeframes are unresolved';
-  summary.push(`${htfPhrase}, but ${ltfPhrase}${price !== null && reclaim ? ` from the ${fmtPrice(reclaim.high)} area` : ''}.`);
+  const pullbackRef = ltf === 'DOWN' && input.high24h !== null ? ` from the $${fmtPrice(input.high24h)} high` : '';
+  summary.push(`${htfPhrase}, but ${ltfPhrase}${pullbackRef}.`);
 
   const flowPhrase = sellFlow ? 'sell-dominant' : taker5m.dominance === 'BUY' ? 'buy-dominant' : 'mixed';
   const oiPhrase = positioning.oiTrend.changePct === null ? 'unchanged across an unreported window' : oiDeclining ? 'declined' : 'risen';
@@ -482,9 +504,9 @@ export function buildMarketBrief(
 
   const positioning = buildPositioning(data, price);
   const scenarios = buildScenarios(zones, positioning.taker);
-  const history = buildSnapshotComparisons(options.history ?? [], price, positioning.openInterest, options.compareDates);
+  const history = buildSnapshotComparisons(options.history ?? [], price, positioning.openInterest, options.compareDates, options.now ?? data.fetchedAt);
 
-  const decision = buildDecision({ price, timeframes, positioning, zones, noEntryZone, dataErrors: data.errors });
+  const decision = buildDecision({ price, high24h: data.ticker?.high24h ?? null, timeframes, positioning, zones, noEntryZone, dataErrors: data.errors });
 
   const bottomLine = decision.decision === 'NO_TRADE'
     ? `Current call: NO TRADE. Wait for a confirmed reclaim above ${fmtPrice(noEntryZone.high)} or a confirmed breakdown below ${fmtPrice(noEntryZone.low)} — with follow-through — before considering a directional setup.`

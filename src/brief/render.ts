@@ -86,13 +86,19 @@ function timeframeSection(brief: MarketBrief): string {
   ].join('\n');
 }
 
+const TAKER_PERIOD_MS: Record<BriefTakerBucket['period'], number> = { '5m': 300_000, '15m': 900_000, '1h': 3_600_000 };
+
 function takerRow(bucket: BriefTakerBucket): string {
   const ratio = bucket.ratio !== null ? bucket.ratio.toFixed(4) : '—';
   const volumes = bucket.buyVol !== null && bucket.sellVol !== null
     ? `buys: ${fmtQty(bucket.buyVol)}; sells: ${fmtQty(bucket.sellVol)}`
     : 'volumes not reported';
-  const bucketTime = bucket.bucketTime !== null ? ` (bucket ending ${fmtUtcHm(bucket.bucketTime)} UTC)` : '';
-  return `${ratio} — ${volumes}${bucketTime}`;
+  // The exchange stamps a bucket with its START time; rendering the covered window keeps the
+  // misalignment between the 5m/15m/1h buckets visible instead of hiding it.
+  const window = bucket.bucketTime !== null
+    ? ` (bucket ${fmtUtcHm(bucket.bucketTime)}–${fmtUtcHm(bucket.bucketTime + TAKER_PERIOD_MS[bucket.period])} UTC)`
+    : '';
+  return `${ratio} — ${volumes}${window}`;
 }
 
 function derivativesSection(brief: MarketBrief): string {

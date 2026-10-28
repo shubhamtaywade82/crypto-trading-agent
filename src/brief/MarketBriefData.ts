@@ -89,14 +89,16 @@ export function splitKlines(raw: any[], timeframe: BriefTimeframe, now: number):
   return { confirmed, forming };
 }
 
-/** The exchange reports account ratios as percent strings; absent fields are derived from the ratio. */
+/** The exchange reports account ratios as decimals (0.7488 = 74.88%); absent fields are derived from the ratio. */
 function parseGlobalRatio(raw: any): BriefMarketData['globalRatio'] {
   const row = (raw as any[])?.at(-1);
   if (!row) return null;
 
   const ratio = asNumber(row.longShortRatio);
-  const longPct = asNumber(row.longAccount) ?? (ratio !== null ? (ratio / (1 + ratio)) * 100 : null);
-  const shortPct = asNumber(row.shortAccount) ?? (ratio !== null ? ((1 / (1 + ratio)) * 100) : null);
+  const derivedLong = ratio !== null ? (ratio / (1 + ratio)) * 100 : null;
+  const longPct = asNumber(row.longAccount) !== null ? asNumber(row.longAccount)! * 100 : derivedLong;
+  const shortPct = asNumber(row.shortAccount) !== null ? asNumber(row.shortAccount)! * 100
+    : ratio !== null ? (1 / (1 + ratio)) * 100 : null;
   if (ratio === null && longPct === null) return null;
 
   return { ratio, longPct, shortPct, timestamp: asNumber(row.timestamp) };
@@ -162,18 +164,18 @@ export async function collectBriefMarketData(
 
   const [ticker, mark, klineResults, openInterest, oiHistory, globalRatio, topPositionRatio, taker5m, taker15m, taker1h, book] =
     await Promise.all([
-      attempt('24h ticker', () => client.get24hrChangeStatistics({ symbol } as any), errors),
+      attempt('24h ticker', () => client.get24hrChangeStatistics({ symbol }), errors),
       attempt('mark price', () => client.getMarkPrice({ symbol }), errors),
       Promise.all(BRIEF_TIMEFRAMES.map((tf) =>
         attempt(`klines ${tf}`, () => client.getKlines({ symbol, interval: tf, limit: options.klineLimit }), errors),
       )),
       attempt('open interest', () => client.getOpenInterest({ symbol }), errors),
-      attempt('open interest history', () => client.getOpenInterestStatistics({ symbol, period: '1h', limit: options.oiHistoryLimit } as any), errors),
-      attempt('global long/short ratio', () => client.getGlobalLongShortAccountRatio({ symbol, period: '1h', limit: 1 } as any), errors),
-      attempt('top trader position ratio', () => client.getTopTradersLongShortPositionRatio({ symbol, period: '1h', limit: 1 } as any), errors),
-      attempt('taker flow 5m', () => client.getTakerBuySellVolume({ symbol, period: '5m', limit: 1 } as any), errors),
-      attempt('taker flow 15m', () => client.getTakerBuySellVolume({ symbol, period: '15m', limit: 1 } as any), errors),
-      attempt('taker flow 1h', () => client.getTakerBuySellVolume({ symbol, period: '1h', limit: 1 } as any), errors),
+      attempt('open interest history', () => client.getOpenInterestStatistics({ symbol, period: '1h', limit: options.oiHistoryLimit }), errors),
+      attempt('global long/short ratio', () => client.getGlobalLongShortAccountRatio({ symbol, period: '1h', limit: 1 }), errors),
+      attempt('top trader position ratio', () => client.getTopTradersLongShortPositionRatio({ symbol, period: '1h', limit: 1 }), errors),
+      attempt('taker flow 5m', () => client.getTakerBuySellVolume({ symbol, period: '5m', limit: 1 }), errors),
+      attempt('taker flow 15m', () => client.getTakerBuySellVolume({ symbol, period: '15m', limit: 1 }), errors),
+      attempt('taker flow 1h', () => client.getTakerBuySellVolume({ symbol, period: '1h', limit: 1 }), errors),
       attempt('order book', () => client.getOrderBook({ symbol, limit: options.orderBookDepth as 5 | 10 | 20 | 50 | 100 | 500 | 1000 | 5000 }), errors),
     ]);
 

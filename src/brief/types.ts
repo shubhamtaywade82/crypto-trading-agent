@@ -77,7 +77,7 @@ export interface BriefTimeframeRead {
   formingNarrative: string;
 }
 
-/** Section 3 — one published taker bucket. Timestamps matter: buckets for different periods end at different times. */
+/** Section 3 — one published taker bucket. `bucketTime` is the bucket's START; buckets for different periods cover different windows. */
 export interface BriefTakerBucket {
   period: TakerPeriod;
   ratio: number | null;

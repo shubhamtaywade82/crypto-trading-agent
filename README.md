@@ -199,6 +199,34 @@ one journal per variant). A PROMOTED variant is a research candidate only — th
 
 ---
 
+## Live market brief
+
+One-shot, read-only decision brief for a single USDⓈ-M perpetual — the operator's "SOLUSDT at
+04:24 UTC: NO TRADE, wait for confirmation" page, generated from live public endpoints:
+
+```
+npm run brief -- --symbol SOLUSDT                       # print the brief
+npm run brief -- --symbol SOLUSDT --compare 2026-10-21,2026-10-25
+npm run brief -- --symbol SOLUSDT --out data/briefs --json
+```
+
+The brief covers price and 24h statistics; multi-timeframe structure on **confirmed candles only**
+(5m/15m/1h/4h, with the still-forming candle reported separately and never treated as a signal);
+derivatives, positioning and order flow (funding, OI + hourly trend, global and top-trader
+long/short ratios, taker buckets for 5m/15m/1h each stamped with its own window); support and
+resistance zones from fractal swings on 15m/1h/4h closes; conditional bullish/bearish scenarios
+with confirmation levels and invalidations; the explicit no-entry band between support and the
+reclaim zone; and day-over-day comparison against recorded history (`data/market`, written by
+`scripts/record-market-data.ts`) — or an honest "no recorded snapshots" when none exists.
+
+The executive gate is conservative by construction: a directional bias requires a **confirmed 15m
+close** beyond a mapped zone; everything else — including a break only a forming candle shows —
+resolves to NO_TRADE with explicit reasons, and no probability is ever assigned. Missing readings
+render as "—" with the failing endpoint named; nothing is substituted. See
+[docs/market-brief.md](docs/market-brief.md) for the data sources and decision rules.
+
+---
+
 ## Decision lineage
 
 Every gated signal leaves a `DecisionRecord` in an append-only JSONL journal (`DECISIONS_PATH`, default

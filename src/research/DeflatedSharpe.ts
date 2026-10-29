@@ -11,14 +11,39 @@ export interface DeflatedSharpeInput {
   sharpeRatio: number;
   /** Number of return observations (trades or bars). */
   sampleLength: number;
-  /** Estimated skewness of returns (0 for normal). */
-  skewness?: number;
-  /** Estimated kurtosis of returns (3 for normal). */
-  kurtosis?: number;
+  /** Empirical skewness of the observed return series. */
+  skewness: number;
+  /** Empirical Pearson kurtosis of the observed return series (normal = 3). */
+  kurtosis: number;
   /** Total number of trials or parameter variants tested (from experiment registry). */
   trialCount: number;
-  /** Variance of Sharpe ratios across all tested trials (defaults to 0.5 if unmeasured). */
-  trialSharpeVariance?: number;
+  /** Empirically measured variance across Sharpe ratios in the complete registered trial family. */
+  trialSharpeVariance: number;
+}
+
+export interface ReturnSeriesStats {
+  n: number;
+  mean: number;
+  sampleStdDev: number;
+  sharpe: number;
+  skewness: number;
+  /** Pearson kurtosis; a Gaussian distribution has kurtosis 3. */
+  kurtosis: number;
+}
+
+/** Calculate statistics from a finite observation series; null when too short or zero-variance. */
+export function describeReturnSeries(values: readonly number[]): ReturnSeriesStats | null {
+  if (values.length < 4 || !values.every(Number.isFinite)) return null;
+  const mean = values.reduce((sum, value) => sum + value, 0) / values.length;
+  const centered = values.map((value) => value - mean);
+  const sumSquares = centered.reduce((sum, value) => sum + value * value, 0);
+  const sampleStdDev = Math.sqrt(sumSquares / (values.length - 1));
+  const populationStdDev = Math.sqrt(sumSquares / values.length);
+  if (!(sampleStdDev > 0) || !(populationStdDev > 0) || !Number.isFinite(sampleStdDev)) return null;
+  const skewness = centered.reduce((sum, value) => sum + (value / populationStdDev) ** 3, 0) / values.length;
+  const kurtosis = centered.reduce((sum, value) => sum + (value / populationStdDev) ** 4, 0) / values.length;
+  if (![mean, skewness, kurtosis].every(Number.isFinite)) return null;
+  return { n: values.length, mean, sampleStdDev, sharpe: mean / sampleStdDev, skewness, kurtosis };
 }
 
 export interface DeflatedSharpeResult {
@@ -56,9 +81,11 @@ export function normalCdf(z: number): number {
  * Expected maximum Sharpe ratio among N trials under the null hypothesis:
  * E[max_N] = sqrt(V[SR]) * ((1 - gamma) * Phi^-1(1 - 1/N) + gamma * Phi^-1(1 - 1/(N * e)))
  */
-export function expectedMaxSharpe(trialCount: number, varSharpe = 0.5): number {
+export function expectedMaxSharpe(trialCount: number, varSharpe: number): number {
+  if (!Number.isInteger(trialCount) || trialCount < 1) throw new Error('trialCount must be a positive integer');
+  if (!Number.isFinite(varSharpe) || varSharpe < 0) throw new Error('varSharpe must be a finite, non-negative empirical variance');
   if (trialCount <= 1) return 0;
-  const stdSharpe = Math.sqrt(Math.max(0, varSharpe));
+  const stdSharpe = Math.sqrt(varSharpe);
   if (stdSharpe <= 0) return 0;
 
   const p1 = 1 - 1 / trialCount;
@@ -74,10 +101,10 @@ export function expectedMaxSharpe(trialCount: number, varSharpe = 0.5): number {
  * Standard error of the Sharpe ratio under non-normality (Mertens 2002):
  * se = sqrt((1 - skew*SR + ((kurt - 1)/4)*SR^2) / (T - 1))
  */
-export function sharpeStandardError(sr: number, t: number, skew = 0, kurt = 3): number {
-  if (t <= 1) return Number.POSITIVE_INFINITY;
+export function sharpeStandardError(sr: number, t: number, skew: number, kurt: number): number {
+  if (t <= 1 || !Number.isFinite(sr) || !Number.isFinite(skew) || !Number.isFinite(kurt) || kurt < 1) return Number.POSITIVE_INFINITY;
   const variance = (1 - skew * sr + ((kurt - 1) / 4) * Math.pow(sr, 2)) / (t - 1);
-  return Math.sqrt(Math.max(1e-12, variance));
+  return variance > 0 && Number.isFinite(variance) ? Math.sqrt(variance) : Number.POSITIVE_INFINITY;
 }
 
 /**
@@ -88,11 +115,16 @@ export function computeDeflatedSharpe(input: DeflatedSharpeInput): DeflatedSharp
   const {
     sharpeRatio,
     sampleLength,
-    skewness = 0,
-    kurtosis = 3,
+    skewness,
+    kurtosis,
     trialCount,
-    trialSharpeVariance = 0.5,
+    trialSharpeVariance,
   } = input;
+  if (!Number.isFinite(sharpeRatio) || !Number.isInteger(sampleLength) || sampleLength < 2 ||
+      !Number.isInteger(trialCount) || trialCount < 1 || !Number.isFinite(skewness) ||
+      !Number.isFinite(kurtosis) || kurtosis < 1 || !Number.isFinite(trialSharpeVariance) || trialSharpeVariance < 0) {
+    throw new Error('invalid Deflated Sharpe inputs: finite return statistics and empirical trial variance are required');
+  }
 
   const se = sharpeStandardError(sharpeRatio, sampleLength, skewness, kurtosis);
   const maxBenchmark = expectedMaxSharpe(trialCount, trialSharpeVariance);

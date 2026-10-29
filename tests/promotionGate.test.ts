@@ -120,7 +120,7 @@ test('default promotion is INSUFFICIENT_DATA without complete DSR evidence', () 
   const large = result({ test: { ...result().test, n: 1200, bootstrap: summary({ n: 1200, clusters: 30 }), netRSeries: Array.from({ length: 1200 }, (_, i) => (i % 2 ? 0.5 : -0.3)) } });
   const v = evaluatePromotion(large, DEFAULT_PROMOTION_POLICY);
   assert.equal(v.decision, 'INSUFFICIENT_DATA');
-  assert.ok(v.reasons.some((r) => /fixed-frequency OOS portfolio equity-return series/.test(r)));
+  assert.ok(v.reasons.some((r) => /trialCount must be an integer >= 2/.test(r)));
 });
 
 test('DSR uses measured fixed-frequency equity returns and the full registered trial family, not profit factor', () => {

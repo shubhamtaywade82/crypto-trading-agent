@@ -120,14 +120,19 @@ test('default promotion is INSUFFICIENT_DATA without complete DSR evidence', () 
   const large = result({ test: { ...result().test, n: 800, bootstrap: summary({ n: 800, clusters: 30 }) } });
   const v = evaluatePromotion(large, DEFAULT_PROMOTION_POLICY);
   assert.equal(v.decision, 'INSUFFICIENT_DATA');
-  assert.ok(v.reasons.some((r) => /Deflated Sharpe/.test(r)));
+  assert.ok(v.reasons.some((r) => /fixed-frequency OOS portfolio equity-return series/.test(r)));
 });
 
-test('DSR uses measured per-trade net-R and the full trial history, not profit factor', () => {
-  const returns = Array.from({ length: 40 }, (_, i) => 0.3 + (i % 2 === 0 ? -1 : 1));
-  const ratios = Array.from({ length: 500 }, (_, i) => (i % 101 - 50) / 50);
-  const policy = { ...LOGIC_TEST_POLICY, minDsr: 0.95, trialCount: ratios.length, trialSharpeRatios: ratios };
-  const v = evaluatePromotion(result({ test: { ...result().test, netRSeries: returns } }), policy);
+test('DSR uses measured fixed-frequency equity returns and the full registered trial family, not profit factor', () => {
+  const fromMs = Date.UTC(2025, 0, 1);
+  const returns = Array.from({ length: 400 }, (_, i) => 0.0005 + (i % 2 === 0 ? -0.004 : 0.005));
+  const toMs = fromMs + returns.length * 86_400_000;
+  const trials = Array.from({ length: 500 }, (_, i) => ({
+    trialId: `trial-${i}`, samplingFrequency: '1d', fromMs, toMs,
+    returns: returns.map((value, j) => value + ((i % 101) - 50) * 0.00001 + (j % 3 - 1) * 0.0001),
+  }));
+  const policy = { ...LOGIC_TEST_POLICY, minDsr: 0.95, trialCount: trials.length };
+  const v = evaluatePromotion(result({ test: { ...result().test, n: returns.length, equityReturnSeries: { samplingFrequency: '1d', fromMs, toMs, returns } }, registeredTrialEquityReturns: trials }), policy);
   assert.equal(v.decision, 'REJECT');
   assert.ok(v.reasons.some((r) => /Deflated Sharpe/.test(r)));
 });

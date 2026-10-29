@@ -117,7 +117,7 @@ test('evaluatePromotion derives minTrades from power analysis when targetEffectS
 });
 
 test('default promotion is INSUFFICIENT_DATA without complete DSR evidence', () => {
-  const large = result({ test: { ...result().test, n: 800, bootstrap: summary({ n: 800, clusters: 30 }) } });
+  const large = result({ test: { ...result().test, n: 1200, bootstrap: summary({ n: 1200, clusters: 30 }), netRSeries: Array.from({ length: 1200 }, (_, i) => (i % 2 ? 0.5 : -0.3)) } });
   const v = evaluatePromotion(large, DEFAULT_PROMOTION_POLICY);
   assert.equal(v.decision, 'INSUFFICIENT_DATA');
   assert.ok(v.reasons.some((r) => /fixed-frequency OOS portfolio equity-return series/.test(r)));

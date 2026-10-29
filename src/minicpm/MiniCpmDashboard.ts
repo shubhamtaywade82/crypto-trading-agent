@@ -8,6 +8,7 @@ export interface DashboardContext {
   btcTrend15m: string;
   btcChange24h: number;
   workers: WorkerStatus[];
+  entriesEnabled?: boolean;
 }
 
 // Strip ANSI control codes for exact visual character length calculation
@@ -32,13 +33,12 @@ function fmtPrice(val: number): string {
   return val.toFixed(4);
 }
 
-function trajectoryMeter(current: number, entry: number, sl: number, tp: number, isLong: boolean): string {
+function trajectoryMeter(current: number, entry: number, sl: number, tp: number, isLong: boolean, len = 14): string {
   const span = Math.abs(tp - sl);
-  if (span <= 0) return chalk.gray('───────────────');
+  if (span <= 0) return chalk.gray('─'.repeat(len));
 
   const ratio = isLong ? (current - sl) / span : (sl - current) / span;
   const clamped = Math.max(0, Math.min(1, ratio));
-  const len = 14;
   const pin = Math.round(clamped * (len - 1));
 
   let out = '';
@@ -48,6 +48,34 @@ function trajectoryMeter(current: number, entry: number, sl: number, tp: number,
     else out += chalk.gray('─');
   }
   return out;
+}
+
+interface ColumnWidths {
+  wAsset: number;
+  wSide: number;
+  wPrice: number;
+  wPnl: number;
+  wTraj: number;
+}
+
+// Allocates dynamic table column widths according to available box width
+function getColumnWidths(boxWidth: number): ColumnWidths {
+  const wAsset = 8;
+  const wSide = 11;
+  const wPrice = 22;
+  const wPnl = 19;
+  const fixedTotal = wAsset + 1 + wSide + 1 + wPrice + 1 + wPnl + 1; // 64
+  const wTraj = Math.max(30, boxWidth - fixedTotal);
+  return { wAsset, wSide, wPrice, wPnl, wTraj };
+}
+
+// Spans left and right content across the full terminal box row
+function renderDualRow(left: string, right: string, visibleWidth: number): string {
+  const leftLen = stripAnsi(left).length;
+  const rightLen = stripAnsi(right).length;
+  const gap = visibleWidth - leftLen - rightLen;
+  if (gap < 2) return padCell(left + ' │ ' + right, visibleWidth, 'left');
+  return left + ' '.repeat(gap) + right;
 }
 
 interface DashboardTotals {
@@ -115,48 +143,54 @@ function renderHeaderBox(ctx: DashboardContext, totals: DashboardTotals, boxWidt
   const realizedColor = totals.realized >= 0 ? chalk.green(`+$${totals.realized.toFixed(2)}`) : chalk.red(`-$${Math.abs(totals.realized).toFixed(2)}`);
 
   console.log(chalk.bold.cyan('╔' + '═'.repeat(boxWidth) + '╗'));
-  const row1 =
+  const row1Left =
     chalk.bold.white(' ⬡ MINICPM-2B COCKPIT v2.0 ') +
     chalk.gray('│ Uptime: ') + chalk.yellow(timeStr) +
-    chalk.gray(' │ Active: ') + chalk.bold.white(`${totals.activeCount}/3 Symbols`) +
-    chalk.gray(' │ BTC Anchor: ') + chalk.bold.white(`$${ctx.btcPrice > 0 ? ctx.btcPrice.toLocaleString() : '—'}`) + ' ' + btcTrend + ` (${btcChange})`;
-  console.log(chalk.bold.cyan('║') + padCell(row1, boxWidth, 'left') + chalk.bold.cyan('║'));
+    chalk.gray(' │ Active: ') + chalk.bold.white(`${totals.activeCount}/3 Symbols`);
+  const row1Right =
+    chalk.gray('BTC Anchor: ') + chalk.bold.white(`$${ctx.btcPrice > 0 ? ctx.btcPrice.toLocaleString() : '—'}`) + ' ' + btcTrend + ` (${btcChange}) `;
+  console.log(chalk.bold.cyan('║') + renderDualRow(row1Left, row1Right, boxWidth) + chalk.bold.cyan('║'));
 
-  const row2 =
+  const row2Left =
     chalk.gray(' PORTFOLIO: Total Equity: ') + chalk.bold.white(`$${totals.equity.toFixed(2)}`) +
     chalk.gray(' │ Open uPnL: ') + upnlColor +
-    chalk.gray(' │ Realized: ') + realizedColor +
-    chalk.gray(' │ Venue: ') + chalk.green('● paper_exchange');
-  console.log(chalk.bold.cyan('║') + padCell(row2, boxWidth, 'left') + chalk.bold.cyan('║'));
+    chalk.gray(' │ Realized: ') + realizedColor;
+  const row2Right = chalk.gray('Venue: ') + chalk.green('● paper_exchange ');
+  console.log(chalk.bold.cyan('║') + renderDualRow(row2Left, row2Right, boxWidth) + chalk.bold.cyan('║'));
 }
 
-function renderTableHeaders(): void {
+function renderTableHeaders(boxWidth: number): void {
+  const { wAsset, wSide, wPrice, wPnl, wTraj } = getColumnWidths(boxWidth);
   const headerRow =
-    padCell(chalk.bold.cyan(' ASSET'), 8, 'left') + chalk.gray('│') +
-    padCell(chalk.bold.cyan(' POSITION'), 11, 'left') + chalk.gray('│') +
-    padCell(chalk.bold.cyan(' ENTRY ➔ MARK'), 22, 'center') + chalk.gray('│') +
-    padCell(chalk.bold.cyan(' uPnL (RET%)'), 19, 'center') + chalk.gray('│') +
-    padCell(chalk.bold.cyan(' TARGET TRAJECTORY (SL ➔ TP)'), 42, 'center');
+    padCell(chalk.bold.cyan(' ASSET'), wAsset, 'left') + chalk.gray('│') +
+    padCell(chalk.bold.cyan(' POSITION'), wSide, 'left') + chalk.gray('│') +
+    padCell(chalk.bold.cyan(' ENTRY ➔ MARK'), wPrice, 'center') + chalk.gray('│') +
+    padCell(chalk.bold.cyan(' uPnL (RET%)'), wPnl, 'center') + chalk.gray('│') +
+    padCell(chalk.bold.cyan(' TARGET TRAJECTORY (SL ➔ TP)'), wTraj, 'center');
   console.log(chalk.bold.cyan('║') + headerRow + chalk.bold.cyan('║'));
 
   const divRow =
-    '─'.repeat(8) + chalk.gray('┼') +
-    '─'.repeat(11) + chalk.gray('┼') +
-    '─'.repeat(22) + chalk.gray('┼') +
-    '─'.repeat(19) + chalk.gray('┼') +
-    '─'.repeat(42);
+    '─'.repeat(wAsset) + chalk.gray('┼') +
+    '─'.repeat(wSide) + chalk.gray('┼') +
+    '─'.repeat(wPrice) + chalk.gray('┼') +
+    '─'.repeat(wPnl) + chalk.gray('┼') +
+    '─'.repeat(wTraj);
   console.log(chalk.bold.cyan('╟') + chalk.gray(divRow) + chalk.bold.cyan('╢'));
 }
 
-function renderWorkerRow(w: WorkerStatus): void {
+function renderWorkerRow(w: WorkerStatus, boxWidth: number): void {
+  const { wAsset, wSide, wPrice, wPnl, wTraj } = getColumnWidths(boxWidth);
   const sym = ' ' + w.symbol.replace('USDT', '');
-  const cellAsset = padCell(chalk.bold.white(sym), 8, 'left');
+  const cellAsset = padCell(chalk.bold.white(sym), wAsset, 'left');
 
   if (!w.activePosition) {
-    const cellSide = padCell(chalk.gray(' IDLE'), 11, 'left');
-    const cellPrice = padCell(chalk.gray('—'), 22, 'center');
-    const cellPnl = padCell(chalk.gray('$0.00 (0.0%)'), 19, 'center');
-    const cellTraj = padCell(chalk.italic.gray('Scanning market with MiniCPM...'), 42, 'center');
+    const cellSide = padCell(chalk.gray(' IDLE'), wSide, 'left');
+    const cellPrice = padCell(chalk.gray('—'), wPrice, 'center');
+    const cellPnl = padCell(chalk.gray('$0.00 (0.0%)'), wPnl, 'center');
+    const trajText = w.stopLoss && w.takeProfit
+      ? chalk.cyan(`[SET] SL: ${fmtPrice(w.stopLoss)} ➔ TP: ${fmtPrice(w.takeProfit)}`)
+      : chalk.italic.gray('Scanning market with MiniCPM...');
+    const cellTraj = padCell(trajText, wTraj, 'center');
     console.log(chalk.bold.cyan('║') + cellAsset + chalk.gray('│') + cellSide + chalk.gray('│') + cellPrice + chalk.gray('│') + cellPnl + chalk.gray('│') + cellTraj + chalk.bold.cyan('║'));
     return;
   }
@@ -164,24 +198,30 @@ function renderWorkerRow(w: WorkerStatus): void {
   const pos = w.activePosition;
   const isLong = pos.side.toUpperCase() === 'LONG';
   const sideText = isLong ? chalk.bold.green(' LONG 10x') : chalk.bold.red(' SHORT 10x');
-  const cellSide = padCell(sideText, 11, 'left');
-  const cellPrice = padCell(`$${fmtPrice(pos.averagePrice)} ➔ $${fmtPrice(pos.currentPrice)}`, 22, 'center');
+  const cellSide = padCell(sideText, wSide, 'left');
+  const cellPrice = padCell(`$${fmtPrice(pos.averagePrice)} ➔ $${fmtPrice(pos.currentPrice)}`, wPrice, 'center');
 
   const retPct = (pos.unrealizedPnl / 980) * 100;
   const pnlSign = pos.unrealizedPnl >= 0 ? '+' : '-';
   const pnlText = `${pnlSign}$${Math.abs(pos.unrealizedPnl).toFixed(2)} (${retPct >= 0 ? '+' : ''}${retPct.toFixed(1)}%)`;
-  const cellPnl = padCell(pos.unrealizedPnl >= 0 ? chalk.green(pnlText) : chalk.red(pnlText), 19, 'center');
+  const cellPnl = padCell(pos.unrealizedPnl >= 0 ? chalk.green(pnlText) : chalk.red(pnlText), wPnl, 'center');
 
   let traj = chalk.gray('— no levels —');
   if (w.stopLoss && w.takeProfit) {
-    const bar = trajectoryMeter(pos.currentPrice, pos.averagePrice, w.stopLoss, w.takeProfit, isLong);
+    const meterLen = Math.max(14, Math.min(48, Math.floor(wTraj - 26)));
+    const bar = trajectoryMeter(pos.currentPrice, pos.averagePrice, w.stopLoss, w.takeProfit, isLong, meterLen);
     traj = `${chalk.red(fmtPrice(w.stopLoss))} ${bar} ${chalk.green(fmtPrice(w.takeProfit))}`;
   }
-  const cellTraj = padCell(traj, 42, 'center');
+  const cellTraj = padCell(traj, wTraj, 'center');
   console.log(chalk.bold.cyan('║') + cellAsset + chalk.gray('│') + cellSide + chalk.gray('│') + cellPrice + chalk.gray('│') + cellPnl + chalk.gray('│') + cellTraj + chalk.bold.cyan('║'));
 }
 
-function renderIntelligencePanel(workers: WorkerStatus[], boxWidth: number): void {
+function renderIntelligencePanel(
+  workers: WorkerStatus[],
+  boxWidth: number,
+  entriesEnabled?: boolean,
+  padLines = 0,
+): void {
   const intelHeader = chalk.bold.white(' LATEST LLM INTELLIGENCE & REASONING:');
   console.log(chalk.bold.cyan('║') + padCell(intelHeader, boxWidth, 'left') + chalk.bold.cyan('║'));
 
@@ -203,19 +243,37 @@ function renderIntelligencePanel(workers: WorkerStatus[], boxWidth: number): voi
     }
   }
 
+  for (let p = 0; p < padLines; p++) {
+    console.log(chalk.bold.cyan('║') + ' '.repeat(boxWidth) + chalk.bold.cyan('║'));
+  }
+
   console.log(chalk.bold.cyan('╚' + '═'.repeat(boxWidth) + '╝'));
-  console.log(chalk.gray('  Rule: $980 Margin · 10x Isolated · Min +5% TP · Auto Break-Even Trailing · 24/7 Realtime'));
+  const modeLabel = entriesEnabled ? chalk.yellow('LIVE (Risk-Gated)') : chalk.cyan('SHADOW ANALYSIS (R1)');
+  console.log(chalk.gray(`  Rule: $980 Margin · 10x Isolated · Min +5% TP · Auto Break-Even Trailing · Mode: ${modeLabel}`));
 }
 
 export function renderDashboard(ctx: DashboardContext): void {
-  const BOX_WIDTH = 106;
+  const cols = process.stdout.columns || 110;
+  const rows = process.stdout.rows || 30;
+  // Reserve border characters with safety padding to prevent edge wrap on strict terminals
+  const boxWidth = Math.max(106, cols - 3);
   const totals = calculateTotals(ctx.workers);
 
+  // Compute wrapped line count to pad vertical space exactly to terminal height
+  const maxTextWidth = boxWidth - 12;
+  let intelLines = 0;
+  for (const w of ctx.workers) {
+    const raw = w.lastDecision.replace(/^Recovered:\s*/, '');
+    intelLines += wrapText(raw, maxTextWidth).length;
+  }
+  const usedLines = 10 + ctx.workers.length + intelLines;
+  const padLines = Math.max(0, rows - usedLines - 2);
+
   console.clear();
-  renderHeaderBox(ctx, totals, BOX_WIDTH);
-  console.log(chalk.bold.cyan('╠' + '═'.repeat(BOX_WIDTH) + '╣'));
-  renderTableHeaders();
-  for (const w of ctx.workers) renderWorkerRow(w);
-  console.log(chalk.bold.cyan('╠' + '═'.repeat(BOX_WIDTH) + '╣'));
-  renderIntelligencePanel(ctx.workers, BOX_WIDTH);
+  renderHeaderBox(ctx, totals, boxWidth);
+  console.log(chalk.bold.cyan('╠' + '═'.repeat(boxWidth) + '╣'));
+  renderTableHeaders(boxWidth);
+  for (const w of ctx.workers) renderWorkerRow(w, boxWidth);
+  console.log(chalk.bold.cyan('╠' + '═'.repeat(boxWidth) + '╣'));
+  renderIntelligencePanel(ctx.workers, boxWidth, ctx.entriesEnabled, padLines);
 }

@@ -137,11 +137,6 @@ export class SymbolTraderWorker {
       return;
     }
 
-    if (!this.config.entriesEnabled) {
-      this.status.state = 'IDLE';
-      this.status.lastDecision = 'ENTRIES PAUSED: this order path bypasses RiskEngine (spec section 2, R1)';
-      return;
-    }
     const input = this.buildPromptInput(params);
     if (!input) return;
 
@@ -153,7 +148,54 @@ export class SymbolTraderWorker {
       return;
     }
 
-    await this.executeEntry(rec, markPrice);
+    this.handleRecommendation(rec, markPrice);
+  }
+
+  private handleRecommendation(rec: LlmTradeRecommendation, markPrice: number): void {
+    this.currentSl = rec.stopLoss;
+    this.currentTp = rec.takeProfit;
+    this.updateStatusLevels(markPrice);
+
+    if (!this.config.entriesEnabled) {
+      this.status.state = 'IDLE';
+      this.status.lastDecision = `[SHADOW] ${rec.action} @ ${markPrice} | SL: ${rec.stopLoss} | TP: ${rec.takeProfit} (${rec.reason}) [R1: entries off]`;
+      return;
+    }
+
+    const risk = this.validateRisk(rec, markPrice);
+    if (!risk.ok) {
+      this.status.state = 'IDLE';
+      this.status.lastDecision = `RISK REFUSED: ${risk.reason}`;
+      return;
+    }
+
+    void this.executeEntry(rec, markPrice);
+  }
+
+  private validateRisk(rec: LlmTradeRecommendation, markPrice: number): { ok: boolean; reason?: string } {
+    const acct = this.status.account;
+    if (acct && acct.availableBalance < this.config.marginPerPosition) {
+      return { ok: false, reason: `insufficient margin ($${acct.availableBalance.toFixed(2)} < $${this.config.marginPerPosition})` };
+    }
+    const isLong = rec.action === 'ENTER_LONG';
+    if (isLong && rec.stopLoss >= markPrice) {
+      return { ok: false, reason: `inverted SL (${rec.stopLoss} >= entry ${markPrice})` };
+    }
+    if (!isLong && rec.stopLoss <= markPrice) {
+      return { ok: false, reason: `inverted SL (${rec.stopLoss} <= entry ${markPrice})` };
+    }
+    if (isLong && rec.takeProfit <= markPrice) {
+      return { ok: false, reason: `inverted TP (${rec.takeProfit} <= entry ${markPrice})` };
+    }
+    if (!isLong && rec.takeProfit >= markPrice) {
+      return { ok: false, reason: `inverted TP (${rec.takeProfit} >= entry ${markPrice})` };
+    }
+    const reward = Math.abs(rec.takeProfit - markPrice);
+    const risk = Math.abs(markPrice - rec.stopLoss);
+    if (risk <= 0 || reward / risk < 1.0) {
+      return { ok: false, reason: `poor reward:risk ${(reward / Math.max(1e-6, risk)).toFixed(2)} < 1.0` };
+    }
+    return { ok: true };
   }
 
   // Establishes default bounds when an exchange position exists without local stop levels

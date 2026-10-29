@@ -36,6 +36,7 @@ async function main() {
     model: 'openbmb/minicpm5-2b:latest',
   });
 
+  const entriesEnabled = process.env.MINICPM_ENTRIES === 'on' || process.argv.includes('--enable-entries');
   const workers = new Map<string, SymbolTraderWorker>();
   for (const symbol of SYMBOLS) {
     const symKey = symbol.replace('USDT', '').toLowerCase();
@@ -47,8 +48,7 @@ async function main() {
         apiKey: paperExchange.apiKey,
         marginPerPosition: 1000,
         leverage: 10,
-        // Paused until entries go through RiskEngine (spec section 11, decision 3). Exits of open positions still run.
-        entriesEnabled: false,
+        entriesEnabled,
       },
       llm,
     );
@@ -88,6 +88,7 @@ async function main() {
         btcTrend15m,
         btcChange24h,
         workers: statuses,
+        entriesEnabled,
       });
     }
   };

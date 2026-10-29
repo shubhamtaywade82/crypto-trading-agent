@@ -79,7 +79,7 @@ where the benchmark expected maximum Sharpe under $N$ independent trials is:
 
 $$\text{SR}^* = \sqrt{\mathbb{V}[\{\text{SR}_n\}]} \left( (1 - \gamma) Z^{-1}\left(1 - \frac{1}{N}\right) + \gamma Z^{-1}\left(1 - \frac{1}{N e}\right) \right)$$
 
-Promotion calculates the Sharpe input from an observed OOS return series with measured skewness and Pearson kurtosis, and uses measured variance across the complete registered trial-Sharpe family. `profitFactor - 1` is not a Sharpe ratio. DSR fails closed when the OOS series or trial history is missing; no default trial variance is accepted. The current evaluator exposes net-R per resolved trade, not fixed-frequency portfolio equity returns, so this frequency limitation must remain explicit until an equity-return series is implemented.
+Promotion calculates DSR only from a fixed-frequency OOS portfolio equity-return series, with measured skewness and Pearson kurtosis plus return series for every registered trial on the identical grid. `profitFactor - 1` is not a Sharpe ratio, and per-trade net-R is not a substitute for equity returns. The trade-ledger runner does not yet produce a sized portfolio equity curve or complete trial return histories, so the default gate returns INSUFFICIENT_DATA until that evidence is connected. No arbitrary default trial variance is accepted.
 
 ### Bootstrap inference contract
 

@@ -85,6 +85,21 @@ export function hypotheticalTrades(
   return out;
 }
 
+export interface FixedFrequencyEquityReturns {
+  /** Explicit return sampling frequency such as 1h or 1d. */
+  samplingFrequency: string;
+  /** Start (inclusive) and end (exclusive) timestamps for the equity-return grid. */
+  fromMs: number;
+  toMs: number;
+  /** Consistently defined simple or log returns from a portfolio equity curve. */
+  returns: number[];
+}
+
+export interface RegisteredTrialEquityReturns extends FixedFrequencyEquityReturns {
+  /** Stable registered experiment/trial identifier. */
+  trialId: string;
+}
+
 export interface WindowStats {
   n: number;
   winRate: number;
@@ -94,8 +109,10 @@ export interface WindowStats {
   symbols: number;
   regimes: number;
   bootstrap: BootstrapSummary | null;
-  /** Per-trade net-R series sorted by resolution time; DSR frequency is per resolved trade. */
+  /** Per-trade net-R is descriptive only and is not an equity-return series suitable for DSR. */
   netRSeries?: number[];
+  /** Supplied only by a portfolio-equity evaluator; current ledger runner does not synthesize it. */
+  equityReturnSeries?: FixedFrequencyEquityReturns;
 }
 
 export interface PerSliceStat { key: string; n: number; meanNetR: number }
@@ -121,6 +138,8 @@ export interface ExperimentResult {
   perSymbol: PerSliceStat[];
   /** Per-regime stability on the test window — a regime collapse is a promotion blocker. */
   perRegime: PerSliceStat[];
+  /** Complete registered trial equity-return series matching the candidate's OOS grid. */
+  registeredTrialEquityReturns?: RegisteredTrialEquityReturns[];
   /** Honest caveats about what the experiment does and does not measure. */
   experimentNotes: string[];
 }

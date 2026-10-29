@@ -121,7 +121,10 @@ export function runGoldenTask(
     bootstrap: { iterations: 1000, seed: 1, confidence: 0.9 },
   });
 
-  const verdict: PromotionVerdict = evaluatePromotion(result, DEFAULT_PROMOTION_POLICY);
+  // Golden scenarios test individual deterministic gate guards; they do not supply the complete registered
+  // Sharpe-trial family required for an actual promotion. Keep their policy explicit and disable DSR here only.
+  const goldenPolicy = { ...DEFAULT_PROMOTION_POLICY, targetEffectSizeR: 0.50, minDsr: undefined };
+  const verdict: PromotionVerdict = evaluatePromotion(result, goldenPolicy);
 
   // 1. Decision match
   if (verdict.decision !== task.expectedDecision) {

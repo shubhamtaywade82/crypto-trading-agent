@@ -7,6 +7,7 @@ import {
   expectedMaxSharpe,
   sharpeStandardError,
   computeDeflatedSharpe,
+  describeReturnSeries,
 } from '../src/research/DeflatedSharpe.js';
 import { walkForward, type Observation } from '../src/research/ConditionalEdge.js';
 
@@ -59,6 +60,8 @@ test('DeflatedSharpe: deflates Sharpe ratio under multiple testing and fat tails
     sampleLength: 100,
     trialCount: 1,
     trialSharpeVariance: 0.5,
+    skewness: 0,
+    kurtosis: 3,
   });
   assert.equal(single.expectedMaxSharpe, 0);
   assert.ok(single.psr > 0.95);
@@ -70,10 +73,29 @@ test('DeflatedSharpe: deflates Sharpe ratio under multiple testing and fat tails
     sampleLength: 100,
     trialCount: 500,
     trialSharpeVariance: 0.5,
+    skewness: 0,
+    kurtosis: 3,
   });
   assert.ok(searched.expectedMaxSharpe > 1.5, 'expected max Sharpe under 500 trials exceeds 1.5');
   assert.ok(searched.dsr < 0.50, 'deflated Sharpe must collapse under multiple testing');
   assert.equal(searched.isSignificant, false);
+});
+
+test('DSR descriptive statistics use the supplied return series and reject degenerate data', () => {
+  const values = Array.from({ length: 100 }, (_, i) => 0.2 + (i % 2 === 0 ? -0.8 : 0.8));
+  const stats = describeReturnSeries(values)!;
+  assert.equal(stats.n, 100);
+  assert.ok(Math.abs(stats.mean - 0.2) < 1e-12);
+  assert.ok(stats.sharpe > 0 && stats.sharpe < 1);
+  assert.ok(Math.abs(stats.kurtosis - 1) < 1e-12);
+  assert.equal(describeReturnSeries([1, 1, 1, 1]), null);
+  assert.throws(() => computeDeflatedSharpe({ sharpeRatio: 1, sampleLength: 20, trialCount: 2, trialSharpeVariance: Number.NaN, skewness: 0, kurtosis: 3 }));
+});
+
+test('SampleSize rejects invalid design assumptions', () => {
+  assert.throws(() => calculateRequiredSampleSize({ effectSizeR: 0.1, sigmaR: 0, alpha: 0.05, power: 0.8 }), /sigmaR/);
+  assert.throws(() => calculateRequiredSampleSize({ effectSizeR: 0.1, sigmaR: 1, alpha: 1, power: 0.8 }), /alpha/);
+  assert.throws(() => calculateRequiredSampleSize({ effectSizeR: 0.1, sigmaR: 1, alpha: 0.05, power: 1 }), /power/);
 });
 
 test('ConditionalEdge: walkForward respects embargoDays buffer between train and test', () => {

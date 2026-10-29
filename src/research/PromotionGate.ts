@@ -46,8 +46,6 @@ export interface PromotionPolicy {
   requireWalkForwardPositive: boolean;
   /** Minimum Deflated Sharpe Ratio (e.g. 0.95 for 5% false discovery rate). */
   minDsr?: number;
-  /** Number of registered Sharpe trials in the lineage. */
-  trialCount?: number;
   /** Cumulative number of registered trials with matching OOS equity-return evidence supplied on result. */
   trialCount?: number;
 }

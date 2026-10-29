@@ -47,7 +47,7 @@ test('hypotheticalTrades only counts setups whose entry was touched and outcome 
   // Sabotage: drop the entry-touched timestamp on the first record (it never fired).
   ledger[0] = { ...ledger[0], entryTouchedAt: null };
   const trades = hypotheticalTrades(spec, ledger, ledger[0].createdAt, ledger[ledger.length - 1].createdAt + 1);
-  assert.equal(trades.length, 9);
+  assert.equal(trades.length, 7); // two additional outcomes resolve at/after the cutoff and are excluded
   assert.ok(!trades.some((t) => t.record.setupId === 'setup-0'));
 });
 

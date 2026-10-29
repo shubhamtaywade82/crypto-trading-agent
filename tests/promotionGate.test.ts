@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { DEFAULT_PROMOTION_POLICY, evaluatePromotion } from '../src/research/PromotionGate.js';
+
+const LOGIC_TEST_POLICY = { ...DEFAULT_PROMOTION_POLICY, targetEffectSizeR: 0.50, minDsr: undefined };
 import type { ExperimentResult } from '../src/research/ExperimentRunner.js';
 import type { BootstrapSummary } from '../src/research/Bootstrap.js';
 
@@ -33,43 +35,43 @@ const result = (over: Partial<ExperimentResult> = {}): ExperimentResult => ({
 });
 
 test('evaluatePromotion returns PROMOTE when every guard is satisfied', () => {
-  const v = evaluatePromotion(result(), DEFAULT_PROMOTION_POLICY);
+  const v = evaluatePromotion(result(), LOGIC_TEST_POLICY);
   assert.equal(v.decision, 'PROMOTE');
   assert.ok(v.reasons.length > 0);
 });
 
 test('evaluatePromotion returns INSUFFICIENT_DATA when OOS n is below minTrades', () => {
-  const v = evaluatePromotion(result({ test: { ...result().test, n: 10, bootstrap: null } }), DEFAULT_PROMOTION_POLICY);
+  const v = evaluatePromotion(result({ test: { ...result().test, n: 10, bootstrap: null } }), LOGIC_TEST_POLICY);
   assert.equal(v.decision, 'INSUFFICIENT_DATA');
   assert.match(v.reasons[0], /minTrades/);
 });
 
 test('evaluatePromotion returns REJECT when OOS mean R is below the floor', () => {
-  const v = evaluatePromotion(result({ test: { ...result().test, meanNetR: 0.01 } }), DEFAULT_PROMOTION_POLICY);
+  const v = evaluatePromotion(result({ test: { ...result().test, meanNetR: 0.01 } }), LOGIC_TEST_POLICY);
   assert.equal(v.decision, 'REJECT');
   assert.ok(v.reasons.some((r) => /OOS mean R/.test(r)));
 });
 
 test('evaluatePromotion rejects when the OOS bootstrap LCB is non-positive', () => {
-  const v = evaluatePromotion(result({ test: { ...result().test, bootstrap: summary({ ciLow: -0.05 }) } }), DEFAULT_PROMOTION_POLICY);
+  const v = evaluatePromotion(result({ test: { ...result().test, bootstrap: summary({ ciLow: -0.05 }) } }), LOGIC_TEST_POLICY);
   assert.equal(v.decision, 'REJECT');
   assert.ok(v.reasons.some((r) => /LCB/.test(r)));
 });
 
 test('evaluatePromotion rejects when profit factor is below the floor', () => {
-  const v = evaluatePromotion(result({ test: { ...result().test, profitFactor: 1.05 } }), DEFAULT_PROMOTION_POLICY);
+  const v = evaluatePromotion(result({ test: { ...result().test, profitFactor: 1.05 } }), LOGIC_TEST_POLICY);
   assert.equal(v.decision, 'REJECT');
   assert.ok(v.reasons.some((r) => /profit factor/.test(r)));
 });
 
 test('evaluatePromotion rejects when max drawdown exceeds the ceiling', () => {
-  const v = evaluatePromotion(result({ test: { ...result().test, maxDrawdownR: 20 } }), DEFAULT_PROMOTION_POLICY);
+  const v = evaluatePromotion(result({ test: { ...result().test, maxDrawdownR: 20 } }), LOGIC_TEST_POLICY);
   assert.equal(v.decision, 'REJECT');
   assert.ok(v.reasons.some((r) => /DD/.test(r)));
 });
 
 test('evaluatePromotion rejects when symbol coverage is too thin', () => {
-  const v = evaluatePromotion(result({ perSymbol: [{ key: 'BTCUSDT', n: 25, meanNetR: 0.35 }] }), DEFAULT_PROMOTION_POLICY);
+  const v = evaluatePromotion(result({ perSymbol: [{ key: 'BTCUSDT', n: 25, meanNetR: 0.35 }] }), LOGIC_TEST_POLICY);
   assert.equal(v.decision, 'REJECT');
   assert.ok(v.reasons.some((r) => /symbols with n>=5/.test(r)));
 });
@@ -77,13 +79,13 @@ test('evaluatePromotion rejects when symbol coverage is too thin', () => {
 test('evaluatePromotion rejects when OOS delta vs parent is below the margin', () => {
   // Candidate matches parent: zero delta.
   const r = result({ test: { ...result().test, meanNetR: 0.15 }, parentTest: { ...result().parentTest, meanNetR: 0.15 } });
-  const v = evaluatePromotion(r, DEFAULT_PROMOTION_POLICY);
+  const v = evaluatePromotion(r, LOGIC_TEST_POLICY);
   assert.equal(v.decision, 'REJECT');
   assert.ok(v.reasons.some((r) => /delta vs parent/.test(r)));
 });
 
 test('evaluatePromotion rejects when walk-forward OOS is not positive', () => {
-  const v = evaluatePromotion(result({ walkForward: { outOfSample: summary({ mean: -0.05 }), baseline: summary(), folds: 3 } }), DEFAULT_PROMOTION_POLICY);
+  const v = evaluatePromotion(result({ walkForward: { outOfSample: summary({ mean: -0.05 }), baseline: summary(), folds: 3 } }), LOGIC_TEST_POLICY);
   assert.equal(v.decision, 'REJECT');
   assert.ok(v.reasons.some((r) => /walk-forward/.test(r)));
 });
@@ -94,13 +96,13 @@ test('evaluatePromotion rejects when the candidate collapses in its worst regime
     perRegime: [{ key: 'TREND_UP | EXPANDED', n: 20, meanNetR: 0.8 }, { key: 'TRANSITION | COMPRESSED', n: 20, meanNetR: -0.6 }],
     parentTest: { ...result().parentTest, meanNetR: 0.4 },
   });
-  const v = evaluatePromotion(r, DEFAULT_PROMOTION_POLICY);
+  const v = evaluatePromotion(r, LOGIC_TEST_POLICY);
   assert.equal(v.decision, 'REJECT');
   assert.ok(v.reasons.some((r) => /worst regime/.test(r)));
 });
 
 test('a custom policy can be applied (e.g. zero minOosDelta — accept ties)', () => {
-  const tie = { ...DEFAULT_PROMOTION_POLICY, minOosDelta: 0 };
+  const tie = { ...LOGIC_TEST_POLICY, minOosDelta: 0 };
   const r = result({ test: { ...result().test, meanNetR: 0.15 }, parentTest: { ...result().parentTest, meanNetR: 0.15 } });
   const v = evaluatePromotion(r, tie);
   assert.equal(v.decision, 'PROMOTE');
@@ -108,16 +110,24 @@ test('a custom policy can be applied (e.g. zero minOosDelta — accept ties)', (
 
 test('evaluatePromotion derives minTrades from power analysis when targetEffectSizeR is stated', () => {
   // Stating a target effect size of 0.10R requires ~784 trades; 40 trades returns INSUFFICIENT_DATA
-  const powerPolicy = { ...DEFAULT_PROMOTION_POLICY, targetEffectSizeR: 0.10 };
+  const powerPolicy = { ...DEFAULT_PROMOTION_POLICY, targetEffectSizeR: 0.10, minDsr: undefined };
   const v = evaluatePromotion(result(), powerPolicy);
   assert.equal(v.decision, 'INSUFFICIENT_DATA');
   assert.match(v.reasons[0], /required minTrades=78[0-9]/);
 });
 
-test('evaluatePromotion rejects when Deflated Sharpe Ratio fails under large trial count', () => {
-  // Candidate clears static guards but fails DSR when 500 trials were searched
-  const dsrPolicy = { ...DEFAULT_PROMOTION_POLICY, minDsr: 0.95, trialCount: 500 };
-  const v = evaluatePromotion(result(), dsrPolicy);
+test('default promotion is INSUFFICIENT_DATA without complete DSR evidence', () => {
+  const large = result({ test: { ...result().test, n: 800, bootstrap: summary({ n: 800, clusters: 30 }) } });
+  const v = evaluatePromotion(large, DEFAULT_PROMOTION_POLICY);
+  assert.equal(v.decision, 'INSUFFICIENT_DATA');
+  assert.ok(v.reasons.some((r) => /Deflated Sharpe/.test(r)));
+});
+
+test('DSR uses measured per-trade net-R and the full trial history, not profit factor', () => {
+  const returns = Array.from({ length: 40 }, (_, i) => 0.3 + (i % 2 === 0 ? -1 : 1));
+  const ratios = Array.from({ length: 500 }, (_, i) => (i % 101 - 50) / 50);
+  const policy = { ...LOGIC_TEST_POLICY, minDsr: 0.95, trialCount: ratios.length, trialSharpeRatios: ratios };
+  const v = evaluatePromotion(result({ test: { ...result().test, netRSeries: returns } }), policy);
   assert.equal(v.decision, 'REJECT');
   assert.ok(v.reasons.some((r) => /Deflated Sharpe/.test(r)));
 });

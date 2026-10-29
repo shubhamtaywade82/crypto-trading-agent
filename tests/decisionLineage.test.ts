@@ -9,6 +9,7 @@ import { ExecutorAgent } from '../src/agents/ExecutorAgent.js';
 import { PaperEngine } from '../src/binance/paperEngine.js';
 import { AgentLedger } from '../src/learning/AgentLedger.js';
 import { TradeOutcomeRecorder } from '../src/learning/TradeOutcomeRecorder.js';
+import { DurableResearchLedger } from '../src/research/ResearchLedger.js';
 import { setSymbolRules } from '../src/binance/symbolRules.js';
 import { entryMeta, type OpenParams } from '../src/binance/remoteOrders.js';
 import { closedTrade } from '../src/binance/remoteState.js';
@@ -164,6 +165,25 @@ test('recorder: trades without a decisionId keep the neutral fallback', () => {
   assert.equal(graded.evidence, undefined);
   assert.equal(graded.rMultiple, -1);
   assert.equal(journal.all().length, 0);
+});
+
+test('recorder: writes trade episodes to DurableResearchLedger with valid timestamps', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'grade-rl-'));
+  const ledger = new AgentLedger(join(dir, 'ledger.json'));
+  const journal = new DecisionJournal(join(dir, 'decisions.jsonl'));
+  const rLedger = new DurableResearchLedger(join(dir, 'research-events.jsonl'));
+  const recorder = new TradeOutcomeRecorder(ledger, journal, rLedger);
+  recorder.process([{
+    symbol: 'BTCUSDT', strategy: 'MOMENTUM-γ', side: 'LONG', entry: 100, exit: 120, qty: 2,
+    pnl: 40, reason: 'TAKE PROFIT', closedAt: 1_700_000_000, initialRisk: 10, decisionId: 'dec-100',
+  }]);
+  const events = rLedger.all();
+  assert.equal(events.length, 1);
+  assert.equal(events[0].type, 'trade_episode');
+  assert.equal((events[0] as any).payload.decisionId, 'dec-100');
+  assert.equal((events[0] as any).payload.realizedR, 2);
+  assert.equal(events[0].timestamps.exchange_time, 1_700_000_000);
+  assert.ok(events[0].timestamps.received_at > 0);
 });
 
 test('remote: entryMeta and closedTrade carry the decision lineage', () => {

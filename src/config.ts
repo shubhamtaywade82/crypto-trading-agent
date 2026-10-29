@@ -115,6 +115,7 @@ export const EnvSchema = z.object({
   REGIME_TREND_ENTER: z.coerce.number().min(0).max(1).default(0.55),
   REGIME_TREND_EXIT: z.coerce.number().min(0).max(1).default(0.4),
   SETUP_OUTCOMES_PATH: pathWithDefault('data/setup-outcomes.jsonl'),
+  RESEARCH_LEDGER_PATH: pathWithDefault('data/research-events.jsonl'),
   /** Gross reward:risk a setup scenario must offer to be built at all (the quality gate then re-checks it after costs). */
   SETUP_MIN_REWARD_RISK: z.coerce.number().min(0).default(1.5),
   /** Hide scenarios the quality gate already rejected (NO_TRADE) from Telegram setup cards; they still reach the outcome ledger. */
@@ -295,6 +296,7 @@ export const config = {
   rrProfilePath: env.RR_PROFILE_PATH,
   approvalsPath: env.APPROVALS_PATH,
   setupOutcomesPath: env.SETUP_OUTCOMES_PATH,
+  researchLedgerPath: env.RESEARCH_LEDGER_PATH,
   regime: {
     scored: env.REGIME_MODEL === 'scored',
     options: { confirmBars: env.REGIME_CONFIRM_BARS, trendEnter: env.REGIME_TREND_ENTER, trendExit: env.REGIME_TREND_EXIT },

@@ -14,21 +14,27 @@
 
 import type { ExperimentResult } from './ExperimentRunner.js';
 import { calculateRequiredSampleSize } from './SampleSize.js';
-import { computeDeflatedSharpe } from './DeflatedSharpe.js';
+import { computeDeflatedSharpe, describeReturnSeries } from './DeflatedSharpe.js';
 import { shrinkMean } from './Shrinkage.js';
 
 export interface PromotionPolicy {
-  /** Minimum OOS trades. If targetEffectSizeR is provided, derived via power analysis. */
+  /** Absolute lower bound; the power-derived sample size is also enforced. */
   minTrades?: number;
-  /** Target effect size in R for power analysis. When supplied, overrides static minTrades. */
-  targetEffectSizeR?: number;
+  /** Pre-registered minimum detectable effect in R; required for power sizing. */
+  targetEffectSizeR: number;
+  /** Assumed per-trade standard deviation in R. */
+  powerSigmaR: number;
+  powerAlpha: number;
+  targetPower: number;
+  /** Minimum distinct time clusters in OOS data. */
+  minOosClusters: number;
   /** Minimum OOS mean net R. Default 0.05R. */
   minOosExpectancyR: number;
   /** Minimum OOS profit factor. Default 1.10. */
   minProfitFactor: number;
   /** Maximum OOS drawdown in R. Default 15R. */
   maxDrawdownR: number;
-  /** Minimum OOS bootstrap probPositive. Default 0.85. */
+  /** Minimum fraction of ordinary bootstrap means above zero; descriptive, not a posterior probability. */
   minOosConfidence: number;
   /** Minimum distinct symbols with at least 5 trades each. Default 2. */
   minSymbolCoverage: number;
@@ -40,12 +46,19 @@ export interface PromotionPolicy {
   requireWalkForwardPositive: boolean;
   /** Minimum Deflated Sharpe Ratio (e.g. 0.95 for 5% false discovery rate). */
   minDsr?: number;
-  /** Cumulative trials tested across the experiment lineage (for DSR multiple testing correction). */
+  /** Number of registered Sharpe trials in the lineage. */
   trialCount?: number;
+  /** Complete finite Sharpe ratios for registered trials, one value per trial. */
+  trialSharpeRatios?: number[];
 }
 
 export const DEFAULT_PROMOTION_POLICY: PromotionPolicy = {
   minTrades: 30,
+  targetEffectSizeR: 0.10,
+  powerSigmaR: 1.0,
+  powerAlpha: 0.05,
+  targetPower: 0.80,
+  minOosClusters: 30,
   minOosExpectancyR: 0.05,
   minProfitFactor: 1.10,
   maxDrawdownR: 15,
@@ -54,7 +67,25 @@ export const DEFAULT_PROMOTION_POLICY: PromotionPolicy = {
   minOosDelta: 0.05,
   maxRegimeRegressionPct: 0.30,
   requireWalkForwardPositive: true,
+  minDsr: 0.95,
 };
+
+function sampleVariance(values: readonly number[]): number {
+  if (values.length < 2) return Number.NaN;
+  const mean = values.reduce((sum, value) => sum + value, 0) / values.length;
+  return values.reduce((sum, value) => sum + (value - mean) ** 2, 0) / (values.length - 1);
+}
+
+function getDsrReadinessIssue(result: ExperimentResult, policy: PromotionPolicy): string | null {
+  if (policy.minDsr === undefined) return null;
+  const count = policy.trialCount;
+  const ratios = policy.trialSharpeRatios;
+  if (!Number.isInteger(count) || (count ?? 0) < 2 || !ratios || ratios.length !== count || !ratios.every(Number.isFinite)) return 'Deflated Sharpe is enabled but trial evidence is incomplete: trialCount must be >=2 and trialSharpeRatios must contain one finite value per registered trial';
+  const stats = result.test.netRSeries ? describeReturnSeries(result.test.netRSeries) : null;
+  if (!stats || stats.n !== result.test.n) return 'Deflated Sharpe is enabled but the OOS per-trade net-R series is missing, non-finite, degenerate, or inconsistent with OOS n';
+  if (!Number.isFinite(sampleVariance(ratios))) return 'Deflated Sharpe trial Sharpe variance could not be estimated';
+  return null;
+}
 
 export type PromotionDecision = 'PROMOTE' | 'REJECT' | 'INSUFFICIENT_DATA';
 
@@ -66,10 +97,8 @@ export interface PromotionVerdict {
 
 /** Determines the effective sample size floor, using power analysis when effect size is stated. */
 function getEffectiveMinTrades(policy: PromotionPolicy): number {
-  if (policy.targetEffectSizeR && policy.targetEffectSizeR > 0) {
-    return calculateRequiredSampleSize({ effectSizeR: policy.targetEffectSizeR }).requiredSampleSize;
-  }
-  return policy.minTrades ?? 30;
+  const powerFloor = calculateRequiredSampleSize({ effectSizeR: policy.targetEffectSizeR, sigmaR: policy.powerSigmaR, alpha: policy.powerAlpha, power: policy.targetPower }).requiredSampleSize;
+  return Math.max(policy.minTrades ?? 0, powerFloor);
 }
 
 /** Evaluates candidate against the promotion policy using strict statistical gates. */
@@ -77,7 +106,12 @@ export function evaluatePromotion(
   result: ExperimentResult,
   policy: PromotionPolicy = DEFAULT_PROMOTION_POLICY,
 ): PromotionVerdict {
-  const minTrades = getEffectiveMinTrades(policy);
+  let minTrades: number;
+  try {
+    minTrades = getEffectiveMinTrades(policy);
+  } catch (error) {
+    return { decision: 'INSUFFICIENT_DATA', reasons: [`Invalid power-analysis contract: ${(error as Error).message}`], policy };
+  }
   if (result.test.n < minTrades) {
     return {
       decision: 'INSUFFICIENT_DATA',
@@ -85,6 +119,12 @@ export function evaluatePromotion(
       policy,
     };
   }
+
+  if ((result.test.bootstrap?.clusters ?? 0) < policy.minOosClusters) {
+    return { decision: 'INSUFFICIENT_DATA', reasons: [`OOS independent clusters=${result.test.bootstrap?.clusters ?? 0} below required minOosClusters=${policy.minOosClusters}`], policy };
+  }
+  const dsrIssue = getDsrReadinessIssue(result, policy);
+  if (dsrIssue) return { decision: 'INSUFFICIENT_DATA', reasons: [dsrIssue], policy };
 
   const reasons: string[] = [
     ...checkExpectancyAndDsr(result, policy),
@@ -119,15 +159,13 @@ function checkExpectancyAndDsr(result: ExperimentResult, policy: PromotionPolicy
     reasons.push(`OOS bootstrap LCB ${Number.isFinite(lcb) ? lcb.toFixed(3) : 'n/a'} <= 0`);
   }
 
-  if (policy.minDsr !== undefined && policy.trialCount && policy.trialCount > 1) {
-    const dsrRes = computeDeflatedSharpe({
-      sharpeRatio: result.test.profitFactor - 1, // Sharpe proxy from excess profit factor
-      sampleLength: result.test.n,
-      trialCount: policy.trialCount,
-    });
-    if (dsrRes.dsr < policy.minDsr) {
-      reasons.push(`Deflated Sharpe ${dsrRes.dsr.toFixed(2)} < ${policy.minDsr} under ${policy.trialCount} trials`);
-    }
+  if (policy.minDsr !== undefined) {
+    const stats = describeReturnSeries(result.test.netRSeries ?? [])!;
+    const ratios = policy.trialSharpeRatios!;
+    const avg = ratios.reduce((sum, value) => sum + value, 0) / ratios.length;
+    const trialSharpeVariance = ratios.reduce((sum, value) => sum + (value - avg) ** 2, 0) / (ratios.length - 1);
+    const dsr = computeDeflatedSharpe({ sharpeRatio: stats.sharpe, sampleLength: stats.n, skewness: stats.skewness, kurtosis: stats.kurtosis, trialCount: policy.trialCount!, trialSharpeVariance });
+    if (dsr.dsr < policy.minDsr) reasons.push(`Deflated Sharpe ${dsr.dsr.toFixed(2)} < ${policy.minDsr} under ${policy.trialCount} registered trials (per-trade net-R series)`);
   }
 
   return reasons;
@@ -143,7 +181,7 @@ function checkRiskAndDrawdown(result: ExperimentResult, policy: PromotionPolicy)
   }
   const probPositive = result.test.bootstrap?.probPositive ?? 0;
   if (probPositive < policy.minOosConfidence) {
-    reasons.push(`OOS P(E[R]>0) ${probPositive.toFixed(2)} < ${policy.minOosConfidence}`);
+    reasons.push(`OOS bootstrap fraction of resampled means > 0 ${probPositive.toFixed(2)} < ${policy.minOosConfidence}`);
   }
   return reasons;
 }

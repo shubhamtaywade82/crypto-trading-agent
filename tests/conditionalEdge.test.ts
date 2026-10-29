@@ -56,6 +56,21 @@ test('bootstrap is reproducible from its seed and brackets the sample mean', () 
   assert.ok(a.probPositive > 0.95);
 });
 
+test('null-centred cluster bootstrap p-values are calibrated under null and detect a planted edge', () => {
+  let falsePositives = 0;
+  for (let seed = 0; seed < 60; seed += 1) {
+    const rand = mulberry32(seed + 1000);
+    const samples = Array.from({ length: 80 }, (_, i) => ({ value: rand() * 2 - 1, cluster: `day-${i}` }));
+    const p = bootstrapMean(samples, { iterations: 400, seed, confidence: 0.95 })!.pValue;
+    if (p <= 0.05) falsePositives += 1;
+  }
+  assert.ok(falsePositives <= 9, `null false-positive rate should stay near 5%, got ${falsePositives}/60`);
+  const edge = daily('EDGE', 80, 0.45, 913, 1).map((o) => ({ value: o.netR, cluster: utcDay(o.t) }));
+  const significant = bootstrapMean(edge, { iterations: 2000, seed: 7, confidence: 0.95 })!;
+  assert.ok(significant.pValue < 0.05);
+  assert.ok(significant.probPositive > 0.95);
+});
+
 test('bootstrap rejects empty or non-finite input', () => {
   assert.equal(bootstrapMean([]), null);
   assert.equal(bootstrapMean([{ value: Number.NaN, cluster: 'a' }]), null);

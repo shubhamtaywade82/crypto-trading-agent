@@ -32,6 +32,7 @@ import { evaluateExecutionQuality } from '../execution/ExecutionQuality.js';
 import { AgentLedger } from '../learning/AgentLedger.js';
 import { confidenceMultiplier } from '../learning/ConfidenceAdjuster.js';
 import { TradeOutcomeRecorder } from '../learning/TradeOutcomeRecorder.js';
+import { DurableResearchLedger } from '../research/ResearchLedger.js';
 import { buildSetupMap } from '../decision/SetupEngine.js';
 import { SetupLedger } from '../decision/SetupLedger.js';
 import { loadRrProfile } from '../risk/rrProfile.js';
@@ -134,7 +135,8 @@ export class Orchestrator extends EventEmitter {
   private lastInitError: string | null = null;
   private ledger = new AgentLedger('data/agent-ledger.json');
   private journal = new DecisionJournal(config.decisionsPath);
-  private recorder = new TradeOutcomeRecorder(this.ledger, this.journal);
+  private researchLedger = new DurableResearchLedger(config.researchLedgerPath);
+  private recorder = new TradeOutcomeRecorder(this.ledger, this.journal, this.researchLedger);
   /** Winning fusion intents of the current cycle, keyed by `${symbol}:${agent}`; feeds decision evidence. */
   private fusionIntents = new Map<string, import('../decision/SignalFusion.js').TradeIntent>();
   private council = new TradingCouncil(this.advisor, this.ledger);
@@ -461,21 +463,21 @@ export class Orchestrator extends EventEmitter {
       if (decision.approved) this.refusalSuppressor.noteApproval(signal);
       else this.refusalSuppressor.noteRefusal(signal, decision.reason, portfolio);
       if (!decision.approved) {
-        this.journal.record(record);
+        this.persistDecision(record);
         this.log('RISK-MGR-δ', `REJECTED ${signal.symbol}: ${decision.reason}`, 'warn');
         this.hooks.onRefusal(signal, decision.reason);
         this.counters.monitored += 1;
         continue;
       }
       if (await this.isVetoed(signal, ctx)) {
-        this.journal.record({ ...record, status: 'VETOED', rejectionReason: 'advisor veto' });
+        this.persistDecision({ ...record, status: 'VETOED', rejectionReason: 'advisor veto' });
         this.counters.monitored += 1;
         continue;
       }
       const derivatives = ctx.marketDataV2?.[signal.symbol]?.derivatives ?? null;
       const eq = evaluateExecutionQuality({ symbol: signal.symbol, side: signal.type.includes('SHORT') ? 'SHORT' : 'LONG', sourceAgent: signal.agent, evidenceScore: Math.round(signal.confidence * 100), entry: signal.entry ?? 0, stopLoss: signal.stopLoss ?? 0, takeProfit: signal.takeProfit ?? 0, reasons: [signal.reason] }, derivatives, decision.positionSizeUsdt);
       if (!eq.approved) {
-        this.journal.record({ ...record, status: 'EQ_REJECTED', rejectionReason: eq.reason });
+        this.persistDecision({ ...record, status: 'EQ_REJECTED', rejectionReason: eq.reason });
         this.log(signal.agent, `EQ BLOCK ${signal.symbol}: ${eq.reason}`, 'warn');
         this.counters.monitored += 1;
         continue;
@@ -486,7 +488,7 @@ export class Orchestrator extends EventEmitter {
         : null;
       const frictionLabel = friction && `${signal.symbol} ${entrySide(signal.type)} $${decision.positionSizeUsdt.toFixed(0)}: ${friction.reason}`;
       if (friction && !friction.allowed) {
-        this.journal.record({ ...record, status: 'FRICTION_REJECTED', rejectionReason: `friction: ${friction.reason}`, execution: { ts: Date.now(), spreadBps: friction.spreadBps, slippageBps: friction.slipBps, effectiveCostBps: null, friction: { status: friction.status, spreadBps: friction.spreadBps, slipBps: friction.slipBps } } });
+        this.persistDecision({ ...record, status: 'FRICTION_REJECTED', rejectionReason: `friction: ${friction.reason}`, execution: { ts: Date.now(), spreadBps: friction.spreadBps, slippageBps: friction.slipBps, effectiveCostBps: null, friction: { status: friction.status, spreadBps: friction.spreadBps, slipBps: friction.slipBps } } });
         this.log(signal.agent, `FRICTION BLOCK ${frictionLabel}`, 'warn');
         this.counters.monitored += 1;
         continue;
@@ -504,7 +506,7 @@ export class Orchestrator extends EventEmitter {
           rejectionReason: log.msg,
         }),
       };
-      this.journal.record(executed);
+      this.persistDecision(executed);
       this.log(log.agent, log.msg, log.level);
       this.hooks.onOrder(signal, decision, log, ctx);
       if (log.level === 'warn') this.counters.monitored += 1;
@@ -522,6 +524,33 @@ export class Orchestrator extends EventEmitter {
       decision,
       evidence,
       now: Date.now(),
+    });
+  }
+
+  /** Dual-writes decisions to both the operational journal and the immutable research ledger. */
+  private persistDecision(rec: import('../decision/DecisionJournal.js').DecisionRecord): void {
+    this.journal.record(rec);
+    this.recordResearchDecision(rec);
+  }
+
+  private recordResearchDecision(rec: import('../decision/DecisionJournal.js').DecisionRecord): void {
+    const now = Date.now();
+    this.researchLedger.append({
+      type: 'decision_snapshot',
+      timestamps: { exchange_time: rec.timestamp, received_at: now, available_at: now },
+      payload: {
+        decisionId: rec.decisionId,
+        symbol: rec.symbol,
+        strategy: rec.strategy,
+        action: rec.side === 'LONG' || rec.side === 'SHORT' ? rec.side : 'NO_TRADE',
+        status: rec.status === 'EXECUTED' ? 'EXECUTED' : 'REJECTED',
+        rejectionReason: rec.rejectionReason ?? undefined,
+        evidenceScore: Math.round(rec.evidence?.score ?? 50),
+        plannedEntry: rec.entry ?? undefined,
+        stopLoss: rec.stopLoss ?? undefined,
+        takeProfit: rec.takeProfit ?? undefined,
+        notional: rec.notionalUsdt ?? undefined,
+      },
     });
   }
 

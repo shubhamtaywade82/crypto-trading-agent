@@ -245,9 +245,10 @@ export class DurableResearchLedger {
     }
   }
 
-  append(input: Omit<ResearchEvent, 'seq'>): ResearchEvent {
+  append(input: Omit<ResearchEvent, 'seq' | 'id'> & { id?: string }): ResearchEvent {
     this.seq += 1;
-    const event = { ...input, seq: this.seq } as ResearchEvent;
+    const id = input.id ?? `evt_${Date.now()}_${this.seq}`;
+    const event = { ...input, id, seq: this.seq } as ResearchEvent;
     this.events.push(event);
 
     if (this.filePath) {

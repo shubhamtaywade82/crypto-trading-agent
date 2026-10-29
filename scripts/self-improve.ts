@@ -186,8 +186,9 @@ async function main(): Promise<void> {
     console.log(`=== Last ${tail.length} research events (of ${lines.length} total) ===`);
     for (const line of tail) {
       try {
-        const e = JSON.parse(line) as ResearchEvent;
-        console.log(`[${e.seq}] ${new Date(e.at).toISOString()} ${e.type} ${summaryOf(e)}`);
+        const e = JSON.parse(line) as any;
+        const atMs = e.at ?? e.timestamps?.exchange_time ?? e.timestamps?.received_at ?? Date.now();
+        console.log(`[${e.seq ?? '-'}] ${new Date(atMs).toISOString()} ${e.type} ${summaryOf(e)}`);
       } catch {
         console.log(`(unparseable line) ${line.slice(0, 100)}`);
       }
@@ -273,8 +274,14 @@ main().catch((err) => {
 });
 
 /** Render a one-line summary of an event for the `--events` audit trail view. */
-function summaryOf(e: ResearchEvent): string {
+function summaryOf(e: any): string {
   switch (e.type) {
+    case 'decision_snapshot':
+      return `${e.payload.symbol} ${e.payload.strategy} ${e.payload.action} [${e.payload.status}]${e.payload.rejectionReason ? ` (${e.payload.rejectionReason})` : ''}`;
+    case 'trade_episode':
+      return `${e.payload.symbol} ${e.payload.strategy} ${e.payload.side} exit=${e.payload.exitPrice} PnL=${e.payload.netPnl?.toFixed?.(2) ?? e.payload.netPnl} (${e.payload.realizedR?.toFixed?.(2) ?? e.payload.realizedR}R) [${e.payload.exitReason}]`;
+    case 'order_fill':
+      return `${e.payload.symbol} ${e.payload.side} qty=${e.payload.qty} @ ${e.payload.price}`;
     case 'spec_registered':
       return `${e.payload.id}:v${e.payload.version} (parent: ${e.payload.parentVersion ?? '∅'})`;
     case 'champion_appointed':
@@ -288,7 +295,7 @@ function summaryOf(e: ResearchEvent): string {
     case 'experiment_started':
       return `${e.payload.experimentId}: candidate ${e.payload.candidateId}:v${e.payload.candidateVersion} from parent ${e.payload.parentId}:v${e.payload.parentVersion}`;
     case 'experiment_completed':
-      return `${e.payload.experimentId}: ${e.payload.decision} (test n=${e.payload.testN}, meanR=${e.payload.testMeanR.toFixed(3)} vs parent ${e.payload.parentTestMeanR.toFixed(3)})`;
+      return `${e.payload.experimentId}: ${e.payload.decision} (test n=${e.payload.testN}, meanR=${e.payload.testMeanR?.toFixed?.(3) ?? e.payload.testMeanR} vs parent ${e.payload.parentTestMeanR?.toFixed?.(3) ?? e.payload.parentTestMeanR})`;
     case 'loop_iteration_started':
       return `champion ${e.payload.championId}:v${e.payload.championVersion}, ledger=${e.payload.ledgerSize}`;
     case 'loop_iteration_completed':
@@ -298,10 +305,12 @@ function summaryOf(e: ResearchEvent): string {
     case 'hypothesis_repaired':
       return `${e.payload.ok ? 'repaired' : 'repair failed'} after ${e.payload.attempts} attempt(s); ${e.payload.errorCount} error(s)${e.payload.firstError ? ` — ${e.payload.firstError}` : ''}`;
     case 'model_routed':
-      return `${e.payload.kind} → ${e.payload.model} (score=${e.payload.score.toFixed(3)}${e.payload.reasons.length > 0 ? `; ${e.payload.reasons.join('; ')}` : ''})`;
+      return `${e.payload.kind} → ${e.payload.model} (score=${e.payload.score?.toFixed?.(3) ?? e.payload.score}${e.payload.reasons?.length > 0 ? `; ${e.payload.reasons.join('; ')}` : ''})`;
     case 'llm_call_failed':
       return `${e.payload.model} — ${e.payload.error}`;
     case 'patch_applied':
       return `${e.payload.ok ? 'succeeded' : 'failed'} — ${e.payload.filesChanged} file(s), ${e.payload.verifyPassed}/${e.payload.verifyCommandCount} validations passed${e.payload.commitSha ? `; commit ${e.payload.commitSha.slice(0, 7)}` : ''}${e.payload.error ? `; ${e.payload.error}` : ''}`;
+    default:
+      return JSON.stringify(e.payload ?? {});
   }
 }

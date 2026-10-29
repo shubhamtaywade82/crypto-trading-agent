@@ -62,7 +62,7 @@ A candidate strategy cannot merely show positive backtest returns; it must stati
 ## 4. Pillar 3: Statistical Hardening & Acceptance Gates
 
 ### 4.1 Power-Calibrated Sample Sizing
-Fixed arbitrary trade counts (e.g. $N=30$) are statistically invalid for detecting small edges. The required sample size is derived directly from statistical power ($1 - \beta = 0.80$) and significance ($\alpha = 0.05$):
+Fixed trade counts (e.g. $N=30$) are not universal evidence. The default promotion policy preregisters a 0.10R detectable effect, assumed per-trade sigma of 1R, 80% power and two-sided alpha of 0.05 (about 784 independent-equivalent observations under the normal approximation). The 30-trade floor is only a lower bound; the gate also requires at least 30 distinct time clusters and returns INSUFFICIENT_DATA when power assumptions or evidence are missing. The normal-approximation calculation is:
 
 $$N \ge \left( \frac{(z_\alpha + z_\beta) \cdot \sigma}{\Delta\mu} \right)^2$$
 
@@ -79,7 +79,11 @@ where the benchmark expected maximum Sharpe under $N$ independent trials is:
 
 $$\text{SR}^* = \sqrt{\mathbb{V}[\{\text{SR}_n\}]} \left( (1 - \gamma) Z^{-1}\left(1 - \frac{1}{N}\right) + \gamma Z^{-1}\left(1 - \frac{1}{N e}\right) \right)$$
 
-Candidates with high trial counts and negative skewness ($\gamma_3$) or excess kurtosis ($\gamma_4$) are deflated accordingly.
+Promotion calculates the Sharpe input from an observed OOS return series with measured skewness and Pearson kurtosis, and uses measured variance across the complete registered trial-Sharpe family. `profitFactor - 1` is not a Sharpe ratio. DSR fails closed when the OOS series or trial history is missing; no default trial variance is accepted. The current evaluator exposes net-R per resolved trade, not fixed-frequency portfolio equity returns, so this frequency limitation must remain explicit until an equity-return series is implemented.
+
+### Bootstrap inference contract
+
+The cluster-bootstrap percentile interval describes uncertainty in the mean. `probPositive` is only the fraction of ordinary resampled means above zero; it is not a p-value or posterior probability. Holm correction consumes a separate one-sided p-value from whole-cluster resampling after centring outcomes under the null mean of zero. Seeded null and positive-edge simulation tests cover these semantics.
 
 ### 4.3 Empirical Bayes Shrinkage
 To prevent small-sample overfitting across market regimes, raw regime expectancies $\hat{\mu}_c$ are shrunk toward the grand baseline mean $\hat{\mu}_b$:
@@ -89,7 +93,9 @@ $$\hat{\mu}_s = \frac{n}{n + k} \hat{\mu}_c + \frac{k}{n + k} \hat{\mu}_b$$
 Where $k$ acts as a pseudo-count prior ($k=25$). Strata with few observations ($n < 10$) are pulled strongly toward the baseline, preventing false regime-specific claims.
 
 ### 4.4 Walk-Forward Purging & Embargo
-Cross-validation folds enforce an explicit embargo window (default 5 days) between train and test splits to eliminate serial autocorrelation and multi-day volatility spillover.
+Cross-validation folds enforce an explicit embargo window (default 5 days) between train and test splits to reduce temporal leakage. The experiment runner only includes outcomes resolved strictly before a window cutoff; nested walk-forward selection is bounded to the training window, leaving the static test interval untouched for final evaluation.
+
+Finite `maxSpreadBps` experiments use the point-in-time spread saved with each setup. Unknown spreads are excluded fail-closed and reported rather than silently treating the parameter as a no-op.
 
 ---
 

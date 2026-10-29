@@ -61,6 +61,17 @@ test('runExperiment returns empty results when the ledger is too short for the t
   assert.ok(/spans/.test(result.experimentNotes[0]));
 });
 
+test('hypotheticalTrades excludes outcomes not resolved strictly before cutoff', () => {
+  const spec = seedStructLiqSpec();
+  const ledger = makeLedger({ n: 4, spacing: 60_000 });
+  const cutoff = ledger[2]!.createdAt + 1;
+  ledger[0] = { ...ledger[0]!, closedAt: cutoff };
+  ledger[1] = { ...ledger[1]!, closedAt: cutoff - 1 };
+  const selected = hypotheticalTrades(spec, ledger, ledger[0]!.createdAt, cutoff);
+  assert.ok(!selected.some((trade) => trade.record.setupId === ledger[0]!.setupId));
+  assert.ok(selected.some((trade) => trade.record.setupId === ledger[1]!.setupId));
+});
+
 test('runExperiment computes train and test metrics on disjoint windows', () => {
   const parent = seedStructLiqSpec();
   const candidate = child(parent, { minimumRewardRisk: 1.4 });
@@ -84,12 +95,15 @@ test('runExperiment flags sweep-age mutations as approximations in experimentNot
   assert.ok(result.experimentNotes.some((n) => /maxSweepAgeCandles/.test(n) && /approximation/.test(n)));
 });
 
-test('runExperiment flags finite maxSpreadBps as a no-op (ledger lacks per-setup spread)', () => {
+test('finite maxSpreadBps filters point-in-time spreads and fails closed when missing', () => {
   const parent = seedStructLiqSpec();
   const candidate = child(parent, { maxSpreadBps: 5 } as Partial<StructLiqSpecParams>);
   const ledger = makeMultiRegimeLedger(60);
   const result = runExperiment(candidate, parent, ledger, BASE_CONFIG);
-  assert.ok(result.experimentNotes.some((n) => /maxSpreadBps/.test(n) && /no-op/.test(n)));
+  assert.ok(result.experimentNotes.some((n) => /maxSpreadBps/.test(n) && /unknown spread/.test(n)));
+  assert.ok(!passesSpecFilters(candidate, { ...ledger[0]!, features: { ...ledger[0]!.features, spreadBps: null } }));
+  assert.ok(!passesSpecFilters(candidate, { ...ledger[0]!, features: { ...ledger[0]!.features, spreadBps: 8 } }));
+  assert.ok(passesSpecFilters(candidate, { ...ledger[0]!, features: { ...ledger[0]!.features, spreadBps: 3 } }));
 });
 
 test('runExperiment throws when candidate and parent have different ids', () => {

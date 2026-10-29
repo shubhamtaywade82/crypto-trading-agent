@@ -55,8 +55,10 @@ export function passesSpecFilters(spec: StrategySpec<StructLiqSpecParams>, r: Se
   if (r.features.sweepDepthAtr !== null && r.features.sweepDepthAtr < spec.params.minSweepDepthAtr) return false;
   if (r.features.sweepDisplacementAtr !== null && r.features.sweepDisplacementAtr < spec.params.minSweepDisplacementAtr) return false;
   if (r.effectiveRr !== null && r.effectiveRr < spec.params.minimumRewardRisk) return false;
-  // `maxSpreadBps` is a research-plane filter; the ledger does not yet store per-setup spread, so a finite
-  // maxSpreadBps produces no exclusions today. Documented in experimentNotes.
+  if (Number.isFinite(spec.params.maxSpreadBps)) {
+    if (typeof r.features.spreadBps !== 'number' || !Number.isFinite(r.features.spreadBps)) return false;
+    if (r.features.spreadBps > spec.params.maxSpreadBps) return false;
+  }
   return true;
 }
 
@@ -73,6 +75,8 @@ export function hypotheticalTrades(
   const out: EligibleSetup[] = [];
   for (const r of ledger) {
     if (r.createdAt < from || r.createdAt >= to) continue;
+    // The outcome must be known strictly before the window cutoff to avoid look-ahead.
+    if (r.closedAt === null || r.closedAt >= to) continue;
     if (!passesSpecFilters(spec, r)) continue;
     if (r.entryTouchedAt === null) continue;
     if (r.netR === null) continue;
@@ -90,6 +94,8 @@ export interface WindowStats {
   symbols: number;
   regimes: number;
   bootstrap: BootstrapSummary | null;
+  /** Per-trade net-R series sorted by resolution time; DSR frequency is per resolved trade. */
+  netRSeries?: number[];
 }
 
 export interface PerSliceStat { key: string; n: number; meanNetR: number }
@@ -166,6 +172,7 @@ function windowStats(trades: readonly EligibleSetup[], options: BootstrapOptions
     symbols: symbols.size,
     regimes: regimes.size,
     bootstrap,
+    netRSeries: [...trades].sort((a, b) => (a.record.closedAt ?? a.record.createdAt) - (b.record.closedAt ?? b.record.createdAt)).map((t) => t.netR),
   };
 }
 
@@ -256,10 +263,9 @@ export function runExperiment(
   }
 
   if (Number.isFinite(candidate.params.maxSpreadBps)) {
-    notes.push(
-      `maxSpreadBps=${candidate.params.maxSpreadBps} configured but the ledger does not yet store per-setup spread; ` +
-      `this filter is a no-op until the ledger records it.`,
-    );
+    const inWindow = ledger.filter((r) => r.createdAt >= trainFrom && r.createdAt < testTo);
+    const missing = inWindow.filter((r) => typeof r.features.spreadBps !== 'number' || !Number.isFinite(r.features.spreadBps)).length;
+    if (missing > 0) notes.push(`maxSpreadBps=${candidate.params.maxSpreadBps}: ${missing}/${inWindow.length} records have unknown spread and are excluded (fail-closed).`);
   }
 
   const dims = config.walkForwardDims ?? ['strategy', 'regime', 'phase', 'side'];
@@ -269,7 +275,8 @@ export function runExperiment(
   const trainParent = hypotheticalTrades(parent, ledger, trainFrom, trainTo);
   const testParent = hypotheticalTrades(parent, ledger, trainTo, testTo);
 
-  const obs = observationsOf(candidate, ledger, trainFrom, testTo, dims);
+  // Nested walk-forward selection is limited to training history; the following static test period is held out.
+  const obs = observationsOf(candidate, ledger, trainFrom, trainTo, dims);
   const wf = walkForward(obs, {
     trainDays: config.walkForwardTrainDays ?? 14,
     testDays: config.walkForwardTestDays ?? 7,
@@ -300,7 +307,7 @@ function emptyResult(
   notes: string[],
 ): ExperimentResult {
   const empty: WindowStats = {
-    n: 0, winRate: 0, meanNetR: 0, profitFactor: 0, maxDrawdownR: 0, symbols: 0, regimes: 0, bootstrap: null,
+    n: 0, winRate: 0, meanNetR: 0, profitFactor: 0, maxDrawdownR: 0, symbols: 0, regimes: 0, bootstrap: null, netRSeries: [],
   };
   return {
     candidateId: candidate.id,

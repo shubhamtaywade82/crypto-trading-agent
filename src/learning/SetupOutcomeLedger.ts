@@ -35,6 +35,8 @@ export interface SetupOutcomeRecord {
     verdictAtCreation: SetupVerdict | null;
     sweepDepthAtr: number | null;
     sweepDisplacementAtr: number | null;
+    /** Spread in bps at setup creation; null if the point-in-time value was not available. */
+    spreadBps: number | null;
   };
   statesReached: { state: SetupScenario['state']; at: number }[];
   eligibleSeenAt: number | null;
@@ -104,6 +106,7 @@ export class SetupOutcomeLedger {
         locationAtEntry: s.locationAtEntry?.location ?? null, checks: s.quality?.checks ?? null,
         verdictAtCreation: s.quality?.verdict ?? null,
         sweepDepthAtr: s.evidence?.depthAtr ?? null, sweepDisplacementAtr: s.evidence?.displacementAtr ?? null,
+        spreadBps: typeof map.spreadBps === 'number' && Number.isFinite(map.spreadBps) && map.spreadBps >= 0 ? map.spreadBps : null,
       },
       statesReached: [{ state: s.state, at: s.lifecycle!.createdAt }],
       eligibleSeenAt: null, entryTouchedAt: null, mfeR: null, maeR: null, outcome: 'OPEN', closedAt: null, netR: null,
@@ -170,7 +173,15 @@ export class SetupOutcomeLedger {
       if (!line.trim()) continue;
       try {
         const parsed: unknown = JSON.parse(line);
-        if (isRecord(parsed)) this.records.set(parsed.setupId, parsed);
+        if (isRecord(parsed)) {
+          const record = parsed as SetupOutcomeRecord;
+          const spread = record.features?.spreadBps;
+          // Backward-compatible: older append-only records are preserved with an explicit unknown spread.
+          this.records.set(record.setupId, {
+            ...record,
+            features: { ...record.features, spreadBps: typeof spread === 'number' && Number.isFinite(spread) && spread >= 0 ? spread : null },
+          });
+        }
       } catch { /* a torn last line from a crash is skipped */ }
     }
     // Setups still OPEN belong to a session that no longer exists; their outcome can no longer be observed

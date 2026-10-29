@@ -102,8 +102,8 @@ export function expectedMaxSharpe(trialCount: number, varSharpe: number): number
  * se = sqrt((1 - skew*SR + ((kurt - 1)/4)*SR^2) / (T - 1))
  */
 export function sharpeStandardError(sr: number, t: number, skew: number, kurt: number): number {
-  if (t <= 1 || !Number.isFinite(sr) || !Number.isFinite(skew) || !Number.isFinite(kurt) || kurt < 1) return Number.POSITIVE_INFINITY;
-  const variance = (1 - skew * sr + ((kurt - 1) / 4) * Math.pow(sr, 2)) / (t - 1);
+  if (t <= 1 || !Number.isFinite(sr) || !Number.isFinite(skew) || !Number.isFinite(kurt) || kurt < 1 - 1e-9) return Number.POSITIVE_INFINITY;
+  const variance = (1 - skew * sr + ((Math.max(1, kurt) - 1) / 4) * Math.pow(sr, 2)) / (t - 1);
   return variance > 0 && Number.isFinite(variance) ? Math.sqrt(variance) : Number.POSITIVE_INFINITY;
 }
 
@@ -122,11 +122,11 @@ export function computeDeflatedSharpe(input: DeflatedSharpeInput): DeflatedSharp
   } = input;
   if (!Number.isFinite(sharpeRatio) || !Number.isInteger(sampleLength) || sampleLength < 2 ||
       !Number.isInteger(trialCount) || trialCount < 1 || !Number.isFinite(skewness) ||
-      !Number.isFinite(kurtosis) || kurtosis < 1 || !Number.isFinite(trialSharpeVariance) || trialSharpeVariance < 0) {
+      !Number.isFinite(kurtosis) || kurtosis < 1 - 1e-9 || !Number.isFinite(trialSharpeVariance) || trialSharpeVariance < 0) {
     throw new Error('invalid Deflated Sharpe inputs: finite return statistics and empirical trial variance are required');
   }
 
-  const se = sharpeStandardError(sharpeRatio, sampleLength, skewness, kurtosis);
+  const se = sharpeStandardError(sharpeRatio, sampleLength, skewness, Math.max(1, kurtosis));
   const maxBenchmark = expectedMaxSharpe(trialCount, trialSharpeVariance);
 
   // Probabilistic Sharpe Ratio vs 0 benchmark

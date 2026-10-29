@@ -157,3 +157,8 @@ the execution-friction verdict gates anything (above), because it measures cost,
 
 Recorded readings (`MICRO_RECORD=on`) now include every window and the bias state, so the multi-window rules can be
 tested offline against what followed.
+
+
+### Evaluation leakage and execution costs
+
+The offline evaluator excludes any training label whose forward-price observation lands in the holdout interval. This prevents training statistics from using outcomes that belong to the untouched evaluation period. Directional net returns use entry-side depth-walked slippage and the opposing exit-side slippage for each horizon (plus two taker fees); the spread-based fallback is used only when both entry and exit spreads are available. These are estimates for the recorded order size, not actual fills.

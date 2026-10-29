@@ -6,7 +6,7 @@ import path from 'node:path';
 import { test } from 'node:test';
 import { mulberry32 } from '../src/research/Bootstrap.js';
 import {
-  DEFAULT_EVAL_CONFIG, evaluate, labelSegment, parseReading, renderReport, roundTripCostBps, segmentReadings, type EvalConfig, type RecordedReading,
+  DEFAULT_EVAL_CONFIG, directionalRoundTripCostBps, evaluate, labelSegment, parseReading, renderReport, roundTripCostBps, segmentReadings, type EvalConfig, type RecordedReading,
 } from '../src/microstructure/MicroEval.js';
 
 const T0 = Date.UTC(2026, 9, 26, 0, 0);
@@ -48,7 +48,8 @@ test('labels use the first mid at or after t + horizon, within tolerance and ins
   const seg = [0, 1, 2, 3, 5, 6].map((s) => reading(T0 + s * 1_000, 100 + s * 0.01, { bias: { bias: s >= 3 ? 'LONG' : 'NEUTRAL' } }));
   const out = labelSegment(seg, { ...cfg, horizonsMs: [1_000, 2_000, 10_000], toleranceMs: 1_500 }, T0 + 4_000);
   assert.ok(Math.abs(out[0].forwardBps[0]! - 1) < 1e-9); // 100 -> 100.01
-  assert.ok(Math.abs(out[3].forwardBps[0]! - (0.02 / 100.03) * 10_000) < 1e-9); // t=3 -> first mid at/after 4 s is t=5
+  assert.equal(out[3].forwardBps[0], null); // training entry cannot use the holdout mid at t=5
+  assert.ok(out[4].forwardBps[0] !== null); // holdout entry can use a later holdout mid
   assert.equal(out[0].forwardBps[2], null); // nothing 10 s ahead in this segment
   assert.deepEqual(out.map((l) => l.biasOnset), [false, false, false, true, false, false]);
   assert.deepEqual(out.map((l) => l.split), ['train', 'train', 'train', 'train', 'holdout', 'holdout']);
@@ -61,6 +62,13 @@ test('round-trip cost is measured slippage when recorded, else the spread, plus 
   assert.equal(roundTripCostBps(reading(T0, 100), 4), 9);
   assert.equal(roundTripCostBps(reading(T0, 100, { friction: { status: 'BLOCK', buySlipBps: null, sellSlipBps: 2 } }), 4), 9);
   assert.equal(roundTripCostBps(reading(T0, 100, { friction: undefined, spreadBps: null }), 4), null);
+});
+
+test('directional round-trip costs use entry-side and exit-side slippage', () => {
+  const entry = reading(T0, 100, { friction: { status: 'OK', buySlipBps: 1, sellSlipBps: 5 } });
+  const exit = reading(T0 + 5_000, 101, { friction: { status: 'OK', buySlipBps: 3, sellSlipBps: 2 } });
+  assert.equal(directionalRoundTripCostBps(entry, exit, 1, 4), 11);
+  assert.equal(directionalRoundTripCostBps(entry, exit, -1, 4), 16);
 });
 
 // ---- evaluation on synthetic recordings ---------------------------------------------------------------------------
@@ -210,6 +218,6 @@ test('it parses exactly what the live recorder writes', async () => {
   assert.equal(live[89]!.bias!.bias, 'NEUTRAL');
   const res = evaluate([{ symbol: 'SOLUSDT', readings: parsed as RecordedReading[], malformed: 0 }], { ...cfg, minN: 5, minClusters: 1 });
   assert.equal(res.integrity[0].segments, 1);
-  assert.equal(res.coverage.find((c) => c.horizonMs === 30_000)!.labelled, 60);
+  assert.equal(res.coverage.find((c) => c.horizonMs === 30_000)!.labelled, 33); // train labels crossing into holdout are excluded
   assert.ok(res.costs[0].p50! > 8); // spread 2 bp + two 4 bp fees
 });

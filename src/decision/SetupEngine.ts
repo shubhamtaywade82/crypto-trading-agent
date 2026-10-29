@@ -354,6 +354,7 @@ export function buildSetupMap(state: MarketState, options: SetupEngineOptions = 
     crowding: state.crowding?.positioningExtreme ?? null,
     openInterestExpansion: state.crowding?.openInterestExpansion ?? null,
     takerAggressionRatio: state.crowding?.takerAggressionRatio ?? null,
+    ...(typeof state.derivatives?.spreadBps === 'number' && Number.isFinite(state.derivatives.spreadBps) && state.derivatives.spreadBps >= 0 ? { spreadBps: state.derivatives.spreadBps } : {}),
     scenarios,
     invalidatedIds,
     noTradeReasons: noTradeReasons.slice(0, 3),

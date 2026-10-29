@@ -48,8 +48,8 @@ export interface PromotionPolicy {
   minDsr?: number;
   /** Number of registered Sharpe trials in the lineage. */
   trialCount?: number;
-  /** Complete finite Sharpe ratios for registered trials, one value per trial. */
-  trialSharpeRatios?: number[];
+  /** Cumulative number of registered trials with matching OOS equity-return evidence supplied on result. */
+  trialCount?: number;
 }
 
 export const DEFAULT_PROMOTION_POLICY: PromotionPolicy = {
@@ -79,11 +79,17 @@ function sampleVariance(values: readonly number[]): number {
 function getDsrReadinessIssue(result: ExperimentResult, policy: PromotionPolicy): string | null {
   if (policy.minDsr === undefined) return null;
   const count = policy.trialCount;
-  const ratios = policy.trialSharpeRatios;
-  if (!Number.isInteger(count) || (count ?? 0) < 2 || !ratios || ratios.length !== count || !ratios.every(Number.isFinite)) return 'Deflated Sharpe is enabled but trial evidence is incomplete: trialCount must be >=2 and trialSharpeRatios must contain one finite value per registered trial';
-  const stats = result.test.netRSeries ? describeReturnSeries(result.test.netRSeries) : null;
-  if (!stats || stats.n !== result.test.n) return 'Deflated Sharpe is enabled but the OOS per-trade net-R series is missing, non-finite, degenerate, or inconsistent with OOS n';
-  if (!Number.isFinite(sampleVariance(ratios))) return 'Deflated Sharpe trial Sharpe variance could not be estimated';
+  if (!Number.isInteger(count) || (count ?? 0) < 2) return 'Deflated Sharpe is enabled but trialCount must be an integer >= 2';
+  const candidate = result.test.equityReturnSeries;
+  const candidateStats = candidate ? describeReturnSeries(candidate.returns) : null;
+  if (!candidate || !candidate.samplingFrequency.trim() || !Number.isFinite(candidate.fromMs) || !Number.isFinite(candidate.toMs) || candidate.toMs <= candidate.fromMs || !candidateStats) {
+    return 'Deflated Sharpe requires a valid fixed-frequency OOS portfolio equity-return series; per-trade net-R is not a substitute';
+  }
+  const trials = result.registeredTrialEquityReturns;
+  if (!trials || trials.length !== count || trials.some((trial) => !trial.trialId.trim() || trial.samplingFrequency !== candidate.samplingFrequency || trial.fromMs !== candidate.fromMs || trial.toMs !== candidate.toMs || trial.returns.length !== candidate.returns.length || !describeReturnSeries(trial.returns))) {
+    return 'Deflated Sharpe requires a complete registered-trial family of valid OOS equity-return series on the exact same frequency and time grid';
+  }
+  if (new Set(trials.map((trial) => trial.trialId)).size !== count) return 'Deflated Sharpe trial evidence contains duplicate trial IDs';
   return null;
 }
 
@@ -160,10 +166,10 @@ function checkExpectancyAndDsr(result: ExperimentResult, policy: PromotionPolicy
   }
 
   if (policy.minDsr !== undefined) {
-    const stats = describeReturnSeries(result.test.netRSeries ?? [])!;
-    const ratios = policy.trialSharpeRatios!;
-    const avg = ratios.reduce((sum, value) => sum + value, 0) / ratios.length;
-    const trialSharpeVariance = ratios.reduce((sum, value) => sum + (value - avg) ** 2, 0) / (ratios.length - 1);
+    const equity = result.test.equityReturnSeries!;
+    const stats = describeReturnSeries(equity.returns)!;
+    const ratios = result.registeredTrialEquityReturns!.map((trial) => describeReturnSeries(trial.returns)!.sharpe);
+    const trialSharpeVariance = sampleVariance(ratios);
     const dsr = computeDeflatedSharpe({ sharpeRatio: stats.sharpe, sampleLength: stats.n, skewness: stats.skewness, kurtosis: stats.kurtosis, trialCount: policy.trialCount!, trialSharpeVariance });
     if (dsr.dsr < policy.minDsr) reasons.push(`Deflated Sharpe ${dsr.dsr.toFixed(2)} < ${policy.minDsr} under ${policy.trialCount} registered trials (per-trade net-R series)`);
   }

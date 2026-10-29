@@ -113,6 +113,8 @@ export interface SetupMap {
   scenarios: SetupScenario[];
   /** Scenario ids whose thesis was structurally killed this cycle (as opposed to merely not admissible). */
   invalidatedIds?: string[];
+  /** Point-in-time bid-ask spread in bps when this setup was generated. */
+  spreadBps?: number | null;
   /** Flow deltas at map time (OI vs price, taker z-score); absent when no derivatives history exists. */
   flow?: FlowContext;
   thesisTransition?: ThesisTransition;

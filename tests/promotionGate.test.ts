@@ -142,7 +142,7 @@ test('DSR requires actual fixed-frequency equity returns and measured trial disp
 
 test('DSR cannot silently skip trial correction when dispersion metadata is missing', () => {
   const returns = Array.from({ length: 900 }, (_, i) => (i % 2 === 0 ? 0.0001 : -0.0001));
-  const withEquity = result({ testEquityReturns: { source: 'EQUITY_CURVE', from: 0, to: 900_000, frequencyMs: 1_000, returns } });
+  const withEquity = result({ testEquityReturns: { source: 'CANDIDATE_PORTFOLIO_REPLAY', candidateId: 'STRUCT-LIQ-η', candidateVersion: 2, from: 0, to: 900_000, frequencyMs: 1_000, returns } });
   const verdict = evaluatePromotion(withEquity, { ...DEFAULT_PROMOTION_POLICY, minDsr: 0.95, trialCount: 500 });
   assert.equal(verdict.decision, 'INSUFFICIENT_DATA');
   assert.ok(verdict.reasons.some((r) => /trialSharpeVariance/.test(r)));

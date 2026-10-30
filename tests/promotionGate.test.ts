@@ -125,7 +125,7 @@ test('evaluatePromotion derives minTrades from power analysis when targetEffectS
   const underpowered = result({ test: { ...result().test, n: 40, effectiveN: 40 } });
   const v = evaluatePromotion(underpowered, powerPolicy);
   assert.equal(v.decision, 'INSUFFICIENT_DATA');
-  assert.match(v.reasons[0], /required minTrades=78[0-9]/);
+  assert.match(v.reasons[0], /required 78[0-9] independent-equivalent/);
 });
 
 test('DSR requires actual fixed-frequency equity returns and measured trial dispersion', () => {

@@ -12,6 +12,8 @@ export type DecisionStatus =
   | 'EQ_REJECTED'
   /** The live order book could not take the entry at an acceptable spread/slippage (MICRO_ENTRY_GATE). */
   | 'FRICTION_REJECTED'
+  /** The Tev1 decision-intelligence gate classified the candidate as not tradable (TEV1_GATE=on). */
+  | 'TEV1_REJECTED'
   | 'EXECUTION_REFUSED'
   | 'EXECUTION_FAILED';
 

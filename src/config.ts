@@ -23,6 +23,21 @@ export const EnvSchema = z.object({
   LLM_COUNCIL: z.enum(['off', 'on']).default('on'),
   /** Refused when on (see superRefine): an LLM-selected entry needs the expectancy gate, not a stated probability. */
   LLM_COUNCIL_AUTOTRADE: z.enum(['off', 'on']).default('off'),
+  /**
+   * Tev1 decision-intelligence gate (Ollama /v1/systemone, docs/tev1-decision-intelligence.md).
+   * off: not constructed. shadow: evaluate every risk-approved entry and audit it, refuse nothing.
+   * on: a BLOCK verdict refuses the candidate, fail-closed on timeouts and malformed responses.
+   * Refused with MODE=live (see superRefine) until out-of-sample evidence exists — same bar as the council.
+   */
+  TEV1_GATE: z.enum(['off', 'shadow', 'on']).default('off'),
+  /** Model tag sent to /v1/systemone; tev1:4b is the more accurate baseline, tev1:0.8b the memory-budget fallback. */
+  TEV1_MODEL: z.string().default('tev1:4b'),
+  /** Per-request budget: a decision the loop waits on must fail fast, not stall the tick. */
+  TEV1_TIMEOUT_MS: z.coerce.number().int().positive().default(8000),
+  /** Minimum classification confidence for an APPROVE to pass the gate (classification confidence, not trade probability). */
+  TEV1_MIN_CONFIDENCE: z.coerce.number().min(0).max(1).default(0.6),
+  /** Replayable audit trail: request, raw response, evaluation, verdict and latency per evaluation. */
+  TEV1_AUDIT_PATH: pathWithDefault('data/tev1-decisions.jsonl'),
   OLLAMA_API_KEY_1: z.string().optional(),
   OLLAMA_API_KEY_2: z.string().optional(),
   OLLAMA_API_KEY_3: z.string().optional(),
@@ -169,6 +184,13 @@ export const EnvSchema = z.object({
       message: 'LLM_COUNCIL_AUTOTRADE=on is refused: LLM-selected entries need the expectancy gate (docs/superpowers/specs/2026-10-17-intraday-decision-contract-design.md, section 5), which is not implemented yet',
     });
   }
+  if (env.MODE === 'live' && env.TEV1_GATE === 'on') {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['TEV1_GATE'],
+      message: 'TEV1_GATE=on is refused in MODE=live: AI-gated live execution needs out-of-sample evidence that the filter improves net expectancy without unacceptable missed opportunities (run shadow, then benchmark per docs/tev1-decision-intelligence.md). Use TEV1_GATE=shadow in live until then',
+    });
+  }
   if (env.MODE !== 'paper' || !env.PAPER_EXCHANGE_URL || env.PAPER_EXCHANGE_ACCOUNT_ID) return;
   ctx.addIssue({
     code: z.ZodIssueCode.custom,
@@ -256,6 +278,13 @@ export const config = {
     enabled: env.LLM_COUNCIL === 'on',
     /** Always false today: superRefine refuses LLM_COUNCIL_AUTOTRADE=on until the expectancy gate exists. The council stays advisory-only. */
     autoTrade: env.LLM_COUNCIL_AUTOTRADE === 'on',
+  },
+  tev1: {
+    gate: env.TEV1_GATE,
+    model: env.TEV1_MODEL,
+    timeoutMs: env.TEV1_TIMEOUT_MS,
+    minConfidence: env.TEV1_MIN_CONFIDENCE,
+    auditPath: env.TEV1_AUDIT_PATH,
   },
   marketDataV2: {
     enabled: true,

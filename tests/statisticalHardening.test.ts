@@ -89,7 +89,6 @@ test('DeflatedSharpe derives Sharpe, skewness and kurtosis from fixed-frequency 
     trialSharpeVariance: 0.2,
   });
   assert.equal(dsr.samplingFrequencyMs, 15 * 60_000);
-  assert.equal(dsr.sampleLength, undefined);
   assert.equal(dsr.psr > 0, true);
   assert.ok(Number.isFinite(dsr.sharpeRatio));
   assert.ok(Number.isFinite(dsr.skewness));

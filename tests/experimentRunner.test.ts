@@ -84,12 +84,15 @@ test('runExperiment flags sweep-age mutations as approximations in experimentNot
   assert.ok(result.experimentNotes.some((n) => /maxSweepAgeCandles/.test(n) && /approximation/.test(n)));
 });
 
-test('runExperiment flags finite maxSpreadBps as a no-op (ledger lacks per-setup spread)', () => {
+test('maxSpreadBps uses recorded setup spread and missing historical spread is incomplete', () => {
   const parent = seedStructLiqSpec();
-  const candidate = child(parent, { maxSpreadBps: 5 } as Partial<StructLiqSpecParams>);
+  const candidate = child(parent, { maxSpreadBps: 2 } as Partial<StructLiqSpecParams>);
   const ledger = makeMultiRegimeLedger(60);
-  const result = runExperiment(candidate, parent, ledger, BASE_CONFIG);
-  assert.ok(result.experimentNotes.some((n) => /maxSpreadBps/.test(n) && /no-op/.test(n)));
+  assert.ok(ledger.some((r) => r.features.spreadBps === 2.5));
+  assert.ok(!passesSpecFilters(candidate, ledger[0]));
+  const missing = ledger.map((r) => ({ ...r, features: { ...r.features, spreadBps: undefined } }));
+  const result = runExperiment(candidate, parent, missing, BASE_CONFIG);
+  assert.ok(result.experimentNotes.some((n) => n.startsWith('incomplete research input:') && /spreadBps/.test(n)));
 });
 
 test('runExperiment throws when candidate and parent have different ids', () => {

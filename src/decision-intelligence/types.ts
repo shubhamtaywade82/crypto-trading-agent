@@ -105,10 +105,12 @@ export type SetupWeakness = (typeof SETUP_WEAKNESS_CHOICES)[number];
 /** Higher-timeframe facts, already computed by the deterministic engine. */
 export interface TimeframeFacts {
   trend: 'BULLISH' | 'BEARISH' | 'NEUTRAL';
+  /** Latest structural event, e.g. 'BOS_BULLISH@101.2' or 'NO_BREAK'. */
   structure: string;
   adx14: number | null;
   rsi14: number | null;
-  atr14: number | null;
+  /** ATR14 as a percentage of last close, comparable across symbols and price levels. */
+  atrPct: number | null;
 }
 
 /** Order-flow and derivatives facts; every field may be missing on the venue feed. */

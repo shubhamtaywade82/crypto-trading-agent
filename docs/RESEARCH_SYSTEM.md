@@ -81,14 +81,22 @@ $$\text{SR}^* = \sqrt{\mathbb{V}[\{\text{SR}_n\}]} \left( (1 - \gamma) Z^{-1}\le
 
 Candidates with high trial counts and negative skewness ($\gamma_3$) or excess kurtosis ($\gamma_4$) are deflated accordingly.
 
-### 4.3 Empirical Bayes Shrinkage
+### 4.3 Cluster bootstrap inference and effective sample size
+
+The ordinary cluster bootstrap is used for the confidence interval. Its probPositive field is only the fraction of ordinary resampled means above zero; it is neither a Bayesian posterior probability nor a hypothesis-test p-value.
+
+The one-sided p-value tests \(H_0: E[R] \le 0\) against \(H_1: E[R] > 0\) using a separate null-centered cluster bootstrap: each observation is centered by the observed grand mean before complete day clusters are resampled. This preserves within-cluster dependence and unequal cluster sizes while constructing the null distribution. Holm correction consumes this p-value, not the ordinary bootstrap positive-mean fraction.
+
+For promotion power sizing, the runner estimates a conservative design effect from the intracluster correlation and reports an effective sample size. Negative estimated ICC is not used to claim more independent observations. The cluster bootstrap remains the inferential procedure; effective N is a planning diagnostic for minimum evidence requirements.
+
+### 4.4 Empirical Bayes Shrinkage
 To prevent small-sample overfitting across market regimes, raw regime expectancies $\hat{\mu}_c$ are shrunk toward the grand baseline mean $\hat{\mu}_b$:
 
 $$\hat{\mu}_s = \frac{n}{n + k} \hat{\mu}_c + \frac{k}{n + k} \hat{\mu}_b$$
 
 Where $k$ acts as a pseudo-count prior ($k=25$). Strata with few observations ($n < 10$) are pulled strongly toward the baseline, preventing false regime-specific claims.
 
-### 4.4 Walk-Forward Purging & Embargo
+### 4.5 Walk-Forward Purging & Embargo
 Cross-validation folds enforce an explicit embargo window (default 5 days) between train and test splits to eliminate serial autocorrelation and multi-day volatility spillover.
 
 ---
@@ -97,7 +105,7 @@ Cross-validation folds enforce an explicit embargo window (default 5 days) betwe
 
 ### 5.1 Whitelisted Feature Space
 The `HypothesisRegistry` enforces a strict closed-world ontology (`WHITELISTED_FEATURES`):
-`alma`, `supertrend`, `atr`, `rsi`, `volume_ratio`, `cvd`, `funding_rate`, `open_interest`, `bb_width`.
+`sweep_depth_atr`, `sweep_displacement_atr`, `absorption_score`, `order_flow_imbalance`, `spread_bps`, `break_distance_atr`, `reward_risk_ratio`, `atr_volatility_pct`, `funding_rate_apr`.
 Any hypothesis referencing unmeasurable or hallucinated indicators is rejected at registration.
 
 ### 5.2 Ticker & Date Anonymization
@@ -133,3 +141,10 @@ npx tsx --test tests/promotionGate.test.ts
 # 7. Run full test suite (1,790+ passing specs)
 npm test
 ```
+
+
+## 7. Evidence required for spread-filter experiments
+
+SetupMap captures the quote spread from the market state's derivatives snapshot when available, and SetupOutcomeLedger persists that value with the setup. maxSpreadBps now applies as an actual filter. If a finite spread threshold is part of a candidate but relevant ledger rows lack a valid recorded spread, ExperimentRunner marks the run as incomplete and PromotionGate returns INSUFFICIENT_DATA; missing legacy data is not silently treated as a pass.
+
+DSR inputs are deliberately separate from the setup-outcome ledger. The experiment runner accepts equityCurve marks and equitySamplingMs; the curve must cover the exact test interval at the declared cadence with no missing or invalid marks. A setup-level R series is not substituted for account-equity returns. The current self-improvement loop does not itself own an equity curve, so DSR remains inactive unless a caller supplies the required equity and trial-history evidence and enables minDsr.

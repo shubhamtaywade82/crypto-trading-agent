@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
+  buildPeriodicEquityReturns,
   hypotheticalTrades,
   passesSpecFilters,
   runExperiment,
@@ -59,6 +60,32 @@ test('runExperiment returns empty results when the ledger is too short for the t
   assert.equal(result.train.n, 0);
   assert.ok(result.experimentNotes.length > 0);
   assert.ok(/spans/.test(result.experimentNotes[0]));
+});
+
+test('fixed-cadence DSR returns require complete exact equity-curve coverage', () => {
+  const marks = [0, 1, 2, 3].map((i) => ({ t: i * 1_000, equity: 100 * (1 + i * 0.01) }));
+  const valid = buildPeriodicEquityReturns(marks, 1_000, 3_000, 1_000);
+  assert.equal(valid.reason, null);
+  assert.equal(valid.series?.returns.length, 2);
+  assert.ok(Math.abs(valid.series!.returns[0] - (101 / 100 - 1)) < 1e-12);
+
+  const gap = buildPeriodicEquityReturns([marks[0], marks[1], marks[3]], 0, 3_000, 1_000);
+  assert.equal(gap.series, null);
+  assert.match(gap.reason ?? '', /cadence/);
+});
+
+test('runExperiment exposes real test-period equity returns when a fixed-cadence curve is supplied', () => {
+  const spec = seedStructLiqSpec();
+  const DAY = 86_400_000;
+  const ledger = makeMultiRegimeLedger(60);
+  const equityCurve = Array.from({ length: 46 }, (_, i) => ({
+    t: Date.UTC(2026, 0, 1) + i * DAY,
+    equity: 10_000 * (1 + i * 0.001),
+  }));
+  const result = runExperiment(spec, spec, ledger, { ...BASE_CONFIG, equityCurve, equitySamplingMs: DAY });
+  assert.equal(result.testEquityReturns?.source, 'EQUITY_CURVE');
+  assert.equal(result.testEquityReturns?.frequencyMs, DAY);
+  assert.equal(result.testEquityReturns?.returns.length, 15);
 });
 
 test('runExperiment computes train and test metrics on disjoint windows', () => {

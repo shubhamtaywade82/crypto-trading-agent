@@ -41,7 +41,7 @@ test('evaluatePromotion returns PROMOTE when every guard is satisfied', () => {
 test('evaluatePromotion returns INSUFFICIENT_DATA when OOS n is below minTrades', () => {
   const v = evaluatePromotion(result({ test: { ...result().test, n: 10, bootstrap: null } }), DEFAULT_PROMOTION_POLICY);
   assert.equal(v.decision, 'INSUFFICIENT_DATA');
-  assert.match(v.reasons[0], /required/);
+  assert.match(v.reasons[0], /minTrades/);
 });
 
 test('power sizing rejects high trade counts when cluster dependence leaves too few effective observations', () => {

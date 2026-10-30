@@ -34,7 +34,7 @@ export interface PromotionPolicy {
   minProfitFactor: number;
   /** Maximum OOS drawdown in R. Default 15R. */
   maxDrawdownR: number;
-  /** Minimum OOS bootstrap probPositive. Default 0.85. */
+  /** Minimum ordinary cluster-bootstrap positive-mean fraction. Descriptive, not a p-value or posterior. Default 0.85. */
   minOosConfidence: number;
   /** Minimum distinct symbols with at least 5 trades each. Default 2. */
   minSymbolCoverage: number;
@@ -48,6 +48,8 @@ export interface PromotionPolicy {
   minDsr?: number;
   /** Cumulative trials tested across the experiment lineage (for DSR multiple testing correction). */
   trialCount?: number;
+  /** Empirical variance of Sharpe ratios across all trials on the same return frequency. */
+  trialSharpeVariance?: number;
 }
 
 export const DEFAULT_PROMOTION_POLICY: PromotionPolicy = {

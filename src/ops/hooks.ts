@@ -23,6 +23,7 @@ export interface OpsDeps {
   now?: () => number;
   /** Leave scenarios the quality gate rejected (NO_TRADE) out of setup cards. */
   hideNoTradeSetups?: boolean;
+  refusalReannounceMs?: number;
 }
 
 export interface DigestRequest {
@@ -131,8 +132,11 @@ class Ops implements OpsHooks {
   private lastWsStatus: WsStatus | null = null;
   private wasWsUp = false;
 
+  private readonly refusalReannounceMs: number;
+
   constructor(private readonly deps: OpsDeps) {
     this.now = deps.now ?? Date.now;
+    this.refusalReannounceMs = deps.refusalReannounceMs ?? REFUSAL_REANNOUNCE_MS;
     this.seen = new Set((deps.seedTrades ?? []).map(tradeKey));
     this.startTime = this.now();
   }
@@ -269,7 +273,7 @@ class Ops implements OpsHooks {
     this.audit('refusal', { reason }, signal);
     const blockKey = `${signal.symbol}:${signal.agent}:${signal.type}:${key}`;
     const announcedAt = this.announcedRefusals.get(blockKey);
-    if (announcedAt !== undefined && this.now() - announcedAt < REFUSAL_REANNOUNCE_MS) return;
+    if (announcedAt !== undefined && this.now() - announcedAt < this.refusalReannounceMs) return;
     this.announcedRefusals.set(blockKey, this.now());
     this.notify(signalNotice({ outcome: 'REFUSED', signal, note: reason, at: this.now() }));
   }

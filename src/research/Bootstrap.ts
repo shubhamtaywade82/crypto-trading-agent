@@ -58,6 +58,50 @@ export function quantileSorted(sorted: readonly number[], q: number): number {
 
 export const utcDay = (t: number): string => new Date(t).toISOString().slice(0, 10);
 
+/**
+ * Conservative cluster-adjusted effective sample size.
+ *
+ * Estimates a one-way random-effects ICC from unequal-sized clusters and applies
+ * DEFF = 1 + (m0 - 1) * max(ICC, 0). Negative ICC estimates are not used to claim
+ * extra information. This is a planning diagnostic; inference still uses the
+ * cluster bootstrap itself.
+ */
+export function effectiveSampleSize(samples: readonly Sample[]): number {
+  if (samples.length <= 1) return samples.length;
+  const groups = new Map<string, number[]>();
+  for (const sample of samples) {
+    const values = groups.get(sample.cluster) ?? [];
+    values.push(sample.value);
+    groups.set(sample.cluster, values);
+  }
+  const clusters = [...groups.values()];
+  const k = clusters.length;
+  const n = samples.length;
+  if (k <= 1) return 1;
+
+  const grandMean = samples.reduce((sum, sample) => sum + sample.value, 0) / n;
+  let withinSs = 0;
+  let betweenSs = 0;
+  let sumClusterSizeSquared = 0;
+  for (const values of clusters) {
+    const clusterMean = values.reduce((sum, value) => sum + value, 0) / values.length;
+    sumClusterSizeSquared += values.length ** 2;
+    for (const value of values) withinSs += (value - clusterMean) ** 2;
+    betweenSs += values.length * (clusterMean - grandMean) ** 2;
+  }
+
+  const dfWithin = n - k;
+  if (dfWithin <= 0) return n;
+  const msWithin = withinSs / dfWithin;
+  const msBetween = betweenSs / (k - 1);
+  const m0 = (n - sumClusterSizeSquared / n) / (k - 1);
+  if (!(m0 > 1) || !(msBetween + (m0 - 1) * msWithin > 0)) return n;
+
+  const rho = Math.max(0, Math.min(1, (msBetween - msWithin) / (msBetween + (m0 - 1) * msWithin)));
+  const designEffect = Math.max(1, 1 + (m0 - 1) * rho);
+  return Math.max(1, Math.min(n, n / designEffect));
+}
+
 export function bootstrapMean(samples: readonly Sample[], options: BootstrapOptions = {}): BootstrapSummary | null {
   const values = samples.map((s) => s.value);
   if (values.length === 0 || !values.every(Number.isFinite)) return null;

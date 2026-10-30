@@ -262,7 +262,7 @@ export function buildPeriodicEquityReturns(
   from: number,
   to: number,
   frequencyMs: number,
-): { series: PeriodicEquityReturns | null; reason: string | null } {
+): { series: Omit<PeriodicEquityReturns, 'candidateId' | 'candidateVersion'> | null; reason: string | null } {
   if (!Number.isFinite(frequencyMs) || frequencyMs <= 0) return { series: null, reason: 'equitySamplingMs must be a positive finite duration' };
   if (!(to > from) || (to - from) % frequencyMs !== 0) return { series: null, reason: 'test window is not an integer multiple of equitySamplingMs' };
   for (let i = 0; i < curve.length; i += 1) {
@@ -281,7 +281,7 @@ export function buildPeriodicEquityReturns(
   }
   const returns = marks.slice(1).map((mark, i) => mark.equity / marks[i].equity - 1);
   if (!returns.length || !returns.every(Number.isFinite)) return { series: null, reason: 'equity curve produced no finite test returns' };
-  return { series: { source: 'EQUITY_CURVE', from, to, frequencyMs, returns }, reason: null };
+  return { series: { source: 'CANDIDATE_PORTFOLIO_REPLAY', from, to, frequencyMs, returns }, reason: null };
 }
 
 /**

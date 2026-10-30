@@ -15,6 +15,8 @@ export interface SymbolWorkerConfig {
   leverage: number;
   /** When false, no entry is submitted: this path sizes by fixed margin and takes the LLM's stop distance unbounded (spec section 2, R1). Exits still run. */
   entriesEnabled: boolean;
+  /** Ollama tag of the model driving this worker's decisions; recorded on every opened position for attribution. */
+  modelTag: string;
 }
 
 export interface WorkerStatus {
@@ -30,6 +32,8 @@ export interface WorkerStatus {
   breakEvenMoved: boolean;
   lastDecision: string;
   lastUpdated: number;
+  /** Ollama tag of the model that produced the current decision path; shown on the dashboard. */
+  modelTag: string;
 }
 
 export interface EvaluationParams {
@@ -70,6 +74,7 @@ export class SymbolTraderWorker {
       breakEvenMoved: false,
       lastDecision: 'Initialized',
       lastUpdated: Date.now(),
+      modelTag: config.modelTag,
     };
 
     const saved = loadMiniCpmState().positions[config.symbol];
@@ -77,7 +82,10 @@ export class SymbolTraderWorker {
       this.currentSl = saved.stopLoss;
       this.currentTp = saved.takeProfit;
       this.breakEvenMoved = !!saved.breakEvenMoved;
-      this.status.lastDecision = `Recovered: SL $${saved.stopLoss} | TP $${saved.takeProfit}`;
+      // A position recovered from disk keeps the model attribution it was opened with; the
+      // status shows the currently configured model because that is what new decisions use.
+      const openedNote = saved.openedByModel && saved.openedByModel !== config.modelTag ? ` (opened by ${saved.openedByModel})` : '';
+      this.status.lastDecision = `Recovered: SL $${saved.stopLoss} | TP $${saved.takeProfit}${openedNote}`;
     }
   }
 
@@ -212,6 +220,7 @@ export class SymbolTraderWorker {
       breakEvenMoved: false,
       openedAt: Date.now(),
       reason: 'Auto-anchored recovery levels',
+      openedByModel: this.config.modelTag,
     });
   }
 
@@ -247,6 +256,7 @@ export class SymbolTraderWorker {
           breakEvenMoved: false,
           openedAt: Date.now(),
           reason: rec.reason,
+          openedByModel: this.config.modelTag,
         });
         await this.syncAccount();
       }
@@ -307,6 +317,7 @@ export class SymbolTraderWorker {
       breakEvenMoved: true,
       openedAt: Date.now(),
       reason: 'Shifted to Break-Even',
+      openedByModel: this.config.modelTag,
     });
   }
 

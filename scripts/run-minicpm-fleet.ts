@@ -5,11 +5,25 @@ import { MiniCpmService } from '../src/minicpm/MiniCpmService.js';
 import { SymbolTraderWorker } from '../src/minicpm/SymbolTraderWorker.js';
 import { renderDashboard } from '../src/minicpm/MiniCpmDashboard.js';
 import { resolveFleetPaperExchange, type FleetPaperExchange } from '../src/minicpm/fleetPaperExchange.js';
+import {
+  DEFAULT_FLEET_MODEL_ID,
+  DEFAULT_LLM_HOST,
+  DEFAULT_LLM_TIMEOUT_MS,
+  lookupModelByTag,
+  parseModelRoute,
+  resolveFleetModelAssignment,
+  type FleetModelAssignment,
+} from '../src/minicpm/FleetModels.js';
 import { config } from '../src/config.js';
 
 const SYMBOLS = ['ETHUSDT', 'SOLUSDT', 'XRPUSDT'];
 const ANCHOR = 'BTCUSDT';
 const ALL_SYMBOLS = [ANCHOR, ...SYMBOLS];
+
+function argValue(flag: string): string | undefined {
+  const i = process.argv.indexOf(flag);
+  return i >= 0 && i + 1 < process.argv.length ? process.argv[i + 1] : undefined;
+}
 
 async function main() {
   // Refuse to start without the broker token, before any broker or market-feed call.
@@ -21,7 +35,44 @@ async function main() {
     process.exit(1);
   }
 
-  console.log('Initializing Real-Time MiniCPM-2B Multi-Symbol Trader Fleet...');
+  // Model selection: fleet default (--model / FLEET_MODEL) plus per-symbol overrides
+  // (--route 'ETH=qwen3.5:2b,SOL=lfm2.5-2.6b' / FLEET_MODEL_ROUTE). Registry ids and raw
+  // Ollama tags are both accepted. A route naming an untraded symbol fails at boot.
+  const modelSpec = argValue('--model') ?? process.env.FLEET_MODEL ?? DEFAULT_FLEET_MODEL_ID;
+  const routeSpec = argValue('--route') ?? process.env.FLEET_MODEL_ROUTE;
+  const llmHost = argValue('--host') ?? process.env.FLEET_LLM_HOST ?? DEFAULT_LLM_HOST;
+  const timeoutMs = Number.parseInt(argValue('--timeout-ms') ?? process.env.FLEET_LLM_TIMEOUT_MS ?? '', 10) || DEFAULT_LLM_TIMEOUT_MS;
+
+  let assignment: FleetModelAssignment;
+  try {
+    assignment = resolveFleetModelAssignment({
+      symbols: SYMBOLS,
+      defaultSpec: modelSpec,
+      ...(routeSpec ? { route: parseModelRoute(routeSpec) } : {}),
+    });
+  } catch (err) {
+    console.error(`[MiniCPM fleet] model selection refused: ${(err as Error).message}`);
+    process.exit(1);
+  }
+
+  console.log('Initializing Real-Time Multi-Model Trader Fleet (default: MiniCPM5-2B control)...');
+  console.log(`  LLM host: ${llmHost} · timeout: ${timeoutMs}ms`);
+  for (const symbol of SYMBOLS) {
+    const tag = assignment.bySymbol[symbol];
+    const meta = lookupModelByTag(tag);
+    const metaNote = meta ? ` (${meta.label}, ${meta.sizeGb}GB, ${meta.role})` : '';
+    console.log(`  ${symbol}: ${tag}${metaNote}`);
+  }
+  // Tags outside the curated shortlist are allowed (custom models), but a typo that happens to
+  // look like a tag would otherwise degrade silently at request time — surface it at boot.
+  for (const tag of assignment.distinctTags) {
+    if (!lookupModelByTag(tag)) {
+      console.warn(`  WARNING: '${tag}' is not in the curated shortlist — if this is a typo, the daemon will 404 and every decision becomes "No setup approved". Verify with: ollama list | grep ${tag}`);
+    }
+  }
+
+  const entriesEnabled = process.env.MINICPM_ENTRIES === 'on' || process.argv.includes('--enable-entries');
+  console.log(`  Entries: ${entriesEnabled ? 'ARMED (risk-gated)' : 'OFF (shadow analysis, R1)'}`);
 
   const futuresClient = new USDMClient({
     api_key: config.binance.apiKey,
@@ -30,16 +81,14 @@ async function main() {
 
   const marketData = new MarketDataService(futuresClient, DEFAULT_MARKET_DATA_OPTIONS);
   const marketStateBuilder = new MarketStateBuilder();
-  // Pinned to the local daemon that serves the MiniCPM model; OLLAMA_HOST and the trading advisor's key pool do not apply here.
-  const llm = new MiniCpmService({
-    host: 'http://127.0.0.1:11434',
-    model: 'openbmb/minicpm5-2b:latest',
-  });
+  // One service per worker so per-symbol model routing stays local to its worker. The service is
+  // model-agnostic: any Ollama tag works, the prompt/validation contract is identical for every model.
 
-  const entriesEnabled = process.env.MINICPM_ENTRIES === 'on' || process.argv.includes('--enable-entries');
   const workers = new Map<string, SymbolTraderWorker>();
   for (const symbol of SYMBOLS) {
     const symKey = symbol.replace('USDT', '').toLowerCase();
+    const modelTag = assignment.bySymbol[symbol];
+    const llm = new MiniCpmService({ host: llmHost, model: modelTag, timeoutMs });
     const worker = new SymbolTraderWorker(
       {
         symbol,
@@ -49,6 +98,7 @@ async function main() {
         marginPerPosition: 1000,
         leverage: 10,
         entriesEnabled,
+        modelTag,
       },
       llm,
     );

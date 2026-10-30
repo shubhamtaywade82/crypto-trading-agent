@@ -1,6 +1,6 @@
 # MiniCPM-2B Autonomous 24/7 Multi-Symbol Trading Fleet
 
-A real-time, autonomous trading agent running on Binance USD-M Futures market data and powered by a local `openbmb/minicpm5-2b:latest` (Ollama) model, connected to isolated accounts on `paper_exchange`.
+A real-time, autonomous trading agent running on Binance USD-M Futures market data and powered by a local `openbmb/minicpm5-2b:latest` (Ollama) model (the **control model** — see [Model Selection](#6-model-selection--ab-routing)), connected to isolated accounts on `paper_exchange`.
 
 ---
 
@@ -27,7 +27,8 @@ A real-time, autonomous trading agent running on Binance USD-M Futures market da
                 └────────────────────────────┼────────────────────────────┘
                                              ▼
                       ┌──────────────────────────────────────────────┐
-                      │        Local LLM (minicpm5-2b:latest)        │
+                      │    Local LLM (default: minicpm5-2b control)  │
+                      │   - Swappable per symbol (FleetModels.ts)    │
                       │   - Dynamic SL / TP / Entry Decision         │
                       │   - Min 5% Return on Capital Target          │
                       └──────────────────────┬───────────────────────┘
@@ -99,7 +100,7 @@ Each symbol runs in an independent, isolated ledger on `paper_exchange`:
 ## 5. Running the 24/7 Live Fleet
 
 ### Prerequisites
-1. Ensure Ollama is running with `openbmb/minicpm5-2b:latest`:
+1. Ensure Ollama is running with `openbmb/minicpm5-2b:latest` (or the model you selected):
    ```bash
    ollama run openbmb/minicpm5-2b:latest
    ```
@@ -134,4 +135,74 @@ The runner displays a continuous live terminal cockpit updated up to 4 times per
 * Symbol state (`IDLE`, `ANALYZING`, `IN_POSITION`).
 * Real-time mark price, entry price, position size, and uPnL.
 * Total realized PnL and current account equity.
-* Latest LLM rationale and SL/TP levels.
+* Latest LLM rationale and SL/TP levels — each symbol's reasoning is prefixed with its model tag, and the footer shows the fleet's model assignment.
+
+---
+
+## 6. Model Selection & A/B Routing
+
+The fleet's decision LLM is **not hard-coded**. `MiniCpmService` is model-agnostic — the
+prompt and the JSON validation contract are identical for every model — and the runner
+accepts a fleet-wide default plus per-symbol overrides:
+
+```bash
+# Fleet-wide model (registry id or raw Ollama tag); default is the MiniCPM5-2B control
+npm run fleet -- --model qwen3.5-2b
+FLEET_MODEL=qwen3.5:2b npm run fleet
+
+# Per-symbol A/B routing under identical market conditions
+npm run fleet -- --route 'ETH=qwen3.5:2b,SOL=lfm2.5-2.6b,XRP=minicpm5-2b'
+FLEET_MODEL_ROUTE='ETH=qwen3.5-2b,SOL=lfm2.5-2.6b' npm run fleet
+
+# LLM host and per-request timeout (raise for thinking models on modest GPUs)
+npm run fleet -- --host http://127.0.0.1:11434 --timeout-ms 60000
+```
+
+Env vars: `FLEET_MODEL`, `FLEET_MODEL_ROUTE`, `FLEET_LLM_HOST`, `FLEET_LLM_TIMEOUT_MS`.
+Flags win over env vars. A route naming a symbol the fleet does not trade fails at boot —
+a typo can never silently strand a worker on the control model. Every opened position is
+persisted with `openedByModel` in `data/minicpm-state.json` so model comparison ledgers
+attribute outcomes correctly even when the assignment changes mid-flight.
+
+### Curated shortlist (src/minicpm/FleetModels.ts)
+
+| id | Ollama tag | Size | Marketed strengths | Suggested role here |
+|---|---|---|---|---|
+| `minicpm5-2b` *(default)* | `openbmb/minicpm5-2b:latest` | ~2.0 GB | lightweight coding, local trading analysis | **control** |
+| `qwen3.5-2b` | `qwen3.5:2b` | 2.7–3.1 GB | thinking, tool use, instruction following | trading-analysis (first A/B candidate) |
+| `qwen3-4b` | `qwen3:4b` | 2.5 GB | thinking, function calling, agent workflows | reasoning |
+| `lfm2.5-2.6b` | `LiquidAI/lfm2.5-2.6b` | 1.7 GB | native tool calling, agentic RL | tool-execution |
+| `granite4.2-3b` | `granite4.2:3b` | 2.2 GB | native tools, structured JSON | structured output |
+| `nemotron3-nano-4b` | `nemotron-3-nano:4b` | 2.8–2.9 GB | thinking, tools, unified modes | reasoning |
+| `qwen3-1.7b` | `qwen3:1.7b` | 1.4 GB | tool selection | lightweight routing |
+| `lfm2.5-1.2b` | `LiquidAI/lfm2.5-1.2b-instruct` | 0.73 GB | tool selection, tiny footprint | lightweight routing |
+
+```bash
+ollama pull openbmb/minicpm5-2b:latest   # control (already installed)
+ollama pull qwen3.5:2b                    # first challenger
+ollama pull LiquidAI/lfm2.5-2.6b          # agentic candidate
+ollama pull granite4.2:3b                 # structured-JSON candidate
+ollama pull qwen3:4b
+ollama pull qwen3:1.7b
+ollama pull LiquidAI/lfm2.5-1.2b-instruct
+ollama pull nemotron-3-nano:4b
+```
+
+### What the shortlist is NOT
+
+The shortlist records what models are *marketed for*, not what they have proven on this
+fleet. Third-party benchmarks (JevBench, BFCL, ToolSandbox, Local Agent Bench) each measure
+one run under their own conditions; none of them measure this fleet's objective — net
+post-cost expectancy per trade. A challenger model earns exactly nothing until its own
+fleet ledger clears the same promotion gates as any strategy change (`npm run
+self-improve`, docs/RESEARCH_SYSTEM.md): positive OOS mean, bootstrap LCB > 0, DSR from
+the actual per-trade Sharpe, and a sample large enough for the claimed edge.
+
+Recommended evaluation protocol (identical conditions per candidate):
+1. Keep `minicpm5-2b` as the control on one symbol; route the challenger to another
+   symbol on the same feed, same prompt, same risk rules.
+2. Run shadow mode (entries off) first; compare decision quality before comparing PnL.
+3. Raise `--timeout-ms` for thinking models; record latency alongside decisions.
+4. Give every model the same number of evaluation cycles before comparing ledgers.
+5. Remember: download size is not VRAM consumption — a 1.7 GB model with a large context
+   can still exceed an 8 GB GPU alongside the rest of the fleet.

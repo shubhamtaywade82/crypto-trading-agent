@@ -9,6 +9,8 @@ export interface PersistedSymbolState {
   breakEvenMoved?: boolean;
   openedAt: number;
   reason: string;
+  /** Ollama tag of the model whose recommendation opened the position (model-attribution for ledger comparison). */
+  openedByModel?: string;
 }
 
 export interface StateStore {

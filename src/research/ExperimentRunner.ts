@@ -56,8 +56,10 @@ export function passesSpecFilters(spec: StrategySpec<StructLiqSpecParams>, r: Se
   if (r.features.sweepDepthAtr !== null && r.features.sweepDepthAtr < spec.params.minSweepDepthAtr) return false;
   if (r.features.sweepDisplacementAtr !== null && r.features.sweepDisplacementAtr < spec.params.minSweepDisplacementAtr) return false;
   if (r.effectiveRr !== null && r.effectiveRr < spec.params.minimumRewardRisk) return false;
-  // `maxSpreadBps` is a research-plane filter; the ledger does not yet store per-setup spread, so a finite
-  // maxSpreadBps produces no exclusions today. Documented in experimentNotes.
+  if (Number.isFinite(spec.params.maxSpreadBps)) {
+    const spreadBps = r.features.spreadBps;
+    if (typeof spreadBps !== 'number' || !Number.isFinite(spreadBps) || spreadBps < 0 || spreadBps > spec.params.maxSpreadBps) return false;
+  }
   return true;
 }
 
@@ -314,9 +316,10 @@ export function runExperiment(
   }
 
   if (Number.isFinite(candidate.params.maxSpreadBps)) {
-    notes.push(
-      `maxSpreadBps=${candidate.params.maxSpreadBps} configured but the ledger does not yet store per-setup spread; ` +
-      `this filter is a no-op until the ledger records it.`,
+    const relevant = ledger.filter((r) => r.createdAt >= first && r.createdAt < testTo);
+    const missingSpread = relevant.filter((r) => typeof r.features.spreadBps !== 'number' || !Number.isFinite(r.features.spreadBps) || r.features.spreadBps < 0).length;
+    if (missingSpread > 0) notes.push(
+      `incomplete research input: maxSpreadBps=${candidate.params.maxSpreadBps} requires per-setup spread; ${missingSpread}/${relevant.length} records are missing a valid spreadBps.`,
     );
   }
 

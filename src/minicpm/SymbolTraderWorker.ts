@@ -259,7 +259,25 @@ export class SymbolTraderWorker {
         this.currentSl = rec.stopLoss;
         this.currentTp = rec.takeProfit;
         this.breakEvenMoved = false;
+        // Reflect the confirmed fill immediately. state, the position view and the guarding levels
+        // become consistent the moment the broker confirms, BEFORE the ENTRY event and before the
+        // account sync: a live tick that lands between the fill and syncAccount()'s round-trips must
+        // never see a position-less worker and silently skip break-even/SL/TP management.
+        // syncAccount() afterwards only replaces this optimistic view with the broker's truth.
+        this.status.activePosition = {
+          id: Number(order.orderId) || 0,
+          symbol: this.config.symbol,
+          side: side === 'buy' ? 'long' : 'short',
+          netQuantity: order.filledQuantity ?? quantity,
+          averagePrice: markPrice,
+          currentPrice: markPrice,
+          leverage: this.config.leverage,
+          marginType: 'isolated',
+          liquidationPrice: null,
+          unrealizedPnl: 0,
+        };
         this.status.state = 'IN_POSITION';
+        this.updateStatusLevels(markPrice);
         saveMiniCpmPosition({
           symbol: this.config.symbol,
           entryPrice: markPrice,
@@ -398,6 +416,12 @@ export class SymbolTraderWorker {
       this.currentSl = null;
       this.currentTp = null;
       this.breakEvenMoved = false;
+      // Same atomic-transition rule as the entry: a confirmed reduce-only exit means the position
+      // is flat as of this instant. Do not leave a phantom IN_POSITION behind if the account sync
+      // is slow or fails — the worker knows the broker truth it just acted on.
+      this.status.activePosition = null;
+      this.status.state = 'IDLE';
+      this.updateStatusLevels(null);
       removeMiniCpmPosition(this.config.symbol);
       await this.syncAccount();
     } catch (err) {

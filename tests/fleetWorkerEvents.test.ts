@@ -91,7 +91,13 @@ function startFakeExchange(): Promise<FakeExchange> {
       resolve({
         url: `http://127.0.0.1:${port}`,
         orders,
-        close: () => new Promise((r) => server.close(() => r(undefined))),
+        // closeAllConnections first: without it server.close() waits out the keep-alive timeout on
+        // undici's pooled sockets, and under the runner's parallel test-file load those lingering
+        // sockets were the window where a torn-down server answered (or half-answered) a fetch.
+        close: () => new Promise((r) => {
+          server.closeAllConnections();
+          server.close(() => r(undefined));
+        }),
       });
     });
   });
@@ -172,8 +178,14 @@ test('a worker emits ENTRY, BREAK_EVEN and EXIT trade events across a full posit
     );
 
     await worker.evaluate(EVALUATION);
-    // executeEntry is fire-and-forget inside evaluate(): wait for the fill to land
-    await waitFor(() => worker.getStatus().state === 'IN_POSITION');
+    // executeEntry is fire-and-forget inside evaluate(): wait for the fill to land AND for the
+    // worker's position view to be populated. onLiveTick() manages the position, so waiting on
+    // state alone is the race that used to flake under CI's parallel test-file load: state flipped
+    // to IN_POSITION while activePosition was still null until syncAccount()'s round-trips ended.
+    await waitFor(() => {
+      const status = worker.getStatus();
+      return status.state === 'IN_POSITION' && status.activePosition !== null;
+    });
     await waitFor(() => events.length >= 1);
 
     const entry = events[0]!;
@@ -280,7 +292,10 @@ test('a throwing notification sink never breaks trading', async () => {
       llmStub,
     );
     await worker.evaluate(EVALUATION);
-    await waitFor(() => worker.getStatus().state === 'IN_POSITION');
+    await waitFor(() => {
+      const status = worker.getStatus();
+      return status.state === 'IN_POSITION' && status.activePosition !== null;
+    });
     assert.equal(exchange.orders.length, 1, 'the entry still filled despite the broken sink');
     // The exit path must survive too
     await worker.onLiveTick(111);

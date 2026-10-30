@@ -71,17 +71,27 @@ test('MINICPM_ENTRIES=on arms entries in the resolved config (same rule as the s
   assert.equal(supervisor.state.entriesEnabled, true);
 });
 
-test('the embedded fleet module never imports the Telegram/alert pipeline (no operator interruptions)', () => {
+test('the embedded fleet never touches the main agent alert pipeline (only the low-level Telegram sender)', () => {
   const dir = path.resolve('src/minicpm');
   const offenders: string[] = [];
   for (const file of readdirSync(dir)) {
     if (!file.endsWith('.ts') && !file.endsWith('.tsx')) continue;
     const src = readFileSync(path.join(dir, file), 'utf8');
-    if (/from\s+['"].*(ops\/telegram|ops\/alerts|ops\/cards|ops\/hooks|sendAlert|sendTelegram)['"]/.test(src)) {
+    // Allowed: ../ops/telegram.js (the low-level sender). Forbidden: the main agent's alert
+    // pipeline — sendAlert / AlertEvent / NotificationEngine / opsHooks / alert cards. Fleet
+    // trade cards must stay a separate, [FLEET]-tagged stream, never a second caller of it.
+    if (/from\s+['"].*(ops\/alerts|ops\/cards|ops\/hooks|runtime\/opsHooks|sendAlert)['"]/.test(src)) {
       offenders.push(file);
     }
   }
-  assert.deepEqual(offenders, [], 'src/minicpm must not import any ops alert/telegram surface');
+  assert.deepEqual(offenders, [], 'src/minicpm must not import the main agent alert pipeline (alerts/cards/hooks/sendAlert)');
+
+  // The single deliberate import point: FleetTelegram imports the low-level sendTelegram only.
+  const fleetTelegram = readFileSync(path.join(dir, 'FleetTelegram.ts'), 'utf8');
+  const importMatch = fleetTelegram.match(/import\s+\{([^}]*)\}\s+from\s+['"]\.\.\/ops\/telegram\.js['"]/);
+  assert.ok(importMatch, 'FleetTelegram is the one bridge to the Telegram sender');
+  assert.match(importMatch[1]!, /sendTelegram/, 'it uses the low-level sender');
+  assert.doesNotMatch(importMatch[1]!, /sendAlert/, 'the fleet never sends through sendAlert');
 });
 
 test('the fleet screen renders a parked explanation and never throws on partial state', async () => {
@@ -120,5 +130,6 @@ test('the fleet screen renders a parked explanation and never throws on partial 
   assert.ok(running.some((l) => l.includes('SHADOW ANALYSIS')));
   assert.ok(running.some((l) => l.includes('qwen3.5:2b')));
   assert.ok(running.some((l) => l.includes('ETH')));
-  assert.ok(running.some((l) => l.includes('NO Telegram alerts')), 'the view must state the no-alerts contract');
+  assert.ok(running.some((l) => l.includes('Telegram trade notifications')), 'the view must state the fleet trade-notification contract');
+  assert.ok(running.some((l) => l.includes('FLEET_TELEGRAM=off')), 'the view must show the opt-out switch');
 });

@@ -113,7 +113,8 @@ export default function App() {
 
   const [orchestrator] = useState(() => new Orchestrator());
   // Embedded multi-model fleet: shares the worker code path with `npm run fleet`, parks itself
-  // (never throws) when its prerequisites are missing, and sends no Telegram alerts.
+  // (never throws) when its prerequisites are missing, and notifies trade fills via its own
+  // [FLEET]-tagged Telegram cards — never through the main agent's alert pipeline.
   const [fleetSupervisor] = useState(() => new FleetSupervisor());
   const [fleetState, setFleetState] = useState<FleetState>(() => fleetSupervisor.state);
   const [isSyncing, setIsSyncing] = useState(false);

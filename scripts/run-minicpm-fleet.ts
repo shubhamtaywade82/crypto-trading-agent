@@ -14,6 +14,7 @@ import {
   resolveFleetModelAssignment,
   type FleetModelAssignment,
 } from '../src/minicpm/FleetModels.js';
+import { fleetTelegramEnabled, sendFleetEvent } from '../src/minicpm/FleetTelegram.js';
 import { config } from '../src/config.js';
 
 const SYMBOLS = ['ETHUSDT', 'SOLUSDT', 'XRPUSDT'];
@@ -73,6 +74,9 @@ async function main() {
 
   const entriesEnabled = process.env.MINICPM_ENTRIES === 'on' || process.argv.includes('--enable-entries');
   console.log(`  Entries: ${entriesEnabled ? 'ARMED (risk-gated)' : 'OFF (shadow analysis, R1)'}`);
+  // [FLEET] Telegram cards per worker buy/sell/exit — same bot config as the main agent, tagged
+  // and routed around its alert pipeline. FLEET_TELEGRAM=off is the opt-out.
+  console.log(`  Telegram: ${fleetTelegramEnabled(process.env) ? 'trade notifications ON ([FLEET] buy/sell/exit cards per worker)' : 'OFF (FLEET_TELEGRAM=off)'}`);
 
   const futuresClient = new USDMClient({
     api_key: config.binance.apiKey,
@@ -99,6 +103,9 @@ async function main() {
         leverage: 10,
         entriesEnabled,
         modelTag,
+        onTradeEvent: (event) => {
+          void sendFleetEvent(event).catch(() => undefined);
+        },
       },
       llm,
     );

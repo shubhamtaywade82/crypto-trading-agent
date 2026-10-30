@@ -139,7 +139,7 @@ export function renderFleetScreen(p: FleetScreenProps): string[] {
   }
   lines.push(midRule());
   lines.push(box(chalk.gray('  $1,000 margin · 10x isolated · min +5% TP · auto break-even trailing · per-model attribution (openedByModel)')));
-  lines.push(box(chalk.gray('  The embedded fleet sends NO Telegram alerts; its evidence lives in the paper-exchange ledger and this view.')));
+  lines.push(box(chalk.gray('  Buy/sell/exit fills send [FLEET]-tagged Telegram trade notifications (same bot config; FLEET_TELEGRAM=off disables).')));
   lines.push(bottomRule());
   return lines;
 }

@@ -13,6 +13,7 @@ import {
   parseModelRoute,
   resolveFleetModelAssignment,
 } from './FleetModels.js';
+import { fleetTelegramEnabled, sendFleetEvent } from './FleetTelegram.js';
 import { config } from '../config.js';
 
 /**
@@ -26,9 +27,12 @@ import { config } from '../config.js';
  *     the fleet must not add a single code path to the main agent's decision loop);
  *   - is DISABLED, never fatal, when its prerequisites are missing (no PAPER_EXCHANGE_API_KEY,
  *     FLEET_IN_DEV=off): dev still starts normally and the cockpit log says why;
- *   - NEVER sends Telegram alerts or any other notification: it imports nothing from src/ops,
- *     emits only 'state' and 'log' events for the local TUI. The main agent's alerting pipeline
- *     is untouched — fleet decisions are research evidence, not operator interruptions.
+ *   - sends its own [FLEET] Telegram trade notifications: every worker entry fill (buy/sell),
+ *     exit fill (SL/TP/break-even) and break-even lock posts a [FLEET]-tagged card through the
+ *     LOW-LEVEL sendTelegram on the operator's existing bot/chat config. It never touches the
+ *     main agent's alert pipeline (no sendAlert/AlertEvent/NotificationEngine/opsHooks —
+ *     enforced by a unit test), so the two Telegram streams stay distinguishable and the main
+ *     agent's alerting is unaffected. FLEET_TELEGRAM=off is the opt-out.
  *
  * Entries follow the same rule as the standalone fleet: OFF (shadow, R1) unless the operator
  * explicitly exports MINICPM_ENTRIES=on.
@@ -190,7 +194,10 @@ export class FleetSupervisor extends EventEmitter {
 
     const models = [...new Set(Object.values(fleetConfig.assignment))];
     const notes = models.map((tag) => `${tag}${lookupModelByTag(tag) ? '' : ' (not in shortlist)'}`).join(', ');
-    this.log(`embedded multi-model fleet online — models: ${notes}; entries ${fleetConfig.entriesEnabled ? 'ARMED (risk-gated)' : 'OFF (shadow, R1)'}`);
+    const telegramNote = fleetTelegramEnabled(this.env)
+      ? 'Telegram trade notifications ON ([FLEET] buy/sell/exit cards per worker)'
+      : 'Telegram trade notifications OFF (FLEET_TELEGRAM=off)';
+    this.log(`embedded multi-model fleet online — models: ${notes}; entries ${fleetConfig.entriesEnabled ? 'ARMED (risk-gated)' : 'OFF (shadow, R1)'}; ${telegramNote}`);
 
     this.futuresClient = new USDMClient({
       api_key: config.binance.apiKey,
@@ -212,6 +219,11 @@ export class FleetSupervisor extends EventEmitter {
           leverage: 10,
           entriesEnabled: fleetConfig.entriesEnabled,
           modelTag,
+          // [FLEET] Telegram cards on the shared bot config. Fire-and-forget by design: a
+          // Telegram outage resolves false and the evaluation loop continues unaffected.
+          onTradeEvent: (event) => {
+            void sendFleetEvent(event, { env: this.env }).catch(() => undefined);
+          },
         },
         llm,
       );

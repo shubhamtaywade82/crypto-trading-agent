@@ -154,11 +154,20 @@ Properties of the embedded fleet:
 * **Parks, never blocks**: without `PAPER_EXCHANGE_API_KEY` (or with `FLEET_IN_DEV=off`) the
   supervisor parks itself with a cockpit log line explaining why; `npm run dev` starts normally
   and the FLEET view shows the parked explanation and the enable instructions.
-* **Sends NO Telegram alerts** — by construction, not convention: `src/minicpm` imports nothing
-  from `src/ops` (enforced by a unit test), so fleet decisions never reach the alert/trading bot
-  channels the main agent uses. Fleet evidence lives in the paper-exchange ledger, the
-  `openedByModel` attribution, and the FLEET view — it is research data, not operator
-  interruptions. To be notified about the fleet, watch the cockpit or the ledger.
+* **Sends its own `[FLEET]` Telegram trade notifications**: every worker's entry fill (buy/sell),
+  exit fill (stop-loss / take-profit / break-even) and break-even lock posts a `[FLEET] SYMBOL
+  BUY/SELL` card (`src/minicpm/FleetTelegram.ts`) to the same Telegram bot/chat config the
+  operator already uses (`TELEGRAM_TRADING_BOT_TOKEN` or `TELEGRAM_BOT_TOKEN`, plus
+  `TELEGRAM_CHAT_ID`) — nothing new to configure. The card carries the symbol, the order side,
+  the entry/exit price, SL/TP, the realized PnL on exits, the model tag that produced the
+  decision, and the model's stated reason. Two guarantees hold by construction: (1) the fleet
+  never touches the main agent's alert pipeline — no `sendAlert`, no `AlertEvent`, no
+  `NotificationEngine`, no opsHooks (enforced by a unit test; the fleet calls only the low-level
+  `sendTelegram`) — so the main agent's alert stream is unaffected and every fleet card is
+  visually distinguishable by its `[FLEET]` prefix; (2) notifications are fire-and-forget —
+  unconfigured Telegram or a Telegram outage silently skips sending and trading continues.
+  Opt out with `FLEET_TELEGRAM=off`. Shadow-mode decisions (no order) never notify; only
+  actual fills and protection moves do. The same notifications run in the standalone fleet.
 * **Same entry rule as standalone**: entries stay OFF (shadow, R1) unless the operator exports
   `MINICPM_ENTRIES=on` on the command line.
 * Same model selection as the standalone runner (`--model`, `--route`, `FLEET_MODEL`,

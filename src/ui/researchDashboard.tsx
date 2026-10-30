@@ -186,6 +186,11 @@ function renderExperimentsPanel(data: DashboardData, width: number): string[] {
   return panel('Recent experiments (last 10)', lines, width);
 }
 
+function getEventTimestampMs(e: ResearchEvent): number | undefined {
+  const anyEvent = e as unknown as { at?: number; timestamps?: { exchange_time?: number; received_at?: number } };
+  return anyEvent.at ?? anyEvent.timestamps?.exchange_time ?? anyEvent.timestamps?.received_at;
+}
+
 function renderEventsSparkline(data: DashboardData, width: number): string[] {
   // Group events by day and count them — a sparkline of research activity over time.
   if (data.events.length === 0) {
@@ -193,7 +198,9 @@ function renderEventsSparkline(data: DashboardData, width: number): string[] {
   }
   const byDay = new Map<string, number>();
   for (const e of data.events) {
-    const day = new Date(e.at).toISOString().slice(0, 10);
+    const atMs = getEventTimestampMs(e);
+    if (typeof atMs !== 'number' || Number.isNaN(atMs)) continue;
+    const day = new Date(atMs).toISOString().slice(0, 10);
     byDay.set(day, (byDay.get(day) ?? 0) + 1);
   }
   const counts = [...byDay.values()];

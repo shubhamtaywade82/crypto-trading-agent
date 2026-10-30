@@ -111,6 +111,15 @@ export function evaluatePromotion(
     return { decision: 'INSUFFICIENT_DATA', reasons: incompleteInput, policy };
   }
 
+  const configuredMinTrades = policy.minTrades ?? 1;
+  if (result.test.n < configuredMinTrades) {
+    return {
+      decision: 'INSUFFICIENT_DATA',
+      reasons: [`OOS n=${result.test.n} below configured minTrades=${configuredMinTrades}; collect more out-of-sample observations`],
+      policy,
+    };
+  }
+
   const powerRequirement = getPowerRequirement(result, policy);
   if (!powerRequirement) {
     return {

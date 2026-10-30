@@ -14,6 +14,8 @@ import { TrendEnsembleAgent } from '../agents/TrendEnsembleAgent.js';
 import { RiskAgent } from '../agents/RiskAgent.js';
 import { ExecutorAgent } from '../agents/ExecutorAgent.js';
 import { OllamaAdvisor } from '../ollama/advisor.js';
+import { HttpTev1Client } from '../decision-intelligence/clients/tev1Client.js';
+import { buildDecisionIntelligence, type DecisionIntelligenceService } from '../decision-intelligence/services/decisionOrchestrator.js';
 import { errorText, isRefusal } from '../binance/remoteOrders.js';
 import { sparkline } from '../binance/indicators.js';
 import { accountFields, buildTelemetry, fleetRuntimes, singleFlight, venueInfo, type SessionCounters, type Telemetry, type TelemetryInput } from './telemetry.js';
@@ -106,6 +108,19 @@ export class Orchestrator extends EventEmitter {
   private ops = new RiskOps((message) => this.log('SYSTEM', message, 'warn'), { killSwitch: this.killSwitch, onCircuit: (from, to, snapshot) => this.hooks.onCircuit(from, to, snapshot), hwm: this.hwm.forMode(config.mode) });
   private executor = new ExecutorAgent(this.binance);
   private advisor = new OllamaAdvisor();
+  /**
+   * Tev1 decision-intelligence gate (TEV1_GATE): classifies each risk-approved entry over the /v1/systemone
+   * endpoint and, when enforced (TEV1_GATE=on), refuses candidates the deterministic policy blocks. Null when
+   * the gate is off. Shadow mode evaluates and audits without refusing anything.
+   */
+  private tev1: DecisionIntelligenceService | null = buildDecisionIntelligence({
+    mode: config.tev1.gate,
+    model: config.tev1.model,
+    minConfidence: config.tev1.minConfidence,
+    client: new HttpTev1Client({ host: config.ollama.host, apiKey: config.ollama.apiKeys[0], timeoutMs: config.tev1.timeoutMs }),
+    auditPath: config.tev1.auditPath,
+    log: (message, level) => this.log('TEV1', message, level),
+  });
   /** Symbols whose protective legs a trail update is moving; a second update on the same symbol waits for the first. */
   private readonly stopsInFlight = new Set<string>();
   private liveStateError: string | null = null;
@@ -473,6 +488,24 @@ export class Orchestrator extends EventEmitter {
         this.persistDecision({ ...record, status: 'VETOED', rejectionReason: 'advisor veto' });
         this.counters.monitored += 1;
         continue;
+      }
+      // Decision intelligence: only entries are classified (exits and alerts are never gated), and only after risk
+      // approval so a deterministic refusal never spends a model call. Enforced blocks land in the journal as
+      // TEV1_REJECTED; shadow verdicts are logged and audited but refuse nothing.
+      if (this.tev1 !== null && signal.type.startsWith('OPEN_')) {
+        const verdict = await this.tev1.evaluateCandidate({
+          decisionId,
+          signal,
+          state: ctx.marketState?.[signal.symbol],
+          evidence,
+          now: Date.now(),
+        });
+        if (verdict.enforced && verdict.gate === 'BLOCK') {
+          this.persistDecision({ ...record, status: 'TEV1_REJECTED', rejectionReason: verdict.reason });
+          this.log('TEV1', `BLOCK ${signal.symbol}: ${verdict.reason}`, 'warn');
+          this.counters.monitored += 1;
+          continue;
+        }
       }
       const derivatives = ctx.marketDataV2?.[signal.symbol]?.derivatives ?? null;
       const eq = evaluateExecutionQuality({ symbol: signal.symbol, side: signal.type.includes('SHORT') ? 'SHORT' : 'LONG', sourceAgent: signal.agent, evidenceScore: Math.round(signal.confidence * 100), entry: signal.entry ?? 0, stopLoss: signal.stopLoss ?? 0, takeProfit: signal.takeProfit ?? 0, reasons: [signal.reason] }, derivatives, decision.positionSizeUsdt);

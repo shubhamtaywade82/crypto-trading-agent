@@ -15,6 +15,10 @@ export interface DrawdownResponse {
  * `flatten` also halts and closes the book, because a drawdown spread across several positions trips no per-position stop.
  */
 export function drawdownResponse(input: { equity: number; peak: number; maxPct: number; action: DrawdownAction }): DrawdownResponse {
+  if (input.maxPct <= 0) {
+    const breached = input.equity <= 0;
+    return { breached, drawdownPct: 0, halt: false, closeAll: false, reason: breached ? 'zero equity' : '' };
+  }
   const drawdownPct = input.peak > 0 ? Math.max(0, ((input.peak - input.equity) / input.peak) * 100) : 0;
   const breached = input.equity <= 0 || drawdownPct > input.maxPct;
   const reason = `drawdown ${drawdownPct.toFixed(2)}% exceeds ${input.maxPct}% from peak`;

@@ -13,22 +13,35 @@ const summary = (over: Partial<BootstrapSummary> = {}): BootstrapSummary => ({
   ciHigh: 0.5,
   probPositive: 0.95,
   pValue: 0.02,
+  pValueSignFlip: 0.03,
   p05: -0.5,
   p95: 1.5,
   ...over,
 });
 
+/** Per-trade moments consistent with the fixture's OOS window: mean 0.3R, sd 0.5R. */
+const oosSharpe = (over: Partial<import('../src/research/ExperimentRunner.js').TradeSharpeStats> = {}) => ({
+  n: 40,
+  mean: 0.3,
+  std: 0.5,
+  skewness: 0,
+  excessKurtosis: 0,
+  sharpePerTrade: 0.6,
+  ...over,
+}) as import('../src/research/ExperimentRunner.js').TradeSharpeStats;
+
 const result = (over: Partial<ExperimentResult> = {}): ExperimentResult => ({
   candidateId: 'STRUCT-LIQ-η', candidateVersion: 2,
   parentId: 'STRUCT-LIQ-η', parentVersion: 1,
-  train: { n: 1000, stdDevNetR: 1, effectiveN: 1000, winRate: 0.55, meanNetR: 0.4, profitFactor: 1.6, maxDrawdownR: 3, symbols: 1, regimes: 2, bootstrap: summary() },
-  test: { n: 900, stdDevNetR: 1, effectiveN: 900, winRate: 0.55, meanNetR: 0.3, profitFactor: 1.5, maxDrawdownR: 4, symbols: 2, regimes: 2, bootstrap: summary() },
-  parentTrain: { n: 1000, stdDevNetR: 1, effectiveN: 1000, winRate: 0.50, meanNetR: 0.2, profitFactor: 1.3, maxDrawdownR: 5, symbols: 1, regimes: 2, bootstrap: summary({ mean: 0.2 }) },
-  parentTest: { n: 900, stdDevNetR: 1, effectiveN: 900, winRate: 0.50, meanNetR: 0.15, profitFactor: 1.2, maxDrawdownR: 5, symbols: 2, regimes: 2, bootstrap: summary({ mean: 0.15 }) },
+  train: { n: 1000, stdDevNetR: 1, effectiveN: 1000, winRate: 0.55, meanNetR: 0.4, profitFactor: 1.6, maxDrawdownR: 3, symbols: 1, regimes: 2, bootstrap: summary(), sharpe: oosSharpe({ n: 1000, mean: 0.4, std: 1, sharpePerTrade: 0.4 }) },
+  test: { n: 900, stdDevNetR: 1, effectiveN: 900, winRate: 0.55, meanNetR: 0.3, profitFactor: 1.5, maxDrawdownR: 4, symbols: 2, regimes: 2, bootstrap: summary(), sharpe: oosSharpe({ n: 900 }) },
+  parentTrain: { n: 1000, stdDevNetR: 1, effectiveN: 1000, winRate: 0.50, meanNetR: 0.2, profitFactor: 1.3, maxDrawdownR: 5, symbols: 1, regimes: 2, bootstrap: summary({ mean: 0.2 }), sharpe: oosSharpe({ n: 1000, mean: 0.2, std: 1, sharpePerTrade: 0.2 }) },
+  parentTest: { n: 900, stdDevNetR: 1, effectiveN: 900, winRate: 0.50, meanNetR: 0.15, profitFactor: 1.2, maxDrawdownR: 5, symbols: 2, regimes: 2, bootstrap: summary({ mean: 0.15 }), sharpe: oosSharpe({ n: 900, mean: 0.15, sharpePerTrade: 0.3 }) },
   walkForward: { outOfSample: summary({ mean: 0.2, ciLow: 0.05 }), baseline: summary({ mean: 0.1 }), folds: 5 },
   perSymbol: [{ key: 'BTCUSDT', n: 25, meanNetR: 0.35 }, { key: 'ETHUSDT', n: 15, meanNetR: 0.20 }],
   perRegime: [{ key: 'TREND_UP | EXPANDED', n: 20, meanNetR: 0.45 }, { key: 'TRANSITION | COMPRESSED', n: 20, meanNetR: 0.15 }],
   experimentNotes: [],
+  contractViolations: [],
   ...over,
 });
 
@@ -39,7 +52,7 @@ test('evaluatePromotion returns PROMOTE when every guard is satisfied', () => {
 });
 
 test('evaluatePromotion returns INSUFFICIENT_DATA when OOS n is below minTrades', () => {
-  const v = evaluatePromotion(result({ test: { ...result().test, n: 10, bootstrap: null } }), DEFAULT_PROMOTION_POLICY);
+  const v = evaluatePromotion(result({ test: { ...result().test, n: 10, bootstrap: null, sharpe: null } }), DEFAULT_PROMOTION_POLICY);
   assert.equal(v.decision, 'INSUFFICIENT_DATA');
   assert.match(v.reasons[0], /minTrades/);
 });
@@ -58,7 +71,8 @@ test('incomplete research input can never pass the promotion gate', () => {
 });
 
 test('evaluatePromotion returns REJECT when OOS mean R is below the floor', () => {
-  const v = evaluatePromotion(result({ test: { ...result().test, meanNetR: 0.01 } }), DEFAULT_PROMOTION_POLICY);
+  // std 0.02 keeps the MDE guard satisfied (the edge is measurable), isolating the mean-floor rejection path.
+  const v = evaluatePromotion(result({ test: { ...result().test, meanNetR: 0.01, sharpe: oosSharpe({ mean: 0.01, std: 0.02, sharpePerTrade: 0.5 }) } }), DEFAULT_PROMOTION_POLICY);
   assert.equal(v.decision, 'REJECT');
   assert.ok(v.reasons.some((r) => /OOS mean R/.test(r)));
 });
@@ -88,8 +102,11 @@ test('evaluatePromotion rejects when symbol coverage is too thin', () => {
 });
 
 test('evaluatePromotion rejects when OOS delta vs parent is below the margin', () => {
-  // Candidate matches parent: zero delta.
-  const r = result({ test: { ...result().test, meanNetR: 0.15 }, parentTest: { ...result().parentTest, meanNetR: 0.15 } });
+  // Candidate matches parent: zero delta. std 0.2 keeps the MDE guard satisfied so the delta path is exercised.
+  const r = result({
+    test: { ...result().test, meanNetR: 0.15, sharpe: oosSharpe({ mean: 0.15, std: 0.2, sharpePerTrade: 0.75 }) },
+    parentTest: { ...result().parentTest, meanNetR: 0.15 },
+  });
   const v = evaluatePromotion(r, DEFAULT_PROMOTION_POLICY);
   assert.equal(v.decision, 'REJECT');
   assert.ok(v.reasons.some((r) => /delta vs parent/.test(r)));
@@ -114,9 +131,32 @@ test('evaluatePromotion rejects when the candidate collapses in its worst regime
 
 test('a custom policy can be applied (e.g. zero minOosDelta — accept ties)', () => {
   const tie = { ...DEFAULT_PROMOTION_POLICY, minOosDelta: 0 };
-  const r = result({ test: { ...result().test, meanNetR: 0.15 }, parentTest: { ...result().parentTest, meanNetR: 0.15 } });
+  const r = result({
+    test: { ...result().test, meanNetR: 0.15, sharpe: oosSharpe({ mean: 0.15, std: 0.2, sharpePerTrade: 0.75 }) },
+    parentTest: { ...result().parentTest, meanNetR: 0.15 },
+  });
   const v = evaluatePromotion(r, tie);
   assert.equal(v.decision, 'PROMOTE');
+});
+
+test('evaluatePromotion holds a candidate whose edge is below the minimum detectable effect at its sample size', () => {
+  // 900 trades with sigma = 1.0R can only confirm edges >= 0.093R at 80% power. The fixture's 0.07R mean
+  // clears every hard floor but not that, so the honest verdict is INSUFFICIENT_DATA — not a promotion.
+  const wide = result({
+    test: { ...result().test, meanNetR: 0.07, sharpe: oosSharpe({ mean: 0.07, std: 1.0, sharpePerTrade: 0.07 }) },
+    parentTest: { ...result().parentTest, meanNetR: 0.02 },
+  });
+  const v = evaluatePromotion(wide, DEFAULT_PROMOTION_POLICY);
+  assert.equal(v.decision, 'INSUFFICIENT_DATA');
+  assert.match(v.reasons[0], /detect effects >=/);
+});
+
+test('evaluatePromotion rejects when the research contract was violated (a filter could not be evaluated)', () => {
+  const v = evaluatePromotion(result({
+    contractViolations: ['maxSpreadBps=5 configured but 480/480 ledger records lack per-setup spread evidence'],
+  }), DEFAULT_PROMOTION_POLICY);
+  assert.equal(v.decision, 'REJECT');
+  assert.ok(v.reasons.some((r) => /research contract violation/.test(r)));
 });
 
 test('evaluatePromotion derives minTrades from power analysis when targetEffectSizeR is stated', () => {
@@ -147,4 +187,22 @@ test('DSR cannot silently skip trial correction when dispersion metadata is miss
   const verdict = evaluatePromotion(withEquity, { ...DEFAULT_PROMOTION_POLICY, minDsr: 0.95, trialCount: 500 });
   assert.equal(verdict.decision, 'INSUFFICIENT_DATA');
   assert.ok(verdict.reasons.some((r) => /trialSharpeVariance/.test(r)));
+});
+
+test('evaluatePromotion passes DSR with a strong equity-return Sharpe under a small trial count', () => {
+  // Alternating +0.02%/+0.01% per-mark equity returns give a per-period Sharpe of ~3; under 2 trials with a
+  // small measured trial-Sharpe variance the deflated Sharpe stays above 0.95 and the candidate promotes.
+  const dsrPolicy = { ...DEFAULT_PROMOTION_POLICY, minDsr: 0.95, trialCount: 2, trialSharpeVariance: 0.01 };
+  const returns = Array.from({ length: 900 }, (_, i) => (i % 2 === 0 ? 0.0002 : 0.0001));
+  const v = evaluatePromotion(result({ testEquityReturns: { source: 'CANDIDATE_PORTFOLIO_REPLAY', candidateId: 'STRUCT-LIQ-η', candidateVersion: 2, from: 0, to: 900_000, frequencyMs: 1_000, returns } }), dsrPolicy);
+  assert.equal(v.decision, 'PROMOTE');
+});
+
+test('evaluatePromotion refuses to proxy DSR from per-trade statistics when equity evidence is missing', () => {
+  // A strong per-trade Sharpe is NOT account-level evidence: without the actual fixed-frequency equity
+  // return series the DSR gate fails closed with INSUFFICIENT_DATA instead of substituting a proxy.
+  const dsrPolicy = { ...DEFAULT_PROMOTION_POLICY, minDsr: 0.95, trialCount: 10, trialSharpeVariance: 0.5 };
+  const v = evaluatePromotion(result({ test: { ...result().test, sharpe: oosSharpe({ std: 0.25, sharpePerTrade: 1.2 }) } }), dsrPolicy);
+  assert.equal(v.decision, 'INSUFFICIENT_DATA');
+  assert.ok(v.reasons.some((r) => /equity return series/.test(r)));
 });

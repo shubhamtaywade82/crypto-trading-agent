@@ -84,11 +84,20 @@ async function readOnlyChecks(): Promise<void> {
     return `${rows.length} row(s)`;
   });
 
-  await check('account reports margin balance and an isolated flag per position', async () => {
-    const info = await futures.getAccountInformation();
+  await check('account (V3) reports margin balance and an isolated flag per position', async () => {
+    const info = await futures.getAccountInformationV3();
     expect(Number.isFinite(Number(info.totalMarginBalance)), 'totalMarginBalance is not numeric');
     for (const p of info.positions) expect(typeof p.isolated === 'boolean', `${p.symbol} has no isolated flag`);
     return `margin balance ${info.totalMarginBalance}`;
+  });
+
+  await check('balance (V3) lists per-asset wallets with an update time', async () => {
+    const balances = await futures.getBalanceV3();
+    expect(balances.length > 0, 'no balances returned');
+    const usdt = balances.find((b) => b.asset === 'USDT');
+    expect(usdt !== undefined, 'no USDT balance row');
+    expect(Number.isFinite(Number(usdt!.availableBalance)), 'USDT availableBalance is not numeric');
+    return `${balances.length} asset(s), USDT available ${usdt!.availableBalance}`;
   });
 
   await check('leverage brackets for every configured symbol', async () => {
@@ -119,9 +128,11 @@ async function readOnlyChecks(): Promise<void> {
     await new Promise((resolve) => setTimeout(resolve, 3_000));
     const streamProblems = venueLog.filter((m) => m.includes('user data stream'));
     expect(streamProblems.length === 0, `user-data stream: ${streamProblems.join(' | ')}`);
+    const stream = service.userStreamStatus();
+    expect(stream.state === 'CONNECTED', `user-data stream state is ${stream.state}, not CONNECTED`);
     const blocked = config.symbols.map((s) => service.entryBlockReason(s)).filter((b): b is string => b !== undefined);
     expect(blocked.length === 0, `entries blocked: ${blocked.join(' | ')}`);
-    return 'journal synced, stream up, no entry blocks';
+    return `journal synced, stream ${stream.state}, no entry blocks`;
   });
 }
 

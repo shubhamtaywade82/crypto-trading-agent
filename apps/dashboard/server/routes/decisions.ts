@@ -60,6 +60,7 @@ export function registerDecisionRoutes(app: Express, ctx: DashboardContext): voi
           d.status === "VETOED" ||
           d.status === "EQ_REJECTED" ||
           d.status === "FRICTION_REJECTED" ||
+          d.status === "TEV1_REJECTED" ||
           d.status === "EXECUTION_REFUSED" ||
           d.status === "EXECUTION_FAILED",
       );

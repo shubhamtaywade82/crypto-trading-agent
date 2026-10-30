@@ -63,9 +63,9 @@ const SEVERITY: readonly CircuitState[] = ['NORMAL', 'CAUTION', 'REDUCED', 'HALT
 export function deriveCircuitState(
   dailyLossPct: number, drawdownPct: number, lossStreak: number, limits: RiskLimits,
 ): CircuitState {
-  if (drawdownPct >= limits.maxDrawdownPercent) return 'EMERGENCY';
-  const byDailyLoss = stateForRatio(dailyLossPct / limits.maxDailyLossPercent);
-  const byStreak = stateForRatio(lossStreak / limits.maxLossStreak);
+  if (limits.maxDrawdownPercent > 0 && drawdownPct >= limits.maxDrawdownPercent) return 'EMERGENCY';
+  const byDailyLoss = limits.maxDailyLossPercent > 0 ? stateForRatio(dailyLossPct / limits.maxDailyLossPercent) : 'NORMAL';
+  const byStreak = limits.maxLossStreak > 0 ? stateForRatio(lossStreak / limits.maxLossStreak) : 'NORMAL';
   return SEVERITY[Math.max(SEVERITY.indexOf(byDailyLoss), SEVERITY.indexOf(byStreak))];
 }
 

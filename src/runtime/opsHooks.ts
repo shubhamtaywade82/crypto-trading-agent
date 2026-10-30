@@ -122,12 +122,15 @@ export async function refreshPortfolio(ctx: MarketContext, source: PortfolioSour
 export interface OpsConfig { audit: boolean; alerts: boolean; eventsPath: string; notificationsPath: string; hideNoTradeSetups?: boolean }
 
 const opsConfigFromEnv = (): OpsConfig => ({
-  audit: config.audit === 'on', alerts: config.alerts === 'on', eventsPath: config.eventsPath, notificationsPath: config.notificationsPath,
-  hideNoTradeSetups: config.setup.alertHideNoTrade,
+  audit: config.audit === 'on',
+  alerts: true, // Alerts should always be on in any mode, task, or state
+  eventsPath: config.eventsPath,
+  notificationsPath: config.notificationsPath,
+  hideNoTradeSetups: false, // Do not block setups from alerts
 });
 
-// Refused signals and active setups re-fire each loop while conditions hold; flapping venues re-alert
-const ALERT_COOLDOWN_MS = { SYSTEM: 5 * 60_000, SIGNAL: 15 * 60_000, SETUP: 30 * 60_000 };
+// Alerts fire promptly without long suppressive cooldowns
+const ALERT_COOLDOWN_MS = { SYSTEM: 60_000, SIGNAL: 60_000, SETUP: 60_000 };
 const DIGEST_DELAY_MS = 5 * 60_000;
 const DAY_MS = 86_400_000;
 
@@ -191,8 +194,14 @@ function loadSubscriptions(file: string) {
   try {
     return parseSubscriptions(readFileSync(file, 'utf-8'));
   } catch {
-    // No preferences file is the normal case: every class is on
-    return defaultSubscriptions();
+    // Normal case: all classes and severity levels alert without suppression
+    return {
+      ...defaultSubscriptions(),
+      minSeverity: 'INFO' as const,
+      levelApproaching: true,
+      setupDeveloping: true,
+      liquiditySweeps: true,
+    };
   }
 }
 
@@ -200,17 +209,19 @@ function loadSubscriptions(file: string) {
 export function buildOps(options: BuildOpsOptions): Ops {
   const cfg = options.config ?? opsConfigFromEnv();
   const now = options.now ?? Date.now;
-  const telegram: TelegramDeps = { log: (line) => options.log(oneLine(line)), ...options.telegram };
+  const isAlerts = options.config ? cfg.alerts : true;
+  const telegram: TelegramDeps = { log: (line) => options.log(oneLine(line)), silent: false, ...options.telegram };
   const hooks = createOps({
-    isAudit: cfg.audit, isAlerts: cfg.alerts, seedTrades: options.seedTrades, now, hideNoTradeSetups: cfg.hideNoTradeSetups ?? false,
+    isAudit: cfg.audit, isAlerts, seedTrades: options.seedTrades, now, hideNoTradeSetups: cfg.hideNoTradeSetups ?? false,
+    refusalReannounceMs: 60_000,
     store: new EventStore(cfg.eventsPath),
-    engine: new NotificationEngine(cfg.alerts ? loadSubscriptions(cfg.notificationsPath) : undefined, { cooldownMs: ALERT_COOLDOWN_MS, now }),
+    engine: new NotificationEngine(isAlerts ? loadSubscriptions(cfg.notificationsPath) : undefined, { cooldownMs: ALERT_COOLDOWN_MS, now }),
     send: (event, html) => sendAlert(event, html, telegram),
   });
   let cancelDigest: (() => void) | undefined;
   return {
     ...hooks,
-    start: (source) => { if (cfg.alerts) cancelDigest = scheduleDailyDigest(hooks, source, { now, log: options.log }); },
+    start: (source) => { if (isAlerts) cancelDigest = scheduleDailyDigest(hooks, source, { now, log: options.log }); },
     stop: () => cancelDigest?.(),
   };
 }

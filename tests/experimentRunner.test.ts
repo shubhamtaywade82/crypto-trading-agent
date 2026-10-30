@@ -47,9 +47,21 @@ test('hypotheticalTrades only counts setups whose entry was touched and outcome 
   const ledger = makeLedger({ n: 10 });
   // Sabotage: drop the entry-touched timestamp on the first record (it never fired).
   ledger[0] = { ...ledger[0], entryTouchedAt: null };
-  const trades = hypotheticalTrades(spec, ledger, ledger[0].createdAt, ledger[ledger.length - 1].createdAt + 1);
+  // Evaluate as-of just after the final trade's outcome is known: a trade whose outcome resolved at or
+  // after the window cutoff would leak future information into the window and is excluded.
+  const trades = hypotheticalTrades(spec, ledger, ledger[0].createdAt, (ledger[ledger.length - 1].closedAt ?? 0) + 1);
   assert.equal(trades.length, 9);
   assert.ok(!trades.some((t) => t.record.setupId === 'setup-0'));
+});
+
+test('hypotheticalTrades excludes trades whose outcome resolved at or after the window cutoff (look-ahead guard)', () => {
+  const spec = seedStructLiqSpec();
+  const ledger = makeLedger({ n: 10 });
+  // Window ends before the last two records' outcomes are known (fixtures close at createdAt + 2h).
+  const end = ledger[ledger.length - 3].createdAt + 1;
+  const trades = hypotheticalTrades(spec, ledger, ledger[0].createdAt, end);
+  assert.ok(trades.every((t) => (t.record.closedAt ?? Number.POSITIVE_INFINITY) < end));
+  assert.ok(trades.length < 9, `expected unresolved-window trades to be dropped; got ${trades.length}`);
 });
 
 test('runExperiment returns empty results when the ledger is too short for the train/test windows', () => {
@@ -120,6 +132,19 @@ test('maxSpreadBps uses recorded setup spread and missing historical spread is i
   const missing = ledger.map((r) => ({ ...r, features: { ...r.features, spreadBps: undefined } }));
   const result = runExperiment(candidate, parent, missing, BASE_CONFIG);
   assert.ok(result.experimentNotes.some((n) => n.startsWith('incomplete research input:') && /spreadBps/.test(n)));
+});
+
+test('runExperiment applies maxSpreadBps when the ledger records per-setup spread', () => {
+  const parent = seedStructLiqSpec();
+  const candidate = child(parent, { maxSpreadBps: 5 } as Partial<StructLiqSpecParams>);
+  const ledger = makeLedger({ n: 40, spreadBps: 3, spacing: 3_600_000 * 6, noise: 0.4 });
+  // Half the records sit above the cap; the filter must actually exclude them.
+  for (let i = 0; i < ledger.length; i += 2) {
+    ledger[i] = { ...ledger[i], features: { ...ledger[i].features, spreadBps: 9 } };
+  }
+  const trades = hypotheticalTrades(candidate, ledger, ledger[0].createdAt, (ledger[ledger.length - 1].closedAt ?? 0) + 1);
+  assert.equal(trades.length, 20);
+  assert.ok(trades.every((t) => typeof t.record.features.spreadBps === 'number' && t.record.features.spreadBps <= 5));
 });
 
 test('runExperiment throws when candidate and parent have different ids', () => {

@@ -190,14 +190,15 @@ test('experimentCompletedPayload extracts the verdict and key metrics from a res
   const result: ExperimentResult = {
     candidateId: candidate.id, candidateVersion: candidate.version,
     parentId: candidate.id, parentVersion: 1,
-    train: { n: 100, stdDevNetR: 1, effectiveN: 100, winRate: 0.55, meanNetR: 0.3, profitFactor: 1.5, maxDrawdownR: 4, symbols: 2, regimes: 3, bootstrap: null },
-    test: { n: 50, stdDevNetR: 1, effectiveN: 50, winRate: 0.55, meanNetR: 0.25, profitFactor: 1.4, maxDrawdownR: 5, symbols: 2, regimes: 3, bootstrap: null },
-    parentTrain: { n: 100, stdDevNetR: 1, effectiveN: 100, winRate: 0.5, meanNetR: 0.2, profitFactor: 1.3, maxDrawdownR: 6, symbols: 2, regimes: 3, bootstrap: null },
-    parentTest: { n: 50, stdDevNetR: 1, effectiveN: 50, winRate: 0.5, meanNetR: 0.15, profitFactor: 1.2, maxDrawdownR: 7, symbols: 2, regimes: 3, bootstrap: null },
+    train: { n: 100, stdDevNetR: 1, effectiveN: 100, winRate: 0.55, meanNetR: 0.3, profitFactor: 1.5, maxDrawdownR: 4, symbols: 2, regimes: 3, bootstrap: null, sharpe: null },
+    test: { n: 50, stdDevNetR: 1, effectiveN: 50, winRate: 0.55, meanNetR: 0.25, profitFactor: 1.4, maxDrawdownR: 5, symbols: 2, regimes: 3, bootstrap: null, sharpe: null },
+    parentTrain: { n: 100, stdDevNetR: 1, effectiveN: 100, winRate: 0.5, meanNetR: 0.2, profitFactor: 1.3, maxDrawdownR: 6, symbols: 2, regimes: 3, bootstrap: null, sharpe: null },
+    parentTest: { n: 50, stdDevNetR: 1, effectiveN: 50, winRate: 0.5, meanNetR: 0.15, profitFactor: 1.2, maxDrawdownR: 7, symbols: 2, regimes: 3, bootstrap: null, sharpe: null },
     walkForward: { outOfSample: null, baseline: null, folds: 5 },
     perSymbol: [{ key: 'BTCUSDT', n: 30, meanNetR: 0.3 }],
     perRegime: [{ key: 'TREND_UP | EXPANDED', n: 20, meanNetR: 0.4 }],
     experimentNotes: ['note 1'],
+    contractViolations: [],
   };
   const verdict: PromotionVerdict = { decision: 'PROMOTE', reasons: ['r1'], policy: DEFAULT_PROMOTION_POLICY };
   const payload = experimentCompletedPayload('exp-1', candidate, result, verdict);

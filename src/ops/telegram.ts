@@ -15,6 +15,7 @@ export interface TelegramDeps {
   readonly env?: Readonly<Record<string, string | undefined>>;
   readonly dryRun?: boolean;
   readonly log?: (line: string) => void;
+  readonly silent?: boolean;
 }
 
 const SEND_TIMEOUT_MS = 10_000;
@@ -83,5 +84,5 @@ export async function sendTelegram(text: TelegramContent, opts: TelegramOptions 
 export const sendAlert = (event: AlertEvent, html: string, deps: TelegramDeps = {}): Promise<boolean> =>
   sendTelegram(html, {
     channel: TRADING_CHANNEL_CLASSES.has(event.class) ? 'trading' : 'alert',
-    silent: SEVERITY_RANK[event.severity] < SEVERITY_RANK.IMPORTANT,
+    silent: deps.silent ?? (SEVERITY_RANK[event.severity] < SEVERITY_RANK.IMPORTANT),
   }, deps);

@@ -19,6 +19,9 @@ export * from './ModelRouter.js';
 export * from './CommandPolicy.js';
 export * from './PatchWorkflow.js';
 export * from './SelfImprovementLoop.js';
+export * from './MonteCarlo.js';
+export * from './VolatilityClustering.js';
+export * from './StatArb.js';
 // The ablation subsystem keeps its own barrel (src/research/ablation/index.js): a star re-export here collides with
 // ExperimentRunner's ExperimentConfig and MetricsCollector's names. Import it directly:
 //   import { runAblationStudy } from './research/ablation/index.js';

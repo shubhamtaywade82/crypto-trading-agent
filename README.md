@@ -243,6 +243,32 @@ cat data/decisions.jsonl | jq 'select(.outcome != null) | {score: .evidence.scor
 
 ---
 
+## Tev1 decision intelligence
+
+A second decision layer between the risk gate and execution: [Tev1](https://ollama.com/library/tev1)
+(a small purpose-trained decision model, Ollama `/v1/systemone`) evaluates each **risk-approved
+entry** against the strategy criteria and classifies it `APPROVE` / `WAIT` / `NO_TRADE` /
+`INSUFFICIENT_DATA`, with a weakness reason code and a multi-timeframe alignment probability. It is
+a **filter, not a predictor** — its confidence is classification confidence, never the probability
+a trade will be profitable; it never originates entries, prices levels, sizes positions or
+executes. Hard risk checks stay in the deterministic engine and remain unconditionally binding.
+
+```
+TEV1_GATE=shadow npm run dev:paper     # evaluate + audit every risk-approved entry, refuse nothing (start here)
+npm run tev1:eval --                   # one-shot synthetic demo; --live --symbol SOLUSDT uses real market state
+```
+
+`TEV1_GATE=on` refuses blocked candidates (journaled `TEV1_REJECTED`, fail-closed on timeouts and
+malformed responses) and is **refused at startup in `MODE=live`** until out-of-sample evidence
+exists — the same bar as council autotrade. Every evaluation appends a fully replayable audit row
+(model tag, question/policy versions, snapshot, raw response, latency) to
+`data/tev1-decisions.jsonl`, the dataset the benchmark plan joins against realized outcomes to
+measure false approvals and missed opportunities. See
+[docs/tev1-decision-intelligence.md](docs/tev1-decision-intelligence.md) for the architecture,
+policy rules and rollout plan.
+
+---
+
 ## Risk state that survives restarts
 
 The drawdown kill-switch measures against a persisted, mode-keyed equity high-water mark

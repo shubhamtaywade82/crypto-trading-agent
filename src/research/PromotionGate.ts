@@ -2,18 +2,28 @@
  * Promotion gate: statistical guards a candidate must pass before it can be promoted from
  * challenger to champion.
  *
- * Enforces:
- *   1. Power-calibrated sample requirements (minTrades derived from effect size).
- *   2. Positive OOS mean net R and positive bootstrap lower confidence bound (LCB).
- *   3. Deflated Sharpe Ratio (DSR) gating against backtest trial count.
- *   4. Profit factor floor and drawdown ceiling.
- *   5. Multi-symbol coverage to prevent single-asset overfitting.
- *   6. Shrunk worst-regime regression check to prevent isolated regime collapses.
- *   7. Positive out-of-sample walk-forward validation.
+ * Verdict order (fail closed — a gate that cannot be evaluated is INSUFFICIENT_DATA, never a silent pass):
+ *   1. INSUFFICIENT_DATA on incomplete research inputs (e.g. a spread filter that could not be evaluated),
+ *      the static `minTrades` floor, and the power-derived sample requirement: required n for the
+ *      pre-registered target effect using the TRAINING split's dispersion (holdout data never tunes the
+ *      requirement) and the cluster-adjusted effective sample size of the OOS window.
+ *   2. INSUFFICIENT_DATA on missing DSR evidence: when `minDsr` is enabled the gate requires an actual
+ *      fixed-frequency OOS portfolio equity-return series plus the cumulative trial count and measured
+ *      trial-Sharpe variance. Per-trade net R is never substituted for account-level returns.
+ *   3. REJECT on any hard floor, evaluated on the observed data: contract integrity (a configured filter
+ *      that could not be evaluated), OOS mean/LCB, DSR (from the equity-return series, never a profit-factor
+ *      proxy), profit factor, drawdown, symbol coverage, parent delta, worst-regime regression, walk-forward
+ *      positivity.
+ *   4. INSUFFICIENT_DATA on power-to-confirm: a candidate that cleared every hard floor but whose positive
+ *      mean edge is smaller than the minimum detectable effect at its observed sample size (80% power) is a
+ *      small-sample illusion — it is not promotable evidence yet.
+ *
+ *   5. PROMOTE: positive expectancy with statistically sufficient power, DSR-defensible Sharpe,
+ *      multi-symbol breadth, regime stability, and positive walk-forward out-of-sample results.
  */
 
 import type { ExperimentResult } from './ExperimentRunner.js';
-import { calculateRequiredSampleSize } from './SampleSize.js';
+import { calculateRequiredSampleSize, minimumDetectableEffect } from './SampleSize.js';
 import { computeDeflatedSharpeFromReturns } from './DeflatedSharpe.js';
 import { shrinkMean } from './Shrinkage.js';
 
@@ -48,7 +58,7 @@ export interface PromotionPolicy {
   minDsr?: number;
   /** Cumulative trials tested across the experiment lineage (for DSR multiple testing correction). */
   trialCount?: number;
-  /** Empirical variance of Sharpe ratios across all trials on the same return frequency. */
+  /** Empirical variance of Sharpe ratios across all trials on the same return frequency. Required (not defaulted) when DSR is enabled with multiple trials. */
   trialSharpeVariance?: number;
 }
 
@@ -75,6 +85,16 @@ export interface PromotionVerdict {
   policy: PromotionPolicy;
 }
 
+/** Sample-size sufficiency verdict with the evidence used to derive it. */
+interface SampleRequirement {
+  sufficient: boolean;
+  /** Effective trade floor applied (power-derived or static). */
+  minTrades: number;
+  /** Minimum detectable effect at the observed n and sigma (only when moments exist). */
+  mdeR: number | null;
+  reason: string;
+}
+
 interface PowerRequirement {
   requiredSampleSize: number;
   sigmaR: number;
@@ -99,6 +119,30 @@ function getPowerRequirement(result: ExperimentResult, policy: PromotionPolicy):
   } catch {
     return null;
   }
+}
+
+/**
+ * The power question, asked only of a candidate that cleared every rejection guard: is this sample size
+ * actually able to CONFIRM a positive edge of the observed size with 80% power?
+ *
+ * MDE = (zα + zβ)·σ/√n. If the observed positive mean is smaller than the smallest effect the sample could
+ * honestly detect, promoting would be a small-sample illusion — the verdict is INSUFFICIENT_DATA, not
+ * PROMOTE. Thirty trades at σ=1R can only confirm edges ≥ ~0.51R; a 0.05R edge on 30 trades is not evidence.
+ */
+function checkPowerToConfirm(result: ExperimentResult, policy: PromotionPolicy): SampleRequirement | null {
+  const moments = result.test.sharpe;
+  if (!moments || !Number.isFinite(moments.std) || !(moments.std > 0)) return null;
+  if (!(result.test.meanNetR > 0)) return null; // non-positive edges are already rejected elsewhere
+  const mde = minimumDetectableEffect({ n: result.test.n, sigmaR: moments.std }).mdeR;
+  if (result.test.meanNetR < mde) {
+    return {
+      sufficient: false,
+      minTrades: result.test.n + 1,
+      mdeR: mde,
+      reason: `OOS n=${result.test.n} can only detect effects >= ${mde.toFixed(3)}R at 80% power (sigma=${moments.std.toFixed(2)}R); observed mean ${result.test.meanNetR.toFixed(3)}R is below that — more data required to confirm the edge`,
+    };
+  }
+  return null;
 }
 
 /** Evaluates candidate against the promotion policy using strict statistical gates. */
@@ -146,6 +190,7 @@ export function evaluatePromotion(
   }
 
   const reasons: string[] = [
+    ...checkContractIntegrity(result),
     ...checkExpectancyAndDsr(result, policy),
     ...(dsr.rejection ? [dsr.rejection] : []),
     ...checkRiskAndDrawdown(result, policy),
@@ -154,6 +199,13 @@ export function evaluatePromotion(
 
   if (reasons.length > 0) {
     return { decision: 'REJECT', reasons, policy };
+  }
+
+  // Every hard floor passed. The final question is power: can this sample size actually confirm an edge
+  // of the observed magnitude? If not, the honest verdict is INSUFFICIENT_DATA, not PROMOTE.
+  const power = checkPowerToConfirm(result, policy);
+  if (power !== null) {
+    return { decision: 'INSUFFICIENT_DATA', reasons: [power.reason], policy };
   }
 
   const delta = result.test.meanNetR - result.parentTest.meanNetR;
@@ -166,6 +218,15 @@ export function evaluatePromotion(
     ],
     policy,
   };
+}
+
+/**
+ * A configured filter that could not be evaluated against recorded evidence invalidates the experiment itself:
+ * the numbers it produced do not measure what the spec claims to measure. Reject loudly instead of promoting
+ * on top of a no-op threshold.
+ */
+function checkContractIntegrity(result: ExperimentResult): string[] {
+  return result.contractViolations.map((v) => `research contract violation: ${v}`);
 }
 
 function checkDsr(result: ExperimentResult, policy: PromotionPolicy): { insufficient?: string; rejection?: string } {

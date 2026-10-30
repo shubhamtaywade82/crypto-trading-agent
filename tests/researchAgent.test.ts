@@ -14,7 +14,7 @@ import type { CellStat } from '../src/research/ConditionalEdge.js';
 
 const cellStat = (key: string, mean: number, n: number, significant = false): CellStat => ({
   key, n,
-  stats: { n, clusters: 5, mean, median: mean, ciLow: mean - 0.1, ciHigh: mean + 0.1, probPositive: 0.9, pValue: 0.05, p05: mean - 0.5, p95: mean + 0.5 },
+  stats: { n, clusters: 5, mean, median: mean, ciLow: mean - 0.1, ciHigh: mean + 0.1, probPositive: 0.9, pValue: 0.05, pValueSignFlip: 0.05, p05: mean - 0.5, p95: mean + 0.5 },
   significant,
 });
 

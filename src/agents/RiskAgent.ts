@@ -98,9 +98,13 @@ export class RiskAgent extends BaseAgent {
       return this.reject(`strategy ${signal.agent} is not approved for live trading`);
     }
     const halt = this.options.killSwitch?.state();
-    if (!halt?.halted || !signal.type.startsWith('OPEN_')) return this.gateSafety(signal, ctx, opts);
-    this.isDrawdownBreached(ctx); // only to keep the session equity peak tracking while halted
-    return this.reject(`kill-switch: ${halt.reason}`);
+    if (halt?.halted && signal.type.startsWith('OPEN_')) {
+      if (config.risk.maxDrawdownPct > 0 || !halt.reason.includes('drawdown')) {
+        this.isDrawdownBreached(ctx); // only to keep the session equity peak tracking while halted
+        return this.reject(`kill-switch: ${halt.reason}`);
+      }
+    }
+    return this.gateSafety(signal, ctx, opts);
   }
 
   /** Priority-0 market safety (stale feed, bad mark, exchange status, shock) blocks new entries only. */
@@ -207,6 +211,7 @@ export class RiskAgent extends BaseAgent {
    */
   private peakEquity = 0;
   private isDrawdownBreached(ctx: MarketContext): boolean {
+    if (config.risk.maxDrawdownPct <= 0) return false;
     if (ctx.equity <= 0) return true;
     const peak = this.options.hwm
       ? this.options.hwm.observe(ctx.equity)

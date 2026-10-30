@@ -80,3 +80,42 @@ export function calculateRequiredSampleSize(input: PowerCalculationInput): Power
     zBeta,
   };
 }
+
+export interface MinimumDetectableEffectInput {
+  /** Observed sample size. */
+  n: number;
+  /** Standard deviation of per-trade return in R units (defaults to 1.0R). */
+  sigmaR?: number;
+  /** Significance level alpha (default 0.05, two-sided). */
+  alpha?: number;
+  /** Desired statistical power (1 - beta), defaults to 0.80. */
+  power?: number;
+}
+
+export interface MinimumDetectableEffectResult {
+  /** Smallest true mean edge (in R) this sample size could detect with the requested power. */
+  mdeR: number;
+  n: number;
+  sigmaR: number;
+  alpha: number;
+  power: number;
+}
+
+/**
+ * Inverse power analysis: the minimum effect size (in R) that a sample of n trades can detect at the stated
+ * significance and power: MDE = (z_alpha + z_beta) * sigma / sqrt(n).
+ *
+ * This is what makes a trade floor *self-calibrating*: instead of asserting "30 trades is enough", ask whether the
+ * observed mean edge even clears the smallest effect those 30 trades could honestly detect. A 0.05R edge over 1.0R
+ * noise needs ~784 trades; 30 trades can only "confirm" edges >= 0.51R.
+ */
+export function minimumDetectableEffect(input: MinimumDetectableEffectInput): MinimumDetectableEffectResult {
+  const { n, sigmaR = 1.0, alpha = 0.05, power = 0.80 } = input;
+  if (n <= 0) throw new Error('n must be strictly positive');
+
+  const zAlpha = normalQuantile(1 - alpha / 2);
+  const zBeta = normalQuantile(power);
+  const mdeR = ((zAlpha + zBeta) * sigmaR) / Math.sqrt(n);
+
+  return { mdeR, n, sigmaR, alpha, power };
+}

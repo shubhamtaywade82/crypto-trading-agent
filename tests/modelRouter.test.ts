@@ -15,7 +15,7 @@ import type { ExperimentResult } from '../src/research/ExperimentRunner.js';
 
 const cellStat = (key: string, mean: number, n: number): CellStat => ({
   key, n,
-  stats: { n, clusters: 5, mean, median: mean, ciLow: mean - 0.1, ciHigh: mean + 0.1, probPositive: 0.9, pValue: 0.05, p05: mean - 0.5, p95: mean + 0.5 },
+  stats: { n, clusters: 5, mean, median: mean, ciLow: mean - 0.1, ciHigh: mean + 0.1, probPositive: 0.9, pValue: 0.05, pValueSignFlip: 0.05, p05: mean - 0.5, p95: mean + 0.5 },
   significant: false,
 });
 
@@ -24,12 +24,13 @@ const seedParams = seedStructLiqSpec().params;
 const emptyResult: ExperimentResult = {
   candidateId: 'X', candidateVersion: 2,
   parentId: 'X', parentVersion: 1,
-  train: { n: 100, stdDevNetR: 1, effectiveN: 100, winRate: 0.5, meanNetR: 0.3, profitFactor: 1.5, maxDrawdownR: 4, symbols: 2, regimes: 3, bootstrap: null },
-  test: { n: 50, stdDevNetR: 1, effectiveN: 50, winRate: 0.5, meanNetR: 0.3, profitFactor: 1.5, maxDrawdownR: 4, symbols: 2, regimes: 3, bootstrap: null },
-  parentTrain: { n: 100, stdDevNetR: 1, effectiveN: 100, winRate: 0.5, meanNetR: 0.2, profitFactor: 1.3, maxDrawdownR: 5, symbols: 2, regimes: 3, bootstrap: null },
-  parentTest: { n: 50, stdDevNetR: 1, effectiveN: 50, winRate: 0.5, meanNetR: 0.2, profitFactor: 1.2, maxDrawdownR: 5, symbols: 2, regimes: 3, bootstrap: null },
+  train: { n: 100, stdDevNetR: 1, effectiveN: 100, winRate: 0.5, meanNetR: 0.3, profitFactor: 1.5, maxDrawdownR: 4, symbols: 2, regimes: 3, bootstrap: null, sharpe: null },
+  test: { n: 50, stdDevNetR: 1, effectiveN: 50, winRate: 0.5, meanNetR: 0.3, profitFactor: 1.5, maxDrawdownR: 4, symbols: 2, regimes: 3, bootstrap: null, sharpe: null },
+  parentTrain: { n: 100, stdDevNetR: 1, effectiveN: 100, winRate: 0.5, meanNetR: 0.2, profitFactor: 1.3, maxDrawdownR: 5, symbols: 2, regimes: 3, bootstrap: null, sharpe: null },
+  parentTest: { n: 50, stdDevNetR: 1, effectiveN: 50, winRate: 0.5, meanNetR: 0.2, profitFactor: 1.2, maxDrawdownR: 5, symbols: 2, regimes: 3, bootstrap: null, sharpe: null },
   walkForward: { outOfSample: null, baseline: null, folds: 5 },
   perSymbol: [], perRegime: [], experimentNotes: [],
+  contractViolations: [],
 };
 
 const coldStart: ResearchDiagnostics = {

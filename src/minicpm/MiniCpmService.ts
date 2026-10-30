@@ -10,6 +10,14 @@ export interface OllamaClientOptions {
   apiKey?: string;
 }
 
+/**
+ * Ollama-backed trade-decision advisor for the fleet worker.
+ *
+ * Historically named for MiniCPM5-2B (still the fleet's default control model) but fully
+ * model-agnostic: any Ollama tag works — see src/minicpm/FleetModels.ts for the curated
+ * shortlist and the routing rules. The prompt and the JSON validation contract are identical
+ * for every model, so model comparisons are apples-to-apples by construction.
+ */
 export class MiniCpmService {
   private readonly host: string;
   private readonly model: string;

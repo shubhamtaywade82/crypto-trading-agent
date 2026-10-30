@@ -172,7 +172,10 @@ export class SelfImprovementLoop {
       });
 
       const result = runExperiment(candidate, parent, ledger, experimentConfig);
-      const verdict = evaluatePromotion(result, DEFAULT_PROMOTION_POLICY);
+      // The promotion policy is hardened with the cumulative trial count (every experiment ever run for this
+      // strategy, plus this one) and an empirical estimate of the cross-trial Sharpe variance. This is what lets
+      // the Deflated Sharpe Ratio actually correct for the search that selected this candidate.
+      const verdict = evaluatePromotion(result, this.promotionPolicy(champion.id));
       const record: ExperimentRecord = {
         experimentId,
         ranAt: Date.now(),
@@ -231,6 +234,34 @@ export class SelfImprovementLoop {
   }
 
   /**
+   * Build the promotion policy for one strategy.
+   *
+   *   - `trialCount`: every experiment ever recorded for this strategy, plus the one about to be evaluated.
+   *     Searching 40 variants and reporting only the best is exactly the selection bias DSR exists to correct.
+   *   - `trialSharpeVariance`: the empirical variance of the per-trade Sharpe across those recorded trials when
+   *     at least two exist. Recorded for when DSR evidence becomes available; not defaulted.
+   *
+   * DSR is deliberately NOT enabled here: the gate's DSR consumes an actual fixed-frequency OOS portfolio
+   * equity-return series, and this loop consumes a setup-outcome ledger without owning a portfolio equity
+   * curve. Enabling `minDsr` without that evidence would fail every promotion closed (INSUFFICIENT_DATA)
+   * while pretending to multiple-testing protection the data cannot support. When the loop is wired to a
+   * replay equity curve (`ExperimentConfig.equityCurve`), flip `minDsr` on with the trial history below.
+   */
+  private promotionPolicy(strategyId: string): import('./PromotionGate.js').PromotionPolicy {
+    const priorTrials = this.experiments.all().filter((r) => r.candidate.id === strategyId);
+    const trialCount = priorTrials.length + 1;
+    const sharpes = priorTrials
+      .map((r) => r.result.test.sharpe?.sharpePerTrade)
+      .filter((s): s is number => s !== undefined && Number.isFinite(s));
+    const trialSharpeVariance = sharpes.length >= 2 ? varianceOf(sharpes) : undefined;
+    return {
+      ...DEFAULT_PROMOTION_POLICY,
+      trialCount,
+      ...(trialSharpeVariance !== undefined ? { trialSharpeVariance } : {}),
+    };
+  }
+
+  /**
    * Convenience: promotes the SHADOW challenger for an id through the next stage. The operator calls this when
    * they are satisfied that a shadow challenger is behaving correctly on divergence metrics.
    */
@@ -257,6 +288,13 @@ function stageRank(s: string): number {
     case 'PROMOTED': return 4;
     default: return 0;
   }
+}
+
+/** Sample variance (n - 1 denominator) of a non-empty numeric array. */
+function varianceOf(xs: readonly number[]): number {
+  if (xs.length < 2) return 0;
+  const mean = xs.reduce((a, b) => a + b, 0) / xs.length;
+  return xs.reduce((acc, x) => acc + (x - mean) ** 2, 0) / (xs.length - 1);
 }
 
 function emptyDiagnostics(): ResearchDiagnostics {

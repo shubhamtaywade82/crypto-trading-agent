@@ -90,8 +90,6 @@ export interface SetupMap {
   symbol: string;
   generatedAt: number;
   mark: number;
-  /** Best available quoted spread at setup creation, in basis points. */
-  spreadBps?: number | null;
   state: SetupState;
   bias: TrendDirection;
   regime: string;
@@ -120,5 +118,10 @@ export interface SetupMap {
   thesisTransition?: ThesisTransition;
   /** Scenarios withheld because they compete with the authoritative thesis. */
   withheldIds?: string[];
+  /**
+   * Observed bid/ask spread in bps at map time; null when the venue did not report it. Frozen into the setup
+   * outcome ledger so research-plane `maxSpreadBps` filters are backed by recorded evidence, not silently skipped.
+   */
+  spreadBps?: number | null;
   noTradeReasons: string[];
 }

@@ -12,9 +12,11 @@ import { MarketDataService } from '../market/MarketDataService.js';
 import type { MarketDataSnapshot } from '../market/MarketDataTypes.js';
 import { LiveBook, LiveStateStore, type LiveManagerMode, type LiveOrderPort } from './liveBook.js';
 import { LiveEntryTracker, LIVE_ENTRY_POLL_MS, liveEntryClientOrderId, orderSideOf, venueRejected, type LiveEntryPort } from './liveEntry.js';
+import { UserDataStream, type ListenKeyPort } from './userDataStream.js';
+import { usdmMarketWsUrl } from './wsRoutes.js';
 import {
   ENTRY_ORDER_PREFIX, isAlreadyIsolated, isEntryOrder, isVenueRejection, parseOrderTradeUpdate, planStartupReconciliation,
-  protectionClientOrderId, protectionOf, type OpenOrderView, type OrderUpdateView, type PositionProtection, type VenuePositionView,
+  protectionClientOrderId, protectionOf, type OpenOrderView, type PositionProtection, type VenuePositionView,
 } from './liveProtection.js';
 import { LiveJournal, LiveOwners, type FillView, type FundingView } from './liveJournal.js';
 import { roundStopPrice } from './symbolRules.js';
@@ -47,7 +49,6 @@ const toFillView = (t: FuturesPositionTrade): FillView => ({
   realizedPnl: Number(t.realizedPnl), commission: Number(t.commission), commissionAsset: t.commissionAsset, time: t.time,
 });
 
-const silentLogger = { silly: () => {}, verbose: () => {}, info: () => {}, warning: () => {}, error: () => {} };
 
 type OpenPositionParams = {
   symbol: string; side: 'BUY' | 'SELL'; qty: number; leverage: number;
@@ -99,7 +100,7 @@ export class BinanceService {
   private readonly entryBlocks = new Map<string, string>();
   /** Hedge mode blocks entries on every symbol; the bot manages one-way positions only. */
   private hedgeBlock: string | null = null;
-  private userStream: WebsocketClient | null = null;
+  private userDataStream: UserDataStream | null = null;
 
   /**
    * `futures` is injectable so tests can exercise the venue logic without a network; `stateDir` holds the live journal
@@ -128,7 +129,10 @@ export class BinanceService {
 
   startRealtimeStream(symbols: string[], onTick: (symbol: string, price: number) => void): () => void {
     const silent = { silly: () => {}, verbose: () => {}, info: () => {}, warning: () => {}, error: () => {} };
-    this.ws = new WebsocketClient({ beautify: false }, silent as any);
+    // Binance's 2026-04-23 WebSocket migration split the routes: regular market data (trade, aggTrade,
+    // kline, …) only answers on <root>/market. The package's default base would dial the legacy
+    // /ws/<symbol>@trade root, which now serves only the public (bookTicker/depth) channels.
+    this.ws = new WebsocketClient({ wsUrl: usdmMarketWsUrl(this.wsEnvironment()), beautify: false }, silent as any);
     const setStatus = (s: WsStatus) => { this.wsStatus = s; };
     this.ws.on('open', () => setStatus('connected'));
     this.ws.on('reconnected', () => setStatus('connected'));
@@ -261,7 +265,7 @@ export class BinanceService {
     const broker = this.usableBroker();
     if (broker) return broker.getAccount();
     if (config.mode === 'paper') return this.paper.getAccount();
-    const info = await this.futures.getAccountInformation();
+    const info = await this.futures.getAccountInformationV3();
     // Margin balance includes unrealized PnL; the wallet balance would hide open losses from the drawdown guard
     const equity = Number(info.totalMarginBalance);
     this.liveStartEquity ??= equity;
@@ -287,7 +291,7 @@ export class BinanceService {
       return this.usableBroker()!.getPositions();
     }
     if (config.mode === 'paper') return this.paper.getPositions();
-    const info = await this.futures.getAccountInformation();
+    const info = await this.futures.getAccountInformationV3();
     const open = (info.positions as any[]).filter((p: any) => Number(p.positionAmt) !== 0);
     // A position's stop and target are its resting closePosition orders: the venue is the only place they live
     const orders = (await Promise.all(open.map((p: any) => this.futures.getAllOpenOrders({ symbol: p.symbol })))).flat().map(toOpenOrderView);
@@ -455,7 +459,7 @@ export class BinanceService {
     return {
       fetchPositions: async () => {
         // getPositionsV3 has marks and liquidation prices; leverage and margin mode only exist on the account's positions
-        const [risk, account] = await Promise.all([futures.getPositionsV3(), futures.getAccountInformation()]);
+        const [risk, account] = await Promise.all([futures.getPositionsV3(), futures.getAccountInformationV3()]);
         const setup = new Map(account.positions.filter((p) => p.positionSide === 'BOTH').map((p) => [p.symbol, p]));
         return risk
           .filter((p) => p.positionSide === 'BOTH' && Number(p.positionAmt) !== 0) // one-way mode only
@@ -609,20 +613,47 @@ export class BinanceService {
   /**
    * Entry fills arrive on the user data stream. The tracker is woken on each one, so protection follows a fill within
    * milliseconds instead of at the next one-second poll.
+   *
+   * The stream dials Binance's current private route (wss://fstream.binance.com/private/ws?listenKey=…&events=…):
+   * the bundled `binance` package still builds the retired /ws/<listenKey> URL, so the connection is driven here over
+   * the same unchanged listen-key REST contract. The stream only accelerates reactions — order state stays reconciled
+   * by REST polling, so a stream outage degrades latency, never correctness.
    */
   private startUserStream(): void {
-    if (this.userStream || config.alertOnly) return;
-    const ws = new WebsocketClient({ beautify: false }, silentLogger as any);
-    ws.on('message', (data: unknown) => {
-      const update: OrderUpdateView | null = parseOrderTradeUpdate(data);
-      if (update && update.clientOrderId.startsWith(ENTRY_ORDER_PREFIX)) this.entries?.wake();
+    if (this.userDataStream || config.alertOnly) return;
+    const keys: ListenKeyPort = {
+      create: async () => {
+        const { listenKey } = await this.futures.getFuturesUserDataListenKey();
+        if (!listenKey) throw new Error('the venue returned no listen key');
+        return listenKey;
+      },
+      keepAlive: async () => { await this.futures.keepAliveFuturesUserDataListenKey(); },
+      close: async () => { await this.futures.closeFuturesUserDataListenKey(); },
+    };
+    const stream = new UserDataStream({
+      environment: this.wsEnvironment(),
+      keys,
+      onEvent: (event) => {
+        if (event.type === 'ORDER_TRADE_UPDATE') {
+          const update = parseOrderTradeUpdate(event.payload);
+          if (update && update.clientOrderId.startsWith(ENTRY_ORDER_PREFIX)) this.entries?.wake();
+        } else if (event.type === 'MARGIN_CALL') {
+          this.entryLog('user data stream: MARGIN_CALL — the venue reports margin pressure on open positions', 'error');
+        }
+      },
+      log: (message, level) => this.entryLog(message, level),
     });
-    ws.on('error', (err: unknown) => this.entryLog(`user data stream: ${errorText(err)}`, 'warn'));
-    this.userStream = ws;
-    ws.subscribeUsdFuturesUserDataStream(config.binance.testnet).catch((err: unknown) => {
-      this.userStream = null;
-      this.entryLog(`user data stream did not start: ${errorText(err)}; entries fall back to polling`, 'warn');
-    });
+    this.userDataStream = stream;
+    void stream.start();
+  }
+
+  /** The private user-data stream's lifecycle state, for the cockpit and health surfaces. */
+  userStreamStatus(): { state: string; connectedForMs: number | null; lastEventAt: number | null } {
+    return this.userDataStream?.status ?? { state: 'STOPPED', connectedForMs: null, lastEventAt: null };
+  }
+
+  private wsEnvironment() {
+    return config.binance.testnet ? ('testnet' as const) : ('live' as const);
   }
 
   flushPaperEngine(): void {

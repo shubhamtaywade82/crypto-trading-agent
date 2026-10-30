@@ -5,6 +5,7 @@ import type { LlmTradeRecommendation, PromptInput } from './MiniCpmPrompt.js';
 import type { Candle } from '../types.js';
 import type { MarketState } from '../market/types.js';
 import { loadMiniCpmState, saveMiniCpmPosition, removeMiniCpmPosition } from './MiniCpmStateStore.js';
+import type { FleetTradeEvent } from './FleetTelegram.js';
 
 export interface SymbolWorkerConfig {
   symbol: string;
@@ -15,6 +16,10 @@ export interface SymbolWorkerConfig {
   leverage: number;
   /** When false, no entry is submitted: this path sizes by fixed margin and takes the LLM's stop distance unbounded (spec section 2, R1). Exits still run. */
   entriesEnabled: boolean;
+  /** Ollama tag of the model driving this worker's decisions; recorded on every opened position for attribution. */
+  modelTag: string;
+  /** Optional trade-event sink: called on every entry fill, exit fill and break-even lock. Synchronous by design — async delivery (e.g. Telegram) is the sink's job, never the trading loop's. */
+  onTradeEvent?: (event: FleetTradeEvent) => void;
 }
 
 export interface WorkerStatus {
@@ -30,6 +35,8 @@ export interface WorkerStatus {
   breakEvenMoved: boolean;
   lastDecision: string;
   lastUpdated: number;
+  /** Ollama tag of the model that produced the current decision path; shown on the dashboard. */
+  modelTag: string;
 }
 
 export interface EvaluationParams {
@@ -70,6 +77,7 @@ export class SymbolTraderWorker {
       breakEvenMoved: false,
       lastDecision: 'Initialized',
       lastUpdated: Date.now(),
+      modelTag: config.modelTag,
     };
 
     const saved = loadMiniCpmState().positions[config.symbol];
@@ -77,12 +85,24 @@ export class SymbolTraderWorker {
       this.currentSl = saved.stopLoss;
       this.currentTp = saved.takeProfit;
       this.breakEvenMoved = !!saved.breakEvenMoved;
-      this.status.lastDecision = `Recovered: SL $${saved.stopLoss} | TP $${saved.takeProfit}`;
+      // A position recovered from disk keeps the model attribution it was opened with; the
+      // status shows the currently configured model because that is what new decisions use.
+      const openedNote = saved.openedByModel && saved.openedByModel !== config.modelTag ? ` (opened by ${saved.openedByModel})` : '';
+      this.status.lastDecision = `Recovered: SL $${saved.stopLoss} | TP $${saved.takeProfit}${openedNote}`;
     }
   }
 
   getStatus(): WorkerStatus {
     return { ...this.status };
+  }
+
+  /** Emits a trade event to the configured sink; a broken sink must never break trading. */
+  private emitTradeEvent(event: Omit<FleetTradeEvent, 'at'>): void {
+    try {
+      this.config.onTradeEvent?.({ ...event, at: Date.now() });
+    } catch {
+      // notification sinks are best-effort: swallow and keep trading
+    }
   }
 
   async syncAccount(): Promise<void> {
@@ -212,6 +232,7 @@ export class SymbolTraderWorker {
       breakEvenMoved: false,
       openedAt: Date.now(),
       reason: 'Auto-anchored recovery levels',
+      openedByModel: this.config.modelTag,
     });
   }
 
@@ -238,7 +259,25 @@ export class SymbolTraderWorker {
         this.currentSl = rec.stopLoss;
         this.currentTp = rec.takeProfit;
         this.breakEvenMoved = false;
+        // Reflect the confirmed fill immediately. state, the position view and the guarding levels
+        // become consistent the moment the broker confirms, BEFORE the ENTRY event and before the
+        // account sync: a live tick that lands between the fill and syncAccount()'s round-trips must
+        // never see a position-less worker and silently skip break-even/SL/TP management.
+        // syncAccount() afterwards only replaces this optimistic view with the broker's truth.
+        this.status.activePosition = {
+          id: Number(order.orderId) || 0,
+          symbol: this.config.symbol,
+          side: side === 'buy' ? 'long' : 'short',
+          netQuantity: order.filledQuantity ?? quantity,
+          averagePrice: markPrice,
+          currentPrice: markPrice,
+          leverage: this.config.leverage,
+          marginType: 'isolated',
+          liquidationPrice: null,
+          unrealizedPnl: 0,
+        };
         this.status.state = 'IN_POSITION';
+        this.updateStatusLevels(markPrice);
         saveMiniCpmPosition({
           symbol: this.config.symbol,
           entryPrice: markPrice,
@@ -247,6 +286,21 @@ export class SymbolTraderWorker {
           breakEvenMoved: false,
           openedAt: Date.now(),
           reason: rec.reason,
+          openedByModel: this.config.modelTag,
+        });
+        this.emitTradeEvent({
+          kind: 'ENTRY',
+          symbol: this.config.symbol,
+          side,
+          model: this.config.modelTag,
+          price: markPrice,
+          quantity,
+          leverage: this.config.leverage,
+          action: rec.action,
+          note: rec.reason,
+          stopLoss: rec.stopLoss,
+          takeProfit: rec.takeProfit,
+          entryPrice: markPrice,
         });
         await this.syncAccount();
       }
@@ -307,6 +361,18 @@ export class SymbolTraderWorker {
       breakEvenMoved: true,
       openedAt: Date.now(),
       reason: 'Shifted to Break-Even',
+      openedByModel: this.config.modelTag,
+    });
+    this.emitTradeEvent({
+      kind: 'BREAK_EVEN',
+      symbol: this.config.symbol,
+      model: this.config.modelTag,
+      price: currentPrice,
+      action: 'BREAK_EVEN',
+      note: `SL moved to entry after +${(gainPct * 10).toFixed(1)}% margin move`,
+      stopLoss: pos.averagePrice,
+      takeProfit: this.currentTp ?? undefined,
+      entryPrice: pos.averagePrice,
     });
   }
 
@@ -317,6 +383,11 @@ export class SymbolTraderWorker {
     currentPrice: number,
   ): Promise<void> {
     this.status.lastDecision = `CLOSING (${reason}) @ ${currentPrice}`;
+    // Capture the guarding levels before they are cleared: the exit card reports what triggered it.
+    const slAtExit = this.currentSl;
+    const tpAtExit = this.currentTp;
+    const isLong = pos.side === 'long';
+    const pnl = Number(((isLong ? currentPrice - pos.averagePrice : pos.averagePrice - currentPrice) * pos.netQuantity).toFixed(2));
     try {
       await this.client.submitOrder({
         symbol: this.config.symbol,
@@ -328,9 +399,29 @@ export class SymbolTraderWorker {
         executionPrice: currentPrice,
         clientOrderId: `minicpm-close-${this.config.symbol}-${Date.now()}`,
       });
+      this.emitTradeEvent({
+        kind: 'EXIT',
+        symbol: this.config.symbol,
+        side,
+        model: this.config.modelTag,
+        price: currentPrice,
+        quantity: pos.netQuantity,
+        leverage: pos.leverage,
+        action: reason,
+        stopLoss: slAtExit ?? undefined,
+        takeProfit: tpAtExit ?? undefined,
+        entryPrice: pos.averagePrice,
+        pnl,
+      });
       this.currentSl = null;
       this.currentTp = null;
       this.breakEvenMoved = false;
+      // Same atomic-transition rule as the entry: a confirmed reduce-only exit means the position
+      // is flat as of this instant. Do not leave a phantom IN_POSITION behind if the account sync
+      // is slow or fails — the worker knows the broker truth it just acted on.
+      this.status.activePosition = null;
+      this.status.state = 'IDLE';
+      this.updateStatusLevels(null);
       removeMiniCpmPosition(this.config.symbol);
       await this.syncAccount();
     } catch (err) {

@@ -35,6 +35,8 @@ export interface SetupOutcomeRecord {
     verdictAtCreation: SetupVerdict | null;
     sweepDepthAtr: number | null;
     sweepDisplacementAtr: number | null;
+    /** Observed spread in bps at setup creation; null when the venue did not report it (pre-upgrade records). */
+    spreadBps: number | null;
   };
   statesReached: { state: SetupScenario['state']; at: number }[];
   eligibleSeenAt: number | null;
@@ -104,6 +106,7 @@ export class SetupOutcomeLedger {
         locationAtEntry: s.locationAtEntry?.location ?? null, checks: s.quality?.checks ?? null,
         verdictAtCreation: s.quality?.verdict ?? null,
         sweepDepthAtr: s.evidence?.depthAtr ?? null, sweepDisplacementAtr: s.evidence?.displacementAtr ?? null,
+        spreadBps: map.spreadBps ?? null,
       },
       statesReached: [{ state: s.state, at: s.lifecycle!.createdAt }],
       eligibleSeenAt: null, entryTouchedAt: null, mfeR: null, maeR: null, outcome: 'OPEN', closedAt: null, netR: null,

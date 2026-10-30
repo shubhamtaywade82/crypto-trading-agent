@@ -4,6 +4,17 @@
  * Trades are not independent: four symbols move together and one strategy fires on several of them in the same hour. An
  * i.i.d. bootstrap over trades would treat those as separate evidence and produce intervals that are too narrow. Resampling
  * whole clusters (by default the UTC day a decision was made) keeps same-day trades together, which is the honest unit.
+ *
+ * Two distinct quantities are reported, and they are NOT interchangeable:
+ *
+ *   - `probPositive` — share of *uncentered* resampled means above zero. A bootstrap summary of the observed data.
+ *     It is NOT a p-value and NOT a Bayesian posterior; it understates uncertainty about the null because the
+ *     observed sample mean is treated as truth.
+ *   - `pValue` — one-sided p-value for H0: E[R] <= 0 from a *null-centered* cluster bootstrap: the empirical cluster
+ *     distribution is shifted so the null holds exactly, then clusters are resampled under the null. This is the
+ *     quantity multiple-testing correction (Holm) is valid on.
+ *   - `pValueSignFlip` — a cluster-level sign-flip randomization test of the same null, as a robustness check that
+ *     does not depend on the bootstrap's resampling distribution.
  */
 
 export interface Sample {
@@ -27,10 +38,15 @@ export interface BootstrapSummary {
   /** Percentile interval of the resampled means. `ciLow > 0` is the selection rule used downstream. */
   ciLow: number;
   ciHigh: number;
-  /** Share of resampled means above zero: an estimate of P(E[R] > 0 | data), not a p-value. */
+  /** Share of uncentered resampled means above zero: a bootstrap SUMMARY of the data, not a p-value and not P(H|data). */
   probPositive: number;
-  /** One-sided bootstrap p for H0: E[R] <= 0 ((resampled means at or below zero + 1) / (iterations + 1)). */
+  /**
+   * One-sided p-value for H0: E[R] <= 0 from the null-centered cluster bootstrap:
+   * ((resampled null means >= observed mean) + 1) / (iterations + 1).
+   */
   pValue: number;
+  /** Same null via cluster-level sign-flip randomization: ((flipped means >= observed mean) + 1) / (iterations + 1). */
+  pValueSignFlip: number;
   /** 5th / 95th percentile of the individual trade outcomes (tail shape, not uncertainty of the mean). */
   p05: number;
   p95: number;
@@ -74,6 +90,9 @@ export function bootstrapMean(samples: readonly Sample[], options: BootstrapOpti
   }
   const clusters = [...groups.values()];
   const rand = mulberry32(options.seed ?? 1);
+  const observedMean = values.reduce((a, b) => a + b, 0) / values.length;
+
+  // --- Uncentered bootstrap: percentile CI of the mean + probPositive (a data summary, never a p-value) ---
   const means: number[] = new Array(iterations);
   for (let i = 0; i < iterations; i += 1) {
     let sum = 0;
@@ -87,17 +106,51 @@ export function bootstrapMean(samples: readonly Sample[], options: BootstrapOpti
   }
   means.sort((a, b) => a - b);
   const sortedValues = [...values].sort((a, b) => a - b);
-  const atOrBelowZero = means.filter((m) => m <= 0).length;
+  const aboveZero = means.filter((m) => m > 0).length;
   const tail = (1 - confidence) / 2;
+
+  // --- Null-centered cluster bootstrap: build the world in which H0: E[R] = 0 holds exactly ---
+  // Shift every cluster's sum by the observed mean times its count, so the shifted population has mean zero while
+  // cluster sizes and within-cluster dependence are preserved. Resampling that population yields the null
+  // distribution of the (cluster-resampled) mean; the p-value is the tail at or beyond the observed mean.
+  const nullClusters = clusters.map((c) => ({ sum: c.sum - observedMean * c.count, count: c.count }));
+  let nullAtOrAbove = 0;
+  for (let i = 0; i < iterations; i += 1) {
+    let sum = 0;
+    let count = 0;
+    for (let k = 0; k < nullClusters.length; k += 1) {
+      const c = nullClusters[Math.floor(rand() * nullClusters.length)];
+      sum += c.sum;
+      count += c.count;
+    }
+    if (sum / count >= observedMean) nullAtOrAbove += 1;
+  }
+  const pValue = (nullAtOrAbove + 1) / (iterations + 1);
+
+  // --- Cluster-level sign-flip randomization test of the same null (robustness check) ---
+  // Flip ALL values in a cluster with probability 1/2 (flipping the cluster, not the individual trade, preserves
+  // within-cluster dependence). Valid under H0 when the underlying noise is symmetric.
+  const totalCount = values.length;
+  let flipsAtOrAbove = 0;
+  for (let i = 0; i < iterations; i += 1) {
+    let sum = 0;
+    for (const c of clusters) {
+      sum += (rand() < 0.5 ? -c.sum : c.sum);
+    }
+    if (sum / totalCount >= observedMean) flipsAtOrAbove += 1;
+  }
+  const pValueSignFlip = (flipsAtOrAbove + 1) / (iterations + 1);
+
   return {
     n: values.length,
     clusters: clusters.length,
-    mean: values.reduce((a, b) => a + b, 0) / values.length,
+    mean: observedMean,
     median: quantileSorted(sortedValues, 0.5),
     ciLow: quantileSorted(means, tail),
     ciHigh: quantileSorted(means, 1 - tail),
-    probPositive: (iterations - atOrBelowZero) / iterations,
-    pValue: (atOrBelowZero + 1) / (iterations + 1),
+    probPositive: aboveZero / iterations,
+    pValue,
+    pValueSignFlip,
     p05: quantileSorted(sortedValues, 0.05),
     p95: quantileSorted(sortedValues, 0.95),
   };

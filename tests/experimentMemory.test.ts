@@ -100,13 +100,14 @@ function fakeExperiment(
   const empty: ExperimentResult = {
     candidateId: candidate.id, candidateVersion: candidate.version,
     parentId: seed.id, parentVersion: seed.version,
-    train: { n: 100, winRate: 0.5, meanNetR: 0.3, profitFactor: 1.5, maxDrawdownR: 4, symbols: 2, regimes: 3, bootstrap: null },
-    test: { n: 50, winRate: 0.5, meanNetR: 0.3, profitFactor: 1.5, maxDrawdownR: 4, symbols: 2, regimes: 3, bootstrap: null },
-    parentTrain: { n: 100, winRate: 0.5, meanNetR: 0.2, profitFactor: 1.3, maxDrawdownR: 5, symbols: 2, regimes: 3, bootstrap: null },
-    parentTest: { n: 50, winRate: 0.5, meanNetR: 0.2, profitFactor: 1.2, maxDrawdownR: 5, symbols: 2, regimes: 3, bootstrap: null },
+    train: { n: 100, winRate: 0.5, meanNetR: 0.3, profitFactor: 1.5, maxDrawdownR: 4, symbols: 2, regimes: 3, bootstrap: null, sharpe: null },
+    test: { n: 50, winRate: 0.5, meanNetR: 0.3, profitFactor: 1.5, maxDrawdownR: 4, symbols: 2, regimes: 3, bootstrap: null, sharpe: null },
+    parentTrain: { n: 100, winRate: 0.5, meanNetR: 0.2, profitFactor: 1.3, maxDrawdownR: 5, symbols: 2, regimes: 3, bootstrap: null, sharpe: null },
+    parentTest: { n: 50, winRate: 0.5, meanNetR: 0.2, profitFactor: 1.2, maxDrawdownR: 5, symbols: 2, regimes: 3, bootstrap: null, sharpe: null },
     walkForward: { outOfSample: null, baseline: null, folds: 5 },
     perSymbol: [], perRegime: worstCells.map((k) => ({ key: k, n: 20, meanNetR: 0.3 })),
     experimentNotes: [],
+    contractViolations: [],
   };
   return { experimentId: id, ranAt: Date.now(), candidate, parent: seed, result: empty, verdict };
 }

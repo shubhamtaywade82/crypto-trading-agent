@@ -49,14 +49,22 @@ export interface EligibleSetup {
  * The record's `netR` already subtracts round-trip costs (computed by SetupOutcomeLedger using the same CostRates
  * the experiment runner is given), so we return it as-is. Setups that were never touched by the entry are excluded
  * from the trade set — they are observed setups, not observed trades.
+ *
+ * `maxSpreadBps` is enforced ONLY when the record carries per-setup spread evidence (`features.spreadBps`). Records
+ * with unknown spread are conservatively excluded from the trade set AND reported by `spreadContractViolations`
+ * so the promotion gate can reject an experiment whose configured filter could not actually be evaluated — a
+ * threshold that filters nothing is not a test of anything.
  */
 export function passesSpecFilters(spec: StrategySpec<StructLiqSpecParams>, r: SetupOutcomeRecord): boolean {
   if (r.rr < spec.params.minimumRewardRisk) return false;
   if (r.features.sweepDepthAtr !== null && r.features.sweepDepthAtr < spec.params.minSweepDepthAtr) return false;
   if (r.features.sweepDisplacementAtr !== null && r.features.sweepDisplacementAtr < spec.params.minSweepDisplacementAtr) return false;
   if (r.effectiveRr !== null && r.effectiveRr < spec.params.minimumRewardRisk) return false;
-  // `maxSpreadBps` is a research-plane filter; the ledger does not yet store per-setup spread, so a finite
-  // maxSpreadBps produces no exclusions today. Documented in experimentNotes.
+  if (Number.isFinite(spec.params.maxSpreadBps)) {
+    // Unknown spread cannot pass a finite spread cap — and the caller records the contract violation.
+    if (r.features.spreadBps === null) return false;
+    if (r.features.spreadBps > spec.params.maxSpreadBps) return false;
+  }
   return true;
 }
 
@@ -81,6 +89,25 @@ export function hypotheticalTrades(
   return out;
 }
 
+/**
+ * Moment statistics of the per-trade net R series. This is what the Deflated Sharpe Ratio must consume — the
+ * Sharpe ratio of the actual return series at a defined sampling frequency (here: one observation per trade),
+ * never a profit-factor proxy.
+ */
+export interface TradeSharpeStats {
+  n: number;
+  /** Mean net R per trade. */
+  mean: number;
+  /** Sample standard deviation (n - 1 denominator). */
+  std: number;
+  /** Plugin skewness estimate of net R. */
+  skewness: number;
+  /** Plugin excess kurtosis of net R (normal = 0). */
+  excessKurtosis: number;
+  /** Per-trade Sharpe ratio: mean / std. Annualization is intentionally left to the consumer. */
+  sharpePerTrade: number;
+}
+
 export interface WindowStats {
   n: number;
   winRate: number;
@@ -90,6 +117,8 @@ export interface WindowStats {
   symbols: number;
   regimes: number;
   bootstrap: BootstrapSummary | null;
+  /** Moment statistics of the per-trade net R series; null when fewer than two trades. */
+  sharpe: TradeSharpeStats | null;
 }
 
 export interface PerSliceStat { key: string; n: number; meanNetR: number }
@@ -117,6 +146,12 @@ export interface ExperimentResult {
   perRegime: PerSliceStat[];
   /** Honest caveats about what the experiment does and does not measure. */
   experimentNotes: string[];
+  /**
+   * Research-contract violations: a configured filter could not be evaluated against the recorded evidence
+   * (e.g. a finite `maxSpreadBps` while the ledger has no per-setup spread). Non-empty => the promotion gate
+   * must REJECT; an experiment that could not test what it claims to test is not valid evidence.
+   */
+  contractViolations: string[];
 }
 
 export interface ExperimentConfig {
@@ -135,6 +170,40 @@ export interface ExperimentConfig {
 }
 
 const sum = (xs: readonly number[]): number => xs.reduce((a, b) => a + b, 0);
+
+/**
+ * Plugin moment estimates of a per-trade net R series. Skewness and (excess) kurtosis feed the DSR's
+ * non-normality-corrected standard error; the per-trade Sharpe is the DSR's primary input.
+ */
+export function tradeSharpeStats(netRs: readonly number[]): TradeSharpeStats | null {
+  const n = netRs.length;
+  if (n < 2) return null;
+  const mean = sum(netRs) / n;
+  let m2 = 0;
+  let m3 = 0;
+  let m4 = 0;
+  for (const x of netRs) {
+    const d = x - mean;
+    const d2 = d * d;
+    m2 += d2;
+    m3 += d2 * d;
+    m4 += d2 * d2;
+  }
+  m2 /= n;
+  m3 /= n;
+  m4 /= n;
+  const variance = sum(netRs.map((x) => (x - mean) ** 2)) / (n - 1);
+  const std = Math.sqrt(variance);
+  if (!(std > 0)) return null;
+  return {
+    n,
+    mean,
+    std,
+    skewness: m3 / Math.pow(m2, 1.5),
+    excessKurtosis: m4 / (m2 * m2) - 3,
+    sharpePerTrade: mean / std,
+  };
+}
 
 function windowStats(trades: readonly EligibleSetup[], options: BootstrapOptions = {}): WindowStats {
   const samples = trades.map((t) => ({ value: t.netR, cluster: utcDay(t.record.createdAt) }));
@@ -166,6 +235,7 @@ function windowStats(trades: readonly EligibleSetup[], options: BootstrapOptions
     symbols: symbols.size,
     regimes: regimes.size,
     bootstrap,
+    sharpe: tradeSharpeStats(trades.map((t) => t.netR)),
   };
 }
 
@@ -246,6 +316,7 @@ export function runExperiment(
   }
 
   const notes: string[] = [];
+  const contractViolations: string[] = [];
 
   const sweepAgeChanged = candidate.params.maxSweepAgeCandles !== parent.params.maxSweepAgeCandles;
   if (sweepAgeChanged) {
@@ -256,10 +327,19 @@ export function runExperiment(
   }
 
   if (Number.isFinite(candidate.params.maxSpreadBps)) {
-    notes.push(
-      `maxSpreadBps=${candidate.params.maxSpreadBps} configured but the ledger does not yet store per-setup spread; ` +
-      `this filter is a no-op until the ledger records it.`,
-    );
+    const inWindow = ledger.filter((r) => r.createdAt >= trainFrom && r.createdAt < testTo);
+    const missingSpread = inWindow.filter((r) => r.features.spreadBps === null).length;
+    if (missingSpread > 0) {
+      contractViolations.push(
+        `maxSpreadBps=${candidate.params.maxSpreadBps} configured but ${missingSpread}/${inWindow.length} ledger records ` +
+        `in the evaluation window lack per-setup spread evidence; the filter cannot be evaluated, so the experiment ` +
+        `does not test what it claims to test. Record spreadBps in the ledger and re-run.`,
+      );
+      notes.push(
+        `maxSpreadBps=${candidate.params.maxSpreadBps} cannot be enforced: ${missingSpread} records have no spread evidence ` +
+        `(see contractViolations).`,
+      );
+    }
   }
 
   const dims = config.walkForwardDims ?? ['strategy', 'regime', 'phase', 'side'];
@@ -291,6 +371,7 @@ export function runExperiment(
     perSymbol: perSymbol(testCandidate),
     perRegime: perRegime(testCandidate),
     experimentNotes: notes,
+    contractViolations,
   };
 }
 
@@ -300,7 +381,7 @@ function emptyResult(
   notes: string[],
 ): ExperimentResult {
   const empty: WindowStats = {
-    n: 0, winRate: 0, meanNetR: 0, profitFactor: 0, maxDrawdownR: 0, symbols: 0, regimes: 0, bootstrap: null,
+    n: 0, winRate: 0, meanNetR: 0, profitFactor: 0, maxDrawdownR: 0, symbols: 0, regimes: 0, bootstrap: null, sharpe: null,
   };
   return {
     candidateId: candidate.id,
@@ -315,6 +396,7 @@ function emptyResult(
     perSymbol: [],
     perRegime: [],
     experimentNotes: notes,
+    contractViolations: [],
   };
 }
 

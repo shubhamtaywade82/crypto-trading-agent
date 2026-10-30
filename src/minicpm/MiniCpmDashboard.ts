@@ -1,4 +1,5 @@
 import chalk from 'chalk';
+import { shortModelTag } from './FleetModels.js';
 import type { WorkerStatus } from './SymbolTraderWorker.js';
 
 export interface DashboardContext {
@@ -227,8 +228,9 @@ function renderIntelligencePanel(
 
   for (const w of workers) {
     const sym = w.symbol.replace('USDT', '');
-    const prefix = `  ${chalk.bold.magenta(sym)}: `;
-    const indent = '       ';
+    const model = w.modelTag ? chalk.gray(`[${shortModelTag(w.modelTag)}]`) : '';
+    const prefix = `  ${chalk.bold.magenta(sym)}${model ? ` ${model}` : ''}: `;
+    const indent = ' '.repeat(stripAnsi(prefix).length);
     const maxTextWidth = boxWidth - 12;
     const rawDecision = w.lastDecision.replace(/^Recovered:\s*/, '') + (w.breakEvenMoved ? ' [PROTECTED BREAK-EVEN]' : '');
     const wrapped = wrapText(rawDecision, maxTextWidth);
@@ -249,7 +251,13 @@ function renderIntelligencePanel(
 
   console.log(chalk.bold.cyan('╚' + '═'.repeat(boxWidth) + '╝'));
   const modeLabel = entriesEnabled ? chalk.yellow('LIVE (Risk-Gated)') : chalk.cyan('SHADOW ANALYSIS (R1)');
-  console.log(chalk.gray(`  Rule: $980 Margin · 10x Isolated · Min +5% TP · Auto Break-Even Trailing · Mode: ${modeLabel}`));
+  const fleetModels = [...new Set(workers.map((w) => w.modelTag).filter(Boolean))];
+  const modelLine = fleetModels.length === 0
+    ? ''
+    : fleetModels.length === 1
+      ? ` · Model: ${shortModelTag(fleetModels[0])}`
+      : ` · Models: ${workers.map((w) => `${w.symbol.replace('USDT', '')}=${shortModelTag(w.modelTag)}`).join(' ')}`;
+  console.log(chalk.gray(`  Rule: $980 Margin · 10x Isolated · Min +5% TP · Auto Break-Even Trailing · Mode: ${modeLabel}${modelLine}`));
 }
 
 export function renderDashboard(ctx: DashboardContext): void {

@@ -143,6 +143,13 @@ export function bootstrapMean(samples: readonly Sample[], options: BootstrapOpti
   const sortedValues = [...values].sort((a, b) => a - b);
   const nullAtOrAboveObserved = nullMeans.filter((m) => m >= observedMean).length;
   const ordinaryAboveZero = means.filter((m) => m > 0).length;
+  const nullSpread = Math.max(...nullMeans) - Math.min(...nullMeans);
+  const numericalFloor = Number.EPSILON * Math.max(1, Math.abs(observedMean));
+  // With one independent cluster, or a degenerate resampled null distribution, there is no
+  // estimable null tail. Report no evidence (p=1) rather than a false near-zero p-value.
+  const pValue = clusters.length < 2 || nullSpread <= numericalFloor
+    ? 1
+    : (nullAtOrAboveObserved + 1) / (iterations + 1);
   const tail = (1 - confidence) / 2;
   return {
     n: values.length,
@@ -152,7 +159,7 @@ export function bootstrapMean(samples: readonly Sample[], options: BootstrapOpti
     ciLow: quantileSorted(means, tail),
     ciHigh: quantileSorted(means, 1 - tail),
     probPositive: ordinaryAboveZero / iterations,
-    pValue: (nullAtOrAboveObserved + 1) / (iterations + 1),
+    pValue,
     p05: quantileSorted(sortedValues, 0.05),
     p95: quantileSorted(sortedValues, 0.95),
   };

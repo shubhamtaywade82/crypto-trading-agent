@@ -170,7 +170,7 @@ export interface ExperimentResult {
   parentTrain: WindowStats;
   /** Test window for the parent. */
   parentTest: WindowStats;
-  /** Walk-forward over the whole evaluation window, using train+test as the rolling selection history. */
+  /** Walk-forward over the TRAINING window only (nested selection history); the static test period stays held out. */
   walkForward: { outOfSample: BootstrapSummary | null; baseline: BootstrapSummary | null; folds: number };
   /** Per-symbol stability on the test window — a single-symbol fragility is a promotion blocker. */
   perSymbol: PerSliceStat[];
@@ -414,7 +414,8 @@ export function runExperiment(
   const trainParent = hypotheticalTrades(parent, ledger, trainFrom, trainTo);
   const testParent = hypotheticalTrades(parent, ledger, trainTo, testTo);
 
-  const obs = observationsOf(candidate, ledger, trainFrom, testTo, dims);
+  // Nested walk-forward selection is limited to training history; the following static test period is held out.
+  const obs = observationsOf(candidate, ledger, trainFrom, trainTo, dims);
   const wf = walkForward(obs, {
     trainDays: config.walkForwardTrainDays ?? 14,
     testDays: config.walkForwardTestDays ?? 7,

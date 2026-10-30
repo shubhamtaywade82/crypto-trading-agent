@@ -402,6 +402,7 @@ export class Orchestrator extends EventEmitter {
   }
 
   private async guardEmergencyDrawdown(ctx: CycleContext): Promise<void> {
+    if (config.risk.maxDrawdownPct <= 0) return;
     const maxLoss = ctx.equity * (config.risk.maxDrawdownPct / 100);
     for (const pos of ctx.positions ?? []) {
       if (pos.upnl < 0 && Math.abs(pos.upnl) >= maxLoss) {

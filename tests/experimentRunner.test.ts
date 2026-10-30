@@ -82,7 +82,7 @@ test('runExperiment exposes real test-period equity returns when a fixed-cadence
     t: Date.UTC(2026, 0, 1) + i * DAY,
     equity: 10_000 * (1 + i * 0.001),
   }));
-  const result = runExperiment(spec, spec, ledger, { ...BASE_CONFIG, equityCurve, equitySamplingMs: DAY });
+  const result = runExperiment(spec, spec, ledger, { ...BASE_CONFIG, equityCurve: { source: 'CANDIDATE_PORTFOLIO_REPLAY', candidateId: spec.id, candidateVersion: spec.version, frequencyMs: DAY, marks: equityCurve } });
   assert.equal(result.testEquityReturns?.source, 'EQUITY_CURVE');
   assert.equal(result.testEquityReturns?.frequencyMs, DAY);
   assert.equal(result.testEquityReturns?.returns.length, 15);

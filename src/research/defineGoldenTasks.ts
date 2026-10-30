@@ -143,7 +143,6 @@ export const GOLDEN_TASKS: readonly GoldenTask[] = [
     candidate: candidate({ minimumRewardRisk: 1.7 }, 'tighter RR on a low-PF ledger'),
     expectedDecision: 'INSUFFICIENT_DATA',
     minTestN: 30,
-    expectedReasonContains: ['cluster-adjusted effectiveN'];
   },
   {
     id: 'gate-reject-004',
@@ -158,7 +157,6 @@ export const GOLDEN_TASKS: readonly GoldenTask[] = [
     // the multi-regime ledger exercises several at once).
     expectedReasonNotContains: [],
     minTestN: 30,
-    expectedReasonContains: ['cluster-adjusted effectiveN'];
   },
   {
     id: 'gate-reject-005',

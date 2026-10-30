@@ -168,7 +168,7 @@ function checkDsr(result: ExperimentResult, policy: PromotionPolicy): { insuffic
     return { insufficient: 'DSR unavailable: cumulative trialCount must be supplied as a positive integer' };
   }
   const series = result.testEquityReturns;
-  if (!series || series.source !== 'EQUITY_CURVE' || !Number.isFinite(series.frequencyMs) || series.frequencyMs <= 0) {
+  if (!series || series.source !== 'CANDIDATE_PORTFOLIO_REPLAY' || series.candidateId !== result.candidateId || series.candidateVersion !== result.candidateVersion || !Number.isFinite(series.frequencyMs) || series.frequencyMs <= 0) {
     return { insufficient: 'DSR unavailable: an actual fixed-frequency test equity return series is required' };
   }
   const variance = policy.trialSharpeVariance ?? (policy.trialCount === 1 ? 0 : undefined);

@@ -41,7 +41,20 @@ test('evaluatePromotion returns PROMOTE when every guard is satisfied', () => {
 test('evaluatePromotion returns INSUFFICIENT_DATA when OOS n is below minTrades', () => {
   const v = evaluatePromotion(result({ test: { ...result().test, n: 10, bootstrap: null } }), DEFAULT_PROMOTION_POLICY);
   assert.equal(v.decision, 'INSUFFICIENT_DATA');
-  assert.match(v.reasons[0], /minTrades/);
+  assert.match(v.reasons[0], /required/);
+});
+
+test('power sizing rejects high trade counts when cluster dependence leaves too few effective observations', () => {
+  const v = evaluatePromotion(result({ test: { ...result().test, n: 900, effectiveN: 120 } }), DEFAULT_PROMOTION_POLICY);
+  assert.equal(v.decision, 'INSUFFICIENT_DATA');
+  assert.ok(v.reasons.some((reason) => /effectiveN=120\.0/.test(reason)));
+  assert.ok(v.reasons.some((reason) => /target 0\.100R/.test(reason)));
+});
+
+test('incomplete research input can never pass the promotion gate', () => {
+  const v = evaluatePromotion(result({ experimentNotes: ['incomplete research input: maxSpreadBps requires spread evidence'] }), DEFAULT_PROMOTION_POLICY);
+  assert.equal(v.decision, 'INSUFFICIENT_DATA');
+  assert.ok(v.reasons[0].includes('maxSpreadBps'));
 });
 
 test('evaluatePromotion returns REJECT when OOS mean R is below the floor', () => {

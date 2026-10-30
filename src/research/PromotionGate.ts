@@ -14,14 +14,20 @@
 
 import type { ExperimentResult } from './ExperimentRunner.js';
 import { calculateRequiredSampleSize } from './SampleSize.js';
-import { computeDeflatedSharpe } from './DeflatedSharpe.js';
+import { computeDeflatedSharpeFromReturns } from './DeflatedSharpe.js';
 import { shrinkMean } from './Shrinkage.js';
 
 export interface PromotionPolicy {
-  /** Minimum OOS trades. If targetEffectSizeR is provided, derived via power analysis. */
+  /** Additional OOS trade floor; power-derived sample size is always enforced as well. */
   minTrades?: number;
-  /** Target effect size in R for power analysis. When supplied, overrides static minTrades. */
+  /** Smallest net-R edge the experiment is designed to detect. Required for promotion. */
   targetEffectSizeR?: number;
+  /** Type-I error for power sizing. Defaults to 0.05, two-sided. */
+  powerAlpha?: number;
+  /** Desired statistical power. Defaults to 0.80. */
+  desiredPower?: number;
+  /** Optional conservative sigma in R. Otherwise estimated from the training split only. */
+  powerSigmaR?: number;
   /** Minimum OOS mean net R. Default 0.05R. */
   minOosExpectancyR: number;
   /** Minimum OOS profit factor. Default 1.10. */
@@ -46,6 +52,9 @@ export interface PromotionPolicy {
 
 export const DEFAULT_PROMOTION_POLICY: PromotionPolicy = {
   minTrades: 30,
+  targetEffectSizeR: 0.10,
+  powerAlpha: 0.05,
+  desiredPower: 0.80,
   minOosExpectancyR: 0.05,
   minProfitFactor: 1.10,
   maxDrawdownR: 15,
@@ -64,12 +73,30 @@ export interface PromotionVerdict {
   policy: PromotionPolicy;
 }
 
-/** Determines the effective sample size floor, using power analysis when effect size is stated. */
-function getEffectiveMinTrades(policy: PromotionPolicy): number {
-  if (policy.targetEffectSizeR && policy.targetEffectSizeR > 0) {
-    return calculateRequiredSampleSize({ effectSizeR: policy.targetEffectSizeR }).requiredSampleSize;
+interface PowerRequirement {
+  requiredSampleSize: number;
+  sigmaR: number;
+  alpha: number;
+  power: number;
+}
+
+/** Power sizing uses only the training split's dispersion; holdout returns never tune the required N. */
+function getPowerRequirement(result: ExperimentResult, policy: PromotionPolicy): PowerRequirement | null {
+  const effectSizeR = policy.targetEffectSizeR;
+  const sigmaR = policy.powerSigmaR ?? result.train.stdDevNetR;
+  const alpha = policy.powerAlpha ?? 0.05;
+  const power = policy.desiredPower ?? 0.80;
+  if (!Number.isFinite(effectSizeR) || !(effectSizeR! > 0) || !Number.isFinite(sigmaR) || !(sigmaR! > 0)) return null;
+  try {
+    return {
+      ...calculateRequiredSampleSize({ effectSizeR: effectSizeR!, sigmaR: sigmaR!, alpha, power }),
+      sigmaR: sigmaR!,
+      alpha,
+      power,
+    };
+  } catch {
+    return null;
   }
-  return policy.minTrades ?? 30;
 }
 
 /** Evaluates candidate against the promotion policy using strict statistical gates. */
@@ -77,17 +104,39 @@ export function evaluatePromotion(
   result: ExperimentResult,
   policy: PromotionPolicy = DEFAULT_PROMOTION_POLICY,
 ): PromotionVerdict {
-  const minTrades = getEffectiveMinTrades(policy);
-  if (result.test.n < minTrades) {
+  const incompleteInput = result.experimentNotes.filter((note) => note.startsWith('incomplete research input:'));
+  if (incompleteInput.length > 0) {
+    return { decision: 'INSUFFICIENT_DATA', reasons: incompleteInput, policy };
+  }
+
+  const powerRequirement = getPowerRequirement(result, policy);
+  if (!powerRequirement) {
     return {
       decision: 'INSUFFICIENT_DATA',
-      reasons: [`OOS n=${result.test.n} below required minTrades=${minTrades}; wait for more data`],
+      reasons: ['power sizing unavailable: provide a positive targetEffectSizeR and a finite positive training-split sigmaR'],
+      policy,
+    };
+  }
+  const minTrades = Math.max(policy.minTrades ?? 1, powerRequirement.requiredSampleSize);
+  const effectiveN = result.test.effectiveN;
+  if (result.test.n < minTrades || !Number.isFinite(effectiveN) || effectiveN < powerRequirement.requiredSampleSize) {
+    return {
+      decision: 'INSUFFICIENT_DATA',
+      reasons: [
+        `OOS trades n=${result.test.n}; cluster-adjusted effectiveN=${Number.isFinite(effectiveN) ? effectiveN.toFixed(1) : 'n/a'}; required ${powerRequirement.requiredSampleSize} independent-equivalent observations for target ${policy.targetEffectSizeR!.toFixed(3)}R (sigma=${powerRequirement.sigmaR.toFixed(3)}R, alpha=${powerRequirement.alpha}, power=${powerRequirement.power})`,
+      ],
       policy,
     };
   }
 
+  const dsr = checkDsr(result, policy);
+  if (dsr.insufficient) {
+    return { decision: 'INSUFFICIENT_DATA', reasons: [dsr.insufficient], policy };
+  }
+
   const reasons: string[] = [
     ...checkExpectancyAndDsr(result, policy),
+    ...(dsr.rejection ? [dsr.rejection] : []),
     ...checkRiskAndDrawdown(result, policy),
     ...checkBreadthAndRegime(result, policy),
   ];
@@ -108,6 +157,38 @@ export function evaluatePromotion(
   };
 }
 
+function checkDsr(result: ExperimentResult, policy: PromotionPolicy): { insufficient?: string; rejection?: string } {
+  if (policy.minDsr === undefined) return {};
+  if (!Number.isFinite(policy.minDsr) || policy.minDsr < 0 || policy.minDsr > 1) {
+    return { insufficient: 'DSR policy is invalid: minDsr must be between 0 and 1' };
+  }
+  if (!Number.isInteger(policy.trialCount) || (policy.trialCount ?? 0) < 1) {
+    return { insufficient: 'DSR unavailable: cumulative trialCount must be supplied as a positive integer' };
+  }
+  const series = result.testEquityReturns;
+  if (!series || series.source !== 'EQUITY_CURVE' || !Number.isFinite(series.frequencyMs) || series.frequencyMs <= 0) {
+    return { insufficient: 'DSR unavailable: an actual fixed-frequency test equity return series is required' };
+  }
+  const variance = policy.trialSharpeVariance ?? (policy.trialCount === 1 ? 0 : undefined);
+  if (variance === undefined || !Number.isFinite(variance) || variance < 0 || (policy.trialCount! > 1 && variance === 0)) {
+    return { insufficient: 'DSR unavailable: measured trialSharpeVariance is required when multiple trials were tested' };
+  }
+  try {
+    const dsr = computeDeflatedSharpeFromReturns({
+      returns: series.returns,
+      samplingFrequencyMs: series.frequencyMs,
+      trialCount: policy.trialCount!,
+      trialSharpeVariance: variance,
+    });
+    if (dsr.dsr < policy.minDsr) {
+      return { rejection: `Deflated Sharpe ${dsr.dsr.toFixed(3)} < ${policy.minDsr} using ${series.returns.length} net equity returns at ${series.frequencyMs}ms cadence across ${policy.trialCount} trials` };
+    }
+    return {};
+  } catch (error) {
+    return { insufficient: `DSR unavailable: ${(error as Error).message}` };
+  }
+}
+
 function checkExpectancyAndDsr(result: ExperimentResult, policy: PromotionPolicy): string[] {
   const reasons: string[] = [];
   if (result.test.meanNetR < policy.minOosExpectancyR) {
@@ -117,17 +198,6 @@ function checkExpectancyAndDsr(result: ExperimentResult, policy: PromotionPolicy
   const lcb = result.test.bootstrap?.ciLow ?? Number.NaN;
   if (!Number.isFinite(lcb) || lcb <= 0) {
     reasons.push(`OOS bootstrap LCB ${Number.isFinite(lcb) ? lcb.toFixed(3) : 'n/a'} <= 0`);
-  }
-
-  if (policy.minDsr !== undefined && policy.trialCount && policy.trialCount > 1) {
-    const dsrRes = computeDeflatedSharpe({
-      sharpeRatio: result.test.profitFactor - 1, // Sharpe proxy from excess profit factor
-      sampleLength: result.test.n,
-      trialCount: policy.trialCount,
-    });
-    if (dsrRes.dsr < policy.minDsr) {
-      reasons.push(`Deflated Sharpe ${dsrRes.dsr.toFixed(2)} < ${policy.minDsr} under ${policy.trialCount} trials`);
-    }
   }
 
   return reasons;
@@ -143,7 +213,7 @@ function checkRiskAndDrawdown(result: ExperimentResult, policy: PromotionPolicy)
   }
   const probPositive = result.test.bootstrap?.probPositive ?? 0;
   if (probPositive < policy.minOosConfidence) {
-    reasons.push(`OOS P(E[R]>0) ${probPositive.toFixed(2)} < ${policy.minOosConfidence}`);
+    reasons.push(`OOS bootstrap positive-mean fraction ${probPositive.toFixed(2)} < ${policy.minOosConfidence}`);
   }
   return reasons;
 }

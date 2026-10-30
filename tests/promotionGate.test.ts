@@ -5,8 +5,8 @@ import type { ExperimentResult } from '../src/research/ExperimentRunner.js';
 import type { BootstrapSummary } from '../src/research/Bootstrap.js';
 
 const summary = (over: Partial<BootstrapSummary> = {}): BootstrapSummary => ({
-  n: 50,
-  clusters: 30,
+  n: 900,
+  clusters: 900,
   mean: 0.3,
   median: 0.2,
   ciLow: 0.1,
@@ -21,10 +21,10 @@ const summary = (over: Partial<BootstrapSummary> = {}): BootstrapSummary => ({
 const result = (over: Partial<ExperimentResult> = {}): ExperimentResult => ({
   candidateId: 'STRUCT-LIQ-η', candidateVersion: 2,
   parentId: 'STRUCT-LIQ-η', parentVersion: 1,
-  train: { n: 60, winRate: 0.55, meanNetR: 0.4, profitFactor: 1.6, maxDrawdownR: 3, symbols: 1, regimes: 2, bootstrap: summary() },
-  test: { n: 40, winRate: 0.55, meanNetR: 0.3, profitFactor: 1.5, maxDrawdownR: 4, symbols: 2, regimes: 2, bootstrap: summary() },
-  parentTrain: { n: 60, winRate: 0.50, meanNetR: 0.2, profitFactor: 1.3, maxDrawdownR: 5, symbols: 1, regimes: 2, bootstrap: summary({ mean: 0.2 }) },
-  parentTest: { n: 40, winRate: 0.50, meanNetR: 0.15, profitFactor: 1.2, maxDrawdownR: 5, symbols: 2, regimes: 2, bootstrap: summary({ mean: 0.15 }) },
+  train: { n: 1000, stdDevNetR: 1, effectiveN: 1000, winRate: 0.55, meanNetR: 0.4, profitFactor: 1.6, maxDrawdownR: 3, symbols: 1, regimes: 2, bootstrap: summary() },
+  test: { n: 900, stdDevNetR: 1, effectiveN: 900, winRate: 0.55, meanNetR: 0.3, profitFactor: 1.5, maxDrawdownR: 4, symbols: 2, regimes: 2, bootstrap: summary() },
+  parentTrain: { n: 1000, stdDevNetR: 1, effectiveN: 1000, winRate: 0.50, meanNetR: 0.2, profitFactor: 1.3, maxDrawdownR: 5, symbols: 1, regimes: 2, bootstrap: summary({ mean: 0.2 }) },
+  parentTest: { n: 900, stdDevNetR: 1, effectiveN: 900, winRate: 0.50, meanNetR: 0.15, profitFactor: 1.2, maxDrawdownR: 5, symbols: 2, regimes: 2, bootstrap: summary({ mean: 0.15 }) },
   walkForward: { outOfSample: summary({ mean: 0.2, ciLow: 0.05 }), baseline: summary({ mean: 0.1 }), folds: 5 },
   perSymbol: [{ key: 'BTCUSDT', n: 25, meanNetR: 0.35 }, { key: 'ETHUSDT', n: 15, meanNetR: 0.20 }],
   perRegime: [{ key: 'TREND_UP | EXPANDED', n: 20, meanNetR: 0.45 }, { key: 'TRANSITION | COMPRESSED', n: 20, meanNetR: 0.15 }],
@@ -114,10 +114,23 @@ test('evaluatePromotion derives minTrades from power analysis when targetEffectS
   assert.match(v.reasons[0], /required minTrades=78[0-9]/);
 });
 
-test('evaluatePromotion rejects when Deflated Sharpe Ratio fails under large trial count', () => {
-  // Candidate clears static guards but fails DSR when 500 trials were searched
-  const dsrPolicy = { ...DEFAULT_PROMOTION_POLICY, minDsr: 0.95, trialCount: 500 };
-  const v = evaluatePromotion(result(), dsrPolicy);
-  assert.equal(v.decision, 'REJECT');
-  assert.ok(v.reasons.some((r) => /Deflated Sharpe/.test(r)));
+test('DSR requires actual fixed-frequency equity returns and measured trial dispersion', () => {
+  const policy = { ...DEFAULT_PROMOTION_POLICY, minDsr: 0.95, trialCount: 500, trialSharpeVariance: 0.5 };
+  const missing = evaluatePromotion(result(), policy);
+  assert.equal(missing.decision, 'INSUFFICIENT_DATA');
+  assert.ok(missing.reasons.some((r) => /equity return series/.test(r)));
+
+  const returns = Array.from({ length: 900 }, (_, i) => (i % 2 === 0 ? 0.0001 : -0.0001));
+  const withEquity = result({ testEquityReturns: { source: 'EQUITY_CURVE', from: 0, to: 900_000, frequencyMs: 1_000, returns } });
+  const verdict = evaluatePromotion(withEquity, policy);
+  assert.equal(verdict.decision, 'REJECT');
+  assert.ok(verdict.reasons.some((r) => /Deflated Sharpe/.test(r)));
+});
+
+test('DSR cannot silently skip trial correction when dispersion metadata is missing', () => {
+  const returns = Array.from({ length: 900 }, (_, i) => (i % 2 === 0 ? 0.0001 : -0.0001));
+  const withEquity = result({ testEquityReturns: { source: 'EQUITY_CURVE', from: 0, to: 900_000, frequencyMs: 1_000, returns } });
+  const verdict = evaluatePromotion(withEquity, { ...DEFAULT_PROMOTION_POLICY, minDsr: 0.95, trialCount: 500 });
+  assert.equal(verdict.decision, 'INSUFFICIENT_DATA');
+  assert.ok(verdict.reasons.some((r) => /trialSharpeVariance/.test(r)));
 });

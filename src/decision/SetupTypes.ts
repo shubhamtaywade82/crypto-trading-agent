@@ -90,6 +90,8 @@ export interface SetupMap {
   symbol: string;
   generatedAt: number;
   mark: number;
+  /** Best available quoted spread at setup creation, in basis points. */
+  spreadBps?: number | null;
   state: SetupState;
   bias: TrendDirection;
   regime: string;

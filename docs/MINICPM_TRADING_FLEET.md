@@ -139,6 +139,40 @@ The runner displays a continuous live terminal cockpit updated up to 4 times per
 
 ---
 
+## 5b. Embedded in `npm run dev` (the FLEET view)
+
+The fleet also runs **inside the main dev cockpit** — `npm run dev` hosts a `FleetSupervisor`
+(`src/minicpm/FleetSupervisor.ts`) that shares the exact worker code path with the standalone
+runner (`SymbolTraderWorker` + `MiniCpmService` + `FleetModels`), so embedded and standalone
+behavior are identical by construction. Press **Tab** or **m** to cycle views:
+`cockpit → MTF → liquidity → FLEET`.
+
+Properties of the embedded fleet:
+
+* **Self-contained**: it runs its own Binance market-data snapshot loop and trade WebSocket —
+  hosting the fleet adds zero code paths to the main agent's decision loop.
+* **Parks, never blocks**: without `PAPER_EXCHANGE_API_KEY` (or with `FLEET_IN_DEV=off`) the
+  supervisor parks itself with a cockpit log line explaining why; `npm run dev` starts normally
+  and the FLEET view shows the parked explanation and the enable instructions.
+* **Sends NO Telegram alerts** — by construction, not convention: `src/minicpm` imports nothing
+  from `src/ops` (enforced by a unit test), so fleet decisions never reach the alert/trading bot
+  channels the main agent uses. Fleet evidence lives in the paper-exchange ledger, the
+  `openedByModel` attribution, and the FLEET view — it is research data, not operator
+  interruptions. To be notified about the fleet, watch the cockpit or the ledger.
+* **Same entry rule as standalone**: entries stay OFF (shadow, R1) unless the operator exports
+  `MINICPM_ENTRIES=on` on the command line.
+* Same model selection as the standalone runner (`--model`, `--route`, `FLEET_MODEL`,
+  `FLEET_MODEL_ROUTE`, `--host`, `--timeout-ms` flags/env all work on `npm run dev` too).
+
+```bash
+npm run dev                                        # fleet embeds in shadow mode when the token exists
+FLEET_IN_DEV=off npm run dev                       # main agent only, no embedded fleet
+FLEET_MODEL_ROUTE='ETH=qwen3.5:2b' npm run dev     # embedded A/B routing, same rules as standalone
+MINICPM_ENTRIES=on npm run dev                     # ARM entries in the embedded fleet (explicit, visible)
+```
+
+---
+
 ## 6. Model Selection & A/B Routing
 
 The fleet's decision LLM is **not hard-coded**. `MiniCpmService` is model-agnostic — the

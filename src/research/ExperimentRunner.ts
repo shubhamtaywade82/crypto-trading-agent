@@ -86,8 +86,19 @@ export function hypotheticalTrades(
 
 export interface EquityMark { t: number; equity: number }
 
+export interface EquityCurveEvidence {
+  /** The exact candidate replay whose account equity is represented by these marks. */
+  candidateId: string;
+  candidateVersion: number;
+  source: 'CANDIDATE_PORTFOLIO_REPLAY';
+  frequencyMs: number;
+  marks: readonly EquityMark[];
+}
+
 export interface PeriodicEquityReturns {
-  source: 'EQUITY_CURVE';
+  source: 'CANDIDATE_PORTFOLIO_REPLAY';
+  candidateId: string;
+  candidateVersion: number;
   from: number;
   to: number;
   frequencyMs: number;
@@ -151,10 +162,8 @@ export interface ExperimentConfig {
   walkForwardTestDays?: number;
   /** Minimum observations for a walk-forward cell to enter selection. Default 10. */
   walkForwardMinN?: number;
-  /** Actual account equity marks at a fixed cadence, including exact train/test window boundaries. */
-  equityCurve?: readonly EquityMark[];
-  /** Required fixed spacing between adjacent equity marks. */
-  equitySamplingMs?: number;
+  /** Candidate-specific replay equity marks at fixed cadence, including exact train/test window boundaries. */
+  equityCurve?: EquityCurveEvidence;
 }
 
 const sum = (xs: readonly number[]): number => xs.reduce((a, b) => a + b, 0);
@@ -340,12 +349,15 @@ export function runExperiment(
   });
 
   let testEquityReturns: PeriodicEquityReturns | null = null;
-  if (config.equityCurve !== undefined || config.equitySamplingMs !== undefined) {
-    if (config.equityCurve === undefined || config.equitySamplingMs === undefined) {
-      notes.push('incomplete research input: DSR equity curve and equitySamplingMs must be supplied together');
+  if (config.equityCurve !== undefined) {
+    const evidence = config.equityCurve;
+    if (evidence.source !== 'CANDIDATE_PORTFOLIO_REPLAY' || evidence.candidateId !== candidate.id || evidence.candidateVersion !== candidate.version) {
+      notes.push(`incomplete research input: DSR equity curve provenance does not match ${candidate.id}:v${candidate.version}`);
     } else {
-      const extracted = buildPeriodicEquityReturns(config.equityCurve, trainTo, testTo, config.equitySamplingMs);
-      testEquityReturns = extracted.series;
+      const extracted = buildPeriodicEquityReturns(evidence.marks, trainTo, testTo, evidence.frequencyMs);
+      testEquityReturns = extracted.series
+        ? { ...extracted.series, source: evidence.source, candidateId: evidence.candidateId, candidateVersion: evidence.candidateVersion }
+        : null;
       if (!extracted.series) notes.push(`incomplete research input: DSR unavailable — ${extracted.reason}`);
     }
   }

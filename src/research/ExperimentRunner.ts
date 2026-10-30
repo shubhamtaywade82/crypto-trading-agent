@@ -21,6 +21,7 @@ import type { SetupOutcomeRecord } from '../learning/SetupOutcomeLedger.js';
 import type { CostRates } from '../risk/rrProfile.js';
 import {
   bootstrapMean,
+  effectiveSampleSize,
   utcDay,
   type BootstrapOptions,
   type BootstrapSummary,
@@ -81,8 +82,22 @@ export function hypotheticalTrades(
   return out;
 }
 
+export interface EquityMark { t: number; equity: number }
+
+export interface PeriodicEquityReturns {
+  source: 'EQUITY_CURVE';
+  from: number;
+  to: number;
+  frequencyMs: number;
+  returns: number[];
+}
+
 export interface WindowStats {
   n: number;
+  /** Sample standard deviation of net R outcomes; estimated on the training split for power sizing. */
+  stdDevNetR: number | null;
+  /** Cluster-adjusted effective observation count, using the bootstrap's cluster definition. */
+  effectiveN: number;
   winRate: number;
   meanNetR: number;
   profitFactor: number;
@@ -115,6 +130,8 @@ export interface ExperimentResult {
   perSymbol: PerSliceStat[];
   /** Per-regime stability on the test window — a regime collapse is a promotion blocker. */
   perRegime: PerSliceStat[];
+  /** Periodic net portfolio returns derived from a supplied, evenly sampled equity curve; absent means DSR unavailable. */
+  testEquityReturns?: PeriodicEquityReturns | null;
   /** Honest caveats about what the experiment does and does not measure. */
   experimentNotes: string[];
 }
@@ -132,6 +149,10 @@ export interface ExperimentConfig {
   walkForwardTestDays?: number;
   /** Minimum observations for a walk-forward cell to enter selection. Default 10. */
   walkForwardMinN?: number;
+  /** Actual account equity marks at a fixed cadence, including exact train/test window boundaries. */
+  equityCurve?: readonly EquityMark[];
+  /** Required fixed spacing between adjacent equity marks. */
+  equitySamplingMs?: number;
 }
 
 const sum = (xs: readonly number[]): number => xs.reduce((a, b) => a + b, 0);
@@ -139,6 +160,10 @@ const sum = (xs: readonly number[]): number => xs.reduce((a, b) => a + b, 0);
 function windowStats(trades: readonly EligibleSetup[], options: BootstrapOptions = {}): WindowStats {
   const samples = trades.map((t) => ({ value: t.netR, cluster: utcDay(t.record.createdAt) }));
   const bootstrap = samples.length > 0 ? bootstrapMean(samples, options) : null;
+  const meanNetR = samples.length ? sum(samples.map((s) => s.value)) / samples.length : null;
+  const stdDevNetR = samples.length > 1 && meanNetR !== null
+    ? Math.sqrt(samples.reduce((total, s) => total + (s.value - meanNetR) ** 2, 0) / (samples.length - 1))
+    : null;
   const wins = trades.filter((t) => t.netR > 0);
   const losses = trades.filter((t) => t.netR < 0);
   const grossProfit = sum(wins.map((t) => t.netR));
@@ -159,6 +184,8 @@ function windowStats(trades: readonly EligibleSetup[], options: BootstrapOptions
 
   return {
     n: trades.length,
+    stdDevNetR,
+    effectiveN: effectiveSampleSize(samples),
     winRate: trades.length > 0 ? wins.length / trades.length : 0,
     meanNetR: trades.length > 0 ? sum(trades.map((t) => t.netR)) / trades.length : 0,
     profitFactor: grossLoss > 0 ? grossProfit / grossLoss : (grossProfit > 0 ? Number.POSITIVE_INFINITY : 0),
@@ -213,6 +240,37 @@ function observationsOf(
     }).join(' | '),
     netR: t.netR,
   })).sort((a, b) => a.t - b.t);
+}
+
+/**
+ * Build fixed-cadence simple returns from the actual portfolio equity curve for the test window.
+ * Exact boundaries and every expected mark are required: silently skipping gaps changes the return frequency.
+ */
+export function buildPeriodicEquityReturns(
+  curve: readonly EquityMark[],
+  from: number,
+  to: number,
+  frequencyMs: number,
+): { series: PeriodicEquityReturns | null; reason: string | null } {
+  if (!Number.isFinite(frequencyMs) || frequencyMs <= 0) return { series: null, reason: 'equitySamplingMs must be a positive finite duration' };
+  if (!(to > from) || (to - from) % frequencyMs !== 0) return { series: null, reason: 'test window is not an integer multiple of equitySamplingMs' };
+  for (let i = 0; i < curve.length; i += 1) {
+    const mark = curve[i];
+    if (!Number.isFinite(mark.t) || !Number.isFinite(mark.equity) || mark.equity <= 0) {
+      return { series: null, reason: `equity curve contains an invalid mark at index ${i}` };
+    }
+    if (i > 0 && mark.t - curve[i - 1].t !== frequencyMs) {
+      return { series: null, reason: `equity curve cadence/order violation at index ${i}; expected exactly ${frequencyMs}ms` };
+    }
+  }
+  const marks = curve.filter((mark) => mark.t >= from && mark.t <= to);
+  const expectedMarks = (to - from) / frequencyMs + 1;
+  if (marks.length !== expectedMarks || marks[0]?.t !== from || marks[marks.length - 1]?.t !== to) {
+    return { series: null, reason: `equity curve does not exactly cover test window ${from}..${to} at ${frequencyMs}ms` };
+  }
+  const returns = marks.slice(1).map((mark, i) => mark.equity / marks[i].equity - 1);
+  if (!returns.length || !returns.every(Number.isFinite)) return { series: null, reason: 'equity curve produced no finite test returns' };
+  return { series: { source: 'EQUITY_CURVE', from, to, frequencyMs, returns }, reason: null };
 }
 
 /**
@@ -278,6 +336,17 @@ export function runExperiment(
     seed: config.bootstrap?.seed,
   });
 
+  let testEquityReturns: PeriodicEquityReturns | null = null;
+  if (config.equityCurve !== undefined || config.equitySamplingMs !== undefined) {
+    if (config.equityCurve === undefined || config.equitySamplingMs === undefined) {
+      notes.push('incomplete research input: DSR equity curve and equitySamplingMs must be supplied together');
+    } else {
+      const extracted = buildPeriodicEquityReturns(config.equityCurve, trainTo, testTo, config.equitySamplingMs);
+      testEquityReturns = extracted.series;
+      if (!extracted.series) notes.push(`incomplete research input: DSR unavailable — ${extracted.reason}`);
+    }
+  }
+
   return {
     candidateId: candidate.id,
     candidateVersion: candidate.version,
@@ -285,6 +354,7 @@ export function runExperiment(
     parentVersion: parent.version,
     train: windowStats(trainCandidate, config.bootstrap),
     test: windowStats(testCandidate, config.bootstrap),
+    testEquityReturns,
     parentTrain: windowStats(trainParent, config.bootstrap),
     parentTest: windowStats(testParent, config.bootstrap),
     walkForward: { outOfSample: wf.outOfSample, baseline: wf.baseline, folds: wf.folds.length },
@@ -300,7 +370,7 @@ function emptyResult(
   notes: string[],
 ): ExperimentResult {
   const empty: WindowStats = {
-    n: 0, winRate: 0, meanNetR: 0, profitFactor: 0, maxDrawdownR: 0, symbols: 0, regimes: 0, bootstrap: null,
+    n: 0, stdDevNetR: null, effectiveN: 0, winRate: 0, meanNetR: 0, profitFactor: 0, maxDrawdownR: 0, symbols: 0, regimes: 0, bootstrap: null,
   };
   return {
     candidateId: candidate.id,
@@ -312,6 +382,7 @@ function emptyResult(
     parentTrain: empty,
     parentTest: empty,
     walkForward: { outOfSample: null, baseline: null, folds: 0 },
+    testEquityReturns: null,
     perSymbol: [],
     perRegime: [],
     experimentNotes: notes,

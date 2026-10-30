@@ -104,7 +104,7 @@ function venue(seed: Seed = {}) {
     getCurrentPositionMode: async () => ({ dualSidePosition: seed.dualSide ?? false }),
     getAllOpenOrders: async (query: { symbol?: string } = {}) => orders.filter((o) => o.status === 'NEW' && (!query.symbol || o.symbol === query.symbol)),
     getPositionsV3: async () => openPositions(),
-    getAccountInformation: async () => ({
+    getAccountInformationV3: async () => ({
       totalMarginBalance: '1000', totalInitialMargin: '0', positions: openPositions().map((p) => ({ ...p, isolated: true })),
     }),
     getAccountTrades: async ({ symbol, fromId }: { symbol: string; fromId?: number }) =>

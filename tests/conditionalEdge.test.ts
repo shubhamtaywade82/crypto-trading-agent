@@ -56,6 +56,21 @@ test('bootstrap is reproducible from its seed and brackets the sample mean', () 
   assert.ok(a.probPositive > 0.95);
 });
 
+
+test('bootstrap p-value is computed from a null-centered cluster distribution, not the ordinary CI draws', () => {
+  const positive = Array.from({ length: 120 }, (_, i) => ({ value: 0.25 + ((i % 7) - 3) * 0.01, cluster: `day-${Math.floor(i / 4)}` }));
+  const result = bootstrapMean(positive, { iterations: 3000, seed: 19, confidence: 0.95 });
+  assert.ok(result !== null);
+  assert.ok(result.pValue < 0.01, `expected strong positive evidence, got p=${result.pValue}`);
+  assert.ok(result.probPositive > 0.99);
+
+  const centered = positive.map((s) => ({ ...s, value: s.value - 0.25 }));
+  const nullResult = bootstrapMean(centered, { iterations: 3000, seed: 19, confidence: 0.95 });
+  assert.ok(nullResult !== null);
+  assert.ok(nullResult.pValue > 0.05, `zero-mean sample should not systematically reject H0, got p=${nullResult.pValue}`);
+  assert.ok(nullResult.ciLow <= 0 && nullResult.ciHigh >= 0);
+});
+
 test('bootstrap rejects empty or non-finite input', () => {
   assert.equal(bootstrapMean([]), null);
   assert.equal(bootstrapMean([{ value: Number.NaN, cluster: 'a' }]), null);

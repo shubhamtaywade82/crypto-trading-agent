@@ -111,12 +111,21 @@ Each symbol runs in an independent, isolated ledger on `paper_exchange`:
 ### Launch Command
 From the `crypto-trading-agent` project directory:
 ```bash
-npx tsx scripts/run-minicpm-fleet.ts
+npm run fleet            # alias for: npx tsx scripts/run-minicpm-fleet.ts
+```
+
+Equivalently: `npm run fleet:shadow` (same command — the fleet ships in shadow mode; entries stay off).
+
+Entry execution is opt-in and deliberately not an npm alias. To arm entries the operator must
+set the environment variable explicitly on the command line, so the decision is visible in
+shell history and process listings:
+```bash
+MINICPM_ENTRIES=on npx tsx scripts/run-minicpm-fleet.ts
 ```
 
 For long production runs spanning weeks with memory capping:
 ```bash
-NODE_OPTIONS="--max-old-space-size=512" npx tsx scripts/run-minicpm-fleet.ts
+NODE_OPTIONS="--max-old-space-size=512" npm run fleet
 ```
 
 ### Dashboard View

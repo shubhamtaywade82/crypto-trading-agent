@@ -84,12 +84,27 @@ test('runExperiment flags sweep-age mutations as approximations in experimentNot
   assert.ok(result.experimentNotes.some((n) => /maxSweepAgeCandles/.test(n) && /approximation/.test(n)));
 });
 
-test('runExperiment flags finite maxSpreadBps as a no-op (ledger lacks per-setup spread)', () => {
+test('runExperiment records a contract violation when maxSpreadBps is configured but the ledger lacks spread evidence', () => {
   const parent = seedStructLiqSpec();
   const candidate = child(parent, { maxSpreadBps: 5 } as Partial<StructLiqSpecParams>);
   const ledger = makeMultiRegimeLedger(60);
   const result = runExperiment(candidate, parent, ledger, BASE_CONFIG);
-  assert.ok(result.experimentNotes.some((n) => /maxSpreadBps/.test(n) && /no-op/.test(n)));
+  // A configured filter that cannot be evaluated is a contract violation that blocks promotion — not a silent no-op.
+  assert.ok(result.contractViolations.some((v) => /maxSpreadBps=5/.test(v) && /lack per-setup spread evidence/.test(v)));
+  assert.ok(result.experimentNotes.some((n) => /maxSpreadBps/.test(n)));
+});
+
+test('runExperiment applies maxSpreadBps when the ledger records per-setup spread', () => {
+  const parent = seedStructLiqSpec();
+  const candidate = child(parent, { maxSpreadBps: 5 } as Partial<StructLiqSpecParams>);
+  const ledger = makeLedger({ n: 40, spreadBps: 3, spacing: 3_600_000 * 6, noise: 0.4 });
+  // Half the records sit above the cap; the filter must actually exclude them.
+  for (let i = 0; i < ledger.length; i += 2) {
+    ledger[i] = { ...ledger[i], features: { ...ledger[i].features, spreadBps: 9 } };
+  }
+  const trades = hypotheticalTrades(candidate, ledger, ledger[0].createdAt, ledger[ledger.length - 1].createdAt + 1);
+  assert.equal(trades.length, 20);
+  assert.ok(trades.every((t) => t.record.features.spreadBps !== null && t.record.features.spreadBps <= 5));
 });
 
 test('runExperiment throws when candidate and parent have different ids', () => {

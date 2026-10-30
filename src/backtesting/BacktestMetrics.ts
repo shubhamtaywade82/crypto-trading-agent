@@ -156,9 +156,11 @@ export function computeMetrics(input: {
   const variance = returns.length > 1 && avgReturn !== null
     ? returns.reduce((sum, r) => sum + (r - avgReturn) ** 2, 0) / (returns.length - 1)
     : null;
-  const downside = returns.filter((r) => r < 0);
-  const downsideVariance = downside.length > 1
-    ? downside.reduce((sum, r) => sum + r * r, 0) / downside.length
+  // Downside deviation (Sortino & van der Roer): sqrt(mean of squared SHORTFALLS over ALL observations),
+  // with MAR = 0. The denominator is the full sample N, not the count of negative observations — dividing by
+  // the downside count would overstate downside risk and understate Sortino whenever gains are frequent.
+  const downsideVariance = returns.length > 0
+    ? returns.reduce((sum, r) => sum + Math.min(r, 0) ** 2, 0) / returns.length
     : null;
 
   let consecutive = 0;

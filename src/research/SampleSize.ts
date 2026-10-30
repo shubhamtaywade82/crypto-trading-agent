@@ -59,7 +59,10 @@ export function normalQuantile(p: number): number {
  */
 export function calculateRequiredSampleSize(input: PowerCalculationInput): PowerCalculationResult {
   const { effectSizeR, sigmaR = 1.0, alpha = 0.05, power = 0.80 } = input;
-  if (effectSizeR <= 0) throw new Error('effectSizeR must be strictly positive');
+  if (!Number.isFinite(effectSizeR) || effectSizeR <= 0) throw new Error('effectSizeR must be finite and strictly positive');
+  if (!Number.isFinite(sigmaR) || sigmaR <= 0) throw new Error('sigmaR must be finite and strictly positive');
+  if (!Number.isFinite(alpha) || alpha <= 0 || alpha >= 1) throw new Error('alpha must be between 0 and 1');
+  if (!Number.isFinite(power) || power <= 0.5 || power >= 1) throw new Error('power must be between 0.5 and 1');
 
   const zAlpha = normalQuantile(1 - alpha / 2);
   const zBeta = normalQuantile(power);

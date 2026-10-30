@@ -86,6 +86,14 @@ export function sharpeStandardError(sr: number, t: number, skew = 0, kurt = 3): 
   return Math.sqrt(Math.max(1e-12, variance));
 }
 
+export interface DeflatedSharpeFromReturnsResult extends DeflatedSharpeResult {
+  samplingFrequencyMs: number;
+  sampleMean: number;
+  sampleStdDev: number;
+  skewness: number;
+  kurtosis: number;
+}
+
 export interface DeflatedSharpeFromReturnsInput {
   /** Net simple returns from a real portfolio equity curve, sampled at a fixed cadence. */
   returns: readonly number[];
@@ -100,7 +108,7 @@ export interface DeflatedSharpeFromReturnsInput {
  * Sharpe is expressed per sampling interval (not annualized), and all trial Sharpe ratios
  * used for the variance estimate must use the same cadence.
  */
-export function computeDeflatedSharpeFromReturns(input: DeflatedSharpeFromReturnsInput): DeflatedSharpeResult {
+export function computeDeflatedSharpeFromReturns(input: DeflatedSharpeFromReturnsInput): DeflatedSharpeFromReturnsResult {
   const { returns, samplingFrequencyMs, trialCount, trialSharpeVariance } = input;
   if (!Number.isFinite(samplingFrequencyMs) || samplingFrequencyMs <= 0) throw new Error('samplingFrequencyMs must be positive');
   if (!Number.isInteger(trialCount) || trialCount < 1) throw new Error('trialCount must be a positive integer');

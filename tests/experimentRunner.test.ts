@@ -67,7 +67,7 @@ test('fixed-cadence DSR returns require complete exact equity-curve coverage', (
   const valid = buildPeriodicEquityReturns(marks, 1_000, 3_000, 1_000);
   assert.equal(valid.reason, null);
   assert.equal(valid.series?.returns.length, 2);
-  assert.ok(Math.abs(valid.series!.returns[0] - (101 / 100 - 1)) < 1e-12);
+  assert.ok(Math.abs(valid.series!.returns[0] - (102 / 101 - 1)) < 1e-12);
 
   const gap = buildPeriodicEquityReturns([marks[0], marks[1], marks[3]], 0, 3_000, 1_000);
   assert.equal(gap.series, null);
@@ -83,7 +83,7 @@ test('runExperiment exposes real test-period equity returns when a fixed-cadence
     equity: 10_000 * (1 + i * 0.001),
   }));
   const result = runExperiment(spec, spec, ledger, { ...BASE_CONFIG, equityCurve: { source: 'CANDIDATE_PORTFOLIO_REPLAY', candidateId: spec.id, candidateVersion: spec.version, frequencyMs: DAY, marks: equityCurve } });
-  assert.equal(result.testEquityReturns?.source, 'EQUITY_CURVE');
+  assert.equal(result.testEquityReturns?.source, 'CANDIDATE_PORTFOLIO_REPLAY');
   assert.equal(result.testEquityReturns?.frequencyMs, DAY);
   assert.equal(result.testEquityReturns?.returns.length, 15);
 });

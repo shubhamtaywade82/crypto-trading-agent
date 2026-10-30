@@ -1,5 +1,5 @@
 /**
- * Cluster bootstrap for the mean of per-trade net R.
+ * Cluster bootstrap for the mean of per-trade net R, with a separate null-centered test distribution.
  *
  * Trades are not independent: four symbols move together and one strategy fires on several of them in the same hour. An
  * i.i.d. bootstrap over trades would treat those as separate evidence and produce intervals that are too narrow. Resampling
@@ -27,9 +27,9 @@ export interface BootstrapSummary {
   /** Percentile interval of the resampled means. `ciLow > 0` is the selection rule used downstream. */
   ciLow: number;
   ciHigh: number;
-  /** Share of resampled means above zero: an estimate of P(E[R] > 0 | data), not a p-value. */
+  /** Fraction of ordinary cluster-bootstrap means above zero; descriptive only, not a posterior probability. */
   probPositive: number;
-  /** One-sided bootstrap p for H0: E[R] <= 0 ((resampled means at or below zero + 1) / (iterations + 1)). */
+  /** One-sided null-centered cluster-bootstrap p-value for H0: E[R] <= 0 versus H1: E[R] > 0. */
   pValue: number;
   /** 5th / 95th percentile of the individual trade outcomes (tail shape, not uncertainty of the mean). */
   p05: number;
@@ -73,31 +73,42 @@ export function bootstrapMean(samples: readonly Sample[], options: BootstrapOpti
     groups.set(s.cluster, g);
   }
   const clusters = [...groups.values()];
+  const observedMean = values.reduce((a, b) => a + b, 0) / values.length;
   const rand = mulberry32(options.seed ?? 1);
   const means: number[] = new Array(iterations);
+  const nullMeans: number[] = new Array(iterations);
   for (let i = 0; i < iterations; i += 1) {
     let sum = 0;
     let count = 0;
+    let nullSum = 0;
+    let nullCount = 0;
     for (let k = 0; k < clusters.length; k += 1) {
       const c = clusters[Math.floor(rand() * clusters.length)];
       sum += c.sum;
       count += c.count;
+      // Center each observation by the observed grand mean before resampling whole clusters.
+      // This constructs the H0: E[R] = 0 distribution while preserving within-cluster dependence
+      // and unequal cluster sizes. The ordinary bootstrap distribution above remains for the CI.
+      nullSum += c.sum - observedMean * c.count;
+      nullCount += c.count;
     }
     means[i] = sum / count;
+    nullMeans[i] = nullSum / nullCount;
   }
   means.sort((a, b) => a - b);
   const sortedValues = [...values].sort((a, b) => a - b);
-  const atOrBelowZero = means.filter((m) => m <= 0).length;
+  const nullAtOrAboveObserved = nullMeans.filter((m) => m >= observedMean).length;
+  const ordinaryAboveZero = means.filter((m) => m > 0).length;
   const tail = (1 - confidence) / 2;
   return {
     n: values.length,
     clusters: clusters.length,
-    mean: values.reduce((a, b) => a + b, 0) / values.length,
+    mean: observedMean,
     median: quantileSorted(sortedValues, 0.5),
     ciLow: quantileSorted(means, tail),
     ciHigh: quantileSorted(means, 1 - tail),
-    probPositive: (iterations - atOrBelowZero) / iterations,
-    pValue: (atOrBelowZero + 1) / (iterations + 1),
+    probPositive: ordinaryAboveZero / iterations,
+    pValue: (nullAtOrAboveObserved + 1) / (iterations + 1),
     p05: quantileSorted(sortedValues, 0.05),
     p95: quantileSorted(sortedValues, 0.95),
   };

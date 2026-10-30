@@ -79,6 +79,22 @@ test('effective sample size discounts perfectly repeated same-cluster observatio
   assert.equal(effectiveSampleSize(independent), 200);
 });
 
+test('bootstrap does not claim significance from one cluster or a degenerate null distribution', () => {
+  const oneCluster = bootstrapMean(
+    Array.from({ length: 20 }, (_, i) => ({ value: 1 + i * 0.01, cluster: 'same-day' })),
+    { iterations: 1000, seed: 7 },
+  );
+  assert.ok(oneCluster !== null);
+  assert.equal(oneCluster.pValue, 1);
+
+  const identicalClusters = bootstrapMean(
+    Array.from({ length: 10 }, (_, i) => ({ value: 0.5, cluster: `day-${i}` })),
+    { iterations: 1000, seed: 8 },
+  );
+  assert.ok(identicalClusters !== null);
+  assert.equal(identicalClusters.pValue, 1);
+});
+
 test('null-centered cluster bootstrap controls false positives on zero-edge simulations', () => {
   const random = mulberry32(20261030);
   const repetitions = 60;

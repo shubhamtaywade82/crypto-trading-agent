@@ -122,7 +122,8 @@ test('a custom policy can be applied (e.g. zero minOosDelta — accept ties)', (
 test('evaluatePromotion derives minTrades from power analysis when targetEffectSizeR is stated', () => {
   // Stating a target effect size of 0.10R requires ~784 trades; 40 trades returns INSUFFICIENT_DATA
   const powerPolicy = { ...DEFAULT_PROMOTION_POLICY, targetEffectSizeR: 0.10 };
-  const v = evaluatePromotion(result(), powerPolicy);
+  const underpowered = result({ test: { ...result().test, n: 40, effectiveN: 40 } });
+  const v = evaluatePromotion(underpowered, powerPolicy);
   assert.equal(v.decision, 'INSUFFICIENT_DATA');
   assert.match(v.reasons[0], /required minTrades=78[0-9]/);
 });

@@ -79,6 +79,40 @@ test('effective sample size discounts perfectly repeated same-cluster observatio
   assert.equal(effectiveSampleSize(independent), 200);
 });
 
+test('null-centered cluster bootstrap controls false positives on zero-edge simulations', () => {
+  const random = mulberry32(20261030);
+  const repetitions = 60;
+  let falsePositives = 0;
+  for (let simulation = 0; simulation < repetitions; simulation += 1) {
+    const samples = Array.from({ length: 30 }, (_, day) => {
+      const sharedDayShock = (random() - 0.5) * 0.8;
+      return Array.from({ length: 4 }, () => ({
+        value: sharedDayShock + (random() - 0.5) * 0.8,
+        cluster: `day-${day}`,
+      }));
+    }).flat();
+    const summary = bootstrapMean(samples, { iterations: 600, seed: simulation + 1 });
+    assert.ok(summary !== null);
+    if (summary.pValue <= 0.05) falsePositives += 1;
+  }
+  const falsePositiveRate = falsePositives / repetitions;
+  assert.ok(falsePositiveRate <= 0.15, `empirical null rejection rate was ${falsePositiveRate}`);
+});
+
+test('null-centered cluster bootstrap has power against a clear positive edge', () => {
+  const random = mulberry32(20261031);
+  const samples = Array.from({ length: 40 }, (_, day) => {
+    const sharedDayShock = (random() - 0.5) * 0.4;
+    return Array.from({ length: 4 }, () => ({
+      value: 0.15 + sharedDayShock + (random() - 0.5) * 0.4,
+      cluster: `day-${day}`,
+    }));
+  }).flat();
+  const summary = bootstrapMean(samples, { iterations: 2000, seed: 17 });
+  assert.ok(summary !== null);
+  assert.ok(summary.pValue < 0.01, `expected positive edge to reject null, got ${summary.pValue}`);
+});
+
 test('bootstrap rejects empty or non-finite input', () => {
   assert.equal(bootstrapMean([]), null);
   assert.equal(bootstrapMean([{ value: Number.NaN, cluster: 'a' }]), null);

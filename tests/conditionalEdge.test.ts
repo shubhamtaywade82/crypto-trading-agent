@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import type { DecisionRecord } from '../src/decision/DecisionJournal.js';
-import { bootstrapMean, holm, mulberry32, utcDay } from '../src/research/Bootstrap.js';
+import { bootstrapMean, effectiveSampleSize, holm, mulberry32, utcDay } from '../src/research/Bootstrap.js';
 import { conditionalMatrix, keyOf, observationsOf, walkForward, type Observation } from '../src/research/ConditionalEdge.js';
 import { netROf } from '../src/risk/rrProfile.js';
 
@@ -69,6 +69,14 @@ test('bootstrap p-value is computed from a null-centered cluster distribution, n
   assert.ok(nullResult !== null);
   assert.ok(nullResult.pValue > 0.05, `zero-mean sample should not systematically reject H0, got p=${nullResult.pValue}`);
   assert.ok(nullResult.ciLow <= 0 && nullResult.ciHigh >= 0);
+});
+
+test('effective sample size discounts perfectly repeated same-cluster observations', () => {
+  const repeated = Array.from({ length: 20 }, (_, day) =>
+    Array.from({ length: 10 }, () => ({ value: day - 10, cluster: `day-${day}` }))).flat();
+  assert.equal(effectiveSampleSize(repeated), 20);
+  const independent = repeated.map((sample, i) => ({ ...sample, cluster: `trade-${i}` }));
+  assert.equal(effectiveSampleSize(independent), 200);
 });
 
 test('bootstrap rejects empty or non-finite input', () => {

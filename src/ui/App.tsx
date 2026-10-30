@@ -6,6 +6,8 @@ import { useStore } from '../store.js';
 import { clampSelection, MIN_COLS, MIN_ROWS, renderCockpit, renderCockpitSections, ResizeWarning } from './panels.js';
 import { renderMtfScreen } from './mtfPanels.js';
 import { renderLiquidityScreen } from './liquidityPanels.js';
+import { renderFleetScreen } from './fleetPanels.js';
+import { FleetSupervisor, type FleetState } from '../minicpm/FleetSupervisor.js';
 import { FIELD_SPANS_MS } from '../microstructure/MicrostructureEngine.js';
 import { formatLocalTime, type CurrencyMode } from './format.js';
 import { getSymbolRules, roundPrice } from '../binance/symbolRules.js';
@@ -14,8 +16,8 @@ import type { MarketPriceInfo } from '../types.js';
 import type { NativeTimeframe } from '../market/MarketDataTypes.js';
 
 const TIMEFRAMES: NativeTimeframe[] = ['5m', '15m', '1h', '4h'];
-type View = 'cockpit' | 'mtf' | 'liquidity';
-const NEXT_VIEW: Record<View, View> = { cockpit: 'mtf', mtf: 'liquidity', liquidity: 'cockpit' };
+type View = 'cockpit' | 'mtf' | 'liquidity' | 'fleet';
+const NEXT_VIEW: Record<View, View> = { cockpit: 'mtf', mtf: 'liquidity', liquidity: 'fleet', fleet: 'cockpit' };
 
 export function nextLerpPrice(sym: string, curr: number, target: number, tickSize: number): number {
   const diff = target - curr;
@@ -110,6 +112,11 @@ export default function App() {
   }, []);
 
   const [orchestrator] = useState(() => new Orchestrator());
+  // Embedded multi-model fleet: shares the worker code path with `npm run fleet`, parks itself
+  // (never throws) when its prerequisites are missing, and notifies trade fills via its own
+  // [FLEET]-tagged Telegram cards — never through the main agent's alert pipeline.
+  const [fleetSupervisor] = useState(() => new FleetSupervisor());
+  const [fleetState, setFleetState] = useState<FleetState>(() => fleetSupervisor.state);
   const [isSyncing, setIsSyncing] = useState(false);
   const [time, setTime] = useState(() => new Date().toISOString().slice(11, 19));
   const [localTime, setLocalTime] = useState(() => formatLocalTime());
@@ -140,6 +147,11 @@ export default function App() {
     orchestrator.on('sync', (syncing: boolean) => setIsSyncing(syncing));
     orchestrator.start();
 
+    fleetSupervisor.on('state', (state: FleetState) => setFleetState(state));
+    fleetSupervisor.on('log', (entry: { msg: string; level: string }) =>
+      pushLog({ ts: Date.now(), agent: 'FLEET', msg: entry.msg, level: entry.level === 'error' ? 'error' : entry.level === 'warn' ? 'warn' : 'info' }));
+    void fleetSupervisor.start();
+
     const clockTimer = setInterval(() => {
       const now = new Date();
       setTime(now.toISOString().slice(11, 19));
@@ -154,10 +166,11 @@ export default function App() {
 
     return () => {
       orchestrator.stop();
+      fleetSupervisor.stop();
       clearInterval(clockTimer);
       process.off('exit', flush);
     };
-  }, [orchestrator, set, pushLog]);
+  }, [orchestrator, fleetSupervisor, set, pushLog]);
 
   useInput((input, key) => {
     if (key.tab || input === 'm') {
@@ -198,7 +211,7 @@ export default function App() {
       pushLog({
         ts: Date.now(),
         agent: 'SYSTEM',
-        msg: 'COMMANDS: Tab/m cycle view (cockpit → MTF → liquidity) │ liquidity: ↑↓ symbol, w span, d ladder │ ↑↓ select │ u currency (USD/INR/BOTH) │ c close pos │ x cancel all │ k kill-switch │ a advisor audit │ s stop',
+        msg: 'COMMANDS: Tab/m cycle view (cockpit → MTF → liquidity → fleet) │ liquidity: ↑↓ symbol, w span, d ladder │ ↑↓ select │ u currency (USD/INR/BOTH) │ c close pos │ x cancel all │ k kill-switch │ a advisor audit │ s stop',
         level: 'info',
       });
     }
@@ -246,7 +259,9 @@ export default function App() {
     );
   }
 
-  const displayLines = view === 'liquidity'
+  const displayLines = view === 'fleet'
+    ? renderFleetScreen({ state: fleetState, time, totalWidth: cols, totalHeight: rows })
+    : view === 'liquidity'
     ? renderLiquidityScreen({ feed: state.microstructure, symbols, selectedSymbol, showLadder, spanMs: FIELD_SPANS_MS[spanIndex], marketStates: state.marketStates, time, totalWidth: cols, totalHeight: rows })
     : renderMtfScreen({
         symbols,

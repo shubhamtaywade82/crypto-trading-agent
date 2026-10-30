@@ -1,10 +1,14 @@
 import { inferRuntimeMode } from '@nemesis-oss/ollama-sdk';
 
 /**
- * `@nemesis-oss/ollama-sdk` refuses any `format` request pre-flight against a non-local endpoint (it classifies every
- * hostname that is not localhost/loopback/RFC1918-ish as Ollama Cloud, a known cloud limitation) and the refusal would
- * silently disable the LLM layers. So JSON mode is requested only where the SDK allows it; elsewhere the prompts
- * already demand JSON and `parseJsonLoose` copes with fenced or chatty replies.
+ * `@nemesis-oss/ollama-sdk` refuses any `format` request pre-flight against a non-local endpoint and the
+ * refusal would silently disable the LLM layers. SDK 1.24.1 classifies hostnames as a tri-state:
+ *   local   — loopback (all of 127/8), RFC1918 private ranges (10/8, 172.16/12, 192.168/16),
+ *             IPv6 private, and *.local / *.internal / *.localhost: a LAN daemon is not Ollama Cloud
+ *   cloud   — only ollama.com and *.ollama.com
+ *   unknown — everything else (public hostnames): may or may not serve /api/* locally
+ * JSON mode is requested only where the SDK allows it; elsewhere the prompts already demand JSON
+ * and `parseJsonLoose` copes with fenced or chatty replies.
  */
 export function jsonFormatFor(host: string): { format: 'json' } | Record<string, never> {
   return inferRuntimeMode(host) === 'local' ? { format: 'json' } : {};

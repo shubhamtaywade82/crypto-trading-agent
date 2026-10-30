@@ -69,19 +69,35 @@ async function startFakeOllama(host: string, handler: Handler): Promise<FakeOlla
 }
 
 /**
- * The SDK classifies only 127.0.0.1 and localhost as local, so 127.0.0.2 (loopback on Linux and CI) reaches the
- * cloud branch without a network. Returns null where that address is not bindable (e.g. macOS), so callers skip.
+ * SDK >= 1.24 classifies the whole loopback range (and RFC1918) as local; the cloud branch is reachable
+ * only through an *.ollama.com hostname. So the fake daemon binds 127.0.0.1 and this harness
+ * monkeypatches globalThis.fetch to transparently rewrite wire-test.ollama.com -> 127.0.0.1:port.
+ * The SDK still takes its REAL cloud branch — Bearer auth, format refused — because classification
+ * is URL-string based; only the transport is redirected. The patch is undone in close().
  */
-async function startCloudLikeDaemon(handler: Handler): Promise<FakeOllama | null> {
-  try {
-    return await startFakeOllama('127.0.0.2', handler);
-  } catch (err) {
-    if ((err as NodeJS.ErrnoException).code === 'EADDRNOTAVAIL') return null;
-    throw err;
-  }
+async function startCloudLikeDaemon(handler: Handler): Promise<FakeOllama> {
+  const daemon = await startFakeOllama('127.0.0.1', handler);
+  const realPort = new URL(daemon.url).port;
+  const cloudHost = 'wire-test.ollama.com';
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = ((input: Parameters<typeof fetch>[0], init?: Parameters<typeof fetch>[1]) => {
+    const rawUrl = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
+    if (typeof rawUrl === 'string' && rawUrl.includes(`//${cloudHost}`)) {
+      const rewritten = new URL(rawUrl);
+      rewritten.hostname = '127.0.0.1'; // hostname swap only: the port stays bound to the fake daemon
+      return originalFetch(rewritten, init);
+    }
+    return originalFetch(input, init);
+  }) as typeof fetch;
+  return {
+    ...daemon,
+    url: `http://${cloudHost}:${realPort}`,
+    close: async () => {
+      globalThis.fetch = originalFetch;
+      await daemon.close();
+    },
+  };
 }
-
-const CLOUD_SKIP = '127.0.0.2 is not bindable on this host; the cloud-branch wire test needs Linux loopback';
 
 const ollamaReply = (response: string): { status: number; body: unknown } => ({ status: 200, body: { model: config.ollama.model, response, done: true } });
 
@@ -138,9 +154,8 @@ test('veto and ping reach a local daemon through the real SDK, with JSON mode on
   }
 });
 
-test('a cloud-classified host gets the Bearer key and no format field, and generateJson parses a fenced reply', async (t: TestContext) => {
+test('a cloud-classified host gets the Bearer key and no format field, and generateJson parses a fenced reply', async () => {
   const daemon = await startCloudLikeDaemon(() => ollamaReply('```json\n{"a":1}\n```'));
-  if (!daemon) return t.skip(CLOUD_SKIP);
   try {
     await withOllama(daemon.url, ['k-test'], async () => {
       const advisor = new OllamaAdvisor();
@@ -155,9 +170,8 @@ test('a cloud-classified host gets the Bearer key and no format field, and gener
   }
 });
 
-test('the SDK refuses format on a cloud-classified host before any request, which is why jsonMode omits it', async (t: TestContext) => {
+test('the SDK refuses format on a cloud-classified host before any request, which is why jsonMode omits it', async () => {
   const daemon = await startCloudLikeDaemon(() => ollamaReply('{}'));
-  if (!daemon) return t.skip(CLOUD_SKIP);
   try {
     const client = new OllamaClient({ baseUrl: daemon.url, retries: 0 });
     await assert.rejects(client.generateText({ model: 'm', prompt: 'p', format: 'json' }), OllamaUnsupportedCapabilityError);
@@ -212,10 +226,9 @@ test('an unreachable daemon leaves the advisor offline and the veto proceeds wit
   });
 });
 
-test('a rate-limited key fails over to the next key, each request carrying its own Bearer token', async (t: TestContext) => {
+test('a rate-limited key fails over to the next key, each request carrying its own Bearer token', async () => {
   const daemon = await startCloudLikeDaemon((request) =>
     request.authorization === 'Bearer k-1' ? { status: 429, body: { error: 'rate limit' } } : ollamaReply('{"verdict":"VETO","reason":"second key"}'));
-  if (!daemon) return t.skip(CLOUD_SKIP);
   try {
     await withOllama(daemon.url, ['k-1', 'k-2'], async () => {
       const advisor = new OllamaAdvisor();
@@ -256,9 +269,8 @@ test('SMC advisor fails closed near its timeout when the daemon never answers', 
 const requireBearer = (token: string): Handler => (request) =>
   request.authorization === `Bearer ${token}` ? ollamaReply(OPEN_LONG) : { status: 401, body: { error: 'unauthorized' } };
 
-test('SMC advisor authenticates against a cloud-classified host with the configured key', async (t: TestContext) => {
+test('SMC advisor authenticates against a cloud-classified host with the configured key', async () => {
   const daemon = await startCloudLikeDaemon(requireBearer('k-smc'));
-  if (!daemon) return t.skip(CLOUD_SKIP);
   try {
     const decision = await new SmcExecutionAdvisor({ host: daemon.url, model: 'm', apiKey: 'k-smc' }).decide(smcContext());
     assert.equal(decision.action, 'OPEN', 'an unauthenticated cloud call is refused (401) and fails closed to HOLD');
@@ -270,9 +282,8 @@ test('SMC advisor authenticates against a cloud-classified host with the configu
   }
 });
 
-test('SmcMlRuntime.fromConfig hands the configured Ollama key to the SMC advisor', async (t: TestContext) => {
+test('SmcMlRuntime.fromConfig hands the configured Ollama key to the SMC advisor', async () => {
   const daemon = await startCloudLikeDaemon(requireBearer('k-runtime'));
-  if (!daemon) return t.skip(CLOUD_SKIP);
   try {
     await withOllama(daemon.url, ['k-runtime'], async () => {
       const runtime = SmcMlRuntime.fromConfig();
@@ -335,10 +346,9 @@ test('MiniCpm analyze gives up near its timeout when the daemon never answers', 
   }
 });
 
-test('MiniCpm analyze against a cloud-classified host sends its key and no format', async (t: TestContext) => {
+test('MiniCpm analyze against a cloud-classified host sends its key and no format', async () => {
   const daemon = await startCloudLikeDaemon((request) =>
     request.authorization === 'Bearer k-minicpm' ? ollamaReply(MINICPM_LONG) : { status: 401, body: { error: 'unauthorized' } });
-  if (!daemon) return t.skip(CLOUD_SKIP);
   try {
     const rec = await new MiniCpmService({ host: daemon.url, apiKey: 'k-minicpm' }).analyze(minicpmInput());
     assert.equal(rec?.action, 'ENTER_LONG');

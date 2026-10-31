@@ -51,6 +51,7 @@ export interface RemoteStateFile {
   accountId: string;
   positions: Record<string, PositionMeta>;
   closedTrades: TradeRecord[];
+  accountSince?: number;
 }
 
 const MAX_TRADES = 1000;
@@ -87,6 +88,7 @@ interface RawStateFile {
   accountId: unknown;
   positions: Record<string, unknown>;
   closedTrades: unknown[];
+  accountSince?: unknown;
 }
 
 const hasStateShape = (raw: unknown): raw is RawStateFile =>
@@ -98,7 +100,8 @@ function sanitized(raw: RawStateFile, accountId: string, notify: (message: strin
   const closedTrades = raw.closedTrades.filter(isValidTrade);
   const dropped = Object.keys(raw.positions).length - Object.keys(positions).length + raw.closedTrades.length - closedTrades.length;
   if (dropped > 0) notify(`sidecar: dropped ${dropped} malformed entries`);
-  return { version: 1, accountId, positions, closedTrades };
+  const since = isNumber(raw.accountSince) ? { accountSince: raw.accountSince } : {};
+  return { version: 1, accountId, positions, closedTrades, ...since };
 }
 
 /** Sidecar file holding per-position strategy state and the closed-trade journal for one exchange account. */
@@ -135,12 +138,15 @@ export class RemoteStore {
     return this.pendingNotices.splice(0);
   }
 
-  /** A recreated exchange account holds no positions, so strategy state left over from the old one must not be journaled as closes. */
-  clearPositions(): void {
+  /**
+   * A recreated exchange account holds no positions, so strategy state left over from the old one must not be journaled as closes.
+   * The journal is kept as history, but `recreatedAt` marks where the new account's trades start.
+   */
+  clearPositions(recreatedAt: number): void {
     const dropped = Object.keys(this.state.positions);
-    if (dropped.length === 0) return;
-    this.notice(`account was recreated on the exchange; dropped sidecar positions of ${dropped.join(', ')} without journaling them`);
+    if (dropped.length > 0) this.notice(`account was recreated on the exchange; dropped sidecar positions of ${dropped.join(', ')} without journaling them`);
     this.state.positions = {};
+    this.state.accountSince = recreatedAt;
     this.persist();
   }
 
@@ -170,6 +176,12 @@ export class RemoteStore {
 
   trades(): TradeRecord[] {
     return [...this.state.closedTrades];
+  }
+
+  /** Trades of the current exchange account only: pnl stats are anchored on its margin, so older accounts' trades would skew them. */
+  currentAccountTrades(): TradeRecord[] {
+    const since = this.state.accountSince ?? 0;
+    return this.state.closedTrades.filter((t) => t.closedAt >= since);
   }
 
   private load(accountId: string): RemoteStateFile | null {

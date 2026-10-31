@@ -187,6 +187,7 @@ test('should drop the sidecar positions but keep the journal when the account ha
 
   assert.deepEqual(store.metas(), {});
   assert.deepEqual(store.trades(), [past]);
+  assert.deepEqual(broker.getTrades(), []);
   const reloaded = new RemoteStore(file, ACCOUNT_ID);
-  assert.deepEqual([reloaded.metas(), reloaded.trades()], [{}, [past]]);
+  assert.deepEqual([reloaded.metas(), reloaded.trades(), reloaded.currentAccountTrades()], [{}, [past], []]);
 });

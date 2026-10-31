@@ -73,7 +73,7 @@ export class RemoteBroker {
       const existing = await this.deps.api.getAccount();
       if (existing === null) {
         // A missing account cannot hold positions, so clearing first also survives a crash between the two steps.
-        this.deps.store.clearPositions();
+        this.deps.store.clearPositions(this.now());
         await this.deps.api.createAccount(this.deps.initialMargin);
       }
     } catch (err) {
@@ -117,7 +117,7 @@ export class RemoteBroker {
     return this.positions.map((p) => toPosition(p, this.deps.store.getMeta(p.symbol), this.marks.get(p.symbol)));
   }
 
-  getTrades(): TradeRecord[] { return this.deps.store.trades(); }
+  getTrades(): TradeRecord[] { return this.deps.store.currentAccountTrades(); }
 
   status(): VenueStatus {
     const state: VenueState = this.consecutiveFailures === 0 ? 'connected' : this.consecutiveFailures < DOWN_AFTER_FAILURES ? 'degraded' : 'down';

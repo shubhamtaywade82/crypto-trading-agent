@@ -35,7 +35,7 @@ const SYMBOL = (arg('symbol') ?? 'SOLUSDT').toUpperCase();
 const SIDE: 'LONG' | 'SHORT' = (arg('side') ?? 'LONG').toUpperCase() === 'SHORT' ? 'SHORT' : 'LONG';
 const MODEL = arg('model') ?? config.tev1.model;
 const MODE = (arg('mode') ?? 'on') as 'on' | 'shadow';
-const HOST = arg('host') ?? config.ollama.host;
+const HOST = arg('host') ?? config.tev1.host;
 const LIVE = has('live');
 
 function banner(title: string): void {

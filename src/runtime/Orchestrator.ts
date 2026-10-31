@@ -117,7 +117,7 @@ export class Orchestrator extends EventEmitter {
     mode: config.tev1.gate,
     model: config.tev1.model,
     minConfidence: config.tev1.minConfidence,
-    client: new HttpTev1Client({ host: config.ollama.host, apiKey: config.ollama.apiKeys[0], timeoutMs: config.tev1.timeoutMs }),
+    client: new HttpTev1Client({ host: config.tev1.host, apiKey: config.ollama.apiKeys[0], timeoutMs: config.tev1.timeoutMs }),
     auditPath: config.tev1.auditPath,
     log: (message, level) => this.log('TEV1', message, level),
   });

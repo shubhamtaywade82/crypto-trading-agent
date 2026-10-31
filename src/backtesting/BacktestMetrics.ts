@@ -148,7 +148,13 @@ export function computeMetrics(input: {
   let maxDrawdownUsd = 0;
   for (const point of curve) {
     peak = Math.max(peak, point.equity);
-    maxDrawdownUsd = Math.max(maxDrawdownUsd, peak - point.equity);
+    // Floor trough at 0: portfolio equity can dip below zero when multiple leveraged
+    // positions simultaneously carry large unrealised losses without each individual
+    // position breaching its own isolated-margin liquidation price. In reality the
+    // account would be liquidated before it goes negative, so we cap the trough at 0
+    // (and therefore maxDrawdown at 100 %) to avoid misleading >100 % figures.
+    const trough = Math.max(0, point.equity);
+    maxDrawdownUsd = Math.max(maxDrawdownUsd, peak - trough);
   }
 
   const returns = barReturns(curve);

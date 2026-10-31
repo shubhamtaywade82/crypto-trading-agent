@@ -30,6 +30,8 @@ export const EnvSchema = z.object({
    * Refused with MODE=live (see superRefine) until out-of-sample evidence exists — same bar as the council.
    */
   TEV1_GATE: z.enum(['off', 'shadow', 'on']).default('off'),
+  /** Host serving Ollama /v1/systemone. Defaults to OLLAMA_HOST, but can be set separately (e.g. local daemon when OLLAMA_HOST is cloud). */
+  TEV1_HOST: z.string().optional(),
   /** Model tag sent to /v1/systemone; tev1:4b is the more accurate baseline, tev1:0.8b the memory-budget fallback. */
   TEV1_MODEL: z.string().default('tev1:4b'),
   /** Per-request budget: a decision the loop waits on must fail fast, not stall the tick. */
@@ -281,6 +283,7 @@ export const config = {
   },
   tev1: {
     gate: env.TEV1_GATE,
+    host: env.TEV1_HOST?.trim() || env.OLLAMA_HOST,
     model: env.TEV1_MODEL,
     timeoutMs: env.TEV1_TIMEOUT_MS,
     minConfidence: env.TEV1_MIN_CONFIDENCE,

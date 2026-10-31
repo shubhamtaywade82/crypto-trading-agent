@@ -4,7 +4,8 @@ import { test } from 'node:test';
 // Each case re-imports config.ts fresh under mutated env, mirroring tests/config.entry.test.ts.
 async function loadConfig(env: Record<string, string>) {
   const prior = { ...process.env };
-  Object.assign(process.env, { MODE: 'paper', BINANCE_API_KEY: 'k', BINANCE_API_SECRET: 's', ...env });
+  // The developer's .env (e.g. TEV1_GATE=shadow) must not leak into default assertions.
+  Object.assign(process.env, { DOTENV_CONFIG_PATH: '/dev/null', MODE: 'paper', BINANCE_API_KEY: 'k', BINANCE_API_SECRET: 's', ...env });
   try {
     return await import(`../src/config.js?t=${Date.now()}-${Math.random()}`);
   } finally {

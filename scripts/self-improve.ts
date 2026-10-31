@@ -228,8 +228,14 @@ async function main(): Promise<void> {
       listModels: async () => [],
       generateText: (req) => advisor.generateText(req),
     };
-    agent = new ResearchAgent(client, 'qwen2.5:7b', undefined, bus, memory);
-    console.log('ResearchAgent: LLM mode (Ollama qwen2.5:7b). Will fall back to deterministic proposer on any LLM failure.');
+    const requestedModel = arg('model', process.env.RESEARCH_MODEL ?? 'openbmb/minicpm5-2b:latest');
+    const routerConfig = {
+      smallModel: requestedModel,
+      largeModel: requestedModel,
+      threshold: 0.5,
+    };
+    agent = new ResearchAgent(client, requestedModel, undefined, bus, memory, routerConfig);
+    console.log(`ResearchAgent: LLM mode (Ollama ${requestedModel}). Will fall back to deterministic proposer on any LLM failure.`);
   } else {
     agent = new ResearchAgent(null, undefined, undefined, bus, memory);
     console.log('ResearchAgent: deterministic fallback mode (no LLM). Use --llm to enable.');

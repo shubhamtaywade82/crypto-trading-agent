@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
+  buildPeriodicEquityReturns,
   hypotheticalTrades,
   passesSpecFilters,
   runExperiment,
@@ -46,9 +47,21 @@ test('hypotheticalTrades only counts setups whose entry was touched and outcome 
   const ledger = makeLedger({ n: 10 });
   // Sabotage: drop the entry-touched timestamp on the first record (it never fired).
   ledger[0] = { ...ledger[0], entryTouchedAt: null };
-  const trades = hypotheticalTrades(spec, ledger, ledger[0].createdAt, ledger[ledger.length - 1].createdAt + 1);
+  // Evaluate as-of just after the final trade's outcome is known: a trade whose outcome resolved at or
+  // after the window cutoff would leak future information into the window and is excluded.
+  const trades = hypotheticalTrades(spec, ledger, ledger[0].createdAt, (ledger[ledger.length - 1].closedAt ?? 0) + 1);
   assert.equal(trades.length, 9);
   assert.ok(!trades.some((t) => t.record.setupId === 'setup-0'));
+});
+
+test('hypotheticalTrades excludes trades whose outcome resolved at or after the window cutoff (look-ahead guard)', () => {
+  const spec = seedStructLiqSpec();
+  const ledger = makeLedger({ n: 10 });
+  // Window ends before the last two records' outcomes are known (fixtures close at createdAt + 2h).
+  const end = ledger[ledger.length - 3].createdAt + 1;
+  const trades = hypotheticalTrades(spec, ledger, ledger[0].createdAt, end);
+  assert.ok(trades.every((t) => (t.record.closedAt ?? Number.POSITIVE_INFINITY) < end));
+  assert.ok(trades.length < 9, `expected unresolved-window trades to be dropped; got ${trades.length}`);
 });
 
 test('runExperiment returns empty results when the ledger is too short for the train/test windows', () => {
@@ -59,6 +72,32 @@ test('runExperiment returns empty results when the ledger is too short for the t
   assert.equal(result.train.n, 0);
   assert.ok(result.experimentNotes.length > 0);
   assert.ok(/spans/.test(result.experimentNotes[0]));
+});
+
+test('fixed-cadence DSR returns require complete exact equity-curve coverage', () => {
+  const marks = [0, 1, 2, 3].map((i) => ({ t: i * 1_000, equity: 100 * (1 + i * 0.01) }));
+  const valid = buildPeriodicEquityReturns(marks, 1_000, 3_000, 1_000);
+  assert.equal(valid.reason, null);
+  assert.equal(valid.series?.returns.length, 2);
+  assert.ok(Math.abs(valid.series!.returns[0] - (102 / 101 - 1)) < 1e-12);
+
+  const gap = buildPeriodicEquityReturns([marks[0], marks[1], marks[3]], 0, 3_000, 1_000);
+  assert.equal(gap.series, null);
+  assert.match(gap.reason ?? '', /cadence/);
+});
+
+test('runExperiment exposes real test-period equity returns when a fixed-cadence curve is supplied', () => {
+  const spec = seedStructLiqSpec();
+  const DAY = 86_400_000;
+  const ledger = makeMultiRegimeLedger(60);
+  const equityCurve = Array.from({ length: 46 }, (_, i) => ({
+    t: Date.UTC(2026, 0, 1) + i * DAY,
+    equity: 10_000 * (1 + i * 0.001),
+  }));
+  const result = runExperiment(spec, spec, ledger, { ...BASE_CONFIG, equityCurve: { source: 'CANDIDATE_PORTFOLIO_REPLAY', candidateId: spec.id, candidateVersion: spec.version, frequencyMs: DAY, marks: equityCurve } });
+  assert.equal(result.testEquityReturns?.source, 'CANDIDATE_PORTFOLIO_REPLAY');
+  assert.equal(result.testEquityReturns?.frequencyMs, DAY);
+  assert.equal(result.testEquityReturns?.returns.length, 15);
 });
 
 test('runExperiment computes train and test metrics on disjoint windows', () => {
@@ -84,14 +123,15 @@ test('runExperiment flags sweep-age mutations as approximations in experimentNot
   assert.ok(result.experimentNotes.some((n) => /maxSweepAgeCandles/.test(n) && /approximation/.test(n)));
 });
 
-test('runExperiment records a contract violation when maxSpreadBps is configured but the ledger lacks spread evidence', () => {
+test('maxSpreadBps uses recorded setup spread and missing historical spread is incomplete', () => {
   const parent = seedStructLiqSpec();
-  const candidate = child(parent, { maxSpreadBps: 5 } as Partial<StructLiqSpecParams>);
+  const candidate = child(parent, { maxSpreadBps: 2 } as Partial<StructLiqSpecParams>);
   const ledger = makeMultiRegimeLedger(60);
-  const result = runExperiment(candidate, parent, ledger, BASE_CONFIG);
-  // A configured filter that cannot be evaluated is a contract violation that blocks promotion — not a silent no-op.
-  assert.ok(result.contractViolations.some((v) => /maxSpreadBps=5/.test(v) && /lack per-setup spread evidence/.test(v)));
-  assert.ok(result.experimentNotes.some((n) => /maxSpreadBps/.test(n)));
+  assert.ok(ledger.some((r) => r.features.spreadBps === 2.5));
+  assert.ok(!passesSpecFilters(candidate, ledger[0]));
+  const missing = ledger.map((r) => ({ ...r, features: { ...r.features, spreadBps: undefined } }));
+  const result = runExperiment(candidate, parent, missing, BASE_CONFIG);
+  assert.ok(result.experimentNotes.some((n) => n.startsWith('incomplete research input:') && /spreadBps/.test(n)));
 });
 
 test('runExperiment applies maxSpreadBps when the ledger records per-setup spread', () => {
@@ -102,9 +142,9 @@ test('runExperiment applies maxSpreadBps when the ledger records per-setup sprea
   for (let i = 0; i < ledger.length; i += 2) {
     ledger[i] = { ...ledger[i], features: { ...ledger[i].features, spreadBps: 9 } };
   }
-  const trades = hypotheticalTrades(candidate, ledger, ledger[0].createdAt, ledger[ledger.length - 1].createdAt + 1);
+  const trades = hypotheticalTrades(candidate, ledger, ledger[0].createdAt, (ledger[ledger.length - 1].closedAt ?? 0) + 1);
   assert.equal(trades.length, 20);
-  assert.ok(trades.every((t) => t.record.features.spreadBps !== null && t.record.features.spreadBps <= 5));
+  assert.ok(trades.every((t) => typeof t.record.features.spreadBps === 'number' && t.record.features.spreadBps <= 5));
 });
 
 test('runExperiment throws when candidate and parent have different ids', () => {

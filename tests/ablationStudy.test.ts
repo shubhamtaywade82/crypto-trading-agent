@@ -265,7 +265,7 @@ test('end-to-end study: injected evidence flows through segments, selection, con
       }));
       records.push(JSON.stringify({
         type: 'outcome', setupId: id, label: 'TARGET', fillPrice: 100, filledAt: decidedAt, exitPrice: 101,
-        resolvedAt: decidedAt + 30 * 60_000, netR: 2, barsHeld: 6,
+        resolvedAt: decidedAt + 30 * 60_000, netR: 2 + ((i % 5) - 2) * 0.1, barsHeld: 6,
         policy: { ...POLICY, takerFeeRate: POLICY.takerFeeRate, slippageRate: POLICY.slippageRate },
       }));
     }

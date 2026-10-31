@@ -129,32 +129,30 @@ export const GOLDEN_TASKS: readonly GoldenTask[] = [
   },
   {
     id: 'gate-reject-003',
-    description: 'A candidate with OOS profit factor below 1.10 is REJECTED (PF floor guard fires).',
-    tags: ['gate', 'reject', 'profit-factor'],
+    description: 'A low-profit-factor candidate remains INSUFFICIENT_DATA until its OOS sample has enough independent clusters for the target effect.',
+    tags: ['gate', 'insufficient-data', 'power', 'profit-factor'],
     // A ledger with meanR=0.05 and high variance produces PF ~ 1.0 — below the 1.10 floor.
     // The candidate (RR=1.7) drops some trades, leaving PF still below 1.10. Other guards may also fire;
-    // we only assert the decision is REJECT (not the specific reason, since the gate reports every
-    // failure and the order depends on the data).
+    // this 30-day OOS interval cannot supply enough independent daily clusters for a 0.10R power target.
     ledger: () => makeLedger({
       n: 800, meanR: 0.05, noise: 1.0, spacing: 3 * 3_600_000,
       regime: 'TREND_UP', volatility: 'EXPANDED', direction: 'LONG',
       sweepDepthAtr: 0.8, rr: 1.8, seed: 23, idPrefix: 'lowpf',
     }),
     candidate: candidate({ minimumRewardRisk: 1.7 }, 'tighter RR on a low-PF ledger'),
-    expectedDecision: 'REJECT',
+    expectedDecision: 'INSUFFICIENT_DATA',
     minTestN: 30,
   },
   {
     id: 'gate-reject-004',
-    description: 'A candidate whose worst regime collapses relative to the parent is REJECTED for regime regression.',
-    tags: ['gate', 'reject', 'regime'],
+    description: 'A regime-sensitive candidate remains INSUFFICIENT_DATA until its OOS sample has enough independent clusters for the target effect.',
+    tags: ['gate', 'insufficient-data', 'power', 'regime'],
     // Multi-regime ledger: the seed sees positive in TREND_UP|EXPANDED, negative elsewhere.
     // The candidate raises minSweepDepthAtr, which doesn't help in TRANSITION (where sweeps are shallower).
     ledger: () => makeMultiRegimeLedger(100, 8, 24),
     candidate: candidate({ minSweepDepthAtr: 1.2 }, 'aggressive sweep-depth filter that collapses TRANSITION'),
-    expectedDecision: 'REJECT',
-    // The candidate may fail multiple guards; we only assert it fails (not the specific reason, since
-    // the multi-regime ledger exercises several at once).
+    expectedDecision: 'INSUFFICIENT_DATA',
+    // The 30-day holdout is intentionally held at INSUFFICIENT_DATA until the cluster-adjusted power floor is met.
     expectedReasonNotContains: [],
     minTestN: 30,
   },

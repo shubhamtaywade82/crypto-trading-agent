@@ -1,5 +1,5 @@
 /**
- * Cluster bootstrap for the mean of per-trade net R.
+ * Cluster bootstrap for the mean of per-trade net R, with a separate null-centered test distribution.
  *
  * Trades are not independent: four symbols move together and one strategy fires on several of them in the same hour. An
  * i.i.d. bootstrap over trades would treat those as separate evidence and produce intervals that are too narrow. Resampling
@@ -43,6 +43,8 @@ export interface BootstrapSummary {
   /**
    * One-sided p-value for H0: E[R] <= 0 from the null-centered cluster bootstrap:
    * ((resampled null means >= observed mean) + 1) / (iterations + 1).
+   * Degenerate cases with no estimable null tail (a single independent cluster, or a null
+   * distribution with no spread) conservatively report p = 1 — no evidence against the null.
    */
   pValue: number;
   /** Same null via cluster-level sign-flip randomization: ((flipped means >= observed mean) + 1) / (iterations + 1). */
@@ -74,6 +76,50 @@ export function quantileSorted(sorted: readonly number[], q: number): number {
 
 export const utcDay = (t: number): string => new Date(t).toISOString().slice(0, 10);
 
+/**
+ * Conservative cluster-adjusted effective sample size.
+ *
+ * Estimates a one-way random-effects ICC from unequal-sized clusters and applies
+ * DEFF = 1 + (m0 - 1) * max(ICC, 0). Negative ICC estimates are not used to claim
+ * extra information. This is a planning diagnostic; inference still uses the
+ * cluster bootstrap itself.
+ */
+export function effectiveSampleSize(samples: readonly Sample[]): number {
+  if (samples.length <= 1) return samples.length;
+  const groups = new Map<string, number[]>();
+  for (const sample of samples) {
+    const values = groups.get(sample.cluster) ?? [];
+    values.push(sample.value);
+    groups.set(sample.cluster, values);
+  }
+  const clusters = [...groups.values()];
+  const k = clusters.length;
+  const n = samples.length;
+  if (k <= 1) return 1;
+
+  const grandMean = samples.reduce((sum, sample) => sum + sample.value, 0) / n;
+  let withinSs = 0;
+  let betweenSs = 0;
+  let sumClusterSizeSquared = 0;
+  for (const values of clusters) {
+    const clusterMean = values.reduce((sum, value) => sum + value, 0) / values.length;
+    sumClusterSizeSquared += values.length ** 2;
+    for (const value of values) withinSs += (value - clusterMean) ** 2;
+    betweenSs += values.length * (clusterMean - grandMean) ** 2;
+  }
+
+  const dfWithin = n - k;
+  if (dfWithin <= 0) return n;
+  const msWithin = withinSs / dfWithin;
+  const msBetween = betweenSs / (k - 1);
+  const m0 = (n - sumClusterSizeSquared / n) / (k - 1);
+  if (!(m0 > 1) || !(msBetween + (m0 - 1) * msWithin > 0)) return n;
+
+  const rho = Math.max(0, Math.min(1, (msBetween - msWithin) / (msBetween + (m0 - 1) * msWithin)));
+  const designEffect = Math.max(1, 1 + (m0 - 1) * rho);
+  return Math.max(1, Math.min(n, n / designEffect));
+}
+
 export function bootstrapMean(samples: readonly Sample[], options: BootstrapOptions = {}): BootstrapSummary | null {
   const values = samples.map((s) => s.value);
   if (values.length === 0 || !values.every(Number.isFinite)) return null;
@@ -89,8 +135,8 @@ export function bootstrapMean(samples: readonly Sample[], options: BootstrapOpti
     groups.set(s.cluster, g);
   }
   const clusters = [...groups.values()];
-  const rand = mulberry32(options.seed ?? 1);
   const observedMean = values.reduce((a, b) => a + b, 0) / values.length;
+  const rand = mulberry32(options.seed ?? 1);
 
   // --- Uncentered bootstrap: percentile CI of the mean + probPositive (a data summary, never a p-value) ---
   const means: number[] = new Array(iterations);
@@ -114,7 +160,7 @@ export function bootstrapMean(samples: readonly Sample[], options: BootstrapOpti
   // cluster sizes and within-cluster dependence are preserved. Resampling that population yields the null
   // distribution of the (cluster-resampled) mean; the p-value is the tail at or beyond the observed mean.
   const nullClusters = clusters.map((c) => ({ sum: c.sum - observedMean * c.count, count: c.count }));
-  let nullAtOrAbove = 0;
+  const nullMeans: number[] = new Array(iterations);
   for (let i = 0; i < iterations; i += 1) {
     let sum = 0;
     let count = 0;
@@ -123,9 +169,16 @@ export function bootstrapMean(samples: readonly Sample[], options: BootstrapOpti
       sum += c.sum;
       count += c.count;
     }
-    if (sum / count >= observedMean) nullAtOrAbove += 1;
+    nullMeans[i] = sum / count;
   }
-  const pValue = (nullAtOrAbove + 1) / (iterations + 1);
+  const nullAtOrAbove = nullMeans.filter((m) => m >= observedMean).length;
+  const nullSpread = Math.max(...nullMeans) - Math.min(...nullMeans);
+  const numericalFloor = Number.EPSILON * Math.max(1, Math.abs(observedMean));
+  // With one independent cluster, or a degenerate resampled null distribution, there is no
+  // estimable null tail. Report no evidence (p=1) rather than a false near-zero p-value.
+  const pValue = clusters.length < 2 || nullSpread <= numericalFloor
+    ? 1
+    : (nullAtOrAbove + 1) / (iterations + 1);
 
   // --- Cluster-level sign-flip randomization test of the same null (robustness check) ---
   // Flip ALL values in a cluster with probability 1/2 (flipping the cluster, not the individual trade, preserves

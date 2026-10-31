@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import type { DecisionRecord } from '../src/decision/DecisionJournal.js';
-import { bootstrapMean, holm, mulberry32, utcDay } from '../src/research/Bootstrap.js';
+import { bootstrapMean, effectiveSampleSize, holm, mulberry32, utcDay } from '../src/research/Bootstrap.js';
 import { conditionalMatrix, keyOf, observationsOf, walkForward, type Observation } from '../src/research/ConditionalEdge.js';
 import { netROf } from '../src/risk/rrProfile.js';
 
@@ -54,6 +54,79 @@ test('bootstrap is reproducible from its seed and brackets the sample mean', () 
   assert.ok(a.ciLow < a.mean && a.mean < a.ciHigh);
   assert.ok(a.ciLow > 0, `a +0.3R mean over 80 trades should have a positive lower bound, got ${a.ciLow}`);
   assert.ok(a.probPositive > 0.95);
+});
+
+
+test('bootstrap p-value is computed from a null-centered cluster distribution, not the ordinary CI draws', () => {
+  const positive = Array.from({ length: 120 }, (_, i) => ({ value: 0.25 + ((i % 7) - 3) * 0.01, cluster: `day-${Math.floor(i / 4)}` }));
+  const result = bootstrapMean(positive, { iterations: 3000, seed: 19, confidence: 0.95 });
+  assert.ok(result !== null);
+  assert.ok(result.pValue < 0.01, `expected strong positive evidence, got p=${result.pValue}`);
+  assert.ok(result.probPositive > 0.99);
+
+  const centered = positive.map((s) => ({ ...s, value: s.value - 0.25 }));
+  const nullResult = bootstrapMean(centered, { iterations: 3000, seed: 19, confidence: 0.95 });
+  assert.ok(nullResult !== null);
+  assert.ok(nullResult.pValue > 0.05, `zero-mean sample should not systematically reject H0, got p=${nullResult.pValue}`);
+  assert.ok(nullResult.ciLow <= 0 && nullResult.ciHigh >= 0);
+});
+
+test('effective sample size discounts perfectly repeated same-cluster observations', () => {
+  const repeated = Array.from({ length: 20 }, (_, day) =>
+    Array.from({ length: 10 }, () => ({ value: day - 10, cluster: `day-${day}` }))).flat();
+  assert.equal(effectiveSampleSize(repeated), 20);
+  const independent = repeated.map((sample, i) => ({ ...sample, cluster: `trade-${i}` }));
+  assert.equal(effectiveSampleSize(independent), 200);
+});
+
+test('bootstrap does not claim significance from one cluster or a degenerate null distribution', () => {
+  const oneCluster = bootstrapMean(
+    Array.from({ length: 20 }, (_, i) => ({ value: 1 + i * 0.01, cluster: 'same-day' })),
+    { iterations: 1000, seed: 7 },
+  );
+  assert.ok(oneCluster !== null);
+  assert.equal(oneCluster.pValue, 1);
+
+  const identicalClusters = bootstrapMean(
+    Array.from({ length: 10 }, (_, i) => ({ value: 0.5, cluster: `day-${i}` })),
+    { iterations: 1000, seed: 8 },
+  );
+  assert.ok(identicalClusters !== null);
+  assert.equal(identicalClusters.pValue, 1);
+});
+
+test('null-centered cluster bootstrap controls false positives on zero-edge simulations', () => {
+  const random = mulberry32(20261030);
+  const repetitions = 60;
+  let falsePositives = 0;
+  for (let simulation = 0; simulation < repetitions; simulation += 1) {
+    const samples = Array.from({ length: 30 }, (_, day) => {
+      const sharedDayShock = (random() - 0.5) * 0.8;
+      return Array.from({ length: 4 }, () => ({
+        value: sharedDayShock + (random() - 0.5) * 0.8,
+        cluster: `day-${day}`,
+      }));
+    }).flat();
+    const summary = bootstrapMean(samples, { iterations: 600, seed: simulation + 1 });
+    assert.ok(summary !== null);
+    if (summary.pValue <= 0.05) falsePositives += 1;
+  }
+  const falsePositiveRate = falsePositives / repetitions;
+  assert.ok(falsePositiveRate <= 0.15, `empirical null rejection rate was ${falsePositiveRate}`);
+});
+
+test('null-centered cluster bootstrap has power against a clear positive edge', () => {
+  const random = mulberry32(20261031);
+  const samples = Array.from({ length: 40 }, (_, day) => {
+    const sharedDayShock = (random() - 0.5) * 0.4;
+    return Array.from({ length: 4 }, () => ({
+      value: 0.15 + sharedDayShock + (random() - 0.5) * 0.4,
+      cluster: `day-${day}`,
+    }));
+  }).flat();
+  const summary = bootstrapMean(samples, { iterations: 2000, seed: 17 });
+  assert.ok(summary !== null);
+  assert.ok(summary.pValue < 0.01, `expected positive edge to reject null, got ${summary.pValue}`);
 });
 
 test('bootstrap rejects empty or non-finite input', () => {

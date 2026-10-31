@@ -36,7 +36,7 @@ export interface LedgerFixtureOptions {
   rr?: number;
   /** Sweep depth ATR feature; default null. */
   sweepDepthAtr?: number | null;
-  /** Observed spread in bps frozen into features; default null (venue did not report it). */
+  /** Spread observed on setup creation, in bps; default 2.5. */
   spreadBps?: number | null;
   /** Override the random seed (deterministic via mulberry32). */
   seed?: number;
@@ -59,7 +59,7 @@ export function makeLedger(opts: LedgerFixtureOptions): SetupOutcomeRecord[] {
   const direction = opts.direction ?? 'LONG';
   const rr = opts.rr ?? 1.5;
   const sweepDepthAtr = opts.sweepDepthAtr ?? null;
-  const spreadBps = opts.spreadBps ?? null;
+  const spreadBps = opts.spreadBps === undefined ? 2.5 : opts.spreadBps;
   const rand = mulberry32(opts.seed ?? 1);
   const idPrefix = opts.idPrefix ?? 'setup';
 

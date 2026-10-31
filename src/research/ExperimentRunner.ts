@@ -21,6 +21,7 @@ import type { SetupOutcomeRecord } from '../learning/SetupOutcomeLedger.js';
 import type { CostRates } from '../risk/rrProfile.js';
 import {
   bootstrapMean,
+  effectiveSampleSize,
   utcDay,
   type BootstrapOptions,
   type BootstrapSummary,
@@ -61,9 +62,10 @@ export function passesSpecFilters(spec: StrategySpec<StructLiqSpecParams>, r: Se
   if (r.features.sweepDisplacementAtr !== null && r.features.sweepDisplacementAtr < spec.params.minSweepDisplacementAtr) return false;
   if (r.effectiveRr !== null && r.effectiveRr < spec.params.minimumRewardRisk) return false;
   if (Number.isFinite(spec.params.maxSpreadBps)) {
-    // Unknown spread cannot pass a finite spread cap — and the caller records the contract violation.
-    if (r.features.spreadBps === null) return false;
-    if (r.features.spreadBps > spec.params.maxSpreadBps) return false;
+    // Unknown or invalid spread cannot pass a finite spread cap — and the runner records the incomplete-input
+    // note so the gate never promotes on top of a no-op threshold.
+    const spreadBps = r.features.spreadBps;
+    if (typeof spreadBps !== 'number' || !Number.isFinite(spreadBps) || spreadBps < 0 || spreadBps > spec.params.maxSpreadBps) return false;
   }
   return true;
 }
@@ -71,6 +73,10 @@ export function passesSpecFilters(spec: StrategySpec<StructLiqSpecParams>, r: Se
 /**
  * The hypothetical trade set of a spec over a time range. Trades are resolved setups (entry touched, outcome
  * known) that pass the spec's filters. The trade's net R is the ledger's `netR` field.
+ *
+ * The outcome must be known strictly before the window cutoff: a trade whose outcome resolved at or after `to`
+ * carries information from beyond the window, and counting it would leak future outcomes into the window's
+ * statistics (for the train window in particular, that means test-period information). Such trades are excluded.
  */
 export function hypotheticalTrades(
   spec: StrategySpec<StructLiqSpecParams>,
@@ -84,13 +90,14 @@ export function hypotheticalTrades(
     if (!passesSpecFilters(spec, r)) continue;
     if (r.entryTouchedAt === null) continue;
     if (r.netR === null) continue;
+    if (r.closedAt === null || r.closedAt >= to) continue;
     out.push({ record: r, netR: r.netR });
   }
   return out;
 }
 
 /**
- * Moment statistics of the per-trade net R series. This is what the Deflated Sharpe Ratio must consume — the
+ * Moment statistics of the per-trade net R series. This is what the per-trade power guard consumes — the
  * Sharpe ratio of the actual return series at a defined sampling frequency (here: one observation per trade),
  * never a profit-factor proxy.
  */
@@ -108,8 +115,33 @@ export interface TradeSharpeStats {
   sharpePerTrade: number;
 }
 
+export interface EquityMark { t: number; equity: number }
+
+export interface EquityCurveEvidence {
+  /** The exact candidate replay whose account equity is represented by these marks. */
+  candidateId: string;
+  candidateVersion: number;
+  source: 'CANDIDATE_PORTFOLIO_REPLAY';
+  frequencyMs: number;
+  marks: readonly EquityMark[];
+}
+
+export interface PeriodicEquityReturns {
+  source: 'CANDIDATE_PORTFOLIO_REPLAY';
+  candidateId: string;
+  candidateVersion: number;
+  from: number;
+  to: number;
+  frequencyMs: number;
+  returns: number[];
+}
+
 export interface WindowStats {
   n: number;
+  /** Sample standard deviation of net R outcomes; estimated on the training split for power sizing. */
+  stdDevNetR: number | null;
+  /** Cluster-adjusted effective observation count, using the bootstrap's cluster definition. */
+  effectiveN: number;
   winRate: number;
   meanNetR: number;
   profitFactor: number;
@@ -138,12 +170,14 @@ export interface ExperimentResult {
   parentTrain: WindowStats;
   /** Test window for the parent. */
   parentTest: WindowStats;
-  /** Walk-forward over the whole evaluation window, using train+test as the rolling selection history. */
+  /** Walk-forward over the TRAINING window only (nested selection history); the static test period stays held out. */
   walkForward: { outOfSample: BootstrapSummary | null; baseline: BootstrapSummary | null; folds: number };
   /** Per-symbol stability on the test window — a single-symbol fragility is a promotion blocker. */
   perSymbol: PerSliceStat[];
   /** Per-regime stability on the test window — a regime collapse is a promotion blocker. */
   perRegime: PerSliceStat[];
+  /** Periodic net portfolio returns derived from a supplied, evenly sampled equity curve; absent means DSR unavailable. */
+  testEquityReturns?: PeriodicEquityReturns | null;
   /** Honest caveats about what the experiment does and does not measure. */
   experimentNotes: string[];
   /**
@@ -167,6 +201,8 @@ export interface ExperimentConfig {
   walkForwardTestDays?: number;
   /** Minimum observations for a walk-forward cell to enter selection. Default 10. */
   walkForwardMinN?: number;
+  /** Candidate-specific replay equity marks at fixed cadence, including exact train/test window boundaries. */
+  equityCurve?: EquityCurveEvidence;
 }
 
 const sum = (xs: readonly number[]): number => xs.reduce((a, b) => a + b, 0);
@@ -208,6 +244,10 @@ export function tradeSharpeStats(netRs: readonly number[]): TradeSharpeStats | n
 function windowStats(trades: readonly EligibleSetup[], options: BootstrapOptions = {}): WindowStats {
   const samples = trades.map((t) => ({ value: t.netR, cluster: utcDay(t.record.createdAt) }));
   const bootstrap = samples.length > 0 ? bootstrapMean(samples, options) : null;
+  const meanNetR = samples.length ? sum(samples.map((s) => s.value)) / samples.length : null;
+  const stdDevNetR = samples.length > 1 && meanNetR !== null
+    ? Math.sqrt(samples.reduce((total, s) => total + (s.value - meanNetR) ** 2, 0) / (samples.length - 1))
+    : null;
   const wins = trades.filter((t) => t.netR > 0);
   const losses = trades.filter((t) => t.netR < 0);
   const grossProfit = sum(wins.map((t) => t.netR));
@@ -228,6 +268,8 @@ function windowStats(trades: readonly EligibleSetup[], options: BootstrapOptions
 
   return {
     n: trades.length,
+    stdDevNetR,
+    effectiveN: effectiveSampleSize(samples),
     winRate: trades.length > 0 ? wins.length / trades.length : 0,
     meanNetR: trades.length > 0 ? sum(trades.map((t) => t.netR)) / trades.length : 0,
     profitFactor: grossLoss > 0 ? grossProfit / grossLoss : (grossProfit > 0 ? Number.POSITIVE_INFINITY : 0),
@@ -286,6 +328,37 @@ function observationsOf(
 }
 
 /**
+ * Build fixed-cadence simple returns from the actual portfolio equity curve for the test window.
+ * Exact boundaries and every expected mark are required: silently skipping gaps changes the return frequency.
+ */
+export function buildPeriodicEquityReturns(
+  curve: readonly EquityMark[],
+  from: number,
+  to: number,
+  frequencyMs: number,
+): { series: Omit<PeriodicEquityReturns, 'candidateId' | 'candidateVersion'> | null; reason: string | null } {
+  if (!Number.isFinite(frequencyMs) || frequencyMs <= 0) return { series: null, reason: 'equitySamplingMs must be a positive finite duration' };
+  if (!(to > from) || (to - from) % frequencyMs !== 0) return { series: null, reason: 'test window is not an integer multiple of equitySamplingMs' };
+  for (let i = 0; i < curve.length; i += 1) {
+    const mark = curve[i];
+    if (!Number.isFinite(mark.t) || !Number.isFinite(mark.equity) || mark.equity <= 0) {
+      return { series: null, reason: `equity curve contains an invalid mark at index ${i}` };
+    }
+    if (i > 0 && mark.t - curve[i - 1].t !== frequencyMs) {
+      return { series: null, reason: `equity curve cadence/order violation at index ${i}; expected exactly ${frequencyMs}ms` };
+    }
+  }
+  const marks = curve.filter((mark) => mark.t >= from && mark.t <= to);
+  const expectedMarks = (to - from) / frequencyMs + 1;
+  if (marks.length !== expectedMarks || marks[0]?.t !== from || marks[marks.length - 1]?.t !== to) {
+    return { series: null, reason: `equity curve does not exactly cover test window ${from}..${to} at ${frequencyMs}ms` };
+  }
+  const returns = marks.slice(1).map((mark, i) => mark.equity / marks[i].equity - 1);
+  if (!returns.length || !returns.every(Number.isFinite)) return { series: null, reason: 'equity curve produced no finite test returns' };
+  return { series: { source: 'CANDIDATE_PORTFOLIO_REPLAY', from, to, frequencyMs, returns }, reason: null };
+}
+
+/**
  * Run a single experiment. Returns the candidate's metrics and the parent's metrics side-by-side, plus the
  * walk-forward OOS summary, so the promotion gate has everything it needs without recomputing.
  *
@@ -327,19 +400,11 @@ export function runExperiment(
   }
 
   if (Number.isFinite(candidate.params.maxSpreadBps)) {
-    const inWindow = ledger.filter((r) => r.createdAt >= trainFrom && r.createdAt < testTo);
-    const missingSpread = inWindow.filter((r) => r.features.spreadBps === null).length;
-    if (missingSpread > 0) {
-      contractViolations.push(
-        `maxSpreadBps=${candidate.params.maxSpreadBps} configured but ${missingSpread}/${inWindow.length} ledger records ` +
-        `in the evaluation window lack per-setup spread evidence; the filter cannot be evaluated, so the experiment ` +
-        `does not test what it claims to test. Record spreadBps in the ledger and re-run.`,
-      );
-      notes.push(
-        `maxSpreadBps=${candidate.params.maxSpreadBps} cannot be enforced: ${missingSpread} records have no spread evidence ` +
-        `(see contractViolations).`,
-      );
-    }
+    const relevant = ledger.filter((r) => r.createdAt >= first && r.createdAt < testTo);
+    const missingSpread = relevant.filter((r) => typeof r.features.spreadBps !== 'number' || !Number.isFinite(r.features.spreadBps) || r.features.spreadBps < 0).length;
+    if (missingSpread > 0) notes.push(
+      `incomplete research input: maxSpreadBps=${candidate.params.maxSpreadBps} requires per-setup spread; ${missingSpread}/${relevant.length} records are missing a valid spreadBps.`,
+    );
   }
 
   const dims = config.walkForwardDims ?? ['strategy', 'regime', 'phase', 'side'];
@@ -349,7 +414,8 @@ export function runExperiment(
   const trainParent = hypotheticalTrades(parent, ledger, trainFrom, trainTo);
   const testParent = hypotheticalTrades(parent, ledger, trainTo, testTo);
 
-  const obs = observationsOf(candidate, ledger, trainFrom, testTo, dims);
+  // Nested walk-forward selection is limited to training history; the following static test period is held out.
+  const obs = observationsOf(candidate, ledger, trainFrom, trainTo, dims);
   const wf = walkForward(obs, {
     trainDays: config.walkForwardTrainDays ?? 14,
     testDays: config.walkForwardTestDays ?? 7,
@@ -358,6 +424,20 @@ export function runExperiment(
     seed: config.bootstrap?.seed,
   });
 
+  let testEquityReturns: PeriodicEquityReturns | null = null;
+  if (config.equityCurve !== undefined) {
+    const evidence = config.equityCurve;
+    if (evidence.source !== 'CANDIDATE_PORTFOLIO_REPLAY' || evidence.candidateId !== candidate.id || evidence.candidateVersion !== candidate.version) {
+      notes.push(`incomplete research input: DSR equity curve provenance does not match ${candidate.id}:v${candidate.version}`);
+    } else {
+      const extracted = buildPeriodicEquityReturns(evidence.marks, trainTo, testTo, evidence.frequencyMs);
+      testEquityReturns = extracted.series
+        ? { ...extracted.series, source: evidence.source, candidateId: evidence.candidateId, candidateVersion: evidence.candidateVersion }
+        : null;
+      if (!extracted.series) notes.push(`incomplete research input: DSR unavailable — ${extracted.reason}`);
+    }
+  }
+
   return {
     candidateId: candidate.id,
     candidateVersion: candidate.version,
@@ -365,6 +445,7 @@ export function runExperiment(
     parentVersion: parent.version,
     train: windowStats(trainCandidate, config.bootstrap),
     test: windowStats(testCandidate, config.bootstrap),
+    testEquityReturns,
     parentTrain: windowStats(trainParent, config.bootstrap),
     parentTest: windowStats(testParent, config.bootstrap),
     walkForward: { outOfSample: wf.outOfSample, baseline: wf.baseline, folds: wf.folds.length },
@@ -381,7 +462,7 @@ function emptyResult(
   notes: string[],
 ): ExperimentResult {
   const empty: WindowStats = {
-    n: 0, winRate: 0, meanNetR: 0, profitFactor: 0, maxDrawdownR: 0, symbols: 0, regimes: 0, bootstrap: null, sharpe: null,
+    n: 0, stdDevNetR: null, effectiveN: 0, winRate: 0, meanNetR: 0, profitFactor: 0, maxDrawdownR: 0, symbols: 0, regimes: 0, bootstrap: null, sharpe: null,
   };
   return {
     candidateId: candidate.id,
@@ -393,6 +474,7 @@ function emptyResult(
     parentTrain: empty,
     parentTest: empty,
     walkForward: { outOfSample: null, baseline: null, folds: 0 },
+    testEquityReturns: null,
     perSymbol: [],
     perRegime: [],
     experimentNotes: notes,

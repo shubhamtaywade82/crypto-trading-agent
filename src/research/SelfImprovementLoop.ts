@@ -234,12 +234,18 @@ export class SelfImprovementLoop {
   }
 
   /**
-   * Build the promotion policy for one strategy, hardened with the two inputs the Deflated Sharpe Ratio needs:
+   * Build the promotion policy for one strategy.
    *
    *   - `trialCount`: every experiment ever recorded for this strategy, plus the one about to be evaluated.
    *     Searching 40 variants and reporting only the best is exactly the selection bias DSR exists to correct.
    *   - `trialSharpeVariance`: the empirical variance of the per-trade Sharpe across those recorded trials when
-   *     at least two exist (falls back to the conservative 0.5 default otherwise).
+   *     at least two exist. Recorded for when DSR evidence becomes available; not defaulted.
+   *
+   * DSR is deliberately NOT enabled here: the gate's DSR consumes an actual fixed-frequency OOS portfolio
+   * equity-return series, and this loop consumes a setup-outcome ledger without owning a portfolio equity
+   * curve. Enabling `minDsr` without that evidence would fail every promotion closed (INSUFFICIENT_DATA)
+   * while pretending to multiple-testing protection the data cannot support. When the loop is wired to a
+   * replay equity curve (`ExperimentConfig.equityCurve`), flip `minDsr` on with the trial history below.
    */
   private promotionPolicy(strategyId: string): import('./PromotionGate.js').PromotionPolicy {
     const priorTrials = this.experiments.all().filter((r) => r.candidate.id === strategyId);
@@ -250,7 +256,6 @@ export class SelfImprovementLoop {
     const trialSharpeVariance = sharpes.length >= 2 ? varianceOf(sharpes) : undefined;
     return {
       ...DEFAULT_PROMOTION_POLICY,
-      minDsr: 0.95,
       trialCount,
       ...(trialSharpeVariance !== undefined ? { trialSharpeVariance } : {}),
     };

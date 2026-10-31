@@ -7,6 +7,7 @@ import {
   expectedMaxSharpe,
   sharpeStandardError,
   computeDeflatedSharpe,
+  computeDeflatedSharpeFromReturns,
 } from '../src/research/DeflatedSharpe.js';
 import { walkForward, type Observation } from '../src/research/ConditionalEdge.js';
 
@@ -74,6 +75,44 @@ test('DeflatedSharpe: deflates Sharpe ratio under multiple testing and fat tails
   assert.ok(searched.expectedMaxSharpe > 1.5, 'expected max Sharpe under 500 trials exceeds 1.5');
   assert.ok(searched.dsr < 0.50, 'deflated Sharpe must collapse under multiple testing');
   assert.equal(searched.isSignificant, false);
+});
+
+test('DeflatedSharpe derives Sharpe, skewness and kurtosis from fixed-frequency equity returns', () => {
+  const returns = Array.from({ length: 600 }, (_, i) => {
+    const centered = ((i * 37) % 101 - 50) / 10_000;
+    return 0.0002 + centered;
+  });
+  const dsr = computeDeflatedSharpeFromReturns({
+    returns,
+    samplingFrequencyMs: 15 * 60_000,
+    trialCount: 25,
+    trialSharpeVariance: 0.2,
+  });
+  assert.equal(dsr.samplingFrequencyMs, 15 * 60_000);
+  assert.equal(dsr.psr > 0, true);
+  assert.ok(Number.isFinite(dsr.sharpeRatio));
+  assert.ok(Number.isFinite(dsr.skewness));
+  assert.ok(Number.isFinite(dsr.kurtosis));
+  assert.ok(dsr.kurtosis >= 1);
+  assert.throws(() => computeDeflatedSharpeFromReturns({
+    returns,
+    samplingFrequencyMs: 0,
+    trialCount: 25,
+    trialSharpeVariance: 0.2,
+  }), /samplingFrequencyMs/);
+  assert.throws(() => computeDeflatedSharpeFromReturns({
+    returns,
+    samplingFrequencyMs: 60_000,
+    trialCount: 25,
+    trialSharpeVariance: 0,
+  }), /trialSharpeVariance/);
+});
+
+test('SampleSize rejects invalid power-analysis assumptions', () => {
+  assert.throws(() => calculateRequiredSampleSize({ effectSizeR: 0, sigmaR: 1 }), /effectSizeR/);
+  assert.throws(() => calculateRequiredSampleSize({ effectSizeR: 0.1, sigmaR: 0 }), /sigmaR/);
+  assert.throws(() => calculateRequiredSampleSize({ effectSizeR: 0.1, sigmaR: 1, alpha: 0 }), /alpha/);
+  assert.throws(() => calculateRequiredSampleSize({ effectSizeR: 0.1, sigmaR: 1, power: 1 }), /power/);
 });
 
 test('ConditionalEdge: walkForward respects embargoDays buffer between train and test', () => {

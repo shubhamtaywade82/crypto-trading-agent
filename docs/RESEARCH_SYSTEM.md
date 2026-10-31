@@ -71,8 +71,8 @@ $$N \ge \left( \frac{(z_\alpha + z_\beta) \cdot \sigma}{\Delta\mu} \right)^2$$
 
 The promotion gate enforces this in two layers:
 
-1. **Explicit target** — when the policy states `targetEffectSizeR`, the power formula above derives the required $N$ from the *observed* OOS sigma.
-2. **Self-calibrating MDE guard (default)** — when per-trade moments exist, the gate computes the minimum detectable effect $\text{MDE} = (z_\alpha + z_\beta)\sigma / \sqrt{n}$ and returns `INSUFFICIENT_DATA` unless the observed mean edge clears it. Thirty trades at $\sigma = 1R$ can only confirm edges $\ge 0.51R$; a 0.05R edge on 30 trades is not evidence, and the gate now says so.
+1. **Explicit target** — when the policy states `targetEffectSizeR`, the power formula above derives the required $N$ from the *training split's* sigma (`powerSigmaR` overrides it); holdout data never tunes the requirement. The requirement is enforced on both the raw OOS trade count and the cluster-adjusted effective sample size, so clustered (same-day) observations cannot masquerade as independent evidence.
+2. **Self-calibrating MDE guard** — after every hard floor passes, the gate computes the minimum detectable effect $\text{MDE} = (z_\alpha + z_\beta)\sigma / \sqrt{n}$ from the observed per-trade moments and returns `INSUFFICIENT_DATA` unless the observed mean edge clears it. Thirty trades at $\sigma = 1R$ can only confirm edges $\ge 0.51R$; a 0.05R edge on 30 trades is not evidence, and the gate now says so.
 
 The static `minTrades` floor remains only as a fallback for callers without moment statistics.
 
@@ -87,19 +87,21 @@ $$\text{SR}^* = \sqrt{\mathbb{V}[\{\text{SR}_n\}]} \left( (1 - \gamma) Z^{-1}\le
 
 Candidates with high trial counts and negative skewness ($\gamma_3$) or excess kurtosis ($\gamma_4$) are deflated accordingly.
 
-**Input contract (enforced):** the SR fed into the DSR is the *actual per-trade net-R Sharpe* (`mean / std` of the OOS return series, with empirical $\gamma_3, \gamma_4$), computed by `ExperimentRunner.tradeSharpeStats`. Profit factor is a different statistic and is **never** used as a Sharpe substitute — if the OOS moments are missing, the DSR gate refuses to run (`REJECT`) rather than proxy it. The `SelfImprovementLoop` supplies `trialCount` (every experiment ever recorded for the strategy, plus the current one) and, where available, the empirical cross-trial Sharpe variance, so the deflation actually reflects the search that selected the candidate.
+**Input contract (enforced):** when `minDsr` is enabled, the DSR consumes an *actual fixed-frequency OOS portfolio equity-return series* (`ExperimentConfig.equityCurve` marks at a declared cadence, validated for exact boundary and gap-free coverage by `buildPeriodicEquityReturns`), plus an explicit cumulative `trialCount` and a measured `trialSharpeVariance` on the same cadence. Per-trade net R is a different statistic and is **never** substituted for account-level returns; missing equity or trial-history evidence returns `INSUFFICIENT_DATA`, never a promotion. Because the self-improvement loop consumes a setup-outcome ledger and does not own a portfolio equity curve, DSR is opt-in at policy level and fails closed when the required evidence is absent.
 
 ### 4.3 Null-Correct Bootstrap Inference
-`Bootstrap.bootstrapMean` reports three distinct quantities that are NOT interchangeable:
+`Bootstrap.bootstrapMean` reports distinct quantities that are NOT interchangeable:
 
 - `probPositive` — share of *uncentered* resampled means above zero. A data summary. Not a p-value, not $P(E[R]>0 \mid \text{data})$.
-- `pValue` — one-sided p-value for $H_0: E[R] \le 0$ from a **null-centered cluster bootstrap**: every cluster's sum is shifted so the null holds exactly, clusters are resampled under the null, and the p-value is the tail at or beyond the observed mean. This is the quantity Holm correction operates on.
+- `pValue` — one-sided p-value for $H_0: E[R] \le 0$ from a **null-centered cluster bootstrap**: every cluster's sum is shifted so the null holds exactly, clusters are resampled under the null, and the p-value is the tail at or beyond the observed mean. This is the quantity Holm correction operates on. Degenerate cases with no estimable null tail (a single independent cluster, or a null distribution with no spread) conservatively report $p = 1$.
 - `pValueSignFlip` — cluster-level sign-flip randomization test of the same null (robustness check).
 
-Null simulations (`tests/bootstrapNull.test.ts`) verify the reported level on zero-edge data (false-positive rate near the 5% nominal), the power on genuine edges, monotonicity in edge strength, and robustness to skewed payoff distributions.
+For promotion power sizing, `Bootstrap.effectiveSampleSize` estimates a conservative design effect from the intracluster correlation. Negative estimated ICC is not used to claim more independent observations. The cluster bootstrap remains the inferential procedure; effective N is a planning diagnostic the promotion gate applies to the power requirement.
 
-### 4.4 Research-Contract Integrity
-A configured filter that cannot be evaluated against recorded evidence is a **contract violation**, not a silent no-op. Today this guards `maxSpreadBps`: the setup ledger records `features.spreadBps` when the venue reports it; if a spec configures a finite spread cap while records lack spread evidence, `ExperimentRunner` records the violation and the promotion gate **REJECTS** the experiment. An experiment that could not test what it claims to test is not valid evidence.
+Null simulations (`tests/bootstrapNull.test.ts`) verify the reported level on zero-edge data (false-positive rate near the 5% nominal), the power on genuine edges, monotonicity in edge strength, and robustness to skewed payoff distributions; `tests/statisticalHardening.test.ts` covers degenerate and single-cluster inference.
+
+### 4.4 Research-Input Integrity (fail closed)
+A configured filter that cannot be evaluated against recorded evidence invalidates the experiment — it is not a silent no-op. Today this guards `maxSpreadBps`: `SetupMap` captures the quote spread when the venue reports it and `SetupOutcomeLedger` persists it with the setup; if a spec configures a finite spread cap while relevant ledger rows lack a valid recorded spread, `ExperimentRunner` marks the run as an **incomplete research input** and the promotion gate returns `INSUFFICIENT_DATA` — missing legacy data is never silently treated as a pass. Separately, `contractViolations` on the result (a filter that could not be evaluated at all) causes a hard `REJECT`.
 
 ### 4.5 Empirical Bayes Shrinkage
 To prevent small-sample overfitting across market regimes, raw regime expectancies $\hat{\mu}_c$ are shrunk toward the grand baseline mean $\hat{\mu}_b$:
@@ -120,7 +122,7 @@ Cross-validation folds enforce an explicit embargo window (default 5 days) betwe
 
 ### 5.1 Whitelisted Feature Space
 The `HypothesisRegistry` enforces a strict closed-world ontology (`WHITELISTED_FEATURES`):
-`alma`, `supertrend`, `atr`, `rsi`, `volume_ratio`, `cvd`, `funding_rate`, `open_interest`, `bb_width`.
+`sweep_depth_atr`, `sweep_displacement_atr`, `absorption_score`, `order_flow_imbalance`, `spread_bps`, `break_distance_atr`, `reward_risk_ratio`, `atr_volatility_pct`, `funding_rate_apr`.
 Any hypothesis referencing unmeasurable or hallucinated indicators is rejected at registration.
 
 ### 5.2 Ticker & Date Anonymization
@@ -230,3 +232,9 @@ npm run research:kelly        # Kelly sizing analysis of the same trade series
 npm run research:volclust     # volatility clustering diagnostics (--closes FILE | --synthetic)
 npm run research:statarb      # cointegration pairs study (--a FILE --b FILE | --synthetic)
 ```
+
+## 9. Evidence required for spread-filter and DSR experiments
+
+SetupMap captures the quote spread from the market state's derivatives snapshot when available, and SetupOutcomeLedger persists that value with the setup. maxSpreadBps now applies as an actual filter. If a finite spread threshold is part of a candidate but relevant ledger rows lack a valid recorded spread, ExperimentRunner marks the run as incomplete and PromotionGate returns INSUFFICIENT_DATA; missing legacy data is not silently treated as a pass.
+
+DSR inputs are deliberately separate from the setup-outcome ledger. The experiment runner accepts `equityCurve` marks with a `frequencyMs` cadence; the curve must cover the exact test interval at the declared cadence with no missing or invalid marks. A setup-level R series is not substituted for account-equity returns. The current self-improvement loop does not itself own an equity curve, so DSR remains inactive unless a caller supplies the required equity and trial-history evidence and enables minDsr.

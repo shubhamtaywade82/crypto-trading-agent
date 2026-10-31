@@ -332,6 +332,7 @@ export function buildSetupMap(state: MarketState, options: SetupEngineOptions = 
     symbol: state.symbol,
     generatedAt: state.generatedAt,
     mark: state.mark,
+    spreadBps: state.derivatives?.spreadBps ?? null,
     state: mapState,
     bias,
     regime: state.regime.regime,

@@ -28,6 +28,12 @@ export interface DeflatedSharpeResult {
   psr: number;
   dsr: number;
   isSignificant: boolean;
+  /** Present when the statistic was derived from an explicitly sampled equity return series. */
+  samplingFrequencyMs?: number;
+  sampleMean?: number;
+  sampleStdDev?: number;
+  skewness?: number;
+  kurtosis?: number;
 }
 
 const EULER_MASCHERONI = 0.57721566490153286;
@@ -80,6 +86,57 @@ export function sharpeStandardError(sr: number, t: number, skew = 0, kurt = 3): 
   return Math.sqrt(Math.max(1e-12, variance));
 }
 
+export interface DeflatedSharpeFromReturnsResult extends DeflatedSharpeResult {
+  samplingFrequencyMs: number;
+  sampleMean: number;
+  sampleStdDev: number;
+  skewness: number;
+  kurtosis: number;
+}
+
+export interface DeflatedSharpeFromReturnsInput {
+  /** Net simple returns from a real portfolio equity curve, sampled at a fixed cadence. */
+  returns: readonly number[];
+  samplingFrequencyMs: number;
+  trialCount: number;
+  /** Empirical variance of per-trial Sharpe ratios in the full search history; required when trialCount > 1. */
+  trialSharpeVariance: number;
+}
+
+/**
+ * Compute DSR from an actual fixed-frequency equity return series.
+ * Sharpe is expressed per sampling interval (not annualized), and all trial Sharpe ratios
+ * used for the variance estimate must use the same cadence.
+ */
+export function computeDeflatedSharpeFromReturns(input: DeflatedSharpeFromReturnsInput): DeflatedSharpeFromReturnsResult {
+  const { returns, samplingFrequencyMs, trialCount, trialSharpeVariance } = input;
+  if (!Number.isFinite(samplingFrequencyMs) || samplingFrequencyMs <= 0) throw new Error('samplingFrequencyMs must be positive');
+  if (!Number.isInteger(trialCount) || trialCount < 1) throw new Error('trialCount must be a positive integer');
+  if (trialCount > 1 && (!Number.isFinite(trialSharpeVariance) || trialSharpeVariance <= 0)) {
+    throw new Error('trialSharpeVariance must be measured and positive when trialCount > 1');
+  }
+  if (returns.length < 2 || !returns.every(Number.isFinite)) throw new Error('at least two finite equity returns are required');
+  const sampleMean = returns.reduce((sum, value) => sum + value, 0) / returns.length;
+  const centered = returns.map((value) => value - sampleMean);
+  const m2 = centered.reduce((sum, value) => sum + value ** 2, 0) / returns.length;
+  if (!(m2 > 0)) throw new Error('equity return series must have non-zero variance');
+  const m3 = centered.reduce((sum, value) => sum + value ** 3, 0) / returns.length;
+  const m4 = centered.reduce((sum, value) => sum + value ** 4, 0) / returns.length;
+  const skewness = m3 / (m2 ** 1.5);
+  const kurtosis = m4 / (m2 ** 2);
+  const sampleStdDev = Math.sqrt(returns.reduce((sum, value) => sum + (value - sampleMean) ** 2, 0) / (returns.length - 1));
+  const sharpeRatio = sampleMean / sampleStdDev;
+  const result = computeDeflatedSharpe({
+    sharpeRatio,
+    sampleLength: returns.length,
+    skewness,
+    kurtosis,
+    trialCount,
+    trialSharpeVariance,
+  });
+  return { ...result, samplingFrequencyMs, sampleMean, sampleStdDev, skewness, kurtosis };
+}
+
 /**
  * Calculates Deflated Sharpe Ratio (DSR) controlling for sample size, non-normality, and multiple trials.
  * A candidate is statistically significant only when DSR >= 0.95 (5% false discovery rate).
@@ -93,6 +150,10 @@ export function computeDeflatedSharpe(input: DeflatedSharpeInput): DeflatedSharp
     trialCount,
     trialSharpeVariance = 0.5,
   } = input;
+  if (!Number.isFinite(sharpeRatio) || !Number.isInteger(sampleLength) || sampleLength < 2) throw new Error('sharpeRatio must be finite and sampleLength must be >= 2');
+  if (!Number.isInteger(trialCount) || trialCount < 1) throw new Error('trialCount must be a positive integer');
+  if (!Number.isFinite(skewness) || !Number.isFinite(kurtosis) || kurtosis < 1) throw new Error('invalid return skewness/kurtosis');
+  if (!Number.isFinite(trialSharpeVariance) || trialSharpeVariance < 0) throw new Error('trialSharpeVariance must be finite and non-negative');
 
   const se = sharpeStandardError(sharpeRatio, sampleLength, skewness, kurtosis);
   const maxBenchmark = expectedMaxSharpe(trialCount, trialSharpeVariance);

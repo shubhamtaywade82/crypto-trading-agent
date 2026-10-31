@@ -2,38 +2,49 @@
  * Promotion gate: statistical guards a candidate must pass before it can be promoted from
  * challenger to champion.
  *
- * Verdict order:
- *   1. INSUFFICIENT_DATA on absolute sample floors — a stated target effect size (power analysis derives
- *      the required n) or the static minTrades floor.
- *   2. REJECT on any hard floor, evaluated on the observed data: contract integrity (a configured filter
- *      that could not be evaluated), OOS mean/LCB, DSR (from the ACTUAL per-trade Sharpe, never a
- *      profit-factor proxy), profit factor, drawdown, symbol coverage, parent delta, worst-regime
- *      regression, walk-forward positivity.
- *   3. INSUFFICIENT_DATA on power: a candidate that cleared every hard floor but whose positive mean edge
- *      is smaller than the minimum detectable effect at its sample size (80% power) is a small-sample
- *      illusion — it is not promotable evidence yet.
+ * Verdict order (fail closed — a gate that cannot be evaluated is INSUFFICIENT_DATA, never a silent pass):
+ *   1. INSUFFICIENT_DATA on incomplete research inputs (e.g. a spread filter that could not be evaluated),
+ *      the static `minTrades` floor, and the power-derived sample requirement: required n for the
+ *      pre-registered target effect using the TRAINING split's dispersion (holdout data never tunes the
+ *      requirement) and the cluster-adjusted effective sample size of the OOS window.
+ *   2. INSUFFICIENT_DATA on missing DSR evidence: when `minDsr` is enabled the gate requires an actual
+ *      fixed-frequency OOS portfolio equity-return series plus the cumulative trial count and measured
+ *      trial-Sharpe variance. Per-trade net R is never substituted for account-level returns.
+ *   3. REJECT on any hard floor, evaluated on the observed data: contract integrity (a configured filter
+ *      that could not be evaluated), OOS mean/LCB, DSR (from the equity-return series, never a profit-factor
+ *      proxy), profit factor, drawdown, symbol coverage, parent delta, worst-regime regression, walk-forward
+ *      positivity.
+ *   4. INSUFFICIENT_DATA on power-to-confirm: a candidate that cleared every hard floor but whose positive
+ *      mean edge is smaller than the minimum detectable effect at its observed sample size (80% power) is a
+ *      small-sample illusion — it is not promotable evidence yet.
  *
- *   4. PROMOTE: positive expectancy with statistically sufficient power, DSR-defensible Sharpe,
+ *   5. PROMOTE: positive expectancy with statistically sufficient power, DSR-defensible Sharpe,
  *      multi-symbol breadth, regime stability, and positive walk-forward out-of-sample results.
  */
 
 import type { ExperimentResult } from './ExperimentRunner.js';
 import { calculateRequiredSampleSize, minimumDetectableEffect } from './SampleSize.js';
-import { computeDeflatedSharpe } from './DeflatedSharpe.js';
+import { computeDeflatedSharpeFromReturns } from './DeflatedSharpe.js';
 import { shrinkMean } from './Shrinkage.js';
 
 export interface PromotionPolicy {
-  /** Minimum OOS trades. Static floor; superseded by power analysis when targetEffectSizeR or OOS moments exist. */
+  /** Additional OOS trade floor; power-derived sample size is always enforced as well. */
   minTrades?: number;
-  /** Target effect size in R for power analysis. When supplied, overrides static minTrades. */
+  /** Smallest net-R edge the experiment is designed to detect. Required for promotion. */
   targetEffectSizeR?: number;
+  /** Type-I error for power sizing. Defaults to 0.05, two-sided. */
+  powerAlpha?: number;
+  /** Desired statistical power. Defaults to 0.80. */
+  desiredPower?: number;
+  /** Optional conservative sigma in R. Otherwise estimated from the training split only. */
+  powerSigmaR?: number;
   /** Minimum OOS mean net R. Default 0.05R. */
   minOosExpectancyR: number;
   /** Minimum OOS profit factor. Default 1.10. */
   minProfitFactor: number;
   /** Maximum OOS drawdown in R. Default 15R. */
   maxDrawdownR: number;
-  /** Minimum OOS bootstrap probPositive. Default 0.85. */
+  /** Minimum ordinary cluster-bootstrap positive-mean fraction. Descriptive, not a p-value or posterior. Default 0.85. */
   minOosConfidence: number;
   /** Minimum distinct symbols with at least 5 trades each. Default 2. */
   minSymbolCoverage: number;
@@ -47,12 +58,15 @@ export interface PromotionPolicy {
   minDsr?: number;
   /** Cumulative trials tested across the experiment lineage (for DSR multiple testing correction). */
   trialCount?: number;
-  /** Variance of per-trade Sharpe ratios across trials; defaults to 0.5 when unmeasured. */
+  /** Empirical variance of Sharpe ratios across all trials on the same return frequency. Required (not defaulted) when DSR is enabled with multiple trials. */
   trialSharpeVariance?: number;
 }
 
 export const DEFAULT_PROMOTION_POLICY: PromotionPolicy = {
   minTrades: 30,
+  targetEffectSizeR: 0.10,
+  powerAlpha: 0.05,
+  desiredPower: 0.80,
   minOosExpectancyR: 0.05,
   minProfitFactor: 1.10,
   maxDrawdownR: 15,
@@ -81,42 +95,30 @@ interface SampleRequirement {
   reason: string;
 }
 
-/**
- * Absolute sample floors, evaluated BEFORE the rejection guards:
- *
- *   1. `targetEffectSizeR` in the policy → classic power analysis (n ≥ ((zα+zβ)σ/δ)²) using the observed OOS
- *      sigma when available.
- *   2. Otherwise → static `minTrades` floor (legacy callers without moment statistics).
- *
- * The self-calibrating MDE guard is deliberately NOT an absolute floor: a candidate that already fails a
- * hard floor (negative mean, PF below 1.10, regime collapse) is REJECTED on the observed data, not
- * "wait for more trades". Power is the last question asked of an otherwise-passing candidate — see
- * `checkPowerToConfirm`.
- */
-function absoluteSampleRequirement(result: ExperimentResult, policy: PromotionPolicy): SampleRequirement {
-  const n = result.test.n;
-  const moments = result.test.sharpe;
+interface PowerRequirement {
+  requiredSampleSize: number;
+  sigmaR: number;
+  alpha: number;
+  power: number;
+}
 
-  if (policy.targetEffectSizeR && policy.targetEffectSizeR > 0) {
-    const required = calculateRequiredSampleSize({
-      effectSizeR: policy.targetEffectSizeR,
-      sigmaR: moments?.std,
-    }).requiredSampleSize;
+/** Power sizing uses only the training split's dispersion; holdout returns never tune the required N. */
+function getPowerRequirement(result: ExperimentResult, policy: PromotionPolicy): PowerRequirement | null {
+  const effectSizeR = policy.targetEffectSizeR;
+  const sigmaR = policy.powerSigmaR ?? result.train.stdDevNetR;
+  const alpha = policy.powerAlpha ?? 0.05;
+  const power = policy.desiredPower ?? 0.80;
+  if (!Number.isFinite(effectSizeR) || !(effectSizeR! > 0) || !Number.isFinite(sigmaR) || !(sigmaR! > 0)) return null;
+  try {
     return {
-      sufficient: n >= required,
-      minTrades: required,
-      mdeR: null,
-      reason: `OOS n=${n} below power-required minTrades=${required} for target effect ${policy.targetEffectSizeR}R; wait for more data`,
+      ...calculateRequiredSampleSize({ effectSizeR: effectSizeR!, sigmaR: sigmaR!, alpha, power }),
+      sigmaR: sigmaR!,
+      alpha,
+      power,
     };
+  } catch {
+    return null;
   }
-
-  const staticFloor = policy.minTrades ?? 30;
-  return {
-    sufficient: n >= staticFloor,
-    minTrades: staticFloor,
-    mdeR: null,
-    reason: `OOS n=${n} below required minTrades=${staticFloor}; wait for more data`,
-  };
 }
 
 /**
@@ -148,18 +150,49 @@ export function evaluatePromotion(
   result: ExperimentResult,
   policy: PromotionPolicy = DEFAULT_PROMOTION_POLICY,
 ): PromotionVerdict {
-  const requirement = absoluteSampleRequirement(result, policy);
-  if (!requirement.sufficient) {
+  const incompleteInput = result.experimentNotes.filter((note) => note.startsWith('incomplete research input:'));
+  if (incompleteInput.length > 0) {
+    return { decision: 'INSUFFICIENT_DATA', reasons: incompleteInput, policy };
+  }
+
+  const configuredMinTrades = policy.minTrades ?? 1;
+  if (result.test.n < configuredMinTrades) {
     return {
       decision: 'INSUFFICIENT_DATA',
-      reasons: [requirement.reason],
+      reasons: [`OOS n=${result.test.n} below configured minTrades=${configuredMinTrades}; collect more out-of-sample observations`],
       policy,
     };
+  }
+
+  const powerRequirement = getPowerRequirement(result, policy);
+  if (!powerRequirement) {
+    return {
+      decision: 'INSUFFICIENT_DATA',
+      reasons: ['power sizing unavailable: provide a positive targetEffectSizeR and a finite positive training-split sigmaR'],
+      policy,
+    };
+  }
+  const minTrades = Math.max(policy.minTrades ?? 1, powerRequirement.requiredSampleSize);
+  const effectiveN = result.test.effectiveN;
+  if (result.test.n < minTrades || !Number.isFinite(effectiveN) || effectiveN < powerRequirement.requiredSampleSize) {
+    return {
+      decision: 'INSUFFICIENT_DATA',
+      reasons: [
+        `OOS trades n=${result.test.n}; cluster-adjusted effectiveN=${Number.isFinite(effectiveN) ? effectiveN.toFixed(1) : 'n/a'}; required ${powerRequirement.requiredSampleSize} independent-equivalent observations for target ${policy.targetEffectSizeR!.toFixed(3)}R (sigma=${powerRequirement.sigmaR.toFixed(3)}R, alpha=${powerRequirement.alpha}, power=${powerRequirement.power})`,
+      ],
+      policy,
+    };
+  }
+
+  const dsr = checkDsr(result, policy);
+  if (dsr.insufficient) {
+    return { decision: 'INSUFFICIENT_DATA', reasons: [dsr.insufficient], policy };
   }
 
   const reasons: string[] = [
     ...checkContractIntegrity(result),
     ...checkExpectancyAndDsr(result, policy),
+    ...(dsr.rejection ? [dsr.rejection] : []),
     ...checkRiskAndDrawdown(result, policy),
     ...checkBreadthAndRegime(result, policy),
   ];
@@ -196,6 +229,38 @@ function checkContractIntegrity(result: ExperimentResult): string[] {
   return result.contractViolations.map((v) => `research contract violation: ${v}`);
 }
 
+function checkDsr(result: ExperimentResult, policy: PromotionPolicy): { insufficient?: string; rejection?: string } {
+  if (policy.minDsr === undefined) return {};
+  if (!Number.isFinite(policy.minDsr) || policy.minDsr < 0 || policy.minDsr > 1) {
+    return { insufficient: 'DSR policy is invalid: minDsr must be between 0 and 1' };
+  }
+  if (!Number.isInteger(policy.trialCount) || (policy.trialCount ?? 0) < 1) {
+    return { insufficient: 'DSR unavailable: cumulative trialCount must be supplied as a positive integer' };
+  }
+  const series = result.testEquityReturns;
+  if (!series || series.source !== 'CANDIDATE_PORTFOLIO_REPLAY' || series.candidateId !== result.candidateId || series.candidateVersion !== result.candidateVersion || !Number.isFinite(series.frequencyMs) || series.frequencyMs <= 0) {
+    return { insufficient: 'DSR unavailable: an actual fixed-frequency test equity return series is required' };
+  }
+  const variance = policy.trialSharpeVariance ?? (policy.trialCount === 1 ? 0 : undefined);
+  if (variance === undefined || !Number.isFinite(variance) || variance < 0 || (policy.trialCount! > 1 && variance === 0)) {
+    return { insufficient: 'DSR unavailable: measured trialSharpeVariance is required when multiple trials were tested' };
+  }
+  try {
+    const dsr = computeDeflatedSharpeFromReturns({
+      returns: series.returns,
+      samplingFrequencyMs: series.frequencyMs,
+      trialCount: policy.trialCount!,
+      trialSharpeVariance: variance,
+    });
+    if (dsr.dsr < policy.minDsr) {
+      return { rejection: `Deflated Sharpe ${dsr.dsr.toFixed(3)} < ${policy.minDsr} using ${series.returns.length} net equity returns at ${series.frequencyMs}ms cadence across ${policy.trialCount} trials` };
+    }
+    return {};
+  } catch (error) {
+    return { insufficient: `DSR unavailable: ${(error as Error).message}` };
+  }
+}
+
 function checkExpectancyAndDsr(result: ExperimentResult, policy: PromotionPolicy): string[] {
   const reasons: string[] = [];
   if (result.test.meanNetR < policy.minOosExpectancyR) {
@@ -205,32 +270,6 @@ function checkExpectancyAndDsr(result: ExperimentResult, policy: PromotionPolicy
   const lcb = result.test.bootstrap?.ciLow ?? Number.NaN;
   if (!Number.isFinite(lcb) || lcb <= 0) {
     reasons.push(`OOS bootstrap LCB ${Number.isFinite(lcb) ? lcb.toFixed(3) : 'n/a'} <= 0`);
-  }
-
-  if (policy.minDsr !== undefined && policy.trialCount && policy.trialCount > 1) {
-    const moments = result.test.sharpe;
-    if (!moments) {
-      // Without the actual OOS return series the DSR cannot be computed honestly. Refuse rather than proxy it.
-      reasons.push(`DSR gate cannot run: OOS per-trade Sharpe statistics missing (n=${result.test.n} < 2 or zero variance)`);
-    } else {
-      // The Sharpe ratio fed to the DSR is the per-trade net R mean / std of the actual out-of-sample return
-      // series, with empirical skewness and kurtosis. Profit factor is a different statistic and is never a
-      // Sharpe substitute.
-      const dsrRes = computeDeflatedSharpe({
-        sharpeRatio: moments.sharpePerTrade,
-        sampleLength: result.test.n,
-        skewness: moments.skewness,
-        kurtosis: moments.excessKurtosis + 3,
-        trialCount: policy.trialCount,
-        ...(policy.trialSharpeVariance !== undefined ? { trialSharpeVariance: policy.trialSharpeVariance } : {}),
-      });
-      if (dsrRes.dsr < policy.minDsr) {
-        reasons.push(
-          `Deflated Sharpe ${dsrRes.dsr.toFixed(2)} < ${policy.minDsr} under ${policy.trialCount} trials ` +
-          `(per-trade SR ${moments.sharpePerTrade.toFixed(3)}, benchmark ${dsrRes.expectedMaxSharpe.toFixed(3)})`,
-        );
-      }
-    }
   }
 
   return reasons;
@@ -246,7 +285,7 @@ function checkRiskAndDrawdown(result: ExperimentResult, policy: PromotionPolicy)
   }
   const probPositive = result.test.bootstrap?.probPositive ?? 0;
   if (probPositive < policy.minOosConfidence) {
-    reasons.push(`OOS P(E[R]>0) ${probPositive.toFixed(2)} < ${policy.minOosConfidence}`);
+    reasons.push(`OOS bootstrap positive-mean fraction ${probPositive.toFixed(2)} < ${policy.minOosConfidence}`);
   }
   return reasons;
 }

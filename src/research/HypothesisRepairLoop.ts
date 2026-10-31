@@ -61,8 +61,19 @@ export const DEFAULT_MAX_REPAIR_RETRIES = 2;
 export function validateHypothesisOutput(raw: string): { hypotheses: Hypothesis[]; errors: string[] } {
   let json: unknown;
   try {
-    const trimmed = raw.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/i, '');
-    json = JSON.parse(trimmed);
+    let trimmed = raw.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/i, '');
+    trimmed = trimmed.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
+    try {
+      json = JSON.parse(trimmed);
+    } catch {
+      const firstBracket = trimmed.indexOf('[');
+      const lastBracket = trimmed.lastIndexOf(']');
+      if (firstBracket >= 0 && lastBracket > firstBracket) {
+        json = JSON.parse(trimmed.slice(firstBracket, lastBracket + 1));
+      } else {
+        throw new Error('no JSON array found');
+      }
+    }
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     return { hypotheses: [], errors: [`response is not valid JSON: ${msg.slice(0, 100)}`] };

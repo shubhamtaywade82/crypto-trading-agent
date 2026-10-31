@@ -114,9 +114,19 @@ Diagnostics:
 export function parseHypotheses(text: string, model?: string): Hypothesis[] {
   let json: unknown;
   try {
-    // Strip markdown fences if present
-    const trimmed = text.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/i, '');
-    json = JSON.parse(trimmed);
+    let trimmed = text.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/i, '');
+    trimmed = trimmed.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
+    try {
+      json = JSON.parse(trimmed);
+    } catch {
+      const firstBracket = trimmed.indexOf('[');
+      const lastBracket = trimmed.lastIndexOf(']');
+      if (firstBracket >= 0 && lastBracket > firstBracket) {
+        json = JSON.parse(trimmed.slice(firstBracket, lastBracket + 1));
+      } else {
+        return [];
+      }
+    }
   } catch {
     return [];
   }

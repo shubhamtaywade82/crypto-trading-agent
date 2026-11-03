@@ -1,35 +1,35 @@
 {
   "schema_version": 1,
   "queue_id": "context-conditioned-strategy-research",
-  "updated_at_utc": "2026-11-03T21:30:08.734Z",
-  "local_time_ist": "2026-11-04T03:00:08.734+05:30",
-  "parent_registry_version": "v45",
+  "updated_at_utc": "2026-11-03T22:32:22.908Z",
+  "local_time_ist": "2026-11-04T04:02:22.909+05:30",
+  "parent_registry_version": "v47",
   "items": [
     {
       "id": "RQ-001",
       "priority": "P0",
       "title": "Persist multi-year raw OHLCV and Parquet-ready manifests",
       "status": "IN_PROGRESS",
-      "completed_progress": "4h archive complete: 53,796 bars. 1h pages 00-03 persisted/readback-verified: 6,000 rows/symbol, 24,000 total, coverage 2026-02-26T20:00Z through 2026-11-03T19:00Z; cross-page checks show zero duplicates/gaps. Latest 76-row multi-timeframe delta persisted.",
-      "next_action": "Continue 1h backward backfill from 2026-02-26T19:59:59.999Z toward 2020-09-14; validate each page and cross-page join. Then reconcile and convert verified 1h history to Parquet.",
-      "blocker": "1h history remains partial; 15m/5m long history and local Parquet/DuckDB volume are absent."
+      "completed_progress": "4h archive: 53,796 base bars across 4 symbols. 1h pages 00-05 persisted/readback-verified: 9,000 rows/symbol, 36,000 total, coverage 2025-10-24T20:00Z through 2026-11-03T19:00Z; cross-page checks zero duplicates/gaps. Latest 68-row multi-timeframe delta persisted (5m 48, 15m 16, 1h 4, 4h 0).",
+      "next_action": "Continue 1h backward backfill from 2025-10-24T19:59:59.999Z toward 2020-09-14; validate each page and cross-page join. Then backfill 15m and 5m and reconcile all intervals.",
+      "blocker": "1h archive remains partial; long 15m/5m history and local Parquet/DuckDB storage are absent."
     },
     {
       "id": "RQ-002",
       "priority": "P1",
       "title": "Refresh Binance server time and contract metadata",
       "status": "BLOCKED",
-      "next_action": "Probe GET /fapi/v1/time and GET /fapi/v1/exchangeInfo from a network-enabled host; capture HTTP status and verify server-time drift before execution validation.",
-      "blocker": "Current exchangeInfo.serverTime=2026-11-03T05:06:21.602Z, observed 2026-11-03T21:27:39.627Z (16h21m18s stale); shell DNS for fapi.binance.com fails and connector does not expose /fapi/v1/time."
+      "next_action": "Probe /fapi/v1/time and /fapi/v1/exchangeInfo from a network-enabled host; require fresh server time and capture HTTP status before execution validation.",
+      "blocker": "GET /fapi/v1/time is unavailable because shell DNS resolution for fapi.binance.com fails. Latest connector exchangeInfo.serverTime=2026-11-03T05:06:21.597Z, retrieved 2026-11-03T22:29:28.459Z (62,586.862 seconds stale); observed TRADING statuses are not authoritative for execution validation."
     },
     {
       "id": "RQ-003",
       "priority": "P1",
       "title": "Complete historical 5m/15m/1h coverage",
       "status": "IN_PROGRESS",
-      "completed_progress": "1h pages 00-03 persisted/readback-verified (6,000 rows/symbol); latest 76-row delta contains 5m 14 bars/symbol, 15m 4 bars/symbol, 1h 1 bar/symbol; 4h unchanged. Latest completed opens: 5m 21:20Z, 15m 21:00Z, 1h 20:00Z, 4h 16:00Z on 2026-11-03.",
-      "next_action": "Complete 1h backfill to 2020-09-14, then backfill 15m and 5m in bounded pages and reconcile against 4h/1h timestamps.",
-      "blocker": "Long 15m/5m archives absent; 1h historical archive currently starts 2026-02-26T20:00Z."
+      "completed_progress": "1h pages 00-05 persisted/readback-verified: 9,000 rows/symbol, 36,000 total, coverage 2025-10-24T20:00Z through 2026-11-03T19:00Z. Latest 68-row delta has 5m 12 bars/symbol, 15m 4, 1h 1, 4h 0; all checked rolling windows pass.",
+      "next_action": "Continue 1h backfill from 2025-10-24T19:59:59.999Z; once complete, backfill 15m then 5m in bounded pages and reconcile multi-timeframe timestamps.",
+      "blocker": "Long 15m/5m archives absent; 1h coverage starts 2025-10-24T20:00Z, not the 2020 target."
     },
     {
       "id": "RQ-004",
@@ -44,18 +44,18 @@
       "priority": "P2",
       "title": "Integrate generic OHLCV replay and purged walk-forward in project",
       "status": "IN_PROGRESS",
-      "completed_progress": "Pure-JS 4h EMA20 reclaim harness executed in managed V8 on prior daily cycle; 4/4 fixture tests passed and train/validation result persisted. No project Node scripts were run in this monitoring pass.",
-      "next_action": "Mount/checkout repository under Node >=24/npm >=11, port the harness, add formal purge/embargo and funding/fee-aware execution tests.",
-      "blocker": "No local worktree; runtime Node v22.16.0/npm10.9.2 below package floor; no formal purge/embargo."
+      "completed_progress": "Package metadata verified from main: Node >=24/npm >=11; local runtime is Node v22.16.0/npm 10.9.2, no local worktree, SDK import ERR_MODULE_NOT_FOUND. No project scripts or smoke test invoked this pass.",
+      "next_action": "Checkout/mount repository under Node >=24/npm >=11; install dependencies; port deterministic harness and run project typecheck/build/tests plus purge/embargo fixtures.",
+      "blocker": "Local worktree absent, runtime below package floor, no SDK dependencies installed, no direct Binance DNS."
     },
     {
       "id": "RQ-006",
       "priority": "P2",
       "title": "Compare conditional strategy families on matched folds",
       "status": "IN_PROGRESS",
-      "completed_progress": "EMA20 reclaim pullback 4h v1 remains VALIDATION_ONLY (290 train, 166 validation trades); no new experiment or OOS evaluation in this monitoring pass. All six validation CIs include zero.",
-      "next_action": "Do not repeat the same experiment. Compare Donchian20 and failed-breakout fade on identical chronological folds after generic runner, cost model and purge/embargo are ready.",
-      "blocker": "No untouched OOS evaluation; execution costs incomplete; matched-fold second-family comparison not yet run."
+      "completed_progress": "EMA20 reclaim 4h v1 remains VALIDATION_ONLY (290 train, 166 validation trades); all six validation CIs include zero. No new strategy experiment or OOS evaluation this pass.",
+      "next_action": "Do not repeat EMA20 reclaim. After generic runner and execution-cost model are ready, compare Donchian20 and failed-breakout fade on matched chronological folds.",
+      "blocker": "Untouched OOS not evaluated; realistic costs and formal purging/embargo unavailable; generic project replay not integrated."
     },
     {
       "id": "RQ-007",

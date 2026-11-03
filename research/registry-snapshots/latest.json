@@ -16,7 +16,10 @@
     "persistence_model": "append-only Git commit history on a dedicated research branch",
     "raw_market_data_embedded": false,
     "raw_ohlcv_arrays_persisted": false,
-    "hash_algorithm": "GitHub Git blob SHA-1 supplied on readback"
+    "hash_algorithm": "GitHub Git blob SHA-1 supplied on readback",
+    "readback_verification_status": "VERIFIED",
+    "readback_verified_at_utc": "2026-11-03T18:27:11.509Z",
+    "initial_snapshot_blob_sha1": "05af6932de9190fa6ef26b458f8b04cef4a1a2a1"
   },
   "run_update": {
     "classification": "RESEARCH_BLOCKED",
@@ -99,10 +102,10 @@
     },
     {
       "capability": "artifact_readback",
-      "status": "PASS_FOR_PARENT_ONLY",
-      "evidence": "v40 Library object accessible (141,356 bytes) and read in four ranges; JSON parsed. v41 GitHub readback pending.",
-      "impact": "Parent registry available; new snapshot not yet verified.",
-      "next_action": "Fetch v41 GitHub file and compare content/blob hash."
+      "status": "PASS",
+      "evidence": "GitHub fetch_file readback succeeded for research/registry-snapshots/latest.json; JSON parsed as v41; initial blob SHA-1 05af6932de9190fa6ef26b458f8b04cef4a1a2a1; 21471 content characters.",
+      "impact": "v41 registry snapshot is durably stored on the dedicated GitHub research branch; raw market data remains unpersisted.",
+      "next_action": "Next run should fetch this branch path as the registry parent and update the persistent queue."
     }
   ],
   "repository": {

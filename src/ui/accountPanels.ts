@@ -1,6 +1,6 @@
 import chalk from 'chalk';
 import stringWidth from 'string-width';
-import { config, LOOP_INTERVAL_MS } from '../config.js';
+import { config, deriveVenueProfile, LOOP_INTERVAL_MS, type VenueProfile } from '../config.js';
 import { formatPrice, formatQty } from '../binance/symbolRules.js';
 import type { AgentState, Position, WsStatus } from '../types.js';
 import { coloredPnl, dp, fmtCurrency, fmtSignedCurrency, orDash, padLine, pnlColor, rule, runningCount, signedDp, signedUsd } from './format.js';
@@ -34,11 +34,9 @@ function pnlSinceStart(p: CockpitProps): { usd: number; pct: number } | null {
 
 export function renderHeaderLines(p: CockpitProps, width: number = 128): string[] {
   const innerW = width - 2;
-  const tag = p.mode === 'paper' ? chalk.yellow.bold('◉ PAPER') : chalk.green.bold('● LIVE');
-  const venueTitle = p.venue?.name?.startsWith('CoinDCX') ? '◆ COINDCX FUTURES' : '◆ BINANCE FUTURES';
-  const left = ' ' + chalk.green.bold('⬡ NEMESIS CRYPTO AGENT') + chalk.gray(' v2.4.1 ') + tag + '  ' + chalk.cyan.bold(venueTitle);
+  const left = ' ' + chalk.green.bold('⬡ NEMESIS CRYPTO AGENT') + chalk.gray(' v2.4.1 ') + PROFILE_TAG[profileOf(p)] + '  ' + chalk.cyan.bold(venueTitle(profileOf(p), p.venue?.name));
   const timeDisplay = p.localTime && p.localTime !== `${p.time} UTC` ? `${p.time} UTC │ ${p.localTime}` : `${p.time} UTC`;
-  const right = chalk.gray(`${timeDisplay} `) + chalk.green(`●${runningCount(p.agents)} ag `) + chalk.cyan('●auto');
+  const right = chalk.gray(`${timeDisplay} `) + chalk.green(`●${runningCount(p.agents)} ag `) + chalk.cyan('●auto ') + chalk.green('●alerts');
   const midSpace = Math.max(0, innerW - stringWidth(left) - stringWidth(right));
   return [chalk.cyan('╭' + rule('─', innerW) + '╮'), chalk.cyan('│') + padLine(left + rule(' ', midSpace) + right, innerW) + chalk.cyan('│'), chalk.cyan('╰' + rule('─', innerW) + '╯')];
 }
@@ -264,6 +262,27 @@ export function renderPerfLines(p: CockpitProps, width: number = 128): string[] 
   return [chalk.yellow('╔' + rule('═', innerW) + '╗'), chalk.yellow('║') + padLine(text, innerW) + chalk.yellow('║'), chalk.yellow('╚' + rule('═', innerW) + '╝')];
 }
 
+const PROFILE_TAG: Record<VenueProfile, string> = {
+  paper: chalk.yellow.bold('◉ PAPER'),
+  paper_exchange: chalk.yellow.bold('◉ PAPER'),
+  shadow: chalk.cyan.bold('◎ SHADOW'),
+  live: chalk.green.bold('● LIVE'),
+};
+
+/** The footer's venue label already names the broker, so both paper profiles read PAPER there. */
+const PROFILE_MODE: Record<VenueProfile, string> = { paper: 'PAPER', paper_exchange: 'PAPER', shadow: 'SHADOW', live: 'LIVE' };
+
+/** The title names where orders actually go; the shadow profile never sends any, so it says so. */
+function venueTitle(profile: VenueProfile, venueName: string | undefined): string {
+  if (profile === 'paper') return '◆ INTERNAL ENGINE';
+  if (profile === 'paper_exchange') return '◆ PAPER EXCHANGE';
+  const venue = venueName?.startsWith('CoinDCX') ? 'COINDCX FUTURES' : 'BINANCE FUTURES';
+  return profile === 'shadow' ? `◆ ${venue} · MONITOR ONLY` : `◆ ${venue}`;
+}
+
+/** A 'local' venue state means no remote broker is attached, which is exactly the internal paper engine. */
+const profileOf = (p: CockpitProps): VenueProfile => deriveVenueProfile(p.mode, p.venue.state !== 'local', config.alertOnly);
+
 function venueLabel({ name, state }: CockpitProps['venue']): string {
   return chalk.gray(` │ venue ${name}`) + (state === 'local' ? '' : ' ' + VENUE_COLOR[state](`●${state}`));
 }
@@ -273,7 +292,7 @@ export function renderFooterLines(p: CockpitProps, width: number = 128): string[
   const spinner = p.isSyncing ? chalk.yellow('⠋') : chalk.yellow('⠴');
   const orchestrator = ` │ ${runningCount(p.agents)} agents autonomous │ eval ${LOOP_INTERVAL_MS / 1000}s │ api weight `;
   const l1 = ' ' + spinner + chalk.gray(' orchestrator' + orchestrator) + chalk.white(`${p.apiWeight}/${API_WEIGHT_LIMIT}`) + chalk.gray(' │ ws ') + WS_COLOR[p.wsStatus](`●${p.wsStatus}`)
-    + chalk.gray(' │ mode ') + chalk.yellow.bold(config.alertOnly ? `${p.mode.toUpperCase()} (ALERT-ONLY)` : p.mode.toUpperCase()) + venueLabel(p.venue);
+    + chalk.gray(' │ mode ') + chalk.yellow.bold(PROFILE_MODE[profileOf(p)]) + venueLabel(p.venue);
   const currTag = p.currencyMode ?? 'USD';
   const commands = [
     chalk.yellow.bold('Tab/m') + ' ' + chalk.gray('mtf-view'),

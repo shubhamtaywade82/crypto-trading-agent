@@ -65,7 +65,7 @@ if (existsSync(remoteStatePath)) {
 }
 
 const checks: Check[] = evaluateConfig({
-  mode: config.mode, riskEngine: config.riskEngine, alerts: config.alerts,
+  mode: config.mode, riskEngine: config.riskEngine,
   riskPerTradePct: config.risk.riskPerTradePct, maxLeverage: config.risk.maxLeverage,
   maxDailyLossPct: config.risk.maxDailyLossPct, maxDrawdownPct: config.risk.maxDrawdownPct,
   killSwitchHalted: new KillSwitch().state().halted, unprotected,

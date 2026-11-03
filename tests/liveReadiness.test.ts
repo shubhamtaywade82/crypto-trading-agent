@@ -80,14 +80,13 @@ test('a strategy is approvable only when evidence AND forward both pass', () => 
 });
 
 const facts = (over: Partial<ConfigFacts> = {}): ConfigFacts => ({
-  mode: 'paper', riskEngine: 'on', alerts: 'on', riskPerTradePct: 1, maxLeverage: 5, maxDailyLossPct: 3, maxDrawdownPct: 10,
+  mode: 'paper', riskEngine: 'on', riskPerTradePct: 1, maxLeverage: 5, maxDailyLossPct: 3, maxDrawdownPct: 10,
   killSwitchHalted: false, unprotected: [], ...over,
 });
 
 test('a conservative configuration is ready; each unsafe setting is called out', () => {
   assert.equal(isReady(evaluateConfig(facts())), true);
   assert.equal(isReady(evaluateConfig(facts({ riskEngine: 'off' }))), false);
-  assert.equal(isReady(evaluateConfig(facts({ alerts: 'off' }))), false);
   assert.equal(isReady(evaluateConfig(facts({ maxLeverage: 20 }))), false);
   assert.equal(isReady(evaluateConfig(facts({ maxDailyLossPct: 0 }))), false); // 0 means no limit
   assert.equal(isReady(evaluateConfig(facts({ maxDrawdownPct: 40 }))), false);
@@ -102,11 +101,10 @@ test('values between the pass and fail limits warn without blocking', () => {
   assert.equal(evaluateConfig(facts({ killSwitchHalted: true })).find((c) => c.id === 'kill-switch')!.status, 'WARN');
 });
 
-test('live start is blocked without the risk engine or alerts; paper never is', () => {
-  assert.deepEqual(liveStartBlockers({ mode: 'paper', riskEngine: 'on', alerts: 'off' }), []);
-  assert.equal(liveStartBlockers({ mode: 'live', riskEngine: 'on', alerts: 'on' }).length, 0);
-  assert.equal(liveStartBlockers({ mode: 'live', riskEngine: 'off', alerts: 'on' }).length, 1);
-  assert.equal(liveStartBlockers({ mode: 'live', riskEngine: 'off', alerts: 'off' }).length, 2);
+test('live start is blocked without the risk engine; paper never is', () => {
+  assert.deepEqual(liveStartBlockers({ mode: 'paper', riskEngine: 'off' }), []);
+  assert.equal(liveStartBlockers({ mode: 'live', riskEngine: 'on' }).length, 0);
+  assert.equal(liveStartBlockers({ mode: 'live', riskEngine: 'off' }).length, 1);
   assert.ok(DEFAULT_POLICY.evidence.minTrades >= 100);
 });
 

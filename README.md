@@ -243,6 +243,21 @@ cat data/decisions.jsonl | jq 'select(.outcome != null) | {score: .evidence.scor
 
 ---
 
+## Venue profiles
+
+One derived value (`deriveVenueProfile`) names where orders go; the TUI header and footer both read it, so they cannot disagree.
+
+| Profile | Set by | Orders go to |
+| --- | --- | --- |
+| `paper` | `MODE=paper`, no remote broker | internal paper engine |
+| `paper_exchange` | `MODE=paper` + `PAPER_EXCHANGE_URL` + `PAPER_EXCHANGE_ACCOUNT_ID` (the remote broker is attached) | Rails paper broker, that account |
+| `shadow` | `MODE=live`, `ALERT_ONLY=on` (the default) | nowhere: signals and alerts only |
+| `live` | `MODE=live`, `ALERT_ONLY=off` | the live venue (Binance; CoinDCX credentials are refused in live mode) |
+
+Alerts are always on in every profile.
+
+---
+
 ## Tev1 decision intelligence
 
 A second decision layer between the risk gate and execution: [Tev1](https://ollama.com/library/tev1)
@@ -432,7 +447,7 @@ was fixed.
 | `SETUP_MIN_REWARD_RISK` | `1.5` | Gross reward:risk a Telegram setup scenario must offer to be built at all (was a hard-coded 1.25); the quality gate then re-checks it after costs |
 | `SETUP_ALERT_HIDE_NO_TRADE` | `on` | Leave scenarios the quality gate rejected (`NO_TRADE`, e.g. a long entered in premium or cost-adjusted RR < 1.0) out of setup cards; they still reach `data/setup-outcomes.jsonl` |
 | `CROWDING_MIN_REWARD_RISK` | `1.5` | CROWDING-ι targets the nearest untaken liquidity pool paying at least this multiple of its stop (≥ 1.2 ATR); with none, no signal. Replaced the range-midpoint target, whose reward collapsed as price drifted toward it (RR 1.17 → 0.89 → 0.42) |
-| `AUDIT` / `ALERTS` | `off` | Audit trail and Telegram alerts, see [Ops](#ops-audit-trail-telegram-alerts-kill-switch) |
+| `AUDIT` | `on` | Audit trail, see [Ops](#ops-audit-trail-telegram-alerts-kill-switch). Telegram alerts are always on and have no switch |
 | `PAPER_EXCHANGE_URL` | (unset) | When set in `paper` mode, routes through the remote Rails broker (`http://127.0.0.1:3100`) |
 | `PAPER_EXCHANGE_ACCOUNT_ID` | (none) | Account for the remote broker; **required** when `PAPER_EXCHANGE_URL` is set in `paper` mode (startup fails without it); `.env.example` suggests `crypto-agent` |
 
@@ -489,14 +504,13 @@ PASS/FAIL/SKIPPED line per scenario with the agent and exchange numbers it compa
 
 Both are on by default and isolated from trading: an audit, alert or Telegram failure is swallowed before it
 reaches the loop, and sends are fire-and-forget, so trading never waits on Telegram. With a flag turned off its
-hook does nothing: no file is written, no request is made, no timer is started. `ALERTS=on` still needs
+hook does nothing: no file is written, no request is made, no timer is started. Alerts are always on (there is no `ALERTS` switch) but still need
 `TELEGRAM_CHAT_ID` and a bot token below before it can actually send anything — until those are set it has nothing
 to send to.
 
 | Variable | Default | Purpose |
 | --- | --- | --- |
 | `AUDIT` | `on` | `off` stops appending a JSON line per decision step to `EVENTS_PATH` |
-| `ALERTS` | `on` | `off` stops sending Telegram cards (and the daily digest timer) |
 | `EVENTS_PATH` | `data/events.jsonl` | Audit trail; rotated to `<file>.1` at 5 MB |
 | `NOTIFICATIONS_PATH` | `data/notifications.json` | Optional subscription JSON (missing or invalid means every class on) |
 | `TELEGRAM_CHAT_ID` | (unset) | Destination chat, required to send |
@@ -506,9 +520,9 @@ to send to.
 | `TELEGRAM_DRY_RUN` | (unset) | `1` writes each card to the cockpit log (`[telegram dry-run] ...`) instead of sending; works without tokens |
 
 **Enable it:** both are already on; add `TELEGRAM_CHAT_ID` plus a bot token (`TELEGRAM_BOT_TOKEN`, or the two
-per-channel tokens) to `.env` to let `ALERTS` actually send. Try it first with `TELEGRAM_DRY_RUN=1`. Tokens are
-never logged. The audit trail and the alerts are independent of the risk gate. Set `AUDIT=off` / `ALERTS=off` to
-disable either.
+per-channel tokens) to `.env` to let the alerts actually send. Try it first with `TELEGRAM_DRY_RUN=1`. Tokens are
+never logged. The audit trail and the alerts are independent of the risk gate. Set `AUDIT=off` to
+disable the audit trail; alerts cannot be disabled.
 
 **Audit trail.** Each signal keeps one `decisionId` (the signal's `id`) from `signal` through `gate`, `veto`,
 `order`, `exit` and `journal`; refusals are `refusal` events with the same id. System events (`venue`, `circuit`,
@@ -826,7 +840,7 @@ of equity raise a CRITICAL system alert, since a strategy cannot enforce a stop 
 ## Live gate
 
 `MODE=live` trades only strategies listed in `data/strategy-approvals.json` (`APPROVALS_PATH`); with no file, nothing trades, and the
-process refuses to start live without `ALERTS=on`. Approvals come from measured evidence, never by hand:
+process refuses to start live without the risk engine. Approvals come from measured evidence, never by hand:
 
 ```bash
 npx tsx scripts/live-readiness.ts                      # checklist: evidence, forward paper, setup safety; exit 1 if not ready

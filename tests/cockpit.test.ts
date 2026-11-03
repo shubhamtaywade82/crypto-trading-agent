@@ -133,6 +133,13 @@ test('should render real log rows and leave the rest blank', () => {
 const REMOTE_NAME = 'paper_exchange (crypto-agent)';
 const at = (venue: CockpitProps['venue'], mode: CockpitProps['mode'] = 'paper') => render(baseProps({ venue, mode }));
 
+test('should name the venue in the header from the profile and always show alerts on', () => {
+  const remote = at({ name: REMOTE_NAME, state: 'connected' });
+  assert.ok(remote.includes('◆ PAPER EXCHANGE') && !remote.includes('BINANCE FUTURES'));
+  assert.ok(at({ name: 'local paper engine', state: 'local' }).includes('◆ INTERNAL ENGINE'));
+  assert.ok(remote.includes('●alerts'));
+});
+
 test('should show websocket, evaluation interval and venue in the footer, and mark the equity stale whenever the venue is degraded or down', () => {
   const text = render(realisticProps());
   assert.ok(text.includes('ws ●connected') && text.includes('eval 8s'));

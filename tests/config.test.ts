@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { EnvSchema } from '../src/config.js';
+import { deriveVenueProfile, EnvSchema } from '../src/config.js';
 
 const URL = 'http://127.0.0.1:3100';
 
@@ -24,12 +24,12 @@ test('should not need an account id for local paper or live mode', () => {
 
 test('should default the ops flags on and the ops files under data/', () => {
   const env = EnvSchema.parse({});
-  assert.deepEqual([env.AUDIT, env.ALERTS, env.EVENTS_PATH, env.NOTIFICATIONS_PATH], ['on', 'on', 'data/events.jsonl', 'data/notifications.json']);
+  assert.deepEqual([env.AUDIT, env.EVENTS_PATH, env.NOTIFICATIONS_PATH], ['on', 'data/events.jsonl', 'data/notifications.json']);
 });
 
 test('should accept on/off ops flags, reject anything else, and treat a blank path as unset', () => {
-  assert.deepEqual([EnvSchema.parse({ AUDIT: 'on', ALERTS: 'on', EVENTS_PATH: ' /tmp/e.jsonl ' }).AUDIT, EnvSchema.parse({ EVENTS_PATH: ' /tmp/e.jsonl ' }).EVENTS_PATH], ['on', '/tmp/e.jsonl']);
-  assert.ok(!EnvSchema.safeParse({ ALERTS: 'yes' }).success);
+  assert.deepEqual([EnvSchema.parse({ AUDIT: 'on', EVENTS_PATH: ' /tmp/e.jsonl ' }).AUDIT, EnvSchema.parse({ EVENTS_PATH: ' /tmp/e.jsonl ' }).EVENTS_PATH], ['on', '/tmp/e.jsonl']);
+  assert.ok(!EnvSchema.safeParse({ AUDIT: 'yes' }).success);
   assert.equal(EnvSchema.parse({ NOTIFICATIONS_PATH: '  ' }).NOTIFICATIONS_PATH, 'data/notifications.json');
 });
 
@@ -51,4 +51,11 @@ test('struct-liq sweep age must be a positive integer; reward-risk floor must be
   assert.ok(!EnvSchema.safeParse({ STRUCT_LIQ_MIN_REWARD_RISK: '-1' }).success);
   // RR 0 is allowed: it disables the reward-risk floor entirely (diagnostic setting)
   assert.ok(EnvSchema.safeParse({ STRUCT_LIQ_MIN_REWARD_RISK: '0' }).success);
+});
+
+test('should derive one venue profile from mode, remote broker and alert-only', () => {
+  assert.equal(deriveVenueProfile('paper', false, false), 'paper');
+  assert.equal(deriveVenueProfile('paper', true, false), 'paper_exchange');
+  assert.equal(deriveVenueProfile('live', false, true), 'shadow');
+  assert.equal(deriveVenueProfile('live', false, false), 'live');
 });

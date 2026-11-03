@@ -115,7 +115,6 @@ export const EnvSchema = z.object({
   MARKET_DATA_DERIVATIVES_PERIOD: z.enum(['5m', '15m', '30m', '1h', '2h', '4h', '6h', '12h', '1d']).default('1h'),
 
   AUDIT: z.enum(['off', 'on']).default('on'),
-  ALERTS: z.enum(['off', 'on']).default('on'),
   ADAPTIVE_ST_REQUIRE_ANCHOR: z.enum(['off', 'on']).default('off'),
   STRUCT_LIQ: z.enum(['off', 'on']).default('on'),
   STRUCT_LIQ_MAX_SWEEP_AGE_CANDLES: z.coerce.number().int().min(1).default(6),
@@ -229,6 +228,16 @@ export function riskFromEnv(env: Env) {
 
 const env = EnvSchema.parse(process.env);
 
+/**
+ * The one answer to "where do orders go": every panel, readiness check and the HTML monitor derive from this.
+ * paper = internal engine, paper_exchange = Rails broker, shadow = live data with alerts only (no orders), live = real execution.
+ */
+export type VenueProfile = 'paper' | 'paper_exchange' | 'shadow' | 'live';
+export function deriveVenueProfile(mode: Mode, hasRemoteBroker: boolean, alertOnly: boolean): VenueProfile {
+  if (mode === 'live') return alertOnly ? 'shadow' : 'live';
+  return hasRemoteBroker ? 'paper_exchange' : 'paper';
+}
+
 export const config = {
   mode: env.MODE as Mode,
   binance: { apiKey: env.BINANCE_API_KEY, apiSecret: env.BINANCE_API_SECRET, testnet: env.BINANCE_TESTNET === 'on' },
@@ -307,7 +316,6 @@ export const config = {
     basisEnabled: true,
   },
   audit: env.AUDIT,
-  alerts: env.ALERTS,
   adaptiveSuperTrend: {
     requireAnchor: env.ADAPTIVE_ST_REQUIRE_ANCHOR === 'on',
   },

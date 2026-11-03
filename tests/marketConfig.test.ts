@@ -28,7 +28,6 @@ test('should keep ops flags on by default and expose tuning defaults', () => {
   assert.equal(env.MARKET_DATA_MAX_CONCURRENCY, 4);
   assert.equal(env.MARKET_DATA_KLINE_LIMIT, 300);
   assert.equal(env.AUDIT, 'on');
-  assert.equal(env.ALERTS, 'on');
 });
 
 test('should accept market-data tuning values and reject invalid values', () => {

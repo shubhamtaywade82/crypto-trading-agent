@@ -306,6 +306,7 @@ header {
 .log-type.ledger { color: var(--purple); border-color: var(--purple-dim); background: var(--purple-bg); }
 .log-type.risk { color: var(--orange); border-color: rgba(251,146,60,0.4); background: var(--orange-bg); }
 .log-type.mark { color: var(--cyan); border-color: rgba(34,211,238,0.4); background: var(--cyan-bg); }
+.log-type.decision { color: var(--purple); border-color: var(--purple-dim); background: var(--purple-bg); }
 .log-type.tick { color: var(--text-faint); }
 .log-type.liq { color: var(--red); border-color: var(--red-dim); background: var(--red-bg); }
 .log-msg { color: var(--text-dim); font-size: 10.5px; line-height: 1.45; min-width: 0; word-break: break-word; }
@@ -330,6 +331,7 @@ footer .legend { display: flex; gap: 12px; flex-wrap: wrap; }
 .avatar { flex: none; width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; font: 700 15px var(--font-mono); color: var(--blue); background: var(--blue-bg); border: 1px solid var(--blue-dim); position: relative; }
 .agent-card[data-cmp="risk-manager"] .avatar { color: var(--orange); background: var(--orange-bg); border-color: rgba(251,146,60,.5); }
 .agent-card[data-cmp="order-router"] .avatar { color: var(--cyan); background: var(--cyan-bg); border-color: rgba(34,211,238,.5); }
+.agent-card[data-cmp="decision-model"] .avatar { color: var(--purple); background: var(--purple-bg); border-color: var(--purple-dim); }
 .avatar::after { content: ''; position: absolute; inset: -5px; border-radius: 50%; border: 2px solid transparent; }
 .agent-card.on .avatar::after { border-color: var(--yellow); animation: ring 1.2s ease-out infinite; }
 @keyframes ring { from { opacity: .9; transform: scale(.85); } to { opacity: 0; transform: scale(1.25); } }
@@ -447,6 +449,7 @@ footer .legend { display: flex; gap: 12px; flex-wrap: wrap; }
     <div class="stage" data-cmps="binance-ws"><i></i>Observe</div>
     <div class="stage" data-cmps="signal-engine"><i></i>Signal</div>
     <div class="stage" data-cmps="risk-manager,risk-validator"><i></i>Risk gate</div>
+    <div class="stage" data-cmps="decision-model"><i></i>Decision</div>
     <div class="stage" data-cmps="order-router,orders-api"><i></i>Order</div>
     <div class="stage" data-cmps="matching-engine"><i></i>Fill</div>
     <div class="stage" data-cmps="margin-ledger,position-manager"><i></i>Ledger</div>
@@ -457,7 +460,8 @@ footer .legend { display: flex; gap: 12px; flex-wrap: wrap; }
 <div class="controls-panel">
   <div class="cp-group">
     <span class="cp-label">Mode</span>
-    <button class="cp-btn active live" id="modeLiveBtn" title="Real Binance WebSocket trades + real Rails API on port 3100">🟢 LIVE STREAM</button>
+    <button class="cp-btn active live" id="modeLiveBtn" title="Real Binance ticks. The page's own agents trade the sandbox account on the Rails paper exchange">🟢 Sandbox</button>
+    <button class="cp-btn" id="modeMirrorBtn" title="Read-only view of the trading agent's own paper_exchange account: same account as the TUI">🪞 Agent mirror</button>
     <button class="cp-btn" id="modeSimBtn" title="Offline stress testing with synthetic regimes">🧪 Stress Test</button>
   </div>
   <div class="cp-group" id="regimeGroup" style="display:none;">
@@ -478,6 +482,7 @@ footer .legend { display: flex; gap: 12px; flex-wrap: wrap; }
     <span class="cp-label">Agents</span>
     <button class="cp-btn active" id="momToggle">MOMENTUM-γ</button>
     <button class="cp-btn active" id="executorToggle">EXECUTOR-ε</button>
+    <button class="cp-btn active" id="tev1Toggle" title="Tev1 decision model gate: shadow (log only) → on (blocks) → off">TEV1-ζ · shadow</button>
   </div>
   <div class="cp-group">
     <span class="cp-label">Live Action</span>
@@ -495,7 +500,7 @@ footer .legend { display: flex; gap: 12px; flex-wrap: wrap; }
   <div class="price-tick" id="priceSol"><span class="sym">SOL</span><span class="px">$130.00</span><span class="chg up">+0.00%</span></div>
   <div class="price-tick" id="priceXrp"><span class="sym">XRP</span><span class="px">$1.5000</span><span class="chg up">+0.00%</span></div>
   <div style="flex:1"></div>
-  <div class="balance-pill"><span class="lbl">X-Account</span><span class="amt">test-account-1</span></div>
+  <div class="balance-pill" id="profilePill"><span class="lbl">Profile</span><span class="amt" id="profileText">paper_exchange · test-account-1 · sandbox</span></div>
   <div class="balance-pill"><span class="lbl">Equity</span><span class="amt" id="balEquity">$100,000.00</span></div>
   <div class="balance-pill"><span class="lbl">Avail</span><span class="amt" id="balAvail">$100,000.00</span></div>
   <div class="balance-pill"><span class="lbl">Locked</span><span class="amt" id="balLocked">$0.00</span></div>
@@ -611,6 +616,16 @@ footer .legend { display: flex; gap: 12px; flex-wrap: wrap; }
     </div>
   </article>
   <div class="handoff" aria-hidden="true"><i></i></div>
+  <article class="agent-card" data-cmp="decision-model" data-toggle="tev1Toggle" data-types="decision">
+    <div class="avatar"><span>T</span></div>
+    <div class="agent-body">
+      <div class="agent-top"><b>TEV1-ζ</b><span class="agent-state"></span></div>
+      <div class="agent-role">Classifies entries · tev1:0.8b decision model, never sizes or prices</div>
+      <div class="agent-now"></div>
+      <div class="agent-last"><span class="n">0</span> decisions · last: <span class="msg">none yet</span></div>
+    </div>
+  </article>
+  <div class="handoff" aria-hidden="true"><i></i></div>
   <article class="agent-card" data-cmp="order-router" data-toggle="executorToggle" data-types="order,position">
     <div class="avatar"><span>E</span></div>
     <div class="agent-body">
@@ -653,6 +668,13 @@ footer .legend { display: flex; gap: 12px; flex-wrap: wrap; }
           <span class="component-state" id="cmp-risk-manager">watching</span>
         </div>
         <div class="component-detail" id="detail-risk-manager">maxExposure 80% · riskPerTrade 1% · lev 5-10× · liqBuffer ≥ 2.0 ATR</div>
+      </div>
+      <div class="component" data-cmp="decision-model">
+        <div class="component-row">
+          <span class="component-name">TEV1-ζ <span class="ep">POST /v1/systemone · tev1:0.8b</span></span>
+          <span class="component-state" id="cmp-decision-model">shadow</span>
+        </div>
+        <div class="component-detail" id="detail-decision-model">— awaiting risk-approved entry</div>
       </div>
       <div class="component" data-cmp="order-router">
         <div class="component-row">
@@ -879,6 +901,7 @@ const S = {
   chartViewMode: 'text',
   running: true,
   liveApi: true,
+  readOnly: false,
   binanceConnected: false,
   speed: 1,
   tickCount: 0,
@@ -1305,6 +1328,9 @@ async function syncWithBroker() {
     askForApiKey().then(ok => { if (ok) syncWithBroker(); });
     return;
   }
+  // A response for the account we just left must never overwrite the one on screen.
+  const account = CFG.liveAccountId;
+  const isStale = () => account !== CFG.liveAccountId;
   try {
     const [accRes, posRes, ledRes] = await Promise.all([
       fetch(`${CFG.apiBaseUrl}/account`, { headers: { 'X-Account-Id': CFG.liveAccountId, 'X-API-Key': CFG.apiKey } }),
@@ -1312,6 +1338,7 @@ async function syncWithBroker() {
       fetch(`${CFG.apiBaseUrl}/ledger`, { headers: { 'X-Account-Id': CFG.liveAccountId, 'X-API-Key': CFG.apiKey } })
     ]);
 
+    if (isStale()) return;
     if (!accRes.ok && (accRes.status === 401 || accRes.status === 403)) {
       setComponentState('margin-ledger', 'auth failed', 'err');
       askForApiKey(true).then(ok => { if (ok) syncWithBroker(); });
@@ -1320,6 +1347,7 @@ async function syncWithBroker() {
 
     if (accRes.ok) {
       const acc = await accRes.json();
+      if (isStale()) return;
       S.account.available_balance = parseFloat(acc.wallet?.available ?? acc.available_balance);
       S.account.locked_margin = parseFloat(acc.wallet?.locked ?? acc.locked_margin ?? 0);
       S.account.current_equity = parseFloat(acc.equity ?? acc.available_balance);
@@ -1332,6 +1360,7 @@ async function syncWithBroker() {
 
     if (posRes.ok) {
       const posData = await posRes.json();
+      if (isStale()) return;
       const list = Array.isArray(posData) ? posData : (posData.positions || []);
       S.positions = {};
       list.forEach(p => {
@@ -1378,6 +1407,7 @@ async function syncWithBroker() {
 
     if (ledRes.ok) {
       const ledPayload = await ledRes.json();
+      if (isStale()) return;
       // v1 wraps rows in {data:[...]}; older builds returned a bare array.
       const entries = Array.isArray(ledPayload) ? ledPayload : (Array.isArray(ledPayload?.data) ? ledPayload.data : []);
       if (entries.length) {
@@ -1462,7 +1492,7 @@ function handleIncomingTrade(sym, price) {
 }
 
 async function dispatchLiveOrder(symbol, side, qty, price, leverage, clientOrderId) {
-  if (!S.liveApi) return;
+  if (!S.liveApi || S.readOnly) return;
   try {
     const res = await fetch(`${CFG.apiBaseUrl}/orders`, {
       method: 'POST',
@@ -1758,7 +1788,7 @@ function pushMarkPrices() {
   // broker checks liquidation
   brokerLiquidationCheck(symbol);
 
-  if (S.liveApi) {
+  if (S.liveApi && !S.readOnly) {
     fetch(`${CFG.apiBaseUrl}/mark-prices`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-Account-Id': CFG.liveAccountId, 'X-API-Key': CFG.apiKey },
@@ -1789,8 +1819,8 @@ function runSignalCycle(sym) {
     : `<span class="err">REJECT</span> · ${risk.reason}`);
   log('agent', 'risk', `<span class="warn">${Agents.RISK_MGR.id}</span> · ${risk.approved?'<span class="ok">APPROVED</span>':'<span class="err">REJECT</span>'} · ${risk.reason}`);
   if (risk.approved) {
-    // EXECUTOR-ε routes the order
-    submitOrder(signal, risk);
+    // TEV1-ζ sits between the risk gate and EXECUTOR-ε
+    tev1Gate(signal, risk);
   }
 }
 
@@ -2330,6 +2360,7 @@ document.getElementById('stepBtn').addEventListener('click', () => {
 });
 
 document.getElementById('resetBtn').addEventListener('click', async () => {
+  if (S.readOnly) return;
   if (S.liveApi) {
     if (!ensureApiKey()) {
       askForApiKey(true).then(ok => { if (ok) document.getElementById('resetBtn').click(); });
@@ -2457,7 +2488,7 @@ document.getElementById('forceLong').addEventListener('click', () => {
     confidence: 0.7, reason: 'manual force long',
   };
   const risk = Agents.RISK_MGR.gate(signal);
-  if (risk.approved) submitOrder(signal, risk);
+  if (risk.approved) tev1Gate(signal, risk);
   else log('agent', 'risk', `<span class="err">Manual long REJECTED</span> · ${risk.reason}`);
 });
 
@@ -2472,7 +2503,7 @@ document.getElementById('forceShort').addEventListener('click', () => {
     confidence: 0.7, reason: 'manual force short',
   };
   const risk = Agents.RISK_MGR.gate(signal);
-  if (risk.approved) submitOrder(signal, risk);
+  if (risk.approved) tev1Gate(signal, risk);
   else log('agent', 'risk', `<span class="err">Manual short REJECTED</span> · ${risk.reason}`);
 });
 
@@ -2493,23 +2524,41 @@ document.getElementById('keyBtn').addEventListener('click', () => {
   askForApiKey(true).then(ok => { if (ok) syncWithBroker(); });
 });
 
-document.getElementById('modeLiveBtn').addEventListener('click', () => {
-  S.mode = 'live';
-  S.liveApi = true;
-  document.getElementById('modeLiveBtn').classList.add('active');
-  document.getElementById('modeSimBtn').classList.remove('active');
-  document.getElementById('regimeGroup').style.display = 'none';
-  connectBinanceWs();
-  syncWithBroker();
-  log('system', 'state', 'Switched to 🟢 LIVE STREAM: Real Binance WS + Rails 3100');
-});
+// One place decides what the page is: account, whether it may write, and the label every pill shows.
+const AGENT_ACCOUNT = 'crypto-agent'; // must equal the trading agent's PAPER_EXCHANGE_ACCOUNT_ID
+const WRITE_CONTROLS = ['forceLong', 'forceShort', 'forceClose', 'resetBtn', 'momToggle', 'executorToggle', 'tev1Toggle'];
+let mirrorTimer = null;
 
+function setPageMode(mode) {
+  const isMirror = mode === 'mirror';
+  S.mode = mode === 'sim' ? 'sim' : 'live';
+  S.readOnly = isMirror;
+  CFG.liveAccountId = isMirror ? AGENT_ACCOUNT : 'test-account-1';
+  S.agentsEnabled.MOMENTUM = S.agentsEnabled.EXECUTOR = !isMirror;
+  S.positions = {}; S.brackets = {}; S.ledgerEntries = [];
+  WRITE_CONTROLS.forEach(id => { document.getElementById(id).disabled = isMirror; });
+  ['momToggle', 'executorToggle'].forEach(id => document.getElementById(id).classList.toggle('active', !isMirror));
+  [['modeLiveBtn', 'live'], ['modeMirrorBtn', 'mirror'], ['modeSimBtn', 'sim']].forEach(([id, m]) => document.getElementById(id).classList.toggle('active', m === mode));
+  document.getElementById('regimeGroup').style.display = mode === 'sim' ? '' : 'none';
+  document.getElementById('profileText').textContent = mode === 'sim'
+    ? 'offline stress test · no venue'
+    : `paper_exchange · ${CFG.liveAccountId} · ${isMirror ? 'read-only mirror' : 'sandbox'}`;
+  clearInterval(mirrorTimer);
+  if (isMirror) mirrorTimer = setInterval(syncWithBroker, 5000);
+  if (mode !== 'sim') { connectBinanceWs(); syncWithBroker(); }
+}
+
+document.getElementById('modeLiveBtn').addEventListener('click', () => {
+  setPageMode('live');
+  log('system', 'state', 'Sandbox: real Binance ticks, this page\'s agents trade account test-account-1 on the Rails paper exchange');
+});
+document.getElementById('modeMirrorBtn').addEventListener('click', () => {
+  setPageMode('mirror');
+  log('system', 'state', `Agent mirror: read-only view of ${AGENT_ACCOUNT} on the Rails paper exchange, the account the TUI trades. Orders, marks and resets are disabled`);
+});
 document.getElementById('modeSimBtn').addEventListener('click', () => {
-  S.mode = 'sim';
-  document.getElementById('modeSimBtn').classList.add('active');
-  document.getElementById('modeLiveBtn').classList.remove('active');
-  document.getElementById('regimeGroup').style.display = '';
-  log('system', 'state', 'Switched to 🧪 Stress Test mode (synthetic market regimes)');
+  setPageMode('sim');
+  log('system', 'state', 'Stress Test: synthetic market regimes, offline');
 });
 
 document.querySelectorAll('.log-filter').forEach(btn => {
@@ -2573,6 +2622,112 @@ syncWithBroker();
 setInterval(syncWithBroker, 2500);
 
 requestAnimationFrame(loop);
+
+// ============================================================
+// TEV1-ζ — decision model gate (Ollama POST /v1/systemone)
+// Questions mirror src/decision-intelligence/questions/questionRegistry.ts v1.0.0.
+// It classifies a risk-approved entry; it never prices, sizes or executes.
+// ============================================================
+const TEV1 = {
+  mode: 'shadow', model: 'tev1:0.8b', host: 'http://127.0.0.1:11434',
+  timeoutMs: 20000, minConfidence: 0.6,
+  choices: ['APPROVE', 'WAIT', 'NO_TRADE', 'INSUFFICIENT_DATA'],
+};
+const TEV1_EVIDENCE_RULES = 'Use only the evidence supplied in the state. Do not invent missing information, do not estimate prices, and do not forecast whether the trade will be profitable. If the evidence needed to answer is missing, stale or contradictory, answer INSUFFICIENT_DATA.';
+
+function tev1Questions(side) {
+  return {
+    trade_decision: { type: 'choice', instructions: `Evaluate the supplied ${side} candidate strictly against the strategy criteria. ${TEV1_EVIDENCE_RULES}`, criteria: {
+      APPROVE: 'The supplied evidence satisfies the strategy: trend and structure agree with the candidate side, the entry location supports it, the supplied risk/reward meets the strategy floor, the evidence score supports participation, and no required fact is missing.',
+      WAIT: 'The setup is developing but at least one important confirmation is still missing, or the evidence is mixed rather than contradictory.',
+      NO_TRADE: 'The supplied evidence conflicts with the candidate, or a mandatory setup condition fails.',
+      INSUFFICIENT_DATA: 'The information required to evaluate the candidate is unavailable, stale or contradictory.' } },
+    primary_weakness: { type: 'choice', instructions: `Identify the most important weakness in the supplied candidate using only the supplied facts. ${TEV1_EVIDENCE_RULES}`, criteria: {
+      NONE: 'No material setup weakness is evident from the supplied facts.',
+      TREND_CONFLICT: 'The trend direction conflicts with the candidate.',
+      LIQUIDITY_FAILURE: 'The liquidity facts around the entry are not sufficiently established.',
+      NO_DISPLACEMENT: 'Directional displacement or momentum behind the setup is missing.',
+      ORDER_FLOW_CONFLICT: 'The supplied order-flow facts contradict the candidate direction.',
+      POOR_RISK_REWARD: 'The supplied risk/reward does not meet the strategy requirement.',
+      INSUFFICIENT_DATA: 'There is not enough evidence to identify the weakness.' } },
+    mtf_alignment: { type: 'noul', instructions: 'Do the supplied trend facts support the candidate direction? Answer true only if the supplied facts support it; missing evidence is not support.' },
+  };
+}
+
+// The page only has tick-derived facts, so higher-timeframe, funding and order-flow data are declared missing, never guessed.
+function tev1Snapshot(signal) {
+  const ind = S.indicators[signal.symbol] || {};
+  const risk = Math.abs(signal.entry - signal.stopLoss), reward = Math.abs(signal.takeProfit - signal.entry);
+  return {
+    symbol: signal.symbol, venue: 'BINANCE_USDM', decisionTimeframe: 'tick', asOf: now(),
+    market: { regime: S.regime, trendDirection: ind.trend || 'unknown', mark: S.prices[signal.symbol] },
+    indicators: { ema50: ind.ema ?? null, priceAboveEma50: ind.above ?? null, rsi14: ind.rsi ?? null, atr14: ind.atr ?? null, bollingerLower: ind.bbLower ?? null, bollingerUpper: ind.bbUpper ?? null },
+    setup: { type: signal.type, side: signal.side === 'long' ? 'LONG' : 'SHORT', strategy: signal.agent, entry: signal.entry, stopLoss: signal.stopLoss, takeProfit: signal.takeProfit, riskReward: risk > 0 ? +(reward / risk).toFixed(2) : null, evidenceScore: signal.confidence ?? null, evidenceReasons: [signal.reason] },
+    dataQuality: { marketStatePresent: !!ind.ema, stale: false, closedCandlesOnly: false, missingFeatures: ['higherTimeframes', 'orderFlow', 'fundingRate', 'positioning'] },
+  };
+}
+
+async function tev1Call(signal) {
+  const ctl = new AbortController();
+  const timer = setTimeout(() => ctl.abort(), TEV1.timeoutMs);
+  try {
+    const res = await fetch(`${TEV1.host}/v1/systemone`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: ctl.signal,
+      body: JSON.stringify({ model: TEV1.model, state: tev1Snapshot(signal), questions: tev1Questions(signal.side === 'long' ? 'LONG' : 'SHORT'), keep_alive: '10m' }),
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return (await res.json()).answers;
+  } catch (err) {
+    throw new Error(err.name === 'AbortError' ? `timeout after ${TEV1.timeoutMs}ms` : err.message);
+  } finally { clearTimeout(timer); }
+}
+
+/** Returns {pass, text}; never throws. A malformed or failed response is INSUFFICIENT_DATA, which blocks in 'on' mode. */
+async function tev1Evaluate(signal) {
+  const started = performance.now();
+  highlightComponents(['decision-model']);
+  setComponentState('decision-model', 'evaluating', 'warn');
+  setComponentDetail('decision-model', `<span class="k">${TEV1.model}</span> · judging <span class="sym">${signal.symbol}</span> ${signal.side.toUpperCase()}…`);
+  try {
+    const a = await tev1Call(signal);
+    const td = a.trade_decision, pw = a.primary_weakness, mtf = a.mtf_alignment;
+    if (!td || !TEV1.choices.includes(td.choice)) throw new Error('malformed trade_decision answer');
+    const ms = Math.round(performance.now() - started);
+    const pass = td.choice === 'APPROVE' && td.confidence >= TEV1.minConfidence;
+    const cls = pass ? 'ok' : td.choice === 'WAIT' ? 'warn' : 'err';
+    const detail = `<span class="${cls}">${td.choice}</span> ${(td.confidence * 100).toFixed(0)}% · weakness <span class="v">${pw?.choice ?? '—'}</span> · mtf <span class="num">${mtf ? (mtf.noul * 100).toFixed(0) + '%' : '—'}</span> · ${ms}ms`;
+    setComponentState('decision-model', pass ? 'pass' : 'block', pass ? 'live' : 'err');
+    setComponentDetail('decision-model', detail);
+    return { pass, detail };
+  } catch (err) {
+    const detail = `<span class="err">INSUFFICIENT_DATA</span> · ${err.message}`;
+    setComponentState('decision-model', 'error', 'err');
+    setComponentDetail('decision-model', detail);
+    return { pass: false, detail };
+  }
+}
+
+async function tev1Gate(signal, risk) {
+  if (TEV1.mode === 'off') return submitOrder(signal, risk);
+  const verdict = tev1Evaluate(signal);
+  if (TEV1.mode === 'shadow') {
+    submitOrder(signal, risk);
+    const v = await verdict;
+    log('agent', 'decision', `<span class="warn">TEV1-ζ</span> · shadow · would ${v.pass ? '<span class="ok">PASS</span>' : '<span class="err">BLOCK</span>'} · ${v.detail}`);
+    return;
+  }
+  const v = await verdict;
+  log('agent', 'decision', `<span class="warn">TEV1-ζ</span> · ${v.pass ? '<span class="ok">PASS</span> → EXECUTOR-ε' : '<span class="err">BLOCKED</span>'} · ${v.detail}`);
+  if (v.pass) submitOrder(signal, risk);
+}
+
+document.getElementById('tev1Toggle').addEventListener('click', function () {
+  const next = { shadow: 'on', on: 'off', off: 'shadow' };
+  TEV1.mode = next[TEV1.mode];
+  this.textContent = `TEV1-ζ · ${TEV1.mode}`;
+  this.classList.toggle('active', TEV1.mode !== 'off');
+  setComponentState('decision-model', TEV1.mode, TEV1.mode === 'on' ? 'live' : '');
+});
 
 // Agent pipeline rail: mirrors which component is active and the latest log line.
 (function () {

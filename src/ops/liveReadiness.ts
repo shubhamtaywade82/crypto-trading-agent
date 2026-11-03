@@ -122,7 +122,6 @@ export function approvable(evidence: readonly StrategyEvidence[], forward: reado
 export interface ConfigFacts {
   mode: 'paper' | 'live';
   riskEngine: 'on' | 'off';
-  alerts: 'on' | 'off';
   riskPerTradePct: number;
   maxLeverage: number;
   maxDailyLossPct: number;
@@ -144,7 +143,6 @@ export function evaluateConfig(f: ConfigFacts, policy: Policy = DEFAULT_POLICY):
     limit('max-leverage', 'max leverage', f.maxLeverage, policy.maxLeverage, 'x'),
     limit('daily-loss', 'daily loss limit', f.maxDailyLossPct, policy.maxDailyLossPct, '%'),
     limit('drawdown', 'drawdown limit', f.maxDrawdownPct, policy.maxDrawdownPct, '%'),
-    { area: 'OPS', id: 'alerts', status: f.alerts === 'on' ? 'PASS' : 'FAIL', detail: `ALERTS=${f.alerts}` },
     { area: 'OPS', id: 'kill-switch', status: f.killSwitchHalted ? 'WARN' : 'PASS', detail: f.killSwitchHalted ? 'kill switch is HALTED (entries refused until resumed)' : 'kill switch not halted' },
     {
       area: 'RISK', id: 'protective-stops', status: f.unprotected.length === 0 ? 'PASS' : 'FAIL',
@@ -156,10 +154,9 @@ export function evaluateConfig(f: ConfigFacts, policy: Policy = DEFAULT_POLICY):
 export const isReady = (checks: readonly Check[]): boolean => checks.every((c) => c.status !== 'FAIL');
 
 /** Conditions under which the process must not even start in live mode. */
-export function liveStartBlockers(f: Pick<ConfigFacts, 'mode' | 'riskEngine' | 'alerts'>): string[] {
+export function liveStartBlockers(f: Pick<ConfigFacts, 'mode' | 'riskEngine'>): string[] {
   if (f.mode !== 'live') return [];
   const blockers: string[] = [];
   if (f.riskEngine !== 'on') blockers.push('RISK_ENGINE must be on in live mode');
-  if (f.alerts !== 'on') blockers.push('ALERTS must be on in live mode: nobody would hear a halt, a crash or an unprotected position');
   return blockers;
 }

@@ -362,6 +362,7 @@ footer .legend { display: flex; gap: 12px; flex-wrap: wrap; }
       <button class="btn primary" id="playBtn">▶ Play</button>
       <button class="btn" id="stepBtn">⏭ Step</button>
       <button class="btn ghost" id="resetBtn">↺ Reset</button>
+      <button class="btn ghost" id="keyBtn" title="Set the Rails venue X-API-Key (stored in localStorage)">🔑 Key</button>
       <div class="divider"></div>
       <label class="cp-label">Speed</label>
       <select class="speed-select" id="speedSelect">
@@ -718,7 +719,44 @@ const CFG = {
   // Set this to your PAPER_EXCHANGE_API_KEY value for live mode.
   apiKey: '',
   wsUrl: 'wss://fstream.binance.com/ws/btcusdt@trade/ethusdt@trade/solusdt@trade/xrpusdt@trade',
+  resetMargin: 10000,
 };
+
+// LIVE WIRING CONFIG
+// Verified against the real Rails paper venue (scripts/e2e-paper-exchange contract):
+// - POST /api/v1/orders accepts the flat body used by dispatchLiveOrder (probed: filled).
+// - POST /api/v1/mark-prices accepts {prices:{SYM:"..."}} (probed: {updated:{...}}).
+// - POST /api/v1/account/reset defaults to a pristine $10,000 (probed).
+// - v1 /ledger wraps rows in {data:[...]}; /account and /positions return legacy shapes.
+// - Binance combined route under /ws/...@trade returns UNWRAPPED raw trade events (probed live).
+// Overrides: ?api= &account= &key= &margin=  ·  the key is persisted in localStorage,
+// it must equal PAPER_EXCHANGE_API_KEY on the server and is never hardcoded here.
+(function bootstrapping() {
+  const qs = new URLSearchParams(location.search);
+  if (qs.get('api')) CFG.apiBaseUrl = qs.get('api');
+  if (qs.get('account')) CFG.liveAccountId = qs.get('account');
+  if (qs.get('key')) CFG.apiKey = qs.get('key');
+  if (qs.get('margin')) CFG.resetMargin = parseFloat(qs.get('margin')) || CFG.resetMargin;
+})();
+
+function ensureApiKey() {
+  if (CFG.apiKey) return true;
+  const saved = localStorage.getItem('lifecycle-sim.apiKey');
+  if (saved) {
+    CFG.apiKey = saved;
+    return true;
+  }
+  return false;
+}
+
+function askForApiKey(force) {
+  if (CFG.apiKey && !force) return Promise.resolve(true);
+  const entered = prompt(`X-API-Key for the Rails paper venue (${CFG.apiBaseUrl}) — the value of PAPER_EXCHANGE_API_KEY:`, localStorage.getItem('lifecycle-sim.apiKey') || '');
+  if (!entered) return Promise.resolve(false);
+  CFG.apiKey = entered.trim();
+  if (CFG.apiKey) localStorage.setItem('lifecycle-sim.apiKey', CFG.apiKey);
+  return Promise.resolve(Boolean(CFG.apiKey));
+}
 
 // ============================================================
 // STATE
@@ -752,6 +790,7 @@ const S = {
   ordCounter: 0,
   ledgerEntries: [],
   cooldowns: {},          // `${symbol}:${agent}` -> expiry ts
+  brackets: {},           // symbol -> {stopLoss, takeProfit} for sim-opened positions (survives server syncs)
   lastPollTick: 0,
   lastSignalTick: 0,
   agentsEnabled: { MOMENTUM: true, EXECUTOR: true },
@@ -1146,12 +1185,25 @@ const Agents = {
 
 async function syncWithBroker() {
   if (!S.liveApi) return;
+  if (!ensureApiKey()) {
+    setComponentState('margin-ledger', 'no API key', 'err');
+    setComponentDetail('margin-ledger', 'set the venue X-API-Key with the 🔑 Key button (or ?key= in the URL)');
+    setComponentState('orders-api', 'auth pending', 'err');
+    askForApiKey().then(ok => { if (ok) syncWithBroker(); });
+    return;
+  }
   try {
     const [accRes, posRes, ledRes] = await Promise.all([
       fetch(`${CFG.apiBaseUrl}/account`, { headers: { 'X-Account-Id': CFG.liveAccountId, 'X-API-Key': CFG.apiKey } }),
       fetch(`${CFG.apiBaseUrl}/positions`, { headers: { 'X-Account-Id': CFG.liveAccountId, 'X-API-Key': CFG.apiKey } }),
       fetch(`${CFG.apiBaseUrl}/ledger`, { headers: { 'X-Account-Id': CFG.liveAccountId, 'X-API-Key': CFG.apiKey } })
     ]);
+
+    if (!accRes.ok && (accRes.status === 401 || accRes.status === 403)) {
+      setComponentState('margin-ledger', 'auth failed', 'err');
+      askForApiKey(true).then(ok => { if (ok) syncWithBroker(); });
+      return;
+    }
 
     if (accRes.ok) {
       const acc = await accRes.json();
@@ -1172,36 +1224,50 @@ async function syncWithBroker() {
       list.forEach(p => {
         const qty = parseFloat(p.quantity || p.net_quantity || 0);
         if (qty > 0) {
+          // Brackets are a sim-local concept (the venue holds no SL/TP): re-attach the
+          // bracket this sim submitted, so EXECUTOR-ε keeps managing across syncs.
+          const bracket = S.brackets[p.symbol] || {};
+          const entryPrice = parseFloat(p.average_price || p.entry_price);
           S.positions[p.symbol] = {
             id: `pos_${p.id}`,
             symbol: p.symbol,
             side: p.side.toLowerCase(),
             qty,
-            avgPrice: parseFloat(p.average_price || p.entry_price),
+            avgPrice: entryPrice,
             currentPrice: parseFloat(p.current_price || p.ltp || p.average_price),
             leverage: p.leverage || 10,
             marginType: p.margin_type || 'cross',
             initialMargin: parseFloat(p.initial_margin || p.margin_used || 0),
             lockedMargin: parseFloat(p.initial_margin || p.margin_used || 0),
             liquidationPrice: p.liquidation_price ? parseFloat(p.liquidation_price) : null,
-            stopLoss: null,
-            takeProfit: null,
+            stopLoss: bracket.stopLoss ?? null,
+            takeProfit: bracket.takeProfit ?? null,
             strategy: 'crypto-trading-agent',
             realizedPnl: 0,
             lifecycleState: 'open',
             openedAt: now(),
             tp1Hit: false,
-            history: [{ action: 'sync', qty, price: parseFloat(p.average_price || p.entry_price) }]
+            history: [{ action: 'sync', qty, price: entryPrice }]
           };
         }
       });
+      // A flat server position retires its bracket; a locally-theatered fill that the
+      // server never confirmed also stops holding one when the symbol is gone here.
+      for (const symKey of Object.keys(S.brackets)) {
+        const serverPos = S.positions[symKey];
+        if (!serverPos || serverPos.qty <= 0) delete S.brackets[symKey];
+      }
       setComponentState('position-manager', `${Object.keys(S.positions).length} open`, 'live');
       setComponentState('liquidation-engine', `${Object.values(S.positions).filter(p=>p.qty>0&&p.leverage>1).length} monitored`, 'live');
+      setComponentState('position-tracker', 'polling', 'live');
+      setComponentDetail('position-tracker', `<span class="k">GET</span> /api/positions · ${Object.keys(S.positions).length} active<br>` + (Object.values(S.positions).filter(p=>p.qty>0).map(p => `<span class="${p.side==='long'?'ok':'err'}">${p.side.toUpperCase()}</span> ${p.symbol} ${fmtAsset(p.qty,4)}`).join(' · ') || '— no positions'));
     }
 
     if (ledRes.ok) {
-      const entries = await ledRes.json();
-      if (Array.isArray(entries)) {
+      const ledPayload = await ledRes.json();
+      // v1 wraps rows in {data:[...]}; older builds returned a bare array.
+      const entries = Array.isArray(ledPayload) ? ledPayload : (Array.isArray(ledPayload?.data) ? ledPayload.data : []);
+      if (entries.length) {
         S.ledgerEntries = entries.slice(0, 50);
       }
     }
@@ -1278,6 +1344,8 @@ function handleIncomingTrade(sym, price) {
     lastMarkPushTime = currentTime;
     pushMarkPrices();
   }
+
+  maybeRunLiveAgentCycles(sym);
 }
 
 async function dispatchLiveOrder(symbol, side, qty, price, leverage, clientOrderId) {
@@ -1328,6 +1396,11 @@ function submitOrder(signal, risk) {
 
   log('agent', 'order', `→ <span class="k">POST</span> /api/orders · <span class="k">order.symbol</span>=<span class="sym">${symbol}</span> side=<span class="${side==='buy'?'ok':'err'}">${side}</span> qty=<span class="num">${fmtAsset(qty,4)}</span> · exec_price=<span class="num">$${fmt(price,2)}</span> · ${leverage}× ISOLATED · client_oid=<span class="v">…${clientOrderId.slice(-6)}</span>`);
   spawnFlow('to-exchange', 'POST /orders', 'order');
+  // Persist the bracket now: the venue has no SL/TP concept, so live fills synced back
+  // from the server re-attach it (EXECUTOR-ε keeps managing after every 2.5s sync).
+  if (signal.stopLoss != null || signal.takeProfit != null) {
+    S.brackets[symbol] = { stopLoss: signal.stopLoss, takeProfit: signal.takeProfit };
+  }
   setStatus('agent', 'sending');
   setStatus('exchange', 'receiving');
   highlightComponents(['order-router','orders-api']);
@@ -1582,6 +1655,85 @@ function pushMarkPrices() {
 }
 
 // ============================================================
+// AGENT CYCLES (shared between sim tick() and the live WS driver)
+// ============================================================
+function runSignalCycle(sym) {
+  const ind = S.indicators[sym];
+  if (!S.agentsEnabled.MOMENTUM || !ind || !ind.ema) return;
+  const signal = Agents.MOMENTUM.analyze(sym);
+  setComponentState('signal-engine', signal ? 'signal' : 'scanning', signal ? 'live' : 'live');
+  setComponentDetail('signal-engine', `EMA50=<span class="num">$${fmt(ind.ema,2)}</span> · prev ${ind.prevAbove===undefined?'—':(ind.prevAbove?'above':'below')} · now <span class="${ind.above?'ok':'err'}">${ind.above?'above':'below'}</span>${ind.crossover?' · <span class="warn">CROSSOVER</span>':''} · RSI=<span class="num">${ind.rsi?ind.rsi.toFixed(1):'—'}</span> · ATR=<span class="num">${ind.atr?ind.atr.toFixed(2):'—'}</span> · cooldown ${S.cooldowns[`${sym}:MOMENTUM`] && now() < S.cooldowns[`${sym}:MOMENTUM`] ? Math.ceil((S.cooldowns[`${sym}:MOMENTUM`]-now())/1000)+'s' : '0s'}`);
+  if (!signal) return;
+  log('agent', 'signal', `<span class="warn">${signal.agent}</span> · <span class="${signal.side==='long'?'ok':'err'}">${signal.type}</span> <span class="sym">${signal.symbol}</span> · entry=<span class="num">$${fmt(signal.entry,2)}</span> SL=<span class="num">$${fmt(signal.stopLoss,2)}</span> TP=<span class="num">$${fmt(signal.takeProfit,2)}</span> · <span class="v">${signal.reason}</span>`);
+  addMarker(sym, 'signal', signal.entry, signal.type);
+  setComponentState('signal-engine', 'generated', 'live');
+  S.cooldowns[`${sym}:MOMENTUM`] = now() + CFG.cooldownMs;
+  // Risk gate
+  const risk = Agents.RISK_MGR.gate(signal);
+  setComponentState('risk-manager', risk.approved ? 'pass' : 'reject', risk.approved ? 'live' : 'err');
+  setComponentDetail('risk-manager', risk.approved
+    ? `<span class="ok">APPROVED</span> · size=<span class="num">$${fmt(risk.positionSizeUsdt,0)}</span> · lev=<span class="num">${risk.leverage}×</span> · ISOLATED · ${risk.reason}`
+    : `<span class="err">REJECT</span> · ${risk.reason}`);
+  log('agent', 'risk', `<span class="warn">${Agents.RISK_MGR.id}</span> · ${risk.approved?'<span class="ok">APPROVED</span>':'<span class="err">REJECT</span>'} · ${risk.reason}`);
+  if (risk.approved) {
+    // EXECUTOR-ε routes the order
+    submitOrder(signal, risk);
+  }
+}
+
+function runExecutorCycle() {
+  if (!S.agentsEnabled.EXECUTOR) return;
+  for (const symKey of Object.keys(S.positions)) {
+    const pos = S.positions[symKey];
+    if (pos.qty <= 0) continue;
+    const action = Agents.EXECUTOR.managePosition(pos);
+    if (!action) continue;
+    if (action.action === 'trail') {
+      // already applied in managePosition; log occasionally
+      if (S.tickCount % 3 === 0) {
+        log('agent', 'position', `<span class="warn">EXECUTOR-ε</span> · trail SL on <span class="sym">${symKey}</span> · new SL=<span class="num">$${fmt(pos.stopLoss,2)}</span>`);
+      }
+      // Keep the persisted bracket in step with trailing, server syncs would otherwise reset it.
+      if (S.brackets[symKey]) S.brackets[symKey].stopLoss = pos.stopLoss;
+    } else if (action.action === 'reduce') {
+      // Build a CLOSE signal with reduce qty
+      const signal = {
+        agent: 'EXECUTOR-ε', type: 'CLOSE', symbol: symKey, side: pos.side === 'long' ? 'short' : 'long',
+        entry: action.price, stopLoss: null, takeProfit: null,
+        reason: action.reason, qty: action.qty,
+      };
+      log('agent', 'signal', `<span class="warn">EXECUTOR-ε</span> · <span class="warn">${action.reason}</span> on <span class="sym">${symKey}</span> · qty=<span class="num">${fmtAsset(action.qty,4)}</span> @ <span class="num">$${fmt(action.price,2)}</span>`);
+      addMarker(symKey, 'signal', action.price, action.reason.toLowerCase().replace(' ', '_'));
+      const risk = { approved: true, positionSizeUsdt: action.qty * action.price, leverage: pos.leverage, marginType: 'isolated', liqBufferAtr: 0, reason: 'executor exit' };
+      submitOrderWithQty(signal, risk, action.qty);
+      pos.tp1Hit = true;
+    } else if (action.action === 'close') {
+      const signal = {
+        agent: 'EXECUTOR-ε', type: 'CLOSE', symbol: symKey, side: pos.side === 'long' ? 'short' : 'long',
+        entry: action.price, stopLoss: null, takeProfit: null,
+        reason: action.reason,
+      };
+      log('agent', 'signal', `<span class="warn">EXECUTOR-ε</span> · <span class="${action.reason.includes('STOP')?'err':'ok'}">${action.reason}</span> on <span class="sym">${symKey}</span> @ <span class="num">$${fmt(action.price,2)}</span>`);
+      addMarker(symKey, 'signal', action.price, action.reason.toLowerCase().replace(' ', '_'));
+      const risk = { approved: true, positionSizeUsdt: pos.qty * action.price, leverage: pos.leverage, marginType: 'isolated', liqBufferAtr: 0, reason: 'executor exit' };
+      submitOrderWithQty(signal, risk, pos.qty);
+    }
+  }
+}
+
+// Live mode: every WS trade refreshes prices, but the agent cycle runs at the sim's
+// cadence so 60 trades/s doesn't spam signals — time-throttled to one cycle per tick interval.
+let lastLiveAgentCycleAt = 0;
+function maybeRunLiveAgentCycles(sym) {
+  if (S.mode !== 'live' || !S.running) return;
+  const currentTime = now();
+  if (currentTime - lastLiveAgentCycleAt < CFG.tickIntervalMs) return;
+  lastLiveAgentCycleAt = currentTime;
+  runSignalCycle(sym);
+  runExecutorCycle();
+}
+
+// ============================================================
 // MAIN TICK LOOP
 // ============================================================
 let lastTickAt = 0;
@@ -1610,67 +1762,9 @@ function tick() {
     pushMarkPrices();
   }
 
-  // AGENT: MOMENTUM-γ analyze (only for active symbol)
-  if (S.agentsEnabled.MOMENTUM && ind && ind.ema) {
-    const signal = Agents.MOMENTUM.analyze(sym);
-    setComponentState('signal-engine', signal ? 'signal' : 'scanning', signal ? 'live' : 'live');
-    setComponentDetail('signal-engine', `EMA50=<span class="num">$${fmt(ind.ema,2)}</span> · prev ${ind.prevAbove===undefined?'—':(ind.prevAbove?'above':'below')} · now <span class="${ind.above?'ok':'err'}">${ind.above?'above':'below'}</span>${ind.crossover?' · <span class="warn">CROSSOVER</span>':''} · RSI=<span class="num">${ind.rsi?ind.rsi.toFixed(1):'—'}</span> · ATR=<span class="num">${ind.atr?ind.atr.toFixed(2):'—'}</span> · cooldown ${S.cooldowns[`${sym}:MOMENTUM`] && now() < S.cooldowns[`${sym}:MOMENTUM`] ? Math.ceil((S.cooldowns[`${sym}:MOMENTUM`]-now())/1000)+'s' : '0s'}`);
-    if (signal) {
-      log('agent', 'signal', `<span class="warn">${signal.agent}</span> · <span class="${signal.side==='long'?'ok':'err'}">${signal.type}</span> <span class="sym">${signal.symbol}</span> · entry=<span class="num">$${fmt(signal.entry,2)}</span> SL=<span class="num">$${fmt(signal.stopLoss,2)}</span> TP=<span class="num">$${fmt(signal.takeProfit,2)}</span> · <span class="v">${signal.reason}</span>`);
-      addMarker(sym, 'signal', signal.entry, signal.type);
-      setComponentState('signal-engine', 'generated', 'live');
-      S.cooldowns[`${sym}:MOMENTUM`] = now() + CFG.cooldownMs;
-      // Risk gate
-      const risk = Agents.RISK_MGR.gate(signal);
-      setComponentState('risk-manager', risk.approved ? 'pass' : 'reject', risk.approved ? 'live' : 'err');
-      setComponentDetail('risk-manager', risk.approved
-        ? `<span class="ok">APPROVED</span> · size=<span class="num">$${fmt(risk.positionSizeUsdt,0)}</span> · lev=<span class="num">${risk.leverage}×</span> · ISOLATED · ${risk.reason}`
-        : `<span class="err">REJECT</span> · ${risk.reason}`);
-      log('agent', 'risk', `<span class="warn">${Agents.RISK_MGR.id}</span> · ${risk.approved?'<span class="ok">APPROVED</span>':'<span class="err">REJECT</span>'} · ${risk.reason}`);
-      if (risk.approved) {
-        // EXECUTOR-ε routes the order
-        submitOrder(signal, risk);
-      }
-    }
-  }
-
-  // AGENT: EXECUTOR-ε manage existing positions (SL/TP/trailing)
-  if (S.agentsEnabled.EXECUTOR) {
-    for (const symKey of Object.keys(S.positions)) {
-      const pos = S.positions[symKey];
-      if (pos.qty <= 0) continue;
-      const action = Agents.EXECUTOR.managePosition(pos);
-      if (!action) continue;
-      if (action.action === 'trail') {
-        // already applied in managePosition; log occasionally
-        if (S.tickCount % 3 === 0) {
-          log('agent', 'position', `<span class="warn">EXECUTOR-ε</span> · trail SL on <span class="sym">${symKey}</span> · new SL=<span class="num">$${fmt(pos.stopLoss,2)}</span>`);
-        }
-      } else if (action.action === 'reduce') {
-        // Build a CLOSE signal with reduce qty
-        const signal = {
-          agent: 'EXECUTOR-ε', type: 'CLOSE', symbol: symKey, side: pos.side === 'long' ? 'short' : 'long',
-          entry: action.price, stopLoss: null, takeProfit: null,
-          reason: action.reason, qty: action.qty,
-        };
-        log('agent', 'signal', `<span class="warn">EXECUTOR-ε</span> · <span class="warn">${action.reason}</span> on <span class="sym">${symKey}</span> · qty=<span class="num">${fmtAsset(action.qty,4)}</span> @ <span class="num">$${fmt(action.price,2)}</span>`);
-        addMarker(symKey, 'signal', action.price, action.reason.toLowerCase().replace(' ', '_'));
-        const risk = { approved: true, positionSizeUsdt: action.qty * action.price, leverage: pos.leverage, marginType: 'isolated', liqBufferAtr: 0, reason: 'executor exit' };
-        submitOrderWithQty(signal, risk, action.qty);
-        pos.tp1Hit = true;
-      } else if (action.action === 'close') {
-        const signal = {
-          agent: 'EXECUTOR-ε', type: 'CLOSE', symbol: symKey, side: pos.side === 'long' ? 'short' : 'long',
-          entry: action.price, stopLoss: null, takeProfit: null,
-          reason: action.reason,
-        };
-        log('agent', 'signal', `<span class="warn">EXECUTOR-ε</span> · <span class="${action.reason.includes('STOP')?'err':'ok'}">${action.reason}</span> on <span class="sym">${symKey}</span> @ <span class="num">$${fmt(action.price,2)}</span>`);
-        addMarker(symKey, 'signal', action.price, action.reason.toLowerCase().replace(' ', '_'));
-        const risk = { approved: true, positionSizeUsdt: pos.qty * action.price, leverage: pos.leverage, marginType: 'isolated', liqBufferAtr: 0, reason: 'executor exit' };
-        submitOrderWithQty(signal, risk, pos.qty);
-      }
-    }
-  }
+  // AGENTS: signal generation + position management (shared with the live WS driver)
+  runSignalCycle(sym);
+  runExecutorCycle();
 
   // Poll positions every N ticks
   if (S.tickCount - S.lastPollTick >= CFG.pollEveryTicks) {
@@ -2124,13 +2218,25 @@ document.getElementById('stepBtn').addEventListener('click', () => {
 
 document.getElementById('resetBtn').addEventListener('click', async () => {
   if (S.liveApi) {
+    if (!ensureApiKey()) {
+      askForApiKey(true).then(ok => { if (ok) document.getElementById('resetBtn').click(); });
+      return;
+    }
     try {
-      const res = await fetch(`${CFG.apiBaseUrl}/account/reset`, {
+      let res = await fetch(`${CFG.apiBaseUrl}/account/reset?margin=${CFG.resetMargin}`, {
         method: 'POST',
         headers: { 'X-Account-Id': CFG.liveAccountId, 'X-API-Key': CFG.apiKey }
       });
+      if (!res.ok) {
+        // Venue without a margin param: fall back to the server-default pristine balance.
+        res = await fetch(`${CFG.apiBaseUrl}/account/reset`, {
+          method: 'POST',
+          headers: { 'X-Account-Id': CFG.liveAccountId, 'X-API-Key': CFG.apiKey }
+        });
+      }
       if (res.ok) {
-        log('system', 'state', `Account reset to pristine $10,000 on Rails paper_exchange (port 3100)`);
+        S.brackets = {};
+        log('system', 'state', `Account reset to pristine $${fmt(CFG.resetMargin, 0)} on Rails paper_exchange (port 3100)`);
         await syncWithBroker();
         return;
       }
@@ -2270,6 +2376,10 @@ document.getElementById('forceClose').addEventListener('click', () => {
   }
 });
 
+document.getElementById('keyBtn').addEventListener('click', () => {
+  askForApiKey(true).then(ok => { if (ok) syncWithBroker(); });
+});
+
 document.getElementById('modeLiveBtn').addEventListener('click', () => {
   S.mode = 'live';
   S.liveApi = true;
@@ -2339,6 +2449,12 @@ renderExchangeComponents();
 if (S.chartViewMode === 'chart') renderChart();
 
 // Connect live services
+if (S.mode === 'live') {
+  log('system', 'state', `LIVE wiring → venue <span class="v">${CFG.apiBaseUrl}</span> · account <span class="v">${CFG.liveAccountId}</span>${ensureApiKey() ? ' · API key loaded' : ' · no API key yet — press 🔑 Key'}`);
+  if (CFG.liveAccountId === 'crypto-agent') {
+    log('system', 'state', '<span class="warn">Note: the real agent process also trades crypto-agent. Better use a dedicated sim account (?account=sim-account) so the browser agent never fights the production loop.</span>');
+  }
+}
 connectBinanceWs();
 syncWithBroker();
 setInterval(syncWithBroker, 2500);

@@ -1,0 +1,70 @@
+{
+  "schema_version": 1,
+  "queue_id": "context-conditioned-strategy-research",
+  "updated_at_utc": "2026-11-03T21:30:08.734Z",
+  "local_time_ist": "2026-11-04T03:00:08.734+05:30",
+  "parent_registry_version": "v45",
+  "items": [
+    {
+      "id": "RQ-001",
+      "priority": "P0",
+      "title": "Persist multi-year raw OHLCV and Parquet-ready manifests",
+      "status": "IN_PROGRESS",
+      "completed_progress": "4h archive complete: 53,796 bars. 1h pages 00-03 persisted/readback-verified: 6,000 rows/symbol, 24,000 total, coverage 2026-02-26T20:00Z through 2026-11-03T19:00Z; cross-page checks show zero duplicates/gaps. Latest 76-row multi-timeframe delta persisted.",
+      "next_action": "Continue 1h backward backfill from 2026-02-26T19:59:59.999Z toward 2020-09-14; validate each page and cross-page join. Then reconcile and convert verified 1h history to Parquet.",
+      "blocker": "1h history remains partial; 15m/5m long history and local Parquet/DuckDB volume are absent."
+    },
+    {
+      "id": "RQ-002",
+      "priority": "P1",
+      "title": "Refresh Binance server time and contract metadata",
+      "status": "BLOCKED",
+      "next_action": "Probe GET /fapi/v1/time and GET /fapi/v1/exchangeInfo from a network-enabled host; capture HTTP status and verify server-time drift before execution validation.",
+      "blocker": "Current exchangeInfo.serverTime=2026-11-03T05:06:21.602Z, observed 2026-11-03T21:27:39.627Z (16h21m18s stale); shell DNS for fapi.binance.com fails and connector does not expose /fapi/v1/time."
+    },
+    {
+      "id": "RQ-003",
+      "priority": "P1",
+      "title": "Complete historical 5m/15m/1h coverage",
+      "status": "IN_PROGRESS",
+      "completed_progress": "1h pages 00-03 persisted/readback-verified (6,000 rows/symbol); latest 76-row delta contains 5m 14 bars/symbol, 15m 4 bars/symbol, 1h 1 bar/symbol; 4h unchanged. Latest completed opens: 5m 21:20Z, 15m 21:00Z, 1h 20:00Z, 4h 16:00Z on 2026-11-03.",
+      "next_action": "Complete 1h backfill to 2020-09-14, then backfill 15m and 5m in bounded pages and reconcile against 4h/1h timestamps.",
+      "blocker": "Long 15m/5m archives absent; 1h historical archive currently starts 2026-02-26T20:00Z."
+    },
+    {
+      "id": "RQ-004",
+      "priority": "P2",
+      "title": "Replace proxy costs with realistic execution model",
+      "status": "BLOCKED",
+      "next_action": "Version actual fee tier, historical funding cashflows, spread/slippage, latency and market-impact assumptions.",
+      "blocker": "Actual account fee tier and historical execution/impact data unavailable."
+    },
+    {
+      "id": "RQ-005",
+      "priority": "P2",
+      "title": "Integrate generic OHLCV replay and purged walk-forward in project",
+      "status": "IN_PROGRESS",
+      "completed_progress": "Pure-JS 4h EMA20 reclaim harness executed in managed V8 on prior daily cycle; 4/4 fixture tests passed and train/validation result persisted. No project Node scripts were run in this monitoring pass.",
+      "next_action": "Mount/checkout repository under Node >=24/npm >=11, port the harness, add formal purge/embargo and funding/fee-aware execution tests.",
+      "blocker": "No local worktree; runtime Node v22.16.0/npm10.9.2 below package floor; no formal purge/embargo."
+    },
+    {
+      "id": "RQ-006",
+      "priority": "P2",
+      "title": "Compare conditional strategy families on matched folds",
+      "status": "IN_PROGRESS",
+      "completed_progress": "EMA20 reclaim pullback 4h v1 remains VALIDATION_ONLY (290 train, 166 validation trades); no new experiment or OOS evaluation in this monitoring pass. All six validation CIs include zero.",
+      "next_action": "Do not repeat the same experiment. Compare Donchian20 and failed-breakout fade on identical chronological folds after generic runner, cost model and purge/embargo are ready.",
+      "blocker": "No untouched OOS evaluation; execution costs incomplete; matched-fold second-family comparison not yet run."
+    },
+    {
+      "id": "RQ-007",
+      "priority": "P3",
+      "title": "BTC lead/lag and relative-strength experiment",
+      "status": "IN_PROGRESS",
+      "completed_progress": "Same-bar 4h correlations carried forward; no lagged causal test.",
+      "next_action": "Test lagged BTC returns/impulse and relative strength using aligned historical bars and chronological validation.",
+      "blocker": "Lead/lag feature experiment not run."
+    }
+  ]
+}

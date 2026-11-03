@@ -108,7 +108,6 @@ function simulate(bars, signals, cfg, startIndex, endIndex) {
         position = null;
         continue;
       }
-      if (i === endIndex) censored++;
       continue;
     }
     const s = signals[i];

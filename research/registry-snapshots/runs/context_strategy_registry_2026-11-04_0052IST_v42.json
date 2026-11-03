@@ -22,7 +22,22 @@
     "raw_archive_manifest_blob_sha": "2313f633cba35ef84e7f615a61211490709ddbdf",
     "incremental_multitimeframe_delta": "research/raw-deltas/binance-usdm-2026-11-03T19-24-26Z.json",
     "incremental_delta_blob_sha": "939c86639e9aca050bc27d8a393b96bec0ba55ea",
-    "historical_5m_15m_1h_archive_persisted": false
+    "historical_5m_15m_1h_archive_persisted": false,
+    "incremental_multitimeframe_deltas": [
+      {
+        "path": "research/raw-deltas/binance-usdm-2026-11-03T19-24-26Z.json",
+        "rows": 68,
+        "blob_sha": "939c86639e9aca050bc27d8a393b96bec0ba55ea",
+        "commit_sha": "46f24fa47e3448391d83ade45cbfc8e5edff0b0d"
+      },
+      {
+        "path": "research/raw-deltas/binance-usdm-2026-11-03T19-33-57Z.json",
+        "rows": 12,
+        "blob_sha": "a76b66012c85e4b78af56a220dda31b586dac5d1",
+        "commit_sha": "c1533de31d4ce73ebc2a51dbc10945ad74c54f2d",
+        "readback_verified": true
+      }
+    ]
   },
   "run_update": {
     "classification": "RESEARCH_EXECUTED",
@@ -72,20 +87,27 @@
       "note": "All nine pages were fetched from Binance USD-M /fapi/v1/klines with bounded 1500-row requests, validated, committed, and read back. 4h archive now includes the latest completed 12:00 UTC candle."
     },
     "incremental_bars_since_v41": {
-      "5m_per_symbol": 12,
-      "15m_per_symbol": 4,
+      "5m_per_symbol": 14,
+      "15m_per_symbol": 5,
       "1h_per_symbol": 1,
       "4h_per_symbol": 0,
-      "total_all_symbols": 68,
+      "total_all_symbols": 80,
       "latest_completed_open_utc": {
-        "5m": "2026-11-03T19:15:00Z",
-        "15m": "2026-11-03T19:00:00Z",
+        "5m": "2026-11-03T19:25:00Z",
+        "15m": "2026-11-03T19:15:00Z",
         "1h": "2026-11-03T18:00:00Z",
         "4h": "2026-11-03T12:00:00Z"
       },
       "persisted_to_raw_delta": true,
       "raw_delta_path": "research/raw-deltas/binance-usdm-2026-11-03T19-24-26Z.json",
-      "raw_delta_blob_sha": "939c86639e9aca050bc27d8a393b96bec0ba55ea"
+      "raw_delta_blob_sha": "939c86639e9aca050bc27d8a393b96bec0ba55ea",
+      "additional_delta": {
+        "path": "research/raw-deltas/binance-usdm-2026-11-03T19-33-57Z.json",
+        "rows": 12,
+        "blob_sha": "a76b66012c85e4b78af56a220dda31b586dac5d1",
+        "commit_sha": "c1533de31d4ce73ebc2a51dbc10945ad74c54f2d",
+        "readback_verified": true
+      }
     },
     "context_discovery_artifact": {
       "path": "research/experiments/context-taxonomy-4h-2020-2026-v1.json",
@@ -306,7 +328,7 @@
   },
   "current_data_coverage": {
     "source": "Binance USDⓈ-M connector mapped to official public REST endpoints",
-    "retrieval_utc": "2026-11-03T19:24:26Z to 2026-11-03T19:26:14.542Z",
+    "retrieval_utc": "2026-11-03T19:24:26Z to 2026-11-03T19:33:57Z",
     "symbols": [
       "BTCUSDT",
       "ETHUSDT",
@@ -319,20 +341,20 @@
         "completed_per_symbol": 99,
         "forming_excluded_per_symbol": 1,
         "first_open_utc": "2026-11-03T11:05:00Z",
-        "last_returned_open_utc": "2026-11-03T19:20:00Z",
-        "latest_completed_open_utc": "2026-11-03T19:15:00Z",
-        "latest_completed_close_utc": "2026-11-03T19:19:59.999Z",
-        "new_completed_per_symbol_since_v41": 12
+        "last_returned_open_utc": "2026-11-03T19:30:00Z",
+        "latest_completed_open_utc": "2026-11-03T19:25:00Z",
+        "latest_completed_close_utc": "2026-11-03T19:29:59.999Z",
+        "new_completed_per_symbol_since_v41": 14
       },
       "15m": {
         "returned_per_symbol": 100,
         "completed_per_symbol": 99,
         "forming_excluded_per_symbol": 1,
         "first_open_utc": "2026-11-02T18:30:00Z",
-        "last_returned_open_utc": "2026-11-03T19:15:00Z",
-        "latest_completed_open_utc": "2026-11-03T19:00:00Z",
-        "latest_completed_close_utc": "2026-11-03T19:14:59.999Z",
-        "new_completed_per_symbol_since_v41": 4
+        "last_returned_open_utc": "2026-11-03T19:30:00Z",
+        "latest_completed_open_utc": "2026-11-03T19:15:00Z",
+        "latest_completed_close_utc": "2026-11-03T19:29:59.999Z",
+        "new_completed_per_symbol_since_v41": 5
       },
       "1h": {
         "returned_per_symbol": 100,
@@ -403,10 +425,26 @@
         "cross_symbol_alignment": true
       }
     },
-    "persistence": "4h archive and incremental delta persisted as immutable JSON chunks on GitHub; no Parquet file created."
+    "persistence": "4h archive and incremental delta persisted as immutable JSON chunks on GitHub; no Parquet file created.",
+    "total_incremental_completed_since_v41": 80,
+    "incremental_deltas": [
+      {
+        "path": "research/raw-deltas/binance-usdm-2026-11-03T19-24-26Z.json",
+        "rows": 68,
+        "blob_sha": "939c86639e9aca050bc27d8a393b96bec0ba55ea",
+        "readback_verified": true
+      },
+      {
+        "path": "research/raw-deltas/binance-usdm-2026-11-03T19-33-57Z.json",
+        "rows": 12,
+        "blob_sha": "a76b66012c85e4b78af56a220dda31b586dac5d1",
+        "commit_sha": "c1533de31d4ce73ebc2a51dbc10945ad74c54f2d",
+        "readback_verified": true
+      }
+    ]
   },
   "current_context_snapshot": {
-    "snapshot_as_of_utc": "2026-11-03T19:26:14.542Z",
+    "snapshot_as_of_utc": "2026-11-03T19:33:18.512Z",
     "trend_rule": "BULL iff close>EMA50 and EMA50[t]/EMA50[t-10]-1>0; BEAR iff close<EMA50 and slope<0; otherwise TRANSITION. EMA computed recursively on completed candles.",
     "volatility_bucket": "TRAIN_Q33_Q67_APPLIED_TO_CURRENT_COMPLETED_4H",
     "symbols": {
@@ -451,7 +489,38 @@
         "volatility_bucket_4h": "LOW",
         "context_4h": "BEAR_LOW",
         "train_q33_atr_pct": 1.470738,
-        "train_q67_atr_pct": 2.145877
+        "train_q67_atr_pct": 2.145877,
+        "timeframes": {
+          "5m": {
+            "trend": "BULL",
+            "close": 77582.5,
+            "ema20": 77615.1952,
+            "ema50": 77580.1361,
+            "slope10_pct": 0.00252,
+            "atr14_pct": 0.1207,
+            "latest_completed_open_utc": "2026-11-03T19:25:00Z"
+          },
+          "15m": {
+            "trend": "BULL",
+            "close": 77582.5,
+            "ema20": 77542.2438,
+            "ema50": 77342.3269,
+            "slope10_pct": 0.18229,
+            "atr14_pct": 0.25163,
+            "latest_completed_open_utc": "2026-11-03T19:15:00Z"
+          },
+          "1h": {
+            "trend": "BULL",
+            "close": 77570.9,
+            "latest_completed_open_utc": "2026-11-03T18:00:00Z"
+          },
+          "4h": {
+            "trend": "BEAR_LOW",
+            "close": 77664.3,
+            "atr14_pct": 0.98181,
+            "latest_completed_open_utc": "2026-11-03T12:00:00Z"
+          }
+        }
       },
       "ETHUSDT": {
         "role": "tradable",
@@ -494,7 +563,38 @@
         "volatility_bucket_4h": "LOW",
         "context_4h": "TRANSITION_LOW",
         "train_q33_atr_pct": 1.80181,
-        "train_q67_atr_pct": 2.692244
+        "train_q67_atr_pct": 2.692244,
+        "timeframes": {
+          "5m": {
+            "trend": "BEAR",
+            "close": 2289.5,
+            "ema20": 2293.1953,
+            "ema50": 2292.6233,
+            "slope10_pct": -0.028,
+            "atr14_pct": 0.15356,
+            "latest_completed_open_utc": "2026-11-03T19:25:00Z"
+          },
+          "15m": {
+            "trend": "BULL",
+            "close": 2289.5,
+            "ema20": 2291.1173,
+            "ema50": 2281.3782,
+            "slope10_pct": 0.28069,
+            "atr14_pct": 0.32147,
+            "latest_completed_open_utc": "2026-11-03T19:15:00Z"
+          },
+          "1h": {
+            "trend": "BULL",
+            "close": 2292.52,
+            "latest_completed_open_utc": "2026-11-03T18:00:00Z"
+          },
+          "4h": {
+            "trend": "TRANSITION_LOW",
+            "close": 2298.67,
+            "atr14_pct": 1.25988,
+            "latest_completed_open_utc": "2026-11-03T12:00:00Z"
+          }
+        }
       },
       "SOLUSDT": {
         "role": "tradable",
@@ -537,7 +637,38 @@
         "volatility_bucket_4h": "LOW",
         "context_4h": "BEAR_LOW",
         "train_q33_atr_pct": 3.0253490000000003,
-        "train_q67_atr_pct": 4.253547
+        "train_q67_atr_pct": 4.253547,
+        "timeframes": {
+          "5m": {
+            "trend": "BEAR",
+            "close": 93.26,
+            "ema20": 93.4044,
+            "ema50": 93.3689,
+            "slope10_pct": -0.00391,
+            "atr14_pct": 0.18738,
+            "latest_completed_open_utc": "2026-11-03T19:25:00Z"
+          },
+          "15m": {
+            "trend": "BULL",
+            "close": 93.26,
+            "ema20": 93.3138,
+            "ema50": 92.9725,
+            "slope10_pct": 0.23355,
+            "atr14_pct": 0.38725,
+            "latest_completed_open_utc": "2026-11-03T19:15:00Z"
+          },
+          "1h": {
+            "trend": "TRANSITION",
+            "close": 93.41,
+            "latest_completed_open_utc": "2026-11-03T18:00:00Z"
+          },
+          "4h": {
+            "trend": "BEAR_LOW",
+            "close": 93.72,
+            "atr14_pct": 1.64648,
+            "latest_completed_open_utc": "2026-11-03T12:00:00Z"
+          }
+        }
       },
       "XRPUSDT": {
         "role": "tradable",
@@ -580,7 +711,38 @@
         "volatility_bucket_4h": "LOW",
         "context_4h": "TRANSITION_LOW",
         "train_q33_atr_pct": 2.03549,
-        "train_q67_atr_pct": 3.024143
+        "train_q67_atr_pct": 3.024143,
+        "timeframes": {
+          "5m": {
+            "trend": "BEAR",
+            "close": 1.2787,
+            "ema20": 1.281,
+            "ema50": 1.2804,
+            "slope10_pct": -0.01082,
+            "atr14_pct": 0.174,
+            "latest_completed_open_utc": "2026-11-03T19:25:00Z"
+          },
+          "15m": {
+            "trend": "BULL",
+            "close": 1.2787,
+            "ema20": 1.2796,
+            "ema50": 1.2721,
+            "slope10_pct": 0.39335,
+            "atr14_pct": 0.37374,
+            "latest_completed_open_utc": "2026-11-03T19:15:00Z"
+          },
+          "1h": {
+            "trend": "BULL",
+            "close": 1.2808,
+            "latest_completed_open_utc": "2026-11-03T18:00:00Z"
+          },
+          "4h": {
+            "trend": "TRANSITION_LOW",
+            "close": 1.2808,
+            "atr14_pct": 1.29474,
+            "latest_completed_open_utc": "2026-11-03T12:00:00Z"
+          }
+        }
       }
     },
     "funding": {
@@ -612,7 +774,18 @@
       "Depth is a single snapshot; it is not historical liquidity evidence.",
       "No formal shock classifier or historical BTC lead/lag analysis was executed."
     ],
-    "classification_note": "4h volatility buckets now use the newly persisted train-only q33/q67 thresholds; all four current 4h ATR14/close values are below their symbol-specific q33 and classify LOW. 1h volatility buckets remain unassigned because no long 1h archive was backfilled."
+    "classification_note": "4h volatility buckets now use the newly persisted train-only q33/q67 thresholds; all four current 4h ATR14/close values are below their symbol-specific q33 and classify LOW. 1h volatility buckets remain unassigned because no long 1h archive was backfilled.",
+    "candle_context_retrieved_at_utc": "2026-11-03T19:33:18.512Z",
+    "price_derivatives_observed_at_utc": "2026-11-03T19:25:59.232Z",
+    "depth_observed_at_utc": "2026-11-03T19:26:14.542Z",
+    "context_discovery_artifact_blob_sha": "7cf6a2bcbe2c3bc69173ee68cfb6525887ed74ed",
+    "transition_warnings": [
+      "ETH, SOL and XRP have 5m BEAR versus 15m BULL classifications; short-term momentum is mixed.",
+      "BTC is BULL on 5m/15m/1h but BEAR_LOW on 4h.",
+      "SOL is BEAR on 4h, TRANSITION on 1h, BULL on 15m and BEAR on 5m.",
+      "XRP is TRANSITION_LOW on 4h despite the Donchian20 UP_BREAK; this remains non-actionable under the existing context gate."
+    ],
+    "classification_uncertainty": "Trend states use 99 completed candles per interval. The 4h volatility bucket uses per-symbol train-only q33/q67 thresholds; 5m/15m/1h volatility buckets are not assigned. No calibrated classifier probability is available."
   },
   "decisions": {
     "BTCUSDT": {
@@ -751,9 +924,10 @@
   "context_discovery": {
     "artifact": {
       "path": "research/experiments/context-taxonomy-4h-2020-2026-v1.json",
-      "blob_sha": "2cc8a4a1bbe034650a20ad0af77aff80bb4999c7",
-      "commit_sha": "4edd9cfa073ca9470616792184724984324cf4e8",
-      "readback_verified": true
+      "blob_sha": "7cf6a2bcbe2c3bc69173ee68cfb6525887ed74ed",
+      "commit_sha": "0c8dfefdf74a2d9fd0ee47e1e417c52ccf878f2c",
+      "readback_verified": true,
+      "manifest_linked": true
     },
     "timeframe": "4h",
     "split": {

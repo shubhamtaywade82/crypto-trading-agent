@@ -1,13 +1,13 @@
 {
   "schema_version": 1,
   "snapshot_metadata": {
-    "version": "v47",
-    "created_at_utc": "2026-11-03T22:32:22.908Z",
-    "created_at_local_ist": "2026-11-04T04:02:22.909+05:30",
+    "version": "v48",
+    "created_at_utc": "2026-11-03T22:33:54.335Z",
+    "created_at_local_ist": "2026-11-04T04:03:54.335+05:30",
     "parent_registry": {
-      "version": "v46",
-      "path": "research/registry-snapshots/runs/context_strategy_registry_2026-11-04_0300IST_v46.json",
-      "blob_sha": "fd68c48293296f9ce538eefcf262ee1f9465c5b4"
+      "version": "v47",
+      "path": "research/registry-snapshots/runs/context_strategy_registry_2026-11-04_0356IST_v47.json",
+      "blob_sha": "dd34f44e3eac0d111ce6535463ba9d2be5e28f7c"
     },
     "persistence_target": "shubhamtaywade82/crypto-trading-agent",
     "persistence_branch": "research/registry-snapshots",
@@ -33,12 +33,12 @@
     "one_hour_backfill_progress_blob_sha": "383896e2a765f56cfd94a3e84de428041c52332d",
     "queue_path": "research/queue/latest.json",
     "queue_blob_sha": "e99878bb271e0c1ac65fc94e41b4d02bcf6c7298",
-    "market_snapshot_path": "research/market-snapshots/binance-usdm-2026-11-03T22-30Z.json",
-    "market_snapshot_blob_sha": "d8dffceb55f99be4fc13d3405cf3dac766f7a98c",
-    "immutable_snapshot_path": "research/registry-snapshots/runs/context_strategy_registry_2026-11-04_0356IST_v47.json",
+    "market_snapshot_path": "research/market-snapshots/binance-usdm-2026-11-03T22-30Z-v2.json",
+    "market_snapshot_blob_sha": "3d53b677cc2781262e053002a7625d633f00af55",
+    "immutable_snapshot_path": "research/registry-snapshots/runs/context_strategy_registry_2026-11-04_0402IST_v48.json",
     "latest_pointer_path": "research/registry-snapshots/latest.json",
-    "immutable_snapshot_blob_sha": "dd34f44e3eac0d111ce6535463ba9d2be5e28f7c",
-    "immutable_snapshot_commit_sha": "373bda7cf182b8ad911b1fedb57ae89cd523b32d"
+    "immutable_snapshot_blob_sha": "7cb68a07997573de29b93e9533868cb43bf6b9eb",
+    "immutable_snapshot_commit_sha": "a74753375c459c4885eaac86b10116fd6052c56e"
   },
   "run_update": {
     "classification": "MONITORING_ONLY",
@@ -85,6 +85,42 @@
       "path": "research/queue/latest.json",
       "blob_sha": "e99878bb271e0c1ac65fc94e41b4d02bcf6c7298",
       "readback_verified": true
+    },
+    "funding_semantics_correction": true,
+    "funding_info": {
+      "source_endpoint": "GET /fapi/v1/fundingInfo",
+      "retrieved_utc": "2026-11-03T22:33:54.335Z",
+      "symbols": {
+        "BTCUSDT": {
+          "fundingIntervalHours": 8,
+          "adjustedFundingRateCap": "0.00300",
+          "adjustedFundingRateFloor": "-0.00300",
+          "disclaimer": true,
+          "updateTime": null
+        },
+        "ETHUSDT": {
+          "fundingIntervalHours": 8,
+          "adjustedFundingRateCap": "0.00300",
+          "adjustedFundingRateFloor": "-0.00300",
+          "disclaimer": true,
+          "updateTime": null
+        },
+        "SOLUSDT": {
+          "fundingIntervalHours": 8,
+          "adjustedFundingRateCap": "0.00375",
+          "adjustedFundingRateFloor": "-0.00375",
+          "disclaimer": true,
+          "updateTime": null
+        },
+        "XRPUSDT": {
+          "fundingIntervalHours": 8,
+          "adjustedFundingRateCap": "0.00375",
+          "adjustedFundingRateFloor": "-0.00375",
+          "disclaimer": true,
+          "updateTime": null
+        }
+      },
+      "current_estimated_next_rate": "UNAVAILABLE"
     }
   },
   "preflight": [
@@ -157,6 +193,13 @@
       "evidence": "1h page 04/05 per-symbol files, 1h manifest/progress, current 68-row delta, market snapshot, queue and 4h manifest fetched back and matched.",
       "impact": "Remote persistence verified for artifacts in this run.",
       "next_action": "Keep append-only manifests and readback checks."
+    },
+    {
+      "capability": "funding_interval",
+      "status": "PASS",
+      "evidence": "GET /fapi/v1/fundingInfo returned fundingIntervalHours=8 for BTCUSDT, ETHUSDT, SOLUSDT and XRPUSDT; last settled funding history timestamps are 00:00, 08:00 and 16:00 UTC.",
+      "impact": "Eight-hour settlement interval confirmed; current estimated next funding rate remains unavailable.",
+      "next_action": "Refresh fundingInfo and settled funding history on subsequent snapshots."
     }
   ],
   "current_data_coverage": {
@@ -316,7 +359,13 @@
         "taker_buy_sell_ratio_1h": 0.9498,
         "global_account_long_short_ratio": 2.3704,
         "spread_bps": 0.0128617281,
-        "depth20_imbalance_pct": -60.03482784
+        "depth20_imbalance_pct": -60.03482784,
+        "premium_index_last_funding_rate": 0.0001,
+        "current_estimated_next_funding_rate": null,
+        "current_estimated_next_funding_rate_status": "UNAVAILABLE_FROM_PROBED_ENDPOINTS",
+        "funding_interval_hours": 8,
+        "funding_interval_source": "GET /fapi/v1/fundingInfo plus observed funding history timestamps",
+        "last_settled_funding_utc": "2026-11-03T16:00:00Z"
       },
       "ETHUSDT": {
         "role": "tradable",
@@ -342,7 +391,13 @@
         "taker_buy_sell_ratio_1h": 0.7794,
         "global_account_long_short_ratio": 2.2712,
         "spread_bps": 0.0437256912,
-        "depth20_imbalance_pct": 15.04233259
+        "depth20_imbalance_pct": 15.04233259,
+        "premium_index_last_funding_rate": 0.0001,
+        "current_estimated_next_funding_rate": null,
+        "current_estimated_next_funding_rate_status": "UNAVAILABLE_FROM_PROBED_ENDPOINTS",
+        "funding_interval_hours": 8,
+        "funding_interval_source": "GET /fapi/v1/fundingInfo plus observed funding history timestamps",
+        "last_settled_funding_utc": "2026-11-03T16:00:00Z"
       },
       "SOLUSDT": {
         "role": "tradable",
@@ -368,7 +423,13 @@
         "taker_buy_sell_ratio_1h": 0.891,
         "global_account_long_short_ratio": 3.0519,
         "spread_bps": 1.0715242432,
-        "depth20_imbalance_pct": 0.04694684
+        "depth20_imbalance_pct": 0.04694684,
+        "premium_index_last_funding_rate": 0.0001,
+        "current_estimated_next_funding_rate": null,
+        "current_estimated_next_funding_rate_status": "UNAVAILABLE_FROM_PROBED_ENDPOINTS",
+        "funding_interval_hours": 8,
+        "funding_interval_source": "GET /fapi/v1/fundingInfo plus observed funding history timestamps",
+        "last_settled_funding_utc": "2026-11-03T16:00:00Z"
       },
       "XRPUSDT": {
         "role": "tradable",
@@ -394,7 +455,13 @@
         "taker_buy_sell_ratio_1h": 1.0834,
         "global_account_long_short_ratio": 2.308,
         "spread_bps": 0.7815247548,
-        "depth20_imbalance_pct": 12.23819365
+        "depth20_imbalance_pct": 12.23819365,
+        "premium_index_last_funding_rate": 0.0001,
+        "current_estimated_next_funding_rate": null,
+        "current_estimated_next_funding_rate_status": "UNAVAILABLE_FROM_PROBED_ENDPOINTS",
+        "funding_interval_hours": 8,
+        "funding_interval_source": "GET /fapi/v1/fundingInfo plus observed funding history timestamps",
+        "last_settled_funding_utc": "2026-11-03T16:00:00Z"
       }
     },
     "funding_interval_hours": 8,
@@ -404,7 +471,44 @@
     "funding_threshold_abs_pct": 0.05,
     "symbols_above_threshold": [],
     "transition_warning": "5m/15m states are broadly bullish while BTC/ETH/SOL remain BEAR_LOW on 4h and XRP remains TRANSITION_LOW. Lower-timeframe rebound is not a validated entry signal.",
-    "classification_uncertainty": "Deterministic feature labels only; no calibrated probability of classification correctness or future trade success. Taker data is latest 21:00 UTC; global account ratios latest 22:00 UTC; depth is a single snapshot."
+    "classification_uncertainty": "Deterministic feature labels only; no calibrated probability of classification correctness or future trade success. Taker data is latest 21:00 UTC; global account ratios latest 22:00 UTC; depth is a single snapshot.",
+    "funding_interval_hours_by_symbol": {
+      "BTCUSDT": 8,
+      "ETHUSDT": 8,
+      "SOLUSDT": 8,
+      "XRPUSDT": 8
+    },
+    "funding_info": {
+      "BTCUSDT": {
+        "fundingIntervalHours": 8,
+        "adjustedFundingRateCap": "0.00300",
+        "adjustedFundingRateFloor": "-0.00300",
+        "disclaimer": true,
+        "updateTime": null
+      },
+      "ETHUSDT": {
+        "fundingIntervalHours": 8,
+        "adjustedFundingRateCap": "0.00300",
+        "adjustedFundingRateFloor": "-0.00300",
+        "disclaimer": true,
+        "updateTime": null
+      },
+      "SOLUSDT": {
+        "fundingIntervalHours": 8,
+        "adjustedFundingRateCap": "0.00375",
+        "adjustedFundingRateFloor": "-0.00375",
+        "disclaimer": true,
+        "updateTime": null
+      },
+      "XRPUSDT": {
+        "fundingIntervalHours": 8,
+        "adjustedFundingRateCap": "0.00375",
+        "adjustedFundingRateFloor": "-0.00375",
+        "disclaimer": true,
+        "updateTime": null
+      }
+    },
+    "funding_rate_interpretation": "premiumIndex.lastFundingRate is the latest reported funding rate, not a guaranteed forecast of the next settlement. Latest settled funding is independently observed from /fapi/v1/fundingRate history at 2026-11-03T16:00:00Z. Current estimated next funding rate is unavailable."
   },
   "decisions": {
     "BTCUSDT": {
@@ -452,7 +556,8 @@
     "GET /futures/data/takerlongshortRatio",
     "GET /fapi/v1/depth",
     "GET /fapi/v1/exchangeInfo",
-    "GET /fapi/v1/time (UNAVAILABLE: shell DNS/curl failure; no connector action)"
+    "GET /fapi/v1/time (UNAVAILABLE: shell DNS/curl failure; no connector action)",
+    "GET /fapi/v1/fundingInfo"
   ],
   "cost_model_and_risks": {
     "prior_strategy_experiment_cost_proxy": "15bp round-trip notional; not a realistic execution model",
@@ -471,7 +576,8 @@
       "liquidation stream",
       "fresh /fapi/v1/time",
       "fresh authoritative exchangeInfo",
-      "historical funding joined to each experiment trade"
+      "historical funding joined to each experiment trade",
+      "current indicated/estimated next funding rate"
     ],
     "risks": [
       "No OOS_VALIDATED strategy.",
@@ -484,12 +590,7 @@
       "15bp proxy excludes funding and realistic slippage/fees.",
       "Lower-timeframe bullish states conflict with 4h BEAR_LOW/TRANSITION_LOW."
     ],
-    "current_indicated_funding_pct": {
-      "BTCUSDT": 0.01,
-      "ETHUSDT": 0.01,
-      "SOLUSDT": 0.01,
-      "XRPUSDT": 0.01
-    },
+    "current_indicated_funding_pct": null,
     "latest_settled_funding_pct": {
       "BTCUSDT": 0.01,
       "ETHUSDT": 0.01,
@@ -498,7 +599,51 @@
     },
     "funding_interval_hours": 8,
     "next_funding_utc": "2026-11-04T00:00:00Z",
-    "symbols_above_abs_0_05_pct": []
+    "symbols_above_abs_0_05_pct": [],
+    "current_indicated_funding_status": "UNAVAILABLE",
+    "latest_reported_premium_index_funding_pct": {
+      "BTCUSDT": 0.01,
+      "ETHUSDT": 0.01,
+      "SOLUSDT": 0.01,
+      "XRPUSDT": 0.01
+    },
+    "current_estimated_next_funding_rate": "UNAVAILABLE",
+    "funding_interval_hours_by_symbol": {
+      "BTCUSDT": 8,
+      "ETHUSDT": 8,
+      "SOLUSDT": 8,
+      "XRPUSDT": 8
+    },
+    "funding_info_adjustments": {
+      "BTCUSDT": {
+        "fundingIntervalHours": 8,
+        "adjustedFundingRateCap": "0.00300",
+        "adjustedFundingRateFloor": "-0.00300",
+        "disclaimer": true,
+        "updateTime": null
+      },
+      "ETHUSDT": {
+        "fundingIntervalHours": 8,
+        "adjustedFundingRateCap": "0.00300",
+        "adjustedFundingRateFloor": "-0.00300",
+        "disclaimer": true,
+        "updateTime": null
+      },
+      "SOLUSDT": {
+        "fundingIntervalHours": 8,
+        "adjustedFundingRateCap": "0.00375",
+        "adjustedFundingRateFloor": "-0.00375",
+        "disclaimer": true,
+        "updateTime": null
+      },
+      "XRPUSDT": {
+        "fundingIntervalHours": 8,
+        "adjustedFundingRateCap": "0.00375",
+        "adjustedFundingRateFloor": "-0.00375",
+        "disclaimer": true,
+        "updateTime": null
+      }
+    }
   },
   "context_discovery": {
     "artifact": {
@@ -949,5 +1094,5 @@
       "artifact_blob_sha": "efaae8032e17c0fbfc25fd1de0ea4ed0b70e6f4e"
     }
   },
-  "monitoring_only_note": "No strategy experiment was run in this pass. The daily strategy experiment was already executed earlier on 2026-11-04 Asia/Kolkata. This pass persisted two additional 1h historical pages, a fresh 68-row completed-candle delta, current derivatives/context snapshot, queue updates and verified manifests. No OOS test was run."
+  "monitoring_only_note": "No strategy experiment was run in this pass. The daily strategy experiment was already executed earlier on 2026-11-04 Asia/Kolkata. This pass persisted two additional 1h historical pages, a fresh 68-row completed-candle delta, current derivatives/context snapshot, queue updates and verified manifests. No OOS test was run. Funding semantics correction: premiumIndex.lastFundingRate is the latest reported rate, not a guaranteed forecast of the next settlement. Current estimated next funding rate is unavailable. fundingInfo confirms an 8h interval for all four symbols."
 }

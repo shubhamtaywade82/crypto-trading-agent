@@ -321,6 +321,40 @@ footer { padding: 12px var(--pad); border-top: 1px solid var(--border); font-fam
 footer .legend { display: flex; gap: 12px; flex-wrap: wrap; }
 .legend-dot { width: 6px; height: 6px; border-radius: 50%; }
 
+
+/* AGENTS */
+.agents { display: flex; align-items: stretch; gap: 0; padding: 14px var(--pad) 4px; }
+.agent-card { flex: 1 1 0; min-width: 0; display: flex; gap: 12px; padding: 12px 14px; background: var(--bg-2); border: 1px solid var(--border); border-radius: var(--radius); transition: border-color .2s, box-shadow .3s, opacity .2s; }
+.agent-card.on { border-color: var(--yellow); box-shadow: 0 0 18px rgba(251,191,36,0.18); }
+.agent-card.off { opacity: .45; }
+.avatar { flex: none; width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; font: 700 15px var(--font-mono); color: var(--blue); background: var(--blue-bg); border: 1px solid var(--blue-dim); position: relative; }
+.agent-card[data-cmp="risk-manager"] .avatar { color: var(--orange); background: var(--orange-bg); border-color: rgba(251,146,60,.5); }
+.agent-card[data-cmp="order-router"] .avatar { color: var(--cyan); background: var(--cyan-bg); border-color: rgba(34,211,238,.5); }
+.avatar::after { content: ''; position: absolute; inset: -5px; border-radius: 50%; border: 2px solid transparent; }
+.agent-card.on .avatar::after { border-color: var(--yellow); animation: ring 1.2s ease-out infinite; }
+@keyframes ring { from { opacity: .9; transform: scale(.85); } to { opacity: 0; transform: scale(1.25); } }
+.agent-body { min-width: 0; flex: 1; }
+.agent-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.agent-top b { font-size: 13.5px; font-weight: 600; }
+.agent-state { font: 10px var(--font-mono); padding: 2px 8px; border-radius: 999px; background: var(--bg-4); border: 1px solid var(--border); color: var(--text-dim); white-space: nowrap; }
+.agent-state.live { color: var(--green); border-color: var(--green-dim); }
+.agent-state.warn { color: var(--yellow); border-color: var(--yellow-dim); }
+.agent-state.err { color: var(--red); border-color: var(--red-dim); }
+.agent-role { font-size: 11px; color: var(--text-faint); margin: 1px 0 6px; }
+.agent-now, .agent-last { font: 10.5px var(--font-mono); color: var(--text-dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.agent-last { margin-top: 3px; color: var(--text-faint); }
+.agent-last .n { color: var(--text); }
+.handoff { flex: none; width: 36px; display: grid; place-items: center; position: relative; }
+.handoff::before { content: ''; position: absolute; left: 0; right: 0; top: 50%; height: 2px; background: var(--border-light); }
+.handoff i { width: 8px; height: 8px; border-radius: 50%; background: var(--border-light); position: relative; z-index: 1; transition: background .2s, box-shadow .2s; }
+.handoff.pass i { background: var(--yellow); box-shadow: 0 0 10px var(--yellow); }
+@media (max-width: 1000px) {
+  .agents { flex-direction: column; }
+  .handoff { width: auto; height: 22px; }
+  .handoff::before { left: 50%; right: auto; top: 0; bottom: 0; width: 2px; height: auto; }
+}
+@media (max-width: 720px) { .agents { padding-left: 10px; padding-right: 10px; } .agent-now, .agent-last { white-space: normal; } }
+
 /* RESPONSIVE */
 @media (max-width: 1200px) { .lower { grid-template-columns: 1fr; } .log-section { height: 420px; } }
 @media (max-width: 1000px) {
@@ -555,6 +589,38 @@ footer .legend { display: flex; gap: 12px; flex-wrap: wrap; }
     </div>
   </div>
 </div>
+
+<section class="agents" aria-label="Agents">
+  <article class="agent-card" data-cmp="signal-engine" data-toggle="momToggle" data-types="signal">
+    <div class="avatar"><span>M</span></div>
+    <div class="agent-body">
+      <div class="agent-top"><b>MOMENTUM-γ</b><span class="agent-state"></span></div>
+      <div class="agent-role">Finds entries · EMA50 crossover filtered by RSI and ATR</div>
+      <div class="agent-now"></div>
+      <div class="agent-last"><span class="n">0</span> decisions · last: <span class="msg">none yet</span></div>
+    </div>
+  </article>
+  <div class="handoff" aria-hidden="true"><i></i></div>
+  <article class="agent-card" data-cmp="risk-manager" data-toggle="" data-types="risk">
+    <div class="avatar"><span>R</span></div>
+    <div class="agent-body">
+      <div class="agent-top"><b>RISK-MGR-δ</b><span class="agent-state"></span></div>
+      <div class="agent-role">Approves or vetoes · Sizes risk and checks the liquidation buffer</div>
+      <div class="agent-now"></div>
+      <div class="agent-last"><span class="n">0</span> decisions · last: <span class="msg">none yet</span></div>
+    </div>
+  </article>
+  <div class="handoff" aria-hidden="true"><i></i></div>
+  <article class="agent-card" data-cmp="order-router" data-toggle="executorToggle" data-types="order,position">
+    <div class="avatar"><span>E</span></div>
+    <div class="agent-body">
+      <div class="agent-top"><b>EXECUTOR-ε</b><span class="agent-state"></span></div>
+      <div class="agent-role">Places and trails orders · Routes to paper_exchange, moves stops</div>
+      <div class="agent-now"></div>
+      <div class="agent-last"><span class="n">0</span> decisions · last: <span class="msg">none yet</span></div>
+    </div>
+  </article>
+</section>
 
 <div class="architecture">
   <div class="service agent">
@@ -2525,6 +2591,48 @@ requestAnimationFrame(loop);
     if (!last) return;
     document.getElementById('thoughtSrc').textContent = last.querySelector('.log-source')?.textContent || '';
     document.getElementById('thoughtMsg').textContent = last.querySelector('.log-msg')?.textContent || '';
+  }).observe(document.getElementById('logEntries'), { childList: true });
+})();
+
+// Agent cards: mirror existing component state/detail, count decisions from the agent log.
+(function () {
+  const cards = [...document.querySelectorAll('.agent-card')];
+  const handoffs = [...document.querySelectorAll('.handoff')];
+  const mirror = card => {
+    const id = card.dataset.cmp;
+    const st = document.getElementById('cmp-' + id), now = document.getElementById('detail-' + id);
+    const pill = card.querySelector('.agent-state');
+    pill.textContent = st.textContent; pill.className = 'agent-state ' + st.className.replace('component-state', '').trim();
+    card.querySelector('.agent-now').textContent = now.textContent;
+    const tog = card.dataset.toggle && document.getElementById(card.dataset.toggle);
+    card.classList.toggle('off', !!tog && !tog.classList.contains('active'));
+  };
+  cards.forEach((card, i) => {
+    const id = card.dataset.cmp;
+    const watch = new MutationObserver(() => mirror(card));
+    [document.getElementById('cmp-' + id), document.getElementById('detail-' + id)]
+      .forEach(el => watch.observe(el, { childList: true, characterData: true, subtree: true, attributes: true }));
+    if (card.dataset.toggle) watch.observe(document.getElementById(card.dataset.toggle), { attributes: true });
+    mirror(card);
+  });
+  new MutationObserver(() => {
+    cards.forEach((card, i) => {
+      const on = document.querySelector(`.component[data-cmp="${card.dataset.cmp}"]`).classList.contains('active');
+      if (on && !card.classList.contains('on') && handoffs[i - 1]) {
+        handoffs[i - 1].classList.add('pass'); setTimeout(() => handoffs[i - 1].classList.remove('pass'), 900);
+      }
+      card.classList.toggle('on', on);
+    });
+  }).observe(document.querySelector('.architecture'), { subtree: true, attributes: true, attributeFilter: ['class'] });
+  new MutationObserver(() => {
+    const last = document.querySelector('#logEntries .log-entry:last-child');
+    if (!last || !last.querySelector('.log-source.agent')) return;
+    const type = last.querySelector('.log-type')?.textContent.trim().toLowerCase();
+    const card = cards.find(c => c.dataset.types.split(',').includes(type));
+    if (!card) return;
+    const n = card.querySelector('.n');
+    n.textContent = +n.textContent + 1;
+    card.querySelector('.agent-last .msg').textContent = last.querySelector('.log-msg').textContent;
   }).observe(document.getElementById('logEntries'), { childList: true });
 })();
 </script>

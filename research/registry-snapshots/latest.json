@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
   "snapshot_metadata": {
-    "version": "v43",
-    "created_at_utc": "2026-11-03T20:24:24.410Z",
+    "version": "v44",
+    "created_at_utc": "2026-11-03T20:25:15.193Z",
     "parent_registry": {
-      "version": "v42",
+      "version": "v43",
       "path": "research/registry-snapshots/latest.json",
-      "blob_sha": "0dffead484d1e1ff00fa758ea4841e519a15fa3a"
+      "blob_sha": "a48d8cc8f79c6fd2e144a9bc95ad4e0470d81c34"
     },
     "persistence_target": "shubhamtaywade82/crypto-trading-agent",
     "persistence_branch": "research/registry-snapshots",
@@ -39,7 +39,7 @@
         "readback_verified": true
       }
     ],
-    "created_at_local_ist": "2026-11-04T01:54:24.410+05:30",
+    "created_at_local_ist": "2026-11-04T01:55:15.193+05:30",
     "latest_incremental_delta": "research/raw-deltas/binance-usdm-2026-11-03T20-19-12Z.json",
     "latest_incremental_delta_blob_sha": "d6644da960f09a871b77ee7de12f8e39751d576a"
   },
@@ -103,6 +103,23 @@
       "validation_trades": 166,
       "total_trades": 456,
       "untouched_test": "RESERVED_NOT_EVALUATED"
+    },
+    "context_precision_refinement": {
+      "executed_at_utc": "2026-11-03T20:25:15.193Z",
+      "type": "current_4h_context_recalculation_with_longer_ema_atr_warmup",
+      "rows_per_symbol": 1450,
+      "start_utc": "2026-03-07T04:00:00Z",
+      "latest_completed_open_utc": "2026-11-03T16:00:00Z",
+      "inputs": {
+        "page8_path": "research/raw-archive/binance-usdm-4h/page-08.json",
+        "page8_blob_sha": "49d5255204bc3402d94244c1544a18f6ddbfe640",
+        "delta_path": "research/raw-deltas/binance-usdm-2026-11-03T20-19-12Z.json",
+        "delta_blob_sha": "d6644da960f09a871b77ee7de12f8e39751d576a",
+        "context_thresholds_path": "research/experiments/context-taxonomy-4h-2020-2026-v1.json",
+        "context_thresholds_blob_sha": "7cf6a2bcbe2c3bc69173ee68cfb6525887ed74ed"
+      },
+      "quality": "Each symbol 1,450 rows; zero duplicates, gaps, invalid OHLC, non-finite values or nonpositive volume.",
+      "note": "The previous v43 snapshot used a 100-bar rolling EMA warm-up. This recalculation uses the full 1,449-row final archive page plus the latest completed 4h delta. Context labels and decisions did not change; numeric EMA/slope/ATR values are refined."
     }
   },
   "preflight": [
@@ -165,7 +182,7 @@
     {
       "capability": "artifact_readback",
       "status": "PASS",
-      "evidence": "4h pages/manifest, 56-row multi-timeframe delta, 1h pages 00-02/progress, harness, experiment spec and corrected validation result fetched back from GitHub and parsed/verified.",
+      "evidence": "4h pages/manifest, 56-row multi-timeframe delta, 1h pages 00-02/progress, harness, experiment spec and corrected validation result fetched back from GitHub and parsed/verified. Current 4h context values recalculated from 1,450-bar warm-up and source blobs; v44 readback pending.",
       "impact": "Research inputs and outputs are reproducible by GitHub blob references.",
       "next_action": "Continue appending immutable data pages and versioned registry snapshots."
     }
@@ -676,7 +693,7 @@
       "1h": "2026-11-03T19:00:00Z",
       "4h": "2026-11-03T16:00:00Z"
     },
-    "method": "100-row completed rolling windows; EMA20/EMA50 alignment for 5m/15m/1h; 4h EMA50 slope10 + training-fitted per-symbol ATR14/close q33/q67 from context-taxonomy artifact. EMA warm-up is local 100-bar window.",
+    "method": "EMA20/EMA50 and Wilder ATR14 recomputed over 1,450 completed 4h bars per symbol (final archive page plus latest 4h delta); trend uses close vs EMA50 and EMA50 slope10; volatility uses per-symbol training-only q33/q67 from the context taxonomy artifact. 5m/15m/1h states remain 100-row rolling EMA20/EMA50 alignment.",
     "symbols": {
       "BTCUSDT": {
         "role": "reference_only",
@@ -684,12 +701,7 @@
         "last": 77723,
         "change24h_pct": 0.936,
         "quote_volume_24h": 8500860874.07,
-        "trend": {
-          "5m": "BULL",
-          "15m": "BULL",
-          "1h": "BEAR",
-          "4h": "BEAR"
-        },
+        "trend": "BEAR",
         "context_4h": "BEAR_LOW",
         "slope10_4h_pct": -0.7792,
         "atr14_4h_pct": 0.9625,
@@ -705,7 +717,17 @@
         "taker_period_start_utc": "2026-11-03T20:10:00Z",
         "global_long_short_account_ratio_1h": 2.3852,
         "depth_spread_bps": 0.01286,
-        "top20_depth_imbalance": -0.3505
+        "top20_depth_imbalance": -0.3505,
+        "close": 77585.6,
+        "ema20": 77642.08484158789,
+        "ema50": 78579.60049730468,
+        "slope10Pct": -0.7832701362999739,
+        "atr14Pct": 0.9623805131797333,
+        "context": "BEAR_LOW",
+        "volatility": "LOW",
+        "donchian20PriorHigh": 78853.5,
+        "donchian20PriorLow": 76351.6,
+        "donchianSignal": "NONE"
       },
       "ETHUSDT": {
         "role": "tradable",
@@ -713,12 +735,7 @@
         "last": 2285.51,
         "change24h_pct": 1.432,
         "quote_volume_24h": 5664684652.66,
-        "trend": {
-          "5m": "BEAR",
-          "15m": "BULL",
-          "1h": "BULL",
-          "4h": "BEAR"
-        },
+        "trend": "BEAR",
         "context_4h": "BEAR_LOW",
         "slope10_4h_pct": -0.4475,
         "atr14_4h_pct": 1.2381,
@@ -734,7 +751,17 @@
         "taker_period_start_utc": "2026-11-03T20:10:00Z",
         "global_long_short_account_ratio_1h": 2.2415,
         "depth_spread_bps": 0.04382,
-        "top20_depth_imbalance": 0.0206
+        "top20_depth_imbalance": 0.0206,
+        "close": 2286.14,
+        "ema20": 2272.2146847962426,
+        "ema50": 2293.0936348242617,
+        "slope10Pct": -0.46890161271831987,
+        "atr14Pct": 1.2379811862256802,
+        "context": "BEAR_LOW",
+        "volatility": "LOW",
+        "donchian20PriorHigh": 2317.59,
+        "donchian20PriorLow": 2236.06,
+        "donchianSignal": "NONE"
       },
       "SOLUSDT": {
         "role": "tradable",
@@ -742,12 +769,7 @@
         "last": 93.36,
         "change24h_pct": 1.91,
         "quote_volume_24h": 1100708330.4101,
-        "trend": {
-          "5m": "BEAR",
-          "15m": "BULL",
-          "1h": "BEAR",
-          "4h": "BEAR"
-        },
+        "trend": "BEAR",
         "context_4h": "BEAR_LOW",
         "slope10_4h_pct": -1.8566,
         "atr14_4h_pct": 1.6115,
@@ -763,7 +785,17 @@
         "taker_period_start_utc": "2026-11-03T20:10:00Z",
         "global_long_short_account_ratio_1h": 3.0486,
         "depth_spread_bps": 1.07256,
-        "top20_depth_imbalance": -0.0224
+        "top20_depth_imbalance": -0.0224,
+        "close": 93.26,
+        "ema20": 94.06950073159223,
+        "ema50": 96.66698305631039,
+        "slope10Pct": -1.8846388076323994,
+        "atr14Pct": 1.6113505075139107,
+        "context": "BEAR_LOW",
+        "volatility": "LOW",
+        "donchian20PriorHigh": 96.38,
+        "donchian20PriorLow": 90.82,
+        "donchianSignal": "NONE"
       },
       "XRPUSDT": {
         "role": "tradable",
@@ -771,12 +803,7 @@
         "last": 1.2772,
         "change24h_pct": 2.16,
         "quote_volume_24h": 584169058.8874,
-        "trend": {
-          "5m": "BEAR",
-          "15m": "BULL",
-          "1h": "BULL",
-          "4h": "TRANSITION"
-        },
+        "trend": "TRANSITION",
         "context_4h": "TRANSITION_LOW",
         "slope10_4h_pct": -0.4632,
         "atr14_4h_pct": 1.2829,
@@ -792,7 +819,17 @@
         "taker_period_start_utc": "2026-11-03T20:10:00Z",
         "global_long_short_account_ratio_1h": 2.3003,
         "depth_spread_bps": 0.78398,
-        "top20_depth_imbalance": 0.1277
+        "top20_depth_imbalance": 0.1277,
+        "close": 1.2777,
+        "ema20": 1.2595628868378617,
+        "ema50": 1.2712442608775665,
+        "slope10Pct": -0.5010888680502479,
+        "atr14Pct": 1.2827932456477789,
+        "context": "TRANSITION_LOW",
+        "volatility": "LOW",
+        "donchian20PriorHigh": 1.2915,
+        "donchian20PriorLow": 1.2344,
+        "donchianSignal": "NONE"
       }
     },
     "mark_ticker_observed_utc": "2026-11-03T20:19:43Z",
@@ -806,7 +843,15 @@
     },
     "funding_threshold_pct": 0.05,
     "funding_symbols_above_threshold": [],
-    "classification_uncertainty": "Current trend/context labels are deterministic feature classifications, not calibrated probabilities. 4h ATR thresholds are training-derived; lower-timeframe trend states use EMA20/EMA50 alignment. Current 4h EMA warm-up uses the latest 100-bar window. Taker and positioning observations are snapshots, not predictive evidence."
+    "classification_uncertainty": "Current trend/context labels are deterministic feature classifications, not calibrated probabilities. 4h ATR thresholds are training-derived; lower-timeframe trend states use EMA20/EMA50 alignment. Current 4h EMA warm-up uses the latest 100-bar window. Taker and positioning observations are snapshots, not predictive evidence.",
+    "ema_atr_calculation_inputs": {
+      "rowsPerSymbol": 1450,
+      "startUtc": "2026-03-07T04:00:00Z",
+      "endUtc": "2026-11-03T16:00:00Z",
+      "page8BlobSha": "49d5255204bc3402d94244c1544a18f6ddbfe640",
+      "deltaBlobSha": "d6644da960f09a871b77ee7de12f8e39751d576a",
+      "thresholdArtifactBlobSha": "7cf6a2bcbe2c3bc69173ee68cfb6525887ed74ed"
+    }
   },
   "decisions": {
     "BTCUSDT": {

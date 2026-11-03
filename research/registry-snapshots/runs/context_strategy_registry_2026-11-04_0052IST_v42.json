@@ -408,7 +408,7 @@
   "current_context_snapshot": {
     "snapshot_as_of_utc": "2026-11-03T19:26:14.542Z",
     "trend_rule": "BULL iff close>EMA50 and EMA50[t]/EMA50[t-10]-1>0; BEAR iff close<EMA50 and slope<0; otherwise TRANSITION. EMA computed recursively on completed candles.",
-    "volatility_bucket": "UNKNOWN_NOT_ASSIGNED for current market; training quantile thresholds are stored in context_discovery but current 4h ATR% is not mapped to a bucket in this run.",
+    "volatility_bucket": "TRAIN_Q33_Q67_APPLIED_TO_CURRENT_COMPLETED_4H",
     "symbols": {
       "BTCUSDT": {
         "role": "reference_only",
@@ -447,7 +447,11 @@
         "best_ask": 77579.4,
         "spread_bps": 0.01289,
         "top20_depth_imbalance": 0.5134,
-        "depth_event_utc": "2026-11-03T19:26:13.732Z"
+        "depth_event_utc": "2026-11-03T19:26:13.732Z",
+        "volatility_bucket_4h": "LOW",
+        "context_4h": "BEAR_LOW",
+        "train_q33_atr_pct": 1.470738,
+        "train_q67_atr_pct": 2.145877
       },
       "ETHUSDT": {
         "role": "tradable",
@@ -486,7 +490,11 @@
         "best_ask": 2288.9,
         "spread_bps": 0.04369,
         "top20_depth_imbalance": 0.3927,
-        "depth_event_utc": "2026-11-03T19:26:10.347Z"
+        "depth_event_utc": "2026-11-03T19:26:10.347Z",
+        "volatility_bucket_4h": "LOW",
+        "context_4h": "TRANSITION_LOW",
+        "train_q33_atr_pct": 1.80181,
+        "train_q67_atr_pct": 2.692244
       },
       "SOLUSDT": {
         "role": "tradable",
@@ -525,7 +533,11 @@
         "best_ask": 93.26,
         "spread_bps": 1.07233,
         "top20_depth_imbalance": -0.0865,
-        "depth_event_utc": "2026-11-03T19:26:13.561Z"
+        "depth_event_utc": "2026-11-03T19:26:13.561Z",
+        "volatility_bucket_4h": "LOW",
+        "context_4h": "BEAR_LOW",
+        "train_q33_atr_pct": 3.0253490000000003,
+        "train_q67_atr_pct": 4.253547
       },
       "XRPUSDT": {
         "role": "tradable",
@@ -564,7 +576,11 @@
         "best_ask": 1.2788,
         "spread_bps": 0.78201,
         "top20_depth_imbalance": 0.0774,
-        "depth_event_utc": "2026-11-03T19:26:13.692Z"
+        "depth_event_utc": "2026-11-03T19:26:13.692Z",
+        "volatility_bucket_4h": "LOW",
+        "context_4h": "TRANSITION_LOW",
+        "train_q33_atr_pct": 2.03549,
+        "train_q67_atr_pct": 3.024143
       }
     },
     "funding": {
@@ -595,7 +611,8 @@
       "Global long/short ratio is an account-positioning descriptor, not a crowding or liquidation signal.",
       "Depth is a single snapshot; it is not historical liquidity evidence.",
       "No formal shock classifier or historical BTC lead/lag analysis was executed."
-    ]
+    ],
+    "classification_note": "4h volatility buckets now use the newly persisted train-only q33/q67 thresholds; all four current 4h ATR14/close values are below their symbol-specific q33 and classify LOW. 1h volatility buckets remain unassigned because no long 1h archive was backfilled."
   },
   "decisions": {
     "BTCUSDT": {

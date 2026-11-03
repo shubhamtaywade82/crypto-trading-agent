@@ -16,6 +16,11 @@
  * Un-migrated connections only receive the public channels: "wss://fstream.binance.com/ws/btcusdt@markPrice
  * will not [work]" — which is why the legacy paths must not appear anywhere below.
  *
+ * EMPIRICAL CORRECTION (2026-11-03): the rollout is per channel and not uniform. On the real host,
+ * @markPrice does answer on /market and @bookTicker on /public — but @trade still ONLY streams on the
+ * legacy /ws path, and /market subscriptions for @trade stay silent. usdmTradeWsUrl returns the legacy
+ * root for the tick feed until Binance actually moves @trade; see its note.
+ *
  * Testnet: Binance's notice does not document routed paths for the testnet host. The testnet bases
  * therefore keep Binance's documented testnet host with the same route suffixes and are explicitly
  * marked UNVERIFIED; override them with WS_*_BASE if/when Binance documents testnet routing.
@@ -50,9 +55,18 @@ export function usdmWsRouteBases(environment: UsdmWsEnvironment, overrides?: { m
   };
 }
 
-/** Base the `binance` package's WebsocketClient must be given so its `/ws/<stream>` suffix lands on the market route. */
-export function usdmMarketWsUrl(environment: UsdmWsEnvironment): string {
-  return usdmWsRouteBases(environment).market;
+/** The official notice routes regular market data to /market — but that is per channel, and the
+ *  rollout is not uniform. Probed live on 2026-11-03 (6 s windows):
+ *   - wss://fstream.binance.com/ws/<sym>@trade        → streams (SOL 158, BTC 664, ETH 100 msgs)
+ *   - wss://fstream.binance.com/market/ws/<sym>@trade → connects, stays silent (0 msgs, all shapes)
+ *   - wss://fstream.binance.com/market/stream?streams=…@trade → silent (0 msgs)
+ *   - wss://fstream.binance.com/market/ws/<sym>@markPrice → works (new route carries it)
+ *   - wss://fstream.binance.com/public/ws/<sym>@bookTicker → works
+ * Until Binance moves @trade off the legacy path, the tick feed must dial the bare legacy root — a
+ * silent /market subscription starves the entry safety gate (`websocket tick stale`) and blocks
+ * every entry. Re-probe before flipping this. */
+export function usdmTradeWsUrl(environment: UsdmWsEnvironment): string {
+  return environment === 'testnet' ? TESTNET_WS_ROOT : LIVE_WS_ROOT;
 }
 
 /**

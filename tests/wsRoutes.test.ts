@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
-  buildMarketStreamUrl, buildPrivateStreamUrl, maskListenKey, usdmMarketWsUrl, usdmWsRouteBases, USER_DATA_EVENTS,
+  buildMarketStreamUrl, buildPrivateStreamUrl, maskListenKey, usdmTradeWsUrl, usdmWsRouteBases, USER_DATA_EVENTS,
 } from '../src/binance/wsRoutes.js';
 
 /**
@@ -33,10 +33,11 @@ test('explicit base overrides win, so an operator can pin a documented endpoint'
   assert.equal(bases.market, 'wss://fstream.binance.com/market');
 });
 
-test('the market base for the websocket package produces the documented /market/ws/<stream> URL', () => {
-  // the `binance` package appends /ws/<stream> itself, so the base must be the bare market route
-  assert.equal(usdmMarketWsUrl('live'), 'wss://fstream.binance.com/market');
-  assert.equal(usdmMarketWsUrl('testnet'), 'wss://fstream.binancefuture.com/market');
+test('the trade feed base lands on the legacy /ws/<stream> path the @trade channel still answers on', () => {
+  // the `binance` package appends /ws/<stream> itself, so the base must be the bare legacy root
+  // (probed 2026-11-03: the /market route goes silent for @trade; see usdmTradeWsUrl's note)
+  assert.equal(usdmTradeWsUrl('live'), 'wss://fstream.binance.com');
+  assert.equal(usdmTradeWsUrl('testnet'), 'wss://fstream.binancefuture.com');
 });
 
 test('market stream URLs are path-based and carry every stream', () => {

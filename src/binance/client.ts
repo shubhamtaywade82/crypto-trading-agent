@@ -13,7 +13,7 @@ import type { MarketDataSnapshot } from '../market/MarketDataTypes.js';
 import { LiveBook, LiveStateStore, type LiveManagerMode, type LiveOrderPort } from './liveBook.js';
 import { LiveEntryTracker, LIVE_ENTRY_POLL_MS, liveEntryClientOrderId, orderSideOf, venueRejected, type LiveEntryPort } from './liveEntry.js';
 import { UserDataStream, type ListenKeyPort } from './userDataStream.js';
-import { usdmMarketWsUrl } from './wsRoutes.js';
+import { usdmTradeWsUrl } from './wsRoutes.js';
 import {
   ENTRY_ORDER_PREFIX, isAlreadyIsolated, isEntryOrder, isVenueRejection, parseOrderTradeUpdate, planStartupReconciliation,
   protectionClientOrderId, protectionOf, type OpenOrderView, type PositionProtection, type VenuePositionView,
@@ -129,10 +129,11 @@ export class BinanceService {
 
   startRealtimeStream(symbols: string[], onTick: (symbol: string, price: number) => void): () => void {
     const silent = { silly: () => {}, verbose: () => {}, info: () => {}, warning: () => {}, error: () => {} };
-    // Binance's 2026-04-23 WebSocket migration split the routes: regular market data (trade, aggTrade,
-    // kline, …) only answers on <root>/market. The package's default base would dial the legacy
-    // /ws/<symbol>@trade root, which now serves only the public (bookTicker/depth) channels.
-    this.ws = new WebsocketClient({ wsUrl: usdmMarketWsUrl(this.wsEnvironment()), beautify: false }, silent as any);
+    // Binance's 2026-04-23 base-URL split is per channel. bookTicker answers on /public, markPrice on
+    // /market — but @trade still only streams on the legacy path (probed 2026-11-03): a /market/ws/…
+    // subscription accepts the connection and then goes silent, which starves the entry safety gate
+    // of ticks and blocks every entry. usdmTradeWsUrl tracks the probed truth; see its note.
+    this.ws = new WebsocketClient({ wsUrl: usdmTradeWsUrl(this.wsEnvironment()), beautify: false }, silent as any);
     const setStatus = (s: WsStatus) => { this.wsStatus = s; };
     this.ws.on('open', () => setStatus('connected'));
     this.ws.on('reconnected', () => setStatus('connected'));

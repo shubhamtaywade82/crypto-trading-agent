@@ -1,1 +1,158 @@
-{"schema_version":1,"queue_id":"context-conditioned-strategy-research","updated_at_utc":"2026-11-03T23:37:27.375Z","local_time_ist":"2026-11-04T05:07:27.375+05:30","parent_registry_version":"v51","items":[{"id":"RQ-001","priority":"P0","title":"Persist multi-year raw OHLCV and Parquet-ready manifests","status":"IN_PROGRESS","completed_progress":"4h archive: 53,796 base bars across 4 symbols. 1h pages 00-06 persisted/readback-verified: 10,500 rows/symbol, 42,000 total, coverage starts 2025-08-23T08:00Z and incremental 1h through 2026-11-03T22:59:59.999Z. Latest completed 76-row delta persisted: 5m 52, 15m 20, 1h 4, 4h 0; quality gates pass.","next_action":"Continue 1h backward backfill from 2025-08-23T07:59:59.999Z toward 2020-09-14; validate each page and cross-page join. Then backfill 15m and 5m and reconcile all intervals.","blocker":"1h archive remains partial; long 15m/5m history and local Parquet/DuckDB storage are absent."},{"id":"RQ-002","priority":"P1","title":"Refresh Binance server time and contract metadata","status":"BLOCKED","next_action":"Probe /fapi/v1/time and /fapi/v1/exchangeInfo from a network-enabled host; require fresh server time and capture HTTP status before execution validation.","blocker":"GET /fapi/v1/time is unavailable because shell DNS resolution for fapi.binance.com fails. Latest connector exchangeInfo.serverTime=2026-11-03T05:06:21.597Z, retrieved 2026-11-03T22:29:28.459Z (62,586.862 seconds stale); observed TRADING statuses are not authoritative for execution validation."},{"id":"RQ-003","priority":"P1","title":"Complete historical 5m/15m/1h coverage","status":"IN_PROGRESS","completed_progress":"1h pages 00-06 persisted/readback-verified: 10,500 rows/symbol, 42,000 total, coverage starts 2025-08-23T08:00Z. Latest 76-row delta: 5m 52, 15m 20, 1h 4, 4h 0. Latest opens: 5m 23:25Z, 15m 23:15Z, 1h 22:00Z, 4h 16:00Z. All 16 rolling series and new delta rows pass integrity checks.","next_action":"Continue 1h backfill from 2025-08-23T07:59:59.999Z; after 1h target coverage, backfill 15m then 5m in bounded pages and reconcile multi-timeframe timestamps.","blocker":"Long 15m/5m archives absent; 1h coverage starts 2025-08-23T08:00Z, not the 2020 target."},{"id":"RQ-004","priority":"P2","title":"Replace proxy costs with realistic execution model","status":"BLOCKED","next_action":"Version actual fee tier, historical funding cashflows, spread/slippage, latency and market-impact assumptions.","blocker":"Actual account fee tier and historical execution/impact data unavailable."},{"id":"RQ-005","priority":"P2","title":"Integrate generic OHLCV replay and purged walk-forward in project","status":"IN_PROGRESS","completed_progress":"Package metadata verified on main: Node >=24/npm >=11. Current managed runtime Node v22.16.0/npm 10.9.2; no local crypto-trading-agent worktree; SDK import unavailable. GitHub repo contains scripts/backtest.ts and research runner source, but no local execution or smoke test.","next_action":"Provision/checkout project under Node >=24/npm >=11 with dependencies installed; execute a deterministic fixture smoke test before full replay.","blocker":"Local worktree absent, runtime below package floor, no SDK dependencies installed, direct Binance DNS unavailable."},{"id":"RQ-006","priority":"P2","title":"Compare conditional strategy families on matched folds","status":"IN_PROGRESS","completed_progress":"EMA20 reclaim pullback 4h v1 remains VALIDATION_ONLY; all six validation block-bootstrap CIs include zero. This run executed no new experiment and no OOS evaluation; archive work remains higher priority.","next_action":"After historical archive, Node >=24 project runtime, deterministic smoke test, realistic execution costs and purge/embargo are available, compare Donchian20 and failed-breakout fade on matched chronological folds.","blocker":"Untouched OOS not evaluated; actual fee tier, historical funding cashflows, measured spread/slippage, latency/impact and formal purge/embargo remain unavailable."},{"id":"RQ-007","priority":"P3","title":"BTC lead/lag and relative-strength experiment","status":"IN_PROGRESS","completed_progress":"Same-bar 4h correlations carried forward; no lagged causal test.","next_action":"Test lagged BTC returns/impulse and relative strength using aligned historical bars and chronological validation.","blocker":"Lead/lag feature experiment not run."}]}
+[
+  {
+    "blocker": "Re-inspected local /mnt/data/context_research and the persistent Library research folder: registry snapshots only; no raw OHLCV files, page manifests or immutable historical partitions. The 4,800 current connector rows were processed in memory and not persisted.",
+    "id": "RQ-001",
+    "last_checked_at_utc": "2026-11-04T15:28:05Z",
+    "last_reviewed_utc": "2026-11-04T15:28:05Z",
+    "next_action": "Restore a connector-to-container export or mount the persistent research host; first backfill common 4h history, write Parquet partitions with page hashes, reopen/readback, then extend 1h/15m/5m.",
+    "prerequisites": [
+      "Persistent research host or object store",
+      "Reliable historical Binance data access",
+      "Durable storage and manifest writer"
+    ],
+    "priority": "P0",
+    "status": "BLOCKED",
+    "title": "Persist six-year common 4h OHLCV archive as Parquet"
+  },
+  {
+    "blocker": "Direct curl to fapi.binance.com still fails DNS (HTTP 000). Connector exchangeInfo serverTime=2026-11-04T01:01:01.893Z, 14h27m behind the current market timestamp.",
+    "id": "RQ-002",
+    "last_checked_at_utc": "2026-11-04T15:28:05Z",
+    "last_reviewed_utc": "2026-11-04T15:28:05Z",
+    "next_action": "Restore direct DNS/HTTPS; require GET /fapi/v1/time and uncached /fapi/v1/exchangeInfo with <=60s drift before contract execution validation.",
+    "prerequisites": [
+      "Direct Binance REST connectivity or independently fresh uncached endpoint"
+    ],
+    "priority": "P1",
+    "status": "BLOCKED",
+    "title": "Refresh exchange contract metadata and server time"
+  },
+  {
+    "blocker": "Current sample remains 299 completed bars per symbol/interval only: 5m 24h50m, 15m 74h30m, 1h 298h, 4h 1192h.",
+    "id": "RQ-003",
+    "last_checked_at_utc": "2026-11-04T15:28:05Z",
+    "last_reviewed_utc": "2026-11-04T15:28:05Z",
+    "next_action": "After RQ-001, backfill and reconcile full histories for all four symbols/intervals; verify aggregation, gaps and alignment.",
+    "prerequisites": [
+      "Persistent raw archive",
+      "Paginated historical data access"
+    ],
+    "priority": "P1",
+    "status": "BLOCKED",
+    "title": "Reconcile complete 5m/15m/1h historical coverage"
+  },
+  {
+    "blocker": "Current 20-level books, latest completed hourly taker flow and OI/positioning snapshots refreshed, but account fee tier and historical spread/slippage/latency/impact/funding cashflow series remain unavailable.",
+    "id": "RQ-004",
+    "last_checked_at_utc": "2026-11-04T15:28:05Z",
+    "last_reviewed_utc": "2026-11-04T15:28:05Z",
+    "next_action": "Obtain actual fee tier and historical bookTicker/depth/trades/funding cashflows; calibrate conservative symbol/time-of-day execution costs.",
+    "prerequisites": [
+      "Actual account fee tier",
+      "Historical spread/depth/trade and funding data"
+    ],
+    "priority": "P2",
+    "status": "BLOCKED",
+    "title": "Replace proxy execution costs with measured cost model"
+  },
+  {
+    "blocker": "No local checkout; remote main remains 46979031b6b5b78dac630b21c60084a76e4242b8. Runtime Node v22.16.0/npm 10.9.2 is below package engines Node>=24/npm>=11; SDK dependencies absent.",
+    "id": "RQ-005",
+    "last_checked_at_utc": "2026-11-04T15:28:05Z",
+    "last_reviewed_utc": "2026-11-04T15:28:05Z",
+    "next_action": "Mount exact commit in a compatible Node>=24/npm>=11 workspace, install pinned dependencies, add deterministic fixture and run no-lookahead smoke test.",
+    "prerequisites": [
+      "Local repository checkout",
+      "Node>=24/npm>=11",
+      "Pinned dependencies and deterministic fixture"
+    ],
+    "priority": "P2",
+    "status": "BLOCKED",
+    "title": "Run deterministic backtest smoke test and formal purged/embargoed validation"
+  },
+  {
+    "blocker": "No full raw archive, measured costs or executable local harness.",
+    "id": "RQ-006",
+    "last_checked_at_utc": "2026-11-04T15:28:05Z",
+    "last_reviewed_utc": "2026-11-04T15:28:05Z",
+    "next_action": "After RQ-001/RQ-004/RQ-005, freeze matched-window SOL/ETH/XRP experiments comparing Donchian20, trend/pullback and failed-breakout fade with purge/embargo, block bootstrap and Holm correction.",
+    "prerequisites": [
+      "RQ-001",
+      "RQ-004",
+      "RQ-005"
+    ],
+    "priority": "P3",
+    "status": "BLOCKED",
+    "title": "Run matched-window strategy-family experiments"
+  },
+  {
+    "blocker": "100-bar 1h same-hour correlations were computed (ETH .865, SOL .849, XRP .631); one-hour shifted correlations are weak and the rolling sample is insufficient for robust lead/lag discovery.",
+    "id": "RQ-007",
+    "last_checked_at_utc": "2026-11-04T15:28:05Z",
+    "last_reviewed_utc": "2026-11-04T15:28:05Z",
+    "next_action": "After RQ-001/RQ-003, compute past-only rolling correlation, beta, relative strength and lagged BTC impulse over full history; validate by fold.",
+    "prerequisites": [
+      "Aligned full-history multi-symbol OHLCV archive"
+    ],
+    "priority": "P3",
+    "status": "BLOCKED",
+    "title": "Add BTC-relative strength and lead/lag context features"
+  },
+  {
+    "blocker": "Raw historical page arrays/manifests remain absent; exact page-boundary reconciliation remains impossible.",
+    "id": "RQ-008",
+    "last_checked_at_utc": "2026-11-04T15:28:05Z",
+    "last_reviewed_utc": "2026-11-04T15:28:05Z",
+    "next_action": "Persist full historical 4h pages and compare exact open-time sets, duplicates and continuity against inherited page metadata.",
+    "prerequisites": [
+      "Persisted raw page files and page manifest"
+    ],
+    "priority": "P1",
+    "status": "BLOCKED",
+    "title": "Reconcile rolling 4h page-boundary metadata"
+  },
+  {
+    "blocker": "Remote scripts/backtest.ts supports 15m/1h/4h only and one symbol per invocation; no local checkout or fixture.",
+    "id": "RQ-009",
+    "last_checked_at_utc": "2026-11-04T15:28:05Z",
+    "last_reviewed_utc": "2026-11-04T15:28:05Z",
+    "next_action": "After local checkout, add 5m replay/state support and deterministic 5m fixtures; verify tests and no-lookahead behavior.",
+    "prerequisites": [
+      "Local repository checkout",
+      "Node>=24/npm>=11",
+      "Deterministic 5m fixture and execution model"
+    ],
+    "priority": "P2",
+    "status": "BLOCKED",
+    "title": "Add 5m timeframe support to the local backtest harness"
+  },
+  {
+    "blocker": "Data semantics cross-check passed: premiumIndex.lastFundingRate equals latest fundingRate history settlement (0.01% at 08:00 UTC); fundingInfo reports 8h. Local writer/tests still cannot run.",
+    "id": "RQ-010",
+    "last_checked_at_utc": "2026-11-04T15:28:05Z",
+    "last_reviewed_utc": "2026-11-04T15:28:05Z",
+    "next_action": "In compatible local checkout, encode these field semantics in the snapshot schema and regression tests; estimated next rate must remain null absent a separate estimate source.",
+    "prerequisites": [
+      "Inspect current market snapshot writer and tests in a local checkout",
+      "Node>=24/npm>=11 runtime"
+    ],
+    "priority": "P2",
+    "status": "BLOCKED",
+    "title": "Enforce correct funding-field semantics in market snapshot writer"
+  },
+  {
+    "blocker": "Remote scripts/conditional-edge.ts at current main still defaults to minN=30 and bootstrap confidence=0.90; this research gate requires >=100 OOS trades per symbol/context and 95% intervals. Local compatible checkout absent.",
+    "id": "RQ-011",
+    "last_checked_at_utc": "2026-11-04T15:28:05Z",
+    "last_reviewed_utc": "2026-11-04T15:28:05Z",
+    "next_action": "Raise defaults to minN>=100 and confidence=0.95; add tests blocking promotion when per-cell OOS count <100 or lower 95% CI <=0; execute in Node>=24/npm>=11 checkout.",
+    "prerequisites": [
+      "Local repository checkout",
+      "Node>=24/npm>=11",
+      "Deterministic tests for minimum sample and confidence interval gates"
+    ],
+    "priority": "P2",
+    "status": "BLOCKED",
+    "title": "Align conditional-edge CLI defaults with evidence gates"
+  }
+]

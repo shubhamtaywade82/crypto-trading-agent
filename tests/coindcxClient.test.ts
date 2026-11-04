@@ -272,6 +272,28 @@ test('warmSymbols swallows an unresolvable symbol instead of throwing', async ()
   await api.warmSymbols(['NOPEUSDT']);
 });
 
+test('getPositions waits for an in-flight warmSymbols, so a cold restart cannot drop an open position as unresolved', async () => {
+  const { client } = fakeClient({
+    markets: [{ pair: 'B-BTC_USDT', status: 'active' }],
+    positions: [{ id: 1, pair: 'B-BTC_USDT', side: 'long', size: 0.5, entry_price: 50_000, mark_price: 51_000, leverage: 5, margin_type: 'isolated' }],
+  });
+  // Hold the market-metadata fetch open so the warm-up is still pending when the first sync runs
+  const market = client.futures.market;
+  const fetchMarkets = market.getMarketsDetails.bind(market);
+  let openGate!: () => void;
+  const gate = new Promise<void>((resolve) => { openGate = resolve; });
+  market.getMarketsDetails = async () => { await gate; return fetchMarkets(); };
+
+  const api = makeApi(client);
+  const warming = api.warmSymbols(['BTCUSDT']); // fire-and-forget, exactly as binance/client.ts starts it
+  const sync = api.getPositions();
+  openGate();
+  await warming;
+  const positions = await sync;
+  assert.equal(positions.length, 1, 'the position must be mapped to its symbol, not dropped');
+  assert.equal(positions[0].symbol, 'BTCUSDT');
+});
+
 test('submitOrder above maxOrderNotional (INR-routed): the cap is checked against the pre-FX USDT notional', async () => {
   const { client, calls } = fakeClient({
     markets: [{ pair: 'B-XYZ_INR', status: 'active' }],

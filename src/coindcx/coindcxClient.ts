@@ -126,6 +126,8 @@ export class CoinDcxExchangeApi implements ExchangeApi {
   private readonly specs: ContractSpecCache;
   private readonly baseline: CoinDcxBaseline;
   private readonly warnedPairs = new Set<string>();
+  /** In-flight or completed symbol warm-up. Read by getPositions() so pair→symbol mapping never races the warm-up. */
+  private warming: Promise<void> = Promise.resolve();
 
   constructor(private readonly deps: CoinDcxExchangeApiDeps) {
     this.router = new SymbolRouter(deps.client, deps.quotePreference);
@@ -135,10 +137,12 @@ export class CoinDcxExchangeApi implements ExchangeApi {
 
   // getPositions() only maps a pair back to a symbol via router.pairToSymbol, which is empty until resolve() has run
   // for that symbol (only submitOrder() calls resolve()). On a cold restart with open positions already on CoinDCX,
-  // every one of them would be unresolved and silently dropped — the caller (Task 5) must call this once at startup,
-  // for every configured symbol, before the first sync(). An unresolvable symbol is skipped, not thrown.
+  // every one of them would be unresolved and silently dropped. The warm-up is recorded synchronously, so a caller may
+  // start it without awaiting (the broker factory is synchronous) and getPositions() still waits for it before mapping.
+  // An unresolvable symbol is skipped, not thrown.
   async warmSymbols(symbols: string[]): Promise<void> {
-    await Promise.all(symbols.map((symbol) => this.router.resolve(symbol).catch(() => {})));
+    this.warming = Promise.all(symbols.map((symbol) => this.router.resolve(symbol).catch(() => {}))).then(() => undefined);
+    await this.warming;
   }
 
   async getAccount(): Promise<PaperExchangeAccountSnapshot | null> {
@@ -176,6 +180,7 @@ export class CoinDcxExchangeApi implements ExchangeApi {
   }
 
   async getPositions(): Promise<PaperExchangePosition[]> {
+    await this.warming; // cannot reject: each resolve() is caught inside warmSymbols
     return this.guarded(async () => {
       const isINR = this.deps.quotePreference === 'INR';
       const raw = await this.deps.client.futures.account.getPositions({

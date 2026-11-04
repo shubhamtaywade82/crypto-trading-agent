@@ -165,7 +165,7 @@ export const EnvSchema = z.object({
       message: 'RISK_ENGINE=off is refused: the legacy sizing path skipped fee netting, margin, reward-to-risk and portfolio caps. Remove the setting; the risk engine always runs.',
     });
   }
-  if (env.MODE === 'live' && (env.COINDCX_API_KEY !== '' || env.COINDCX_API_SECRET !== '')) {
+  if (env.MODE === 'live' && env.ALERT_ONLY === 'off' && (env.COINDCX_API_KEY !== '' || env.COINDCX_API_SECRET !== '')) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
       path: ['COINDCX_API_KEY'],
@@ -350,7 +350,7 @@ export const config = {
     ? { url: env.PAPER_EXCHANGE_URL.replace(/\/+$/, ''), accountId: env.PAPER_EXCHANGE_ACCOUNT_ID, apiKey: env.PAPER_EXCHANGE_API_KEY }
     : null,
   alertOnly: env.MODE === 'live' && env.ALERT_ONLY === 'on',
-  coindcx: env.MODE === 'live' ? {
+  coindcx: (env.COINDCX_API_KEY !== '' || env.COINDCX_API_SECRET !== '' || env.MODE === 'live') ? {
     apiKey: env.COINDCX_API_KEY,
     apiSecret: env.COINDCX_API_SECRET,
     paperMode: env.COINDCX_PAPER_MODE === 'on',
@@ -362,6 +362,6 @@ export const config = {
   } : null,
 } as const;
 
-if (config.mode === 'live' && (!config.binance.apiKey || !config.binance.apiSecret)) {
+if (config.mode === 'live' && !config.alertOnly && (!config.binance.apiKey || !config.binance.apiSecret)) {
   throw new Error('LIVE mode requires BINANCE_API_KEY and BINANCE_API_SECRET');
 }

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAtUtc": "2026-11-05T16:25:30.000Z",
+  "updatedAtUtc": "2026-11-05T16:28:42.417Z",
   "items": [
     {
       "id": "Q1_ARCHIVE_MULTIYEAR",
@@ -233,6 +233,17 @@
       ],
       "nextAction": "Retrieve the original SOL Donchian20 BULL_LOW experiment artifact and reconcile its 12-trade OOS summary into the registry without changing its evidence status.",
       "blocker": "Accessible prior v75 report records SOL Donchian20 as OOS_PROMISING (12 trades), but the current registry JSON has entries=[] and oosValidatedEntries=[]; the exact frozen rules and trade-level artifact are not present in that registry."
+    },
+    {
+      "id": "Q14_CONTEXT_TAXONOMY_FULL_4H_REESTIMATION",
+      "priority": 2,
+      "status": "BLOCKED",
+      "prerequisites": [
+        "Full aligned 4h archive accessible to research runtime",
+        "Training-only threshold fitting and chronological multi-window validation"
+      ],
+      "nextAction": "Re-estimate EMA50/EMA200 sideways, ATR14 q33/q67 and shock q99 thresholds over the complete 6.14-year 4h archive using rolling chronological folds; report per-symbol JSD, duration and transitions.",
+      "blocker": "The accessible CTX-4H-EMA50xEMA200-ATRQ-v1 context experiment used 1,499 completed bars (~250 days) per symbol, not the 13,454-row aligned full 4h archive; multi-cycle stability is unproven."
     }
   ],
   "lastRun": {
@@ -241,8 +252,8 @@
     "researchExecuted": false,
     "oosEvaluated": false,
     "monitoringCompleted": true,
-    "snapshotAtUtc": "2026-11-05T16:22:22.805Z",
-    "completedAtUtc": "2026-11-05T16:25:30.000Z",
+    "snapshotAtUtc": "2026-11-05T16:27:57.858Z",
+    "completedAtUtc": "2026-11-05T16:28:42.417Z",
     "archiveAppend": {
       "rows": 16,
       "deltaPath": "research-data/binance-usdm/delta/binance_usdm_delta_20261105T1622Z_completed.jsonl",
@@ -271,6 +282,18 @@
       "Prior report's OOS_PROMISING Donchian candidate is not represented in the accessible registry entries."
     ],
     "nextAction": "Provision network-enabled Node>=24/npm>=11 runner with repository checkout; backfill lower timeframes and funding history; fix candle/parser integrity and evidence gates; reconcile original Donchian artifact before the first pre-registered experiment.",
-    "reportPath": "research-data/reports/context_strategy_research_20261105T1625Z_v76_final.json"
+    "reportPath": "research-data/reports/context_strategy_research_20261105T1625Z_v76_final.json",
+    "currentContext": {
+      "taxonomyId": "CTX-4H-EMA50xEMA200-ATRQ-v1",
+      "symbols": {
+        "BTCUSDT": "SHOCK",
+        "ETHUSDT": "SHOCK",
+        "SOLUSDT": "SHOCK",
+        "XRPUSDT": "SHOCK"
+      },
+      "underlying": "DOWN_HIGH",
+      "rule": "absolute completed 4h return > symbol-specific training q99"
+    },
+    "contextDiscoveryArtifact": "research/context-strategy/runs/2026-11-05T095746Z-context-discovery.json"
   }
 }

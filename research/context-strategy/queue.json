@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAtUtc": "2026-11-05T21:36:30.000Z",
+  "updatedAtUtc": "2026-11-05T21:46:05.000Z",
   "items": [
     {
       "id": "Q1_ARCHIVE_MULTIYEAR",
@@ -11,8 +11,8 @@
         "Compatible bulk-data downloader or official Binance Vision access",
         "Persistent writable store"
       ],
-      "nextAction": "Backfill multi-year 5m/15m/1h for all four symbols from an auditable source. Recover the missing 76-row delta or exact creating-run coverage metadata; do not infer its contents.",
-      "blocker": "Canonical 4h series is reassembled and verified: 13,461 rows per symbol (53,844 total), 2020-09-14T08:00Z through 2026-11-05T16:00Z, zero gaps/duplicates/invariant failures. Multi-year 5m/15m/1h history remains absent; the indexed 76-row delta is still inaccessible.",
+      "nextAction": "Backfill multi-year 5m/15m/1h for BTCUSDT, ETHUSDT, SOLUSDT and XRPUSDT from an auditable source. Recover the missing 76-row delta or exact creating-run coverage metadata; do not infer its contents.",
+      "blocker": "Canonical 4h series is PASS: 13,461 rows per symbol (53,844 total), 2020-09-14T08:00Z through 2026-11-05T16:00Z, zero gaps/duplicates/invariant failures and readback-verified hashes. Multi-year 5m/15m/1h history remains absent. The indexed 76-row delta is still inaccessible; its coverage is unknown, but no 4h gap remains through the canonical high-water mark.",
       "result": {
         "canonical4hRowsPerSymbol": 13461,
         "canonical4hRowsTotal": 53844,
@@ -30,7 +30,7 @@
         "Direct bounded HTTP or Binance SDK call"
       ],
       "nextAction": "Restore direct DNS/network access; probe uncached /fapi/v1/time and /fapi/v1/exchangeInfo and require <=60s drift before execution-authoritative contract validation.",
-      "blocker": "Direct bounded probes to /fapi/v1/time, /exchangeInfo, /klines, /premiumIndex, /openInterest and /ticker/24hr returned HTTP 000 due DNS resolution/timeouts. Connector exchangeInfo.serverTime=2026-11-05T06:46:24.911Z versus fresh mark timestamps around 2026-11-05T21:35:05Z, drift approximately 53,338 seconds (14h49m)."
+      "blocker": "Direct bounded probes to /fapi/v1/time, /exchangeInfo, /klines, /premiumIndex, /openInterest and /ticker/24hr returned HTTP 000 (curl exit 6 or 28: DNS resolution failure/timeout). Connector exchangeInfo.serverTime=2026-11-05T06:46:24.911Z versus fresh mark timestamp 2026-11-05T21:45:13Z, drift 53,928.089 seconds (14h58m48s). Connector contract statuses are therefore not execution-authoritative."
     },
     {
       "id": "Q3_RUN_REPOSITORY_BACKTEST",
@@ -42,8 +42,8 @@
         "npm>=11",
         "dependencies installed"
       ],
-      "nextAction": "Provision Node >=24/npm >=11, clean local checkout and dependencies; commit the exact research runner and deterministic fixture; run typecheck/tests and smoke replay.",
-      "blocker": "Shell observed Node 22.16.0/npm 10.9.2; package.json requires Node >=24/npm >=11. No local checkout or node_modules. Binance SDK dependencies are declared remotely but are not importable locally. Repository backtest CLI exists remotely but was not invoked."
+      "nextAction": "Provision Node >=24/npm >=11, clean local checkout and dependencies; commit exact executable research runner and deterministic fixture; run typecheck/tests and smoke replay.",
+      "blocker": "Current shell: Node 22.16.0/npm 10.9.2; repository requires Node >=24/npm >=11. /crypto-trading-agent/.git absent, no node_modules, Binance SDK imports unavailable. Repository harness not invoked."
     },
     {
       "id": "Q4_DERIVATIVES_ARCHIVE",
@@ -430,8 +430,8 @@
       "prerequisites": [
         "GitHub artifact path recovery or fresh Binance backfill"
       ],
-      "nextAction": "Recover the original file or creating-run logs/backup with exact symbol, interval, start/end and row metadata. Do not reconstruct from row count alone.",
-      "blocker": "The exact file and plausible manifest remain inaccessible; its 76-row contents and interval coverage are unknown. The independently reassembled 4h series is continuous through 2026-11-05T16:00Z, so no 4h gap remains; the missing file may still contain lower-timeframe or redundant data."
+      "nextAction": "Recover the original 2026-11-05T0524Z JSONL or creating-run logs containing exact symbol/interval/startTime/endTime coverage; verify its declared SHA-256 before indexing. Do not reconstruct from row count.",
+      "blocker": "GitHub fetch_file returned 404 for the indexed path. Canonical 4h is independently complete through 2026-11-05T16:00Z, so the missing file is not required to close a 4h gap; it may contain unknown lower-timeframe observations."
     },
     {
       "id": "Q11_INCREMENTAL_5M_REFRESH_20261105T183743Z",
@@ -506,8 +506,8 @@
         "Node >=24/npm >=11",
         "Committed executable research runner and deterministic smoke test"
       ],
-      "nextAction": "Provision Node >=24/npm >=11 and clean checkout; commit the exact runner and deterministic fixture; then pre-register a different strategy-family x context x symbol experiment with chronological splits, realistic costs and untouched OOS. Do not re-test the existing Donchian test window.",
-      "blocker": "The daily cycle executed the highest-priority data-quality experiment (canonical 4h reconciliation). No strategy-family backtest or OOS ran because compatible local runtime/repository harness is unavailable and multi-year lower-timeframe history remains incomplete.",
+      "nextAction": "After compatible runtime and multi-year lower-timeframe archive are available, pre-register and execute a different strategy-family x context x symbol experiment; never reuse the existing Donchian untouched test.",
+      "blocker": "Daily cycle completed the highest-priority available data-quality work (canonical 4h reconciliation and incremental integrity checks). Strategy experiment/OOS remains blocked by Node/npm version mismatch, absent local checkout/runner, incomplete multi-year 5m/15m/1h archive and direct REST DNS failure.",
       "result": {
         "experimentId": "4H-CANONICAL-ARCHIVE-RECONCILIATION-V1-20261105T2126Z",
         "artifactPath": "research/context-strategy/experiments/4h-canonical-archive-reconciliation-v1_20261105T2126Z.json",
@@ -641,6 +641,49 @@
         "previousRegistrySha256": "bfa05bab5b7744391c43abd7e036ad22c99aeb168eb349ebe4fcf7ac57c6da62",
         "previousQueueSha256": "3136989ce3087af66bce8c3bd5e07e01942dcf33ba75e6cf4dbb308c5ec623e6",
         "readbackVerified": true
+      }
+    },
+    {
+      "id": "Q30_INCREMENTAL_ARCHIVE_REFRESH_20261105T214605Z",
+      "priority": 1,
+      "status": "COMPLETED",
+      "prerequisites": [
+        "Binance USDⓈ-M kline connector",
+        "Existing archive high-water marks",
+        "GitHub repository write access"
+      ],
+      "nextAction": "On the next hourly run append only completed bars after 5m 21:40Z and 15m 21:30Z; do not append 1h/4h until new bars close. Verify manifest/hash/readback.",
+      "blocker": null,
+      "result": {
+        "rows": 16,
+        "row_counts_by_symbol_interval": {
+          "BTCUSDT:5m": 3,
+          "ETHUSDT:5m": 3,
+          "SOLUSDT:5m": 3,
+          "XRPUSDT:5m": 3,
+          "BTCUSDT:15m": 1,
+          "ETHUSDT:15m": 1,
+          "SOLUSDT:15m": 1,
+          "XRPUSDT:15m": 1
+        },
+        "latest_completed_open_utc_by_interval": {
+          "5m": "2026-11-05T21:40:00Z",
+          "15m": "2026-11-05T21:30:00Z"
+        },
+        "path": "research-data/binance-usdm/delta/binance_usdm_delta_20261105T214605Z_completed.jsonl",
+        "manifestPath": "research-data/binance-usdm/delta/binance_usdm_delta_20261105T214605Z.manifest.json",
+        "sha256": "ef249e89cbeadd1f5635d89dfd00f546a985aad4dccca1114fd942e5b81f196d",
+        "readbackVerified": false,
+        "quality": {
+          "duplicates": 0,
+          "gaps": 0,
+          "ohlcFailures": 0,
+          "nonPositiveVolume": 0,
+          "nonFinite": 0,
+          "closeTimeFailures": 0,
+          "formingIncluded": 0,
+          "crossTimeframeAggregationFailures": 0
+        }
       }
     }
   ],

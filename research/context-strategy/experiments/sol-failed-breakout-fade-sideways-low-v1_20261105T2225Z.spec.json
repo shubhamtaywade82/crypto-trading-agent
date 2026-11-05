@@ -1,0 +1,100 @@
+{
+  "schemaVersion": "1.0.0",
+  "experimentId": "SOL-FAILED-BREAKOUT-FADE-SIDEWAYS-LOW-V1-20261105T2225Z",
+  "createdAtUtc": "2026-11-05T22:25:46Z",
+  "status": "PREREGISTERED",
+  "hypothesis": "In SOLUSDT 4h SIDEWAYS_LOW contexts, a Donchian false breakout that closes back inside the prior range has positive net expectancy when faded over a maximum 24-hour horizon, after fixed execution-cost proxy and historical funding.",
+  "universe": [
+    "SOLUSDT"
+  ],
+  "referenceOnly": [
+    "BTCUSDT"
+  ],
+  "timeframe": "4h",
+  "data": {
+    "repository": "shubhamtaywade82/crypto-trading-agent",
+    "archiveBranch": "research/raw-ohlcv-archive-2026-11-05T0530Z",
+    "archivePath": "research-data/binance-usdm/4h/canonical/SOLUSDT_4h_20200914T0800Z_20261105T1600Z.jsonl",
+    "archiveGitBlobSha1": "77af5caa7d5e76c8efc3fd8571c55a20376ac97f",
+    "archiveSha256": "148389f0347fe05307e2a274c579ccc1c495e32eaad2e49cfb19ca211df89156",
+    "rows": 13461,
+    "startUtc": "2020-09-14T08:00:00Z",
+    "lastCompletedOpenUtc": "2026-11-05T16:00:00Z",
+    "fundingEndpoint": "GET /fapi/v1/fundingRate",
+    "fundingWindowStartMs": 1600070400000,
+    "fundingWindowEndMs": 1793894400000
+  },
+  "split": {
+    "method": "chronological_by_row_index",
+    "trainFraction": 0.6,
+    "validationFraction": 0.2,
+    "testFraction": 0.2,
+    "purgeAndEmbargoBars": 6,
+    "featureWarmupBars": 200
+  },
+  "context": {
+    "name": "SIDEWAYS_LOW",
+    "features": {
+      "trendSpread": "EMA50/EMA200 - 1",
+      "volatility": "Wilder ATR14 / close",
+      "shock": "absolute one-bar 4h close return"
+    },
+    "thresholdsFit": "training partition only",
+    "sidewaysThreshold": "q30(abs(EMA50/EMA200 - 1))",
+    "lowVolatilityThreshold": "q33(ATR14/close)",
+    "shockThreshold": "q99(abs(4h return))",
+    "classification": "SHOCK if abs return > q99; else SIDEWAYS if abs EMA spread <= q30; volatility LOW if ATR/close <= q33; strategy eligible only if SIDEWAYS_LOW and not SHOCK"
+  },
+  "strategy": {
+    "family": "failed-breakout fade / range mean reversion",
+    "signalTimeframe": "4h",
+    "lookbackCandidates": [
+      15,
+      20,
+      25
+    ],
+    "upperFailure": "current high > max(previous N highs) and current close < prior channel high => short next bar open",
+    "lowerFailure": "current low < min(previous N lows) and current close > prior channel low => long next bar open",
+    "ambiguousBar": "if both upper and lower failures occur on the same bar, NO_TRADE",
+    "entry": "next completed 4h candle open",
+    "stop": "signal-bar extreme +/- 0.25 * signal ATR14",
+    "target": "1.5R",
+    "timeStopBars": 6,
+    "position": "fixed 1 SOL; one open position at a time",
+    "intrabar": "stop-first if stop and target are both touched in one candle; stop gap-through fills at adverse open; target fills at target price",
+    "exit": "stop, target, or close of sixth holding candle",
+    "noTrade": [
+      "outside SIDEWAYS_LOW context for conditional variant",
+      "shock context",
+      "ambiguous two-sided failure",
+      "invalid ATR or stop geometry",
+      "overlapping position",
+      "insufficient bars to complete horizon within split"
+    ]
+  },
+  "validation": {
+    "selection": "choose highest validation mean net R among lookback candidates with >=20 validation trades; if none qualify, use lookback 20 and record selection inconclusive",
+    "untouchedTest": "evaluate all three pre-registered lookbacks once on final test; do not select based on test",
+    "multipleTesting": "Holm correction across three test lookback variants",
+    "uncertainty": "2,000 circular moving-block bootstrap replications, block length 5 trades, deterministic seed 20261105",
+    "minimumOosTradesPerSymbolContext": 100,
+    "maximumDrawdownR": 10,
+    "positiveNetExpectancy": true,
+    "confidenceIntervalLowerBoundAboveZero": true,
+    "parameterNeighborhood": "selected lookback and adjacent lookback variants must not show material negative OOS expectancy",
+    "walkForwardRequirement": "at least three non-overlapping OOS windows for OOS_VALIDATED; this single holdout alone cannot satisfy that requirement"
+  },
+  "costs": {
+    "roundTripAllInProxyBps": 15,
+    "definition": "fixed 15bp round-trip proxy covering taker fees, spread and slippage; not account-tier or historical fill calibrated",
+    "funding": "actual SOLUSDT historical funding rates at settlement timestamps; use funding-history markPrice when present, otherwise exact matching 4h candle open as explicitly flagged proxy",
+    "fundingIntervalObserved": "8h in current fundingInfo; historical interval changes checked from timestamp gaps",
+    "latency": "not separately modeled; next-bar-open execution"
+  },
+  "baselines": [
+    "same failed-breakout rules without context filter",
+    "SOL buy-and-hold price return over untouched test (reference only)"
+  ],
+  "seed": 20261105,
+  "output": "research/context-strategy/experiments/sol-failed-breakout-fade-sideways-low-v1_20261105T2225Z.result.json"
+}

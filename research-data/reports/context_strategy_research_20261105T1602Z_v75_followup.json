@@ -213,7 +213,7 @@
     "direct_binance_rest": "All six probes HTTP000; DNS exits 6/28.",
     "connector": "Klines/mark/ticker/funding/OI/taker/long-short/bookTicker returned data; HTTP status/headers unavailable.",
     "exchange_metadata": "exchangeInfo serverTime 06:46:24.911Z; 33289.696 seconds behind latest book timestamp 16:01:14.607Z; blocked for contract validation.",
-    "rolling_data_quality": "16 series, 1600 raw, 1584 completed, 16 forming excluded; 0 duplicates/gaps/OHLC failures/nonpositive volume/nonfinite.",
+    "rolling_data_quality": "16 series; 3200 raw rows (4 symbols x [100 5m + 100 15m + 100 1h + 500 4h]); 3184 completed; 16 forming excluded; zero duplicates, gaps, OHLC failures, nonpositive volume or nonfinite values. Full lower-timeframe history absent.",
     "backtest": "Harness inspected remotely; no local invocation or deterministic smoke test.",
     "storage": "GitHub deltas/manifests/index and report/queue readback available."
   },
@@ -239,5 +239,11 @@
     "schedule": "RRULE:FREQ=HOURLY",
     "changed": false,
     "duplicate_created": false
-  }
+  },
+  "corrections": [
+    {
+      "field": "rolling_data_quality",
+      "correction": "An earlier v75 draft said 1600 raw/1584 completed. Correct count is 3200 raw/3184 completed because each 4h series contains 500 raw bars, not 100. Sixteen forming candles were excluded."
+    }
+  ]
 }

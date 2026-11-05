@@ -97,10 +97,10 @@ function run(input) {
   const params={lookbacks:[15,20,25],stopBufferAtr:0.25,targetR:1.5,maxHoldBars:6,qty:1,costRate:0.0015,minValidationTrades:20,bootstrapReps:2000,blockLength:5,seed:20261105};
   function backtest(start,end,lookback,conditional) {
     const trades=[];
-    let busyUntil=-1, contextBars=0, upperSignals=0, lowerSignals=0, ambiguous=0, overlapSkipped=0;
+    let busyUntil=-1, upperSignals=0, lowerSignals=0, ambiguous=0, overlapSkipped=0;
+    const contextBars=conditional?features.slice(start,end).filter(f=>f.context==="SIDEWAYS_LOW").length:0;
     for (let i=Math.max(start,warmup,lookback);i<end-params.maxHoldBars;i++) {
       if (i<busyUntil) { overlapSkipped++; continue; }
-      if (features[i].context==="SIDEWAYS_LOW") contextBars++;
       if (conditional && features[i].context!=="SIDEWAYS_LOW") continue;
       const priorHigh=Math.max(...high.slice(i-lookback,i));
       const priorLow=Math.min(...low.slice(i-lookback,i));
@@ -150,8 +150,9 @@ function run(input) {
         const f=fundingByTime.get(ft);
         let mark=f.markPrice;
         if (!(Number.isFinite(mark)&&mark>0)) {
-          const bi=barIndexByTime.get(ft);
-          if (bi!==undefined) { mark=open[bi]; fundingProxyCount++; }
+          const nearest=Math.round(ft/intervalMs)*intervalMs;
+          const bi=barIndexByTime.get(nearest);
+          if (bi!==undefined && Math.abs(times[bi]-ft)<=60000) { mark=open[bi]; fundingProxyCount++; }
           else { fundingUnpriced++; continue; }
         }
         fundingCost += side*f.rate*mark*params.qty;
@@ -179,7 +180,7 @@ function run(input) {
     const totalQuote=trades.reduce((a,t)=>a+t.netQuotePnl,0);
     const holding=trades.reduce((a,t)=>a+t.holdingBars,0);
     return {
-      eligibleContextObservations:conditional?contextBars:Math.max(0,end-start-warmup),
+      eligibleContextObservations:conditional?contextBars:features.slice(start,end).filter(f=>f.emaSpread!==null).length,
       trades:n,signals:upperSignals+lowerSignals,upperFailures:upperSignals,lowerFailures:lowerSignals,
       ambiguousBars:ambiguous,overlapSkipped,
       winRate:n?wins.length/n:null,targetBeforeStopProbability:n?trades.filter(t=>t.exitReason==="TARGET").length/n:null,
@@ -225,7 +226,8 @@ function run(input) {
   const trainRange={start:warmup,end:trainEnd};
   const valRange={start:trainEnd+purge,end:validationEnd};
   const testRange={start:validationEnd+purge,end:N};
-  const validationCandidates=params.lookbacks.map((lb)=>({lookback:lb,metrics:backtest(valRange.start,valRange.end,lb,true)}));
+  const validationRaw=params.lookbacks.map((lb)=>({lookback:lb,metrics:backtest(valRange.start,valRange.end,lb,true)}));
+  const validationCandidates=validationRaw.map(x=>({lookback:x.lookback,metrics:{...x.metrics,tradesLedger:undefined}}));
   const eligible=validationCandidates.filter(x=>x.metrics.trades>=params.minValidationTrades);
   const selected=eligible.length?eligible.slice().sort((a,b)=>(b.metrics.meanNetR??-Infinity)-(a.metrics.meanNetR??-Infinity))[0].lookback:20;
   const trainPrimary=backtest(trainRange.start,trainRange.end,selected,true);

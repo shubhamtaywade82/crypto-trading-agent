@@ -8,10 +8,10 @@
       "Persistent raw archive pages and manifest",
       "Parquet-capable runtime"
     ],
-    "blocker": "The canonical 4h archive is persisted as 9 verified JSON pages (13,449 base rows/symbol) plus incremental deltas; Parquet output has not been produced.",
-    "next_action": "Convert verified 4h JSON pages and deltas to partitioned Parquet, reopen/readback, and compare per-symbol row counts, time ranges and checksums.",
-    "last_checked_at_utc": "2026-11-05T08:32:14Z",
-    "last_reviewed_utc": "2026-11-05T08:32:14Z"
+    "blocker": "Canonical 4h archive remains 13,449 base rows/symbol from 2020-09-14 plus 9 incremental rows/symbol through 2026-11-05 04:00; all pages and latest deltas are readback-verified. Parquet output is still absent.",
+    "next_action": "Convert verified 4h JSON pages and deltas to partitioned Parquet, reopen/readback, and compare per-symbol row counts, ranges and hashes.",
+    "last_checked_at_utc": "2026-11-05T10:25:32Z",
+    "last_reviewed_utc": "2026-11-05T10:25:32Z"
   },
   {
     "id": "RQ-002",
@@ -21,10 +21,10 @@
     "prerequisites": [
       "Direct Binance REST DNS/HTTPS or uncached fresh endpoint"
     ],
-    "blocker": "curl to /fapi/v1/time fails DNS (exit 6, HTTP 000); connector exchangeInfo serverTime=2026-11-05T06:46:24.911Z is about 105m50s stale at 08:32:14Z.",
-    "next_action": "Restore direct DNS/HTTPS or an uncached time/metadata path; require server-time drift <=60s before execution validation.",
-    "last_checked_at_utc": "2026-11-05T08:32:14Z",
-    "last_reviewed_utc": "2026-11-05T08:32:14Z"
+    "blocker": "Direct GET /fapi/v1/time and /fapi/v1/exchangeInfo fail DNS (curl exit 6, HTTP 000). Connector exchangeInfo serverTime=2026-11-05T06:46:24.911Z is 13,147 seconds stale at 10:25:32Z; connector does not expose HTTP status/headers.",
+    "next_action": "Restore direct DNS/HTTPS or an uncached time/metadata path; require exchange server-time drift <=60 seconds before contract/execution validation.",
+    "last_checked_at_utc": "2026-11-05T10:25:32Z",
+    "last_reviewed_utc": "2026-11-05T10:25:32Z"
   },
   {
     "id": "RQ-003",
@@ -36,10 +36,10 @@
       "Persistent archive writer",
       "Cross-symbol alignment checks"
     ],
-    "blocker": "Snapshot coverage is only 5m 3,025 rows/symbol (~10.50d), 15m 3,008 (~31.34d), 1h 3,001 (~125d), 4h 3,000 (~500d). Separate canonical archive has 1h 10,534 rows/symbol (~14.5 months) and 4h ~6.1 years; 5m/15m/1h do not share the 2020 start.",
-    "next_action": "Backfill 1h, then 15m and 5m in bounded pages to the common start; reconcile exact open-time sets and contract history.",
-    "last_checked_at_utc": "2026-11-05T08:32:14Z",
-    "last_reviewed_utc": "2026-11-05T08:32:14Z"
+    "blocker": "Canonical 4h is ~6.1 years; 1h is ~14.5 months (10,536 rows/symbol including deltas); 15m remains ~31 days and 5m ~10.5 days. Current append advances latest completed opens to 5m 10:15Z, 15m 10:00Z, 1h 09:00Z, 4h 04:00Z, but no interval has a common 2020 start.",
+    "next_action": "Backfill 1h, then 15m and 5m in bounded pages toward 2020-09-14; reconcile exact open-time sets, contract history and cross-symbol alignment.",
+    "last_checked_at_utc": "2026-11-05T10:25:32Z",
+    "last_reviewed_utc": "2026-11-05T10:25:32Z"
   },
   {
     "id": "RQ-004",
@@ -51,10 +51,10 @@
       "Historical bookTicker/depth/trades",
       "Funding cashflow history"
     ],
-    "blocker": "Only current top-of-book snapshots and funding observations are available; historical spread/depth, slippage, latency, impact and account fee tier are missing.",
-    "next_action": "Acquire historical bookTicker/depth/trade data and account fee tier; estimate symbol/time-of-day spread, slippage and funding costs.",
-    "last_checked_at_utc": "2026-11-05T08:32:14Z",
-    "last_reviewed_utc": "2026-11-05T08:32:14Z"
+    "blocker": "Current top-20 depth, spread and funding snapshots are available, but user fee tier, historical bookTicker/depth/trades, trade-level slippage, latency, impact and historical funding cashflows are not.",
+    "next_action": "Obtain account fee tier and historical bookTicker/depth/trade/funding data; estimate conservative symbol/time-of-day execution costs.",
+    "last_checked_at_utc": "2026-11-05T10:25:32Z",
+    "last_reviewed_utc": "2026-11-05T10:25:32Z"
   },
   {
     "id": "RQ-005",
@@ -66,10 +66,10 @@
       "Node >=24/npm >=11",
       "Pinned dependencies"
     ],
-    "blocker": "Local checkout absent; runtime Node v22.16.0/npm 10.9.2; package.json requires Node>=24/npm>=11; Binance SDK imports are not installed.",
-    "next_action": "Mount the exact repository branch/commit in a compatible runtime, install pinned dependencies, then run fixture determinism and no-lookahead tests.",
-    "last_checked_at_utc": "2026-11-05T08:32:14Z",
-    "last_reviewed_utc": "2026-11-05T08:32:14Z"
+    "blocker": "Local checkout absent; runtime Node v22.16.0/npm 10.9.2 is below package.json Node>=24/npm>=11; Binance SDK packages are not installed. CPULLBACK v1.0.1 fixture smoke passed in managed V8 Code Mode, not in the local Node project harness.",
+    "next_action": "Mount the exact research branch/commit in Node>=24/npm>=11, install pinned dependencies, run fixture determinism/no-lookahead tests and invoke the repository harness.",
+    "last_checked_at_utc": "2026-11-05T10:25:32Z",
+    "last_reviewed_utc": "2026-11-05T10:25:32Z"
   },
   {
     "id": "RQ-006",
@@ -81,10 +81,10 @@
       "RQ-004",
       "RQ-005"
     ],
-    "blocker": "Aligned full-history intraday data, measured costs and compatible harness are not ready.",
-    "next_action": "After prerequisites, preregister strategy x context x symbol experiments with purging/embargo, block bootstrap, 95% CIs and Holm correction.",
-    "last_checked_at_utc": "2026-11-05T08:32:14Z",
-    "last_reviewed_utc": "2026-11-05T08:32:14Z"
+    "blocker": "Full matched-window strategy experiments remain blocked by incomplete 5m/15m/1h history, unmeasured execution costs and no compatible local Node harness. The latest 4h CPULLBACK test had only 8-10 trades per symbol.",
+    "next_action": "After RQ-003/004/005, pre-register strategy x context x symbol tests on multi-cycle history with purging/embargo, block bootstrap, 95% CIs, Holm correction and >=100 OOS trades/cell.",
+    "last_checked_at_utc": "2026-11-05T10:25:32Z",
+    "last_reviewed_utc": "2026-11-05T10:25:32Z"
   },
   {
     "id": "RQ-007",
@@ -94,10 +94,10 @@
     "prerequisites": [
       "Aligned multi-year 1h/15m history for BTC and all tradable symbols"
     ],
-    "blocker": "Current short-timeframe history is insufficient for robust lead/lag inference.",
-    "next_action": "Compute past-only rolling beta, relative strength and lagged BTC impulse on aligned multi-year data; validate by fold.",
-    "last_checked_at_utc": "2026-11-05T08:32:14Z",
-    "last_reviewed_utc": "2026-11-05T08:32:14Z"
+    "blocker": "Multi-year aligned 1h/15m data is still unavailable; current short-timeframe history cannot support robust BTC lead/lag inference.",
+    "next_action": "After RQ-003, compute past-only rolling beta, relative strength and lagged BTC impulse on aligned multi-year data; validate by fold.",
+    "last_checked_at_utc": "2026-11-05T10:25:32Z",
+    "last_reviewed_utc": "2026-11-05T10:25:32Z"
   },
   {
     "id": "RQ-008",
@@ -108,10 +108,10 @@
       "Raw 4h archive pages on both branches",
       "Canonical hash procedure"
     ],
-    "blocker": "10,428 common bars matched exactly with zero OHLCV mismatches, but 44 earliest BTC page-0004 rows remain unmatched and page hash lineage differs.",
+    "blocker": "10,428 common cross-branch bars match exactly with zero OHLCV mismatches; 44 earliest BTC page-0004 rows remain unmatched and BTC manifest hash lineage still differs.",
     "next_action": "Recompute BTC page-0002..0004 hashes from canonical bytes and independently verify the 44 unmatched earliest bars against Binance history.",
-    "last_checked_at_utc": "2026-11-05T08:32:14Z",
-    "last_reviewed_utc": "2026-11-05T08:32:14Z"
+    "last_checked_at_utc": "2026-11-05T10:25:32Z",
+    "last_reviewed_utc": "2026-11-05T10:25:32Z"
   },
   {
     "id": "RQ-009",
@@ -123,10 +123,10 @@
       "Node>=24/npm>=11",
       "5m deterministic fixture"
     ],
-    "blocker": "Remote scripts/backtest.ts currently supports 15m/1h/4h only and one symbol per invocation.",
-    "next_action": "Add 5m interval state/replay support and deterministic fixture tests after compatible checkout.",
-    "last_checked_at_utc": "2026-11-05T08:32:14Z",
-    "last_reviewed_utc": "2026-11-05T08:32:14Z"
+    "blocker": "Remote scripts/backtest.ts supports 15m/1h/4h and one symbol per invocation; 5m replay is absent. Local compatible checkout is unavailable.",
+    "next_action": "Add 5m interval state/replay and deterministic fixture tests after mounting the exact repository in Node>=24/npm>=11.",
+    "last_checked_at_utc": "2026-11-05T10:25:32Z",
+    "last_reviewed_utc": "2026-11-05T10:25:32Z"
   },
   {
     "id": "RQ-010",
@@ -137,10 +137,10 @@
       "Writer tests in local checkout",
       "Node>=24/npm>=11"
     ],
-    "blocker": "This snapshot stores premiumIndex-reported funding separately from latest settled funding and next funding time; regression tests in the project writer are not run.",
-    "next_action": "Add schema and regression tests for current reported rate, latest settled rate, funding interval and next funding timestamp; never infer a next rate.",
-    "last_checked_at_utc": "2026-11-05T08:32:14Z",
-    "last_reviewed_utc": "2026-11-05T08:32:14Z"
+    "blocker": "Current premiumIndex lastFundingRate is stored separately from latest settled fundingRate and next funding time. At 10:25Z ETH reported 0.0100% vs latest settled 0.005731%; all four symbols show an 8h interval. Writer regression tests remain unrun.",
+    "next_action": "Add schema/regression tests for reported rate, settled rate, interval and next funding timestamp; never infer a predicted next rate from lastFundingRate.",
+    "last_checked_at_utc": "2026-11-05T10:25:32Z",
+    "last_reviewed_utc": "2026-11-05T10:25:32Z"
   },
   {
     "id": "RQ-011",
@@ -152,10 +152,10 @@
       "Node>=24/npm>=11",
       "Promotion-gate tests"
     ],
-    "blocker": "Remote scripts/conditional-edge.ts still defaults to minN=30 and confidence=0.90; required policy is >=100 OOS trades/cell and 95% intervals.",
-    "next_action": "Raise defaults to minN>=100 and confidence=0.95; test that promotion fails when n<100 or lower 95% CI<=0.",
-    "last_checked_at_utc": "2026-11-05T08:32:14Z",
-    "last_reviewed_utc": "2026-11-05T08:32:14Z"
+    "blocker": "Remote conditional-edge CLI defaults remain minN=30 and confidence=0.90, below required >=100 OOS trades per symbol/context and 95% intervals; local compatible checkout unavailable.",
+    "next_action": "Raise defaults to minN>=100 and confidence=0.95; test promotion fails when n<100 or lower 95% CI<=0.",
+    "last_checked_at_utc": "2026-11-05T10:25:32Z",
+    "last_reviewed_utc": "2026-11-05T10:25:32Z"
   },
   {
     "id": "RQ-012",
@@ -165,10 +165,10 @@
     "prerequisites": [
       "Persisted raw pages and page manifest"
     ],
-    "blocker": "4h canonical archive continuity passes and overlapping branch bars match, but the BTC page hash divergence and 44 earliest unmatched rows remain.",
+    "blocker": "Canonical 4h continuity and common-bar equality pass; the BTC page hash divergence and 44 earliest unmatched rows remain unresolved.",
     "next_action": "Resolve RQ-008 with canonical hash recomputation and independent verification of the unmatched earliest bars.",
-    "last_checked_at_utc": "2026-11-05T08:32:14Z",
-    "last_reviewed_utc": "2026-11-05T08:32:14Z"
+    "last_checked_at_utc": "2026-11-05T10:25:32Z",
+    "last_reviewed_utc": "2026-11-05T10:25:32Z"
   },
   {
     "id": "RQ-013",
@@ -180,9 +180,23 @@
       "RQ-004",
       "RQ-005"
     ],
-    "blocker": "Candidate mechanism is not yet tested; sufficient aligned intraday history, measured costs and compatible harness are missing.",
-    "next_action": "Pre-register range detector, breakout-failure definition, entry/stop/target/time-stop and NO_TRADE rules; run only after RQ-003/004/005.",
-    "last_checked_at_utc": "2026-11-05T08:32:14Z",
-    "last_reviewed_utc": "2026-11-05T08:32:14Z"
+    "blocker": "Range mean reversion / failed-breakout fade has not been tested; aligned multi-year intraday history, measured costs and compatible harness are still missing.",
+    "next_action": "Pre-register range detector, failed-breakout definition, entry/stop/target/time-stop and NO_TRADE rules after RQ-003/004/005.",
+    "last_checked_at_utc": "2026-11-05T10:25:32Z",
+    "last_reviewed_utc": "2026-11-05T10:25:32Z"
+  },
+  {
+    "id": "RQ-014",
+    "priority": "P2",
+    "status": "BLOCKED",
+    "title": "Resolve CPULLBACK v1.0.1 bootstrap specification/output mismatch",
+    "prerequisites": [
+      "Frozen experiment specification",
+      "Exact harness source and artifact hash"
+    ],
+    "blocker": "The v1.0.1 specification declares 1,200 moving-block bootstrap iterations, while the bundled script and reported test intervals use 2,000. OOS samples are only 8-10 trades per symbol and all 95% intervals include zero; evidence remains INSUFFICIENT_EVIDENCE.",
+    "next_action": "Reconcile the frozen specification and harness, regenerate only from the pinned spec/code, record matching bootstrap settings and retain INSUFFICIENT_EVIDENCE until per-cell OOS n>=100 and all other gates pass.",
+    "last_checked_at_utc": "2026-11-05T10:25:32Z",
+    "last_reviewed_utc": "2026-11-05T10:25:32Z"
   }
 ]

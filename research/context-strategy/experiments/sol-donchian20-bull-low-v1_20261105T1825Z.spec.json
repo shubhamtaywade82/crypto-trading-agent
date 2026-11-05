@@ -8,11 +8,12 @@
   "timeframe": "4h",
   "hypothesis": "A long-only Donchian close breakout may have better net expectancy when the signal bar is in a bullish, low-volatility context than the same breakout rule without the context filter.",
   "context": {
-    "id": "EMA50_GT_EMA200_ATR14_Q33_TRAIN",
+    "id": "EMA50_GT_EMA200_ATR14_Q33_TRAIN_EX_SHOCK_Q99",
     "trend": "EMA50 > EMA200, both computed from completed 4h closes",
     "volatility": "ATR14_Wilder / close <= training-period q33",
     "thresholdFit": "q33 computed only from training observations; frozen for validation and test",
-    "unknownHandling": "No signal if indicator warm-up or context inputs are unavailable"
+    "unknownHandling": "No signal if indicator warm-up or context inputs are unavailable",
+    "shockExclusion": "abs(log(close[t]/close[t-1])) <= training-period q99 of absolute 4h log returns; q99 fitted on train only and frozen"
   },
   "entry": {
     "signal": "completed close[t] > max(high[t-20:t-1])",
@@ -111,6 +112,7 @@
     "invalid OHLCV or funding data",
     "signal not confirmed by completed 4h close",
     "position already open",
-    "no next-bar entry bar"
+    "no next-bar entry bar",
+    "training-q99 shock exclusion is active"
   ]
 }

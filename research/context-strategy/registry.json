@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAtUtc": "2026-11-05T09:57:46.370Z",
+  "updatedAtUtc": "2026-11-05T18:33:32.864Z",
   "evidencePolicy": {
     "minimumProvisionalOosTradesPerSymbolContext": 100,
     "strongerEvidenceTrades": 200,
@@ -8,7 +8,103 @@
     "requireRobustnessAndUncertainty": true
   },
   "oosValidatedEntries": [],
-  "entries": [],
+  "entries": [
+    {
+      "id": "SOL-DONCHIAN20-BULL-LOW-V1-20261105T1825Z",
+      "symbol": "SOLUSDT",
+      "context": "EMA50_GT_EMA200_ATR14_Q33_TRAIN_EX_SHOCK_Q99",
+      "strategyVersion": "DONCHIAN_BREAKOUT_BULL_LOW_V1",
+      "evidenceStatus": "INSUFFICIENT_EVIDENCE",
+      "detector": {
+        "ema50GreaterThanEma200": true,
+        "atr14ToCloseAtOrBelowTrainingQ33": 0.03126932494557754,
+        "absoluteLogReturnAtOrBelowTrainingQ99": 0.10296191664487292
+      },
+      "selectedRules": {
+        "donchianLookbackBars": 15,
+        "stopAtrMultiple": 1.75,
+        "targetR": 2,
+        "maxHoldingBars": 12,
+        "entry": "completed close above prior 15-bar high; enter next bar open",
+        "direction": "LONG_ONLY",
+        "intrabar": "adverse-first",
+        "costs": "15bp round-trip proxy plus historical funding settlements"
+      },
+      "dataPeriod": {
+        "startUtc": "2020-09-14T08:00:00Z",
+        "endUtc": "2026-11-05T16:00:00Z",
+        "ohlcvRows": 13460,
+        "fundingRows": 6806
+      },
+      "splits": {
+        "train": {
+          "bars": 7222,
+          "fromUtc": "2020-09-14T08:00:00Z",
+          "toUtc": "2024-01-01T00:00:00Z"
+        },
+        "validation": {
+          "bars": 2184,
+          "fromUtc": "2024-01-03T00:00:00Z",
+          "toUtc": "2025-01-01T00:00:00Z"
+        },
+        "untouchedTest": {
+          "bars": 4030,
+          "fromUtc": "2025-01-03T00:00:00Z",
+          "toUtc": "2026-11-05T16:00:00Z"
+        }
+      },
+      "validation": {
+        "trades": 30,
+        "meanNetR": -0.14690101883101825,
+        "bootstrap95CI": [
+          -0.3991254668965209,
+          0.0923438693428527
+        ],
+        "allNineGridCandidatesNegative": true
+      },
+      "oos": {
+        "trades": 55,
+        "winRateNet": 0.43636363636363634,
+        "targetBeforeStopProbability": 0.21818181818181817,
+        "meanNetR": 0.04310725980179393,
+        "bootstrap95CI": [
+          -0.27982083578522227,
+          0.3899637337756116
+        ],
+        "profitFactor": 1.082381347767158,
+        "maxDrawdownR": 7.887869012414981,
+        "averageWinR": 1.297935979800483,
+        "averageLossR": -0.9283730395520299,
+        "totalQuotePnlPerSol": -19.82649886691824,
+        "averageQuotePnlPerTradePerSol": -0.36048179758033166,
+        "exposurePct": 0.10521091811414392,
+        "turnoverQuote": 16364.059999999998,
+        "fundingProxyEvents": 0,
+        "fundingUnpricedEvents": 0
+      },
+      "baselineUnconditional": {
+        "trades": 125,
+        "meanNetR": -0.07965977153895483,
+        "bootstrap95CI": [
+          -0.2913941832914661,
+          0.12954021313599381
+        ],
+        "profitFactor": 0.8618992576560267,
+        "maxDrawdownR": 21.557494015405496,
+        "totalQuotePnlPerSol": -76.09072066207301
+      },
+      "failureModes": [
+        "OOS trade count 55 is below the predeclared 100 per symbol/context floor.",
+        "95% moving-block bootstrap CI crosses zero.",
+        "Total quote PnL per SOL is negative despite a slightly positive mean net R.",
+        "All nine validation parameter candidates had negative mean net R; selected validation mean was -0.147R.",
+        "15bp execution-cost proxy is not calibrated to account-specific fills."
+      ],
+      "evaluatedAtUtc": "2026-11-05T18:30:38.142Z",
+      "artifactPath": "research/context-strategy/experiments/sol-donchian20-bull-low-v1_20261105T1825Z.result.json",
+      "artifactSha256": "bfa05bab5b7744391c43abd7e036ad22c99aeb168eb349ebe4fcf7ac57c6da62"
+    }
+  ],
   "candidateHypotheses": [
     {
       "family": "TREND_PULLBACK_CONTINUATION",
@@ -95,6 +191,18 @@
         "FUNDING_OI_EXTREME"
       ],
       "blocker": "No durable historical funding/OI/positioning archive; only current snapshots and 3 funding settlements."
+    },
+    {
+      "family": "DONCHIAN_BREAKOUT_BULL_LOW_V1",
+      "status": "INSUFFICIENT_EVIDENCE",
+      "symbols": [
+        "SOLUSDT"
+      ],
+      "contexts": [
+        "EMA50_GT_EMA200_ATR14_Q33_TRAIN_EX_SHOCK_Q99"
+      ],
+      "experimentId": "SOL-DONCHIAN20-BULL-LOW-V1-20261105T1825Z",
+      "blocker": "OOS n=55<100; 95% block-bootstrap CI crosses zero; total quote PnL per SOL negative; validation parameter grid all negative."
     }
   ],
   "priorAccessibleEvidence": {

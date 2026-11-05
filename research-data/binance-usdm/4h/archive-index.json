@@ -52,7 +52,7 @@
     ]
   },
   "integrity": {
-    "structural_quality": "PASS for all persisted pages: no internal 4h gaps, OHLC invariant failures, or nonpositive-volume rows reported.",
+    "structural_quality": "Base 4h pages passed structural checks. Incremental delta audit is DEGRADED: one 76-row indexed delta file is missing and one XRP 4h line was malformed; the malformed row has a separate correction artifact and four missing 4h bars per symbol were backfilled.",
     "readback": "PASS for raw pages 1-9 via GitHub fetch_file readback.",
     "original_manifest_hash_matches": 22,
     "original_manifest_hash_mismatches": 14,
@@ -104,7 +104,51 @@
       "expected_hashes_rewritten": false,
       "conclusion": "Source data independently verified; expected-vs-actual SHA-256 mismatch remains as a manifest hash provenance/canonicalization issue, not an observed OHLCV row discrepancy."
     },
-    "audit_text_discrepancy": "Resolved in this update: the prior 14-versus-17 summary conflict was caused by an incorrect hash_mismatch_scope string. Canonical scope is 14, matching original_manifest_hash_mismatches and mismatch_symbols_by_page."
+    "audit_text_discrepancy": "Resolved in this update: the prior 14-versus-17 summary conflict was caused by an incorrect hash_mismatch_scope string. Canonical scope is 14, matching original_manifest_hash_mismatches and mismatch_symbols_by_page.",
+    "incremental_delta_audit": {
+      "audited_at_utc": "2026-11-05T18:37:00Z",
+      "indexed_delta_files_before_repair": 18,
+      "declared_rows_before_repair": 936,
+      "accessible_files_before_repair": 17,
+      "parseable_rows_before_repair": 859,
+      "missing_files": [
+        {
+          "file": "research-data/binance-usdm/delta/binance_usdm_delta_2026-11-05T0524Z.jsonl",
+          "declared_rows": 76,
+          "declared_sha256": "f5d9e50602f4ef4046fc4d39da053e45d3619ad147aa398a6bd1e281a7f3b93d"
+        }
+      ],
+      "malformed_records": [
+        {
+          "file": "research-data/binance-usdm/delta/binance_usdm_delta_2026-11-05T1225Z_completed.jsonl",
+          "line": 16,
+          "symbol": "XRPUSDT",
+          "interval": "4h",
+          "open_time_utc": "2026-11-05T08:00:00Z",
+          "original_file_sha256": "5727eaa443e03c90326d01205133fe04b8721afe038fa2ce0f84c431dc77c299",
+          "correction_file": "research-data/binance-usdm/delta/corrections/xrpusdt_4h_20261105T0800Z.json"
+        }
+      ],
+      "duplicate_keys_across_accessible_deltas": 0,
+      "repairs_added": {
+        "delta_file": "research-data/binance-usdm/delta/binance_usdm_delta_20261105T183635Z_4h_gap_repair.jsonl",
+        "rows": 16,
+        "sha256": "bdd3f040d48014ba816b0586ac70a9b7fd27dffb8ab2093a5c2db0a675efdb0e",
+        "correction_file": "research-data/binance-usdm/delta/corrections/xrpusdt_4h_20261105T0800Z.json",
+        "correction_sha256": "b4b1c0994af55dd00af23d33469ce8f182b05f1ab244c38c6ab1ea46ff8a90a7"
+      },
+      "unresolved": "One indexed 76-row delta file remains inaccessible; one malformed XRP 4h line remains in the original immutable delta but has a separate corrected-row artifact. Full lower-timeframe archive reconstruction and canonical correction application are still pending.",
+      "status": "DEGRADED",
+      "indexed_delta_files_after_repair": 20,
+      "declared_rows_after_repair": 956,
+      "accessible_files_after_repair": 19,
+      "parseable_rows_after_repair": 879,
+      "repair_additions": {
+        "fourHourGapRepairRows": 16,
+        "fiveMinuteRefreshRows": 4,
+        "correctionArtifacts": 1
+      }
+    }
   },
   "incremental_deltas": [
     {
@@ -418,6 +462,64 @@
         "1h": "2026-11-05T16:00:00.000Z",
         "4h": "2026-11-05T12:00:00.000Z"
       }
+    },
+    {
+      "file": "research-data/binance-usdm/delta/binance_usdm_delta_20261105T183211Z_completed.jsonl",
+      "rows": 64,
+      "sha256": "72f5cb1527ef9f21f08ffdeddeaf8d25dddc14bc1b096ea0513ce7d03f39b205",
+      "manifest_file": "research-data/binance-usdm/delta/binance_usdm_delta_20261105T183211Z.manifest.json",
+      "retrieved_at_utc": "2026-11-05T18:32:11.229Z",
+      "row_counts_by_symbol_interval": {
+        "BTCUSDT:5m": 11,
+        "BTCUSDT:15m": 4,
+        "BTCUSDT:1h": 1,
+        "ETHUSDT:5m": 11,
+        "ETHUSDT:15m": 4,
+        "ETHUSDT:1h": 1,
+        "SOLUSDT:5m": 11,
+        "SOLUSDT:15m": 4,
+        "SOLUSDT:1h": 1,
+        "XRPUSDT:5m": 11,
+        "XRPUSDT:15m": 4,
+        "XRPUSDT:1h": 1
+      },
+      "latest_completed_open_utc_by_interval": {
+        "5m": "2026-11-05T18:25:00.000Z",
+        "15m": "2026-11-05T18:15:00.000Z",
+        "1h": "2026-11-05T17:00:00.000Z"
+      }
+    },
+    {
+      "file": "research-data/binance-usdm/delta/binance_usdm_delta_20261105T183635Z_4h_gap_repair.jsonl",
+      "rows": 16,
+      "sha256": "bdd3f040d48014ba816b0586ac70a9b7fd27dffb8ab2093a5c2db0a675efdb0e",
+      "manifest_file": "research-data/binance-usdm/delta/binance_usdm_delta_20261105T183635Z_4h_gap_repair.manifest.json",
+      "retrieved_at_utc": "2026-11-05T18:36:35.947Z",
+      "row_counts_by_symbol_interval": {
+        "BTCUSDT:4h": 4,
+        "ETHUSDT:4h": 4,
+        "SOLUSDT:4h": 4,
+        "XRPUSDT:4h": 4
+      },
+      "latest_completed_open_utc_by_interval": {
+        "4h": "2026-11-05T04:00:00Z"
+      }
+    },
+    {
+      "file": "research-data/binance-usdm/delta/binance_usdm_delta_20261105T183743Z_5m_completed.jsonl",
+      "rows": 4,
+      "sha256": "2cd664e92ae615ab1a5e0942c9b1246924a905567992c56a33de36889983b2cb",
+      "manifest_file": "research-data/binance-usdm/delta/binance_usdm_delta_20261105T183743Z_5m.manifest.json",
+      "retrieved_at_utc": "2026-11-05T18:37:43.295Z",
+      "row_counts_by_symbol_interval": {
+        "BTCUSDT:5m": 1,
+        "ETHUSDT:5m": 1,
+        "SOLUSDT:5m": 1,
+        "XRPUSDT:5m": 1
+      },
+      "latest_completed_open_utc_by_interval": {
+        "5m": "2026-11-05T18:30:00Z"
+      }
     }
   ],
   "incremental_delta_rows_total": 872,
@@ -437,5 +539,41 @@
   "latest_incremental_delta_manifest": "research-data/binance-usdm/delta/binance_usdm_delta_20261105T173533Z.manifest.json",
   "latest_incremental_delta_sha256": "4253a17db5a3534be2dbd649e569fb292c53693ff5f6d6b2b194776b3ce7fe2b",
   "row_level_reconciliation_file": "research-data/binance-usdm/4h/alternate-source-row-reconciliation_2026-11-05T1229Z.json",
-  "row_level_reconciliation_status": "14_OF_14_MISMATCHED_PAGE_SYMBOL_PAIRS_EXACTLY_MATCHED_ALTERNATE_BINANCE_CONNECTOR_REPLAY"
+  "row_level_reconciliation_status": "14_OF_14_MISMATCHED_PAGE_SYMBOL_PAIRS_EXACTLY_MATCHED_ALTERNATE_BINANCE_CONNECTOR_REPLAY",
+  "last_incremental_update_utc": "2026-11-05T18:37:43.295Z",
+  "incremental_highwater_marks": {
+    "5m": "2026-11-05T18:30:00Z",
+    "15m": "2026-11-05T18:15:00Z",
+    "1h": "2026-11-05T17:00:00Z",
+    "4h": "2026-11-05T12:00:00Z"
+  },
+  "incremental_latest_completed_open_utc_by_symbol_interval": {
+    "BTCUSDT:5m": "2026-11-05T18:30:00Z",
+    "BTCUSDT:15m": "2026-11-05T18:15:00.000Z",
+    "BTCUSDT:1h": "2026-11-05T17:00:00.000Z",
+    "ETHUSDT:5m": "2026-11-05T18:30:00Z",
+    "ETHUSDT:15m": "2026-11-05T18:15:00.000Z",
+    "ETHUSDT:1h": "2026-11-05T17:00:00.000Z",
+    "SOLUSDT:5m": "2026-11-05T18:30:00Z",
+    "SOLUSDT:15m": "2026-11-05T18:15:00.000Z",
+    "SOLUSDT:1h": "2026-11-05T17:00:00.000Z",
+    "XRPUSDT:5m": "2026-11-05T18:30:00Z",
+    "XRPUSDT:15m": "2026-11-05T18:15:00.000Z",
+    "XRPUSDT:1h": "2026-11-05T17:00:00.000Z",
+    "BTCUSDT:4h": "2026-11-05T12:00:00Z",
+    "ETHUSDT:4h": "2026-11-05T12:00:00Z",
+    "SOLUSDT:4h": "2026-11-05T12:00:00Z",
+    "XRPUSDT:4h": "2026-11-05T12:00:00Z"
+  },
+  "corrections": [
+    {
+      "file": "research-data/binance-usdm/delta/corrections/xrpusdt_4h_20261105T0800Z.json",
+      "sha256": "b4b1c0994af55dd00af23d33469ce8f182b05f1ab244c38c6ab1ea46ff8a90a7",
+      "symbol": "XRPUSDT",
+      "interval": "4h",
+      "open_time_utc": "2026-11-05T08:00:00Z",
+      "supersedes_file": "research-data/binance-usdm/delta/binance_usdm_delta_2026-11-05T1225Z_completed.jsonl",
+      "supersedes_line": 16
+    }
+  ]
 }

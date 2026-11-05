@@ -264,19 +264,10 @@ export default function App() {
     : view === 'liquidity'
     ? renderLiquidityScreen({ feed: state.microstructure, symbols, selectedSymbol, showLadder, spanMs: FIELD_SPANS_MS[spanIndex], marketStates: state.marketStates, time, totalWidth: cols, totalHeight: rows })
     : renderMtfScreen({
-        symbols,
-        selectedSymbol,
-        selectedTimeframe: mtfTimeframe,
-        marketStates: state.marketStates,
-        mtfCandles: state.mtfCandles,
-        spotPrices: lerpPrices,
-        funding: state.funding,
-        time,
-        localTime,
-        totalWidth: cols,
-        totalHeight: rows,
-        wsStatus: state.wsStatus,
-        mode: state.mode,
+        symbols, selectedSymbol, selectedTimeframe: mtfTimeframe,
+        marketStates: state.marketStates, mtfCandles: state.mtfCandles, spotPrices: lerpPrices,
+        microstructure: state.microstructure, funding: state.funding,
+        time, localTime, totalWidth: cols, totalHeight: rows, wsStatus: state.wsStatus, mode: state.mode,
       });
 
   return (

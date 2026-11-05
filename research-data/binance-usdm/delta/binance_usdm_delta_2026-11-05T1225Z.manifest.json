@@ -1,0 +1,65 @@
+{
+  "schema_version": "1.0.0",
+  "created_at_utc": "2026-11-05T12:27:45.432Z",
+  "repository": "shubhamtaywade82/crypto-trading-agent",
+  "branch": "research/raw-ohlcv-archive-2026-11-05T0530Z",
+  "source_endpoint": "GET /fapi/v1/klines via Binance public market-data connector",
+  "interval_set": [
+    "5m",
+    "15m",
+    "1h",
+    "4h"
+  ],
+  "symbols": [
+    "BTCUSDT",
+    "ETHUSDT",
+    "SOLUSDT",
+    "XRPUSDT"
+  ],
+  "delta_file": "research-data/binance-usdm/delta/binance_usdm_delta_2026-11-05T1225Z_completed.jsonl",
+  "rows": 16,
+  "row_counts_by_symbol_interval": {
+    "BTCUSDT:5m": 1,
+    "BTCUSDT:15m": 1,
+    "BTCUSDT:1h": 1,
+    "BTCUSDT:4h": 1,
+    "ETHUSDT:5m": 1,
+    "ETHUSDT:15m": 1,
+    "ETHUSDT:1h": 1,
+    "ETHUSDT:4h": 1,
+    "SOLUSDT:5m": 1,
+    "SOLUSDT:15m": 1,
+    "SOLUSDT:1h": 1,
+    "SOLUSDT:4h": 1,
+    "XRPUSDT:5m": 1,
+    "XRPUSDT:15m": 1,
+    "XRPUSDT:1h": 1,
+    "XRPUSDT:4h": 1
+  },
+  "latest_completed_open_utc_by_interval": {
+    "5m": "2026-11-05T12:20:00.000Z",
+    "15m": "2026-11-05T12:00:00.000Z",
+    "1h": "2026-11-05T11:00:00.000Z",
+    "4h": "2026-11-05T08:00:00.000Z"
+  },
+  "all_rows_completed_at_retrieval": true,
+  "forming_candles_included": 0,
+  "quality": {
+    "duplicates": 0,
+    "gaps": 0,
+    "timestamp_alignment": "PASS: one expected completed candle per symbol/timeframe; exact open-time grids.",
+    "ohlc_invariant_failures": 0,
+    "nonpositive_volume": 0,
+    "nonfinite": 0
+  },
+  "sha256": "5727eaa443e03c90326d01205133fe04b8721afe038fa2ce0f84c431dc77c299",
+  "readback_sha256": "5727eaa443e03c90326d01205133fe04b8721afe038fa2ce0f84c431dc77c299",
+  "readback_exact": true,
+  "github_blob_sha1": "d191539b698a70e08fc2b01b643fefe76307687c",
+  "notes": [
+    "Rows were fetched with exact startTime/endTime windows and limit=1.",
+    "All 16 requests returned exactly one row; each row openTime matched the requested open and closeTime was earlier than the captured retrieval time.",
+    "No Binance SDK used. Direct REST from shell remains DNS-blocked.",
+    "This delta does not resolve the existing historical page-manifest hash divergences."
+  ]
+}

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAtUtc": "2026-11-05T14:58:59.657Z",
+  "updatedAtUtc": "2026-11-05T15:56:40.316Z",
   "items": [
     {
       "id": "Q1_ARCHIVE_MULTIYEAR",
@@ -12,7 +12,7 @@
         "Persistent writable store"
       ],
       "nextAction": "Backfill complete 5m/15m/1h history for BTC/ETH/SOL/XRP across multiple years; retain raw pages, manifests and SHA-256; continue incremental completed-bar appends.",
-      "blocker": "The 6.14-year 4h archive exists, but full 5m/15m/1h archives are absent. Current run appended 96 completed bars only; direct REST DNS failed and this runtime lacks compatible Node."
+      "blocker": "6.14-year 4h archive is present; current run added 68 lower-timeframe bars, but full multi-year 5m/15m/1h history is absent. Direct Binance REST DNS failed and no compatible local runtime exists."
     },
     {
       "id": "Q2_VERIFY_EXCHANGE_TIME_METADATA",
@@ -22,7 +22,7 @@
         "Direct bounded HTTP or Binance SDK call"
       ],
       "nextAction": "Obtain uncached /fapi/v1/time and /fapi/v1/exchangeInfo from a network-enabled runner; require server-time drift <=60s.",
-      "blocker": "Direct /fapi/v1/time, /exchangeInfo and other fapi probes failed DNS (curl exit 6 / HTTP 000). Connector exchangeInfo serverTime 06:46:24.911Z versus mark time 14:52:35Z: 29170.089s stale; connector exposes neither /time nor HTTP headers."
+      "blocker": "Direct /fapi/v1/time and /fapi/v1/exchangeInfo probes failed HTTP 000 (curl DNS exits 6/28). Connector exchangeInfo serverTime 2026-11-05T06:46:24.911Z was 32780.089 seconds behind mark response time 2026-11-05T15:52:45Z; connector does not expose HTTP headers or a fresh /time result."
     },
     {
       "id": "Q3_RUN_REPOSITORY_BACKTEST",
@@ -35,7 +35,7 @@
         "dependencies installed"
       ],
       "nextAction": "Run repository on Node>=24/npm>=11 with dependencies installed; fix closeTime filtering and zero-volume rejection; run deterministic fixture smoke and train/validation/untouched-test replay.",
-      "blocker": "Managed runtime Node22.16.0/npm10.9.2, no checkout, no Docker, no SDK packages. scripts/backtest.ts inspected but not invoked; no smoke test or experiment ran."
+      "blocker": "Managed runtime Node 22.16.0/npm 10.9.2 vs project requirements Node>=24/npm>=11; no local checkout, Docker absent, SDK import ERR_MODULE_NOT_FOUND. Harness inspected remotely only; no smoke test or experiment ran."
     },
     {
       "id": "Q4_DERIVATIVES_ARCHIVE",
@@ -45,7 +45,7 @@
         "Recorder process and persistent storage"
       ],
       "nextAction": "Start durable recorder for funding settlements, OI history, taker flow, long/short ratios and basis; preserve timestamps and quality metadata.",
-      "blocker": "Only four recent funding settlements per symbol, four hourly OI-stat observations and four 15m taker/long-short observations were retrieved. No continuous historical derivatives archive was persisted."
+      "blocker": "No continuous historical derivatives archive. Current run retrieved 3 funding settlements, 3 recent 15m taker/long-short observations and recent OI snapshots only; no durable funding/OI history was added."
     },
     {
       "id": "Q5_CONDITIONAL_STRATEGY_TEST",
@@ -57,7 +57,7 @@
         "pre-registered rule"
       ],
       "nextAction": "Test 4h trend/pullback continuation on SOL/ETH/XRP, with BTC trend confirmation as a separate filter; fixed ATR stop/target/time stop and realistic fees/slippage/funding.",
-      "blocker": "Waiting for complete lower-timeframe history, compatible executable harness, closeTime/volume integrity fixes, historical funding and frozen realistic cost model."
+      "blocker": "Waiting for complete 5m/15m/1h history, compatible executable runtime, closeTime and zero-volume integrity fixes, historical funding/cost model, and generic strategy runner beyond STRUCT-LIQ."
     },
     {
       "id": "Q6_TAXONOMY_STABILITY_REVIEW",
@@ -98,26 +98,60 @@
         "delta_sha256": "6230395415fb2799aef43c34d0c0a9cb9aeb04edacc677f5e7cb3f13014e4507",
         "readbackVerified": true
       }
+    },
+    {
+      "id": "Q8_INCREMENTAL_ARCHIVE_REFRESH_20261105T155345Z",
+      "priority": 1,
+      "status": "COMPLETED",
+      "prerequisites": [
+        "Binance USDⓈ-M market-data connector",
+        "Existing archive high-water marks",
+        "GitHub repository write access"
+      ],
+      "nextAction": "On next hourly run append only completed bars after current high-water marks and verify manifest/hash/readback.",
+      "blocker": null,
+      "result": {
+        "rows": 68,
+        "row_counts_by_symbol_interval": {
+          "BTCUSDT:5m": 12,
+          "BTCUSDT:15m": 4,
+          "BTCUSDT:1h": 1,
+          "ETHUSDT:5m": 12,
+          "ETHUSDT:15m": 4,
+          "ETHUSDT:1h": 1,
+          "SOLUSDT:5m": 12,
+          "SOLUSDT:15m": 4,
+          "SOLUSDT:1h": 1,
+          "XRPUSDT:5m": 12,
+          "XRPUSDT:15m": 4,
+          "XRPUSDT:1h": 1
+        },
+        "delta_path": "research-data/binance-usdm/delta/binance_usdm_delta_20261105T155345_completed.jsonl",
+        "manifest_path": "research-data/binance-usdm/delta/binance_usdm_delta_20261105T155345.manifest.json",
+        "delta_sha256": "551703c5240c38e7453ec192f29ba10192b12f452547f263009e9832ce402b66",
+        "readbackVerified": true
+      }
     }
   ],
   "lastRun": {
-    "runId": "context-strategy-research-2026-11-05T145448Z-v74",
+    "runId": "context-strategy-20261105T155640-v75",
     "runClassification": "RESEARCH_BLOCKED",
     "researchExecuted": false,
     "oosEvaluated": false,
     "monitoringCompleted": true,
     "archiveAppend": {
-      "rows": 96,
-      "deltaPath": "research-data/binance-usdm/delta/binance_usdm_delta_20261105T145448Z_completed.jsonl",
-      "deltaSha256": "6230395415fb2799aef43c34d0c0a9cb9aeb04edacc677f5e7cb3f13014e4507",
+      "rows": 68,
+      "deltaPath": "research-data/binance-usdm/delta/binance_usdm_delta_20261105T155345_completed.jsonl",
+      "deltaSha256": "551703c5240c38e7453ec192f29ba10192b12f452547f263009e9832ce402b66",
+      "manifestPath": "research-data/binance-usdm/delta/binance_usdm_delta_20261105T155345.manifest.json",
       "readbackVerified": true
     },
     "blockers": [
-      "Node.js 22.16.0/npm 10.9.2 do not satisfy package.json Node>=24/npm>=11; no local checkout; Docker unavailable.",
-      "Direct fapi.binance.com DNS resolution failed; connected exchangeInfo serverTime was 29170.089 seconds stale.",
-      "Full multi-year 5m/15m/1h archive and historical funding/OI archive remain absent.",
-      "Repository backtest harness was not invokable; no deterministic fixture smoke test ran."
+      "No local repository checkout; Node/npm below package engine floor; Docker and Binance SDK package unavailable.",
+      "All six direct Binance USD-M REST probes failed DNS; exchangeInfo serverTime is 32780.089 seconds stale.",
+      "Full multi-year 5m/15m/1h archive and continuous historical funding/OI archive remain absent.",
+      "Backtest script does not support 5m; raw closeTime is dropped; zero volume is accepted; primary CLI uses fixed funding; generic strategy families are not wired into ExperimentRunner; no deterministic smoke test ran."
     ],
-    "nextAction": "Provision a compatible Node>=24/npm>=11 runner with repository checkout and network egress; fix closeTime/zero-volume validation before any strategy experiment."
+    "nextAction": "Provision a network-enabled Node>=24/npm>=11 runner with the repository checkout; fix closeTime and zero-volume validation plus parser diagnostics; run deterministic replay fixture; then backfill lower-timeframe/funding history and generalize strategy execution."
   }
 }

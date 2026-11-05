@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAtUtc": "2026-11-05T15:56:40.316Z",
+  "updatedAtUtc": "2026-11-05T16:00:01.868Z",
   "items": [
     {
       "id": "Q1_ARCHIVE_MULTIYEAR",
@@ -131,6 +131,31 @@
         "delta_sha256": "abcf854391d35017a1d25261893502daa0896518db170cc6bb0b6320a34dce95",
         "readbackVerified": true
       }
+    },
+    {
+      "id": "Q9_INCREMENTAL_ARCHIVE_REFRESH_20261105T155851Z",
+      "priority": 1,
+      "status": "COMPLETED",
+      "prerequisites": [
+        "Binance USDⓈ-M kline connector",
+        "Previous 5m high-water mark 2026-11-05T15:45:00Z",
+        "GitHub write access"
+      ],
+      "nextAction": "On next hourly run append only completed bars after 2026-11-05T15:50:00Z and verify manifest/hash/readback.",
+      "blocker": null,
+      "result": {
+        "rows": 4,
+        "row_counts_by_symbol_interval": {
+          "BTCUSDT:5m": 1,
+          "ETHUSDT:5m": 1,
+          "SOLUSDT:5m": 1,
+          "XRPUSDT:5m": 1
+        },
+        "delta_path": "research-data/binance-usdm/delta/binance_usdm_delta_20261105T155851_completed.jsonl",
+        "manifest_path": "research-data/binance-usdm/delta/binance_usdm_delta_20261105T155851.manifest.json",
+        "delta_sha256": "6bb3eb99e9dc0f6421610837441fd000713788fb46d9d93c1b1bd1587e46fcce",
+        "readbackVerified": true
+      }
     }
   ],
   "lastRun": {
@@ -140,10 +165,22 @@
     "oosEvaluated": false,
     "monitoringCompleted": true,
     "archiveAppend": {
-      "rows": 68,
-      "deltaPath": "research-data/binance-usdm/delta/binance_usdm_delta_20261105T155345_completed.jsonl",
-      "deltaSha256": "abcf854391d35017a1d25261893502daa0896518db170cc6bb0b6320a34dce95",
-      "manifestPath": "research-data/binance-usdm/delta/binance_usdm_delta_20261105T155345.manifest.json",
+      "rows": 72,
+      "deltas": [
+        {
+          "path": "research-data/binance-usdm/delta/binance_usdm_delta_20261105T155345_completed.jsonl",
+          "rows": 68,
+          "sha256": "abcf854391d35017a1d25261893502daa0896518db170cc6bb0b6320a34dce95",
+          "manifest": "research-data/binance-usdm/delta/binance_usdm_delta_20261105T155345.manifest.json"
+        },
+        {
+          "path": "research-data/binance-usdm/delta/binance_usdm_delta_20261105T155851_completed.jsonl",
+          "rows": 4,
+          "sha256": "6bb3eb99e9dc0f6421610837441fd000713788fb46d9d93c1b1bd1587e46fcce",
+          "manifest": "research-data/binance-usdm/delta/binance_usdm_delta_20261105T155851.manifest.json"
+        }
+      ],
+      "cumulativeIncrementalDeltaRows": 752,
       "readbackVerified": true
     },
     "blockers": [
@@ -152,6 +189,7 @@
       "Full multi-year 5m/15m/1h archive and continuous historical funding/OI archive remain absent.",
       "Backtest script does not support 5m; raw closeTime is dropped; zero volume is accepted; primary CLI uses fixed funding; generic strategy families are not wired into ExperimentRunner; no deterministic smoke test ran."
     ],
-    "nextAction": "Provision a network-enabled Node>=24/npm>=11 runner with the repository checkout; fix closeTime and zero-volume validation plus parser diagnostics; run deterministic replay fixture; then backfill lower-timeframe/funding history and generalize strategy execution."
+    "nextAction": "Provision a network-enabled Node>=24/npm>=11 runner with the repository checkout; fix closeTime and zero-volume validation plus parser diagnostics; run deterministic replay fixture; then backfill lower-timeframe/funding history and generalize strategy execution.",
+    "snapshotAtUtc": "2026-11-05T15:58:21Z"
   }
 }

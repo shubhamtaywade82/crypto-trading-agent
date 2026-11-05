@@ -1,0 +1,140 @@
+{
+  "schemaVersion": "1.0.0",
+  "experimentId": "4H-CANONICAL-ARCHIVE-RECONCILIATION-V1-20261105T2126Z",
+  "type": "DATA_QUALITY_ARCHIVE_RECONCILIATION",
+  "status": "COMPLETED_DATA_QUALITY_EXPERIMENT",
+  "createdAtUtc": "2026-11-05T21:26:30.000Z",
+  "completedAtUtc": "2026-11-05T21:27:30.000Z",
+  "objective": "Reassemble and validate a continuous common-window 4h OHLCV archive for BTCUSDT, ETHUSDT, SOLUSDT and XRPUSDT after incremental repairs.",
+  "specification": {
+    "commonStartUtc": "2020-09-14T08:00:00.000Z",
+    "baseEndUtc": "2026-11-04T12:00:00.000Z",
+    "finalCompletedOpenUtc": "2026-11-05T16:00:00.000Z",
+    "intervalMs": 14400000,
+    "expectedRowsPerSymbol": 13461,
+    "expectedTotalRows": 53844,
+    "algorithm": [
+      "Read all nine immutable 4h base pages for each symbol.",
+      "Filter to the common full-bar start 2020-09-14T08:00:00Z.",
+      "Read accessible incremental 4h records from the staged delta reconciliation input.",
+      "Detect duplicate symbol/open-time keys and compare raw row arrays before deduplication.",
+      "Apply the separate XRPUSDT 4h correction for 2026-11-05T08:00:00Z; preserve the malformed original delta unchanged.",
+      "Sort by open time and validate exact 4h continuity, OHLC invariants, positive volume, finite fields and closeTime."
+    ],
+    "no_strategy_backtest": true,
+    "no_oos_evaluation": true
+  },
+  "inputs": {
+    "baseArchiveIndex": "research-data/binance-usdm/4h/archive-index.json",
+    "basePagePathTemplate": "research-data/binance-usdm/4h/{SYMBOL}/page-{0001..0009}.jsonl",
+    "deduplicatedDelta": "research-data/binance-usdm/4h/reconciliation/accessible_4h_delta_rows_20261105T2118Z_deduped.jsonl",
+    "deduplicatedDeltaSha256": "504d1fb582be39cbdba65d4926a2e60afe4e1156d0ea817b3badb6047449b7de",
+    "correction": "research-data/binance-usdm/delta/corrections/xrpusdt_4h_20261105T0800Z.json",
+    "missingIndexedDelta": {
+      "path": "research-data/binance-usdm/delta/binance_usdm_delta_2026-11-05T0524Z.jsonl",
+      "declaredRows": 76,
+      "declaredSha256": "f5d9e50602f4ef4046fc4d39da053e45d3619ad147aa398a6bd1e281a7f3b93d",
+      "status": "UNRESOLVED"
+    }
+  },
+  "duplicateAudit": {
+    "duplicateKeys": 4,
+    "keys": [
+      "BTCUSDT:2026-11-05T04:00:00.000Z",
+      "ETHUSDT:2026-11-05T04:00:00.000Z",
+      "SOLUSDT:2026-11-05T04:00:00.000Z",
+      "XRPUSDT:2026-11-05T04:00:00.000Z"
+    ],
+    "rowsIdentical": true,
+    "sourceFiles": [
+      "research-data/binance-usdm/delta/binance_usdm_delta_2026-11-05T0933Z_BTC_ETH.jsonl",
+      "research-data/binance-usdm/delta/binance_usdm_delta_2026-11-05T0933Z_SOL_XRP.jsonl",
+      "research-data/binance-usdm/delta/binance_usdm_delta_20261105T183635Z_4h_gap_repair.jsonl"
+    ],
+    "resolution": "Deduplicated only in canonical input; original source deltas remain immutable."
+  },
+  "results": {
+    "BTCUSDT": {
+      "rows": 13461,
+      "baseRows": 13454,
+      "incrementalRows": 7,
+      "gaps": 0,
+      "duplicates": 0,
+      "ohlcFailures": 0,
+      "nonPositiveVolume": 0,
+      "nonFinite": 0,
+      "closeTimeFailures": 0,
+      "canonicalSha256": "9493967b1ca2a50562cd79715285d23bcc4d9b94ee52918b3f8e185ca1e1f69e",
+      "gitBlobSha1": "a465025b2276a0e9cfbf805ba64be4da6ed08868",
+      "readbackVerified": true,
+      "manifest": "research-data/binance-usdm/4h/canonical/BTCUSDT_4h_20200914T0800Z_20261105T1600Z.manifest.json"
+    },
+    "ETHUSDT": {
+      "rows": 13461,
+      "baseRows": 13454,
+      "incrementalRows": 7,
+      "gaps": 0,
+      "duplicates": 0,
+      "ohlcFailures": 0,
+      "nonPositiveVolume": 0,
+      "nonFinite": 0,
+      "closeTimeFailures": 0,
+      "canonicalSha256": "6e079f11bc017316f4c09381a67b86196dbf8bfa03e49fcefe88ff63ecf071d5",
+      "gitBlobSha1": "26034cbb638d45295504f8e1a52862adca63eea6",
+      "readbackVerified": true,
+      "manifest": "research-data/binance-usdm/4h/canonical/ETHUSDT_4h_20200914T0800Z_20261105T1600Z.manifest.json"
+    },
+    "SOLUSDT": {
+      "rows": 13461,
+      "baseRows": 13454,
+      "incrementalRows": 7,
+      "gaps": 0,
+      "duplicates": 0,
+      "ohlcFailures": 0,
+      "nonPositiveVolume": 0,
+      "nonFinite": 0,
+      "closeTimeFailures": 0,
+      "canonicalSha256": "f6050d0c4dcabf7575e6d371d4db72e1620ccb9faf0cc9536cf1d4cd3cf86a11",
+      "gitBlobSha1": "77af5caa7d5e76c8efc3fd8571c55a20376ac97f",
+      "readbackVerified": true,
+      "manifest": "research-data/binance-usdm/4h/canonical/SOLUSDT_4h_20200914T0800Z_20261105T1600Z.manifest.json"
+    },
+    "XRPUSDT": {
+      "rows": 13461,
+      "baseRows": 13454,
+      "incrementalRows": 7,
+      "gaps": 0,
+      "duplicates": 0,
+      "ohlcFailures": 0,
+      "nonPositiveVolume": 0,
+      "nonFinite": 0,
+      "closeTimeFailures": 0,
+      "canonicalSha256": "a52070d01a8570fbcbe5fe43daf3e13ea03d978223cfe7201c6bcee6bb4c118a",
+      "gitBlobSha1": "242e2c96a05feb175e869edbdea23ee85a136f69",
+      "readbackVerified": true,
+      "manifest": "research-data/binance-usdm/4h/canonical/XRPUSDT_4h_20200914T0800Z_20261105T1600Z.manifest.json"
+    }
+  },
+  "aggregate": {
+    "symbols": 4,
+    "rowsPerSymbol": 13461,
+    "totalRows": 53844,
+    "continuous4h": true,
+    "qualityFailures": 0
+  },
+  "limitations": [
+    "The missing 76-row delta remains inaccessible; its interval coverage is unknown. The 4h series is independently continuous through 2026-11-05T16:00Z, but this does not recover missing 5m/15m/1h records.",
+    "Multi-year 5m/15m/1h history remains incomplete.",
+    "Original page SHA-256 manifest mismatches remain as provenance caveats; earlier row-level reconciliation reported 21,000/21,000 exact rows across 14 mismatched page/symbol pairs.",
+    "The exact inline V8 transformation source is not committed as a runnable repository script; this artifact captures the algorithm and all inputs/outputs."
+  ],
+  "execution": {
+    "runtime": "managed V8 Code Mode",
+    "repositoryHarnessExecuted": false,
+    "localNodeUsed": false,
+    "binanceSdkUsed": false
+  },
+  "statusDecision": "DATA_QUALITY_PASS_FOR_4H_ONLY; OVERALL_ARCHIVE_DEGRADED",
+  "strategyExperimentExecuted": false,
+  "oosEvaluated": false
+}

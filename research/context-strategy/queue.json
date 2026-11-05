@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAtUtc": "2026-11-05T21:46:05.000Z",
+  "updatedAtUtc": "2026-11-05T22:35:14Z",
   "items": [
     {
       "id": "Q1_ARCHIVE_MULTIYEAR",
@@ -11,8 +11,8 @@
         "Compatible bulk-data downloader or official Binance Vision access",
         "Persistent writable store"
       ],
-      "nextAction": "Backfill multi-year 5m/15m/1h for BTCUSDT, ETHUSDT, SOLUSDT and XRPUSDT from an auditable source. Recover the missing 76-row delta or exact creating-run coverage metadata; do not infer its contents.",
-      "blocker": "Canonical 4h series is PASS: 13,461 rows per symbol (53,844 total), 2020-09-14T08:00Z through 2026-11-05T16:00Z, zero gaps/duplicates/invariant failures and readback-verified hashes. Multi-year 5m/15m/1h history remains absent. The indexed 76-row delta is still inaccessible; its coverage is unknown, but no 4h gap remains through the canonical high-water mark.",
+      "nextAction": "Backfill multi-year 5m/15m/1h history for all four symbols from an auditable source; recover the missing 76-row delta or exact creating-run coverage metadata. Continue incremental appends from 5m 22:30Z, 15m 22:15Z, 1h 21:00Z and 4h 16:00Z.",
+      "blocker": "Canonical 4h PASS: 13,461 rows/symbol through 2026-11-05T16:00Z. Incremental high-water marks are current, but multi-year 5m/15m/1h history remains absent. Missing indexed 76-row delta is still inaccessible; no 4h gap remains.",
       "result": {
         "canonical4hRowsPerSymbol": 13461,
         "canonical4hRowsTotal": 53844,
@@ -29,21 +29,21 @@
       "prerequisites": [
         "Direct bounded HTTP or Binance SDK call"
       ],
-      "nextAction": "Restore direct DNS/network access; probe uncached /fapi/v1/time and /fapi/v1/exchangeInfo and require <=60s drift before execution-authoritative contract validation.",
-      "blocker": "Direct bounded probes to /fapi/v1/time, /exchangeInfo, /klines, /premiumIndex, /openInterest and /ticker/24hr returned HTTP 000 (curl exit 6 or 28: DNS resolution failure/timeout). Connector exchangeInfo.serverTime=2026-11-05T06:46:24.911Z versus fresh mark timestamp 2026-11-05T21:45:13Z, drift 53,928.089 seconds (14h58m48s). Connector contract statuses are therefore not execution-authoritative."
+      "nextAction": "Restore direct DNS; obtain uncached /fapi/v1/time and /fapi/v1/exchangeInfo; require <=60s drift before execution-authoritative contract checks.",
+      "blocker": "Direct curl to fapi.binance.com /fapi/v1/time and /exchangeInfo fails curl exit 6 (DNS). Connector exchangeInfo.serverTime=2026-11-05T06:46:24.908Z versus mark timestamp 2026-11-05T22:35:10Z, drift about 15h48m45s. Returned TRADING/PERPETUAL statuses are stale."
     },
     {
       "id": "Q3_RUN_REPOSITORY_BACKTEST",
       "priority": 3,
-      "status": "BLOCKED",
+      "status": "PARTIALLY_COMPLETED",
       "prerequisites": [
         "Repository checkout",
         "Node>=24",
         "npm>=11",
         "dependencies installed"
       ],
-      "nextAction": "Provision Node >=24/npm >=11, clean local checkout and dependencies; commit exact executable research runner and deterministic fixture; run typecheck/tests and smoke replay.",
-      "blocker": "Current shell: Node 22.16.0/npm 10.9.2; repository requires Node >=24/npm >=11. /crypto-trading-agent/.git absent, no node_modules, Binance SDK imports unavailable. Repository harness not invoked."
+      "nextAction": "Provision Node >=24/npm >=11 and a clean local checkout; run repository typecheck/tests and compare repository harness output against the committed self-contained runner.",
+      "blocker": "Committed self-contained JS runner executed in managed V8 Code Mode; 600-bar deterministic and no-lookahead fixture smoke passed, and untouched OOS completed. Local repository harness remains uninvoked because only Node22.16/npm10.9 are installed and no local checkout exists."
     },
     {
       "id": "Q4_DERIVATIVES_ARCHIVE",
@@ -52,8 +52,8 @@
       "prerequisites": [
         "Recorder process and persistent storage"
       ],
-      "nextAction": "Persist raw multi-symbol funding settlements, OI, taker volume and positioning with timestamps and source metadata; do not substitute current snapshots for historical series.",
-      "blocker": "Current funding/OI/taker/global-account positioning snapshots are available, but historical funding/OI/taker/positioning archives remain absent. Earlier SOL funding sample: 6,806 rows; 3,501 blank markPrice, 3,452 4h-open proxies and 49 unpriced."
+      "nextAction": "Backfill historical funding for BTC/ETH/XRP and OI/taker/positioning histories for all symbols; preserve source timestamps and interval changes.",
+      "blocker": "SOL funding archive now persisted: 6,806 rows from 2020-09-14T08:00Z to 2026-11-05T16:00Z, zero duplicates/invalid rows and zero >8h gaps. 3,501 markPrice values blank. Other-symbol funding and historical OI/taker/positioning archives remain absent."
     },
     {
       "id": "Q5_CONDITIONAL_STRATEGY_TEST",
@@ -500,22 +500,32 @@
     {
       "id": "Q23_DAILY_RESEARCH_CYCLE_20261106",
       "priority": 2,
-      "status": "COMPLETED_DATA_QUALITY_ONLY",
+      "status": "COMPLETED",
       "prerequisites": [
         "Canonical archive integrity/reassembly",
         "Node >=24/npm >=11",
         "Committed executable research runner and deterministic smoke test"
       ],
-      "nextAction": "After compatible runtime and multi-year lower-timeframe archive are available, pre-register and execute a different strategy-family x context x symbol experiment; never reuse the existing Donchian untouched test.",
-      "blocker": "Daily cycle completed the highest-priority available data-quality work (canonical 4h reconciliation and incremental integrity checks). Strategy experiment/OOS remains blocked by Node/npm version mismatch, absent local checkout/runner, incomplete multi-year 5m/15m/1h archive and direct REST DNS failure.",
+      "nextAction": "Next daily cycle: select a distinct falsifiable strategy family only after preserving this rejection and improving multi-timeframe/derivatives coverage; do not reuse this untouched test window for tuning.",
+      "blocker": null,
       "result": {
-        "experimentId": "4H-CANONICAL-ARCHIVE-RECONCILIATION-V1-20261105T2126Z",
-        "artifactPath": "research/context-strategy/experiments/4h-canonical-archive-reconciliation-v1_20261105T2126Z.json",
-        "canonicalRowsTotal": 53844,
-        "rowsPerSymbol": 13461,
-        "zero4hQualityFailures": true,
-        "strategyExperimentExecuted": false,
-        "oosEvaluated": false
+        "strategyExperimentExecuted": true,
+        "oosEvaluated": true,
+        "experimentId": "SOL-FAILED-BREAKOUT-FADE-SIDEWAYS-LOW-V1-20261105T2225Z",
+        "evidenceStatus": "REJECTED",
+        "selectedLookback": 20,
+        "oosTrades": 113,
+        "meanNetR": -0.1479703017321489,
+        "ci95": [
+          -0.31751343217234484,
+          0.019600128600543533
+        ],
+        "profitFactor": 0.7870525610801595,
+        "maxDrawdownR": 20.791692075760004,
+        "resultPath": "research/context-strategy/experiments/sol-failed-breakout-fade-sideways-low-v1_20261105T2225Z.result.json",
+        "resultSha256": "ff7abf4ee4246c9dadfaa5cd9344a2d559f532925ce721b0c581d816c94d6692",
+        "runnerSmokeTest": "PASS",
+        "fundingArchiveRows": 6806
       }
     },
     {
@@ -687,6 +697,115 @@
         "readbackVerifiedAtUtc": "2026-11-05T21:46:05.000Z",
         "readbackSha256": "ef249e89cbeadd1f5635d89dfd00f546a985aad4dccca1114fd942e5b81f196d",
         "gitBlobSha1": "09ab75f2405cd339c81631808535b6e043b22a21"
+      }
+    },
+    {
+      "id": "Q31_INCREMENTAL_ARCHIVE_REFRESH_20261105T222546Z",
+      "priority": 1,
+      "status": "COMPLETED",
+      "prerequisites": [
+        "Binance connector",
+        "Archive high-water marks",
+        "GitHub write access"
+      ],
+      "nextAction": "Continue from latest high-water marks.",
+      "blocker": null,
+      "result": {
+        "rows": 44,
+        "path": "research-data/binance-usdm/delta/binance_usdm_delta_20261105T222546Z_completed.jsonl",
+        "sha256": "0233731e2e0da90be198b9edfe217f44f76ab9d543a04955c5b26b6fd49ef486",
+        "readbackVerified": true
+      }
+    },
+    {
+      "id": "Q32_SOL_FUNDING_ARCHIVE_20261105T223302Z",
+      "priority": 2,
+      "status": "COMPLETED",
+      "prerequisites": [
+        "Binance funding-history connector",
+        "GitHub archive write access"
+      ],
+      "nextAction": "Backfill other symbols and derivative metrics.",
+      "blocker": null,
+      "result": {
+        "rows": 6806,
+        "path": "research-data/binance-usdm/derivatives/funding/SOLUSDT_funding_20200914T0800Z_20261105T1600Z.jsonl",
+        "sha256": "34bfd47393c7e9756e617a70669d8ee51349f6a3ba2b4931ae719993c6064549",
+        "blankMarkPriceRows": 3501,
+        "observedSpacingHours": {
+          "2": 98,
+          "4": 3,
+          "8": 6704
+        },
+        "duplicates": 0,
+        "invalid": 0,
+        "gapsOver8h": 0,
+        "readbackVerified": true
+      }
+    },
+    {
+      "id": "Q33_INCREMENTAL_ARCHIVE_REFRESH_20261105T223302Z",
+      "priority": 1,
+      "status": "COMPLETED",
+      "prerequisites": [
+        "Binance kline connector",
+        "Archive high-water marks"
+      ],
+      "nextAction": "Continue from 5m 22:25Z and 15m 22:15Z; no new 1h/4h candle yet.",
+      "blocker": null,
+      "result": {
+        "rows": 8,
+        "path": "research-data/binance-usdm/delta/binance_usdm_delta_20261105T223302Z_completed.jsonl",
+        "sha256": "a1e0889a2c20cfe757ef2216879ab224417f9ae3cada780553be8e90500a75f7",
+        "readbackVerified": true,
+        "aggregationChecks": 4
+      }
+    },
+    {
+      "id": "Q34_INCREMENTAL_ARCHIVE_REFRESH_20261105T223514Z",
+      "priority": 1,
+      "status": "COMPLETED",
+      "prerequisites": [
+        "Binance kline connector",
+        "Archive high-water marks"
+      ],
+      "nextAction": "Continue from 5m 22:30Z; wait for next completed 15m/1h/4h bars.",
+      "blocker": null,
+      "result": {
+        "rows": 4,
+        "path": "research-data/binance-usdm/delta/binance_usdm_delta_20261105T223514Z_5m_completed.jsonl",
+        "sha256": "1afe32141e4386daef9791149137852ceeb6768b8384284b3cd2e990a88e06eb",
+        "readbackVerified": true
+      }
+    },
+    {
+      "id": "Q35_SOL_FAILED_BREAKOUT_FADE_OOS_20261105T2225Z",
+      "priority": 2,
+      "status": "COMPLETED_REJECTED",
+      "prerequisites": [
+        "Canonical SOL 4h archive",
+        "Historical SOL funding",
+        "Committed runner",
+        "Deterministic smoke test"
+      ],
+      "nextAction": "Do not retune this variant on the same test. Investigate a distinct structure/strategy family after multi-timeframe archive and repository runtime work.",
+      "blocker": null,
+      "result": {
+        "experimentId": "SOL-FAILED-BREAKOUT-FADE-SIDEWAYS-LOW-V1-20261105T2225Z",
+        "evidenceStatus": "REJECTED",
+        "selectedLookback": 20,
+        "oosTrades": 113,
+        "meanNetR": -0.1479703017321489,
+        "ci95": [
+          -0.31751343217234484,
+          0.019600128600543533
+        ],
+        "profitFactor": 0.7870525610801595,
+        "maxDrawdownR": 20.791692075760004,
+        "totalQuotePnlPerSol": -26.583894816491103,
+        "resultPath": "research/context-strategy/experiments/sol-failed-breakout-fade-sideways-low-v1_20261105T2225Z.result.json",
+        "resultSha256": "ff7abf4ee4246c9dadfaa5cd9344a2d559f532925ce721b0c581d816c94d6692",
+        "readbackVerified": true
       }
     }
   ],

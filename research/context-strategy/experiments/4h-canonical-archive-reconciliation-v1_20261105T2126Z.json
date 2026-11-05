@@ -64,10 +64,11 @@
       "nonPositiveVolume": 0,
       "nonFinite": 0,
       "closeTimeFailures": 0,
-      "canonicalSha256": "9493967b1ca2a50562cd79715285d23bcc4d9b94ee52918b3f8e185ca1e1f69e",
+      "canonicalSha256": "7088aa2b2cc48c3895fd77dfc2ece0ae812062f24a70374ec556273a2d8380d7",
       "gitBlobSha1": "a465025b2276a0e9cfbf805ba64be4da6ed08868",
       "readbackVerified": true,
-      "manifest": "research-data/binance-usdm/4h/canonical/BTCUSDT_4h_20200914T0800Z_20261105T1600Z.manifest.json"
+      "manifest": "research-data/binance-usdm/4h/canonical/BTCUSDT_4h_20200914T0800Z_20261105T1600Z.manifest.json",
+      "canonicalRowsSha256": "f14ce6a0fc2938840d7cb69059a8b3f02748ed544c0b65694c0cb2aea32f45b1"
     },
     "ETHUSDT": {
       "rows": 13461,
@@ -79,10 +80,11 @@
       "nonPositiveVolume": 0,
       "nonFinite": 0,
       "closeTimeFailures": 0,
-      "canonicalSha256": "6e079f11bc017316f4c09381a67b86196dbf8bfa03e49fcefe88ff63ecf071d5",
+      "canonicalSha256": "0e1ba53fb3c4c42e89440f2aaabfc7eead44ac84bc67a083c86df96a2f12dce2",
       "gitBlobSha1": "26034cbb638d45295504f8e1a52862adca63eea6",
       "readbackVerified": true,
-      "manifest": "research-data/binance-usdm/4h/canonical/ETHUSDT_4h_20200914T0800Z_20261105T1600Z.manifest.json"
+      "manifest": "research-data/binance-usdm/4h/canonical/ETHUSDT_4h_20200914T0800Z_20261105T1600Z.manifest.json",
+      "canonicalRowsSha256": "606dc793a8658bf2a74e5784efaa4a599f44c8ad3000d0a92b0b14c6d44f1fa1"
     },
     "SOLUSDT": {
       "rows": 13461,
@@ -94,10 +96,11 @@
       "nonPositiveVolume": 0,
       "nonFinite": 0,
       "closeTimeFailures": 0,
-      "canonicalSha256": "f6050d0c4dcabf7575e6d371d4db72e1620ccb9faf0cc9536cf1d4cd3cf86a11",
+      "canonicalSha256": "148389f0347fe05307e2a274c579ccc1c495e32eaad2e49cfb19ca211df89156",
       "gitBlobSha1": "77af5caa7d5e76c8efc3fd8571c55a20376ac97f",
       "readbackVerified": true,
-      "manifest": "research-data/binance-usdm/4h/canonical/SOLUSDT_4h_20200914T0800Z_20261105T1600Z.manifest.json"
+      "manifest": "research-data/binance-usdm/4h/canonical/SOLUSDT_4h_20200914T0800Z_20261105T1600Z.manifest.json",
+      "canonicalRowsSha256": "e72bb0e341d54d972c27f3db24dafffe3cce8ae4b5184df1c073891d986a65f6"
     },
     "XRPUSDT": {
       "rows": 13461,
@@ -109,10 +112,11 @@
       "nonPositiveVolume": 0,
       "nonFinite": 0,
       "closeTimeFailures": 0,
-      "canonicalSha256": "a52070d01a8570fbcbe5fe43daf3e13ea03d978223cfe7201c6bcee6bb4c118a",
+      "canonicalSha256": "b1a96c24f0e91aff7368facc428dffa22360093ce74dfe186d259b66d19f8023",
       "gitBlobSha1": "242e2c96a05feb175e869edbdea23ee85a136f69",
       "readbackVerified": true,
-      "manifest": "research-data/binance-usdm/4h/canonical/XRPUSDT_4h_20200914T0800Z_20261105T1600Z.manifest.json"
+      "manifest": "research-data/binance-usdm/4h/canonical/XRPUSDT_4h_20200914T0800Z_20261105T1600Z.manifest.json",
+      "canonicalRowsSha256": "40b9420ca1862a8a2b4ecd3ee0bb6b5fc81f3cc3e8126143ae74cf19f65c62c5"
     }
   },
   "aggregate": {
@@ -132,9 +136,40 @@
     "runtime": "managed V8 Code Mode",
     "repositoryHarnessExecuted": false,
     "localNodeUsed": false,
-    "binanceSdkUsed": false
+    "binanceSdkUsed": false,
+    "hashImplementationCorrection": "An earlier in-memory SHA-256 implementation had an incorrect round-constant sequence for canonical file hashes. Canonical JSONL and row hashes in this record and archive-index have been recomputed and corrected. Git blob SHA-1 equality independently verified exact persisted bytes."
   },
   "statusDecision": "DATA_QUALITY_PASS_FOR_4H_ONLY; OVERALL_ARCHIVE_DEGRADED",
   "strategyExperimentExecuted": false,
-  "oosEvaluated": false
+  "oosEvaluated": false,
+  "hashAudit": {
+    "correctedAtUtc": "2026-11-05T21:36:00.000Z",
+    "method": "Recomputed SHA-256 from exact source pages plus deduplicated delta using a self-tested SHA-256 implementation; independently verified GitHub blob SHA-1 against exact canonical bytes.",
+    "previousIncorrectCanonicalSha256": {
+      "BTCUSDT": "9493967b1ca2a50562cd79715285d23bcc4d9b94ee52918b3f8e185ca1e1f69e",
+      "ETHUSDT": "6e079f11bc017316f4c09381a67b86196dbf8bfa03e49fcefe88ff63ecf071d5",
+      "SOLUSDT": "f6050d0c4dcabf7575e6d371d4db72e1620ccb9faf0cc9536cf1d4cd3cf86a11",
+      "XRPUSDT": "a52070d01a8570fbcbe5fe43daf3e13ea03d978223cfe7201c6bcee6bb4c118a"
+    },
+    "corrected": {
+      "BTCUSDT": {
+        "canonicalSha256": "7088aa2b2cc48c3895fd77dfc2ece0ae812062f24a70374ec556273a2d8380d7",
+        "canonicalRowsSha256": "f14ce6a0fc2938840d7cb69059a8b3f02748ed544c0b65694c0cb2aea32f45b1"
+      },
+      "ETHUSDT": {
+        "canonicalSha256": "0e1ba53fb3c4c42e89440f2aaabfc7eead44ac84bc67a083c86df96a2f12dce2",
+        "canonicalRowsSha256": "606dc793a8658bf2a74e5784efaa4a599f44c8ad3000d0a92b0b14c6d44f1fa1"
+      },
+      "SOLUSDT": {
+        "canonicalSha256": "148389f0347fe05307e2a274c579ccc1c495e32eaad2e49cfb19ca211df89156",
+        "canonicalRowsSha256": "e72bb0e341d54d972c27f3db24dafffe3cce8ae4b5184df1c073891d986a65f6"
+      },
+      "XRPUSDT": {
+        "canonicalSha256": "b1a96c24f0e91aff7368facc428dffa22360093ce74dfe186d259b66d19f8023",
+        "canonicalRowsSha256": "40b9420ca1862a8a2b4ecd3ee0bb6b5fc81f3cc3e8126143ae74cf19f65c62c5"
+      }
+    },
+    "allFourBlobSha1Verified": true
+  },
+  "updatedAtUtc": "2026-11-05T21:36:00.000Z"
 }

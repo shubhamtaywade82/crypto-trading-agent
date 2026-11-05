@@ -1,0 +1,717 @@
+{
+  "schemaVersion": 1,
+  "createdAtUtc": "2026-11-05T09:57:46.370Z",
+  "runType": "historical_context_discovery_and_market_monitoring",
+  "outcome": "RESEARCH_EXECUTED",
+  "strategyBacktestExecuted": false,
+  "strategyOosEvaluated": false,
+  "registryPromotion": false,
+  "repository": {
+    "name": "shubhamtaywade82/crypto-trading-agent",
+    "defaultBranch": "main",
+    "researchBranch": "research/context-strategy-2026-11-05-run11",
+    "observedRecentCommit": "3e5049c7a7ef57a9db75aaaa145287d839746bae",
+    "packageVersion": "2.4.1",
+    "nodeRequirement": ">=24",
+    "npmRequirement": ">=11",
+    "backtestScript": "scripts/backtest.ts",
+    "backtestScriptBlobSha": "284a5ffd4e254265da49c76cb792cfdc3b19e094",
+    "conditionalEdgeScript": "scripts/conditional-edge.ts",
+    "conditionalEdgeScriptBlobSha": "29034c61fdd42a5e40272234b221d29cb95fb3ee",
+    "researchLogBlobSha": "e76428a76ec029f26e394b3fb9540c8e7c873e63",
+    "liveReadinessScript": "scripts/live-readiness.ts"
+  },
+  "preflight": {
+    "shell": {
+      "status": "BLOCKED",
+      "evidence": "container.exec returned system_error on two attempts; no cwd, OS, disk, RAM, CPU, Node or npm version obtained."
+    },
+    "inMemoryCompute": {
+      "status": "PASS",
+      "evidence": "functions.exec V8 runtime executed data QA, SHA-256 manifests, EMA/ATR context analysis and deterministic fixture smoke."
+    },
+    "nodeAndSdk": {
+      "status": "UNAVAILABLE",
+      "evidence": "No executable Node/npm runtime or installed @nemesis-oss/binance-sdk could be inspected/imported."
+    },
+    "repository": {
+      "status": "PASS",
+      "evidence": "GitHub connector read repository/package/scripts; repo reports push/admin permission; dedicated research branch created."
+    },
+    "network": {
+      "status": "DEGRADED",
+      "evidence": "Binance connector market-data calls succeeded. Direct web access to fapi /time was inaccessible and /exchangeInfo returned HTTP 451; exchangeInfo serverTime was stale by 191.36 minutes."
+    },
+    "rawArchive": {
+      "status": "BLOCKED",
+      "evidence": "No local raw archive or manifest file was accessible/read back in this runtime; this run fetched bounded klines only."
+    },
+    "dataQuality": {
+      "status": "PASS_FOR_SAMPLED_WINDOWS",
+      "evidence": "16 sampled symbol/interval datasets passed duplicate, continuity, alignment, OHLC, positive-volume and finite-value checks; one forming candle excluded per dataset."
+    },
+    "backtestHarness": {
+      "status": "BLOCKED",
+      "evidence": "Repository backtest and conditional-edge scripts exist, but cannot be invoked without shell/Node. No repository harness smoke test or strategy backtest was run."
+    },
+    "customClassifierSmoke": {
+      "status": "PASS",
+      "evidence": "500-bar deterministic synthetic fixture; repeated output identical; changing bars strictly after trainEnd did not change training thresholds or training labels."
+    },
+    "localStorage": {
+      "status": "UNAVAILABLE",
+      "evidence": "No accessible local filesystem/disk inspection."
+    },
+    "persistentStorage": {
+      "status": "PASS",
+      "evidence": "Dedicated GitHub branch available; this snapshot, registry and queue are being committed and read back."
+    },
+    "artifactReadback": {
+      "status": "PENDING",
+      "evidence": "Will be marked PASS only after fetch_file returns exact saved content."
+    }
+  },
+  "dataManifest": {
+    "source": "Binance USDⓈ-M public market-data REST through connected Binance tools; not Binance SDK and not direct local REST execution.",
+    "retrievedAtUtc": "2026-11-05T09:57:46.370Z",
+    "endpoints": [
+      {
+        "method": "GET",
+        "path": "/fapi/v1/klines",
+        "symbols": [
+          "BTCUSDT",
+          "ETHUSDT",
+          "SOLUSDT",
+          "XRPUSDT"
+        ],
+        "intervals": [
+          "5m",
+          "15m",
+          "1h",
+          "4h"
+        ],
+        "limits": {
+          "5m": 200,
+          "15m": 200,
+          "1h": 1500,
+          "4h": 1500
+        }
+      },
+      {
+        "method": "GET",
+        "path": "/fapi/v1/exchangeInfo",
+        "note": "Response returned TRADING/PERPETUAL for all four symbols, but serverTime was stale; not used for execution validation."
+      },
+      {
+        "method": "GET",
+        "path": "/fapi/v1/ticker/24hr",
+        "symbols": [
+          "BTCUSDT",
+          "ETHUSDT",
+          "SOLUSDT",
+          "XRPUSDT"
+        ]
+      },
+      {
+        "method": "GET",
+        "path": "/fapi/v1/premiumIndex",
+        "symbols": [
+          "BTCUSDT",
+          "ETHUSDT",
+          "SOLUSDT",
+          "XRPUSDT"
+        ]
+      },
+      {
+        "method": "GET",
+        "path": "/fapi/v1/openInterest",
+        "symbols": [
+          "BTCUSDT",
+          "ETHUSDT",
+          "SOLUSDT",
+          "XRPUSDT"
+        ]
+      },
+      {
+        "method": "GET",
+        "path": "/fapi/v1/fundingRate",
+        "symbols": [
+          "BTCUSDT",
+          "ETHUSDT",
+          "SOLUSDT",
+          "XRPUSDT"
+        ],
+        "limit": 3
+      },
+      {
+        "method": "GET",
+        "path": "/fapi/v1/depth",
+        "symbols": [
+          "BTCUSDT",
+          "ETHUSDT",
+          "SOLUSDT",
+          "XRPUSDT"
+        ],
+        "limit": 20
+      },
+      {
+        "method": "GET",
+        "path": "/futures/data/takerlongshortRatio",
+        "symbols": [
+          "BTCUSDT",
+          "ETHUSDT",
+          "SOLUSDT",
+          "XRPUSDT"
+        ],
+        "period": "1h",
+        "limit": 24
+      },
+      {
+        "method": "GET",
+        "path": "/futures/data/globalLongShortAccountRatio",
+        "symbols": [
+          "BTCUSDT",
+          "ETHUSDT",
+          "SOLUSDT",
+          "XRPUSDT"
+        ],
+        "period": "1h",
+        "limit": 24
+      },
+      {
+        "method": "GET",
+        "path": "/fapi/v1/fundingInfo",
+        "note": "Funding interval metadata; 8h for all four target symbols."
+      },
+      {
+        "method": "GET",
+        "path": "/fapi/v1/time",
+        "status": "NOT_CHECKED",
+        "reason": "No matching connected Binance action; direct web request was inaccessible."
+      }
+    ],
+    "rowsFetched": 13600,
+    "completedRows": 13584,
+    "formingRowsExcluded": 16,
+    "aggregateNormalizedJsonSha256": "3854497a2a975c2b88d9b3c65b6bdb2db1cd4e50ed1b16cf298c329969e3e88b",
+    "hashDefinition": "SHA-256 of JSON.stringify(normalized arrays returned by the connector; not a hash of original HTTP response bytes.",
+    "datasets": [
+      [
+        "BTCUSDT",
+        "5m",
+        200,
+        "2026-11-04T17:20:00.000Z",
+        "2026-11-05T09:55:00.000Z",
+        "2026-11-05T09:50:00.000Z",
+        "d9567c6dbe40f143c8c0bbf29fed5f20f9b0960e92ef0c287668459bfaaf9f71"
+      ],
+      [
+        "BTCUSDT",
+        "15m",
+        200,
+        "2026-11-03T08:00:00.000Z",
+        "2026-11-05T09:45:00.000Z",
+        "2026-11-05T09:30:00.000Z",
+        "a34f0f0d14431e50ad6c81c125171ed360fcb81344527b14ab5a45086cf772b2"
+      ],
+      [
+        "BTCUSDT",
+        "1h",
+        1500,
+        "2026-09-03T22:00:00.000Z",
+        "2026-11-05T09:00:00.000Z",
+        "2026-11-05T08:00:00.000Z",
+        "3e6d0cc3575b4d41d8bb2789795f87b52149b668cde72372892fda184fb7bf59"
+      ],
+      [
+        "BTCUSDT",
+        "4h",
+        1500,
+        "2026-02-28T12:00:00.000Z",
+        "2026-11-05T08:00:00.000Z",
+        "2026-11-05T04:00:00.000Z",
+        "439fb04a625e5a4440c03707682907de9860eb3031320a2b8969fdbe0c477743"
+      ],
+      [
+        "ETHUSDT",
+        "5m",
+        200,
+        "2026-11-04T17:20:00.000Z",
+        "2026-11-05T09:55:00.000Z",
+        "2026-11-05T09:50:00.000Z",
+        "56bd11c24a86329da74c44634edfc2a6b41768876b2df8e04da1d2ebc9f62582"
+      ],
+      [
+        "ETHUSDT",
+        "15m",
+        200,
+        "2026-11-03T08:00:00.000Z",
+        "2026-11-05T09:45:00.000Z",
+        "2026-11-05T09:30:00.000Z",
+        "ecf23fb35649cfcb7dd6645b62307e4b572a7fa22cdf18d9449b2163c4eddcc7"
+      ],
+      [
+        "ETHUSDT",
+        "1h",
+        1500,
+        "2026-09-03T22:00:00.000Z",
+        "2026-11-05T09:00:00.000Z",
+        "2026-11-05T08:00:00.000Z",
+        "dd9b75ef31f25b9d59da46ffc5a933e1532ce8c7907caaaa8e7315f3ae7cd153"
+      ],
+      [
+        "ETHUSDT",
+        "4h",
+        1500,
+        "2026-02-28T12:00:00.000Z",
+        "2026-11-05T08:00:00.000Z",
+        "2026-11-05T04:00:00.000Z",
+        "29f0626e2ff7cb165d81c1670a6e3af434adbf1ea88ee4266cbea8b0ab1bd71c"
+      ],
+      [
+        "SOLUSDT",
+        "5m",
+        200,
+        "2026-11-04T17:20:00.000Z",
+        "2026-11-05T09:55:00.000Z",
+        "2026-11-05T09:50:00.000Z",
+        "6247a7bde374d15131f623a9f2c63152b281da1964893384e9432f78931bc223"
+      ],
+      [
+        "SOLUSDT",
+        "15m",
+        200,
+        "2026-11-03T08:00:00.000Z",
+        "2026-11-05T09:45:00.000Z",
+        "2026-11-05T09:30:00.000Z",
+        "f5386a041ed1b17d7c39c4b3749fbe08c4294e920ee0839939a21eb1b6f11d47"
+      ],
+      [
+        "SOLUSDT",
+        "1h",
+        1500,
+        "2026-09-03T22:00:00.000Z",
+        "2026-11-05T09:00:00.000Z",
+        "2026-11-05T08:00:00.000Z",
+        "06e30a685f12f85e2e666dd95cb54f4cb1ba461a48f96fe41c52ec5c8d967dc5"
+      ],
+      [
+        "SOLUSDT",
+        "4h",
+        1500,
+        "2026-02-28T12:00:00.000Z",
+        "2026-11-05T08:00:00.000Z",
+        "2026-11-05T04:00:00.000Z",
+        "5d42ee6924c8eb8138d43b78dcbfd2a0ebe6e08179ad3f7bce57f9f171de868e"
+      ],
+      [
+        "XRPUSDT",
+        "5m",
+        200,
+        "2026-11-04T17:20:00.000Z",
+        "2026-11-05T09:55:00.000Z",
+        "2026-11-05T09:50:00.000Z",
+        "d6680a1efd8c6ab09fc7b477c645a38a0dbcced442512ac0dcb26e165e67b47a"
+      ],
+      [
+        "XRPUSDT",
+        "15m",
+        200,
+        "2026-11-03T08:00:00.000Z",
+        "2026-11-05T09:45:00.000Z",
+        "2026-11-05T09:30:00.000Z",
+        "8f4f763238260e6fc0f349cba3f9404969234880e4d812523194035e1f734d7d"
+      ],
+      [
+        "XRPUSDT",
+        "1h",
+        1500,
+        "2026-09-03T22:00:00.000Z",
+        "2026-11-05T09:00:00.000Z",
+        "2026-11-05T08:00:00.000Z",
+        "cb8c7cfcff1f9417c064fdcdf34684d4502e7c43576a851b90990c5654a50e8b"
+      ],
+      [
+        "XRPUSDT",
+        "4h",
+        1500,
+        "2026-02-28T12:00:00.000Z",
+        "2026-11-05T08:00:00.000Z",
+        "2026-11-05T04:00:00.000Z",
+        "a922bf93f4ea7541d97c2ec8d503d562eacb7dd6c755d5e57f3c8ff1acf84133"
+      ]
+    ],
+    "quality": {
+      "duplicates": 0,
+      "missingIntervals": 0,
+      "alignmentIssues": 0,
+      "badOHLC": 0,
+      "nonPositiveVolume": 0,
+      "nonFinite": 0,
+      "formingExcludedPerDataset": 1,
+      "coverageAdequacy": "4h ~250 days; 1h ~62.5 days; 15m ~50 hours; 5m ~16.7 hours. Initial research sample only; not multiple-cycle evidence."
+    }
+  },
+  "contextExperiment": {
+    "id": "CTX-4H-EMA50xEMA200-ATRQ-v1",
+    "status": "COMPLETED_CONTEXT_DISCOVERY_ONLY",
+    "hypothesis": "A compact 4h trend/volatility taxonomy derived on training data can describe persistent market states and reveal train/test distribution drift across BTC, ETH, SOL and XRP.",
+    "method": {
+      "timeframe": "4h",
+      "warmupBars": 210,
+      "completedBarsPerSymbol": 1499,
+      "validFeatureBars": 1289,
+      "split": "chronological 70% train / 30% untouched test of valid feature rows",
+      "trainBars": 902,
+      "testBars": 387,
+      "trendFeature": "EMA50 / EMA200 - 1",
+      "sidewaysThreshold": "training 30th percentile of absolute EMA spread; UP if spread > threshold, DOWN if spread < -threshold, else SIDEWAYS",
+      "volatilityFeature": "ATR14 / close; LOW below training q33, NORMAL q33-q67, HIGH above q67",
+      "shockOverlay": "SHOCK if absolute 4h return exceeds training q99",
+      "transitionMeasurement": "consecutive context runs and adjacent-state transition counts",
+      "stabilityMeasurement": "Jensen-Shannon divergence between train and test context frequencies"
+    },
+    "results": {
+      "BTCUSDT": {
+        "thresholds": {
+          "flatSpread": 0.008833604038775967,
+          "atrPctQ33": 0.0096271644950586,
+          "atrPctQ67": 0.012682165310673094,
+          "absReturnQ99": 0.028091977550189138
+        },
+        "trainCounts": {
+          "DOWN_LOW": 57,
+          "SIDEWAYS_LOW": 157,
+          "SIDEWAYS_NORMAL": 93,
+          "SIDEWAYS_HIGH": 19,
+          "SHOCK": 10,
+          "UP_HIGH": 114,
+          "UP_NORMAL": 138,
+          "UP_LOW": 86,
+          "DOWN_NORMAL": 67,
+          "DOWN_HIGH": 161
+        },
+        "testCounts": {
+          "UP_NORMAL": 124,
+          "UP_HIGH": 56,
+          "SHOCK": 4,
+          "SIDEWAYS_HIGH": 1,
+          "SIDEWAYS_NORMAL": 31,
+          "SIDEWAYS_LOW": 46,
+          "DOWN_HIGH": 17,
+          "DOWN_NORMAL": 5,
+          "DOWN_LOW": 16
+        },
+        "jsd": 0.07127337044085075,
+        "medianDurationBars": 4,
+        "meanDurationBars": 6.241935483870968,
+        "topTransitions": [
+          [
+            "UP_NORMAL -> UP_NORMAL",
+            105
+          ],
+          [
+            "UP_LOW -> UP_LOW",
+            79
+          ],
+          [
+            "UP_HIGH -> UP_HIGH",
+            46
+          ],
+          [
+            "SIDEWAYS_LOW -> SIDEWAYS_LOW",
+            39
+          ],
+          [
+            "SIDEWAYS_NORMAL -> SIDEWAYS_NORMAL",
+            23
+          ]
+        ]
+      },
+      "ETHUSDT": {
+        "thresholds": {
+          "flatSpread": 0.0214634323316931,
+          "atrPctQ33": 0.013200380639039779,
+          "atrPctQ67": 0.016785805182954614,
+          "absReturnQ99": 0.03847769737041141
+        },
+        "trainCounts": {
+          "SIDEWAYS_LOW": 174,
+          "SIDEWAYS_NORMAL": 66,
+          "SIDEWAYS_HIGH": 28,
+          "UP_HIGH": 111,
+          "UP_NORMAL": 152,
+          "UP_LOW": 78,
+          "DOWN_HIGH": 155,
+          "DOWN_NORMAL": 79,
+          "DOWN_LOW": 49,
+          "SHOCK": 10
+        },
+        "testCounts": {
+          "UP_HIGH": 42,
+          "UP_NORMAL": 96,
+          "SHOCK": 4,
+          "UP_LOW": 82,
+          "SIDEWAYS_HIGH": 19,
+          "SIDEWAYS_NORMAL": 16,
+          "SIDEWAYS_LOW": 16,
+          "DOWN_NORMAL": 68,
+          "DOWN_LOW": 26,
+          "DOWN_HIGH": 18
+        },
+        "jsd": 0.0745093619892296,
+        "medianDurationBars": 3,
+        "meanDurationBars": 5.953846153846154,
+        "topTransitions": [
+          [
+            "UP_NORMAL -> UP_NORMAL",
+            76
+          ],
+          [
+            "UP_LOW -> UP_LOW",
+            73
+          ],
+          [
+            "DOWN_NORMAL -> DOWN_NORMAL",
+            61
+          ],
+          [
+            "UP_HIGH -> UP_HIGH",
+            30
+          ],
+          [
+            "DOWN_LOW -> DOWN_LOW",
+            22
+          ]
+        ]
+      },
+      "SOLUSDT": {
+        "thresholds": {
+          "flatSpread": 0.009707079052593704,
+          "atrPctQ33": 0.014178111832337257,
+          "atrPctQ67": 0.018553935026188743,
+          "absReturnQ99": 0.03838550931806905
+        },
+        "trainCounts": {
+          "DOWN_NORMAL": 90,
+          "DOWN_LOW": 81,
+          "DOWN_HIGH": 180,
+          "SHOCK": 10,
+          "SIDEWAYS_NORMAL": 72,
+          "SIDEWAYS_HIGH": 16,
+          "UP_HIGH": 98,
+          "UP_NORMAL": 136,
+          "UP_LOW": 39,
+          "SIDEWAYS_LOW": 180
+        },
+        "testCounts": {
+          "UP_HIGH": 118,
+          "UP_NORMAL": 90,
+          "SHOCK": 6,
+          "UP_LOW": 36,
+          "SIDEWAYS_HIGH": 12,
+          "DOWN_HIGH": 34,
+          "DOWN_NORMAL": 74,
+          "DOWN_LOW": 17
+        },
+        "jsd": 0.15368861729748834,
+        "medianDurationBars": 4,
+        "meanDurationBars": 5.608695652173913,
+        "topTransitions": [
+          [
+            "UP_HIGH -> UP_HIGH",
+            100
+          ],
+          [
+            "UP_NORMAL -> UP_NORMAL",
+            69
+          ],
+          [
+            "DOWN_NORMAL -> DOWN_NORMAL",
+            65
+          ],
+          [
+            "UP_LOW -> UP_LOW",
+            32
+          ],
+          [
+            "DOWN_HIGH -> DOWN_HIGH",
+            28
+          ]
+        ]
+      },
+      "XRPUSDT": {
+        "thresholds": {
+          "flatSpread": 0.017889792752296362,
+          "atrPctQ33": 0.012276880606136395,
+          "atrPctQ67": 0.016600813684509944,
+          "absReturnQ99": 0.041977408704388056
+        },
+        "trainCounts": {
+          "DOWN_LOW": 173,
+          "DOWN_NORMAL": 138,
+          "SHOCK": 10,
+          "DOWN_HIGH": 175,
+          "SIDEWAYS_HIGH": 37,
+          "SIDEWAYS_NORMAL": 134,
+          "SIDEWAYS_LOW": 99,
+          "UP_HIGH": 82,
+          "UP_NORMAL": 26,
+          "UP_LOW": 28
+        },
+        "testCounts": {
+          "UP_HIGH": 171,
+          "SHOCK": 5,
+          "UP_NORMAL": 32,
+          "UP_LOW": 14,
+          "SIDEWAYS_HIGH": 23,
+          "SIDEWAYS_NORMAL": 4,
+          "SIDEWAYS_LOW": 10,
+          "DOWN_HIGH": 44,
+          "DOWN_NORMAL": 68,
+          "DOWN_LOW": 16
+        },
+        "jsd": 0.15264375223442933,
+        "medianDurationBars": 5,
+        "meanDurationBars": 8.41304347826087,
+        "topTransitions": [
+          [
+            "UP_HIGH -> UP_HIGH",
+            161
+          ],
+          [
+            "DOWN_NORMAL -> DOWN_NORMAL",
+            62
+          ],
+          [
+            "DOWN_HIGH -> DOWN_HIGH",
+            38
+          ],
+          [
+            "UP_NORMAL -> UP_NORMAL",
+            24
+          ],
+          [
+            "SIDEWAYS_HIGH -> SIDEWAYS_HIGH",
+            20
+          ]
+        ]
+      }
+    },
+    "interpretation": "Trend/volatility labels persist for a median 3-5 four-hour bars. Train/test frequency drift is lower for BTC/ETH (JSD ~0.07) and higher for SOL/XRP (~0.15). This is a preliminary taxonomy check over ~250 days, not proof of stable multi-cycle regimes or predictive trading edge."
+  },
+  "currentContext": {
+    "computedAtUtc": "2026-11-05T09:57:46.370Z",
+    "lastCompleted4hOpen": "2026-11-05T04:00:00.000Z",
+    "lastCompleted1hOpen": "2026-11-05T08:00:00.000Z",
+    "lastCompleted15mOpen": "2026-11-05T09:30:00.000Z",
+    "lastCompleted5mOpen": "2026-11-05T09:50:00.000Z",
+    "BTCUSDT": {
+      "state": "DOWN_HIGH",
+      "emaSpread4hPct": -2.0503764466388796,
+      "atrPct4h": 1.3288108440194484,
+      "return4hPct": -0.18940593604414024,
+      "ema20Above50_1h": true,
+      "emaSpread1hPct": 1.1906427392260222,
+      "return24hPct": 2.579067488508935
+    },
+    "ETHUSDT": {
+      "state": "DOWN_HIGH",
+      "emaSpread4hPct": -3.4711943617513175,
+      "atrPct4h": 1.7456533102487495,
+      "return4hPct": -0.3078294311345098,
+      "ema20Above50_1h": true,
+      "emaSpread1hPct": 1.9499092043876454,
+      "return24hPct": 4.201593841623286
+    },
+    "SOLUSDT": {
+      "state": "DOWN_HIGH",
+      "emaSpread4hPct": -6.2714367469751675,
+      "atrPct4h": 2.0694537595946043,
+      "return4hPct": -0.4052369077306772,
+      "ema20Above50_1h": true,
+      "emaSpread1hPct": 0.9667367837453256,
+      "return24hPct": 3.7632679318108764
+    },
+    "XRPUSDT": {
+      "state": "DOWN_HIGH",
+      "emaSpread4hPct": -3.590607088418152,
+      "atrPct4h": 1.7645204764803073,
+      "return4hPct": 0.38185428440506985,
+      "ema20Above50_1h": true,
+      "emaSpread1hPct": 1.1646263845955678,
+      "return24hPct": 3.4593159456504763
+    },
+    "btcRollingCorrelation30x4h": {
+      "ETHUSDT": 0.9339073324975322,
+      "SOLUSDT": 0.9004328544904011,
+      "XRPUSDT": 0.8111245780854853
+    },
+    "relativeStrength24hVsBTCPercentagePoints": {
+      "ETHUSDT": 2.0309558204181455,
+      "SOLUSDT": 0.1679501432677588,
+      "XRPUSDT": 0.32100859366359646
+    },
+    "warning": "4h trend/volatility state conflicts with 1h EMA20>EMA50 on all four symbols; treat as rebound/transition, not a clean aligned trend."
+  },
+  "marketSnapshot": {
+    "retrievedAtUtc": "2026-11-05T09:54:21.268Z",
+    "BTCUSDT": {
+      "lastPrice": 80412.2,
+      "markPrice": 80411.07156098,
+      "change24hPct": 2.495,
+      "openInterest": 95785.401,
+      "takerBuySellRatio1h": 1.1252,
+      "globalLongShortRatio1h": 1.3918,
+      "longAccountPct": 58.19,
+      "depthImbalanceTop20": 0.8121,
+      "bestBid": 80410.5,
+      "bestAsk": 80410.6,
+      "settledFundingRate": 0.0001
+    },
+    "ETHUSDT": {
+      "lastPrice": 2417.62,
+      "markPrice": 2417.42539418,
+      "change24hPct": 4.062,
+      "openInterest": 2368859.808,
+      "takerBuySellRatio1h": 1.0774,
+      "globalLongShortRatio1h": 1.9317,
+      "longAccountPct": 65.89,
+      "depthImbalanceTop20": 0.3521,
+      "bestBid": 2418.13,
+      "bestAsk": 2418.14,
+      "settledFundingRate": 0.00005731
+    },
+    "SOLUSDT": {
+      "lastPrice": 96.78,
+      "markPrice": 96.78103744,
+      "change24hPct": 3.852,
+      "openInterest": 9213098.5,
+      "takerBuySellRatio1h": 0.911,
+      "globalLongShortRatio1h": 2.7467,
+      "longAccountPct": 73.31,
+      "depthImbalanceTop20": -0.1295,
+      "bestBid": 96.79,
+      "bestAsk": 96.8,
+      "settledFundingRate": 0.0001
+    },
+    "XRPUSDT": {
+      "lastPrice": 1.3203,
+      "markPrice": 1.32038555,
+      "change24hPct": 2.867,
+      "openInterest": 344151581.4,
+      "takerBuySellRatio1h": 1.1458,
+      "globalLongShortRatio1h": 2.5224,
+      "longAccountPct": 71.61,
+      "depthImbalanceTop20": -0.0107,
+      "bestBid": 1.3204,
+      "bestAsk": 1.3205,
+      "settledFundingRate": 0.0001
+    },
+    "fundingIntervalHours": 8,
+    "nextFundingTimeUtc": "2026-11-05T16:00:00.000Z",
+    "premiumIndexLastFundingRateField": 0.0001,
+    "note": "Current predicted funding not separately available. Premium-index lastFundingRate field was 0.0001 for all four; latest funding history settlement differed for ETH (0.00005731). No observed absolute rate exceeded 0.05%.",
+    "noLiquidationInference": true
+  }
+}

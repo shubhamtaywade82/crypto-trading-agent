@@ -16,7 +16,17 @@
     "archive_branch_was_113_ahead_0_behind_main_before_this_run": true,
     "context_branch_was_20_ahead_0_behind_main_before_this_run": true,
     "main_modified": false,
-    "branches_merged": false
+    "branches_merged": false,
+    "archive_branch_current_head_after_run": "57d0608d5faa0a7ca65104c234dcfe7bb2420c43",
+    "context_branch_current_head_after_run": "42e7d1e32b40af7e26c499034fac6520b1d08ef9",
+    "archive_branch_current_ahead_behind_main": {
+      "ahead": 119,
+      "behind": 0
+    },
+    "context_branch_current_ahead_behind_main": {
+      "ahead": 21,
+      "behind": 0
+    }
   },
   "preflight": [
     {
@@ -63,7 +73,7 @@
     },
     {
       "capability": "raw_historical_archive",
-      "status": "PASS_WITH_PROVENANCE_CAVEAT",
+      "status": "DEGRADED",
       "evidence": "Archive index lists 53,952 raw 4h rows and 53,816 aligned rows over 2020-09-14T08:00Z to 2026-11-04T12:00Z. Page-0009 raw files fetched for all symbols: BTC 1,500 rows/218,811 bytes, ETH 1,500/211,226, SOL 1,456/184,555, XRP 1,500/207,329. Page-0009 SHA matches 3/4; BTC hash mismatch retained. Prior reconciliation artifact reports 21,000/21,000 exact row matches across 14 mismatched page/symbol pairs.",
       "impact": "4h multi-cycle history accessible; provenance caveat remains.",
       "next_action": "Preserve expected/actual hashes; do not rewrite originals. Backfill lower timeframes."
@@ -215,10 +225,13 @@
     "promotion_gate_defaults": {
       "minTrades": 30,
       "minOosConfidence": 0.85,
+      "minOosConfidenceInterpretation": "Positive-bootstrap-mean fraction; not a 95% confidence interval or calibrated posterior probability.",
       "minSymbolCoverage": 2,
-      "minTradesPerCoveredSymbol": 5
+      "minTradesPerCoveredSymbol": 5,
+      "powerDerivedSampleSizeGuard": true,
+      "note": "The generic gate also enforces a power-derived effective sample-size requirement, but it does not enforce >=100 OOS trades for every symbol/context cell."
     },
-    "bootstrap": "UTC-day cluster bootstrap; no moving/stationary multi-day block-length sensitivity exposed by this implementation.",
+    "bootstrap": "Bootstrap.ts groups samples by UTC decision day and resamples day clusters. This preserves same-day dependence but does not expose moving/stationary multi-day block-length sensitivity.",
     "smoke_or_tests_executed": false
   },
   "market_snapshot": {

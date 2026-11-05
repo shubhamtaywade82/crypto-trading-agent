@@ -137,8 +137,17 @@
         "correction_file": "research-data/binance-usdm/delta/corrections/xrpusdt_4h_20261105T0800Z.json",
         "correction_sha256": "b4b1c0994af55dd00af23d33469ce8f182b05f1ab244c38c6ab1ea46ff8a90a7"
       },
-      "unresolved": "The 76-row delta file is not accessible at its indexed path. Its contents and time coverage are unknown; the 4h gap from 2026-11-04T16:00Z through 2026-11-05T04:00Z has been repaired independently, but lower-timeframe coverage from the missing file is not reconstructed.",
-      "status": "DEGRADED"
+      "unresolved": "One indexed 76-row delta file remains inaccessible; one malformed XRP 4h line remains in the original immutable delta but has a separate corrected-row artifact. Full lower-timeframe archive reconstruction and canonical correction application are still pending.",
+      "status": "DEGRADED",
+      "indexed_delta_files_after_repair": 20,
+      "declared_rows_after_repair": 956,
+      "accessible_files_after_repair": 19,
+      "parseable_rows_after_repair": 879,
+      "repair_additions": {
+        "fourHourGapRepairRows": 16,
+        "fiveMinuteRefreshRows": 4,
+        "correctionArtifacts": 1
+      }
     }
   },
   "incremental_deltas": [
@@ -495,6 +504,22 @@
       "latest_completed_open_utc_by_interval": {
         "4h": "2026-11-05T04:00:00Z"
       }
+    },
+    {
+      "file": "research-data/binance-usdm/delta/binance_usdm_delta_20261105T183743Z_5m_completed.jsonl",
+      "rows": 4,
+      "sha256": "2cd664e92ae615ab1a5e0942c9b1246924a905567992c56a33de36889983b2cb",
+      "manifest_file": "research-data/binance-usdm/delta/binance_usdm_delta_20261105T183743Z_5m.manifest.json",
+      "retrieved_at_utc": "2026-11-05T18:37:43.295Z",
+      "row_counts_by_symbol_interval": {
+        "BTCUSDT:5m": 1,
+        "ETHUSDT:5m": 1,
+        "SOLUSDT:5m": 1,
+        "XRPUSDT:5m": 1
+      },
+      "latest_completed_open_utc_by_interval": {
+        "5m": "2026-11-05T18:30:00Z"
+      }
     }
   ],
   "incremental_delta_rows_total": 872,
@@ -515,24 +540,24 @@
   "latest_incremental_delta_sha256": "4253a17db5a3534be2dbd649e569fb292c53693ff5f6d6b2b194776b3ce7fe2b",
   "row_level_reconciliation_file": "research-data/binance-usdm/4h/alternate-source-row-reconciliation_2026-11-05T1229Z.json",
   "row_level_reconciliation_status": "14_OF_14_MISMATCHED_PAGE_SYMBOL_PAIRS_EXACTLY_MATCHED_ALTERNATE_BINANCE_CONNECTOR_REPLAY",
-  "last_incremental_update_utc": "2026-11-05T18:36:35.947Z",
+  "last_incremental_update_utc": "2026-11-05T18:37:43.295Z",
   "incremental_highwater_marks": {
-    "5m": "2026-11-05T18:25:00.000Z",
-    "15m": "2026-11-05T18:15:00.000Z",
-    "1h": "2026-11-05T17:00:00.000Z",
+    "5m": "2026-11-05T18:30:00Z",
+    "15m": "2026-11-05T18:15:00Z",
+    "1h": "2026-11-05T17:00:00Z",
     "4h": "2026-11-05T12:00:00Z"
   },
   "incremental_latest_completed_open_utc_by_symbol_interval": {
-    "BTCUSDT:5m": "2026-11-05T18:25:00.000Z",
+    "BTCUSDT:5m": "2026-11-05T18:30:00Z",
     "BTCUSDT:15m": "2026-11-05T18:15:00.000Z",
     "BTCUSDT:1h": "2026-11-05T17:00:00.000Z",
-    "ETHUSDT:5m": "2026-11-05T18:25:00.000Z",
+    "ETHUSDT:5m": "2026-11-05T18:30:00Z",
     "ETHUSDT:15m": "2026-11-05T18:15:00.000Z",
     "ETHUSDT:1h": "2026-11-05T17:00:00.000Z",
-    "SOLUSDT:5m": "2026-11-05T18:25:00.000Z",
+    "SOLUSDT:5m": "2026-11-05T18:30:00Z",
     "SOLUSDT:15m": "2026-11-05T18:15:00.000Z",
     "SOLUSDT:1h": "2026-11-05T17:00:00.000Z",
-    "XRPUSDT:5m": "2026-11-05T18:25:00.000Z",
+    "XRPUSDT:5m": "2026-11-05T18:30:00Z",
     "XRPUSDT:15m": "2026-11-05T18:15:00.000Z",
     "XRPUSDT:1h": "2026-11-05T17:00:00.000Z",
     "BTCUSDT:4h": "2026-11-05T12:00:00Z",

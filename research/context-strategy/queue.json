@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAtUtc": "2026-11-05T18:40:32.471Z",
+  "updatedAtUtc": "2026-11-05T19:24:20.083Z",
   "items": [
     {
       "id": "Q1_ARCHIVE_MULTIYEAR",
@@ -11,8 +11,8 @@
         "Compatible bulk-data downloader or official Binance Vision access",
         "Persistent writable store"
       ],
-      "nextAction": "Complete canonical archive reassembly with correction application; recover the missing 76-row delta file or reconstruct its coverage, then backfill multi-year 5m/15m/1h history.",
-      "blocker": "The 4h continuity gap from 2026-11-04T16:00Z through 2026-11-05T04:00Z was backfilled (16 rows) and the malformed XRP 08:00 row was preserved as a correction. The archive index audit still finds one inaccessible 76-row delta file and one malformed original line; lower-timeframe coverage remains incomplete."
+      "nextAction": "Recover the original 76-row delta or its exact request/coverage manifest from repository history or backup. Do not synthesize row coverage from the declared count. Then reassemble the canonical 4h archive with the XRP correction applied and backfill multi-year 5m/15m/1h history.",
+      "blocker": "A 52-row incremental refresh was appended and readback-verified through 5m 19:15Z, 15m 19:00Z and 1h 18:00Z on 2026-11-05. The indexed 76-row delta still returns 404 in the only archive branch; no manifest, alternate branch copy or commit-search hit was found. Its exact symbol/interval/time coverage is unknown. One malformed XRP 4h original line remains immutable with a separate correction artifact. Multi-year lower-timeframe history is absent."
     },
     {
       "id": "Q2_VERIFY_EXCHANGE_TIME_METADATA",
@@ -21,8 +21,8 @@
       "prerequisites": [
         "Direct bounded HTTP or Binance SDK call"
       ],
-      "nextAction": "Restore direct network DNS, then obtain uncached /fapi/v1/time and /fapi/v1/exchangeInfo; require <=60s drift and verify PERPETUAL/TRADING before execution checks.",
-      "blocker": "Direct GET /fapi/v1/time, /exchangeInfo, /klines, /premiumIndex, /openInterest and /ticker/24hr returned HTTP 000 (curl DNS errors 6/28) at 2026-11-05T18:22:31Z. Connector exchangeInfo.serverTime=2026-11-05T06:46:24.911Z versus fresh mark time=2026-11-05T18:23:23.001Z (41,818.090 seconds / 11.616 hours stale). Current mark/ticker/OI/book data are fresh, but metadata cannot authorize execution."
+      "nextAction": "Restore direct DNS/network access; probe uncached /fapi/v1/time and /fapi/v1/exchangeInfo and require <=60s drift. Re-check all four symbols' PERPETUAL/TRADING status before treating contract metadata as execution-authoritative.",
+      "blocker": "Direct bounded requests to /fapi/v1/time, /exchangeInfo, /klines, /premiumIndex, /openInterest and /ticker/24hr failed with DNS resolution errors (no HTTP status). Connector exchangeInfo.serverTime=2026-11-05T06:46:24.913Z versus fresh mark.time=2026-11-05T19:21:14Z, a 45,289.087s (12h34m49s) stale value. Connector mark/ticker/OI/book observations are fresh, but metadata is not execution-authoritative."
     },
     {
       "id": "Q3_RUN_REPOSITORY_BACKTEST",
@@ -34,8 +34,8 @@
         "npm>=11",
         "dependencies installed"
       ],
-      "nextAction": "Provision Node>=24/npm>=11 with clean repository checkout and dependencies; run typecheck/tests and deterministic replay fixture after integrity fixes.",
-      "blocker": "Managed runtime Node 22.16.0/npm 10.9.2; repository package requires Node>=24/npm>=11. No local checkout and SDK imports return ERR_MODULE_NOT_FOUND. The repository harness was not invoked. A separate managed-V8 runner completed one experiment and its deterministic fixture smoke, but does not replace repository typecheck/tests."
+      "nextAction": "Provision Node >=24 and npm >=11, obtain a clean local checkout, install the lockfile dependencies, persist the exact runner source, then run repository typecheck/tests and deterministic fixture replay.",
+      "blocker": "Current shell has Node 22.16.0/npm 10.9.2; no local crypto-trading-agent checkout; Binance SDK imports are unavailable. Repository harness and repository-level fixture smoke test were not run."
     },
     {
       "id": "Q4_DERIVATIVES_ARCHIVE",
@@ -56,7 +56,7 @@
         "Q3 executable harness",
         "pre-registered rule"
       ],
-      "nextAction": "Do not promote. First persist the exact runner source and execute it under Node >=24/npm >=11 with repository tests; then run a separate strategy family.",
+      "nextAction": "Do not promote or re-test the same Donchian search on its existing test window. First commit the exact executable runner and run repository verification; then pre-register a different strategy family after archive prerequisites are resolved.",
       "blocker": "OOS n=55<100, 95% moving-block bootstrap CI crosses zero, total quote PnL per SOL is negative, and all nine validation candidates had negative mean net R. Experiment used a separate managed-V8 runner; repository harness remains uninvoked. Exact managed-V8 runner source is not persisted; recorded runner SHA covers only a descriptor string. Full code-level reproducibility requires committing and executing the runner in the repository.",
       "result": {
         "experimentId": "SOL-DONCHIAN20-BULL-LOW-V1-20261105T1825Z",
@@ -405,8 +405,8 @@
       "prerequisites": [
         "GitHub artifact path recovery or fresh Binance backfill"
       ],
-      "nextAction": "Locate the missing file at an alternate repository path or reconstruct the exact 76-row interval coverage from source manifests; do not infer its contents.",
-      "blocker": "Archive index references research-data/binance-usdm/delta/binance_usdm_delta_2026-11-05T0524Z.jsonl (76 rows, SHA f5d9e506...) but GitHub fetch returns 404. No alternate candidate filename or manifest was found."
+      "nextAction": "Recover the original file from a backup or its creating-run logs, including exact symbol/interval/start/end/row metadata. Only then reconstruct with bounded Binance klines requests and verify all 76 keys against the declared SHA-256.",
+      "blocker": "Exact path and declared SHA-256 are known, but file and plausible manifest names return 404 in archive/context/main refs; commit search for 0524Z returned no matches. The 76 rows cannot be safely reconstructed from count alone."
     },
     {
       "id": "Q11_INCREMENTAL_5M_REFRESH_20261105T183743Z",
@@ -423,6 +423,66 @@
         "path": "research-data/binance-usdm/delta/binance_usdm_delta_20261105T183743Z_5m_completed.jsonl",
         "sha256": "2cd664e92ae615ab1a5e0942c9b1246924a905567992c56a33de36889983b2cb"
       }
+    },
+    {
+      "id": "Q22_INCREMENTAL_ARCHIVE_REFRESH_20261105T192420Z",
+      "priority": 1,
+      "status": "COMPLETED",
+      "prerequisites": [
+        "Binance USDⓈ-M kline connector",
+        "Archive high-water marks",
+        "GitHub write access"
+      ],
+      "nextAction": "Next hourly run fetch only completed bars after 5m 19:15Z, 15m 19:00Z and 1h 18:00Z; 4h remains at 12:00Z until the 16:00Z candle closes.",
+      "blocker": null,
+      "result": {
+        "rows": 52,
+        "counts": {
+          "BTCUSDT:5m": 9,
+          "BTCUSDT:15m": 3,
+          "BTCUSDT:1h": 1,
+          "ETHUSDT:5m": 9,
+          "ETHUSDT:15m": 3,
+          "ETHUSDT:1h": 1,
+          "SOLUSDT:5m": 9,
+          "SOLUSDT:15m": 3,
+          "SOLUSDT:1h": 1,
+          "XRPUSDT:5m": 9,
+          "XRPUSDT:15m": 3,
+          "XRPUSDT:1h": 1
+        },
+        "deltaPath": "research-data/binance-usdm/delta/binance_usdm_delta_20261105T192420Z_completed.jsonl",
+        "manifestPath": "research-data/binance-usdm/delta/binance_usdm_delta_20261105T192420Z.manifest.json",
+        "sha256": "a113035e936ad6ed43e75a5767dd24d7e4a21ea138f1872fa36391c28b01ecf4",
+        "readbackVerified": true,
+        "quality": {
+          "duplicates": 0,
+          "gaps": 0,
+          "ohlcFailures": 0,
+          "nonPositiveVolume": 0,
+          "nonFinite": 0,
+          "closeTimeFailures": 0,
+          "formingIncluded": 0
+        },
+        "highwater": {
+          "5m": "2026-11-05T19:15:00.000Z",
+          "15m": "2026-11-05T19:00:00.000Z",
+          "1h": "2026-11-05T18:00:00.000Z",
+          "4h": "2026-11-05T12:00:00.000Z"
+        }
+      }
+    },
+    {
+      "id": "Q23_DAILY_RESEARCH_CYCLE_20261106",
+      "priority": 2,
+      "status": "BLOCKED",
+      "prerequisites": [
+        "Canonical archive integrity/reassembly",
+        "Node >=24/npm >=11",
+        "Committed executable research runner and deterministic smoke test"
+      ],
+      "nextAction": "After Q1/Q3 prerequisites pass, execute a pre-registered strategy-family x context x symbol experiment with chronological train/validation/untouched-test splits, funding/cost treatment, block-bootstrap CI and multiple-testing control.",
+      "blocker": "No valid strategy experiment was run in this daily cycle. The 76-row archive delta has unknown exact coverage; multi-year 5m/15m/1h data are missing; local Node/npm are below project requirements; no repository checkout or committed executable runner is available. Do not lower the evidence gate or substitute a fabricated experiment."
     }
   ],
   "lastRun": {

@@ -134,7 +134,136 @@
       "XRPUSDT": -0.1124
     },
     "confidence": "Deterministic taxonomy classification; no calibrated classification probability.",
-    "warning": "5m 21:45, 15m 21:45, 1h 21:00 and 4h 20:00 candles were forming and excluded."
+    "warning": "5m 21:45, 15m 21:45, 1h 21:00 and 4h 20:00 candles were forming and excluded.",
+    "taxonomyDefinition": {
+      "features": {
+        "trend": "EMA50/EMA200 spread",
+        "volatility": "Wilder ATR14 / close",
+        "shock": "absolute single-bar 4h return",
+        "warmupBars": 210,
+        "timeframe": "4h"
+      },
+      "trainingOnlyThresholds": {
+        "BTCUSDT": {
+          "flatSpreadPct": 2.5048262259,
+          "atrQ33Pct": 1.4474484729,
+          "atrQ67Pct": 2.0674450299,
+          "absReturnQ99Pct": 4.8982315271
+        },
+        "ETHUSDT": {
+          "flatSpreadPct": 2.5106475931,
+          "atrQ33Pct": 1.7549854873,
+          "atrQ67Pct": 2.5876150427,
+          "absReturnQ99Pct": 6.3197419283
+        },
+        "SOLUSDT": {
+          "flatSpreadPct": 4.0735303635,
+          "atrQ33Pct": 2.7494077104,
+          "atrQ67Pct": 4.0357264283,
+          "absReturnQ99Pct": 9.7612032075
+        },
+        "XRPUSDT": {
+          "flatSpreadPct": 2.3358684921,
+          "atrQ33Pct": 1.9936041468,
+          "atrQ67Pct": 3.0167265805,
+          "absReturnQ99Pct": 9.0979653978
+        }
+      },
+      "classification": "SHOCK overrides trend/volatility when absolute 4h return exceeds train q99; otherwise SIDEWAYS when absolute EMA spread is <= train q30, UP when spread > q30, DOWN when spread < -q30; volatility LOW below q33, NORMAL q33-q67, HIGH above q67."
+    },
+    "testWindow": {
+      "featureRowsPerSymbol": 13244,
+      "trainRowsPerSymbol": 9270,
+      "testRowsPerSymbol": 3974,
+      "testContextCounts": {
+        "BTCUSDT": {
+          "SIDEWAYS_NORMAL": 284,
+          "UP_LOW": 868,
+          "DOWN_NORMAL": 434,
+          "DOWN_HIGH": 271,
+          "DOWN_LOW": 327,
+          "SHOCK": 8
+        },
+        "ETHUSDT": {
+          "SIDEWAYS_NORMAL": 382,
+          "DOWN_NORMAL": 705,
+          "DOWN_LOW": 447,
+          "SIDEWAYS_HIGH": 61,
+          "SHOCK": 15,
+          "SIDEWAYS_LOW": 676,
+          "DOWN_HIGH": 504,
+          "UP_NORMAL": 558,
+          "UP_HIGH": 99,
+          "UP_LOW": 527
+        },
+        "SOLUSDT": {
+          "SIDEWAYS_LOW": 1547,
+          "DOWN_LOW": 762,
+          "DOWN_NORMAL": 452,
+          "SIDEWAYS_NORMAL": 71,
+          "SIDEWAYS_HIGH": 39,
+          "UP_HIGH": 38,
+          "UP_NORMAL": 187,
+          "UP_LOW": 739,
+          "DOWN_HIGH": 136,
+          "SHOCK": 3
+        },
+        "XRPUSDT": {
+          "UP_NORMAL": 455,
+          "UP_HIGH": 202,
+          "UP_LOW": 150,
+          "SHOCK": 8,
+          "SIDEWAYS_HIGH": 20,
+          "DOWN_HIGH": 355,
+          "DOWN_NORMAL": 597,
+          "SIDEWAYS_NORMAL": 241,
+          "SIDEWAYS_LOW": 1033,
+          "DOWN_LOW": 913
+        }
+      },
+      "currentContextTestFrequencyPct": {
+        "BTCUSDT": {
+          "SIDEWAYS_NORMAL": 7.15
+        },
+        "ETHUSDT": {
+          "DOWN_NORMAL": 17.74
+        },
+        "SOLUSDT": {
+          "DOWN_LOW": 19.17
+        },
+        "XRPUSDT": {
+          "DOWN_NORMAL": 15.02
+        }
+      },
+      "stability": {
+        "BTCUSDT": {
+          "jsdTrainTest": 0.1230879554,
+          "medianDurationBars": 6,
+          "meanDurationBars": 20.2755,
+          "selfTransitionPct": 95.0919
+        },
+        "ETHUSDT": {
+          "jsdTrainTest": 0.042897029,
+          "medianDurationBars": 6,
+          "meanDurationBars": 15.5234,
+          "selfTransitionPct": 93.5817
+        },
+        "SOLUSDT": {
+          "jsdTrainTest": 0.1310198977,
+          "medianDurationBars": 6,
+          "meanDurationBars": 20.4845,
+          "selfTransitionPct": 95.1422
+        },
+        "XRPUSDT": {
+          "jsdTrainTest": 0.0467493191,
+          "medianDurationBars": 8,
+          "meanDurationBars": 16.6276,
+          "selfTransitionPct": 94.0096
+        }
+      },
+      "adequacy": "Six-year 4h sample is useful for exploratory context stability; lower-timeframe multi-year coverage is absent. Context frequencies and persistence are not trade probabilities. CTX v2 is exploratory and was not pre-registered before data inspection."
+    },
+    "currentFeatureWindow": "1,499 completed 4h bars per symbol from 2026-03-01 through 2026-11-05T16:00Z; thresholds from full-history training split remain frozen."
   },
   "strategyRegistry": {
     "entries": 1,

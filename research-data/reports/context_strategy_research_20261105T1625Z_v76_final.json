@@ -101,82 +101,106 @@
     }
   },
   "context_discovery": {
-    "taxonomy_refit": false,
-    "prior_walk_forward_observations": 10760,
-    "states": [
-      {
-        "context": "BEAR_HIGH",
-        "count": 544,
-        "frequency_pct": 5.06,
-        "median_duration_bars": 11.5
+    "taxonomy_id": "CTX-4H-EMA50xEMA200-ATRQ-v1",
+    "source_run_path": "research/context-strategy/runs/2026-11-05T095746Z-context-discovery.json",
+    "source_run_blob_sha": "e9e2fe34fb6c1bafc77a95977816f1a4a783e277",
+    "outcome": "COMPLETED_CONTEXT_DISCOVERY_ONLY",
+    "strategy_backtest_executed": false,
+    "strategy_oos_evaluated": false,
+    "pre_registration": "EXPLORATORY; hypothesis/method were not committed before data inspection. Do not treat as confirmatory strategy evidence.",
+    "method": {
+      "timeframe": "4h",
+      "warmupBars": 210,
+      "completedBarsPerSymbol": 1499,
+      "validFeatureBarsPerSymbol": 1289,
+      "split": "chronological 70% train / 30% untouched test",
+      "trainBarsPerSymbol": 902,
+      "testBarsPerSymbol": 387,
+      "trendFeature": "EMA50 / EMA200 - 1",
+      "sidewaysThreshold": "training 30th percentile of absolute EMA spread",
+      "volatilityFeature": "ATR14 / close; LOW below training q33, NORMAL q33-q67, HIGH above q67",
+      "shockOverlay": "SHOCK if absolute completed 4h return exceeds training q99"
+    },
+    "adequacy": "This context run used approximately 250 days per symbol, not the complete 6.14-year 4h archive. The full archive has 13,454 aligned rows per symbol, but the context experiment only used 1,499 completed bars per symbol. Multi-cycle taxonomy stability remains unproven.",
+    "perSymbol": {
+      "BTCUSDT": {
+        "trainThresholds": {
+          "flatSpreadPct": 0.8833604038775967,
+          "atrPctQ33": 0.9627164495058601,
+          "atrPctQ67": 1.2682165310673095,
+          "absReturnQ99Pct": 2.809197755018914
+        },
+        "jsdTrainTest": 0.07127337044085075,
+        "medianDurationBars": 4,
+        "meanDurationBars": 6.241935483870968,
+        "selfTransitionPct": 84.19689119170984,
+        "testTopStatePct": {
+          "UP_NORMAL": 32.04,
+          "UP_LOW": 22.48,
+          "UP_HIGH": 14.47,
+          "SIDEWAYS_LOW": 11.89,
+          "SHOCK": 1.03
+        }
       },
-      {
-        "context": "BEAR_LOW",
-        "count": 3558,
-        "frequency_pct": 33.07,
-        "median_duration_bars": 5.25
+      "ETHUSDT": {
+        "trainThresholds": {
+          "flatSpreadPct": 2.14634323316931,
+          "atrPctQ33": 1.320038063903978,
+          "atrPctQ67": 1.6785805182954614,
+          "absReturnQ99Pct": 3.847769737041141
+        },
+        "jsdTrainTest": 0.0745093619892296,
+        "medianDurationBars": 3,
+        "meanDurationBars": 5.953846153846154,
+        "selfTransitionPct": 83.41968911917098,
+        "testTopStatePct": {
+          "UP_NORMAL": 24.81,
+          "UP_LOW": 21.19,
+          "DOWN_NORMAL": 17.57,
+          "UP_HIGH": 10.85,
+          "SHOCK": 1.03
+        }
       },
-      {
-        "context": "BEAR_NORMAL",
-        "count": 1354,
-        "frequency_pct": 12.58,
-        "median_duration_bars": 4
+      "SOLUSDT": {
+        "trainThresholds": {
+          "flatSpreadPct": 0.9707079052593705,
+          "atrPctQ33": 1.4178111832337257,
+          "atrPctQ67": 1.8553935026188744,
+          "absReturnQ99Pct": 3.8385509318069047
+        },
+        "jsdTrainTest": 0.15368861729748834,
+        "medianDurationBars": 4,
+        "meanDurationBars": 5.608695652173913,
+        "selfTransitionPct": 82.38341968911917,
+        "testTopStatePct": {
+          "UP_HIGH": 30.49,
+          "UP_NORMAL": 23.26,
+          "DOWN_NORMAL": 19.12,
+          "UP_LOW": 9.3,
+          "SHOCK": 1.55
+        }
       },
-      {
-        "context": "BULL_HIGH",
-        "count": 94,
-        "frequency_pct": 0.87,
-        "median_duration_bars": 4
-      },
-      {
-        "context": "BULL_LOW",
-        "count": 3008,
-        "frequency_pct": 27.96,
-        "median_duration_bars": 3.75
-      },
-      {
-        "context": "BULL_NORMAL",
-        "count": 686,
-        "frequency_pct": 6.38,
-        "median_duration_bars": 3
-      },
-      {
-        "context": "TRANSITION_HIGH",
-        "count": 25,
-        "frequency_pct": 0.23,
-        "median_duration_bars": 2
-      },
-      {
-        "context": "TRANSITION_LOW",
-        "count": 1134,
-        "frequency_pct": 10.54,
-        "median_duration_bars": 2
-      },
-      {
-        "context": "TRANSITION_NORMAL",
-        "count": 357,
-        "frequency_pct": 3.32,
-        "median_duration_bars": 2
-      }
-    ],
-    "transition_probabilities": {
-      "BEAR": {
-        "BEAR": 94.22,
-        "BULL": 0.26,
-        "TRANSITION": 5.52
-      },
-      "BULL": {
-        "BEAR": 0.18,
-        "BULL": 92.16,
-        "TRANSITION": 7.66
-      },
-      "TRANSITION": {
-        "BEAR": 20.58,
-        "BULL": 18.47,
-        "TRANSITION": 60.95
+      "XRPUSDT": {
+        "trainThresholds": {
+          "flatSpreadPct": 1.7889792752296363,
+          "atrPctQ33": 1.2276880606136396,
+          "atrPctQ67": 1.6600813684509945,
+          "absReturnQ99Pct": 4.197740870438806
+        },
+        "jsdTrainTest": 0.15264375223442933,
+        "medianDurationBars": 5,
+        "meanDurationBars": 8.41304347826087,
+        "selfTransitionPct": 88.34196891191709,
+        "testTopStatePct": {
+          "UP_HIGH": 44.19,
+          "DOWN_NORMAL": 17.57,
+          "DOWN_HIGH": 11.37,
+          "UP_NORMAL": 8.27,
+          "SHOCK": 1.29
+        }
       }
     },
-    "adequacy": "4h archive spans multiple cycles; lower-timeframe multi-year context stability cannot be assessed. Rare high-volatility transition cells remain sparse. Classification confidence is not calibrated."
+    "interpretation": "BTC/ETH train-test context-frequency drift was lower (JSD ~0.07) than SOL/XRP (~0.15). Median duration was 3-5 four-hour bars and self-transition rates 82-88%. This is a preliminary taxonomy stability result, not a predictive edge or trade outcome study."
   },
   "strategy_scorecard": {
     "registry_file": "research/context-strategy/registry.json",
@@ -214,8 +238,8 @@
   },
   "current_snapshot": {
     "market_retrieval_utc": "2026-11-05T16:20:50Z–2026-11-05T16:22:22Z",
-    "feature_utc": "2026-11-05T16:22:06.933Z",
-    "context_method": "4h EMA20/EMA50 and 20-bar return sign; ATR14/close compared with inherited train q33 only. q66 unavailable; states are provisional, not calibrated.",
+    "feature_utc": "2026-11-05T16:27:57.858Z",
+    "context_method": "CTX-4H-EMA50xEMA200-ATRQ-v1: EMA50/EMA200 spread with training 30th-percentile sideways threshold; ATR14/close q33/q67; SHOCK overlay when absolute completed 4h return exceeds training q99. Rule-based state only; no calibrated classification probability.",
     "q33_atr14_close_pct": {
       "BTCUSDT": 1.439,
       "ETHUSDT": 1.795,
@@ -226,11 +250,17 @@
       {
         "symbol": "BTCUSDT",
         "role": "reference_only",
-        "context": "PROVISIONAL_BEARISH_VOL_ABOVE_Q33",
-        "ema20_4h": 78595.4143,
-        "ema50_4h": 78733.6677,
-        "return20_4h_pct": -2.6581,
-        "atr14_close_pct": 1.7559,
+        "context": "SHOCK",
+        "underlyingTrendVolContext": "DOWN_HIGH",
+        "ema50_4h": 78733.66772224504,
+        "ema200_4h": 80402.77085286171,
+        "emaSpreadPct": -2.075927375278086,
+        "flatThresholdPct": 0.8833604038775967,
+        "atr14ClosePct": 1.7559004593161787,
+        "atrQ33Pct": 0.9627164495058601,
+        "atrQ67Pct": 1.2682165310673095,
+        "lastCompleted4hReturnPct": -5.451437868983389,
+        "shockQ99Pct": 2.809197755018914,
         "return20_1h_pct": -4.9394,
         "return20_15m_pct": -4.9893,
         "return20_5m_pct": -3.1024,
@@ -251,11 +281,17 @@
       {
         "symbol": "ETHUSDT",
         "role": "tradable",
-        "context": "PROVISIONAL_TRANSITION_VOL_ABOVE_Q33",
-        "ema20_4h": 2333.3053,
-        "ema50_4h": 2316.859,
-        "return20_4h_pct": -1.4044,
-        "atr14_close_pct": 2.3802,
+        "context": "SHOCK",
+        "underlyingTrendVolContext": "DOWN_HIGH",
+        "ema50_4h": 2316.858972082281,
+        "ema200_4h": 2398.015921170051,
+        "emaSpreadPct": -3.3843373753820405,
+        "flatThresholdPct": 2.14634323316931,
+        "atr14ClosePct": 2.3802227183927602,
+        "atrQ33Pct": 1.320038063903978,
+        "atrQ67Pct": 1.6785805182954614,
+        "lastCompleted4hReturnPct": -6.990395538572747,
+        "shockQ99Pct": 3.847769737041141,
         "return20_1h_pct": -6.3817,
         "return20_15m_pct": -6.6642,
         "return20_5m_pct": -4.2936,
@@ -276,11 +312,17 @@
       {
         "symbol": "SOLUSDT",
         "role": "tradable",
-        "context": "PROVISIONAL_BEARISH_LOW_VOL",
-        "ema20_4h": 94.22263,
-        "ema50_4h": 95.80286,
-        "return20_4h_pct": -4.3294,
-        "atr14_close_pct": 2.6968,
+        "context": "SHOCK",
+        "underlyingTrendVolContext": "DOWN_HIGH",
+        "ema50_4h": 95.8028590923795,
+        "ema200_4h": 102.26695974999056,
+        "emaSpreadPct": -6.3208104293054905,
+        "flatThresholdPct": 0.9707079052593705,
+        "atr14ClosePct": 2.6967930029154528,
+        "atrQ33Pct": 1.4178111832337257,
+        "atrQ67Pct": 1.8553935026188744,
+        "lastCompleted4hReturnPct": -6.550580431177455,
+        "shockQ99Pct": 3.8385509318069047,
         "return20_1h_pct": -4.5724,
         "return20_15m_pct": -6.1186,
         "return20_5m_pct": -3.6308,
@@ -301,11 +343,17 @@
       {
         "symbol": "XRPUSDT",
         "role": "tradable",
-        "context": "PROVISIONAL_TRANSITION_VOL_ABOVE_Q33",
-        "ema20_4h": 1.2819108,
-        "ema50_4h": 1.2787806,
-        "return20_4h_pct": -0.3919,
-        "atr14_close_pct": 2.2777,
+        "context": "SHOCK",
+        "underlyingTrendVolContext": "DOWN_HIGH",
+        "ema50_4h": 1.2787806232594114,
+        "ema200_4h": 1.3257009117702754,
+        "emaSpreadPct": -3.539281605246003,
+        "flatThresholdPct": 1.7889792752296363,
+        "atr14ClosePct": 2.2777070355967006,
+        "atrQ33Pct": 1.2276880606136396,
+        "atrQ67Pct": 1.6600813684509945,
+        "lastCompleted4hReturnPct": -5.580407915687302,
+        "shockQ99Pct": 4.197740870438806,
         "return20_1h_pct": -4.1635,
         "return20_15m_pct": -5.1515,
         "return20_5m_pct": -2.9246,
@@ -329,13 +377,47 @@
     "next_funding_utc": "2026-11-06T00:00:00Z",
     "funding_history_last_three_settlements_available": true,
     "liquidation_feed_available": false,
-    "historical_depth_impact_available": false
+    "historical_depth_impact_available": false,
+    "taxonomy_thresholds": {
+      "BTCUSDT": {
+        "flatSpreadPct": 0.8833604038775967,
+        "atrPctQ33": 0.9627164495058601,
+        "atrPctQ67": 1.2682165310673095,
+        "absReturnQ99Pct": 2.809197755018914
+      },
+      "ETHUSDT": {
+        "flatSpreadPct": 2.14634323316931,
+        "atrPctQ33": 1.320038063903978,
+        "atrPctQ67": 1.6785805182954614,
+        "absReturnQ99Pct": 3.847769737041141
+      },
+      "SOLUSDT": {
+        "flatSpreadPct": 0.9707079052593705,
+        "atrPctQ33": 1.4178111832337257,
+        "atrPctQ67": 1.8553935026188744,
+        "absReturnQ99Pct": 3.8385509318069047
+      },
+      "XRPUSDT": {
+        "flatSpreadPct": 1.7889792752296363,
+        "atrPctQ33": 1.2276880606136396,
+        "atrPctQ67": 1.6600813684509945,
+        "absReturnQ99Pct": 4.197740870438806
+      }
+    },
+    "warnings": [
+      "All four completed 4h candles breach their training q99 absolute-return shock thresholds; the overlay classifies all four symbols as SHOCK.",
+      "Underlying EMA50/EMA200 and ATR state is DOWN_HIGH for all four symbols.",
+      "All four symbols also have negative 20-bar returns on 5m, 15m and 1h.",
+      "Context thresholds were trained on a roughly 250-day sample in the accessible discovery run; the full 6.14-year archive was not used for this taxonomy fit.",
+      "No calibrated context probability; shock threshold is a deterministic training-quantile rule, not a trade win probability.",
+      "Only top-of-book is available; no historical depth/impact or liquidation feed."
+    ]
   },
   "decisions": {
     "SOLUSDT": "NO_TRADE",
     "ETHUSDT": "NO_TRADE",
     "XRPUSDT": "NO_TRADE",
-    "reason": "No OOS_VALIDATED strategy exists; no validated trigger can be evaluated. SOL Donchian20 remains research-only and is not registered in the accessible registry."
+    "reason": "All four symbols currently classify as SHOCK under the accessible training-q99 overlay; no OOS_VALIDATED symbol/context strategy exists. SOL Donchian20 remains research-only and is not registered in the accessible registry."
   },
   "costs": {
     "legacy_round_trip_15bp": "proxy only; not calibrated",
@@ -359,5 +441,6 @@
     "commit": "27c82bab6834abc7204cacd4f10604f13139f7a9",
     "updated_at_utc": "2026-11-05T16:25:30.000Z",
     "items": 13
-  }
+  },
+  "correction_note": "This v76 report was corrected after reading the actual context-discovery artifact. The active accessible taxonomy is CTX-4H-EMA50xEMA200-ATRQ-v1, not the earlier provisional EMA20/EMA50 plus q33-only classification. All current symbols classify SHOCK using the artifact's training-q99 overlay."
 }

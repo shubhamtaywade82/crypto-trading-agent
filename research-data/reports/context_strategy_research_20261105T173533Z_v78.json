@@ -235,14 +235,14 @@
         "change_24h_pct": -5.326,
         "quote_volume_24h": 18980384636.83,
         "open_interest": 94383.467,
-        "indicated_funding_pct": 0.01,
         "settled_funding_pct": 0.01,
         "taker_buy_sell_ratio_15m": 0.9747,
         "global_long_short_ratio": 2.7161,
         "spread_bps": 0.0132,
         "ret20_5m_pct": 0.4342,
         "ret20_15m_pct": -5.2228,
-        "ret20_1h_pct": -4.667
+        "ret20_1h_pct": -4.667,
+        "premium_index_lastFundingRate_pct": 0.01
       },
       "ETHUSDT": {
         "context": "SHOCK",
@@ -251,14 +251,14 @@
         "change_24h_pct": -7.016,
         "quote_volume_24h": 12805419632.22,
         "open_interest": 2350193.781,
-        "indicated_funding_pct": 0.01,
         "settled_funding_pct": 0.01,
         "taker_buy_sell_ratio_15m": 1.1961,
         "global_long_short_ratio": 3.5065,
         "spread_bps": 0.0444,
         "ret20_5m_pct": 0.525,
         "ret20_15m_pct": -6.5679,
-        "ret20_1h_pct": -6.395
+        "ret20_1h_pct": -6.395,
+        "premium_index_lastFundingRate_pct": 0.01
       },
       "SOLUSDT": {
         "context": "DOWN_LOW",
@@ -267,14 +267,14 @@
         "change_24h_pct": -6.269,
         "quote_volume_24h": 2178037273.6743,
         "open_interest": 8999969.92,
-        "indicated_funding_pct": -0.000418,
         "settled_funding_pct": 0.008962,
         "taker_buy_sell_ratio_15m": 1.3161,
         "global_long_short_ratio": 3.6232,
         "spread_bps": 1.1149,
         "ret20_5m_pct": 0.2232,
         "ret20_15m_pct": -6.4698,
-        "ret20_1h_pct": -4.7875
+        "ret20_1h_pct": -4.7875,
+        "premium_index_lastFundingRate_pct": -0.000418
       },
       "XRPUSDT": {
         "context": "DOWN_NORMAL",
@@ -283,14 +283,14 @@
         "change_24h_pct": -5.27,
         "quote_volume_24h": 827784648.6141,
         "open_interest": 348819260.7,
-        "indicated_funding_pct": 0.01,
         "settled_funding_pct": 0.01,
         "taker_buy_sell_ratio_15m": 0.8843,
         "global_long_short_ratio": 2.9604,
         "spread_bps": 0.8064,
         "ret20_5m_pct": -0.2171,
         "ret20_15m_pct": -5.531,
-        "ret20_1h_pct": -4.6476
+        "ret20_1h_pct": -4.6476,
+        "premium_index_lastFundingRate_pct": 0.01
       }
     },
     "funding_interval_hours": 8,
@@ -298,7 +298,15 @@
     "next_funding_utc": "2026-11-06T00:00:00Z",
     "funding_extreme_abs_gt_0_05_pct": false,
     "no_liquidation_feed": true,
-    "historical_depth_and_impact_unavailable": true
+    "historical_depth_and_impact_unavailable": true,
+    "funding_rate_semantics": {
+      "premium_index_field": "lastFundingRate, as returned by the premium-index/mark-price endpoint; connector did not expose a separate predicted next-funding rate.",
+      "latest_settled_rate": "Latest /fapi/v1/fundingRate history record at 2026-11-05T16:00:00Z.",
+      "next_funding_utc": "2026-11-06T00:00:00Z",
+      "observed_interval_hours": 8,
+      "sol_discrepancy": "Premium-index lastFundingRate was -0.00000418 as a decimal (-0.000418%); latest settled history was +0.00008962 (+0.008962%). Keep the two fields separate."
+    },
+    "predicted_next_funding_rate": "NOT_EXPOSED_BY_CONNECTOR"
   },
   "decisions": {
     "BTCUSDT": "REFERENCE_ONLY",

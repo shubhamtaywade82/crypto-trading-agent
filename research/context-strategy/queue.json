@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAtUtc": "2026-11-05T18:33:32.864Z",
+  "updatedAtUtc": "2026-11-05T18:38:28.993Z",
   "items": [
     {
       "id": "Q1_ARCHIVE_MULTIYEAR",
@@ -11,8 +11,8 @@
         "Compatible bulk-data downloader or official Binance Vision access",
         "Persistent writable store"
       ],
-      "nextAction": "Use a network-enabled local/cloud downloader or Binance Vision bulk archives to backfill 5m/15m/1h for BTC/ETH/SOL/XRP; preserve raw pages, manifests and hashes, then validate gaps and alignment.",
-      "blocker": "The 6.14-year 4h archive remains available and incremental capture continues. This run appended 64 completed 5m/15m/1h rows (16 per symbol) with zero quality failures. Full multi-year 5m/15m/1h archives remain absent; direct Binance REST DNS fails and connector reads are suitable only for bounded incremental capture."
+      "nextAction": "Complete canonical archive reassembly with correction application; recover the missing 76-row delta file or reconstruct its coverage, then backfill multi-year 5m/15m/1h history.",
+      "blocker": "The 4h continuity gap from 2026-11-04T16:00Z through 2026-11-05T04:00Z was backfilled (16 rows) and the malformed XRP 08:00 row was preserved as a correction. The archive index audit still finds one inaccessible 76-row delta file and one malformed original line; lower-timeframe coverage remains incomplete."
     },
     {
       "id": "Q2_VERIFY_EXCHANGE_TIME_METADATA",
@@ -44,8 +44,8 @@
       "prerequisites": [
         "Recorder process and persistent storage"
       ],
-      "nextAction": "Persist a durable multi-symbol recorder/archive for funding, OI, taker flow, global/top-trader positioning and basis. Recover mark-price values for historical funding rows with blank markPrice; retain missing/proxy flags.",
-      "blocker": "A 6,806-row SOL funding history was retrieved for the experiment, but raw funding data was not persisted as an archive. 3,501 rows had blank markPrice; 3,452 were approximated from the matching 4h open and 49 remained unpriced. Historical OI/taker/positioning archive remains absent."
+      "nextAction": "Persist multi-symbol funding/OI/taker/positioning raw archives; recover or flag missing funding mark prices.",
+      "blocker": "6,806 SOL funding settlements fetched for the experiment, but raw history is not archived. 3,501 markPrice fields blank; 3,452 use 4h-open proxy; 49 remain unpriced. Historical OI/taker/positioning archives absent."
     },
     {
       "id": "Q5_CONDITIONAL_STRATEGY_TEST",
@@ -56,8 +56,8 @@
         "Q3 executable harness",
         "pre-registered rule"
       ],
-      "nextAction": "Do not promote or repeat this parameter search. Preserve the result; after the compatible repository runner and lower-timeframe archive are ready, run a separately pre-registered strategy family and multi-window robustness evaluation.",
-      "blocker": "The pre-registered SOL 4h conditional experiment completed, but OOS n=55<100, the 95% moving-block bootstrap CI crosses zero, total quote PnL per SOL is negative, and all nine validation candidates had negative mean net R. Repository backtest harness remains unavailable.",
+      "nextAction": "Do not promote or repeat this parameter search. After the compatible repository runner is available, test a separate falsifiable strategy family across multiple walk-forward windows.",
+      "blocker": "OOS n=55<100, 95% moving-block bootstrap CI crosses zero, total quote PnL per SOL is negative, and all nine validation candidates had negative mean net R. Experiment used a separate managed-V8 runner; repository harness remains uninvoked.",
       "result": {
         "experimentId": "SOL-DONCHIAN20-BULL-LOW-V1-20261105T1825Z",
         "evidenceStatus": "INSUFFICIENT_EVIDENCE",
@@ -377,6 +377,51 @@
           "15m": "2026-11-05T18:15:00Z",
           "1h": "2026-11-05T17:00:00Z"
         }
+      }
+    },
+    {
+      "id": "Q9_4H_GAP_REPAIR_20261105T183635Z",
+      "priority": 0,
+      "status": "COMPLETED",
+      "prerequisites": [
+        "Binance connector",
+        "Archive branch write access"
+      ],
+      "nextAction": "Reassemble 4h base pages plus deltas and apply the XRP correction artifact; verify per-symbol row counts and continuity.",
+      "blocker": null,
+      "result": {
+        "rows": 16,
+        "correctionRows": 1,
+        "deltaPath": "research-data/binance-usdm/delta/binance_usdm_delta_20261105T183635Z_4h_gap_repair.jsonl",
+        "manifestPath": "research-data/binance-usdm/delta/binance_usdm_delta_20261105T183635Z_4h_gap_repair.manifest.json",
+        "correctionPath": "research-data/binance-usdm/delta/corrections/xrpusdt_4h_20261105T0800Z.json",
+        "sha256": "bdd3f040d48014ba816b0586ac70a9b7fd27dffb8ab2093a5c2db0a675efdb0e"
+      }
+    },
+    {
+      "id": "Q10_RECOVER_MISSING_76_ROW_DELTA",
+      "priority": 0,
+      "status": "BLOCKED",
+      "prerequisites": [
+        "GitHub artifact path recovery or fresh Binance backfill"
+      ],
+      "nextAction": "Locate the missing file at an alternate repository path or reconstruct the exact 76-row interval coverage from source manifests; do not infer its contents.",
+      "blocker": "Archive index references research-data/binance-usdm/delta/binance_usdm_delta_2026-11-05T0524Z.jsonl (76 rows, SHA f5d9e506...) but GitHub fetch returns 404. No alternate candidate filename or manifest was found."
+    },
+    {
+      "id": "Q11_INCREMENTAL_5M_REFRESH_20261105T183743Z",
+      "priority": 1,
+      "status": "COMPLETED",
+      "prerequisites": [
+        "Binance connector",
+        "Archive branch write access"
+      ],
+      "nextAction": "Continue from 2026-11-05T18:30:00Z next run.",
+      "blocker": null,
+      "result": {
+        "rows": 4,
+        "path": "research-data/binance-usdm/delta/binance_usdm_delta_20261105T183743Z_5m_completed.jsonl",
+        "sha256": "2cd664e92ae615ab1a5e0942c9b1246924a905567992c56a33de36889983b2cb"
       }
     }
   ],

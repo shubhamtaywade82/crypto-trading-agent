@@ -1,0 +1,116 @@
+{
+  "schemaVersion": 1,
+  "experimentId": "SOL-DONCHIAN20-BULL-LOW-V1-20261105T1825Z",
+  "status": "PREREGISTERED",
+  "registeredAtUtc": "2026-11-05T18:25:00Z",
+  "instrument": "SOLUSDT",
+  "venue": "Binance USDⓈ-M perpetual",
+  "timeframe": "4h",
+  "hypothesis": "A long-only Donchian close breakout may have better net expectancy when the signal bar is in a bullish, low-volatility context than the same breakout rule without the context filter.",
+  "context": {
+    "id": "EMA50_GT_EMA200_ATR14_Q33_TRAIN",
+    "trend": "EMA50 > EMA200, both computed from completed 4h closes",
+    "volatility": "ATR14_Wilder / close <= training-period q33",
+    "thresholdFit": "q33 computed only from training observations; frozen for validation and test",
+    "unknownHandling": "No signal if indicator warm-up or context inputs are unavailable"
+  },
+  "entry": {
+    "signal": "completed close[t] > max(high[t-20:t-1])",
+    "conditionalEligibility": "context[t] is true",
+    "fill": "next completed bar open[t+1]",
+    "direction": "LONG_ONLY",
+    "overlap": "one position at a time; ignore signals while position is open"
+  },
+  "exit": {
+    "stop": "entry - 1.5 * ATR14_at_signal",
+    "target": "entry + 2.0 * (entry - stop)",
+    "maxHoldingBars": 12,
+    "timeStop": "close of the 12th bar after entry",
+    "intrabarConflict": "adverse-first: if stop and target both touch in one bar, count stop first",
+    "gapRules": "stop gaps fill at bar open; target gaps fill at target price",
+    "splitBoundary": "entry and exit must both fall within the same split; purge boundary-overlapping trades"
+  },
+  "costs": {
+    "roundTripFeeSpreadSlippageProxyBps": 15,
+    "sensitivityProxyBps": 30,
+    "funding": "Apply each historical Binance USDⓈ-M funding settlement crossed while position is open, using settlement markPrice * fundingRate per unit; positive rate is a long cost.",
+    "limitations": "15bp is a proxy, not account-specific or historical order-book calibrated. No maker fills assumed."
+  },
+  "sizing": {
+    "unit": "one SOL base unit for R-normalized trade outcomes",
+    "compounding": false,
+    "portfolioRisk": "not inferred; quote PnL is per one SOL unit"
+  },
+  "comparisonArms": [
+    "Same Donchian entry/exit rule without BULL_LOW context filter",
+    "Buy-and-hold SOL over untouched test interval, reported separately and not treated as a like-for-like strategy"
+  ],
+  "parameterRobustness": {
+    "validationOnlyGrid": {
+      "donchianLookbackBars": [
+        15,
+        20,
+        25
+      ],
+      "stopAtrMultiples": [
+        1.25,
+        1.5,
+        1.75
+      ],
+      "targetR": 2,
+      "maxHoldingBars": 12
+    },
+    "selection": "Use the preregistered base (20, 1.5) unless at least 30 validation trades exist; if at least 30, select the highest validation net expectancy, ties resolved by smaller lookback then smaller stop multiple. Do not inspect test results for selection."
+  },
+  "splits": {
+    "train": {
+      "startUtc": "2020-09-14T08:00:00Z",
+      "endExclusiveUtc": "2024-01-01T00:00:00Z"
+    },
+    "validation": {
+      "startUtc": "2024-01-03T00:00:00Z",
+      "endExclusiveUtc": "2025-01-01T00:00:00Z"
+    },
+    "untouchedTest": {
+      "startUtc": "2025-01-03T00:00:00Z",
+      "endExclusiveUtc": "2026-11-05T16:00:00Z"
+    },
+    "purgeEmbargo": "12 bars (48 hours) around split boundaries; only trades fully contained in one split are scored"
+  },
+  "evidenceGates": {
+    "minimumProvisionalOosTradesPerSymbolContext": 100,
+    "strongerEvidenceTrades": 200,
+    "requirePositiveNetExpectancyAfterCosts": true,
+    "requireBlockBootstrapUncertainty": true,
+    "requireParameterAndTimeStability": true,
+    "insufficientEvidenceIfSampleOrUncertaintyGatesFail": true
+  },
+  "plannedStatistics": [
+    "eligible context observations",
+    "trade count",
+    "net win rate",
+    "target-before-stop probability",
+    "mean net R and per-unit quote PnL",
+    "profit factor",
+    "max drawdown in R",
+    "average win/loss",
+    "exposure and turnover",
+    "moving-block bootstrap 95% interval for mean net R",
+    "validation-only parameter neighborhood",
+    "test-period buy-and-hold baseline"
+  ],
+  "dataRequirements": {
+    "klines": "GET /fapi/v1/klines symbol=SOLUSDT interval=4h",
+    "funding": "GET /fapi/v1/fundingRate symbol=SOLUSDT",
+    "completedBarsOnly": true,
+    "validate": "monotonic timestamps, 4h continuity, duplicates, OHLC invariants, positive volume, finite values, closeTime and forming-bar exclusion"
+  },
+  "noTradeRules": [
+    "unknown or shock context",
+    "missing or stale bar",
+    "invalid OHLCV or funding data",
+    "signal not confirmed by completed 4h close",
+    "position already open",
+    "no next-bar entry bar"
+  ]
+}

@@ -1,0 +1,105 @@
+{
+  "schemaVersion": 1,
+  "updatedAtUtc": "2026-11-05T09:57:46.370Z",
+  "evidencePolicy": {
+    "minimumProvisionalOosTradesPerSymbolContext": 100,
+    "strongerEvidenceTrades": 200,
+    "requirePositiveNetExpectancyAfterCosts": true,
+    "requireRobustnessAndUncertainty": true
+  },
+  "oosValidatedEntries": [],
+  "entries": [],
+  "candidateHypotheses": [
+    {
+      "family": "TREND_PULLBACK_CONTINUATION",
+      "status": "HYPOTHESIS",
+      "symbols": [
+        "SOLUSDT",
+        "ETHUSDT",
+        "XRPUSDT"
+      ],
+      "contexts": [
+        "UP_LOW",
+        "UP_NORMAL",
+        "DOWN_LOW",
+        "DOWN_NORMAL"
+      ],
+      "blocker": "No strategy backtest executed; repo harness unavailable."
+    },
+    {
+      "family": "BREAKOUT_RETEST_VOLATILITY_CONTRACTION",
+      "status": "HYPOTHESIS",
+      "symbols": [
+        "SOLUSDT",
+        "ETHUSDT",
+        "XRPUSDT"
+      ],
+      "contexts": [
+        "LOW",
+        "NORMAL"
+      ],
+      "blocker": "Longer 5m/15m archive and executable harness required."
+    },
+    {
+      "family": "RANGE_MEAN_REVERSION_FAILED_BREAKOUT",
+      "status": "HYPOTHESIS",
+      "symbols": [
+        "SOLUSDT",
+        "ETHUSDT",
+        "XRPUSDT"
+      ],
+      "contexts": [
+        "SIDEWAYS_LOW",
+        "SIDEWAYS_NORMAL"
+      ],
+      "blocker": "No strategy backtest executed."
+    },
+    {
+      "family": "VOLATILITY_EXPANSION_MOMENTUM",
+      "status": "HYPOTHESIS",
+      "symbols": [
+        "SOLUSDT",
+        "ETHUSDT",
+        "XRPUSDT"
+      ],
+      "contexts": [
+        "UP_HIGH",
+        "DOWN_HIGH",
+        "SHOCK"
+      ],
+      "blocker": "No strategy backtest executed; current high-vol state is not itself an entry."
+    },
+    {
+      "family": "BTC_LED_RELATIVE_STRENGTH",
+      "status": "HYPOTHESIS",
+      "symbols": [
+        "SOLUSDT",
+        "ETHUSDT",
+        "XRPUSDT"
+      ],
+      "contexts": [
+        "BTC_CONFIRMATION",
+        "BTC_DIVERGENCE"
+      ],
+      "blocker": "Current correlation snapshot only; no historical lead/lag experiment."
+    },
+    {
+      "family": "FUNDING_OI_POSITIONING_FILTER",
+      "status": "HYPOTHESIS",
+      "symbols": [
+        "SOLUSDT",
+        "ETHUSDT",
+        "XRPUSDT"
+      ],
+      "contexts": [
+        "FUNDING_OI_EXTREME"
+      ],
+      "blocker": "No durable historical funding/OI/positioning archive; only current snapshots and 3 funding settlements."
+    }
+  ],
+  "priorAccessibleEvidence": {
+    "source": "docs/research-log.md",
+    "asOf": "2026-09-30",
+    "summary": "Repository log reported no validated edge. MOMENTUM net expectancy -0.164R (n=131) and STRUCTURE-TREND -0.070R (n=64) in documented tests; this run did not re-run or alter those variants."
+  }
+}

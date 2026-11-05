@@ -88,10 +88,13 @@ function run(input) {
     if (f.markPrice===undefined || f.markPrice==="") fundingBlankMark++;
   }
   const fundingTimes=Array.from(fundingByTime.keys()).sort((a,b)=>a-b);
-  const fundingGapHours={};
+  const fundingIntervalHoursObserved={};
+  let fundingIntervalsOver8h=0;
   for (let i=1;i<fundingTimes.length;i++) {
     const h=(fundingTimes[i]-fundingTimes[i-1])/3600000;
-    fundingGapHours[h]=(fundingGapHours[h]||0)+1;
+    const bucket=String(Math.round(h));
+    fundingIntervalHoursObserved[bucket]=(fundingIntervalHoursObserved[bucket]||0)+1;
+    if (h>8.05) fundingIntervalsOver8h++;
   }
   const barIndexByTime=new Map(times.map((t,i)=>[t,i]));
   const params={lookbacks:[15,20,25],stopBufferAtr:0.25,targetR:1.5,maxHoldBars:6,qty:1,costRate:0.0015,minValidationTrades:20,bootstrapReps:2000,blockLength:5,seed:20261105};
@@ -249,7 +252,7 @@ function run(input) {
   for(let i=warmup;i<N;i++)contextCounts[features[i].context]=(contextCounts[features[i].context]||0)+1;
   const output={
     experimentId:input.experimentId,rows:N,dataRange:{startUtc:new Date(times[0]).toISOString(),lastOpenUtc:new Date(times[N-1]).toISOString()},
-    dataQuality:dataIssues,fundingQuality:{rows:fundingSorted.length,duplicates:fundingDuplicates,invalid:fundingBad,blankMarkPrice:fundingBlankMark,gapHours:fundingGapHours,firstFundingUtc:fundingTimes.length?new Date(fundingTimes[0]).toISOString():null,lastFundingUtc:fundingTimes.length?new Date(fundingTimes[fundingTimes.length-1]).toISOString():null},
+    dataQuality:dataIssues,fundingQuality:{rows:fundingSorted.length,duplicates:fundingDuplicates,invalid:fundingBad,blankMarkPrice:fundingBlankMark,intervalHoursObserved,fundingIntervalsOver8h,firstFundingUtc:fundingTimes.length?new Date(fundingTimes[0]).toISOString():null,lastFundingUtc:fundingTimes.length?new Date(fundingTimes[fundingTimes.length-1]).toISOString():null},
     split:{train:{startIndex:trainRange.start,endIndexExclusive:trainRange.end,startUtc:new Date(times[trainRange.start]).toISOString(),endUtc:new Date(times[trainRange.end-1]).toISOString()},validation:{startIndex:valRange.start,endIndexExclusive:valRange.end,startUtc:new Date(times[valRange.start]).toISOString(),endUtc:new Date(times[valRange.end-1]).toISOString()},test:{startIndex:testRange.start,endIndexExclusive:testRange.end,startUtc:testStartTime,endUtc:testEndTime},purgeBars:purge},
     thresholds,contextCounts,validationCandidates,selectedLookback:selected,selectionEligibleCandidates:eligible.length,
     trainPrimary:{...trainPrimary,tradesLedger:undefined},validationPrimary:{...validationPrimary,tradesLedger:undefined},

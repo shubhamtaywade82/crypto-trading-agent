@@ -1,0 +1,90 @@
+{
+  "schema_version": "1.0.0",
+  "created_at_utc": "2026-11-05T09:38:24.122Z",
+  "repository": "shubhamtaywade82/crypto-trading-agent",
+  "branch": "research/raw-ohlcv-archive-2026-11-05T0530Z",
+  "interval": "4h",
+  "source_endpoint": "GET /fapi/v1/klines",
+  "symbols": [
+    "BTCUSDT",
+    "ETHUSDT",
+    "SOLUSDT",
+    "XRPUSDT"
+  ],
+  "pages_persisted": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9
+  ],
+  "page_manifests": [
+    "research-data/binance-usdm/4h/manifest-page-0001.json",
+    "research-data/binance-usdm/4h/manifest-page-0002.json",
+    "research-data/binance-usdm/4h/manifest-page-0003.json",
+    "research-data/binance-usdm/4h/manifest-page-0004.json",
+    "research-data/binance-usdm/4h/manifest-page-0005.json",
+    "research-data/binance-usdm/4h/manifest-page-0006.json",
+    "research-data/binance-usdm/4h/manifest-page-0007.json",
+    "research-data/binance-usdm/4h/manifest-page-0008.json",
+    "research-data/binance-usdm/4h/manifest-page-0009.json"
+  ],
+  "raw_rows_by_symbol": {
+    "BTCUSDT": 13499,
+    "ETHUSDT": 13499,
+    "SOLUSDT": 13455,
+    "XRPUSDT": 13499
+  },
+  "raw_rows_total": 53952,
+  "aligned_analysis_window": {
+    "start_utc": "2020-09-14T08:00:00Z",
+    "end_last_completed_open_utc": "2026-11-04T12:00:00Z",
+    "rows_per_symbol": 13454,
+    "rows_total": 53816,
+    "coverage_years_approx": 6.14,
+    "exclusions": [
+      "For BTCUSDT, ETHUSDT and XRPUSDT, trim 44 page-0009 rows before the common SOL start.",
+      "SOLUSDT contract onboardDate is 2020-09-14T07:00:00Z; its 2020-09-14T04:00:00Z 4h bar is partial and is excluded, so the common analysis window starts at 08:00Z."
+    ]
+  },
+  "integrity": {
+    "structural_quality": "PASS for all persisted pages: no internal 4h gaps, OHLC invariant failures, or nonpositive-volume rows reported.",
+    "readback": "PASS for raw pages 1-9 via GitHub fetch_file readback.",
+    "original_manifest_hash_matches": 19,
+    "original_manifest_hash_mismatches": 17,
+    "hash_mismatch_scope": "page-0002..0006 BTCUSDT (5 mismatches total); page-0007..0009 all four symbols (12 mismatches). Raw rows are preserved; do not overwrite expected hashes. Alternate-source reconciliation remains open.",
+    "source_revision_policy": "Store actual and expected hashes side-by-side; do not normalize mismatches without provenance."
+  },
+  "incremental_deltas": [
+    {
+      "file": "research-data/binance-usdm/delta/binance_usdm_delta_2026-11-05T0524Z.jsonl",
+      "rows": 76,
+      "sha256": "f5d9e50602f4ef4046fc4d39da053e45d3619ad147aa398a6bd1e281a7f3b93d"
+    },
+    {
+      "file": "research-data/binance-usdm/delta/binance_usdm_delta_2026-11-05T0933Z_BTC_ETH.jsonl",
+      "rows": 144,
+      "sha256": "e2d0e11ee240b01e9441969ee9f1f4282a093b0ee9a01eb4504e5905a40a18de"
+    },
+    {
+      "file": "research-data/binance-usdm/delta/binance_usdm_delta_2026-11-05T0933Z_SOL_XRP.jsonl",
+      "rows": 144,
+      "sha256": "cda3ffc3149c1ed88fc9164d9a40e323d53b4f23ca62452015eedad157c08fc7"
+    },
+    {
+      "file": "research-data/binance-usdm/delta/binance_usdm_delta_2026-11-05T0938Z_5m.jsonl",
+      "rows": 4,
+      "sha256": "e197420e0d04b5765faa116b0333f84b2a5b17aadfd43f1dc991fb994b904fb3"
+    }
+  ],
+  "incremental_delta_rows_total": 368,
+  "next_actions": [
+    "Reconcile the 17 historical page hash divergences against an alternate official source or recover original raw arrays.",
+    "Backfill complete 1h/15m/5m histories; current deltas do not constitute full history.",
+    "Fetch BTCUSDT/ETHUSDT/XRPUSDT pages beyond the common SOL start if symbol-specific earliest history is required."
+  ]
+}

@@ -9,7 +9,7 @@
  *   --study regime  regime model: the classic first-match classifier vs the scored regime with hysteresis (manager off)
  * Use --end-days-ago to score a window the variants were not tuned on.
  */
-import { fetchArchiveKlines } from '../src/backtesting/archiveKlines.js';
+import { loadValidatedKlines } from '../src/backtesting/klineLoader.js';
 import { ReplayService } from '../src/backtesting/ReplayService.js';
 import type { ReplayData } from '../src/backtesting/types.js';
 import { DEFAULT_PM_CONFIG, type PmConfig } from '../src/position/PositionManager.js';
@@ -53,8 +53,7 @@ const toMs = Date.now() - endDaysAgo * 86_400_000;
 const fromMs = toMs - days * 86_400_000;
 const data: ReplayData = { [symbol]: {} };
 for (const timeframe of ['15m', '1h', '4h'] as NativeTimeframe[]) {
-  const { candles } = await fetchArchiveKlines(symbol, timeframe, fromMs, toMs);
-  if (candles.length === 0) throw new Error(`no ${timeframe} candles for ${symbol}`);
+  const { candles } = await loadValidatedKlines({ symbol, interval: timeframe, fromMs, toMs, source: 'archive' });
   data[symbol]![timeframe] = candles;
 }
 

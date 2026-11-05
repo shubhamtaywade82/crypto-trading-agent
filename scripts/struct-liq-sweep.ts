@@ -24,7 +24,6 @@
 import { mkdirSync } from 'node:fs';
 import path from 'node:path';
 import { MarketDataFeed } from '../src/backtesting/MarketDataFeed.js';
-import { fetchArchiveKlines, validateCandles } from '../src/backtesting/archiveKlines.js';
 import { MarketStateBuilder } from '../src/market/MarketStateBuilder.js';
 import { ReplayService } from '../src/backtesting/ReplayService.js';
 import { DEFAULT_SWEEP_GRID, marginalAxes, sweepStructureLiquidity } from '../src/backtesting/StructLiqSweep.js';
@@ -32,6 +31,8 @@ import { DEFAULT_STRUCTURE_LIQUIDITY_OPTIONS, tunedStructureLiquidityOptions } f
 import type { Candle } from '../src/types.js';
 import type { NativeTimeframe } from '../src/market/MarketDataTypes.js';
 import type { ReplayData } from '../src/backtesting/types.js';
+import { loadValidatedKlines, type KlineSource } from '../src/backtesting/klineLoader.js';
+import { expectedBarCount } from '../src/backtesting/candleIntegrity.js';
 import type { MarketState } from '../src/market/types.js';
 import { CrowdingAgent } from '../src/agents/CrowdingAgent.js';
 import { FundingArbAgent } from '../src/agents/FundingArbAgent.js';
@@ -42,8 +43,6 @@ import { StructureLiquidityAgent } from '../src/agents/StructureLiquidityAgent.j
 import type { BinanceService } from '../src/binance/client.js';
 import type { BaseAgent } from '../src/agents/BaseAgent.js';
 
-const BASE = 'https://fapi.binance.com';
-const INTERVAL_MS: Record<string, number> = { '15m': 900_000, '1h': 3_600_000, '4h': 14_400_000 };
 const TIMEFRAMES: NativeTimeframe[] = ['15m', '1h', '4h'];
 
 function arg(name: string, fallback: string): string {
@@ -55,55 +54,24 @@ const symbols = arg('symbols', 'BTCUSDT,ETHUSDT').toUpperCase().split(',').map((
 const days = Number(arg('days', '45'));
 const warmupBars = Number(arg('warmup', '300'));
 const fleetArg = arg('fleet', '');
-const source = arg('source', 'api');
+const source = arg('source', 'api') as KlineSource;
 if (!['api', 'archive'].includes(source)) throw new Error('--source must be api or archive');
 const journalDirArg = arg('journal-dir', '');
 const journalRunId = new Date().toISOString().replace(/[:.]/g, '-');
 const journalPaths: string[] = [];
 if (journalDirArg) mkdirSync(path.resolve(journalDirArg), { recursive: true });
 
-async function fetchKlines(symbol: string, interval: NativeTimeframe, fromMs: number, toMs: number): Promise<Candle[]> {
-  const out: Candle[] = [];
-  let cursor = fromMs;
-  for (;;) {
-    const url = `${BASE}/fapi/v1/klines?symbol=${symbol}&interval=${interval}&startTime=${cursor}&endTime=${toMs}&limit=1500`;
-    const response = await fetch(url);
-    if (!response.ok) throw new Error(`klines ${interval} failed: HTTP ${response.status}`);
-    const raw = (await response.json()) as unknown[][];
-    for (const k of raw) {
-      out.push({ openTime: Number(k[0]), open: Number(k[1]), high: Number(k[2]), low: Number(k[3]), close: Number(k[4]), volume: Number(k[5]) });
-    }
-    if (raw.length < 1500) break;
-    cursor = Number(raw[raw.length - 1][0]) + INTERVAL_MS[interval];
-  }
-  return out;
-}
-
-const runNowMs = Date.now();
-const toMs = runNowMs;
+const toMs = Date.now();
 const fromMs = toMs - days * 86_400_000;
-const integrityToMs = source === 'archive' ? Math.floor(runNowMs / 86_400_000) * 86_400_000 : toMs;
 console.log(`STRUCT-LIQ parameter sweep over the last ${days} day(s) from ${source}, with strict candle-integrity validation...`);
 const data: ReplayData = {};
 for (const symbol of symbols) {
   data[symbol] = {};
   for (const timeframe of TIMEFRAMES) {
-    let fetched: Candle[];
-    if (source === 'archive') {
-      const archive = await fetchArchiveKlines(symbol, timeframe, fromMs, toMs, undefined, runNowMs);
-      if (archive.missingDays.length) {
-        throw new Error(`${symbol} ${timeframe}: archive has missing daily files; refusing incomplete sweep: ${archive.missingDays.join(', ')}`);
-      }
-      fetched = archive.candles;
-    } else {
-      fetched = await fetchKlines(symbol, timeframe, fromMs, toMs);
-    }
-    // Binance API endTime is inclusive; archive mode stops at the last complete UTC day.
-    const candles = fetched.filter((candle) => candle.openTime >= fromMs && candle.openTime < integrityToMs);
-    if (candles.length === 0) throw new Error(`${symbol} ${timeframe}: no candles in requested window`);
-    const validation = validateCandles(candles, INTERVAL_MS[timeframe], fromMs, integrityToMs);
-    data[symbol][timeframe] = candles;
-    console.log(`  ${symbol} ${timeframe}: integrity passed (${validation.actualBars}/${validation.expectedBars} expected bars)`);
+    // Fails closed: loadValidatedKlines throws CandleIntegrityError on any gap, duplicate, off-grid bar or missing archive day.
+    const loaded = await loadValidatedKlines({ symbol, interval: timeframe, fromMs, toMs, source });
+    data[symbol][timeframe] = loaded.candles;
+    console.log(`  ${symbol} ${timeframe}: integrity passed (${loaded.candles.length}/${expectedBarCount(loaded.window)} expected bars)`);
   }
   console.log(`  ${symbol}: ${data[symbol]['15m']!.length} x 15m candles`);
 }

@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "run_id": "context-strategy-20261105T183211Z-v79",
   "started_at_utc": "2026-11-05T18:22:31Z",
-  "completed_at_utc": "2026-11-05T18:39:09.264Z",
+  "completed_at_utc": "2026-11-05T18:40:32.471Z",
   "run_classification": "OOS_EVALUATED",
   "research_executed": true,
   "summary": "A pre-registered SOLUSDT 4h context-conditioned Donchian experiment completed on an untouched 2025-01-03 to 2026-11-05 test segment. Evidence remains INSUFFICIENT_EVIDENCE. The hourly OHLCV archive was incrementally refreshed and readback verified.",
@@ -80,7 +80,7 @@
     {
       "capability": "repo_backtest_harness_smoke",
       "status": "BLOCKED",
-      "evidence": "Repository scripts/backtest.ts and research modules inspected remotely but not invoked. Separate managed-V8 runner executed a deterministic fixture: stop-first, repeatability and current-bar exclusion all passed.",
+      "evidence": "Repository scripts were inspected but not invoked. A separate managed-V8 runner passed deterministic stop-first/repeatability/no-lookahead fixture checks. Its executable source was not persisted; only a descriptor hash was recorded.",
       "impact": "Independent experiment executed, but repository harness remains unverified.",
       "nextAction": "Run repo typecheck/tests and its own deterministic smoke after runtime setup."
     },
@@ -106,7 +106,7 @@
       "specPath": "research/context-strategy/experiments/sol-donchian20-bull-low-v1_20261105T1825Z.spec.json",
       "specCommit": "1275912cf0b7e05a2f2689ba0c8b876701032887",
       "resultPath": "research/context-strategy/experiments/sol-donchian20-bull-low-v1_20261105T1825Z.result.json",
-      "resultSha256": "bfa05bab5b7744391c43abd7e036ad22c99aeb168eb349ebe4fcf7ac57c6da62",
+      "resultSha256": "3136989ce3087af66bce8c3bd5e07e01942dcf33ba75e6cf4dbb308c5ec623e6",
       "runner": "Managed V8 research runner v1.0.0; not repository harness",
       "data": {
         "symbol": "SOLUSDT",
@@ -196,7 +196,9 @@
         "replicates": 5000,
         "seed": "0x12345678"
       },
-      "evidenceDecision": "No promotion. OOS n=55<100; CI crosses zero; total quote PnL negative; validation mean net R negative across all nine candidates."
+      "evidenceDecision": "No promotion. OOS n=55<100; CI crosses zero; total quote PnL negative; validation mean net R negative across all nine candidates.",
+      "runnerSourcePersisted": false,
+      "reproducibilityStatus": "PARTIAL: experiment specification, data hashes and results are persisted; exact managed-V8 runner source is not committed, and the repository harness was not invoked."
     },
     "contextDiscovery": {
       "taxonomyRefit": false,
@@ -413,8 +415,8 @@
   "persistence": {
     "archiveBranch": "research/raw-ohlcv-archive-2026-11-05T0530Z",
     "contextBranch": "research/context-strategy-2026-11-05-run11",
-    "queueBlob": "85e0d9f2cd22a0fc6f7ea18ef3d07280719311b0",
-    "registryBlob": "bd6b561ba783bbb3f1a011e45e9e0272223ec142",
+    "queueBlob": "bdfed1727548da71c936c5e45d9bce3e86b1e6a0",
+    "registryBlob": "565778701c5b73495e9607a54546a1748f19b536",
     "resultPath": "research/context-strategy/experiments/sol-donchian20-bull-low-v1_20261105T1825Z.result.json",
     "archiveIndexSha256": "a5f1d5b1d3f74fea35647884382f651dde6623cf699a7256ce82c292041f923b"
   },
@@ -425,5 +427,17 @@
     "Provision Node >=24/npm >=11, install repository dependencies, run repository typecheck/tests and its own deterministic replay smoke.",
     "Do not promote or repeat the SOL Donchian candidate; the OOS sample, CI and negative quote PnL do not establish an edge.",
     "After the generic strategy runner is verified, pre-register a separate failed-breakout fade or trend-pullback experiment."
-  ]
+  ],
+  "automation": {
+    "taskId": "6adcdb3143348191ac2cf4d3200236d7",
+    "title": "Context Strategy Research",
+    "enabled": true,
+    "schedule": "FREQ=HOURLY;BYMINUTE=52",
+    "statusAtLastPeek": "in_progress",
+    "scheduledForUtc": "2026-11-05T18:22:09Z",
+    "startedAtUtc": "2026-11-05T18:22:17Z",
+    "nextRunTime": null,
+    "scheduleModified": false,
+    "note": "next_run_time was null while the scheduled run was in progress; the existing hourly schedule was not changed."
+  }
 }

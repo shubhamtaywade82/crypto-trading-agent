@@ -1,7 +1,7 @@
 {
   "schema_version": "1.1.0",
   "snapshot_id": "context-strategy-2026-11-05T061933Z",
-  "evaluated_at_utc": "2026-11-05T06:25:57.207Z",
+  "evaluated_at_utc": "2026-11-05T06:28:37.879Z",
   "run_status": "RESEARCH_BLOCKED",
   "monitoring_performed": true,
   "research_experiment": {
@@ -83,8 +83,8 @@
       "raw_historical_archive_present": true,
       "local_artifact_readback": "previous JSON snapshot and checksum read successfully",
       "raw_data_or_experiment_artifact_persisted": false,
-      "raw_archive_scope": "bounded latest sample persisted on GitHub; not multi-cycle",
-      "artifact_readback": "all four CSV files and manifest fetched back and compared byte-for-byte; row counts verified"
+      "raw_archive_scope": "47,988 completed OHLCV rows persisted across eight contiguous CSV partitions; still insufficient coverage for multi-cycle validation",
+      "artifact_readback": "all eight CSV partitions and manifest fetched back; byte-for-byte readback and quality checks passed"
     }
   },
   "market_data": {
@@ -135,62 +135,117 @@
     },
     "quality_checks_on_returned_sample": {
       "series_count": 16,
-      "fetched_rows": 24000,
-      "completed_rows": 23984,
-      "forming_rows_excluded": 16,
+      "fetched_rows": 48000,
+      "completed_rows": 47988,
+      "forming_rows_excluded": 12,
       "duplicate_timestamps": 0,
       "missing_interval_gaps": 0,
+      "chunk_boundary_gaps": 0,
       "nonmonotonic_timestamps": 0,
       "timestamp_alignment_failures": 0,
       "ohlc_invariant_failures": 0,
       "nonpositive_volume_failures": 0,
       "nonfinite_ohlcv_failures": 0,
       "cross_symbol_timestamp_alignment": "matched for all four intervals",
-      "persisted_archive_quality": "23,988 archived completed rows re-read from GitHub; zero duplicate/gap/alignment/OHLC/volume/nonfinite/forming-candle failures",
-      "limitations": "bounded latest-1,500 bars per symbol and interval; not a multi-cycle historical archive"
+      "persisted_archive_quality": "all 8 CSV partitions fetched back; 47,988 completed rows; all per-symbol intervals contiguous across chunk boundaries; zero duplicate/gap/alignment/OHLC/volume/nonfinite/forming-candle failures",
+      "limitations": "coverage still bounded: 5m 10.42d, 15m 31.24d, 1h 124.9d, 4h 499.7d; not yet multi-cycle across all intervals"
     },
     "raw_archive": {
       "present": true,
       "location": "GitHub branch research/registry-snapshots",
       "manifest_path": "research/data-archive/snapshots/2026-11-05/manifest.json",
-      "manifest_git_blob_sha": "4f5be869d6653f4623113f24f444a714a3079b53",
-      "total_rows": 23988,
-      "total_bytes": 3111613,
+      "manifest_git_blob_sha": "3bb3766101245431173f5ee75fd643da8482e4ed",
+      "total_rows": 47988,
+      "total_bytes": 6243379,
+      "interval_coverage": {
+        "5m": {
+          "rows_per_symbol": 3000,
+          "first_open_utc": "2026-10-25T20:25:00Z",
+          "last_open_utc": "2026-11-05T06:20:00Z",
+          "approx_days": 10.42
+        },
+        "15m": {
+          "rows_per_symbol": 2999,
+          "first_open_utc": "2026-10-05T00:30:00Z",
+          "last_open_utc": "2026-11-05T06:00:00Z",
+          "approx_days": 31.24
+        },
+        "1h": {
+          "rows_per_symbol": 2999,
+          "first_open_utc": "2026-07-03T07:00:00Z",
+          "last_open_utc": "2026-11-05T05:00:00Z",
+          "approx_days": 124.9
+        },
+        "4h": {
+          "rows_per_symbol": 2999,
+          "first_open_utc": "2025-06-23T08:00:00Z",
+          "last_open_utc": "2026-11-05T00:00:00Z",
+          "approx_days": 499.7
+        }
+      },
       "files": [
         {
           "interval": "5m",
+          "kind": "backfill",
+          "path": "research/data-archive/snapshots/2026-11-05/klines_5m_backfill.csv",
+          "rows": 6000,
+          "bytes": 754834,
+          "git_blob_sha": "5f4c4768ffdbf0ef24b40793d3f3ca061d209b4e"
+        },
+        {
+          "interval": "5m",
+          "kind": "current",
           "path": "research/data-archive/snapshots/2026-11-05/klines_5m.csv",
           "rows": 6000,
           "bytes": 745825,
-          "first_open_utc": "2026-10-31T01:25:00Z",
-          "last_open_utc": "2026-11-05T06:20:00Z",
           "git_blob_sha": "256fc10239806f3805b6c4b64edbf291c9fa6946"
         },
         {
           "interval": "15m",
+          "kind": "backfill",
+          "path": "research/data-archive/snapshots/2026-11-05/klines_15m_backfill.csv",
+          "rows": 6000,
+          "bytes": 776337,
+          "git_blob_sha": "79bd95967958745e238846713cf5b299f50d0186"
+        },
+        {
+          "interval": "15m",
+          "kind": "current",
           "path": "research/data-archive/snapshots/2026-11-05/klines_15m.csv",
           "rows": 5996,
           "bytes": 772486,
-          "first_open_utc": "2026-10-20T15:30:00Z",
-          "last_open_utc": "2026-11-05T06:00:00Z",
           "git_blob_sha": "7c4f50db01e514b5d24d4614915ab5978c0aaae0"
         },
         {
           "interval": "1h",
+          "kind": "backfill",
+          "path": "research/data-archive/snapshots/2026-11-05/klines_1h_backfill.csv",
+          "rows": 6000,
+          "bytes": 783171,
+          "git_blob_sha": "c6d5506a351c2275071ee660291bd827235e1f95"
+        },
+        {
+          "interval": "1h",
+          "kind": "current",
           "path": "research/data-archive/snapshots/2026-11-05/klines_1h.csv",
           "rows": 5996,
           "bytes": 788843,
-          "first_open_utc": "2026-09-03T19:00:00Z",
-          "last_open_utc": "2026-11-05T05:00:00Z",
           "git_blob_sha": "56f2d8e3d645b05c27c39348b17d968de2a902e4"
         },
         {
           "interval": "4h",
+          "kind": "backfill",
+          "path": "research/data-archive/snapshots/2026-11-05/klines_4h_backfill.csv",
+          "rows": 6000,
+          "bytes": 817424,
+          "git_blob_sha": "278ae222f5757f776871f7db418e88bef49652e0"
+        },
+        {
+          "interval": "4h",
+          "kind": "current",
           "path": "research/data-archive/snapshots/2026-11-05/klines_4h.csv",
           "rows": 5996,
           "bytes": 804459,
-          "first_open_utc": "2026-02-28T08:00:00Z",
-          "last_open_utc": "2026-11-05T00:00:00Z",
           "git_blob_sha": "355be0a0c61d8010ec5627cf1888a7b2cd1926dc"
         }
       ],
@@ -210,10 +265,10 @@
         "taker_buy_quote_volume",
         "ignore"
       ],
-      "checksum_type": "GitHub Git blob SHA-1; SHA-256 not computed in connector runtime",
+      "checksum_type": "GitHub Git blob SHA-1; SHA-256 not computed in this connector runtime",
       "readback_verified": true,
       "persisted": true,
-      "limitation": "Latest bounded 1,500 completed bars per symbol/interval only; insufficient for multi-cycle inference"
+      "limitation": "Not yet a multi-cycle archive for all intervals; 5m/15m/1h coverage remains short."
     }
   },
   "current_market_snapshot": {
@@ -499,7 +554,7 @@
         "durable archive storage",
         "manifest/checksum writer"
       ],
-      "next_action": "Continue paginated backfill beyond the latest 1,500 bars per series, prioritizing multi-year 4h/1h history and then 15m/5m; append completed bars, update Git blob checksums and re-read manifests."
+      "next_action": "Continue paginated backfill from 2025-06-23 4h, 2026-07-03 1h, 2026-10-05 15m and 2026-10-25 5m toward multiple years; append immutable chunks, update Git blob checksums and verify cross-chunk continuity."
     },
     {
       "id": "Q3",
@@ -543,6 +598,6 @@
     "experiment_results_persisted": false,
     "this_snapshot_persistence": "PERSISTED_AND_READBACK_VERIFIED",
     "github_blob_sha_before_verification_update": "369cb615c366f807ddfc7e378ae65e2e6bfa93e7",
-    "raw_archive_manifest_git_blob_sha": "4f5be869d6653f4623113f24f444a714a3079b53"
+    "raw_archive_manifest_git_blob_sha": "3bb3766101245431173f5ee75fd643da8482e4ed"
   }
 }

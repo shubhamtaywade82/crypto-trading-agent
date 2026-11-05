@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAtUtc": "2026-11-06T00:40:00Z",
+  "updatedAtUtc": "2026-11-06T01:00:00Z",
   "evidencePolicy": {
     "minimumProvisionalOosTradesPerSymbolContext": 100,
     "strongerEvidenceTrades": 200,
@@ -130,7 +130,7 @@
     },
     {
       "family": "BREAKOUT_RETEST_VOLATILITY_CONTRACTION",
-      "status": "HYPOTHESIS",
+      "status": "EVALUATED_INSUFFICIENT_EVIDENCE",
       "symbols": [
         "SOLUSDT",
         "ETHUSDT",
@@ -140,11 +140,17 @@
         "LOW",
         "NORMAL"
       ],
-      "blocker": "Longer 5m/15m archive and executable harness required."
+      "blocker": null,
+      "evaluation": {
+        "evaluatedAtUtc": "2026-11-06T00:58:00Z",
+        "verdict": "INSUFFICIENT_EVIDENCE",
+        "artifact": "research/context-strategy/experiments/breakout-retest-vol-contraction-v1_20261106.result.json",
+        "summary": "SOLUSDT reached n=102 OOS trades with mean net R +0.045R, but 95% bootstrap CI [-0.209, +0.306] crosses zero; ETHUSDT test mean net R -0.252R; pooled cross-asset expectancy is -0.015R."
+      }
     },
     {
       "family": "RANGE_MEAN_REVERSION_FAILED_BREAKOUT",
-      "status": "HYPOTHESIS",
+      "status": "EVALUATED_REJECTED",
       "symbols": [
         "SOLUSDT",
         "ETHUSDT",
@@ -154,7 +160,12 @@
         "SIDEWAYS_LOW",
         "SIDEWAYS_NORMAL"
       ],
-      "blocker": "No strategy backtest executed."
+      "blocker": null,
+      "evaluation": {
+        "evaluatedAtUtc": "2026-11-06T00:58:00Z",
+        "verdict": "REJECTED_OOS_NEGATIVE",
+        "summary": "All three instruments yielded deeply negative out-of-sample mean net R (SOL: -0.334R, ETH: -0.369R, XRP: -0.466R) with win rates < 26%."
+      }
     },
     {
       "family": "VOLATILITY_EXPANSION_MOMENTUM",

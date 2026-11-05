@@ -1,0 +1,67 @@
+{
+  "schemaVersion": 1,
+  "experimentId": "BREAKOUT-RETEST-VOL-CONTRACTION-V1-20261106",
+  "status": "INSUFFICIENT_EVIDENCE_CROSSES_ZERO",
+  "executedAtUtc": "2026-11-06T00:58:00Z",
+  "runner": {
+    "name": "Repository Native Research Harness",
+    "version": "1.0.0",
+    "runtime": "Node v24.19.0 / Linux x86_64",
+    "reproducibilityStatus": "FULL_REPRODUCIBILITY"
+  },
+  "universe": ["SOLUSDT", "ETHUSDT", "XRPUSDT"],
+  "timeframe": "4h",
+  "parameters": {
+    "donchianPeriod": 20,
+    "maxRetestBars": 4,
+    "stopAtrMultiple": 1.5,
+    "rewardRisk": 2.0,
+    "maxHoldBars": 12,
+    "roundTripCostBps": 15
+  },
+  "results": {
+    "SOLUSDT": {
+      "train": { "n": 150, "winRate": "44.0%", "meanR": "0.032" },
+      "test": {
+        "n": 102,
+        "winRate": "42.2%",
+        "meanR": "0.045",
+        "bootstrap95CI": [-0.209, 0.306],
+        "pPositive": 0.622,
+        "sides": {
+          "long": { "n": 58, "meanR": "-0.071" },
+          "short": { "n": 44, "meanR": "0.196" }
+        }
+      }
+    },
+    "ETHUSDT": {
+      "train": { "n": 160, "winRate": "33.8%", "meanR": "-0.083" },
+      "test": {
+        "n": 79,
+        "winRate": "34.2%",
+        "meanR": "-0.252",
+        "sides": {
+          "long": { "n": 47, "meanR": "-0.292" },
+          "short": { "n": 32, "meanR": "-0.194" }
+        }
+      }
+    },
+    "XRPUSDT": {
+      "train": { "n": 139, "winRate": "41.7%", "meanR": "-0.010" },
+      "test": {
+        "n": 82,
+        "winRate": "41.5%",
+        "meanR": "0.139",
+        "sides": {
+          "long": { "n": 37, "meanR": "0.254" },
+          "short": { "n": 45, "meanR": "0.045" }
+        }
+      }
+    }
+  },
+  "interpretation": {
+    "evidenceStatus": "INSUFFICIENT_EVIDENCE",
+    "verdict": "Candidate Hypothesis #2 clears the minimum sample size on SOLUSDT (n=102 >= 100) with a positive mean (+0.045R), but fails statistical promotion: the 95% moving-block bootstrap CI [-0.209, +0.306] spans zero (pPositive = 62.2%), performance is driven solely by Short trades (-0.071R Long vs +0.196R Short), and pooled cross-asset expectancy across SOL, ETH, and XRP is net negative (-0.015R).",
+    "recommendation": "Do not promote. Reserve in registry as audited exploratory research."
+  }
+}

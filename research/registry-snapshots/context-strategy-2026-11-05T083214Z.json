@@ -1,0 +1,202 @@
+{
+  "schema_version": "1.0.0",
+  "run_id": "context-strategy-2026-11-05T083214Z",
+  "evaluated_at_utc": "2026-11-05T08:32:14Z",
+  "run_status": [
+    "MONITORING_ONLY"
+  ],
+  "preflight": {
+    "shell_compute": {
+      "status": "PASS",
+      "evidence": "pwd=/; Linux 6.18.57 x86_64; Python 3.13.5; Node v22.16.0/npm 10.9.2; 5 CPUs; 5.8 GiB RAM (4.7 GiB available); 30 GiB free."
+    },
+    "repo_code": {
+      "status": "BLOCKED",
+      "evidence": "Remote package.json requires Node>=24/npm>=11; local checkout absent. scripts/conditional-edge.ts blob 29034c61fdd42a5e40272234b221d29cb95fb3ee; scripts/backtest.ts blob 284a5ffd4e254265da49c76cb792cfdc3b19e094."
+    },
+    "binance_sdk": {
+      "status": "UNAVAILABLE",
+      "evidence": "binance, @binance/connector, @binance/futures-connector and @nemesis-oss/binance-sdk are NOT_INSTALLED."
+    },
+    "direct_network": {
+      "status": "BLOCKED",
+      "evidence": "curl https://fapi.binance.com/fapi/v1/time and /exchangeInfo fail DNS resolution; exit 6, HTTP 000."
+    },
+    "connector_market_data": {
+      "status": "DEGRADED",
+      "evidence": "Mark/ticker/OI/book/klines/funding/OI history/taker/long-short calls succeeded; HTTP status and headers are not exposed."
+    },
+    "exchange_info": {
+      "status": "BLOCKED",
+      "evidence": "serverTime=2026-11-05T06:46:24.911Z; approximately 105m50s stale at snapshot time."
+    },
+    "raw_historical_archive": {
+      "status": "PASS",
+      "evidence": "4h 13,449 base rows/symbol from 2020-09-14 plus 9 incremental/symbol to 2026-11-05 04:00; 1h 10,500 base rows/symbol from 2025-08-23 plus 34 incremental/symbol to 07:00; manifests read back."
+    },
+    "data_quality": {
+      "status": "PASS",
+      "evidence": "New 5m/15m raw delta 160 rows and 1h/4h delta 16 rows; zero duplicates/gaps/alignment/OHLC/volume/nonfinite failures; 16 forming bars excluded across the two canonical fetches."
+    },
+    "backtest_harness": {
+      "status": "BLOCKED",
+      "evidence": "No local project checkout; Node/npm below engine floor; no SDK imports; no smoke test or experiment run this turn."
+    },
+    "disk_storage": {
+      "status": "DEGRADED",
+      "evidence": "30 GiB free on ephemeral overlay; GitHub branch used as durable archive/registry store."
+    },
+    "artifact_readback": {
+      "status": "PASS",
+      "evidence": "Snapshot CSV and manifest, raw delta JSON files, 1h/4h manifests fetched back and verified; GitHub blob SHA-1 recorded."
+    }
+  },
+  "research_progress": {
+    "work_completed": [
+      "Refreshed BTC/ETH/SOL/XRP mark, ticker, OI, funding, book, taker/positioning and 5m/15m/1h/4h completed-candle context.",
+      "Appended 72 completed rows to the current CSV snapshot archive since the prior snapshot; updated manifest and readback.",
+      "Persisted canonical raw deltas: 120 5m + 40 15m + 12 1h + 4 4h rows, with no quality failures; deltas overlap the CSV snapshot representation and are not additive unique totals.",
+      "Updated and read back 1h and 4h canonical raw archive manifests and persistent research queue."
+    ],
+    "work_not_run": [
+      "No new strategy experiment or OOS evaluation this run; daily experiment already completed earlier at 07:34:30Z.",
+      "No local project harness execution; environment prerequisites remain blocked."
+    ]
+  },
+  "archive": {
+    "snapshot_manifest_path": "research/data-archive/snapshots/2026-11-05/manifest.json",
+    "snapshot_manifest_blob_sha": "56c7a31f8e9ba166c85b7caf266ed7f269d6c823",
+    "snapshot_files": 13,
+    "snapshot_rows": 48136,
+    "snapshot_bytes": 6262326,
+    "snapshot_incremental_rows_since_prior_snapshot": 72,
+    "canonical_raw_delta_files": [
+      {
+        "path": "research/raw-deltas/binance-usdm-2026-11-05-0827Z-5m-15m.json",
+        "blob_sha": "21457eab36d24a1f2848b982eec645c2d3870059",
+        "rows_by_interval": {
+          "5m": 120,
+          "15m": 40
+        },
+        "quality_failures": 0,
+        "forming_excluded": 8
+      },
+      {
+        "path": "research/raw-deltas/binance-usdm-2026-11-05-0827Z-1h-4h.json",
+        "blob_sha": "d4513ce6c92d9e2c0768bfc6e8218a68ff17f655",
+        "rows_by_interval": {
+          "1h": 12,
+          "4h": 4
+        },
+        "quality_failures": 0,
+        "forming_excluded": 8
+      }
+    ],
+    "raw_archive_manifests": {
+      "1h": {
+        "path": "research/raw-archive/binance-usdm-1h/manifest.json",
+        "blob_sha": "ca6a04e110076d3ec48e6d4bffe90e2b61da9de6",
+        "base_rows_per_symbol": 10500,
+        "incremental_rows_per_symbol": 34,
+        "latest_completed": "2026-11-05T07:00:00Z",
+        "status": "IN_PROGRESS"
+      },
+      "4h": {
+        "path": "research/raw-archive/binance-usdm-4h/manifest.json",
+        "blob_sha": "98bfef1cd53178fad59a8802980edd4d273c6b8e",
+        "base_rows_per_symbol": 13449,
+        "incremental_rows_per_symbol": 9,
+        "latest_completed": "2026-11-05T04:00:00Z",
+        "status": "BASE_ARCHIVE_COMPLETE_INCREMENTAL"
+      }
+    },
+    "quality_failures": 0,
+    "manifest_readback_verified": true
+  },
+  "context_discovery": {
+    "taxonomy_status": "UNCHANGED; prior preliminary weekly review from 2026-11-05T07:34:30Z remains current",
+    "new_frequency_duration_transition_analysis": "NOT_RUN",
+    "current_contexts_are_descriptive": true,
+    "definitions": "Trend via EMA20/EMA50 and 20-bar return; volatility via ATR14%; participation via taker ratio and volume/mean20; derivatives via completed 4h OI change and separate funding; BTC state as reference.",
+    "sample_adequacy": "4h has ~6.1 years and is suitable for broad context discovery subject to full archive reconciliation; 1h ~14.5 months; 5m ~10.5 days; 15m ~31.3 days. Intraday multi-cycle strategy validation remains inadequate."
+  },
+  "strategy_context_scorecard": {
+    "tested_candidate": {
+      "strategy": "CPULLBACK-4H-BTC-CONFIRM-v1.0.1",
+      "status_by_symbol": {
+        "ETHUSDT": "INSUFFICIENT_EVIDENCE",
+        "SOLUSDT": "INSUFFICIENT_EVIDENCE",
+        "XRPUSDT": "INSUFFICIENT_EVIDENCE"
+      },
+      "oos_trades": {
+        "ETHUSDT": 9,
+        "SOLUSDT": 10,
+        "XRPUSDT": 8
+      },
+      "net_expectancy_R": {
+        "ETHUSDT": 0.003,
+        "SOLUSDT": 0.326,
+        "XRPUSDT": 0.196
+      },
+      "ci95": {
+        "ETHUSDT": [
+          -0.657,
+          0.573
+        ],
+        "SOLUSDT": [
+          -0.393,
+          1.035
+        ],
+        "XRPUSDT": [
+          -0.539,
+          1.084
+        ]
+      },
+      "note": "Prior OOS artifact remains unchanged; all CIs cross zero and trade counts are below the >=100 per cell gate."
+    },
+    "other_families": {
+      "trend_pullback": "HYPOTHESIS_OR_PRIOR_CANDIDATE",
+      "breakout_retest": "HYPOTHESIS",
+      "range_mean_reversion_failed_breakout": "HYPOTHESIS",
+      "volatility_expansion": "HYPOTHESIS",
+      "btc_relative_strength": "HYPOTHESIS",
+      "funding_oi_filters": "HYPOTHESIS"
+    },
+    "oos_validated_entries": []
+  },
+  "discoveries": [
+    "No new historical edge was tested this run.",
+    "BTC 1h alignment is bullish but 4h alignment bearish; strict 4h BTC confirmation is absent.",
+    "ETH and XRP retain bullish 1h/4h EMA alignment, but recent taker ratios are below 1.",
+    "SOL has short-term 5m/15m volume expansion while 4h EMA20 remains below EMA50 and completed 4h OI declined."
+  ],
+  "market_snapshot_path": "research/market-snapshots/binance-usdm-2026-11-05T0832Z-v57.json",
+  "market_snapshot_blob_sha": "054d885bb7b79b494777cd97d22bd20e8fd36230",
+  "decisions": {
+    "ETHUSDT": "NO_TRADE",
+    "SOLUSDT": "NO_TRADE",
+    "XRPUSDT": "NO_TRADE",
+    "reason": "No OOS_VALIDATED registry entries; no validated trigger can be evaluated."
+  },
+  "queue_path": "research/queue/latest.json",
+  "queue_run_path": "research/queue/runs/context-strategy-research-2026-11-05T0832Z.json",
+  "registry": {
+    "OOS_VALIDATED": [],
+    "tested_candidate": "CPULLBACK-4H-BTC-CONFIRM-v1.0.1",
+    "tested_candidate_status": "INSUFFICIENT_EVIDENCE"
+  },
+  "limitations": [
+    "exchangeInfo is stale and direct REST DNS fails; no contract execution authorization.",
+    "HTTP status/headers unavailable through the connector.",
+    "No local checkout or compatible Node runtime; project harness not run.",
+    "5m/15m history remains short; 1h backfill remains incomplete.",
+    "Historical spread/depth/slippage/latency/market-impact and account fee tier unavailable.",
+    "GitHub blob SHA-1 used for remote object identity; SHA-256 was not computed in this run."
+  ],
+  "next_experiments": [
+    "Finish 5m/15m/1h backfill and archive reconciliation.",
+    "Restore compatible runtime and run deterministic project harness smoke test.",
+    "Replace proxy costs with measured execution model.",
+    "Then preregister range mean-reversion/failed-breakout fade conditioned on BTC regime; do not tune against the prior pullback OOS window."
+  ]
+}

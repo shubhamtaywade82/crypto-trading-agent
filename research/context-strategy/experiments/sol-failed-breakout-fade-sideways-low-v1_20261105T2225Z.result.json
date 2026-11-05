@@ -25,7 +25,12 @@
     "fundingRows": 6806,
     "fundingPayloadSha256": "e20b34e38968818d767498dd2b075d708685d54103c58046a66676396738130f",
     "specBlobSha1": "f9c8527152acd845fd3b5f0273d3f064d5a98744",
-    "specSha256": "42d6d4d3e520ace3d0749abab10bf7fe651729bff2c87414750dd09726e90457"
+    "specSha256": "42d6d4d3e520ace3d0749abab10bf7fe651729bff2c87414750dd09726e90457",
+    "fundingArchivePath": "research-data/binance-usdm/derivatives/funding/SOLUSDT_funding_20200914T0800Z_20261105T1600Z.jsonl",
+    "fundingArchiveSha256": "34bfd47393c7e9756e617a70669d8ee51349f6a3ba2b4931ae719993c6064549",
+    "fundingArchiveGitBlobSha1": "8639dc5c48936bedcb2e7792ec180fcabc1689e2",
+    "fundingArchiveManifestPath": "research-data/binance-usdm/derivatives/funding/SOLUSDT_funding_20200914T0800Z_20261105T1600Z.manifest.json",
+    "fundingArchiveManifestGitBlobSha1": "d77677a00478aec9620db1b012e67c8f3e6b5213"
   },
   "result": {
     "experimentId": "SOL-FAILED-BREAKOUT-FADE-SIDEWAYS-LOW-V1-20261105T2225Z",
@@ -3170,7 +3175,7 @@
       "one untouched holdout is insufficient for OOS_VALIDATED; require multiple walk-forward windows",
       "no latency or partial-fill model"
     ],
-    "evidenceStatus": "INSUFFICIENT_EVIDENCE",
+    "evidenceStatus": "REJECTED",
     "evidenceDecision": {
       "provisionalMinimumTrades": 100,
       "selectedOosTrades": 113,
@@ -3195,7 +3200,35 @@
       ],
       "multipleWalkForwardWindowsRequired": 3,
       "validatedPromotionAllowed": false,
-      "reason": "A single untouched holdout cannot satisfy the predeclared three-window walk-forward requirement; all cost, uncertainty, sample and neighbor gates are also enforced."
-    }
+      "reason": "REJECTED for the specific SOLUSDT 4h SIDEWAYS_LOW failed-breakout-fade V1 rule family because the untouched OOS evaluation failed the predeclared profitability and drawdown gates across the tested parameter neighborhood. This rejection does not generalize to ETH/XRP or other contexts.",
+      "status": "REJECTED",
+      "reasons": [
+        "The selected lookback-20 conditional variant produced negative OOS mean net expectancy (-0.148R) and negative quote PnL (-26.58 USDT per 1 SOL).",
+        "Its 95% moving-block bootstrap CI [-0.318R, +0.020R] crosses zero; one-sided Holm-adjusted p-value is 1.0.",
+        "Profit factor 0.787 is below 1.0.",
+        "Maximum drawdown 20.79R exceeds the predeclared 10R research risk gate.",
+        "Both neighboring lookbacks also have negative OOS mean net R, profit factor below 1 and drawdown above 10R; lookback-15 CI is entirely negative.",
+        "The unconditional same-rule baseline is also not validated: mean net R -0.011R and maximum drawdown 23.01R."
+      ]
+    },
+    "fundingInputAudit": {
+      "archivePath": "research-data/binance-usdm/derivatives/funding/SOLUSDT_funding_20200914T0800Z_20261105T1600Z.jsonl",
+      "rows": 6806,
+      "archiveSha256": "34bfd47393c7e9756e617a70669d8ee51349f6a3ba2b4931ae719993c6064549",
+      "blankMarkPriceRows": 3501,
+      "observedSettlementSpacingHours": {
+        "2": 98,
+        "4": 3,
+        "8": 6704
+      },
+      "gapsOver8h": 0,
+      "selectedOosFundingSettlements": 154,
+      "selectedOosMarkPriceProxySettlements": 0,
+      "selectedOosEntryPriceProxySettlements": 0,
+      "selectedOosUnpricedSettlements": 0,
+      "archiveReadbackVerified": true
+    },
+    "familyScope": "SOLUSDT / 4h / SIDEWAYS_LOW / failed-breakout-fade V1 only",
+    "promotionDecision": "REJECTED"
   }
 }

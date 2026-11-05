@@ -87,9 +87,10 @@
   "costs": {
     "roundTripAllInProxyBps": 15,
     "definition": "fixed 15bp round-trip proxy covering taker fees, spread and slippage; not account-tier or historical fill calibrated",
-    "funding": "actual SOLUSDT historical funding rates at settlement timestamps; use funding-history markPrice when present, otherwise exact matching 4h candle open as explicitly flagged proxy",
+    "funding": "actual SOLUSDT historical funding rates at settlement timestamps; use funding-history markPrice when present, otherwise exact matching 4h candle open, otherwise trade entry price as a notional proxy; proxy counts are reported separately",
     "fundingIntervalObserved": "8h in current fundingInfo; historical interval changes checked from timestamp gaps",
-    "latency": "not separately modeled; next-bar-open execution"
+    "latency": "not separately modeled; next-bar-open execution",
+    "fundingLimitations": "Historical funding markPrice is blank for a material share of rows; entry-price proxy for non-4h-aligned settlement timestamps is approximate and prevents OOS_VALIDATED promotion from this single experiment."
   },
   "baselines": [
     "same failed-breakout rules without context filter",

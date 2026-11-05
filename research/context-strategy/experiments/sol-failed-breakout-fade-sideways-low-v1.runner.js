@@ -147,7 +147,7 @@ function run(input) {
       }
       if (exitIdx<0) continue;
       const entryTime=times[entryIdx], exitTime=closeTime[exitIdx];
-      let fundingCost=0, fundingCount=0, fundingProxyCount=0, fundingUnpriced=0;
+      let fundingCost=0, fundingCount=0, fundingProxyCount=0, fundingEntryPriceProxyCount=0, fundingUnpriced=0;
       for (const ft of fundingTimes) {
         if (ft<=entryTime || ft>exitTime) continue;
         const f=fundingByTime.get(ft);
@@ -156,7 +156,7 @@ function run(input) {
           const nearest=Math.round(ft/intervalMs)*intervalMs;
           const bi=barIndexByTime.get(nearest);
           if (bi!==undefined && Math.abs(times[bi]-ft)<=60000) { mark=open[bi]; fundingProxyCount++; }
-          else { fundingUnpriced++; continue; }
+          else { mark=entry; fundingProxyCount++; fundingEntryPriceProxyCount++; }
         }
         fundingCost += side*f.rate*mark*params.qty;
         fundingCount++;
@@ -171,6 +171,7 @@ function run(input) {
         entry,exit:exitPrice,stop,target,exitReason,holdingBars:exitIdx-entryIdx+1,
         grossQuotePnl:gross,executionCostQuote:executionCost,fundingCostQuote:fundingCost,
         fundingSettlements:fundingCount,fundingMarkProxySettlements:fundingProxyCount,
+        fundingEntryPriceProxySettlements:fundingEntryPriceProxyCount,
         fundingUnpricedSettlements:fundingUnpriced,netQuotePnl:net,netR:net/riskQuote,
         context:features[i].context
       });
@@ -196,6 +197,7 @@ function run(input) {
       averageHoldingBars:n?holding/n:null,turnoverQuote:trades.reduce((a,t)=>a+(t.entry+t.exit),0),
       fundingSettlements:trades.reduce((a,t)=>a+t.fundingSettlements,0),
       fundingMarkProxySettlements:trades.reduce((a,t)=>a+t.fundingMarkProxySettlements,0),
+      fundingEntryPriceProxySettlements:trades.reduce((a,t)=>a+(t.fundingEntryPriceProxySettlements||0),0),
       fundingUnpricedSettlements:trades.reduce((a,t)=>a+t.fundingUnpricedSettlements,0),
       tradesLedger:trades
     };

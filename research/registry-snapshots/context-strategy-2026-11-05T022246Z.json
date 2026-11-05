@@ -1,0 +1,409 @@
+{
+  "schema_version": "1.1.0",
+  "snapshot_id": "context-strategy-2026-11-05T022246Z",
+  "evaluated_at_utc": "2026-11-05T02:22:46.131Z",
+  "run_status": "RESEARCH_BLOCKED",
+  "monitoring_performed": true,
+  "research_experiment": {
+    "executed": false,
+    "oos_evaluated": false,
+    "status": "BLOCKED",
+    "reason": "No local checkout, compatible Node/npm runtime, raw multi-cycle archive, or locally invokable backtest harness. Connector data supports monitoring only."
+  },
+  "repository": {
+    "full_name": "shubhamtaywade82/crypto-trading-agent",
+    "default_branch": "main",
+    "observed_main_commit": "3e5049c7a7ef57a9db75aaaa145287d839746bae",
+    "observed_commit_time_utc": "2026-11-04T19:05:52Z",
+    "package_version": "2.4.1",
+    "required_node": ">=24",
+    "required_npm": ">=11",
+    "remote_backtest_entrypoint": "scripts/backtest.ts",
+    "remote_archive_reader": "src/backtesting/archiveKlines.ts",
+    "local_checkout_present": false,
+    "harness_timeframes": [
+      "15m",
+      "1h",
+      "4h"
+    ],
+    "remote_code_inspected_not_executed": true
+  },
+  "execution_preflight": {
+    "environment": "managed Debian 13 Linux container",
+    "cwd": "/",
+    "kernel": "Linux x86_64",
+    "python": "3.13.5",
+    "node": "v22.16.0",
+    "npm": "10.9.2",
+    "pnpm": "missing",
+    "yarn": "missing",
+    "cpu_count": 5,
+    "memory_total_bytes": 6090668032,
+    "memory_available_bytes": 4920756224,
+    "disk_available_bytes": 32212254720,
+    "binance_sdk_imports": {
+      "binance": false,
+      "@binance/connector": false,
+      "binance-api-node": false,
+      "@nemesis-oss/binance-sdk": false
+    },
+    "local_repository": false,
+    "direct_fapi_dns": "FAILED; curl HTTP 000",
+    "connector_data_calls": "SUCCESS; raw HTTP statuses not exposed",
+    "server_time_endpoint": "/fapi/v1/time BLOCKED by DNS",
+    "exchange_info_server_time_utc": "2026-11-05T01:01:01.903Z",
+    "exchange_info_age_seconds": 4904,
+    "exchange_info_execution_validation": "BLOCKED_STALE",
+    "backtest_smoke_test": false,
+    "raw_archive_present": false
+  },
+  "source_endpoints": {
+    "server_time": "/fapi/v1/time DNS_FAILED",
+    "exchange_info": "/fapi/v1/exchangeInfo connector success but stale serverTime",
+    "klines": "/fapi/v1/klines connector success",
+    "premium_index": "/fapi/v1/premiumIndex connector success",
+    "open_interest": "/fapi/v1/openInterest connector success",
+    "ticker_24h": "/fapi/v1/ticker/24hr connector success",
+    "funding_history": "/fapi/v1/fundingRate connector success",
+    "open_interest_history": "/futures/data/openInterestHist connector success",
+    "taker_buy_sell": "/futures/data/takerlongshortRatio connector success",
+    "global_long_short": "/futures/data/globalLongShortAccountRatio connector success",
+    "book_ticker": "/fapi/v1/ticker/bookTicker connector success",
+    "raw_http_statuses": "not exposed by connector"
+  },
+  "market_data": {
+    "source": "Binance USDⓈ-M connector",
+    "retrieved_at_utc": "2026-11-05T02:22:46.131Z",
+    "symbols": [
+      "BTCUSDT",
+      "ETHUSDT",
+      "SOLUSDT",
+      "XRPUSDT"
+    ],
+    "intervals": {
+      "5m": {
+        "rows_per_symbol": 120,
+        "completed_per_symbol": 119,
+        "forming_excluded": 1,
+        "first_open_utc": "2026-11-04T16:25:00Z",
+        "last_completed_open_utc": "2026-11-05T02:15:00Z"
+      },
+      "15m": {
+        "rows_per_symbol": 120,
+        "completed_per_symbol": 119,
+        "forming_excluded": 1,
+        "first_open_utc": "2026-11-03T20:30:00Z",
+        "last_completed_open_utc": "2026-11-05T02:00:00Z"
+      },
+      "1h": {
+        "rows_per_symbol": 120,
+        "completed_per_symbol": 119,
+        "forming_excluded": 1,
+        "first_open_utc": "2026-10-31T03:00:00Z",
+        "last_completed_open_utc": "2026-11-05T01:00:00Z"
+      },
+      "4h": {
+        "rows_per_symbol": 120,
+        "completed_per_symbol": 119,
+        "forming_excluded": 1,
+        "first_open_utc": "2026-10-16T04:00:00Z",
+        "last_completed_open_utc": "2026-11-04T20:00:00Z"
+      }
+    },
+    "quality": {
+      "series_count": 16,
+      "raw_rows": 1920,
+      "completed_rows": 1904,
+      "forming_rows_excluded": 16,
+      "duplicates": 0,
+      "missing_intervals": 0,
+      "non_monotonic": 0,
+      "ohlc_or_volume_failures": 0,
+      "nonfinite_failures": 0,
+      "alignment": "PASS on returned bounded sample",
+      "full_archive_completeness": "NOT_ESTABLISHED"
+    },
+    "raw_archive": {
+      "present": false,
+      "paths_checked": [
+        "/mnt/data",
+        "/workspace",
+        "/workspaces",
+        "/root",
+        "/tmp"
+      ],
+      "files_found": [
+        "/mnt/data/context_strategy_snapshot_2026-11-05T012501Z.json",
+        "/mnt/data/context_strategy_snapshot_2026-11-05T012501Z.json.sha256"
+      ],
+      "persisted": false
+    },
+    "adequacy": "INSUFFICIENT: 4h under 20 days; 1h under 5 days; 15m under 30 hours; 5m under 10 hours. No multi-cycle sample."
+  },
+  "current_market_snapshot": {
+    "as_of_utc": "2026-11-05T02:22:37Z",
+    "funding_interval_hours": 8,
+    "last_settled_funding_time_utc": "2026-11-05T00:00:00Z",
+    "next_funding_time_utc": "2026-11-05T08:00:00Z",
+    "max_abs_observed_funding_pct": 0.01,
+    "abs_0_05pct_threshold_breached": false,
+    "premium_index_lastFundingRate_is_not_a_separate_next_rate": true,
+    "BTCUSDT": {
+      "mark": 80685.61251449,
+      "last": 80680.2,
+      "change24h_pct": 5.029,
+      "quote_volume_24h": 18935794380.61,
+      "indicated_rate_pct": 0.004986,
+      "settled_rate_pct": 0.002405,
+      "oi": 96624.143,
+      "oi_change_4h_pct": -1.1496,
+      "taker_buy_sell_1h": 0.921,
+      "global_long_short_ratio": 1.3815,
+      "long_account_pct": 58.01,
+      "spread_bps": 0.0124,
+      "book_imbalance": -0.3144,
+      "ret20_1h_pct": 3.7519,
+      "ema20_1h": 79599.342,
+      "ema50_1h": 78640.848,
+      "atr14_1h_pct": 0.7604,
+      "ret20_4h_pct": 3.2297,
+      "ema20_4h": 78324.862,
+      "ema50_4h": 78640.063,
+      "atr14_4h_pct": 1.3564,
+      "ret30m_5m_pct": -0.0192,
+      "ret1h_15m_pct": -0.0484,
+      "context": "1h bullish; 4h mixed; short-term flat/slightly negative; OI/taker softer; transition",
+      "confidence": "medium heuristic"
+    },
+    "ETHUSDT": {
+      "mark": 2429.13,
+      "last": 2429.13,
+      "change24h_pct": 7.397,
+      "quote_volume_24h": 12991856183.19,
+      "indicated_rate_pct": -0.001093,
+      "settled_rate_pct": -0.00265,
+      "oi": 2367624.578,
+      "oi_change_4h_pct": -0.412,
+      "taker_buy_sell_1h": 1.0206,
+      "global_long_short_ratio": 1.8835,
+      "long_account_pct": 65.32,
+      "spread_bps": 0.0412,
+      "book_imbalance": 0.5567,
+      "ret20_1h_pct": 5.9508,
+      "ema20_1h": 2384.263,
+      "ema50_1h": 2335.975,
+      "atr14_1h_pct": 1.08,
+      "ret20_4h_pct": 6.9574,
+      "ema20_4h": 2314.581,
+      "ema50_4h": 2306.265,
+      "atr14_4h_pct": 1.7555,
+      "ret30m_5m_pct": 0.1076,
+      "ret1h_15m_pct": 0.1545,
+      "context": "1h/4h bullish alignment; short-term positive; OI slightly lower; no tested entry trigger",
+      "confidence": "medium heuristic"
+    },
+    "SOLUSDT": {
+      "mark": 96.15248437,
+      "last": 96.15,
+      "change24h_pct": 4.796,
+      "quote_volume_24h": 2140245014.1391,
+      "indicated_rate_pct": 0.01,
+      "settled_rate_pct": 0.01,
+      "oi": 9294828.25,
+      "oi_change_4h_pct": 0.0495,
+      "taker_buy_sell_1h": 1.065,
+      "global_long_short_ratio": 2.8008,
+      "long_account_pct": 73.69,
+      "spread_bps": 1.0398,
+      "book_imbalance": 0.5077,
+      "ret20_1h_pct": 3.5483,
+      "ema20_1h": 94.743,
+      "ema50_1h": 94.024,
+      "atr14_1h_pct": 1.3339,
+      "ret20_4h_pct": 0.8337,
+      "ema20_4h": 94.108,
+      "ema50_4h": 95.984,
+      "atr14_4h_pct": 2.1911,
+      "ret30m_5m_pct": 0.1771,
+      "ret1h_15m_pct": 0.2815,
+      "context": "1h bullish; 4h mixed/weak; short-term positive; transition",
+      "confidence": "low-medium heuristic"
+    },
+    "XRPUSDT": {
+      "mark": 1.3087,
+      "last": 1.3088,
+      "change24h_pct": 4.337,
+      "quote_volume_24h": 864972893.5554,
+      "indicated_rate_pct": 0.01,
+      "settled_rate_pct": 0.01,
+      "oi": 344342815.2,
+      "oi_change_4h_pct": -0.6922,
+      "taker_buy_sell_1h": 1.1807,
+      "global_long_short_ratio": 2.5137,
+      "long_account_pct": 71.54,
+      "spread_bps": 0.764,
+      "book_imbalance": 0.0674,
+      "ret20_1h_pct": 2.4593,
+      "ema20_1h": 1.298008,
+      "ema50_1h": 1.283195,
+      "atr14_1h_pct": 1.0341,
+      "ret20_4h_pct": 4.44,
+      "ema20_4h": 1.275684,
+      "ema50_4h": 1.275165,
+      "atr14_4h_pct": 1.776,
+      "ret30m_5m_pct": 0.176,
+      "ret1h_15m_pct": 0.0765,
+      "context": "1h/4h bullish alignment; short-term positive but muted; OI lower; no tested entry trigger",
+      "confidence": "medium heuristic"
+    }
+  },
+  "context_discovery": {
+    "taxonomy_status": "PROVISIONAL_HEURISTIC_ONLY",
+    "thresholds_fit_on_training_data": false,
+    "frequency_duration_transition_stats": null,
+    "classification_is_not_win_probability": true,
+    "sample_adequacy": "INSUFFICIENT"
+  },
+  "strategy_context_scorecard": {
+    "trend_pullback_continuation": {
+      "family_status": "HYPOTHESIS",
+      "per_symbol_status": "INSUFFICIENT_EVIDENCE",
+      "symbols": [
+        "SOLUSDT",
+        "ETHUSDT",
+        "XRPUSDT"
+      ],
+      "oos_metrics": null
+    },
+    "breakout_retest_volatility_contraction": {
+      "family_status": "HYPOTHESIS",
+      "per_symbol_status": "INSUFFICIENT_EVIDENCE",
+      "symbols": [
+        "SOLUSDT",
+        "ETHUSDT",
+        "XRPUSDT"
+      ],
+      "oos_metrics": null
+    },
+    "range_mean_reversion_failed_breakout_fade": {
+      "family_status": "HYPOTHESIS",
+      "per_symbol_status": "INSUFFICIENT_EVIDENCE",
+      "symbols": [
+        "SOLUSDT",
+        "ETHUSDT",
+        "XRPUSDT"
+      ],
+      "oos_metrics": null
+    },
+    "volatility_expansion_momentum": {
+      "family_status": "HYPOTHESIS",
+      "per_symbol_status": "INSUFFICIENT_EVIDENCE",
+      "symbols": [
+        "SOLUSDT",
+        "ETHUSDT",
+        "XRPUSDT"
+      ],
+      "oos_metrics": null
+    },
+    "btc_led_relative_strength": {
+      "family_status": "HYPOTHESIS",
+      "per_symbol_status": "INSUFFICIENT_EVIDENCE",
+      "symbols": [
+        "SOLUSDT",
+        "ETHUSDT",
+        "XRPUSDT"
+      ],
+      "oos_metrics": null
+    },
+    "funding_oi_filters": {
+      "family_status": "HYPOTHESIS",
+      "per_symbol_status": "INSUFFICIENT_EVIDENCE",
+      "symbols": [
+        "SOLUSDT",
+        "ETHUSDT",
+        "XRPUSDT"
+      ],
+      "oos_metrics": null
+    }
+  },
+  "conditional_strategy_registry": {
+    "oos_validated_entries": [],
+    "status": "NO_VALIDATED_STRATEGIES",
+    "status_transitions_this_run": [],
+    "prior_snapshot_commit": "9cd6f233e01daa059ae7e052c3e44e5de6a63c3a",
+    "prior_underlying_research_artifacts_available": false
+  },
+  "decisions": {
+    "BTCUSDT": "REFERENCE_ONLY",
+    "SOLUSDT": {
+      "decision": "NO_TRADE",
+      "reason": "No OOS_VALIDATED symbol/context entry; 4h context mixed; stale exchange metadata blocks execution validation."
+    },
+    "ETHUSDT": {
+      "decision": "NO_TRADE",
+      "reason": "No OOS_VALIDATED symbol/context entry; bullish context is not an entry trigger; stale exchange metadata blocks execution validation."
+    },
+    "XRPUSDT": {
+      "decision": "NO_TRADE",
+      "reason": "No OOS_VALIDATED symbol/context entry; bullish context is not an entry trigger; stale exchange metadata blocks execution validation."
+    }
+  },
+  "cost_model": {
+    "backtest_costs_applied": false,
+    "maker_fee": null,
+    "taker_fee": null,
+    "slippage": null,
+    "funding_cashflows_simulated": false,
+    "observed_spread_bps": {
+      "BTCUSDT": 0.0124,
+      "ETHUSDT": 0.0412,
+      "SOLUSDT": 1.0398,
+      "XRPUSDT": 0.764
+    },
+    "note": "Point-in-time top-of-book spread is not a slippage model."
+  },
+  "research_queue": [
+    {
+      "id": "Q1",
+      "priority": 1,
+      "status": "BLOCKED",
+      "item": "Restore executable workspace",
+      "next_action": "Mount/clone repository; provision Node 24/npm 11; install dependencies; run typecheck/build/tests and deterministic harness smoke test."
+    },
+    {
+      "id": "Q2",
+      "priority": 2,
+      "status": "BLOCKED",
+      "item": "Acquire multi-cycle archive for 4 symbols x 5m/15m/1h/4h plus funding",
+      "next_action": "Run archive fetcher from a local environment with working Binance REST/data.binance.vision; persist raw monthly/daily files and checksummed manifests; read back and validate continuity."
+    },
+    {
+      "id": "Q3",
+      "priority": 3,
+      "status": "QUEUED_BLOCKED",
+      "item": "Fit compact context taxonomy",
+      "next_action": "After Q2, fit thresholds on training only and report frequency/duration/transitions/stability."
+    },
+    {
+      "id": "Q4",
+      "priority": 4,
+      "status": "QUEUED_BLOCKED",
+      "item": "Pre-register first context-conditioned experiment",
+      "next_action": "After Q1-Q3, freeze trend-pullback rules and costs; execute chronological train/validation/untouched OOS with purge/embargo."
+    },
+    {
+      "id": "Q5",
+      "priority": 5,
+      "status": "QUEUED_BLOCKED",
+      "item": "Weekly taxonomy and strategy-family review",
+      "next_action": "After a multi-cycle archive and reproducible experiment exist, compare context stability and family performance."
+    }
+  ],
+  "artifact_status": {
+    "raw_data_persisted": false,
+    "derived_features_persisted": false,
+    "experiment_results_persisted": false,
+    "snapshot_target_branch": "research/registry-snapshots",
+    "snapshot_readback_verification": "PENDING"
+  }
+}

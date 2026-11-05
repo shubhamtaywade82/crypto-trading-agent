@@ -67,8 +67,25 @@
       "evidence": "Dedicated GitHub branch available; this snapshot, registry and queue are being committed and read back."
     },
     "artifactReadback": {
-      "status": "PENDING",
-      "evidence": "Will be marked PASS only after fetch_file returns exact saved content."
+      "status": "PASS",
+      "evidence": [
+        {
+          "path": "research/context-strategy/runs/2026-11-05T095746Z-context-discovery.json",
+          "blobSha": "64215714c176807da7da4842b1e9f9fe007f7659",
+          "exactMatch": true
+        },
+        {
+          "path": "research/context-strategy/registry.json",
+          "blobSha": "72a45ec15a98d3145afd5d7f78260833eedb02a4",
+          "exactMatch": true
+        },
+        {
+          "path": "research/context-strategy/queue.json",
+          "blobSha": "358237075318c92ff5d9c7ac294281f4a12d664c",
+          "exactMatch": true
+        }
+      ],
+      "note": "All three GitHub files were fetched from the research branch and matched the written contents exactly."
     }
   },
   "dataManifest": {
@@ -713,5 +730,16 @@
     "premiumIndexLastFundingRateField": 0.0001,
     "note": "Current predicted funding not separately available. Premium-index lastFundingRate field was 0.0001 for all four; latest funding history settlement differed for ETH (0.00005731). No observed absolute rate exceeded 0.05%.",
     "noLiquidationInference": true
+  },
+  "persistence": {
+    "provider": "GitHub",
+    "branch": "research/context-strategy-2026-11-05-run11",
+    "files": [
+      "research/context-strategy/runs/2026-11-05T095746Z-context-discovery.json",
+      "research/context-strategy/registry.json",
+      "research/context-strategy/queue.json"
+    ],
+    "rawMarketBarsPersisted": false,
+    "manifestAndResearchSnapshotPersisted": true
   }
 }

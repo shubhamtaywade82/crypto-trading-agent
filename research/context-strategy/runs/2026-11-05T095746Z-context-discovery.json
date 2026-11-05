@@ -44,7 +44,12 @@
     },
     "rawArchive": {
       "status": "BLOCKED",
-      "evidence": "No local raw archive or manifest file was accessible/read back in this runtime; this run fetched bounded klines only."
+      "evidence": [
+        "No local archive path could be inspected because shell/filesystem tools were unavailable.",
+        "GitHub main returned 404 NOT_FOUND for data/strategy-approvals.json, data/backtest-decisions.jsonl and data/setup-outcomes.jsonl.",
+        "Repository .gitignore excludes data/; no tracked raw archive or decision ledger was accessible."
+      ],
+      "impact": "No historical strategy ledger, approval file or raw archive can be compared/replayed in this run."
     },
     "dataQuality": {
       "status": "PASS_FOR_SAMPLED_WINDOWS",
@@ -797,5 +802,12 @@
     ],
     "rawMarketBarsPersisted": false,
     "manifestAndResearchSnapshotPersisted": true
+  },
+  "registryAvailability": {
+    "accessibleOosValidatedEntries": 0,
+    "approvalsFileAccessible": false,
+    "decisionLedgerAccessible": false,
+    "setupOutcomeLedgerAccessible": false,
+    "note": "Local ignored files may exist on the user's machine, but they were not accessible to this run and were not assumed."
   }
 }

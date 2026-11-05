@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAtUtc": "2026-11-05T19:24:20.083Z",
+  "updatedAtUtc": "2026-11-05T20:33:10.000Z",
   "items": [
     {
       "id": "Q1_ARCHIVE_MULTIYEAR",
@@ -11,8 +11,8 @@
         "Compatible bulk-data downloader or official Binance Vision access",
         "Persistent writable store"
       ],
-      "nextAction": "Recover the original 76-row delta or its exact request/coverage manifest from repository history or backup. Do not synthesize row coverage from the declared count. Then reassemble the canonical 4h archive with the XRP correction applied and backfill multi-year 5m/15m/1h history.",
-      "blocker": "A 52-row incremental refresh was appended and readback-verified through 5m 19:15Z, 15m 19:00Z and 1h 18:00Z on 2026-11-05. The indexed 76-row delta still returns 404 in the only archive branch; no manifest, alternate branch copy or commit-search hit was found. Its exact symbol/interval/time coverage is unknown. One malformed XRP 4h original line remains immutable with a separate correction artifact. Multi-year lower-timeframe history is absent."
+      "nextAction": "Recover the original 76-row delta or exact request/coverage manifest from backup/creating-run logs. Then reassemble canonical 4h data applying the XRP correction and backfill multi-year 5m/15m/1h history.",
+      "blocker": "An additional 84 completed rows were appended and readback-verified: 5m through 20:25Z, 15m through 20:15Z, 1h through 19:00Z and 4h through 16:00Z on 2026-11-05. The original indexed 76-row delta still returns 404 and its coverage is unknown. One malformed XRP 4h original line has a separate correction artifact. Canonical reassembly and multi-year lower-timeframe history remain incomplete."
     },
     {
       "id": "Q2_VERIFY_EXCHANGE_TIME_METADATA",
@@ -21,8 +21,8 @@
       "prerequisites": [
         "Direct bounded HTTP or Binance SDK call"
       ],
-      "nextAction": "Restore direct DNS/network access; probe uncached /fapi/v1/time and /fapi/v1/exchangeInfo and require <=60s drift. Re-check all four symbols' PERPETUAL/TRADING status before treating contract metadata as execution-authoritative.",
-      "blocker": "Direct bounded requests to /fapi/v1/time, /exchangeInfo, /klines, /premiumIndex, /openInterest and /ticker/24hr failed with DNS resolution errors (no HTTP status). Connector exchangeInfo.serverTime=2026-11-05T06:46:24.913Z versus fresh mark.time=2026-11-05T19:21:14Z, a 45,289.087s (12h34m49s) stale value. Connector mark/ticker/OI/book observations are fresh, but metadata is not execution-authoritative."
+      "nextAction": "Restore direct DNS/network access; probe uncached /fapi/v1/time and /fapi/v1/exchangeInfo, require <=60s drift, and verify all four PERPETUAL/TRADING contracts before execution validation.",
+      "blocker": "Direct bounded requests to /fapi/v1/time, /exchangeInfo, /klines, /premiumIndex, /openInterest and /ticker/24hr fail DNS resolution. Connector exchangeInfo.serverTime=2026-11-05T06:46:24.913Z versus fresh premiumIndex mark.time=2026-11-05T20:32:30Z, drift 49,565.087s (13h46m05s). Current connector market observations are fresh, but metadata is not execution-authoritative."
     },
     {
       "id": "Q3_RUN_REPOSITORY_BACKTEST",
@@ -481,8 +481,63 @@
         "Node >=24/npm >=11",
         "Committed executable research runner and deterministic smoke test"
       ],
-      "nextAction": "After Q1/Q3 prerequisites pass, execute a pre-registered strategy-family x context x symbol experiment with chronological train/validation/untouched-test splits, funding/cost treatment, block-bootstrap CI and multiple-testing control.",
-      "blocker": "No valid strategy experiment was run in this daily cycle. The 76-row archive delta has unknown exact coverage; multi-year 5m/15m/1h data are missing; local Node/npm are below project requirements; no repository checkout or committed executable runner is available. Do not lower the evidence gate or substitute a fabricated experiment."
+      "nextAction": "After archive recovery/reassembly and compatible Node >=24/npm >=11 checkout, run the committed deterministic fixture smoke test, then pre-register and execute a different strategy-family x context x symbol experiment with chronological splits and cost-aware OOS.",
+      "blocker": "No valid strategy experiment ran. The 76-row delta remains unresolved; multi-year 5m/15m/1h history is absent; local Node/npm are below project requirements; no local checkout or committed executable research runner exists. Do not lower evidence gates or substitute a fabricated experiment."
+    },
+    {
+      "id": "Q24_INCREMENTAL_ARCHIVE_REFRESH_20261105T203205Z",
+      "priority": 1,
+      "status": "COMPLETED",
+      "prerequisites": [
+        "Binance USDⓈ-M kline connector",
+        "Known previous completed-bar high-water marks",
+        "GitHub repository write access"
+      ],
+      "nextAction": "Next run append only completed candles after 5m 20:25Z, 15m 20:15Z, 1h 19:00Z and 4h 16:00Z; verify continuity, manifest/hash and readback.",
+      "blocker": null,
+      "result": {
+        "rows": 84,
+        "row_counts_by_symbol_interval": {
+          "BTCUSDT:5m": 14,
+          "BTCUSDT:15m": 5,
+          "BTCUSDT:1h": 1,
+          "BTCUSDT:4h": 1,
+          "ETHUSDT:5m": 14,
+          "ETHUSDT:15m": 5,
+          "ETHUSDT:1h": 1,
+          "ETHUSDT:4h": 1,
+          "SOLUSDT:5m": 14,
+          "SOLUSDT:15m": 5,
+          "SOLUSDT:1h": 1,
+          "SOLUSDT:4h": 1,
+          "XRPUSDT:5m": 14,
+          "XRPUSDT:15m": 5,
+          "XRPUSDT:1h": 1,
+          "XRPUSDT:4h": 1
+        },
+        "latest_completed_open_utc_by_symbol_interval": {
+          "BTCUSDT:5m": "2026-11-05T20:25:00.000Z",
+          "BTCUSDT:15m": "2026-11-05T20:15:00.000Z",
+          "BTCUSDT:1h": "2026-11-05T19:00:00.000Z",
+          "BTCUSDT:4h": "2026-11-05T16:00:00.000Z",
+          "ETHUSDT:5m": "2026-11-05T20:25:00.000Z",
+          "ETHUSDT:15m": "2026-11-05T20:15:00.000Z",
+          "ETHUSDT:1h": "2026-11-05T19:00:00.000Z",
+          "ETHUSDT:4h": "2026-11-05T16:00:00.000Z",
+          "SOLUSDT:5m": "2026-11-05T20:25:00.000Z",
+          "SOLUSDT:15m": "2026-11-05T20:15:00.000Z",
+          "SOLUSDT:1h": "2026-11-05T19:00:00.000Z",
+          "SOLUSDT:4h": "2026-11-05T16:00:00.000Z",
+          "XRPUSDT:5m": "2026-11-05T20:25:00.000Z",
+          "XRPUSDT:15m": "2026-11-05T20:15:00.000Z",
+          "XRPUSDT:1h": "2026-11-05T19:00:00.000Z",
+          "XRPUSDT:4h": "2026-11-05T16:00:00.000Z"
+        },
+        "delta_path": "research-data/binance-usdm/delta/binance_usdm_delta_20261105T203205Z_completed.jsonl",
+        "manifest_path": "research-data/binance-usdm/delta/binance_usdm_delta_20261105T203205Z.manifest.json",
+        "delta_sha256": "d377e1fb88a0fb40cdbc55700b9cb97feff2280168ee9ebda530459809fef5cc",
+        "readbackVerified": true
+      }
     }
   ],
   "lastRun": {

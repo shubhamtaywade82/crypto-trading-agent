@@ -1,7 +1,7 @@
 {
   "schema_version": "1.1.0",
   "snapshot_id": "context-strategy-2026-11-05T061933Z",
-  "evaluated_at_utc": "2026-11-05T06:19:33.218Z",
+  "evaluated_at_utc": "2026-11-05T06:25:57.207Z",
   "run_status": "RESEARCH_BLOCKED",
   "monitoring_performed": true,
   "research_experiment": {
@@ -30,7 +30,7 @@
   },
   "execution_preflight": {
     "environment": "managed Linux container",
-    "observed_at_utc": "2026-11-05T06:19:33.218Z",
+    "observed_at_utc": "2026-11-05T06:25:57.207Z",
     "os": "Linux x86_64, kernel 6.18.57",
     "node": "v22.16.0",
     "npm": "10.9.2",
@@ -61,8 +61,8 @@
       "endpoint": "/fapi/v1/exchangeInfo",
       "connector_call": "success",
       "server_time_utc": "2026-11-05T03:03:55.303Z",
-      "observed_local_utc": "2026-11-05T06:19:33.218Z",
-      "age_seconds": 11737.915,
+      "observed_local_utc": "2026-11-05T06:25:57.207Z",
+      "age_seconds": 12121.904,
       "symbols_reported_trading": [
         "BTCUSDT",
         "ETHUSDT",
@@ -80,14 +80,16 @@
     "storage": {
       "free_disk_gib": 30,
       "ephemeral_container_write": true,
-      "raw_historical_archive_present": false,
+      "raw_historical_archive_present": true,
       "local_artifact_readback": "previous JSON snapshot and checksum read successfully",
-      "raw_data_or_experiment_artifact_persisted": false
+      "raw_data_or_experiment_artifact_persisted": false,
+      "raw_archive_scope": "bounded latest sample persisted on GitHub; not multi-cycle",
+      "artifact_readback": "all four CSV files and manifest fetched back and compared byte-for-byte; row counts verified"
     }
   },
   "market_data": {
     "source": "connected Binance USDⓈ-M market-data integration",
-    "retrieved_at_utc": "2026-11-05T06:18:26Z",
+    "retrieved_at_utc": "2026-11-05T06:25:07Z",
     "endpoint_http_statuses": "not exposed by connector",
     "exchange_server_time_endpoint": "unavailable",
     "exchange_metadata_server_time_utc": "2026-11-05T03:03:55.303Z (stale; not used for execution validation)",
@@ -101,9 +103,9 @@
       "5m": {
         "rows_per_symbol": 1500,
         "completed_rows_per_symbol": 1499,
-        "first_open_utc": "2026-10-31T01:20:00Z",
-        "last_completed_open_utc": "2026-11-05T06:10:00Z",
-        "latest_completed_close_utc": "2026-11-05T06:14:59.999Z",
+        "first_open_utc": "2026-10-31T01:30:00Z",
+        "last_completed_open_utc": "2026-11-05T06:20:00Z",
+        "latest_completed_close_utc": "2026-11-05T06:24:59.999Z",
         "forming_excluded_per_symbol": 1
       },
       "15m": {
@@ -139,44 +141,97 @@
       "duplicate_timestamps": 0,
       "missing_interval_gaps": 0,
       "nonmonotonic_timestamps": 0,
+      "timestamp_alignment_failures": 0,
       "ohlc_invariant_failures": 0,
       "nonpositive_volume_failures": 0,
       "nonfinite_ohlcv_failures": 0,
-      "cross_symbol_timestamp_alignment": "matched for all four intervals on returned sample",
-      "limitations": "bounded latest-1,500 sample only; 5m covers about 5.2 days, 15m 15.6 days, 1h 62.5 days, 4h 250.7 days; not a multi-cycle archive"
+      "cross_symbol_timestamp_alignment": "matched for all four intervals",
+      "persisted_archive_quality": "23,988 archived completed rows re-read from GitHub; zero duplicate/gap/alignment/OHLC/volume/nonfinite/forming-candle failures",
+      "limitations": "bounded latest-1,500 bars per symbol and interval; not a multi-cycle historical archive"
     },
     "raw_archive": {
-      "present": false,
-      "paths_checked": [
-        "/mnt/data",
-        "/workspace",
-        "/workspaces",
-        "/root",
-        "/tmp"
+      "present": true,
+      "location": "GitHub branch research/registry-snapshots",
+      "manifest_path": "research/data-archive/snapshots/2026-11-05/manifest.json",
+      "manifest_git_blob_sha": "4f5be869d6653f4623113f24f444a714a3079b53",
+      "total_rows": 23988,
+      "total_bytes": 3111613,
+      "files": [
+        {
+          "interval": "5m",
+          "path": "research/data-archive/snapshots/2026-11-05/klines_5m.csv",
+          "rows": 6000,
+          "bytes": 745825,
+          "first_open_utc": "2026-10-31T01:25:00Z",
+          "last_open_utc": "2026-11-05T06:20:00Z",
+          "git_blob_sha": "256fc10239806f3805b6c4b64edbf291c9fa6946"
+        },
+        {
+          "interval": "15m",
+          "path": "research/data-archive/snapshots/2026-11-05/klines_15m.csv",
+          "rows": 5996,
+          "bytes": 772486,
+          "first_open_utc": "2026-10-20T15:30:00Z",
+          "last_open_utc": "2026-11-05T06:00:00Z",
+          "git_blob_sha": "7c4f50db01e514b5d24d4614915ab5978c0aaae0"
+        },
+        {
+          "interval": "1h",
+          "path": "research/data-archive/snapshots/2026-11-05/klines_1h.csv",
+          "rows": 5996,
+          "bytes": 788843,
+          "first_open_utc": "2026-09-03T19:00:00Z",
+          "last_open_utc": "2026-11-05T05:00:00Z",
+          "git_blob_sha": "56f2d8e3d645b05c27c39348b17d968de2a902e4"
+        },
+        {
+          "interval": "4h",
+          "path": "research/data-archive/snapshots/2026-11-05/klines_4h.csv",
+          "rows": 5996,
+          "bytes": 804459,
+          "first_open_utc": "2026-02-28T08:00:00Z",
+          "last_open_utc": "2026-11-05T00:00:00Z",
+          "git_blob_sha": "355be0a0c61d8010ec5627cf1888a7b2cd1926dc"
+        }
       ],
-      "row_count": null,
-      "date_range": null,
-      "schema": null,
-      "sha256": null,
-      "persisted": false
+      "schema": [
+        "symbol",
+        "interval",
+        "open_time",
+        "open",
+        "high",
+        "low",
+        "close",
+        "volume",
+        "close_time",
+        "quote_asset_volume",
+        "trade_count",
+        "taker_buy_base_volume",
+        "taker_buy_quote_volume",
+        "ignore"
+      ],
+      "checksum_type": "GitHub Git blob SHA-1; SHA-256 not computed in connector runtime",
+      "readback_verified": true,
+      "persisted": true,
+      "limitation": "Latest bounded 1,500 completed bars per symbol/interval only; insufficient for multi-cycle inference"
     }
   },
   "current_market_snapshot": {
     "BTCUSDT": {
       "role": "reference_only",
-      "mark": 80533.7,
-      "index": 80566.21021739,
-      "last": 80533.7,
-      "change_24h_pct": 3.511,
+      "mark": 80525,
+      "index": 80557.96086957,
+      "last": 80525,
+      "change_24h_pct": 3.568,
       "high_24h": 81188,
-      "low_24h": 77748,
-      "quote_volume_24h": 15078975508.01,
-      "premium_index_lastFundingRate": 0.00009735,
+      "low_24h": 77750.8,
+      "quote_volume_24h": 15052861877.13,
+      "premium_index_lastFundingRate": 0.0000981,
       "last_settled_funding_rate": 0.00002405,
       "last_settled_funding_time_utc": "2026-11-05T00:00:00Z",
       "funding_interval_hours": 8,
       "next_funding_time_utc": "2026-11-05T08:00:00Z",
-      "open_interest_contracts": 95720.95,
+      "open_interest_contracts": 95721.28,
       "open_interest_change_4h_pct": -0.9206,
       "taker_buy_sell_ratio_latest_1h": 1.0946,
       "taker_observation_utc": "2026-11-05T05:00:00Z",
@@ -203,29 +258,30 @@
         "atr14_pct": 0.201
       },
       "trend_5m": {
-        "return_20_bars_pct": -0.1491,
-        "ema20": 80451.7482,
-        "ema50": 80496.72,
-        "atr14_pct": 0.1035
+        "return_20_bars_pct": -0.1736,
+        "ema20": 80464.027,
+        "ema50": 80498.4651,
+        "atr14_pct": 0.1022
       },
       "context": "1h bullish; 4h price above both EMAs but EMA20 below EMA50; short timeframes neutral/pullback; transition/mixed alignment",
-      "context_confidence": "medium; heuristic only"
+      "context_confidence": "medium; heuristic only",
+      "orderbook_top1_imbalance": 0.8496
     },
     "ETHUSDT": {
       "role": "tradable_universe",
-      "mark": 2425.99676423,
-      "index": 2426.90465116,
-      "last": 2425.9,
-      "change_24h_pct": 5.837,
+      "mark": 2426.19027132,
+      "index": 2427.03255814,
+      "last": 2426.12,
+      "change_24h_pct": 5.906,
       "high_24h": 2449.95,
-      "low_24h": 2290.77,
-      "quote_volume_24h": 11061903553.46,
-      "premium_index_lastFundingRate": 0.00001833,
+      "low_24h": 2290.82,
+      "quote_volume_24h": 11049029320.21,
+      "premium_index_lastFundingRate": 0.00002256,
       "last_settled_funding_rate": -0.0000265,
       "last_settled_funding_time_utc": "2026-11-05T00:00:00Z",
       "funding_interval_hours": 8,
       "next_funding_time_utc": "2026-11-05T08:00:00Z",
-      "open_interest_contracts": 2371616.563,
+      "open_interest_contracts": 2372927.045,
       "open_interest_change_4h_pct": 0.288,
       "taker_buy_sell_ratio_latest_1h": 1.0943,
       "taker_observation_utc": "2026-11-05T05:00:00Z",
@@ -252,36 +308,37 @@
         "atr14_pct": 0.2701
       },
       "trend_5m": {
-        "return_20_bars_pct": -0.2292,
-        "ema20": 2422.7061,
-        "ema50": 2424.1883,
-        "atr14_pct": 0.1481
+        "return_20_bars_pct": -0.1696,
+        "ema20": 2423.2886,
+        "ema50": 2424.3218,
+        "atr14_pct": 0.1432
       },
       "context": "1h/4h bullish EMA alignment; 5m/15m near-term pullback or consolidation",
-      "context_confidence": "medium; heuristic only"
+      "context_confidence": "medium; heuristic only",
+      "orderbook_top1_imbalance": -0.3088
     },
     "SOLUSDT": {
       "role": "tradable_universe",
-      "mark": 96.12,
-      "index": 96.15896091,
-      "last": 96.13,
-      "change_24h_pct": 3.588,
+      "mark": 96.04066413,
+      "index": 96.08225854,
+      "last": 96.05,
+      "change_24h_pct": 3.603,
       "high_24h": 98.16,
       "low_24h": 92.45,
-      "quote_volume_24h": 1853663762.4849,
+      "quote_volume_24h": 1852307751.8348,
       "premium_index_lastFundingRate": 0.0001,
       "last_settled_funding_rate": 0.0001,
       "last_settled_funding_time_utc": "2026-11-05T00:00:00Z",
       "funding_interval_hours": 8,
       "next_funding_time_utc": "2026-11-05T08:00:00Z",
-      "open_interest_contracts": 9237840.21,
+      "open_interest_contracts": 9239163.78,
       "open_interest_change_4h_pct": -0.3814,
       "taker_buy_sell_ratio_latest_1h": 0.9669,
       "taker_observation_utc": "2026-11-05T05:00:00Z",
       "global_long_account_pct": 73.73,
       "global_long_short_account_ratio": 2.8066,
       "orderbook_top20_imbalance": 0.0501,
-      "spread_bps": 1.0404,
+      "spread_bps": 1.0412,
       "trend_1h": {
         "return_20_bars_pct": 2.7924,
         "ema20": 95.1738,
@@ -301,36 +358,37 @@
         "atr14_pct": 0.4361
       },
       "trend_5m": {
-        "return_20_bars_pct": -0.4977,
-        "ema20": 95.9416,
-        "ema50": 96.015,
-        "atr14_pct": 0.2397
+        "return_20_bars_pct": -0.3425,
+        "ema20": 95.9619,
+        "ema50": 96.018,
+        "atr14_pct": 0.2261
       },
       "context": "1h bullish; 4h positive but EMA20 below EMA50; 5m pullback and 1h taker sell bias; elevated global long-account ratio",
-      "context_confidence": "medium-low; heuristic only"
+      "context_confidence": "medium-low; heuristic only",
+      "orderbook_top1_imbalance": -0.4782
     },
     "XRPUSDT": {
       "role": "tradable_universe",
-      "mark": 1.30868587,
-      "index": 1.30865818,
-      "last": 1.3087,
-      "change_24h_pct": 2.651,
+      "mark": 1.3092,
+      "index": 1.30919408,
+      "last": 1.3094,
+      "change_24h_pct": 2.754,
       "high_24h": 1.3424,
       "low_24h": 1.2724,
-      "quote_volume_24h": 759839932.0302,
+      "quote_volume_24h": 758938012.0899,
       "premium_index_lastFundingRate": 0.0001,
       "last_settled_funding_rate": 0.0001,
       "last_settled_funding_time_utc": "2026-11-05T00:00:00Z",
       "funding_interval_hours": 8,
       "next_funding_time_utc": "2026-11-05T08:00:00Z",
-      "open_interest_contracts": 343031018,
+      "open_interest_contracts": 343039255.1,
       "open_interest_change_4h_pct": -0.2563,
       "taker_buy_sell_ratio_latest_1h": 1.2571,
       "taker_observation_utc": "2026-11-05T05:00:00Z",
       "global_long_account_pct": 71.66,
       "global_long_short_account_ratio": 2.5286,
       "orderbook_top20_imbalance": 0.0687,
-      "spread_bps": 0.7641,
+      "spread_bps": 0.7639,
       "trend_1h": {
         "return_20_bars_pct": 1.7923,
         "ema20": 1.301219,
@@ -350,21 +408,28 @@
         "atr14_pct": 0.3278
       },
       "trend_5m": {
-        "return_20_bars_pct": -0.3885,
-        "ema20": 1.3081925,
-        "ema50": 1.3083398,
-        "atr14_pct": 0.1775
+        "return_20_bars_pct": -0.2743,
+        "ema20": 1.3082873,
+        "ema50": 1.308368,
+        "atr14_pct": 0.1642
       },
       "context": "1h/4h bullish; short-term pullback; 1h taker buy dominance and elevated global long-account ratio",
-      "context_confidence": "medium; heuristic only"
+      "context_confidence": "medium; heuristic only",
+      "orderbook_top1_imbalance": -0.4832
     }
   },
   "funding_notes": {
-    "premium_index_field": "lastFundingRate from /fapi/v1/premiumIndex; treated as the current premium-index rate field, not a settled funding cashflow",
+    "premium_index_field": "latest /fapi/v1/premiumIndex lastFundingRate field; not treated as a forward forecast",
     "settled_field": "latest /fapi/v1/fundingRate record per symbol",
     "funding_interval_hours": 8,
     "next_funding_time_utc": "2026-11-05T08:00:00Z",
-    "threshold_abs_0_05pct": "No observed rate exceeded 0.05% per 8-hour interval; largest observed current field was 0.01% (SOL/XRP)."
+    "threshold_abs_0_05pct": "No observed premiumIndex lastFundingRate or latest settled rate exceeded 0.05% per 8-hour interval.",
+    "current_rates_pct_per_8h": {
+      "BTCUSDT": 0.00981,
+      "ETHUSDT": 0.002256,
+      "SOLUSDT": 0.01,
+      "XRPUSDT": 0.01
+    }
   },
   "context_discovery": {
     "taxonomy_status": "PROVISIONAL_HEURISTIC_ONLY",
@@ -434,7 +499,7 @@
         "durable archive storage",
         "manifest/checksum writer"
       ],
-      "next_action": "Use the connected Binance integration or approved archive source to page backward from each symbol's onboard date, write immutable raw partitions and manifests, then verify checksums/readback. Current 1,500-row samples are not sufficient."
+      "next_action": "Continue paginated backfill beyond the latest 1,500 bars per series, prioritizing multi-year 4h/1h history and then 15m/5m; append completed bars, update Git blob checksums and re-read manifests."
     },
     {
       "id": "Q3",
@@ -473,10 +538,11 @@
     }
   ],
   "artifact_status": {
-    "raw_data_persisted": false,
+    "raw_data_persisted": true,
     "derived_features_persisted": false,
     "experiment_results_persisted": false,
     "this_snapshot_persistence": "PERSISTED_AND_READBACK_VERIFIED",
-    "github_blob_sha_before_verification_update": "369cb615c366f807ddfc7e378ae65e2e6bfa93e7"
+    "github_blob_sha_before_verification_update": "369cb615c366f807ddfc7e378ae65e2e6bfa93e7",
+    "raw_archive_manifest_git_blob_sha": "4f5be869d6653f4623113f24f444a714a3079b53"
   }
 }

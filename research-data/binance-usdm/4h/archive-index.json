@@ -1,6 +1,6 @@
 {
   "schema_version": "1.0.0",
-  "created_at_utc": "2026-11-05T09:38:24.122Z",
+  "created_at_utc": "2026-11-05T09:43:57.448Z",
   "repository": "shubhamtaywade82/crypto-trading-agent",
   "branch": "research/raw-ohlcv-archive-2026-11-05T0530Z",
   "interval": "4h",
@@ -54,10 +54,44 @@
   "integrity": {
     "structural_quality": "PASS for all persisted pages: no internal 4h gaps, OHLC invariant failures, or nonpositive-volume rows reported.",
     "readback": "PASS for raw pages 1-9 via GitHub fetch_file readback.",
-    "original_manifest_hash_matches": 19,
-    "original_manifest_hash_mismatches": 17,
+    "original_manifest_hash_matches": 22,
+    "original_manifest_hash_mismatches": 14,
     "hash_mismatch_scope": "page-0002..0006 BTCUSDT (5 mismatches total); page-0007..0009 all four symbols (12 mismatches). Raw rows are preserved; do not overwrite expected hashes. Alternate-source reconciliation remains open.",
-    "source_revision_policy": "Store actual and expected hashes side-by-side; do not normalize mismatches without provenance."
+    "source_revision_policy": "Store actual and expected hashes side-by-side; do not normalize mismatches without provenance.",
+    "mismatch_scope": "page-0002..0006 BTCUSDT (5 mismatches total); page-0007..0008 all four symbols (8 mismatches); page-0009 BTCUSDT (1 mismatch). Raw rows are preserved; do not overwrite expected hashes. Alternate-source reconciliation remains open.",
+    "mismatch_symbols_by_page": {
+      "page1": [],
+      "page2": [
+        "BTCUSDT"
+      ],
+      "page3": [
+        "BTCUSDT"
+      ],
+      "page4": [
+        "BTCUSDT"
+      ],
+      "page5": [
+        "BTCUSDT"
+      ],
+      "page6": [
+        "BTCUSDT"
+      ],
+      "page7": [
+        "BTCUSDT",
+        "ETHUSDT",
+        "SOLUSDT",
+        "XRPUSDT"
+      ],
+      "page8": [
+        "BTCUSDT",
+        "ETHUSDT",
+        "SOLUSDT",
+        "XRPUSDT"
+      ],
+      "page9": [
+        "BTCUSDT"
+      ]
+    }
   },
   "incremental_deltas": [
     {
@@ -79,9 +113,14 @@
       "file": "research-data/binance-usdm/delta/binance_usdm_delta_2026-11-05T0938Z_5m.jsonl",
       "rows": 4,
       "sha256": "e197420e0d04b5765faa116b0333f84b2a5b17aadfd43f1dc991fb994b904fb3"
+    },
+    {
+      "file": "research-data/binance-usdm/delta/binance_usdm_delta_2026-11-05T0943Z_5m.jsonl",
+      "rows": 4,
+      "sha256": "def59e5b169915626d289fcfeb6f5e318c203d7c32e7b5639d5369d11b3a7dd3"
     }
   ],
-  "incremental_delta_rows_total": 368,
+  "incremental_delta_rows_total": 372,
   "next_actions": [
     "Reconcile the 17 historical page hash divergences against an alternate official source or recover original raw arrays.",
     "Backfill complete 1h/15m/5m histories; current deltas do not constitute full history.",

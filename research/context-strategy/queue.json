@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAtUtc": "2026-11-05T16:35:00.000Z",
+  "updatedAtUtc": "2026-11-05T16:38:30.000Z",
   "items": [
     {
       "id": "Q1_ARCHIVE_MULTIYEAR",
@@ -286,6 +286,34 @@
       ],
       "nextAction": "Implement CTX v2 as a tested repository module/script, add deterministic fixtures for EMA/ATR/quantile/shock boundaries, and verify exact parity with the v2 artifact.",
       "blocker": "Current full-history computation ran in managed V8 tool runtime; no runnable source file was committed and the managed Node runtime is below the repository requirement."
+    },
+    {
+      "id": "Q16_INCREMENTAL_ARCHIVE_REFRESH_20261105T1636Z",
+      "priority": 1,
+      "status": "COMPLETED",
+      "prerequisites": [
+        "Binance USDⓈ-M kline connector",
+        "Existing high-water marks",
+        "GitHub write access"
+      ],
+      "nextAction": "On next hourly run append only completed bars after 2026-11-05T16:30Z (5m), 2026-11-05T16:15Z (15m), 2026-11-05T15:00Z (1h), and 2026-11-05T12:00Z (4h); exclude forming candles.",
+      "blocker": null,
+      "result": {
+        "rows": 16,
+        "counts": {
+          "BTCUSDT:5m": 3,
+          "ETHUSDT:5m": 3,
+          "SOLUSDT:5m": 3,
+          "XRPUSDT:5m": 3,
+          "BTCUSDT:15m": 1,
+          "ETHUSDT:15m": 1,
+          "SOLUSDT:15m": 1,
+          "XRPUSDT:15m": 1
+        },
+        "deltaPath": "research-data/binance-usdm/delta/binance_usdm_delta_20261105T1636Z_completed.jsonl",
+        "sha256": "4798fe0514b05ffd8733c6b41a774fa184ed8cafb588590f71bec48e07848d5a",
+        "readbackVerified": true
+      }
     }
   ],
   "lastRun": {
@@ -296,14 +324,21 @@
     "strategyExperimentExecuted": false,
     "oosEvaluated": false,
     "monitoringCompleted": true,
-    "snapshotAtUtc": "2026-11-05T16:31:14.077Z",
-    "completedAtUtc": "2026-11-05T16:35:00.000Z",
+    "snapshotAtUtc": "2026-11-05T16:37:36.643Z",
+    "completedAtUtc": "2026-11-05T16:38:30.000Z",
     "archiveAppend": {
       "rows": 16,
-      "deltaPath": "research-data/binance-usdm/delta/binance_usdm_delta_20261105T1622Z_completed.jsonl",
-      "deltaSha256": "f090cd5983601b08168ec7e621bd329beefc07f5847387af2e011b497cb899e8",
-      "cumulativeIncrementalDeltaRows": 788,
-      "readbackVerified": true
+      "deltaPath": "research-data/binance-usdm/delta/binance_usdm_delta_20261105T1636Z_completed.jsonl",
+      "manifestPath": "research-data/binance-usdm/delta/binance_usdm_delta_20261105T1636Z.manifest.json",
+      "deltaSha256": "4798fe0514b05ffd8733c6b41a774fa184ed8cafb588590f71bec48e07848d5a",
+      "cumulativeIncrementalDeltaRows": 804,
+      "readbackVerified": true,
+      "highWaterMarksUtc": {
+        "5m": "2026-11-05T16:30:00Z",
+        "15m": "2026-11-05T16:15:00Z",
+        "1h": "2026-11-05T15:00:00Z",
+        "4h": "2026-11-05T12:00:00Z"
+      }
     },
     "contextExperiment": {
       "id": "CTX-4H-EMA50xEMA200-ATRQ-v2-FULL-ARCHIVE",
@@ -339,6 +374,7 @@
       "SOL Donchian20 OOS_PROMISING summary remains unregistered; exact frozen rules/trade-level artifact not reconciled."
     ],
     "nextAction": "Commit and test the CTX v2 implementation; restore Node>=24/npm>=11 and repository checkout; backfill lower timeframes/funding; fix replay integrity; then pre-register the first symbol/context strategy experiment.",
-    "reportPath": "research-data/reports/context_strategy_research_20261105T1635Z_v77_final.json"
+    "reportPath": "research-data/reports/context_strategy_research_20261105T1635Z_v77_final.json",
+    "marketSnapshotUtc": "2026-11-05T16:36:47Z–2026-11-05T16:37:36Z"
   }
 }

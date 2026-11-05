@@ -70,11 +70,6 @@
       "status": "PASS",
       "evidence": [
         {
-          "path": "research/context-strategy/runs/2026-11-05T095746Z-context-discovery.json",
-          "blobSha": "64215714c176807da7da4842b1e9f9fe007f7659",
-          "exactMatch": true
-        },
-        {
           "path": "research/context-strategy/registry.json",
           "blobSha": "72a45ec15a98d3145afd5d7f78260833eedb02a4",
           "exactMatch": true
@@ -83,9 +78,14 @@
           "path": "research/context-strategy/queue.json",
           "blobSha": "358237075318c92ff5d9c7ac294281f4a12d664c",
           "exactMatch": true
+        },
+        {
+          "path": "research/context-strategy/runs/2026-11-05T095746Z-context-discovery.json",
+          "exactMatch": true,
+          "verifiedAfterFinalWrite": true
         }
       ],
-      "note": "All three GitHub files were fetched from the research branch and matched the written contents exactly."
+      "note": "The registry, queue and final corrected run snapshot were fetched from the branch and content-matched after writing."
     }
   },
   "dataManifest": {
@@ -417,7 +417,8 @@
           "SIDEWAYS_LOW": 46,
           "DOWN_HIGH": 17,
           "DOWN_NORMAL": 5,
-          "DOWN_LOW": 16
+          "DOWN_LOW": 16,
+          "UP_LOW": 87
         },
         "jsd": 0.07127337044085075,
         "medianDurationBars": 4,
@@ -443,7 +444,21 @@
             "SIDEWAYS_NORMAL -> SIDEWAYS_NORMAL",
             23
           ]
-        ]
+        ],
+        "testCountSum": 387,
+        "testPct": {
+          "UP_NORMAL": 32.04,
+          "UP_HIGH": 14.47,
+          "SHOCK": 1.03,
+          "UP_LOW": 22.48,
+          "SIDEWAYS_HIGH": 0.26,
+          "SIDEWAYS_NORMAL": 8.01,
+          "SIDEWAYS_LOW": 11.89,
+          "DOWN_HIGH": 4.39,
+          "DOWN_NORMAL": 1.29,
+          "DOWN_LOW": 4.13
+        },
+        "selfTransitionPct": 84.19689119170984
       },
       "ETHUSDT": {
         "thresholds": {
@@ -500,7 +515,21 @@
             "DOWN_LOW -> DOWN_LOW",
             22
           ]
-        ]
+        ],
+        "testCountSum": 387,
+        "testPct": {
+          "UP_HIGH": 10.85,
+          "UP_NORMAL": 24.81,
+          "SHOCK": 1.03,
+          "UP_LOW": 21.19,
+          "SIDEWAYS_HIGH": 4.91,
+          "SIDEWAYS_NORMAL": 4.13,
+          "SIDEWAYS_LOW": 4.13,
+          "DOWN_NORMAL": 17.57,
+          "DOWN_LOW": 6.72,
+          "DOWN_HIGH": 4.65
+        },
+        "selfTransitionPct": 83.41968911917098
       },
       "SOLUSDT": {
         "thresholds": {
@@ -555,7 +584,19 @@
             "DOWN_HIGH -> DOWN_HIGH",
             28
           ]
-        ]
+        ],
+        "testCountSum": 387,
+        "testPct": {
+          "UP_HIGH": 30.49,
+          "UP_NORMAL": 23.26,
+          "SHOCK": 1.55,
+          "UP_LOW": 9.3,
+          "SIDEWAYS_HIGH": 3.1,
+          "DOWN_HIGH": 8.79,
+          "DOWN_NORMAL": 19.12,
+          "DOWN_LOW": 4.39
+        },
+        "selfTransitionPct": 82.38341968911917
       },
       "XRPUSDT": {
         "thresholds": {
@@ -612,10 +653,25 @@
             "SIDEWAYS_HIGH -> SIDEWAYS_HIGH",
             20
           ]
-        ]
+        ],
+        "testCountSum": 387,
+        "testPct": {
+          "UP_HIGH": 44.19,
+          "SHOCK": 1.29,
+          "UP_NORMAL": 8.27,
+          "UP_LOW": 3.62,
+          "SIDEWAYS_HIGH": 5.94,
+          "SIDEWAYS_NORMAL": 1.03,
+          "SIDEWAYS_LOW": 2.58,
+          "DOWN_HIGH": 11.37,
+          "DOWN_NORMAL": 17.57,
+          "DOWN_LOW": 4.13
+        },
+        "selfTransitionPct": 88.34196891191709
       }
     },
-    "interpretation": "Trend/volatility labels persist for a median 3-5 four-hour bars. Train/test frequency drift is lower for BTC/ETH (JSD ~0.07) and higher for SOL/XRP (~0.15). This is a preliminary taxonomy check over ~250 days, not proof of stable multi-cycle regimes or predictive trading edge."
+    "interpretation": "Trend/volatility labels persist for a median 3-5 four-hour bars. Train/test frequency drift is lower for BTC/ETH (JSD ~0.07) and higher for SOL/XRP (~0.15). This is a preliminary taxonomy check over ~250 days, not proof of stable multi-cycle regimes or predictive trading edge.",
+    "dataRefreshedAtUtc": "2026-11-05T10:02:05.898Z"
   },
   "currentContext": {
     "computedAtUtc": "2026-11-05T09:57:46.370Z",

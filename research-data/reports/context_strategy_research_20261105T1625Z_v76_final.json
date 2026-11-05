@@ -1,0 +1,363 @@
+{
+  "schema_version": "1.0.0",
+  "version": "v76-final",
+  "run_id": "context-strategy-20261105T1622Z-v76",
+  "created_at_utc": "2026-11-05T16:25:30.000Z",
+  "run_classification": "RESEARCH_BLOCKED",
+  "research_executed": false,
+  "oos_evaluated": false,
+  "monitoring_completed": true,
+  "new_experiments": 0,
+  "oos_validated_entries": 0,
+  "rejected_entries": 0,
+  "repository": {
+    "full_name": "shubhamtaywade82/crypto-trading-agent",
+    "default_branch": "main",
+    "main_head": "3e5049c7a7ef57a9db75aaaa145287d839746bae",
+    "archive_branch": "research/raw-ohlcv-archive-2026-11-05T0530Z",
+    "delta_commit": "4a8de1b3abd1c7b96462efe4ef0b63b0dfe06823",
+    "manifest_commit": "cac01a93e7d40966dc62da22bc984520c9b89b78",
+    "archive_index_commit": "7da6a90f709eb42cc9ba3b38e5bf1899b88eea55",
+    "context_branch": "research/context-strategy-2026-11-05-run11",
+    "queue_commit": "27c82bab6834abc7204cacd4f10604f13139f7a9",
+    "main_modified": false
+  },
+  "archive": {
+    "source_endpoint": "GET /fapi/v1/klines",
+    "base_interval": "4h",
+    "base_raw_rows": 53952,
+    "base_aligned_rows": 53816,
+    "base_coverage_start_utc": "2020-09-14T08:00:00Z",
+    "base_coverage_end_last_completed_open_utc": "2026-11-04T12:00:00Z",
+    "coverage_years_approx": 6.14,
+    "cumulative_incremental_delta_rows": 788,
+    "latest_delta": {
+      "path": "research-data/binance-usdm/delta/binance_usdm_delta_20261105T1622Z_completed.jsonl",
+      "manifest": "research-data/binance-usdm/delta/binance_usdm_delta_20261105T1622Z.manifest.json",
+      "rows": 16,
+      "sha256": "f090cd5983601b08168ec7e621bd329beefc07f5847387af2e011b497cb899e8",
+      "first_open_utc": "2026-11-05T16:00:00.000Z",
+      "latest_completed_open_by_interval_utc": {
+        "5m": "2026-11-05T16:15:00.000Z",
+        "15m": "2026-11-05T16:00:00.000Z"
+      },
+      "forming_candles_excluded": 8,
+      "quality": {
+        "duplicates": 0,
+        "missing_intervals": 0,
+        "ohlc_invariant_failures": 0,
+        "nonpositive_volume": 0,
+        "nonfinite_values": 0,
+        "timestamp_alignment_failures": 0,
+        "close_time_failures": 0
+      },
+      "readback_verified": true
+    },
+    "high_water_marks_utc": {
+      "5m": "2026-11-05T16:15:00Z",
+      "15m": "2026-11-05T16:00:00Z",
+      "1h": "2026-11-05T15:00:00Z",
+      "4h": "2026-11-05T12:00:00Z"
+    },
+    "lower_timeframe_full_history": false,
+    "hash_provenance_caveat": "14 original page/symbol manifest hash mismatches remain; prior accessible reconciliation reports 21,000/21,000 exact raw row matches. Expected hashes were not rewritten."
+  },
+  "preflight": {
+    "shell_compute": {
+      "status": "PASS",
+      "evidence": "Linux 6.18.57; cwd=/; UTC 2026-11-05T16:25:02Z; 5 CPU cores; 5.8 GiB RAM total, 4.7 GiB available; 32 GiB overlay, 30 GiB free."
+    },
+    "repository_runtime": {
+      "status": "BLOCKED",
+      "evidence": "GitHub repo readable/writable; no local crypto-trading-agent checkout found; Node v22.16.0; npm 10.9.2; package.json requires Node>=24/npm>=11; Docker command not found; SDK not used and import not checked."
+    },
+    "direct_binance_rest": {
+      "status": "BLOCKED",
+      "evidence": "Bounded curl probes to /fapi/v1/time, /fapi/v1/exchangeInfo, /fapi/v1/klines, /fapi/v1/premiumIndex, /fapi/v1/openInterest and /fapi/v1/ticker/24hr returned HTTP 000; /time curl exit 6 (DNS resolution failure); no direct HTTP response."
+    },
+    "binance_connector": {
+      "status": "DEGRADED",
+      "evidence": "USD-M connector returned klines, mark, 24h ticker, funding history, open interest, taker flow, global long/short ratio and book ticker; connector did not expose HTTP status/headers."
+    },
+    "exchange_metadata": {
+      "status": "BLOCKED",
+      "evidence": "exchangeInfo.serverTime=2026-11-05T06:46:24.908Z; local retrieval=2026-11-05T16:21:31.793Z; drift=34506.885 seconds. Last returned metadata listed BTC/ETH/SOL/XRP as PERPETUAL/TRADING but is stale."
+    },
+    "raw_archive": {
+      "status": "PASS",
+      "evidence": "4h archive index and raw page manifests accessible; 53,952 raw rows, 53,816 aligned base rows; new 16-row delta and manifest persisted."
+    },
+    "data_quality": {
+      "status": "DEGRADED",
+      "evidence": "16 rolling series; 3,440 raw rows, 3,424 completed, 16 forming excluded; duplicates=0, gaps=0, OHLC failures=0, nonpositive volume=0, nonfinite=0. Rolling coverage: 5m 2026-11-05T06:25Z–16:15Z; 15m 2026-11-04T10:30Z–2026-11-05T16:00Z; 1h 2026-10-31T17:00Z–2026-11-05T15:00Z; 4h 2026-08-14T12:00Z–2026-11-05T12:00Z. Full 5m/15m/1h archive absent."
+    },
+    "backtest": {
+      "status": "BLOCKED",
+      "evidence": "Remote harness exists but local invocation unavailable. No deterministic fixture smoke, no full test suite, no experiment, no OOS. Remote source audit confirms 5m replay absent, Binance closeTime dropped by mapping, zero volume accepted, malformed CSV rows silently skipped, fixed funding rate in CLI, STRUCT-LIQ-only runner."
+    },
+    "storage_readback": {
+      "status": "PASS",
+      "evidence": "GitHub write access confirmed. Delta, manifest and archive index were read back; 16 JSONL rows; computed SHA-256 equals manifest and index; archive index cumulative incremental rows=788."
+    }
+  },
+  "context_discovery": {
+    "taxonomy_refit": false,
+    "prior_walk_forward_observations": 10760,
+    "states": [
+      {
+        "context": "BEAR_HIGH",
+        "count": 544,
+        "frequency_pct": 5.06,
+        "median_duration_bars": 11.5
+      },
+      {
+        "context": "BEAR_LOW",
+        "count": 3558,
+        "frequency_pct": 33.07,
+        "median_duration_bars": 5.25
+      },
+      {
+        "context": "BEAR_NORMAL",
+        "count": 1354,
+        "frequency_pct": 12.58,
+        "median_duration_bars": 4
+      },
+      {
+        "context": "BULL_HIGH",
+        "count": 94,
+        "frequency_pct": 0.87,
+        "median_duration_bars": 4
+      },
+      {
+        "context": "BULL_LOW",
+        "count": 3008,
+        "frequency_pct": 27.96,
+        "median_duration_bars": 3.75
+      },
+      {
+        "context": "BULL_NORMAL",
+        "count": 686,
+        "frequency_pct": 6.38,
+        "median_duration_bars": 3
+      },
+      {
+        "context": "TRANSITION_HIGH",
+        "count": 25,
+        "frequency_pct": 0.23,
+        "median_duration_bars": 2
+      },
+      {
+        "context": "TRANSITION_LOW",
+        "count": 1134,
+        "frequency_pct": 10.54,
+        "median_duration_bars": 2
+      },
+      {
+        "context": "TRANSITION_NORMAL",
+        "count": 357,
+        "frequency_pct": 3.32,
+        "median_duration_bars": 2
+      }
+    ],
+    "transition_probabilities": {
+      "BEAR": {
+        "BEAR": 94.22,
+        "BULL": 0.26,
+        "TRANSITION": 5.52
+      },
+      "BULL": {
+        "BEAR": 0.18,
+        "BULL": 92.16,
+        "TRANSITION": 7.66
+      },
+      "TRANSITION": {
+        "BEAR": 20.58,
+        "BULL": 18.47,
+        "TRANSITION": 60.95
+      }
+    },
+    "adequacy": "4h archive spans multiple cycles; lower-timeframe multi-year context stability cannot be assessed. Rare high-volatility transition cells remain sparse. Classification confidence is not calibrated."
+  },
+  "strategy_scorecard": {
+    "registry_file": "research/context-strategy/registry.json",
+    "registry_entries": 0,
+    "oos_validated_entries": 0,
+    "prior_report_candidate": {
+      "symbol": "SOLUSDT",
+      "timeframe": "4h",
+      "strategy": "Donchian20",
+      "context": "BULL_LOW",
+      "status": "OOS_PROMISING",
+      "oos_trades": 12,
+      "win_rate_pct": 66.7,
+      "target_before_stop_pct": 41.7,
+      "mean_net_r": 0.606,
+      "profit_factor": 2.72,
+      "max_drawdown_r": 1.3,
+      "ci95_mean_net_r": [
+        0.086,
+        1.199
+      ],
+      "source_report": "research-data/reports/context_strategy_research_20261105T1610Z_v75_final.json",
+      "registry_reconciliation": "NOT_REGISTERED_IN_ACCESSIBLE_REGISTRY; exact frozen rules/trade-level artifact not found in registry."
+    },
+    "hypotheses": [
+      "TREND_PULLBACK_CONTINUATION",
+      "BREAKOUT_RETEST_VOLATILITY_CONTRACTION",
+      "RANGE_MEAN_REVERSION_FAILED_BREAKOUT",
+      "VOLATILITY_EXPANSION_MOMENTUM",
+      "BTC_LED_RELATIVE_STRENGTH",
+      "FUNDING_OI_POSITIONING_FILTER"
+    ],
+    "rejected": 0,
+    "validated": 0
+  },
+  "current_snapshot": {
+    "market_retrieval_utc": "2026-11-05T16:20:50Z–2026-11-05T16:22:22Z",
+    "feature_utc": "2026-11-05T16:22:06.933Z",
+    "context_method": "4h EMA20/EMA50 and 20-bar return sign; ATR14/close compared with inherited train q33 only. q66 unavailable; states are provisional, not calibrated.",
+    "q33_atr14_close_pct": {
+      "BTCUSDT": 1.439,
+      "ETHUSDT": 1.795,
+      "SOLUSDT": 2.772,
+      "XRPUSDT": 1.963
+    },
+    "symbols": [
+      {
+        "symbol": "BTCUSDT",
+        "role": "reference_only",
+        "context": "PROVISIONAL_BEARISH_VOL_ABOVE_Q33",
+        "ema20_4h": 78595.4143,
+        "ema50_4h": 78733.6677,
+        "return20_4h_pct": -2.6581,
+        "atr14_close_pct": 1.7559,
+        "return20_1h_pct": -4.9394,
+        "return20_15m_pct": -4.9893,
+        "return20_5m_pct": -3.1024,
+        "mark": 76714.7,
+        "last": 76714.1,
+        "change24h_pct": -4.948,
+        "quote_volume_usdt": 17795115001.22,
+        "open_interest": 93770.014,
+        "oi_change_since_160847_pct": 0.9191,
+        "taker_buy_sell_ratio_15m": 1.2604,
+        "global_long_short_ratio_15m": 2.4352,
+        "bid": 76738.4,
+        "ask": 76738.5,
+        "spread_bps": 0.01303,
+        "indicated_funding_pct": 0.01,
+        "settled_funding_16utc_pct": 0.01
+      },
+      {
+        "symbol": "ETHUSDT",
+        "role": "tradable",
+        "context": "PROVISIONAL_TRANSITION_VOL_ABOVE_Q33",
+        "ema20_4h": 2333.3053,
+        "ema50_4h": 2316.859,
+        "return20_4h_pct": -1.4044,
+        "atr14_close_pct": 2.3802,
+        "return20_1h_pct": -6.3817,
+        "return20_15m_pct": -6.6642,
+        "return20_5m_pct": -4.2936,
+        "mark": 2270.3349,
+        "last": 2270.16,
+        "change24h_pct": -7.068,
+        "quote_volume_usdt": 12184681977.34,
+        "open_interest": 2338465.254,
+        "oi_change_since_160847_pct": 0.8899,
+        "taker_buy_sell_ratio_15m": 1.0742,
+        "global_long_short_ratio_15m": 3.1946,
+        "bid": 2271.44,
+        "ask": 2271.45,
+        "spread_bps": 0.04402,
+        "indicated_funding_pct": 0.01,
+        "settled_funding_16utc_pct": 0.01
+      },
+      {
+        "symbol": "SOLUSDT",
+        "role": "tradable",
+        "context": "PROVISIONAL_BEARISH_LOW_VOL",
+        "ema20_4h": 94.22263,
+        "ema50_4h": 95.80286,
+        "return20_4h_pct": -4.3294,
+        "atr14_close_pct": 2.6968,
+        "return20_1h_pct": -4.5724,
+        "return20_15m_pct": -6.1186,
+        "return20_5m_pct": -3.6308,
+        "mark": 91.21,
+        "last": 91.15,
+        "change24h_pct": -6.253,
+        "quote_volume_usdt": 2105007321.9423,
+        "open_interest": 8921877.88,
+        "oi_change_since_160847_pct": 0.467,
+        "taker_buy_sell_ratio_15m": 0.9731,
+        "global_long_short_ratio_15m": 3.4883,
+        "bid": 91.23,
+        "ask": 91.24,
+        "spread_bps": 1.09607,
+        "indicated_funding_pct": 0.006703,
+        "settled_funding_16utc_pct": 0.008962
+      },
+      {
+        "symbol": "XRPUSDT",
+        "role": "tradable",
+        "context": "PROVISIONAL_TRANSITION_VOL_ABOVE_Q33",
+        "ema20_4h": 1.2819108,
+        "ema50_4h": 1.2787806,
+        "return20_4h_pct": -0.3919,
+        "atr14_close_pct": 2.2777,
+        "return20_1h_pct": -4.1635,
+        "return20_15m_pct": -5.1515,
+        "return20_5m_pct": -2.9246,
+        "mark": 1.256,
+        "last": 1.2557,
+        "change24h_pct": -4.814,
+        "quote_volume_usdt": 814209127.5554,
+        "open_interest": 346296627.2,
+        "oi_change_since_160847_pct": -0.0435,
+        "taker_buy_sell_ratio_15m": 0.9574,
+        "global_long_short_ratio_15m": 2.8285,
+        "bid": 1.2561,
+        "ask": 1.2562,
+        "spread_bps": 0.79608,
+        "indicated_funding_pct": 0.01,
+        "settled_funding_16utc_pct": 0.01
+      }
+    ],
+    "funding_interval_hours": 8,
+    "last_settlement_utc": "2026-11-05T16:00:00Z",
+    "next_funding_utc": "2026-11-06T00:00:00Z",
+    "funding_history_last_three_settlements_available": true,
+    "liquidation_feed_available": false,
+    "historical_depth_impact_available": false
+  },
+  "decisions": {
+    "SOLUSDT": "NO_TRADE",
+    "ETHUSDT": "NO_TRADE",
+    "XRPUSDT": "NO_TRADE",
+    "reason": "No OOS_VALIDATED strategy exists; no validated trigger can be evaluated. SOL Donchian20 remains research-only and is not registered in the accessible registry."
+  },
+  "costs": {
+    "legacy_round_trip_15bp": "proxy only; not calibrated",
+    "account_fee_tier": "unavailable",
+    "historical_funding_cashflows": "unavailable",
+    "historical_spread_depth_impact": "unavailable",
+    "latency_fill_quality": "unavailable"
+  },
+  "automation": {
+    "id": "6adcdb3143348191ac2cf4d3200236d7",
+    "enabled": true,
+    "schedule": "RRULE:FREQ=HOURLY",
+    "schedule_changed": false,
+    "duplicate_created": false,
+    "last_run_time_reported": "2026-11-05T15:00:56.735731Z",
+    "note": "Automation metadata last_run_time differs from the research queue's internal v75 run timestamp; schedule remains enabled and unchanged."
+  },
+  "queue": {
+    "branch": "research/context-strategy-2026-11-05-run11",
+    "path": "research/context-strategy/queue.json",
+    "commit": "27c82bab6834abc7204cacd4f10604f13139f7a9",
+    "updated_at_utc": "2026-11-05T16:25:30.000Z",
+    "items": 13
+  }
+}

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAtUtc": "2026-11-05T18:40:32.471Z",
+  "updatedAtUtc": "2026-11-06T00:40:00Z",
   "evidencePolicy": {
     "minimumProvisionalOosTradesPerSymbolContext": 100,
     "strongerEvidenceTrades": 200,
@@ -108,7 +108,7 @@
   "candidateHypotheses": [
     {
       "family": "TREND_PULLBACK_CONTINUATION",
-      "status": "HYPOTHESIS",
+      "status": "EVALUATED_REJECTED",
       "symbols": [
         "SOLUSDT",
         "ETHUSDT",
@@ -120,7 +120,13 @@
         "DOWN_LOW",
         "DOWN_NORMAL"
       ],
-      "blocker": "No strategy backtest executed; repo harness unavailable."
+      "blocker": null,
+      "evaluation": {
+        "evaluatedAtUtc": "2026-11-06T00:38:00Z",
+        "verdict": "REJECTED_OOS_NEGATIVE",
+        "artifact": "research/context-strategy/experiments/pullback-continuation-v1_20261106.result.json",
+        "summary": "All three instruments (SOL, ETH, XRP) yielded negative out-of-sample mean net R (-0.179R, -0.191R, -0.065R) under 15bps round-trip cost model."
+      }
     },
     {
       "family": "BREAKOUT_RETEST_VOLATILITY_CONTRACTION",

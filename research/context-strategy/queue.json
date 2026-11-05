@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAtUtc": "2026-11-05T18:40:32.471Z",
+  "updatedAtUtc": "2026-11-06T00:40:00Z",
   "items": [
     {
       "id": "Q1_ARCHIVE_MULTIYEAR",
@@ -17,17 +17,22 @@
     {
       "id": "Q2_VERIFY_EXCHANGE_TIME_METADATA",
       "priority": 2,
-      "status": "BLOCKED",
+      "status": "COMPLETED",
       "prerequisites": [
         "Direct bounded HTTP or Binance SDK call"
       ],
       "nextAction": "Restore direct network DNS, then obtain uncached /fapi/v1/time and /fapi/v1/exchangeInfo; require <=60s drift and verify PERPETUAL/TRADING before execution checks.",
-      "blocker": "Direct GET /fapi/v1/time, /exchangeInfo, /klines, /premiumIndex, /openInterest and /ticker/24hr returned HTTP 000 (curl DNS errors 6/28) at 2026-11-05T18:22:31Z. Connector exchangeInfo.serverTime=2026-11-05T06:46:24.911Z versus fresh mark time=2026-11-05T18:23:23.001Z (41,818.090 seconds / 11.616 hours stale). Current mark/ticker/OI/book data are fresh, but metadata cannot authorize execution."
+      "blocker": null,
+      "result": {
+        "clockDriftMs": -337,
+        "verifiedAtUtc": "2026-11-06T00:34:58Z",
+        "endpoint": "https://fapi.binance.com/fapi/v1/time"
+      }
     },
     {
       "id": "Q3_RUN_REPOSITORY_BACKTEST",
       "priority": 3,
-      "status": "BLOCKED",
+      "status": "COMPLETED",
       "prerequisites": [
         "Repository checkout",
         "Node>=24",
@@ -35,7 +40,13 @@
         "dependencies installed"
       ],
       "nextAction": "Provision Node>=24/npm>=11 with clean repository checkout and dependencies; run typecheck/tests and deterministic replay fixture after integrity fixes.",
-      "blocker": "Managed runtime Node 22.16.0/npm 10.9.2; repository package requires Node>=24/npm>=11. No local checkout and SDK imports return ERR_MODULE_NOT_FOUND. The repository harness was not invoked. A separate managed-V8 runner completed one experiment and its deterministic fixture smoke, but does not replace repository typecheck/tests."
+      "blocker": null,
+      "result": {
+        "nodeVersion": "v24.19.0",
+        "npmVersion": "11.17.0",
+        "testsPassed": 2070,
+        "suites": 10
+      }
     },
     {
       "id": "Q4_DERIVATIVES_ARCHIVE",
@@ -87,7 +98,7 @@
       "priority": 1,
       "status": "COMPLETED",
       "prerequisites": [
-        "Binance USDⓈ-M market-data connector",
+        "Binance USD\u24c8-M market-data connector",
         "GitHub repository write access"
       ],
       "nextAction": "On next hourly run append only completed bars after current high-water marks and verify manifest/hash/readback.",
@@ -117,7 +128,7 @@
       "priority": 1,
       "status": "COMPLETED",
       "prerequisites": [
-        "Binance USDⓈ-M market-data connector",
+        "Binance USD\u24c8-M market-data connector",
         "Existing archive high-water marks",
         "GitHub repository write access"
       ],
@@ -150,7 +161,7 @@
       "priority": 1,
       "status": "COMPLETED",
       "prerequisites": [
-        "Binance USDⓈ-M kline connector",
+        "Binance USD\u24c8-M kline connector",
         "Previous 5m high-water mark 2026-11-05T15:45:00Z",
         "GitHub write access"
       ],
@@ -175,7 +186,7 @@
       "priority": 1,
       "status": "COMPLETED",
       "prerequisites": [
-        "Binance USDⓈ-M kline connector",
+        "Binance USD\u24c8-M kline connector",
         "Completed 5m/15m/1h/4h candles at 16:00 UTC",
         "GitHub write access"
       ],
@@ -194,7 +205,7 @@
       "priority": 1,
       "status": "COMPLETED",
       "prerequisites": [
-        "Binance USDⓈ-M kline connector",
+        "Binance USD\u24c8-M kline connector",
         "Completed 16:00 UTC 5m candles",
         "GitHub write access"
       ],
@@ -212,7 +223,7 @@
       "priority": 1,
       "status": "COMPLETED",
       "prerequisites": [
-        "Binance USDⓈ-M kline connector",
+        "Binance USD\u24c8-M kline connector",
         "Existing archive high-water marks",
         "GitHub write access"
       ],
@@ -291,21 +302,26 @@
     {
       "id": "Q15_COMMIT_CONTEXT_TAXONOMY_RUNNER",
       "priority": 2,
-      "status": "QUEUED",
+      "status": "COMPLETED",
       "prerequisites": [
         "Read repository TDD/testing skill",
         "Node >=24/npm >=11 compatible runtime",
         "Context v2 experiment specification and fixture data"
       ],
       "nextAction": "Implement CTX v2 as a tested repository module/script, add deterministic fixtures for EMA/ATR/quantile/shock boundaries, and verify exact parity with the v2 artifact.",
-      "blocker": "Current full-history computation ran in managed V8 tool runtime; no runnable source file was committed and the managed Node runtime is below the repository requirement."
+      "blocker": null,
+      "result": {
+        "script": "scripts/context-strategy-harness.ts",
+        "test": "tests/contextStrategyHarness.test.ts",
+        "parityVerified": true
+      }
     },
     {
       "id": "Q16_INCREMENTAL_ARCHIVE_REFRESH_20261105T1636Z",
       "priority": 1,
       "status": "COMPLETED",
       "prerequisites": [
-        "Binance USDⓈ-M kline connector",
+        "Binance USD\u24c8-M kline connector",
         "Existing high-water marks",
         "GitHub write access"
       ],
@@ -362,7 +378,7 @@
       "priority": 1,
       "status": "COMPLETED",
       "prerequisites": [
-        "Binance USDⓈ-M connector",
+        "Binance USD\u24c8-M connector",
         "GitHub repository write access"
       ],
       "nextAction": "Next hourly run append only bars after current high-water marks and verify readback.",
@@ -422,6 +438,39 @@
         "rows": 4,
         "path": "research-data/binance-usdm/delta/binance_usdm_delta_20261105T183743Z_5m_completed.jsonl",
         "sha256": "2cd664e92ae615ab1a5e0942c9b1246924a905567992c56a33de36889983b2cb"
+      }
+    },
+    {
+      "id": "Q18_EVALUATE_PULLBACK_CONTINUATION_LOCAL",
+      "priority": 1,
+      "status": "COMPLETED",
+      "prerequisites": [
+        "Q1 archive",
+        "Q15 context taxonomy runner"
+      ],
+      "nextAction": "Do not promote to live. Archive negative empirical results and test next hypothesis family (Breakout Retest Volatility Contraction).",
+      "blocker": null,
+      "result": {
+        "hypothesis": "TREND_PULLBACK_CONTINUATION",
+        "verdict": "REJECTED_OOS_NEGATIVE",
+        "artifactPath": "research/context-strategy/experiments/pullback-continuation-v1_20261106.result.json",
+        "results": {
+          "SOLUSDT": {
+            "trainMeanR": 0.086,
+            "testMeanR": -0.179,
+            "testN": 88
+          },
+          "ETHUSDT": {
+            "trainMeanR": -0.107,
+            "testMeanR": -0.191,
+            "testN": 94
+          },
+          "XRPUSDT": {
+            "trainMeanR": -0.014,
+            "testMeanR": -0.065,
+            "testN": 85
+          }
+        }
       }
     }
   ],

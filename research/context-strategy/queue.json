@@ -1,0 +1,72 @@
+{
+  "schemaVersion": 1,
+  "updatedAtUtc": "2026-11-05T09:57:46.370Z",
+  "items": [
+    {
+      "id": "Q1_ARCHIVE_MULTIYEAR",
+      "priority": 1,
+      "status": "BLOCKED",
+      "prerequisites": [
+        "Node>=24 shell or dedicated research runner",
+        "writable persistent data store"
+      ],
+      "nextAction": "Backfill paginated Binance klines for all four symbols and 5m/15m/1h/4h across multiple years; write raw files and manifest, verify SHA-256 and readback.",
+      "blocker": "No shell/Node runtime or local filesystem in this run; current 5m/15m coverage is only 200 bars."
+    },
+    {
+      "id": "Q2_VERIFY_EXCHANGE_TIME_METADATA",
+      "priority": 2,
+      "status": "BLOCKED",
+      "prerequisites": [
+        "Direct bounded HTTP or Binance SDK call"
+      ],
+      "nextAction": "Call /fapi/v1/time and /fapi/v1/exchangeInfo with explicit timeout; reject metadata if serverTime drift remains high.",
+      "blocker": "/fapi/v1/time not exposed by connected Binance tool; direct web request inaccessible; exchangeInfo serverTime lagged retrieval by 191.36 minutes."
+    },
+    {
+      "id": "Q3_RUN_REPOSITORY_BACKTEST",
+      "priority": 3,
+      "status": "BLOCKED",
+      "prerequisites": [
+        "Repository checkout",
+        "Node>=24",
+        "npm>=11",
+        "dependencies installed"
+      ],
+      "nextAction": "Run deterministic fixture smoke, then scripts/backtest.ts with archive/API source and frozen costs; record train/validation/untouched test, walk-forward and block-bootstrap.",
+      "blocker": "scripts/backtest.ts exists but could not be invoked because shell/Node environment is unavailable."
+    },
+    {
+      "id": "Q4_DERIVATIVES_ARCHIVE",
+      "priority": 4,
+      "status": "BLOCKED",
+      "prerequisites": [
+        "Recorder process and persistent storage"
+      ],
+      "nextAction": "Record funding, OI history, taker volume, global/top-trader long-short ratios and basis; preserve timestamps and quality metadata.",
+      "blocker": "Only current OI/positioning/taker snapshots and three recent funding settlements were retrieved; no historical derivatives archive was accessible."
+    },
+    {
+      "id": "Q5_CONDITIONAL_STRATEGY_TEST",
+      "priority": 5,
+      "status": "QUEUED",
+      "prerequisites": [
+        "Q1 archive",
+        "Q3 executable harness",
+        "pre-registered rule"
+      ],
+      "nextAction": "Test 4h trend/pullback continuation on SOL/ETH/XRP, with BTC trend confirmation as a separate filter; fixed ATR stop/target/time stop and realistic fees/slippage/funding.",
+      "blocker": "Waiting for Q1 and Q3."
+    },
+    {
+      "id": "Q6_TAXONOMY_STABILITY_REVIEW",
+      "priority": 6,
+      "status": "QUEUED",
+      "prerequisites": [
+        "Multi-year archive"
+      ],
+      "nextAction": "Repeat training-only threshold estimation across rolling chronological windows; compare JSD, duration and transitions by symbol.",
+      "blocker": "Current 250-day 4h sample is too short for multi-cycle stability claims."
+    }
+  ]
+}

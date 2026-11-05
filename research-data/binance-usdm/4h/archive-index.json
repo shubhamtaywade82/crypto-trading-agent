@@ -56,9 +56,9 @@
     "readback": "PASS for raw pages 1-9 via GitHub fetch_file readback.",
     "original_manifest_hash_matches": 22,
     "original_manifest_hash_mismatches": 14,
-    "hash_mismatch_scope": "page-0002..0006 BTCUSDT (5 mismatches total); page-0007..0009 all four symbols (12 mismatches). Raw rows are preserved; do not overwrite expected hashes. Alternate-source reconciliation remains open.",
+    "hash_mismatch_scope": "14 page/symbol pairs: BTCUSDT pages 2-6 and 9 (6); BTCUSDT, ETHUSDT, SOLUSDT and XRPUSDT pages 7-8 (8).",
     "source_revision_policy": "Store actual and expected hashes side-by-side; do not normalize mismatches without provenance.",
-    "mismatch_scope": "page-0002..0006 BTCUSDT (5 mismatches total); page-0007..0008 all four symbols (8 mismatches); page-0009 BTCUSDT (1 mismatch). Raw rows are preserved; do not overwrite expected hashes. Alternate-source reconciliation remains open.",
+    "mismatch_scope": "14 page/symbol pairs: BTCUSDT pages 2-6 and 9 (6); all four symbols pages 7-8 (8).",
     "mismatch_symbols_by_page": {
       "page1": [],
       "page2": [
@@ -91,7 +91,20 @@
       "page9": [
         "BTCUSDT"
       ]
-    }
+    },
+    "row_level_reconciliation": {
+      "file": "research-data/binance-usdm/4h/alternate-source-row-reconciliation_2026-11-05T1229Z.json",
+      "created_at_utc": "2026-11-05T12:29:44Z",
+      "pairs_tested": 14,
+      "rows_compared": 21000,
+      "exact_pairs": 14,
+      "exact_rows": 21000,
+      "row_level_mismatches": 0,
+      "method": "Refetched each mismatched page/symbol from GET /fapi/v1/klines via Binance public connector using the manifest's identical 4h endTime and limit=1500; compared ordered raw arrays.",
+      "expected_hashes_rewritten": false,
+      "conclusion": "Source data independently verified; expected-vs-actual SHA-256 mismatch remains as a manifest hash provenance/canonicalization issue, not an observed OHLCV row discrepancy."
+    },
+    "audit_text_discrepancy": "Resolved in this update: the prior 14-versus-17 summary conflict was caused by an incorrect hash_mismatch_scope string. Canonical scope is 14, matching original_manifest_hash_mismatches and mismatch_symbols_by_page."
   },
   "incremental_deltas": [
     {
@@ -198,8 +211,8 @@
   ],
   "incremental_delta_rows_total": 516,
   "next_actions": [
-    "Reconcile the 17 historical page hash divergences against an alternate official source or recover original raw arrays.",
-    "Backfill complete 1h/15m/5m histories; current deltas do not constitute full history.",
+    "Preserve expected and actual manifest hashes; investigate hash provenance/canonicalization only if original expected arrays or a source hash specification can be recovered.",
+    "Backfill complete 1h/15m/5m histories; current rolling windows and incremental deltas do not constitute full history.",
     "Fetch BTCUSDT/ETHUSDT/XRPUSDT pages beyond the common SOL start if symbol-specific earliest history is required."
   ],
   "last_incremental_refresh_utc": "2026-11-05T12:27:45.432Z",
@@ -211,5 +224,7 @@
   },
   "latest_incremental_delta_file": "research-data/binance-usdm/delta/binance_usdm_delta_2026-11-05T1225Z_completed.jsonl",
   "latest_incremental_delta_manifest": "research-data/binance-usdm/delta/binance_usdm_delta_2026-11-05T1225Z.manifest.json",
-  "latest_incremental_delta_sha256": "5727eaa443e03c90326d01205133fe04b8721afe038fa2ce0f84c431dc77c299"
+  "latest_incremental_delta_sha256": "5727eaa443e03c90326d01205133fe04b8721afe038fa2ce0f84c431dc77c299",
+  "row_level_reconciliation_file": "research-data/binance-usdm/4h/alternate-source-row-reconciliation_2026-11-05T1229Z.json",
+  "row_level_reconciliation_status": "14_OF_14_MISMATCHED_PAGE_SYMBOL_PAIRS_EXACTLY_MATCHED_ALTERNATE_BINANCE_CONNECTOR_REPLAY"
 }

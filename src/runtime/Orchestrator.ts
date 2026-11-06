@@ -11,6 +11,7 @@ import { MeanReversionAgent } from '../agents/MeanReversionAgent.js';
 import { CrowdingAgent } from '../agents/CrowdingAgent.js';
 import { AlmaMtfChampionAgent } from '../agents/AlmaMtfChampionAgent.js';
 import { TrendEnsembleAgent } from '../agents/TrendEnsembleAgent.js';
+import { EmaCrossSwingAgent } from '../agents/EmaCrossSwingAgent.js';
 import { RiskAgent } from '../agents/RiskAgent.js';
 import { ExecutorAgent } from '../agents/ExecutorAgent.js';
 import { OllamaAdvisor } from '../ollama/advisor.js';
@@ -85,8 +86,10 @@ export class Orchestrator extends EventEmitter {
   private crowding = new CrowdingAgent(this.binance);
   private almaChampion = new AlmaMtfChampionAgent(this.binance);
   private trendEnsemble = new TrendEnsembleAgent(this.binance);
+  private emaCrossSwing = new EmaCrossSwingAgent(this.binance);
   private agents: BaseAgent[] = [
     this.almaChampion,
+    this.emaCrossSwing,
     // Research port awaiting forward evidence: paper only, like the adaptive SuperTrend
     ...(config.mode === 'paper' ? [this.trendEnsemble] : []),
     new FundingArbAgent(this.binance),

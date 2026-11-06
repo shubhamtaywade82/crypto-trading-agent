@@ -18,6 +18,7 @@ export type AgentId =
   | 'AI-COUNCIL-κ'
   | 'ALMA-CHAMPION-λ'
   | 'TREND-ENS-μ'
+  | 'EMA-SWING-ν'
   // Not an orchestrator agent: the log channel of the embedded multi-model fleet (FleetSupervisor)
   | 'FLEET';
 export type SignalType = 'OPEN_LONG' | 'OPEN_SHORT' | 'OPEN_HEDGE' | 'OPEN_FUNDING_SHORT' | 'CLOSE' | 'MONITOR' | 'ALERT';

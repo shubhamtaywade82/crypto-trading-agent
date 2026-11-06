@@ -2,7 +2,8 @@
  * STRUCT-LIQ parameter-sensitivity sweep — measures how tunable the setup's
  * firing rate actually is.
  *
- *   npx tsx scripts/struct-liq-sweep.ts [--symbols BTCUSDT,ETHUSDT] [--days 45]
+ *   npx tsx scripts/struct-liq-sweep.ts [--symbols BTCUSDT,ETHUSDT] [--days 45] [--end-days-ago 0] [--source api|archive]
+ *   (the window is computed from --days/--end-days-ago; the resolved bounds go to data/research/runs/<run>.manifest.json)
  *                                        [--warmup 300]
  *                                        [--fleet 6:1.5,24:1.0,96:0.6]
  *
@@ -33,6 +34,14 @@ import type { NativeTimeframe } from '../src/market/MarketDataTypes.js';
 import type { ReplayData } from '../src/backtesting/types.js';
 import { loadValidatedKlines, type KlineSource } from '../src/backtesting/klineLoader.js';
 import { expectedBarCount } from '../src/backtesting/candleIntegrity.js';
+import {
+  buildRunId,
+  describeSeries,
+  readCodeState,
+  resolveResearchWindow,
+  writeRunManifest,
+  type SeriesRecord,
+} from '../src/backtesting/researchRun.js';
 import type { MarketState } from '../src/market/types.js';
 import { CrowdingAgent } from '../src/agents/CrowdingAgent.js';
 import { FundingArbAgent } from '../src/agents/FundingArbAgent.js';
@@ -52,6 +61,7 @@ function arg(name: string, fallback: string): string {
 
 const symbols = arg('symbols', 'BTCUSDT,ETHUSDT').toUpperCase().split(',').map((s) => s.trim()).filter(Boolean);
 const days = Number(arg('days', '45'));
+const endDaysAgo = Number(arg('end-days-ago', '0'));
 const warmupBars = Number(arg('warmup', '300'));
 const fleetArg = arg('fleet', '');
 const source = arg('source', 'api') as KlineSource;
@@ -61,16 +71,19 @@ const journalRunId = new Date().toISOString().replace(/[:.]/g, '-');
 const journalPaths: string[] = [];
 if (journalDirArg) mkdirSync(path.resolve(journalDirArg), { recursive: true });
 
-const toMs = Date.now();
-const fromMs = toMs - days * 86_400_000;
-console.log(`STRUCT-LIQ parameter sweep over the last ${days} day(s) from ${source}, with strict candle-integrity validation...`);
+const runNowMs = Date.now();
+const runWindow = resolveResearchWindow({ days, endDaysAgo, source, nowMs: runNowMs });
+const { fromMs, toMs } = runWindow;
+console.log(`STRUCT-LIQ parameter sweep: ${runWindow.fromIso} -> ${runWindow.toIso} (${days} day(s), ${source}; computed from --days/--end-days-ago), with strict candle-integrity validation...`);
 const data: ReplayData = {};
+const series: SeriesRecord[] = [];
 for (const symbol of symbols) {
   data[symbol] = {};
   for (const timeframe of TIMEFRAMES) {
     // Fails closed: loadValidatedKlines throws CandleIntegrityError on any gap, duplicate, off-grid bar or missing archive day.
     const loaded = await loadValidatedKlines({ symbol, interval: timeframe, fromMs, toMs, source });
     data[symbol][timeframe] = loaded.candles;
+    series.push(describeSeries({ symbol, interval: timeframe, source, window: loaded.window, candles: loaded.candles }));
     console.log(`  ${symbol} ${timeframe}: integrity passed (${loaded.candles.length}/${expectedBarCount(loaded.window)} expected bars)`);
   }
   console.log(`  ${symbol}: ${data[symbol]['15m']!.length} x 15m candles`);
@@ -181,6 +194,26 @@ for (const { age, rr } of combos) {
 }
 
 console.log(`\nGrid: ages [${grid.sweepAges.join(', ')}] x RRs [${grid.rewardRisks.join(', ')}]`);
+{
+  const { commit, dirty } = readCodeState(process.cwd());
+  const manifestPath = writeRunManifest({
+    schemaVersion: 1,
+    runId: buildRunId('struct-liq-sweep', `${symbols.join('-')}-${days}d-${source}`, runNowMs),
+    kind: 'struct-liq-sweep',
+    createdAtIso: new Date(runNowMs).toISOString(),
+    codeCommit: commit,
+    codeDirty: dirty,
+    argv: process.argv.slice(2),
+    window: runWindow,
+    series,
+    summary: {
+      symbols: symbols.join(','),
+      baselineSetups: total.baselineSetups,
+      fleetCombos: combos.length,
+    },
+  }, path.resolve('data/research/runs'));
+  console.log(`Run manifest written to ${manifestPath}`);
+}
 console.log('Notes: emissions repeat the same setup on following bars; distinct setups are what cooldowns turn into trades.');
 console.log('      RR 0.01 is a diagnostic "reward-risk gate off" probe, not a tradable setting.');
 if (journalPaths.length) {

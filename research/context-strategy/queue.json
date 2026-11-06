@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAtUtc": "2026-11-06T10:40:40.493Z",
+  "updatedAtUtc": "2026-11-06T10:40:52.201Z",
   "items": [
     {
       "id": "Q1_ARCHIVE_MULTIYEAR",
@@ -1545,6 +1545,73 @@
           "closeTimeFailures": 0,
           "formingExcluded": true
         }
+      }
+    },
+    {
+      "id": "Q53_1H_ARCHIVE_PAGE_0008_20261106T1030Z",
+      "priority": 1,
+      "status": "COMPLETED",
+      "prerequisites": [
+        "Page 0007",
+        "Binance connector",
+        "Writable archive branch"
+      ],
+      "nextAction": "Continue page 0009 from 2022-01-27T08:00Z.",
+      "blocker": null,
+      "result": {
+        "rowsPerSymbol": 1500,
+        "rowsTotal": 6000,
+        "firstOpenUtc": "2021-11-25T20:00:00Z",
+        "lastCompletedOpenUtc": "2022-01-27T07:00:00Z",
+        "nextStartUtc": "2022-01-27T08:00:00Z",
+        "manifest": "research-data/binance-usdm/1h/manifest-page-0008.json",
+        "readbackVerified": true
+      }
+    },
+    {
+      "id": "Q54_INCREMENTAL_REFRESH_20261106T1031Z",
+      "priority": 1,
+      "status": "COMPLETED",
+      "prerequisites": [
+        "Previous high-water marks",
+        "Completed-candle exclusion",
+        "Writable archive branch"
+      ],
+      "nextAction": "Next refresh only after current high-water marks.",
+      "blocker": null,
+      "result": {
+        "rows": 80,
+        "intervalRows": {
+          "fiveMinute": 56,
+          "fifteenMinute": 20,
+          "oneHour": 4,
+          "fourHour": 0
+        },
+        "paths": [
+          "research-data/binance-usdm/delta/binance_usdm_delta_20261106T1031Z_5m_15m.jsonl",
+          "research-data/binance-usdm/delta/binance_usdm_delta_20261106T1032Z_1h.jsonl"
+        ],
+        "readbackVerified": true
+      }
+    },
+    {
+      "id": "Q55_INCREMENTAL_REFRESH_20261106T1035Z",
+      "priority": 1,
+      "status": "COMPLETED",
+      "prerequisites": [
+        "5m high-water 10:25Z",
+        "Completed 10:30Z bar",
+        "Writable archive branch"
+      ],
+      "nextAction": "Next refresh only after 5m 10:30Z.",
+      "blocker": null,
+      "result": {
+        "rows": 4,
+        "interval": "5m",
+        "latestCompletedOpenUtc": "2026-11-06T10:30:00Z",
+        "path": "research-data/binance-usdm/delta/binance_usdm_delta_20261106T1035Z_5m.jsonl",
+        "sha256": "f41b7f58477a46b445d076cd590ec3d03fab07cd9f4903a2248453bac25b7adb",
+        "readbackVerified": true
       }
     }
   ],

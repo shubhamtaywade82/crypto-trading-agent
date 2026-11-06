@@ -37,9 +37,23 @@
       "npm": ">=11"
     },
     "binanceSdkPackages": {
+      "@nemesis-oss/binance-sdk": false,
       "binance": false,
-      "atBinanceConnector": false,
-      "atBinanceFuturesConnector": false
+      "@binance/connector": false,
+      "@binance/futures-connector": false
+    },
+    "repositoryPackage": {
+      "engines": {
+        "node": ">=24",
+        "npm": ">=11"
+      },
+      "dependencies": {
+        "@nemesis-oss/binance-sdk": "3.2.0",
+        "binance": "^2.15.22"
+      },
+      "backtestScript": "tsx scripts/backtest.ts",
+      "backtestScriptExistsRemotely": true,
+      "backtestInvoked": false
     }
   },
   "preflight": [
@@ -53,16 +67,16 @@
     {
       "check": "repository_code",
       "status": "DEGRADED",
-      "evidence": "GitHub repository and research branches readable; package.json requires Node >=24/npm >=11; scripts/backtest.ts exists remotely; no local crypto-trading-agent checkout found under /mnt/data, /workspace, /workspaces or /root.",
+      "evidence": "GitHub package.json readback: engines node>=24, npm>=11; scripts.backtest='tsx scripts/backtest.ts'; dependencies @nemesis-oss/binance-sdk 3.2.0 and binance ^2.15.22. scripts/backtest.ts exists remotely; no local checkout.",
       "impact": "Source inspected, but actual repository backtest harness cannot be invoked in this runtime.",
-      "nextAction": "Create clean local checkout under compatible runtime and verify commit."
+      "nextAction": "Provision Node24/npm11, clean checkout, npm ci, import-test both declared Binance SDK packages, then run the actual backtest fixture smoke."
     },
     {
       "check": "binance_sdk",
       "status": "BLOCKED",
-      "evidence": "require.resolve failed for binance, @binance/connector and @binance/futures-connector. SDK not used.",
+      "evidence": "Local require.resolve returned NOT_INSTALLED for @nemesis-oss/binance-sdk, binance, @binance/connector and @binance/futures-connector. Repo declares @nemesis-oss/binance-sdk@3.2.0 and binance@^2.15.22. SDK not used.",
       "impact": "All market data retrieved through Binance public-data connector; no SDK execution.",
-      "nextAction": "Install and import-test intended SDK in Node24 checkout."
+      "nextAction": "Install declared dependencies in the compatible checkout and verify imports before claiming SDK execution."
     },
     {
       "check": "network_binance_endpoints",
@@ -699,7 +713,8 @@
       "research-data/binance-usdm/delta/binance_usdm_delta_20261106T2034Z_1h4h_completed.jsonl"
     ],
     "reportPath": "research/context-strategy/reports/context_strategy_research_20261106T2038Z_v98.json",
-    "reportSha256": "16134cfeebdd0aeda30d5d42c0956ebf24917a4fa2ff668787e10170e08867ce",
-    "readbackVerified": true
-  }
+    "readbackVerified": true,
+    "reportHashStoredExternally": true
+  },
+  "revisedAtUtc": "2026-11-06T20:43:56.871Z"
 }

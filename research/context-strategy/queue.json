@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAtUtc": "2026-11-06T10:40:23.623Z",
+  "updatedAtUtc": "2026-11-06T10:40:40.493Z",
   "items": [
     {
       "id": "Q1_ARCHIVE_MULTIYEAR",
@@ -11,16 +11,16 @@
         "Compatible bulk-data downloader or official Binance Vision access",
         "Persistent writable store"
       ],
-      "nextAction": "Continue oldest-first 1h page 0008 from 2021-11-25T20:00Z for all four symbols; then acquire multi-year 5m/15m from an auditable bulk source and recover the unresolved 76-row 2026-11-05T0524Z delta provenance.",
-      "blocker": "1h archive has 10,500 rows/symbol through 2021-11-25T19:00Z, still far short of current. Multi-year 5m/15m remain absent. The separate 76-row delta provenance remains unresolved. Direct fapi DNS is unavailable in the local shell; Binance connector remains usable.",
+      "nextAction": "Continue 1h page 0009 from 2022-01-27T08:00Z; then backfill multi-year 5m/15m and recover missing 76-row delta provenance.",
+      "blocker": "1h now has 12,000 rows/symbol through 2022-01-27T07:00Z, still short of current. Multi-year 5m/15m absent; missing 76-row delta unresolved; direct fapi DNS unavailable.",
       "result": {
         "canonicalFileRowsPerSymbol": 13461,
         "canonicalFileRowsTotal": 53844,
         "canonicalFileEndUtc": "2026-11-05T16:00:00Z",
         "effectiveHighwaterByInterval": {
-          "5m": "2026-11-06T09:15:00Z",
-          "15m": "2026-11-06T09:00:00Z",
-          "1h": "2026-11-06T08:00:00Z",
+          "5m": "2026-11-06T10:30:00Z",
+          "15m": "2026-11-06T10:15:00Z",
+          "1h": "2026-11-06T09:00:00Z",
           "4h": "2026-11-06T04:00:00Z"
         },
         "latestDeltaRows": 20,
@@ -35,15 +35,18 @@
           "rowLevelReconciliation": "21,000/21,000 exact rows; expected-vs-actual hash provenance remains unresolved"
         },
         "oneHourBackfill": {
-          "pages": 7,
-          "rowsPerSymbol": 10500,
-          "rowsTotal": 42000,
+          "pages": 8,
+          "rowsPerSymbol": 12000,
+          "rowsTotal": 48000,
           "startUtc": "2020-09-14T08:00:00Z",
-          "lastCompletedOpenUtc": "2021-11-25T19:00:00Z",
-          "nextStartUtc": "2021-11-25T20:00:00Z",
+          "lastCompletedOpenUtc": "2022-01-27T07:00:00Z",
+          "nextStartUtc": "2022-01-27T08:00:00Z",
           "archiveIndexPath": "research-data/binance-usdm/1h/archive-index.json",
-          "readbackVerified": true
-        }
+          "readbackVerified": true,
+          "page8RowsTotal": 6000,
+          "page8Manifest": "research-data/binance-usdm/1h/manifest-page-0008.json"
+        },
+        "incrementalRowsAddedThisRun": 84
       }
     },
     {
@@ -54,7 +57,7 @@
         "Direct bounded HTTP or Binance SDK call"
       ],
       "nextAction": "Restore direct DNS and obtain uncached /fapi/v1/time plus /fapi/v1/exchangeInfo; require <=60s server-time drift before execution validation.",
-      "blocker": "Direct HTTPS probe to fapi.binance.com failed DNS resolution (HTTP 000; no response status). Connector exchangeInfo.serverTime=2026-11-06T03:24:17.654Z versus fresh markPrice.time=2026-11-06T09:20:10.004Z; drift 21,352.350s (5.931h). Metadata is stale and cannot validate current contract status."
+      "blocker": "Direct fapi DNS failed. exchangeInfo.serverTime=2026-11-06T09:50:23.288Z versus fresh markPrice.time=2026-11-06T10:36:40Z; drift 2,776.712s (46.28 minutes)."
     },
     {
       "id": "Q3_RUN_REPOSITORY_BACKTEST",
@@ -67,7 +70,7 @@
         "dependencies installed"
       ],
       "nextAction": "Provision Node>=24/npm>=11 and a clean checkout; run repository typecheck/tests and parity-check the managed V8 runner before any new strategy experiment.",
-      "blocker": "Local Node 22.16.0/npm 10.9.2 are below package engine floor Node>=24/npm>=11; no local checkout or Binance SDK imports. The v1.1 strategy runner executed in managed V8 at 2026-11-06T08:44:43Z, but the repository Node CLI and local harness were not invoked; no smoke test was rerun this monitoring run.",
+      "blocker": "Local Node 22.16.0/npm 10.9.2 below package floor Node>=24/npm>=11; no local checkout or Binance SDK. Repository CLI and smoke test not invoked this run.",
       "result": {
         "smokeTest": {
           "runnerBlobSha": "b0fb55492c4beef3b3ccf5010bbf4fb39513d6d4",
@@ -1770,5 +1773,29 @@
     "createdAtUtc": "2026-11-06T07:30:06.656Z",
     "readbackVerified": true
   },
-  "lastRunId": "CONTEXT-STRATEGY-20261106T1036Z-V91"
+  "lastRunId": "CONTEXT-STRATEGY-20261106T1036Z-V91",
+  "incremental_highwater_marks": {
+    "5m": "2026-11-06T10:30:00Z",
+    "15m": "2026-11-06T10:15:00Z",
+    "1h": "2026-11-06T09:00:00Z",
+    "4h": "2026-11-06T04:00:00Z"
+  },
+  "last_incremental_refresh_utc": "2026-11-06T10:36:11.297Z",
+  "latest_incremental_delta_files": [
+    {
+      "file": "research-data/binance-usdm/delta/binance_usdm_delta_20261106T1031Z_5m_15m.jsonl",
+      "rows": 76,
+      "sha256": "7064aa4f9f4049f9b69c84fdcfaed4ebcc70578cdf6659fb4422575239944960"
+    },
+    {
+      "file": "research-data/binance-usdm/delta/binance_usdm_delta_20261106T1032Z_1h.jsonl",
+      "rows": 4,
+      "sha256": "96413a9aaf10a00d55cf3846f49a07161bd81681dfe9f5bf17c531a1490c1d8f"
+    },
+    {
+      "file": "research-data/binance-usdm/delta/binance_usdm_delta_20261106T1035Z_5m.jsonl",
+      "rows": 4,
+      "sha256": "f41b7f58477a46b445d076cd590ec3d03fab07cd9f4903a2248453bac25b7adb"
+    }
+  ]
 }

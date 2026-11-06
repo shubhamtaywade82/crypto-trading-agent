@@ -71,14 +71,21 @@ module.exports = function runExperiment(input) {
   }
   function simulate(start,end,th,stopAtr,costBps,btcFilter){
     const trades=[];let eligible=0,confirmed=0,signals=0,held=0,turnover=0,fEvents=0,fFallback=0,fUnpriced=0;
+    const eligibleByContext={},confirmedByContext={};
+    for(let k=Math.max(start,warmup+1);k<end;k++){
+      const c=label(k,si,th);
+      if(c==="BULL_NORMAL"||c==="BEAR_NORMAL"){
+        eligible++;eligibleByContext[c]=(eligibleByContext[c]||0)+1;
+        const bt=btcLabel(k,th),ok=c==="BULL_NORMAL"?bt==="BULL":bt==="BEAR";
+        if(ok){confirmed++;confirmedByContext[c]=(confirmedByContext[c]||0)+1;}
+      }
+    }
     const lastSignal=end-cfg.timeStopBars-1;
     for(let i=Math.max(start,warmup+1);i<=lastSignal;i++){
       const ctx=label(i,si,th);
       let dir=ctx==="BULL_NORMAL"?1:ctx==="BEAR_NORMAL"?-1:0;
-      if(dir!==0)eligible++;
       const b=btcLabel(i,th);
       const aligned=!btcFilter||(dir===1?b==="BULL":dir===-1?b==="BEAR":false);
-      if(dir!==0&&aligned)confirmed++;
       if(dir===0||!aligned)continue;
       const prev=sol[i-1],cur=sol[i];
       const longSignal=dir===1&&prev.c<=si.e20[i-1]&&cur.c>si.e20[i]&&cur.c>cur.o;
@@ -113,7 +120,7 @@ module.exports = function runExperiment(input) {
       fEvents+=fund.events;fFallback+=fund.fallback;fUnpriced+=fund.unpriced;held+=hold;turnover+=entry+exitPrice;
       i=exitIndex;
     }
-    return {trades,eligibleContextBars:eligible,btcConfirmedContextBars:confirmed,signals,heldBars:held,turnover,fundingEvents:fEvents,fundingFallback:fFallback,fundingUnpriced:fUnpriced};
+    return {trades,eligibleContextBars:eligible,btcConfirmedContextBars:confirmed,eligibleByContext,confirmedByContext,signals,heldBars:held,turnover,fundingEvents:fEvents,fundingFallback:fFallback,fundingUnpriced:fUnpriced};
   }
   function bootstrap(trades,alpha){
     if(trades.length<2)return null;
@@ -190,7 +197,7 @@ module.exports = function runExperiment(input) {
   const primaryMetrics=metrics(primary,testStart,n,.05/6);
   const byContext={};
   for(const c of ["BULL_NORMAL","BEAR_NORMAL"]){
-    const sub={...primary,trades:primary.trades.filter(x=>x.context===c)};
+    const sub={...primary,trades:primary.trades.filter(x=>x.context===c),eligibleContextBars:primary.eligibleByContext[c]||0,btcConfirmedContextBars:primary.confirmedByContext[c]||0};
     byContext[c]=metrics(sub,testStart,n,.05/6);
   }
   const neighbors=[1.25,1.5,1.75].map(stopAtr=>({stopAtr,metrics:metrics(simulate(testStart,n,th,stopAtr,15,true),testStart,n,.05/6)}));

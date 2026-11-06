@@ -42,9 +42,13 @@ describe('proposeSpecs', () => {
       draft({ id: 'NOPREFIX' }),
     ];
     const client = scripted([reply(...bad), reply(draft({ id: 'LLM-FIXED' }))]);
-    const result = await proposeSpecs({ client, model: 'm', count: 5, existing: [] });
+    const lines: string[] = [];
+    const result = await proposeSpecs({ client, model: 'm', count: 5, existing: [], log: (line) => lines.push(line) });
     assert.deepEqual(result.proposals.map((p) => p.id), ['LLM-FIXED']);
     assert.equal(result.rejected.length, 5);
+    assert.deepEqual(result.attempts.map((a) => [a.attempt, a.accepted, a.rejected.length]), [[1, [], 5], [2, ['LLM-FIXED'], 0]]);
+    assert.equal(result.attempts[1]!.reply, reply(draft({ id: 'LLM-FIXED' })));
+    assert.ok(lines.some((l) => /attempt 2\/2/.test(l)) && lines.some((l) => /^  ok LLM-FIXED/.test(l)), lines.join('\n'));
     assert.match(client.prompts[1]!, /MEAN_REVERSION[\s\S]*DOGEUSDT[\s\S]*roundTripBps 2[\s\S]*minOosTrades 20[\s\S]*must start with LLM-/);
   });
 

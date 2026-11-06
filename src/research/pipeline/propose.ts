@@ -35,12 +35,25 @@ export interface ProposeArgs {
   count: number;
   /** Specs already on disk: their ids block duplicates and their hypotheses are shown to the model. */
   existing: HypothesisSpec[];
+  /** Progress lines for the operator; silent when omitted. */
+  log?: (line: string) => void;
+}
+
+export interface ProposalAttempt {
+  attempt: number;
+  prompt: string;
+  /** Raw model reply, kept so every proposal can be audited against exactly what the model said. */
+  reply: string;
+  latencyMs: number;
+  accepted: string[];
+  rejected: string[];
 }
 
 export interface ProposeResult {
   proposals: HypothesisSpec[];
   /** Why drafts were dropped across all attempts (schema, evaluator limits, duplicates, unreadable reply). */
   rejected: string[];
+  attempts: ProposalAttempt[];
 }
 
 function buildPrompt(args: ProposeArgs, wanted: number, repairs: string[]): string {
@@ -88,30 +101,49 @@ function draftsIn(text: string): unknown[] {
 
 const reasonOf = (error: unknown): string => (error instanceof Error ? error.message.split('\n')[0]! : String(error));
 
-/** Asks the model for `count` drafts, with one repair round for rejected ones. LLM transport errors propagate to the caller. */
-export async function proposeSpecs(args: ProposeArgs): Promise<ProposeResult> {
-  const taken = new Set(args.existing.map((s) => `${s.id}@${s.version}`));
-  const proposals: HypothesisSpec[] = [];
+const describeSpec = (spec: HypothesisSpec): string =>
+  `${spec.id} · ${spec.symbols.join(',')} · ${spec.timeframes.join(',')} · ${JSON.stringify(spec.params)} · ${spec.window.days}d · ${spec.hypothesis.slice(0, 120)}`;
+
+function acceptDrafts(reply: string, wanted: number, taken: Set<string>): { accepted: HypothesisSpec[]; rejected: string[] } {
+  let drafts: unknown[];
+  try { drafts = draftsIn(reply); } catch (error) { return { accepted: [], rejected: [reasonOf(error)] }; }
+  const accepted: HypothesisSpec[] = [];
   const rejected: string[] = [];
-  let repairs: string[] = [];
-  for (let attempt = 0; attempt < MAX_ATTEMPTS && proposals.length < args.count; attempt += 1) {
-    const wanted = args.count - proposals.length;
-    const text = await args.client.generateText({ model: args.model, prompt: buildPrompt(args, wanted, repairs), timeoutMs: LLM_TIMEOUT_MS });
-    repairs = [];
-    let drafts: unknown[];
-    try { drafts = draftsIn(text); } catch (error) { repairs.push(reasonOf(error)); rejected.push(reasonOf(error)); continue; }
-    for (const raw of drafts.slice(0, wanted)) {
-      try {
-        const spec = checkDraft(raw, taken);
-        taken.add(`${spec.id}@${spec.version}`);
-        proposals.push(spec);
-      } catch (error) {
-        repairs.push(reasonOf(error));
-        rejected.push(reasonOf(error));
-      }
+  for (const raw of drafts.slice(0, wanted)) {
+    try {
+      const spec = checkDraft(raw, taken);
+      taken.add(`${spec.id}@${spec.version}`);
+      accepted.push(spec);
+    } catch (error) {
+      rejected.push(reasonOf(error));
     }
   }
-  return { proposals, rejected };
+  return { accepted, rejected };
+}
+
+/** Asks the model for `count` drafts, with one repair round for rejected ones. LLM transport errors propagate to the caller. */
+export async function proposeSpecs(args: ProposeArgs): Promise<ProposeResult> {
+  const log = args.log ?? (() => undefined);
+  const taken = new Set(args.existing.map((s) => `${s.id}@${s.version}`));
+  const proposals: HypothesisSpec[] = [];
+  const attempts: ProposalAttempt[] = [];
+  let repairs: string[] = [];
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS && proposals.length < args.count; attempt += 1) {
+    const wanted = args.count - proposals.length;
+    const prompt = buildPrompt(args, wanted, repairs);
+    log(`asking ${args.model} for ${wanted} draft(s), attempt ${attempt}/${MAX_ATTEMPTS}, timeout ${LLM_TIMEOUT_MS / 1000}s`);
+    const startedMs = Date.now();
+    const reply = await args.client.generateText({ model: args.model, prompt, timeoutMs: LLM_TIMEOUT_MS });
+    const latencyMs = Date.now() - startedMs;
+    const { accepted, rejected } = acceptDrafts(reply, wanted, taken);
+    log(`reply in ${(latencyMs / 1000).toFixed(1)}s (${reply.length} chars): ${accepted.length} accepted, ${rejected.length} rejected`);
+    for (const spec of accepted) log(`  ok ${describeSpec(spec)}`);
+    for (const reason of rejected) log(`  rejected: ${reason}`);
+    proposals.push(...accepted);
+    attempts.push({ attempt, prompt, reply, latencyMs, accepted: accepted.map((spec) => spec.id), rejected });
+    repairs = rejected;
+  }
+  return { proposals, rejected: attempts.flatMap((a) => a.rejected), attempts };
 }
 
 /** One `<id>.json` per proposal; an existing file is never overwritten. Returns the paths written. */

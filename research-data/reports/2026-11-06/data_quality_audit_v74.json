@@ -1,0 +1,127 @@
+{
+  "schema_version": "1.0.0",
+  "as_of_utc": "2026-11-06T11:46:16.879Z",
+  "canonical_4h": {
+    "rows_per_symbol": 13461,
+    "total_rows": 53844,
+    "start_utc": "2020-09-14T08:00:00Z",
+    "last_completed_open_utc": "2026-11-05T16:00:00Z",
+    "duration_years": 6.14,
+    "readback_verified": true,
+    "aligned": true,
+    "per_symbol": {
+      "BTCUSDT": {
+        "sha256": "7088aa2b2cc48c3895fd77dfc2ece0ae812062f24a70374ec556273a2d8380d7",
+        "blob_sha": "a465025b2276a0e9cfbf805ba64be4da6ed08868",
+        "bytes": 1971801
+      },
+      "ETHUSDT": {
+        "sha256": "0e1ba53fb3c4c42e89440f2aaabfc7eead44ac84bc67a083c86df96a2f12dce2",
+        "blob_sha": "26034cbb638d45295504f8e1a52862adca63eea6",
+        "bytes": 1933503
+      },
+      "SOLUSDT": {
+        "sha256": "148389f0347fe05307e2a274c579ccc1c495e32eaad2e49cfb19ca211df89156",
+        "blob_sha": "77af5caa7d5e76c8efc3fd8571c55a20376ac97f",
+        "bytes": 1851212
+      },
+      "XRPUSDT": {
+        "sha256": "b1a96c24f0e91aff7368facc428dffa22360093ce74dfe186d259b66d19f8023",
+        "blob_sha": "242e2c96a05feb175e869edbdea23ee85a136f69",
+        "bytes": 1864069
+      }
+    },
+    "quality_failures": {
+      "duplicates": 0,
+      "gaps": 0,
+      "off_grid": 0,
+      "ohlc": 0,
+      "non_positive_volume": 0,
+      "non_finite": 0,
+      "close_time": 0
+    }
+  },
+  "aligned_base_window": {
+    "rows_per_symbol": 13454,
+    "total_rows": 53816,
+    "last_completed_open_utc": "2026-11-04T12:00:00Z",
+    "note": "Canonical 4h layer includes 7 later rows per symbol through 2026-11-05T16:00Z; these are separate from the older aligned base-window field."
+  },
+  "rolling_300_row_probe": {
+    "symbols": [
+      "BTCUSDT",
+      "ETHUSDT",
+      "SOLUSDT",
+      "XRPUSDT"
+    ],
+    "intervals": [
+      "5m",
+      "15m",
+      "1h",
+      "4h"
+    ],
+    "rows_per_series": 300,
+    "series_count": 16,
+    "raw_rows": 4800,
+    "completed_rows": 4784,
+    "forming_rows_excluded": 16,
+    "quality_failures": {
+      "duplicates": 0,
+      "gaps": 0,
+      "off_grid": 0,
+      "ohlc": 0,
+      "non_positive_volume": 0,
+      "non_finite": 0,
+      "non_monotonic": 0
+    },
+    "coverage": {
+      "5m": "2026-11-05T10:30Z to 2026-11-06T11:25Z",
+      "15m": "2026-11-03T08:30Z to 2026-11-06T11:15Z",
+      "1h": "2026-10-25T00:00Z to 2026-11-06T11:00Z",
+      "4h": "2026-09-17T12:00Z to 2026-11-06T08:00Z (08:00 bar forming at probe time)"
+    }
+  },
+  "incremental_archive": {
+    "branch": "research/raw-ohlcv-archive-2026-11-05T0530Z",
+    "archive_index_path": "research-data/binance-usdm/4h/archive-index.json",
+    "index_blob_sha": "5f32db23dafd6593efafdedbb1510446451144bf",
+    "incremental_rows_total": 2128,
+    "delta_files": 39,
+    "highwater": {
+      "5m": "2026-11-06T11:30:00Z",
+      "15m": "2026-11-06T11:15:00Z",
+      "1h": "2026-11-06T10:00:00Z",
+      "4h": "2026-11-06T04:00:00Z"
+    },
+    "new_rows_since_prior_highwater": {
+      "total": 68,
+      "5m": 48,
+      "15m": 16,
+      "1h": 4,
+      "4h": 0
+    },
+    "forming_rows_excluded": 16,
+    "quality_failures": 0,
+    "new_deltas": [
+      {
+        "path": "research-data/binance-usdm/delta/binance_usdm_delta_20261106T113449Z_completed.jsonl",
+        "rows": 64,
+        "sha256": "759733f2d1e5b60c7ed6f2a3e35a0b2c4f5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f",
+        "manifest": "research-data/binance-usdm/delta/binance_usdm_delta_20261106T113449Z.manifest.json"
+      },
+      {
+        "path": "research-data/binance-usdm/delta/binance_usdm_delta_20261106T113644Z_completed.jsonl",
+        "rows": 4,
+        "sha256": "ec2eb7d65391db1f708b62590711b897040ec3ce1656c8aaf155f571fbcabd80",
+        "manifest": "research-data/binance-usdm/delta/binance_usdm_delta_20261106T113644Z.manifest.json"
+      }
+    ]
+  },
+  "unresolved": [
+    "76-row historical delta gap remains unresolved.",
+    "14 manifest hash mismatches remain; 21,000-row reconciliation across 14 pairs was exact at row level, with no OHLCV mismatches.",
+    "Four duplicate keys were removed during canonical reconciliation.",
+    "Malformed XRP record is retained in the immutable source; a separate correction artifact exists.",
+    "Multi-year 5m/15m/1h archives are not yet available; only rolling probes and incremental deltas exist."
+  ]
+}

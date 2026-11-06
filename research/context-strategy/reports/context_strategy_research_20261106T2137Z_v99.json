@@ -1,0 +1,536 @@
+{
+  "schemaVersion": "1.0.0",
+  "runId": "CONTEXT-STRATEGY-20261106T2137Z-V99",
+  "version": "V99",
+  "createdAtUtc": "2026-11-06T21:37:59.973Z",
+  "classification": "RESEARCH_BLOCKED",
+  "summary": "Two additional 1h archive pages (12,000 rows) and a fresh 68-row completed-candle delta were persisted and readback-verified. Monitoring completed. No strategy experiment, repository smoke test, or untouched OOS evaluation ran because the local runtime is below the repository engine floor, the repository is not checked out, required packages are absent, and direct Binance/Binance Vision DNS is unavailable.",
+  "researchProgress": {
+    "archiveRowsAddedThisRun": {
+      "historical1h": 12000,
+      "incremental5m15m1h": 68,
+      "total": 12068
+    },
+    "oneHourArchive": {
+      "pages": 25,
+      "rowsPerSymbol": 37500,
+      "rowsTotal": 150000,
+      "startUtc": "2020-09-14T08:00:00.000Z",
+      "lastCompletedOpenUtc": "2024-12-24T19:00:00.000Z",
+      "nextStartUtc": "2024-12-24T20:00:00.000Z",
+      "quality": {
+        "duplicates": 0,
+        "gaps": 0,
+        "ohlcFailures": 0,
+        "nonFinite": 0,
+        "nonPositiveVolume": 0,
+        "alignmentFailures": 0
+      }
+    },
+    "fourHourArchive": {
+      "rawRowsBySymbol": {
+        "BTCUSDT": 13499,
+        "ETHUSDT": 13499,
+        "SOLUSDT": 13455,
+        "XRPUSDT": 13499
+      },
+      "rawRowsTotal": 53952,
+      "canonicalRowsPerSymbol": 13461,
+      "canonicalRowsTotal": 53844,
+      "canonicalEndLastCompletedOpenUtc": "2026-11-05T16:00:00.000Z",
+      "alignedAnalysisRowsPerSymbol": 13454,
+      "alignedAnalysisRowsTotal": 53816,
+      "alignedAnalysisEndUtc": "2026-11-04T12:00:00.000Z",
+      "latestIncremental4hHighwaterUtc": "2026-11-06T16:00:00.000Z",
+      "canonicalReassemblyRequired": true
+    },
+    "incrementalRefresh": {
+      "rowsFetched": 80,
+      "formingRowsExcluded": 12,
+      "rowsAppended": 68,
+      "latestCompletedOpenUtcByInterval": {
+        "5m": "2026-11-06T21:25:00.000Z",
+        "15m": "2026-11-06T21:15:00.000Z",
+        "1h": "2026-11-06T20:00:00.000Z",
+        "4h": "2026-11-06T16:00:00.000Z"
+      },
+      "quality": {
+        "duplicates": 0,
+        "gaps": 0,
+        "ohlcFailures": 0,
+        "nonFinite": 0,
+        "nonPositiveVolume": 0,
+        "timestampAlignment": 0,
+        "crossSymbolAlignment": true
+      },
+      "readbackVerified": true
+    },
+    "incrementalDeltaRowsIndexedTotal": 2644,
+    "unresolved": {
+      "missingDeltaRows": 76,
+      "missingDeltaFile": "research-data/binance-usdm/delta/binance_usdm_delta_2026-11-05T0524Z.jsonl",
+      "pageSymbolShaMismatches": 14,
+      "rowLevelReconciliationRows": 21000,
+      "rowLevelMismatches": 0,
+      "multiYear5m15mArchive": false,
+      "canonical4hLagHours": 24
+    },
+    "experimentsRun": 0,
+    "oosEvaluations": 0,
+    "remainingWork": [
+      "1h page0026 from 2024-12-24T20:00:00Z",
+      "canonical 4h reassembly through 2026-11-06T16:00Z",
+      "multi-year 5m/15m backfill",
+      "recover the exact 76-row missing delta",
+      "retain/reconcile 14 hash mismatches",
+      "historical funding/OI/taker/positioning archives",
+      "compatible local Node/npm/repository harness"
+    ]
+  },
+  "contextDiscovery": {
+    "taxonomyId": "CTX-4H-EMA50xEMA200-ATRQ-v2-FULL-ARCHIVE",
+    "taxonomyChanged": false,
+    "thresholdsRefit": false,
+    "featureMethod": "Completed 4h candles only; EMA50/EMA200 spread; Wilder ATR14/close; training q33/q67 volatility bands; training q99 shock threshold.",
+    "currentFeatureTimeUtc": "2026-11-06T19:59:59.999Z",
+    "latestCompleted4hOpenUtc": "2026-11-06T16:00:00.000Z",
+    "calculationWindow": "Connector sample of 1,000 4h bars per symbol (999 completed); EMA50 warmed over last 500 bars, EMA200 over 1,000 bars, ATR14 Wilder smoothing over last 100 bars. Frozen training thresholds from the existing CTX v2 artifact; this is not a full canonical-archive recomputation.",
+    "thresholdsBySymbol": {
+      "BTCUSDT": {
+        "flatSpreadThresholdPct": 2.5048,
+        "atrQ33Pct": 1.4474,
+        "atrQ67Pct": 2.0674,
+        "shockQ99Pct": 4.8982
+      },
+      "ETHUSDT": {
+        "flatSpreadThresholdPct": 2.5106,
+        "atrQ33Pct": 1.755,
+        "atrQ67Pct": 2.5876,
+        "shockQ99Pct": 6.3197
+      },
+      "SOLUSDT": {
+        "flatSpreadThresholdPct": 4.0735,
+        "atrQ33Pct": 2.7494,
+        "atrQ67Pct": 4.0357,
+        "shockQ99Pct": 9.7612
+      },
+      "XRPUSDT": {
+        "flatSpreadThresholdPct": 2.3359,
+        "atrQ33Pct": 1.9936,
+        "atrQ67Pct": 3.0167,
+        "shockQ99Pct": 9.098
+      }
+    },
+    "currentContexts": {
+      "BTCUSDT": {
+        "context": "BEAR_NORMAL",
+        "emaSpreadPct": -2.5408,
+        "atr14ClosePct": 1.4716,
+        "last4hReturnPct": 0.0409,
+        "classificationConfidence": "LOW_NEAR_BOUNDARY",
+        "transitionWarning": true
+      },
+      "ETHUSDT": {
+        "context": "BEAR_NORMAL",
+        "emaSpreadPct": -3.7323,
+        "atr14ClosePct": 1.8652,
+        "last4hReturnPct": 0.237,
+        "classificationConfidence": "LOW_NEAR_BOUNDARY",
+        "transitionWarning": true
+      },
+      "SOLUSDT": {
+        "context": "BEAR_LOW",
+        "emaSpreadPct": -6.9411,
+        "atr14ClosePct": 2.2286,
+        "last4hReturnPct": -0.6193,
+        "classificationConfidence": "MODERATE",
+        "transitionWarning": false
+      },
+      "XRPUSDT": {
+        "context": "BEAR_NORMAL",
+        "emaSpreadPct": -4.3493,
+        "atr14ClosePct": 2.1749,
+        "last4hReturnPct": -0.1433,
+        "classificationConfidence": "MODERATE",
+        "transitionWarning": false
+      }
+    },
+    "historicalTestStability": {
+      "BTCUSDT": {
+        "observations": 284,
+        "frequencyPct": 7.15,
+        "medianDurationBars": 6,
+        "selfTransitionPct": 95.09,
+        "jsdTrainTest": 0.1231
+      },
+      "ETHUSDT": {
+        "observations": 705,
+        "frequencyPct": 17.74,
+        "medianDurationBars": 6,
+        "selfTransitionPct": 93.58,
+        "jsdTrainTest": 0.0429
+      },
+      "SOLUSDT": {
+        "observations": 762,
+        "frequencyPct": 19.17,
+        "medianDurationBars": 6,
+        "selfTransitionPct": 95.14,
+        "jsdTrainTest": 0.131
+      },
+      "XRPUSDT": {
+        "observations": 597,
+        "frequencyPct": 15.02,
+        "medianDurationBars": 8,
+        "selfTransitionPct": 94.01,
+        "jsdTrainTest": 0.0467
+      }
+    },
+    "discovery": "No new taxonomy experiment or stability review was run. BTC and SOL retain higher train/test JSD than ETH/XRP. Current labels are feature classifications, not win probabilities."
+  },
+  "strategyContextScorecard": {
+    "registryEntriesUnchanged": true,
+    "oosValidatedEntries": 0,
+    "entries": [
+      {
+        "symbol": "SOLUSDT",
+        "context": "BULL_LOW",
+        "strategy": "DONCHIAN_BREAKOUT_BULL_LOW_V1",
+        "status": "INSUFFICIENT_EVIDENCE",
+        "oosTrades": 55,
+        "winRate": 0.4364,
+        "targetBeforeStopProbability": 0.2182,
+        "meanNetR": 0.0431,
+        "bootstrap95CI": [
+          -0.2798,
+          0.39
+        ],
+        "profitFactor": 1.0824,
+        "maxDrawdownR": 7.8879,
+        "totalQuotePnlPerSol": -19.8265,
+        "validationTrades": 30,
+        "validationMeanNetR": -0.1469
+      },
+      {
+        "symbol": "SOLUSDT",
+        "context": "SIDEWAYS_LOW",
+        "strategy": "FAILED_BREAKOUT_FADE_V1",
+        "status": "REJECTED",
+        "oosTrades": 113,
+        "winRate": 0.4336,
+        "targetBeforeStopProbability": 0.2743,
+        "meanNetR": -0.148,
+        "bootstrap95CI": [
+          -0.3175,
+          0.0196
+        ],
+        "profitFactor": 0.7871,
+        "maxDrawdownR": 20.7917,
+        "holmAdjustedPValue": 1,
+        "validationTrades": 100,
+        "validationMeanNetR": -0.2526
+      },
+      {
+        "symbol": "SOLUSDT",
+        "context": "BEAR_NORMAL",
+        "strategy": "EMA20_PULLBACK_RECROSS_BTC_CONFIRM_V1_1",
+        "status": "INSUFFICIENT_EVIDENCE",
+        "oosTrades": 10,
+        "winRate": 0.4,
+        "targetBeforeStopProbability": 0.1,
+        "meanNetR": -0.1886,
+        "bootstrap95CI": [
+          -0.8603,
+          0.7791
+        ],
+        "profitFactor": 0.733,
+        "maxDrawdownR": 3.4844,
+        "costProxyBps": 15
+      }
+    ],
+    "statusCounts": {
+      "OOS_VALIDATED": 0,
+      "OOS_PROMISING": 0,
+      "REJECTED": 1,
+      "INSUFFICIENT_EVIDENCE": 2
+    },
+    "evidencePolicy": {
+      "minimumProvisionalOosTradesPerSymbolContext": 100,
+      "strongerEvidenceTrades": 200,
+      "positiveNetExpectancyAfterCosts": true,
+      "robustnessAndUncertaintyRequired": true
+    }
+  },
+  "keyDiscoveries": [
+    "No new conditional edge was tested or discovered this run.",
+    "The tested SOL failed-breakout fade implementation remains REJECTED; this does not reject all range mean-reversion variants.",
+    "The SOL Donchian breakout remains INSUFFICIENT_EVIDENCE; its 95% block-bootstrap interval includes negative expectancy and its quote PnL is negative.",
+    "The SOL EMA pullback/BTC confirmation candidate remains INSUFFICIENT_EVIDENCE at 10 OOS trades.",
+    "No ETHUSDT/XRPUSDT symbol-specific strategy has OOS evidence in the current registry."
+  ],
+  "currentMarketSnapshot": {
+    "asOfUtc": "2026-11-06T21:31:25.198Z",
+    "dataTimes": {
+      "markPriceUtc": "2026-11-06T21:31:23.001Z",
+      "exchangeInfoServerTimeUtc": "2026-11-06T11:18:40.883Z",
+      "exchangeInfoDriftSeconds": 36762.123,
+      "latestSettledFundingUtc": "2026-11-06T16:00:00.000Z",
+      "nextFundingUtc": "2026-11-07T00:00:00.000Z",
+      "depthBatchUtc": "2026-11-06T21:26Z",
+      "takerBucketUtc": "2026-11-06T20:00:00.000Z",
+      "globalLongShortSampleUtc": "2026-11-06T21:00:00.000Z"
+    },
+    "funding": {
+      "intervalHours": {
+        "BTCUSDT": 8,
+        "ETHUSDT": 8,
+        "SOLUSDT": 8,
+        "XRPUSDT": 8
+      },
+      "premiumIndexLastFundingRateFieldPct": {
+        "BTCUSDT": 0.01,
+        "ETHUSDT": 0.008527,
+        "SOLUSDT": 0.009154,
+        "XRPUSDT": 0.003959
+      },
+      "lastSettledFundingPct": {
+        "BTCUSDT": 0.009043,
+        "ETHUSDT": 0.003319,
+        "SOLUSDT": 0.006719,
+        "XRPUSDT": 0.005378
+      },
+      "separatelyNamedPredictedFundingRate": "UNAVAILABLE",
+      "thresholdAbsPct": 0.05,
+      "thresholdBreached": false
+    },
+    "symbols": {
+      "BTCUSDT": {
+        "role": "REFERENCE_ONLY",
+        "context": "BEAR_NORMAL",
+        "markPrice": 75727.89626812,
+        "lastPrice": 75727,
+        "change24hPct": -0.341,
+        "openInterest": 96579.604,
+        "oiChange20to21UtcPct": 0.3047,
+        "takerBuySellRatio20Utc": 0.8424,
+        "globalLongAccountPct21Utc": 75.63,
+        "globalLongShortAccountRatio21Utc": 3.1034,
+        "spreadBps": 0.0132,
+        "depth20NotionalImbalance": -0.5111
+      },
+      "ETHUSDT": {
+        "role": "TRADABLE",
+        "context": "BEAR_NORMAL",
+        "markPrice": 2226.10532558,
+        "lastPrice": 2226.06,
+        "change24hPct": -0.368,
+        "openInterest": 2369517.477,
+        "oiChange20to21UtcPct": -0.126,
+        "takerBuySellRatio20Utc": 1.3537,
+        "globalLongAccountPct21Utc": 79.75,
+        "globalLongShortAccountRatio21Utc": 3.9383,
+        "spreadBps": 0.0449,
+        "depth20NotionalImbalance": 0.2293
+      },
+      "SOLUSDT": {
+        "role": "TRADABLE",
+        "context": "BEAR_LOW",
+        "markPrice": 89.73,
+        "lastPrice": 89.73,
+        "change24hPct": -0.222,
+        "openInterest": 9289091.9,
+        "oiChange20to21UtcPct": -0.0535,
+        "takerBuySellRatio20Utc": 1.0572,
+        "globalLongAccountPct21Utc": 78.06,
+        "globalLongShortAccountRatio21Utc": 3.5579,
+        "spreadBps": 1.1127,
+        "depth20NotionalImbalance": 0.0988
+      },
+      "XRPUSDT": {
+        "role": "TRADABLE",
+        "context": "BEAR_NORMAL",
+        "markPrice": 1.1743,
+        "lastPrice": 1.1743,
+        "change24hPct": -4.248,
+        "openInterest": 337069031.5,
+        "oiChange20to21UtcPct": 0.6233,
+        "takerBuySellRatio20Utc": 1.0219,
+        "globalLongAccountPct21Utc": 75.24,
+        "globalLongShortAccountRatio21Utc": 3.0388,
+        "spreadBps": 0.8495,
+        "depth20NotionalImbalance": 0.016
+      }
+    },
+    "contextWarnings": [
+      "BTC context remains close to the frozen sideways boundary.",
+      "ETH volatility is near its training q33 boundary.",
+      "Global long/short is account-count based; order-book imbalance is a single snapshot; OI alone does not prove crowding or liquidations."
+    ]
+  },
+  "decisions": {
+    "BTCUSDT": "REFERENCE_ONLY",
+    "SOLUSDT": "NO_TRADE",
+    "ETHUSDT": "NO_TRADE",
+    "XRPUSDT": "NO_TRADE",
+    "eligibleOosValidatedStrategies": 0,
+    "reasons": [
+      "No OOS_VALIDATED registry entries exist.",
+      "No symbol/context-specific validated trigger can be evaluated.",
+      "ExchangeInfo metadata is 10h12m stale and cannot validate current contract filters/status."
+    ]
+  },
+  "dataQualityAudit": {
+    "currentSamples": {
+      "perSymbol": {
+        "BTCUSDT": {
+          "4h": {
+            "returned": 1000,
+            "completed": 999,
+            "formingExcluded": 1
+          },
+          "1h": {
+            "returned": 50,
+            "completed": 49,
+            "formingExcluded": 1
+          },
+          "15m": {
+            "returned": 50,
+            "completed": 49,
+            "formingExcluded": 1
+          },
+          "5m": {
+            "returned": 50,
+            "completed": 49,
+            "formingExcluded": 1
+          }
+        },
+        "ETHUSDT": {
+          "4h": {
+            "returned": 1000,
+            "completed": 999,
+            "formingExcluded": 1
+          },
+          "1h": {
+            "returned": 50,
+            "completed": 49,
+            "formingExcluded": 1
+          },
+          "15m": {
+            "returned": 50,
+            "completed": 49,
+            "formingExcluded": 1
+          },
+          "5m": {
+            "returned": 50,
+            "completed": 49,
+            "formingExcluded": 1
+          }
+        },
+        "SOLUSDT": {
+          "4h": {
+            "returned": 1000,
+            "completed": 999,
+            "formingExcluded": 1
+          },
+          "1h": {
+            "returned": 50,
+            "completed": 49,
+            "formingExcluded": 1
+          },
+          "15m": {
+            "returned": 50,
+            "completed": 49,
+            "formingExcluded": 1
+          },
+          "5m": {
+            "returned": 50,
+            "completed": 49,
+            "formingExcluded": 1
+          }
+        },
+        "XRPUSDT": {
+          "4h": {
+            "returned": 1000,
+            "completed": 999,
+            "formingExcluded": 1
+          },
+          "1h": {
+            "returned": 50,
+            "completed": 49,
+            "formingExcluded": 1
+          },
+          "15m": {
+            "returned": 50,
+            "completed": 49,
+            "formingExcluded": 1
+          },
+          "5m": {
+            "returned": 50,
+            "completed": 49,
+            "formingExcluded": 1
+          }
+        }
+      },
+      "quality": "zero duplicates, gaps or OHLCV invariant failures in fetched samples"
+    },
+    "persistedNewSegments": {
+      "page24Rows": 6000,
+      "page25Rows": 6000,
+      "deltaRows": 68,
+      "formingDeltaRowsExcluded": 12,
+      "readbackVerified": true
+    },
+    "unavailable": [
+      "Direct HTTP status/headers/server time",
+      "Multi-year 5m/15m archive",
+      "Historical BTC/ETH/XRP funding",
+      "Historical OI/taker/positioning archive",
+      "Exact coverage of missing 76-row delta"
+    ]
+  },
+  "costAssumptions": {
+    "noNewExperiment": true,
+    "existingBacktestCostProxyBps": 15,
+    "remoteBacktestFundingProxy": {
+      "enabledByFlag": true,
+      "intervalHours": 8,
+      "rate": 0.0001
+    },
+    "limitation": "The remote replay CLI uses a fixed funding proxy rather than a full symbol/time-aligned historical funding series; do not treat this as fully calibrated funding-cost validation."
+  },
+  "execution": {
+    "repositoryPackageEngine": {
+      "node": ">=24",
+      "npm": ">=11"
+    },
+    "availableRuntime": {
+      "node": "v22.16.0",
+      "npm": "10.9.2"
+    },
+    "sdkPackagesInstalled": false,
+    "localCheckout": false,
+    "remoteHarnessExists": true,
+    "harnessInvoked": false,
+    "fixtureSmokeTest": "NOT_RUN",
+    "reason": "Runtime floor mismatch, no project checkout/dependencies, direct DNS failure; remote archive source is Binance Vision and not the persisted GitHub research archive."
+  },
+  "researchQueue": {
+    "items": 82,
+    "updatedAtUtc": "2026-11-06T21:36:07.357Z",
+    "nextOneHourPageStartUtc": "2024-12-24T20:00:00.000Z",
+    "weeklyReviewDueUtc": "2026-11-11T00:00:00.000Z"
+  },
+  "nextExperiments": [
+    "Continue 1h page0026 from 2024-12-24T20:00:00Z.",
+    "Reassemble canonical 4h series through 2026-11-06T16:00Z and verify no intermediate gaps.",
+    "Implement/verify a harness adapter that consumes the persisted repository archive, or restore Binance Vision network access.",
+    "Provision Node24/npm11 and clean checkout; run typecheck/tests and deterministic no-lookahead fixture.",
+    "After prerequisites, pre-register a trend/pullback or breakout/retest strategy x context x symbol experiment with frozen train/validation/test boundaries and realistic funding costs."
+  ],
+  "persistence": {
+    "archiveBranch": "research/raw-ohlcv-archive-2026-11-05T0530Z",
+    "researchBranch": "research/context-strategy-2026-11-06-run12",
+    "archiveArtifactsReadbackVerified": true,
+    "queueReadbackVerified": true,
+    "registryEvidenceEntriesChanged": false
+  }
+}

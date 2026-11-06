@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAtUtc": "2026-11-06T03:33:17.127Z",
+  "updatedAtUtc": "2026-11-06T04:36:39Z",
   "items": [
     {
       "id": "Q1_ARCHIVE_MULTIYEAR",
@@ -11,8 +11,8 @@
         "Compatible bulk-data downloader or official Binance Vision access",
         "Persistent writable store"
       ],
-      "nextAction": "Continue oldest-first 1h backfill page 0003 from 2021-01-17T08:00:00Z for all four symbols. Then backfill multi-year 5m/15m from an auditable bulk source; recover the unresolved 2026-11-05T0524Z 76-row delta provenance. Keep hourly completed-bar appends current.",
-      "blocker": "1h coverage has advanced to 3,000 rows/symbol (2020-09-14T08:00Z through 2021-01-17T07:00Z), still far short of current. Multi-year 5m/15m remain absent. The separate 2026-11-05T0524Z 76-row delta provenance remains unresolved. Direct fapi DNS is unavailable in the local shell; the Binance connector remains usable.",
+      "nextAction": "Continue oldest-first 1h page 0004 from 2021-03-20T20:00:00Z for all four symbols; then acquire multi-year 5m/15m from an auditable bulk source and recover the unresolved 76-row 2026-11-05T0524Z delta provenance.",
+      "blocker": "1h coverage is now 4,500 rows/symbol through 2021-03-20T19:00Z, still far short of current. Multi-year 5m/15m remain absent. The separate 76-row delta provenance remains unresolved. Direct fapi DNS is unavailable in the local shell; Binance connector remains usable.",
       "result": {
         "canonical4hRowsPerSymbol": 13462,
         "canonical4hRowsTotal": 53848,
@@ -23,26 +23,27 @@
         "canonicalFileRowsPerSymbol": 13461,
         "canonicalFileEndUtc": "2026-11-05T16:00:00Z",
         "effectiveHighwaterByInterval": {
-          "5m": "2026-11-06T03:25:00Z",
-          "15m": "2026-11-06T03:15:00Z",
-          "1h": "2026-11-06T02:00:00Z",
-          "4h": "2026-11-05T20:00:00Z"
+          "5m": "2026-11-06T04:25:00Z",
+          "15m": "2026-11-06T04:15:00Z",
+          "1h": "2026-11-06T03:00:00Z",
+          "4h": "2026-11-06T00:00:00Z"
         },
-        "latestDeltaRows": 8,
-        "latestDeltaSha256": "b909633bf760386145ba19f7734523d42abd38982ffae13cc36672696a8e3db9",
+        "latestDeltaRows": 72,
+        "latestDeltaSha256": "8a786991b7d8a56e98ddc0a24fdcceddc3dfe4903ef31b895b926067c0e46713",
         "latestDeltaReadbackVerified": true,
         "unresolvedMissing76RowDelta": true,
-        "latestDeltaPath": "research-data/binance-usdm/delta/binance_usdm_delta_20261106T0330Z_5m_15m.jsonl",
+        "latestDeltaPath": "research-data/binance-usdm/delta/binance_usdm_delta_20261106T0435Z_completed.jsonl",
         "oneHourBackfill": {
-          "pages": 2,
-          "rowsPerSymbol": 3000,
-          "rowsTotal": 12000,
+          "pages": 3,
+          "rowsPerSymbol": 4500,
+          "rowsTotal": 18000,
           "startUtc": "2020-09-14T08:00:00Z",
-          "lastCompletedOpenUtc": "2021-01-17T07:00:00Z",
-          "nextStartUtc": "2021-01-17T08:00:00Z",
+          "lastCompletedOpenUtc": "2021-03-20T19:00:00Z",
+          "nextStartUtc": "2021-03-20T20:00:00Z",
           "manifestPaths": [
             "research-data/binance-usdm/1h/manifest-page-0001.json",
-            "research-data/binance-usdm/1h/manifest-page-0002.json"
+            "research-data/binance-usdm/1h/manifest-page-0002.json",
+            "research-data/binance-usdm/1h/manifest-page-0003.json"
           ],
           "archiveIndexPath": "research-data/binance-usdm/1h/archive-index.json",
           "readbackVerified": true
@@ -80,7 +81,7 @@
         "Direct bounded HTTP or Binance SDK call"
       ],
       "nextAction": "Restore direct DNS and obtain uncached /fapi/v1/time plus /fapi/v1/exchangeInfo; require <=60s server-time drift before using contract metadata for execution validation.",
-      "blocker": "Direct fapi.binance.com DNS resolution failed (curl exit 6, HTTP 000). Latest connector exchangeInfo.serverTime=2026-11-06T01:01:01.894Z versus fresh market endpoint timestamps around 2026-11-06T02:30:56Z (~1h29m54s stale); direct /fapi/v1/time unavailable. Metadata remains non-authoritative for execution validation."
+      "blocker": "Direct fapi.binance.com DNS resolution failed (curl exit 6, HTTP 000). exchangeInfo.serverTime=2026-11-06T03:24:17.651Z versus fresh market timestamps 04:36:39Z (~72m stale); metadata is not authoritative for execution validation."
     },
     {
       "id": "Q3_RUN_REPOSITORY_BACKTEST",
@@ -93,7 +94,22 @@
         "dependencies installed"
       ],
       "nextAction": "Provision Node >=24/npm >=11 and a clean local checkout; run repository typecheck/tests and compare repository harness output against the committed self-contained runner.",
-      "blocker": "Committed self-contained JS runner executed in managed V8 Code Mode; 600-bar deterministic and no-lookahead fixture smoke passed, and untouched OOS completed. Local repository harness remains uninvoked because only Node22.16/npm10.9 are installed and no local checkout exists."
+      "blocker": "Remote scripts/backtest.ts exists, but no local checkout; Node22.16.0/npm10.9.2 do not satisfy Node>=24/npm>=11. Committed 4h runner passed 600-bar deterministic/no-lookahead smoke in managed V8; repository harness not invoked.",
+      "result": {
+        "smokeTest": {
+          "runnerBlobSha": "b0fb55492c4beef3b3ccf5010bbf4fb39513d6d4",
+          "fixtureBars": 600,
+          "deterministic": true,
+          "preTestUnaffectedByTestMutation": true,
+          "issueFree": true,
+          "trainTrades": 4,
+          "validationTrades": 1,
+          "testTrades": 9,
+          "selectedLookback": 20,
+          "execution": "managed V8 Code Mode",
+          "localRepositoryHarnessExecuted": false
+        }
+      }
     },
     {
       "id": "Q4_DERIVATIVES_ARCHIVE",
@@ -934,8 +950,8 @@
         "Pre-registered distinct strategy specification",
         "Untouched forward test segment"
       ],
-      "nextAction": "Provision Node >=24/npm >=11 and a clean checkout of the verified main commit; run deterministic fixture smoke tests; continue 1h page 0003 and complete multi-year 5m/15m archive; then pre-register a new strategy family on a forward untouched test segment.",
-      "blocker": "No strategy experiment or untouched OOS ran. Local shell has Node 22.16.0/npm 10.9.2, no repository checkout, no Docker and no importable Binance SDK. Direct fapi DNS failed (curl exit 6 / HTTP 000). Repository main requires Node >=24/npm >=11; current 1h archive is only 3,000 rows/symbol through 2021-01-17 and multi-year 5m/15m are absent. StrategySpec/ExperimentRunner only wire STRUCT-LIQ over existing SetupOutcomeLedger; scripts/backtest.ts lacks 5m and historical funding uses a constant proxy. PromotionGate default minTrades=30 is weaker than the required per-symbol/context >=100 gate.",
+      "nextAction": "Continue 1h page 0004 from 2021-03-20T20:00Z; obtain multi-year 5m/15m and historical derivatives; provision Node>=24/npm>=11 with a clean checkout; then pre-register a distinct strategy family on a forward untouched holdout.",
+      "blocker": "No strategy experiment or untouched OOS ran in this run. Local runtime remains Node22.16/npm10.9; no local checkout; direct fapi DNS fails; 1h archive is only 4,500 rows/symbol through 2021-03-20; multi-year 5m/15m and BTC/ETH/XRP funding plus historical OI/taker archives are absent; 4h count/hash reconciliation remains unresolved.",
       "result": {
         "experimentExecuted": false,
         "runClassification": "RESEARCH_BLOCKED",
@@ -944,7 +960,8 @@
         "lastCheckedUtc": "2026-11-06T03:33:17.127Z",
         "registryOosValidatedEntries": 0,
         "mainCommit": "c767974e638a50316bc9e79037e8ef0148409aee"
-      }
+      },
+      "lastCheckedAtUtc": "2026-11-06T04:36:39Z"
     },
     {
       "id": "Q38_INCREMENTAL_ARCHIVE_REFRESH_20261106T012524Z",
@@ -1178,6 +1195,66 @@
         "archiveIndexPath": "research-data/binance-usdm/1h/archive-index.json",
         "readbackVerified": true,
         "allHashesMatch": true
+      }
+    },
+    {
+      "id": "Q44_HISTORICAL_1H_BACKFILL_PAGE_0003_20261106T0433Z",
+      "priority": 1,
+      "status": "COMPLETED",
+      "prerequisites": [
+        "Binance USD-M kline connector",
+        "GitHub archive branch write access",
+        "Page 0002 contiguous high-water"
+      ],
+      "nextAction": "Continue oldest-first page 0004 from 2021-03-20T20:00:00Z for all four symbols.",
+      "blocker": null,
+      "result": {
+        "rowsPerSymbol": 1500,
+        "rowsTotal": 6000,
+        "firstOpenUtc": "2021-01-17T08:00:00Z",
+        "lastCompletedOpenUtc": "2021-03-20T19:00:00Z",
+        "nextStartUtc": "2021-03-20T20:00:00Z",
+        "duplicates": 0,
+        "missingIntervals": 0,
+        "ohlcFailures": 0,
+        "nonPositiveVolume": 0,
+        "nonFinite": 0,
+        "misaligned": 0,
+        "crossSymbolAligned": true,
+        "readbackVerified": true,
+        "manifestPath": "research-data/binance-usdm/1h/manifest-page-0003.json",
+        "manifestBlobSha": "46fff148bdb32738ea0e0b3943f39381b5ac6061"
+      }
+    },
+    {
+      "id": "Q45_INCREMENTAL_ARCHIVE_REFRESH_20261106T0435Z",
+      "priority": 1,
+      "status": "COMPLETED",
+      "prerequisites": [
+        "Binance USD-M kline connector",
+        "Existing archive high-water marks",
+        "GitHub repository write access"
+      ],
+      "nextAction": "Next run append only completed bars after 5m 04:25Z, 15m 04:15Z, 1h 03:00Z and 4h 00:00Z; exclude forming bars and verify readback.",
+      "blocker": null,
+      "result": {
+        "rows": 72,
+        "rowCountsByInterval": {
+          "5m": 48,
+          "15m": 16,
+          "1h": 4,
+          "4h": 4
+        },
+        "deltaPath": "research-data/binance-usdm/delta/binance_usdm_delta_20261106T0435Z_completed.jsonl",
+        "manifestPath": "research-data/binance-usdm/delta/manifest-20261106T0435Z-all-intervals.json",
+        "sha256": "8a786991b7d8a56e98ddc0a24fdcceddc3dfe4903ef31b895b926067c0e46713",
+        "readbackVerified": true,
+        "latestCompletedOpenUtcByInterval": {
+          "5m": "2026-11-06T04:25:00Z",
+          "15m": "2026-11-06T04:15:00Z",
+          "1h": "2026-11-06T03:00:00Z",
+          "4h": "2026-11-06T00:00:00Z"
+        }
       }
     }
   ],

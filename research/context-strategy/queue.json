@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAtUtc": "2026-11-06T14:00:23.547Z",
+  "updatedAtUtc": "2026-11-06T14:50:11.280Z",
   "items": [
     {
       "id": "Q1_ARCHIVE_MULTIYEAR",
@@ -11,19 +11,19 @@
         "Compatible bulk-data downloader or official Binance Vision access",
         "Persistent writable store"
       ],
-      "nextAction": "Continue 1h page 0012 from 2022-08-02T20:00Z; then backfill multi-year 5m/15m and recover the missing 76-row delta provenance.",
-      "blocker": "Multi-year 5m/15m absent; 1h has a multi-year gap after 2022-08-02; 76-row delta file remains 404; 14 page/symbol SHA provenance mismatches remain despite 21,000/21,000 exact row reconciliation; direct fapi DNS unavailable.",
+      "nextAction": "Continue 1h page 0013 from 2022-10-04T08:00Z for all four symbols; then backfill multi-year 5m/15m and recover missing 76-row delta provenance.",
+      "blocker": "Multi-year 5m/15m absent; 1h archive remains incomplete after 2022-10-04; missing 76-row delta provenance and 14 page/symbol SHA mismatches remain; direct fapi DNS unavailable.",
       "result": {
         "canonicalFileRowsPerSymbol": 13461,
         "canonicalFileRowsTotal": 53844,
         "canonicalFileEndUtc": "2026-11-05T16:00:00Z",
         "effectiveHighwaterByInterval": {
-          "5m": "2026-11-06T13:40:00Z",
-          "15m": "2026-11-06T13:30:00Z",
-          "1h": "2026-11-06T12:00:00Z",
+          "5m": "2026-11-06T14:35:00Z",
+          "15m": "2026-11-06T14:15:00Z",
+          "1h": "2026-11-06T13:00:00Z",
           "4h": "2026-11-06T08:00:00Z"
         },
-        "latestDeltaRows": 20,
+        "latestDeltaRows": 60,
         "latestDeltaSha256": "c8f81165e2e539646fce405312b5630949ea9d7e570c147f15abf5c27c070a7d",
         "latestDeltaReadbackVerified": true,
         "latestDeltaPath": "research-data/binance-usdm/delta/binance_usdm_delta_20261106T135331Z_5m_15m.jsonl",
@@ -36,16 +36,17 @@
           "rowLevelMismatches": 0
         },
         "oneHourBackfill": {
-          "pages": 11,
-          "rowsPerSymbol": 16500,
-          "rowsTotal": 66000,
+          "pages": 12,
+          "rowsPerSymbol": 18000,
+          "rowsTotal": 72000,
           "startUtc": "2020-09-14T08:00:00Z",
-          "lastCompletedOpenUtc": "2022-08-02T19:00:00Z",
-          "nextStartUtc": "2022-08-02T20:00:00Z",
-          "latestPagePath": "research-data/binance-usdm/1h/manifest-page-0011.json",
+          "lastCompletedOpenUtc": "2022-10-04T07:00:00Z",
+          "nextStartUtc": "2022-10-04T08:00:00Z",
+          "latestPagePath": "research-data/binance-usdm/1h/BTCUSDT/page-0012.jsonl",
+          "manifestPath": "research-data/binance-usdm/1h/manifest-page-0012.json",
           "readbackVerified": true
         },
-        "incrementalRowsAddedThisRun": 12,
+        "incrementalRowsAddedThisRun": 60,
         "canonical4h": {
           "rowsPerSymbol": 13461,
           "rowsTotal": 53844,
@@ -66,7 +67,27 @@
             "rows": 8,
             "sha256": "63e49c7123dd1aee4e421f8f35d8d57531ec55e2ab0c469a2046c91d3c092ae5",
             "readbackVerified": true
+          },
+          {
+            "path": "research-data/binance-usdm/delta/binance_usdm_delta_20261106T1441Z_5m_15m.jsonl",
+            "rows": 56,
+            "sha256": "91a4c8e1a8cd673856663b9052064cedd3692ad11f72167a859cba1d0ad06ad4",
+            "readbackVerified": true
+          },
+          {
+            "path": "research-data/binance-usdm/delta/binance_usdm_delta_20261106T1444Z_1h.jsonl",
+            "rows": 4,
+            "sha256": "88d1b119e69af6228a500f029ff0f4ed81466edf11e4e0bcf29dc31bd1680d33",
+            "readbackVerified": true
           }
+        ],
+        "latestDeltaPaths": [
+          "research-data/binance-usdm/delta/binance_usdm_delta_20261106T1441Z_5m_15m.jsonl",
+          "research-data/binance-usdm/delta/binance_usdm_delta_20261106T1444Z_1h.jsonl"
+        ],
+        "latestDeltaHashes": [
+          "91a4c8e1a8cd673856663b9052064cedd3692ad11f72167a859cba1d0ad06ad4",
+          "88d1b119e69af6228a500f029ff0f4ed81466edf11e4e0bcf29dc31bd1680d33"
         ]
       }
     },
@@ -1777,10 +1798,94 @@
         "decision": "NO_TRADE_ALL",
         "oosValidatedEntries": 0
       }
+    },
+    {
+      "id": "Q59_HISTORICAL_1H_BACKFILL_PAGE_0012_20261106T1439Z",
+      "priority": 1,
+      "status": "COMPLETED",
+      "prerequisites": [
+        "Binance USD-M connector",
+        "GitHub raw archive branch write access"
+      ],
+      "nextAction": "Continue 1h page 0013 from 2022-10-04T08:00Z.",
+      "blocker": null,
+      "result": {
+        "rowsPerSymbol": 1500,
+        "rowsTotal": 6000,
+        "firstOpenUtc": "2022-08-02T20:00:00Z",
+        "lastOpenUtc": "2022-10-04T07:00:00Z",
+        "nextStartUtc": "2022-10-04T08:00:00Z",
+        "manifestPath": "research-data/binance-usdm/1h/manifest-page-0012.json",
+        "manifestBlobSha": "5cfe2741ddfcee42d12e6086822eac82c8e836a1",
+        "archiveIndexBlobSha": "66f31f8e00c006d0e208a76e0c60f45e1319095b",
+        "readbackVerified": true,
+        "quality": {
+          "duplicates": 0,
+          "missingIntervals": 0,
+          "ohlcFailures": 0,
+          "nonPositiveVolume": 0,
+          "nonFinite": 0,
+          "misaligned": 0,
+          "crossSymbolAligned": true
+        }
+      }
+    },
+    {
+      "id": "Q60_INCREMENTAL_ARCHIVE_REFRESH_20261106T1441Z",
+      "priority": 1,
+      "status": "COMPLETED",
+      "prerequisites": [
+        "Binance USD-M connector",
+        "Existing high-water marks",
+        "GitHub raw archive branch write access"
+      ],
+      "nextAction": "On the next hourly run append only completed bars after 5m 14:35Z, 15m 14:15Z, 1h 13:00Z and 4h 08:00Z; exclude forming bars.",
+      "blocker": null,
+      "result": {
+        "rows": 60,
+        "rowCountsByInterval": {
+          "5m": 44,
+          "15m": 12,
+          "1h": 4,
+          "4h": 0
+        },
+        "highWaterMarksUtc": {
+          "5m": "2026-11-06T14:35:00Z",
+          "15m": "2026-11-06T14:15:00Z",
+          "1h": "2026-11-06T13:00:00Z",
+          "4h": "2026-11-06T08:00:00Z"
+        },
+        "artifacts": [
+          {
+            "path": "research-data/binance-usdm/delta/binance_usdm_delta_20261106T1441Z_5m_15m.jsonl",
+            "rows": 56,
+            "sha256": "91a4c8e1a8cd673856663b9052064cedd3692ad11f72167a859cba1d0ad06ad4",
+            "manifest": "research-data/binance-usdm/delta/manifest-20261106T1441Z-5m-15m.json",
+            "readbackVerified": true
+          },
+          {
+            "path": "research-data/binance-usdm/delta/binance_usdm_delta_20261106T1444Z_1h.jsonl",
+            "rows": 4,
+            "sha256": "88d1b119e69af6228a500f029ff0f4ed81466edf11e4e0bcf29dc31bd1680d33",
+            "manifest": "research-data/binance-usdm/delta/manifest-20261106T1444Z-1h.json",
+            "readbackVerified": true
+          }
+        ],
+        "formingBarsExcluded": 8,
+        "quality": {
+          "duplicates": 0,
+          "missingIntervals": 0,
+          "misaligned": 0,
+          "ohlcViolations": 0,
+          "nonPositiveVolume": 0,
+          "nonFinite": 0,
+          "crossSymbolAligned": true
+        }
+      }
     }
   ],
   "lastRun": {
-    "runId": "CONTEXT-STRATEGY-20261106T1355Z-V92",
+    "runId": "CONTEXT-STRATEGY-20261106T145011Z-V93",
     "runClassification": "RESEARCH_BLOCKED",
     "researchExecuted": false,
     "researchType": "HISTORICAL_ARCHIVE_BACKFILL_AND_MARKET_MONITORING",
@@ -1790,280 +1895,237 @@
     "strategyExperimentExecuted": false,
     "oosEvaluated": false,
     "monitoringCompleted": true,
-    "startedAtUtc": "2026-11-06T13:45:59Z",
-    "snapshotAtUtc": "2026-11-06T13:50:11.103Z",
-    "completedAtUtc": "2026-11-06T14:00:23.547Z",
+    "startedAtUtc": "2026-11-06T14:26:10Z",
+    "snapshotAtUtc": "2026-11-06T14:41:47.000Z",
+    "completedAtUtc": "2026-11-06T14:50:11.280Z",
     "dailyResearchCycleAlreadyExecutedToday": false,
     "dailyResearchCycleStatus": "BLOCKED",
     "dailyResearchExperimentRef": null,
-    "archiveAppend": {
-      "rows": 12,
-      "path": "research-data/binance-usdm/delta/binance_usdm_delta_20261106T135331Z_5m_15m.jsonl",
-      "manifestPath": "research-data/binance-usdm/delta/manifest-20261106T135331Z-5m-15m.json",
-      "sha256": "c8f81165e2e539646fce405312b5630949ea9d7e570c147f15abf5c27c070a7d",
-      "readbackVerified": true,
-      "highWaterMarksUtc": {
-        "5m": "2026-11-06T13:40:00Z",
-        "15m": "2026-11-06T13:30:00Z",
-        "1h": "2026-11-06T12:00:00Z",
-        "4h": "2026-11-06T08:00:00Z"
-      }
-    },
     "historical1hBackfill": {
       "rowsPerSymbol": 1500,
       "rowsTotal": 6000,
-      "startUtc": "2022-06-01T08:00:00Z",
-      "lastOpenUtc": "2022-08-02T19:00:00Z",
-      "nextStartUtc": "2022-08-02T20:00:00Z",
-      "manifestPath": "research-data/binance-usdm/1h/manifest-page-0011.json",
+      "startUtc": "2022-08-02T20:00:00Z",
+      "lastOpenUtc": "2022-10-04T07:00:00Z",
+      "nextStartUtc": "2022-10-04T08:00:00Z",
+      "manifestPath": "research-data/binance-usdm/1h/manifest-page-0012.json",
       "readbackVerified": true
+    },
+    "archiveAppend": {
+      "rows": 60,
+      "paths": [
+        "research-data/binance-usdm/delta/binance_usdm_delta_20261106T1441Z_5m_15m.jsonl",
+        "research-data/binance-usdm/delta/binance_usdm_delta_20261106T1444Z_1h.jsonl"
+      ],
+      "hashes": [
+        "91a4c8e1a8cd673856663b9052064cedd3692ad11f72167a859cba1d0ad06ad4",
+        "88d1b119e69af6228a500f029ff0f4ed81466edf11e4e0bcf29dc31bd1680d33"
+      ],
+      "readbackVerified": true,
+      "highWaterMarksUtc": {
+        "5m": "2026-11-06T14:35:00Z",
+        "15m": "2026-11-06T14:15:00Z",
+        "1h": "2026-11-06T13:00:00Z",
+        "4h": "2026-11-06T08:00:00Z"
+      }
     },
     "currentContext": {
       "taxonomyId": "CTX-4H-EMA50xEMA200-ATRQ-v2-FULL-ARCHIVE",
       "featureTimeUtc": "2026-11-06T11:59:59.999Z",
       "latestCompleted4hOpenUtc": "2026-11-06T08:00:00Z",
-      "latestCompleted1hOpenUtc": "2026-11-06T12:00:00Z",
+      "latestCompleted1hOpenUtc": "2026-11-06T13:00:00Z",
       "contexts": {
         "BTCUSDT": {
           "context": "SIDEWAYS_NORMAL",
-          "emaSpreadPct": -2.41594,
-          "atr14ClosePct": 1.46361,
-          "last4hReturnPct": 0.7205,
-          "oneHourTrend": "BEARISH_STACK",
-          "oneHourClose": 76005.5,
-          "oneHourEma20": 76377.7601,
-          "oneHourEma50": 77317.1375,
-          "return1hPct": -0.14688,
-          "return4hPct": 0.48294,
-          "return12hPct": -0.38598,
-          "latestCompleted4hOpenUtc": "2026-11-06T08:00:00Z",
-          "latestCompleted1hOpenUtc": "2026-11-06T12:00:00Z",
-          "latestCompleted15mOpenUtc": "2026-11-06T13:30:00Z",
-          "latestCompleted5mOpenUtc": "2026-11-06T13:40:00Z",
+          "emaSpreadPct": -2.416,
+          "atr14ClosePct": 1.464,
+          "last4hReturnPct": 0.72,
+          "oneHourTrend": "DOWN",
+          "featureMarginRatio": 0.04,
           "transitionWarning": true,
           "shock": false,
-          "featureSeparation": "MEDIUM_LOW"
+          "latestCompleted4hOpenUtc": "2026-11-06T08:00:00Z",
+          "latestCompleted1hOpenUtc": "2026-11-06T13:00:00Z"
         },
         "ETHUSDT": {
           "context": "DOWN_NORMAL",
-          "emaSpreadPct": -3.63064,
-          "atr14ClosePct": 1.9338,
-          "last4hReturnPct": 0.67875,
-          "oneHourTrend": "BEARISH_STACK",
-          "oneHourClose": 2237.82,
-          "oneHourEma20": 2254.6753,
-          "oneHourEma50": 2291.4622,
-          "return1hPct": -0.21893,
-          "return4hPct": 0.55132,
-          "return12hPct": -0.37174,
-          "latestCompleted4hOpenUtc": "2026-11-06T08:00:00Z",
-          "latestCompleted1hOpenUtc": "2026-11-06T12:00:00Z",
-          "latestCompleted15mOpenUtc": "2026-11-06T13:30:00Z",
-          "latestCompleted5mOpenUtc": "2026-11-06T13:40:00Z",
+          "emaSpreadPct": -3.631,
+          "atr14ClosePct": 1.934,
+          "last4hReturnPct": 0.679,
+          "oneHourTrend": "DOWN",
+          "featureMarginRatio": 1.45,
           "transitionWarning": false,
           "shock": false,
-          "featureSeparation": "HIGH"
+          "latestCompleted4hOpenUtc": "2026-11-06T08:00:00Z",
+          "latestCompleted1hOpenUtc": "2026-11-06T13:00:00Z"
         },
         "SOLUSDT": {
           "context": "DOWN_LOW",
           "emaSpreadPct": -6.819,
           "atr14ClosePct": 2.296,
-          "last4hReturnPct": 0.81428,
-          "oneHourTrend": "BEARISH_STACK",
-          "oneHourClose": 90.18,
-          "oneHourEma20": 90.50035,
-          "oneHourEma50": 91.870997,
-          "return1hPct": -0.22129,
-          "return4hPct": 0.74852,
-          "return12hPct": -0.16606,
-          "latestCompleted4hOpenUtc": "2026-11-06T08:00:00Z",
-          "latestCompleted1hOpenUtc": "2026-11-06T12:00:00Z",
-          "latestCompleted15mOpenUtc": "2026-11-06T13:30:00Z",
-          "latestCompleted5mOpenUtc": "2026-11-06T13:40:00Z",
+          "last4hReturnPct": 0.826,
+          "oneHourTrend": "DOWN",
+          "featureMarginRatio": 1.67,
           "transitionWarning": false,
           "shock": false,
-          "featureSeparation": "HIGH"
+          "latestCompleted4hOpenUtc": "2026-11-06T08:00:00Z",
+          "latestCompleted1hOpenUtc": "2026-11-06T13:00:00Z"
         },
         "XRPUSDT": {
           "context": "DOWN_NORMAL",
-          "emaSpreadPct": -4.07784,
-          "atr14ClosePct": 2.17373,
-          "last4hReturnPct": 1.01223,
-          "oneHourTrend": "BEARISH_STACK",
-          "oneHourClose": 1.1888,
-          "oneHourEma20": 1.2143997,
-          "oneHourEma50": 1.2439268,
-          "return1hPct": -0.72651,
-          "return4hPct": 0.1179,
-          "return12hPct": -2.49344,
-          "latestCompleted4hOpenUtc": "2026-11-06T08:00:00Z",
-          "latestCompleted1hOpenUtc": "2026-11-06T12:00:00Z",
-          "latestCompleted15mOpenUtc": "2026-11-06T13:30:00Z",
-          "latestCompleted5mOpenUtc": "2026-11-06T13:40:00Z",
+          "emaSpreadPct": -4.078,
+          "atr14ClosePct": 2.174,
+          "last4hReturnPct": 1.012,
+          "oneHourTrend": "DOWN",
+          "featureMarginRatio": 1.75,
           "transitionWarning": false,
           "shock": false,
-          "featureSeparation": "HIGH"
+          "latestCompleted4hOpenUtc": "2026-11-06T08:00:00Z",
+          "latestCompleted1hOpenUtc": "2026-11-06T13:00:00Z"
         }
       },
       "classificationProbabilityCalibrated": false
     },
     "marketSnapshot": {
-      "asOfUtc": "2026-11-06T13:50:11.103Z",
-      "retrievalWindow": {
-        "markPrice": "2026-11-06T13:50:00Z",
-        "orderBook": "2026-11-06T13:50:09.290Z",
-        "takerFlow": "2026-11-06T13:30:00Z",
-        "globalLongShortRatio": "2026-11-06T13:00:00Z"
-      },
-      "sourceEndpoints": [
-        "GET /fapi/v1/premiumIndex",
-        "GET /fapi/v1/ticker/24hr",
-        "GET /fapi/v1/openInterest",
-        "GET /fapi/v1/fundingRate",
-        "GET /fapi/v1/depth",
-        "GET /futures/data/takerlongshortRatio",
-        "GET /futures/data/globalLongShortAccountRatio",
-        "GET /fapi/v1/klines"
-      ],
+      "timestampUtc": "2026-11-06T14:41:47.000Z",
+      "source": "Binance USD-M public-data connector actions mapping to official REST endpoints; raw HTTP status not exposed",
       "fundingIntervalHours": 8,
       "lastSettledFundingUtc": "2026-11-06T08:00:00Z",
-      "previousSettledFundingUtc": "2026-11-06T00:00:00Z",
       "nextFundingUtc": "2026-11-06T16:00:00Z",
-      "oiChangeComparison": {
-        "previousSnapshotUtc": "2026-11-06T12:31:59.546Z",
-        "note": "Snapshot-to-snapshot percentage change only; not a continuous OI time series."
-      },
+      "fundingSemantics": "premiumIndex.lastFundingRate is retained as the current premium-index funding field; /fapi/v1/fundingRate history supplies the latest settled event. Do not reinterpret either field as a calibrated forecast.",
       "symbols": {
         "BTCUSDT": {
           "role": "REFERENCE_ONLY",
-          "lastPrice": 75913,
-          "markPrice": 75913,
-          "change24hPct": -4.89,
-          "high24h": 79844.4,
+          "lastPrice": 75861.3,
+          "markPrice": 75871.83847826,
+          "change24hPct": -3.845,
+          "high24h": 79097.5,
           "low24h": 75158,
-          "quoteVolume24h": 21604835551.19,
-          "openInterestContracts": 94603.724,
-          "oiChangeSincePreviousSnapshotPct": -0.9183,
-          "premiumIndexLastFundingRatePct": 0.007335,
+          "quoteVolume24h": 21313367415.65,
+          "openInterestContracts": 95708.541,
+          "premiumIndexLastFundingRatePct": 0.007691,
           "lastSettledFundingPct": 0.005491,
-          "takerBuySellRatio15m": 0.839,
-          "buyVolume15m": 3054.469,
-          "sellVolume15m": 3640.756,
-          "globalAccountLongShortRatio1h": 3.0967,
-          "longAccountPct": 75.59,
-          "spreadBps": 0.013175,
-          "top10BookQuantityImbalance": -0.29557,
-          "bidQtyTop10": 2.966,
-          "askQtyTop10": 5.455,
+          "fundingAbsAbove005Pct": false,
+          "spreadBps": 0.0132,
+          "top10BookImbalance": 0.6954,
+          "takerBuySellRatio5m": 0.7183,
+          "takerFlowTimeUtc": "2026-11-06T14:30:00Z",
+          "globalAccountLongShortRatio5m": 3.0469,
+          "longAccountPct": 75.29,
+          "positioningTimeUtc": "2026-11-06T14:35:00Z",
           "context": "SIDEWAYS_NORMAL"
         },
         "ETHUSDT": {
           "role": "TRADABLE",
-          "lastPrice": 2237.15,
-          "markPrice": 2237.56092248,
-          "change24hPct": -6.446,
-          "high24h": 2392.37,
+          "lastPrice": 2239.08,
+          "markPrice": 2239.66499198,
+          "change24hPct": -5.185,
+          "high24h": 2375.23,
           "low24h": 2205.11,
-          "quoteVolume24h": 14042121778.69,
-          "openInterestContracts": 2370917.024,
-          "oiChangeSincePreviousSnapshotPct": -0.0615,
-          "premiumIndexLastFundingRatePct": 0.004748,
+          "quoteVolume24h": 13768894315.74,
+          "openInterestContracts": 2365643.785,
+          "premiumIndexLastFundingRatePct": 0.00416,
           "lastSettledFundingPct": 0.005654,
-          "takerBuySellRatio15m": 0.9318,
-          "buyVolume15m": 86427.78,
-          "sellVolume15m": 92756.986,
-          "globalAccountLongShortRatio1h": 3.9213,
-          "longAccountPct": 79.68,
-          "spreadBps": 0.044698,
-          "top10BookQuantityImbalance": 0.815,
-          "bidQtyTop10": 73.082,
-          "askQtyTop10": 7.449,
+          "fundingAbsAbove005Pct": false,
+          "spreadBps": 0.0447,
+          "top10BookImbalance": -0.4132,
+          "takerBuySellRatio5m": 1.3293,
+          "takerFlowTimeUtc": "2026-11-06T14:35:00Z",
+          "globalAccountLongShortRatio5m": 3.8426,
+          "longAccountPct": 79.35,
+          "positioningTimeUtc": "2026-11-06T14:35:00Z",
           "context": "DOWN_NORMAL"
         },
         "SOLUSDT": {
           "role": "TRADABLE",
-          "lastPrice": 90.35,
-          "markPrice": 90.35663415,
-          "change24hPct": -5.363,
-          "high24h": 95.52,
+          "lastPrice": 91.27,
+          "markPrice": 91.278158,
+          "change24hPct": -3.049,
+          "high24h": 94.58,
           "low24h": 88.24,
-          "quoteVolume24h": 2363879791.1189,
-          "openInterestContracts": 9273151.54,
-          "oiChangeSincePreviousSnapshotPct": -0.2127,
-          "premiumIndexLastFundingRatePct": 0.004002,
+          "quoteVolume24h": 2362107617.73,
+          "openInterestContracts": 9261640.68,
+          "premiumIndexLastFundingRatePct": 0.004347,
           "lastSettledFundingPct": 0.003262,
-          "takerBuySellRatio15m": 0.7765,
-          "buyVolume15m": 295043.34,
-          "sellVolume15m": 379966.58,
-          "globalAccountLongShortRatio1h": 3.6041,
-          "longAccountPct": 78.28,
-          "spreadBps": 1.107113,
-          "top10BookQuantityImbalance": -0.21992,
-          "bidQtyTop10": 18972.38,
-          "askQtyTop10": 29669.86,
+          "fundingAbsAbove005Pct": false,
+          "spreadBps": 1.0967,
+          "top10BookImbalance": -0.0599,
+          "takerBuySellRatio5m": 1.7119,
+          "takerFlowTimeUtc": "2026-11-06T14:35:00Z",
+          "globalAccountLongShortRatio5m": 3.4984,
+          "longAccountPct": 77.74,
+          "positioningTimeUtc": "2026-11-06T14:35:00Z",
           "context": "DOWN_LOW"
         },
         "XRPUSDT": {
           "role": "TRADABLE",
-          "lastPrice": 1.1858,
-          "markPrice": 1.18571598,
-          "change24hPct": -9.315,
-          "high24h": 1.3089,
-          "low24h": 1.1771,
-          "quoteVolume24h": 1179589077.0244,
-          "openInterestContracts": 329891411,
-          "oiChangeSincePreviousSnapshotPct": -0.4691,
-          "premiumIndexLastFundingRatePct": 0.009964,
+          "lastPrice": 1.1882,
+          "markPrice": 1.18847183,
+          "change24hPct": -7.784,
+          "high24h": 1.2946,
+          "low24h": 1.1742,
+          "quoteVolume24h": 1189440196.66,
+          "openInterestContracts": 331413815.4,
+          "premiumIndexLastFundingRatePct": 0.008151,
           "lastSettledFundingPct": 0.01,
-          "takerBuySellRatio15m": 0.8959,
-          "buyVolume15m": 10964926.9,
-          "sellVolume15m": 12239055.9,
-          "globalAccountLongShortRatio1h": 3.0502,
-          "longAccountPct": 75.31,
-          "spreadBps": 0.843562,
-          "top10BookQuantityImbalance": 0.1323,
-          "bidQtyTop10": 878209.6,
-          "askQtyTop10": 672986.3,
+          "fundingAbsAbove005Pct": false,
+          "spreadBps": 0.842,
+          "top10BookImbalance": -0.1127,
+          "takerBuySellRatio5m": 1.3961,
+          "takerFlowTimeUtc": "2026-11-06T14:35:00Z",
+          "globalAccountLongShortRatio5m": 2.9984,
+          "longAccountPct": 74.99,
+          "positioningTimeUtc": "2026-11-06T14:35:00Z",
           "context": "DOWN_NORMAL"
         }
       },
-      "classificationProbabilityCalibrated": false,
-      "metadataWarning": "Exchange metadata is stale; contract statuses are observed but not trusted for execution validation."
+      "dataTimestampsUtc": {
+        "markPrice": "2026-11-06T14:41:47Z",
+        "ticker24h": "2026-11-06T14:41:43Z",
+        "openInterest": "2026-11-06T14:41:07Z",
+        "orderBook": "2026-11-06T14:41:11Z",
+        "takerFlow": "2026-11-06T14:30:00Z to 2026-11-06T14:35:00Z",
+        "globalAccountRatio": "2026-11-06T14:35:00Z",
+        "latestCompleted4hOpenUtc": "2026-11-06T08:00:00Z",
+        "latestCompleted1hOpenUtc": "2026-11-06T13:00:00Z",
+        "latestCompleted15mOpenUtc": "2026-11-06T14:15:00Z",
+        "latestCompleted5mOpenUtc": "2026-11-06T14:35:00Z"
+      },
+      "positioningCaveat": "Global long/short ratio is account-count based, not position-notional based. A single order-book snapshot and current OI do not establish crowding or liquidation."
     },
     "strategyResearch": {
       "executed": false,
       "oosEvaluated": false,
       "oosValidatedEntries": 0,
       "registryEntries": 3,
-      "blocker": "No compatible local Node runtime or checkout; historical intraday archive incomplete; metadata freshness fails execution-validation gate."
+      "blocker": "Daily strategy experiment remains blocked by incomplete multi-year 5m/15m archive, unresolved archive provenance, unavailable direct time/metadata and missing local Node24/npm11 repository checkout."
     },
     "blockers": [
       "No strategy experiment or untouched OOS run this cycle.",
       "Node22.16/npm10.9 below repository floor Node24/npm11; local checkout absent.",
-      "Direct /fapi/v1/time DNS failure and stale exchangeInfo (−9,057.11s).",
-      "Multi-year 5m/15m history absent; 1h archive gap after 2022-08-02.",
-      "76-row delta missing; 14 page/symbol SHA provenance mismatches remain.",
+      "Direct /fapi/v1/time DNS resolution failure; connector exchangeInfo.serverTime is stale by more than 3 hours.",
+      "Multi-year 5m/15m history absent; 1h archive remains incomplete after 2022-10-04.",
+      "Missing 76-row delta and 14 page/symbol SHA provenance mismatches remain unresolved.",
       "Historical BTC/ETH/XRP funding and all-symbol OI/taker/positioning archives absent."
     ],
-    "reportPath": "research/context-strategy/reports/context_strategy_research_20261106T1355Z_v92.json",
-    "reportSha256": "3d6995b5bae8c783586db8ab04e313ce174d1e527def1851134aa66c80c8b1e3",
-    "nextExecutableAction": "Continue 1h page0012; resolve missing delta and hash provenance; backfill 5m/15m; provision Node24/npm11 checkout and run repository verification before pre-registering a new strategy experiment."
+    "reportPath": "research/context-strategy/reports/context_strategy_research_20261106T145011Z_v93.json",
+    "reportSha256": "27496fdcdccaeef2e9fc7b398190dd443622a07d1bfbde6fda79c6a6c1587fd0",
+    "nextExecutableAction": "Continue 1h page 0013 from 2022-10-04T08:00Z; then resolve 5m/15m archive and provenance blockers; provision Node24/npm11 checkout before a new pre-registered experiment."
   },
   "lastRunReport": {
-    "path": "research/context-strategy/reports/context_strategy_research_20261106T1355Z_v92.json",
-    "blobSha": "c073c08bf7ef57b8ac27962db601a8d140336ae0",
-    "sha256": "3d6995b5bae8c783586db8ab04e313ce174d1e527def1851134aa66c80c8b1e3",
-    "createdAtUtc": "2026-11-06T14:00:23.547Z",
+    "path": "research/context-strategy/reports/context_strategy_research_20261106T145011Z_v93.json",
+    "blobSha": "a1bd231fdae947b72e1bb2a363671f6d9bb7699d",
+    "sha256": "27496fdcdccaeef2e9fc7b398190dd443622a07d1bfbde6fda79c6a6c1587fd0",
+    "createdAtUtc": "2026-11-06T14:50:11.280Z",
     "readbackVerified": true
   },
-  "lastRunId": "CONTEXT-STRATEGY-20261106T1355Z-V92",
+  "lastRunId": "CONTEXT-STRATEGY-20261106T145011Z-V93",
   "incremental_highwater_marks": {
-    "5m": "2026-11-06T13:40:00Z",
-    "15m": "2026-11-06T13:30:00Z",
-    "1h": "2026-11-06T12:00:00Z",
+    "5m": "2026-11-06T14:35:00Z",
+    "15m": "2026-11-06T14:15:00Z",
+    "1h": "2026-11-06T13:00:00Z",
     "4h": "2026-11-06T08:00:00Z"
   },
-  "last_incremental_refresh_utc": "2026-11-06T14:00:23.547Z",
+  "last_incremental_refresh_utc": "2026-11-06T14:50:11.280Z",
   "latest_incremental_delta_files": [
     {
       "file": "research-data/binance-usdm/delta/binance_usdm_delta_20261106T1031Z_5m_15m.jsonl",
@@ -2085,6 +2147,20 @@
       "rows": 12,
       "sha256": "c8f81165e2e539646fce405312b5630949ea9d7e570c147f15abf5c27c070a7d",
       "manifestFile": "research-data/binance-usdm/delta/manifest-20261106T135331Z-5m-15m.json",
+      "readbackVerified": true
+    },
+    {
+      "file": "research-data/binance-usdm/delta/binance_usdm_delta_20261106T1441Z_5m_15m.jsonl",
+      "rows": 56,
+      "sha256": "91a4c8e1a8cd673856663b9052064cedd3692ad11f72167a859cba1d0ad06ad4",
+      "manifestFile": "research-data/binance-usdm/delta/manifest-20261106T1441Z-5m-15m.json",
+      "readbackVerified": true
+    },
+    {
+      "file": "research-data/binance-usdm/delta/binance_usdm_delta_20261106T1444Z_1h.jsonl",
+      "rows": 4,
+      "sha256": "88d1b119e69af6228a500f029ff0f4ed81466edf11e4e0bcf29dc31bd1680d33",
+      "manifestFile": "research-data/binance-usdm/delta/manifest-20261106T1444Z-1h.json",
       "readbackVerified": true
     }
   ]

@@ -1,0 +1,51 @@
+{
+  "schemaVersion": 1,
+  "id": "LLM-CC-PB-VS-LONG-4H-V1",
+  "version": 1,
+  "status": "DRAFT",
+  "hypothesis": "PULLBACK reclaim with volume surge on 4h, long-only, 1.5R/1ATR/breakeven. Tests trend continuation pullbacks with volume confirmation.",
+  "family": "PULLBACK_RECLAIM",
+  "symbols": [
+    "BTCUSDT",
+    "ETHUSDT",
+    "SOLUSDT",
+    "XRPUSDT"
+  ],
+  "timeframes": [
+    "4h"
+  ],
+  "timeframeRule": "each timeframe tested independently",
+  "context": {
+    "id": "VOLUME_SURGE",
+    "taxonomyVersion": "ctx-v1"
+  },
+  "campaign": "CRYPTO-CONFLUENCE-2026Q4",
+  "params": {
+    "trigger": "PULLBACK_RECLAIM",
+    "regimeFilter": "VOLUME_SURGE",
+    "direction": "LONG",
+    "lookback": 10,
+    "targetR": 1.5,
+    "stopAtr": 1,
+    "rrRatio": 1.5,
+    "useBreakeven": true,
+    "maxHoldingBars": 18
+  },
+  "window": {
+    "days": 1095,
+    "endDaysAgo": 0,
+    "endIso": "2026-11-01T00:00:00.000Z",
+    "split": {
+      "trainPct": 60,
+      "validationPct": 20,
+      "testPct": 20
+    }
+  },
+  "costs": {
+    "roundTripBps": 15
+  },
+  "evidence": {
+    "minOosTrades": 100,
+    "alpha": 0.01
+  }
+}

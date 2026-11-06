@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 1,
+  "id": "LLM-STOCH-SUPERTREND-BOTH-V2",
+  "version": 1,
+  "status": "DRAFT",
+  "hypothesis": "H5b: Stochastic crosses gated by Supertrend regime to stay with prevailing trend.",
+  "family": "STOCH_CROSS",
+  "symbols": [
+    "BTCUSDT",
+    "ETHUSDT",
+    "SOLUSDT",
+    "XRPUSDT"
+  ],
+  "timeframes": [
+    "4h",
+    "1h"
+  ],
+  "timeframeRule": "each timeframe tested independently",
+  "context": {
+    "id": "SUPERTREND_REGIME",
+    "taxonomyVersion": "ctx-v1"
+  },
+  "campaign": "CRYPTO-DISCOVERY-2026Q4",
+  "params": {
+    "trigger": "STOCH_CROSS",
+    "regimeFilter": "SUPERTREND_REGIME",
+    "direction": "BOTH",
+    "fastPeriod": 14,
+    "slowPeriod": 3,
+    "targetR": 2,
+    "stopAtr": 1.5,
+    "rrRatio": 2,
+    "useBreakeven": true,
+    "maxHoldingBars": 18
+  },
+  "window": {
+    "days": 1095,
+    "endDaysAgo": 0,
+    "endIso": "2026-11-01T00:00:00.000Z",
+    "split": {
+      "trainPct": 60,
+      "validationPct": 20,
+      "testPct": 20
+    }
+  },
+  "costs": {
+    "roundTripBps": 15
+  },
+  "evidence": {
+    "minOosTrades": 100,
+    "alpha": 0.01
+  }
+}

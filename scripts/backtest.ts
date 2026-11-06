@@ -9,15 +9,27 @@
  * consumes), then runs the same agents, fusion, risk gate and execution model
  * the orchestrator runs, on a no-lookahead feed with spread, slippage, taker
  * fees and conservative intrabar exits.
+ *
+ * Every series passes the candle integrity gate (src/backtesting/candleIntegrity.ts) before it is replayed: a gap, duplicate,
+ * off-grid bar or broken OHLC invariant aborts the run. The window is trimmed to complete bars, so the forming bar never enters.
+ *
+ * No from/to is typed: the window is computed from --days and --end-days-ago. Its resolved bounds, the validated bar window
+ * and a sha256 of each series are written to data/research/runs/<run>.manifest.json. Raw candles are fetched per run, never stored.
  */
+import path from 'node:path';
 import { ReplayService } from '../src/backtesting/ReplayService.js';
-import type { Candle } from '../src/types.js';
 import type { NativeTimeframe } from '../src/market/MarketDataTypes.js';
 import type { ReplayData } from '../src/backtesting/types.js';
-import { fetchArchiveKlines, validateCandles } from '../src/backtesting/archiveKlines.js';
+import { loadValidatedKlines, type KlineSource } from '../src/backtesting/klineLoader.js';
+import {
+  buildRunId,
+  describeSeries,
+  readCodeState,
+  resolveResearchWindow,
+  writeRunManifest,
+  type SeriesRecord,
+} from '../src/backtesting/researchRun.js';
 
-const BASE = 'https://fapi.binance.com';
-const INTERVAL_MS: Record<string, number> = { '15m': 900_000, '1h': 3_600_000, '4h': 14_400_000 };
 const TIMEFRAMES: NativeTimeframe[] = ['15m', '1h', '4h'];
 
 function arg(name: string, fallback: string): string {
@@ -29,32 +41,14 @@ const symbol = arg('symbol', 'BTCUSDT').toUpperCase();
 const days = Number(arg('days', '30'));
 // Shifts the whole window into the past: --days 90 --end-days-ago 90 tests the 90 days before the last 90, unseen by anything tuned on those
 const endDaysAgo = Number(arg('end-days-ago', '0'));
-if (!Number.isFinite(days) || days <= 0 || !Number.isFinite(endDaysAgo) || endDaysAgo < 0) throw new Error('--days must be > 0 and --end-days-ago >= 0');
 const equity = Number(arg('equity', '1150'));
 const fundingEnabled = process.argv.includes('--funding');
 const decisionsPath = arg('decisions', '');
 // archive = data.binance.vision, for networks where fapi.binance.com is blocked (HTTP 451); it lags by about a day
-const source = arg('source', 'api');
+const source = arg('source', 'api') as KlineSource;
 if (!['api', 'archive'].includes(source)) throw new Error('--source must be api or archive');
 const positionManagerArg = arg('position-manager', '');
 if (positionManagerArg && !['on', 'off'].includes(positionManagerArg)) throw new Error('--position-manager must be on or off');
-
-async function fetchKlines(symbol: string, interval: NativeTimeframe, fromMs: number, toMs: number): Promise<Candle[]> {
-  const out: Candle[] = [];
-  let cursor = fromMs;
-  for (;;) {
-    const url = `${BASE}/fapi/v1/klines?symbol=${symbol}&interval=${interval}&startTime=${cursor}&endTime=${toMs}&limit=1500`;
-    const response = await fetch(url);
-    if (!response.ok) throw new Error(`klines ${interval} failed: HTTP ${response.status}`);
-    const raw = (await response.json()) as unknown[][];
-    for (const k of raw) {
-      out.push({ openTime: Number(k[0]), open: Number(k[1]), high: Number(k[2]), low: Number(k[3]), close: Number(k[4]), volume: Number(k[5]) });
-    }
-    if (raw.length < 1500) break;
-    cursor = Number(raw[raw.length - 1][0]) + INTERVAL_MS[interval];
-  }
-  return out;
-}
 
 function row(label: string, value: string): void {
   console.log(`  ${label.padEnd(26)} ${value}`);
@@ -70,30 +64,18 @@ function table(title: string, slices: Record<string, { trades: number; winRatePc
 }
 
 const runNowMs = Date.now();
-const toMs = runNowMs - endDaysAgo * 86_400_000;
-const fromMs = toMs - days * 86_400_000;
-// Archive files omit the current UTC day; pin the archive coverage cutoff once for all timeframes.
-const integrityToMs = source === 'archive'
-  ? Math.min(toMs, Math.floor(runNowMs / 86_400_000) * 86_400_000)
-  : toMs;
-console.log(`Backtesting ${symbol} over ${days} day(s) ending ${endDaysAgo === 0 ? 'now' : `${endDaysAgo} day(s) ago`} from public Binance USD-M klines...`);
+const runWindow = resolveResearchWindow({ days, endDaysAgo, source, nowMs: runNowMs });
+const { fromMs, toMs } = runWindow;
+console.log(`Backtesting ${symbol} over ${runWindow.fromIso} -> ${runWindow.toIso} (${days} day(s), ${source}; computed from --days/--end-days-ago)...`);
 const data: ReplayData = { [symbol]: {} };
+const series: SeriesRecord[] = [];
 for (const timeframe of TIMEFRAMES) {
-  let candles: Candle[];
-  if (source === 'archive') {
-    const archive = await fetchArchiveKlines(symbol, timeframe, fromMs, toMs, undefined, runNowMs);
-    candles = archive.candles;
-    if (archive.missingDays.length) {
-      throw new Error(`${timeframe}: archive has missing daily files; refusing incomplete backtest: ${archive.missingDays.join(', ')}`);
-    }
-  } else {
-    candles = await fetchKlines(symbol, timeframe, fromMs, toMs);
-  }
-  if (candles.length === 0) throw new Error(`no ${timeframe} candles for ${symbol} in the requested window`);
-  // Fail closed if data is malformed, duplicated, missing, irregularly spaced, or out of window.
-  const validation = validateCandles(candles, INTERVAL_MS[timeframe], fromMs, integrityToMs);
+  // Fails closed: loadValidatedKlines throws CandleIntegrityError on any gap, duplicate, off-grid bar or missing archive day.
+  const loaded = await loadValidatedKlines({ symbol, interval: timeframe, fromMs, toMs, source });
+  const { candles } = loaded;
   data[symbol][timeframe] = candles;
-  console.log(`  ${timeframe}: integrity passed (${validation.actualBars}/${validation.expectedBars} expected bars; ${new Date(candles[0].openTime).toISOString()} -> ${new Date(candles[candles.length - 1].openTime).toISOString()})`);
+  series.push(describeSeries({ symbol, interval: timeframe, source, window: loaded.window, candles }));
+  console.log(`  ${timeframe}: ${candles.length} candles (${new Date(candles[0]!.openTime).toISOString()} -> ${new Date(candles[candles.length - 1]!.openTime).toISOString()}), integrity gate passed`);
 }
 
 const service = new ReplayService({
@@ -145,3 +127,25 @@ table('=== By symbol ===', m.bySymbol);
 console.log(`\nDecisions journaled: ${result.decisions.length} (${result.decisions.filter((d) => d.status === 'EXECUTED').length} executed, ${result.decisions.filter((d) => d.status !== 'EXECUTED').length} rejected/refused)`);
 console.log(`Period: ${new Date(m.period.from).toISOString()} -> ${new Date(m.period.to).toISOString()} over ${m.period.steps} 15m steps`);
 if (decisionsPath) console.log(`Decision journal written to ${decisionsPath}`);
+
+const { commit, dirty } = readCodeState(process.cwd());
+const manifestPath = writeRunManifest({
+  schemaVersion: 1,
+  runId: buildRunId('backtest', `${symbol}-${days}d-${source}`, runNowMs),
+  kind: 'backtest',
+  createdAtIso: new Date(runNowMs).toISOString(),
+  codeCommit: commit,
+  codeDirty: dirty,
+  argv: process.argv.slice(2),
+  window: runWindow,
+  series,
+  summary: {
+    symbol,
+    trades: m.totalTrades,
+    netPnlUsdt: m.netPnl,
+    netReturnPct: m.netReturnPct,
+    maxDrawdownPct: m.maxDrawdownPct,
+    decisionsJournal: decisionsPath || null,
+  },
+}, path.resolve('data/research/runs'));
+console.log(`Run manifest written to ${manifestPath}`);

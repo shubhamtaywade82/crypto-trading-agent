@@ -1,0 +1,51 @@
+{
+  "schemaVersion": 1,
+  "id": "LLM-SQUEEZE-VOLANDTREND-1H-V1",
+  "version": 1,
+  "status": "DRAFT",
+  "hypothesis": "H3c: Squeeze expansion on 1h with volume+trend confirmation may meet sample-size threshold while preserving positive edge.",
+  "family": "SQUEEZE_EXPANSION",
+  "symbols": [
+    "BTCUSDT",
+    "ETHUSDT",
+    "SOLUSDT",
+    "XRPUSDT"
+  ],
+  "timeframes": [
+    "1h"
+  ],
+  "timeframeRule": "each timeframe tested independently",
+  "context": {
+    "id": "VOL_AND_TREND",
+    "taxonomyVersion": "ctx-v1"
+  },
+  "campaign": "CRYPTO-DISCOVERY-2026Q4",
+  "params": {
+    "trigger": "SQUEEZE_EXPANSION",
+    "regimeFilter": "VOL_AND_TREND",
+    "direction": "BOTH",
+    "lookback": 20,
+    "targetR": 1.5,
+    "stopAtr": 1,
+    "rrRatio": 1.5,
+    "useBreakeven": false,
+    "maxHoldingBars": 12
+  },
+  "window": {
+    "days": 1095,
+    "endDaysAgo": 0,
+    "endIso": "2026-11-01T00:00:00.000Z",
+    "split": {
+      "trainPct": 60,
+      "validationPct": 20,
+      "testPct": 20
+    }
+  },
+  "costs": {
+    "roundTripBps": 15
+  },
+  "evidence": {
+    "minOosTrades": 100,
+    "alpha": 0.01
+  }
+}

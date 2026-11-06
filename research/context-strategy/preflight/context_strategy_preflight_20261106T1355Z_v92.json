@@ -1,0 +1,62 @@
+{
+  "runId": "CONTEXT-STRATEGY-20261106T1355Z-V92",
+  "timestampUtc": "2026-11-06T14:00:23.547Z",
+  "preflight": [
+    {
+      "check": "Shell/compute",
+      "status": "PASS",
+      "evidence": "Linux 6.18.57 x86_64; cwd=/; Node v22.16.0; npm 10.9.2; Python 3.13.5; 5 CPUs; 4.70 GiB available RAM; 30 GiB free disk.",
+      "impact": "Shell and Python inspection worked; Node is below repository engine floor.",
+      "nextAction": "Provision Node >=24 and npm >=11 before invoking the project harness."
+    },
+    {
+      "check": "Repository/code",
+      "status": "DEGRADED",
+      "evidence": "No local checkout. Remote main commit b555afd4dac50122a1213a9767886ac1ddcc5952; package.json requires Node>=24/npm>=11; scripts/backtest.ts exists (blob 284a5ffd4e254265da49c76cb792cfdc3b19e094). SDK dependencies are declared remotely but not installed locally.",
+      "impact": "Repository harness cannot be run in this workspace.",
+      "nextAction": "Create a clean checkout in a compatible runtime and install locked dependencies."
+    },
+    {
+      "check": "Network/Binance endpoints",
+      "status": "DEGRADED",
+      "evidence": "Direct curl /fapi/v1/time failed DNS resolution; /fapi/v1/exchangeInfo timed out. Binance connector returned fresh klines/mark/ticker/OI/funding/depth/taker/positioning. Connector exchangeInfo.serverTime=2026-11-06T11:18:40.901Z vs local 13:49:38.011Z (−9,057.11s). Raw HTTP statuses unavailable.",
+      "impact": "Current market snapshot available; metadata cannot be trusted for contract/execution validation.",
+      "nextAction": "Restore direct network or obtain fresh uncached server time and exchangeInfo with <=60s drift."
+    },
+    {
+      "check": "Raw historical archive",
+      "status": "DEGRADED",
+      "evidence": "GitHub raw branch has 4h canonical files and 1h pages 0001-0011; 1h page 0011 adds 1,500 rows/symbol. Multi-year 5m/15m history absent; one 76-row delta remains HTTP 404.",
+      "impact": "4h context research is supported; intraday multi-timeframe strategy research remains blocked.",
+      "nextAction": "Continue 1h page 0012 and plan 5m/15m bulk backfill; recover the exact missing delta artifact."
+    },
+    {
+      "check": "Data quality/coverage",
+      "status": "DEGRADED",
+      "evidence": "Current klines: 100 rows per symbol for 5m/15m/1h (99 completed, 1 forming excluded); 1,500 for 4h (1,499 completed). Zero duplicates/gaps/OHLC/volume/nonfinite failures. 4h canonical 13,461 rows/symbol with zero structural errors; 14 page/symbol SHA provenance mismatches remain although 21,000/21,000 rows reconciled exactly. 1h archive contiguous only through 2022-08-02, then a multi-year gap.",
+      "impact": "Current features pass; historical intraday inference is not adequately covered.",
+      "nextAction": "Resolve provenance/missing-delta issues and complete multi-year lower-timeframe archive."
+    },
+    {
+      "check": "Backtest harness/smoke test",
+      "status": "BLOCKED",
+      "evidence": "Remote scripts/backtest.ts exists, but no local checkout, Node/npm below floor, and Binance SDK packages are not installed. Repository harness and deterministic fixture smoke were not invoked this run.",
+      "impact": "No strategy experiment or untouched OOS evaluation was run.",
+      "nextAction": "Provision Node24/npm11, checkout repo, run typecheck/tests and harness smoke on deterministic fixtures."
+    },
+    {
+      "check": "Disk/storage",
+      "status": "PASS",
+      "evidence": "30 GiB free in runtime; GitHub raw/archive and context-research branches writable.",
+      "impact": "Page 0011 and current delta were persisted remotely.",
+      "nextAction": "Continue using the dedicated research branches; preserve raw and derived artifacts separately."
+    },
+    {
+      "check": "Artifact readback",
+      "status": "PASS",
+      "evidence": "Four page-0011 JSONL files, page manifest and 1h index read back exactly; 12-row delta and manifest read back exactly; 4h archive index read back after high-water update.",
+      "impact": "Archive writes are verified, not merely attempted.",
+      "nextAction": "Read back the new run report, queue and registry after commit."
+    }
+  ]
+}

@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 1,
+  "id": "LLM-MACD-VOLSURGE-LONG-V2",
+  "version": 1,
+  "status": "DRAFT",
+  "hypothesis": "H4b: Long-only MACD (12/26) cross with volume surge on 4h captures momentum continuation with better long drift; stricter target 2R and 1.5ATR stop with breakeven.",
+  "family": "MACD_CROSS",
+  "symbols": [
+    "BTCUSDT",
+    "ETHUSDT",
+    "SOLUSDT",
+    "XRPUSDT"
+  ],
+  "timeframes": [
+    "4h"
+  ],
+  "timeframeRule": "each timeframe tested independently",
+  "context": {
+    "id": "VOLUME_SURGE",
+    "taxonomyVersion": "ctx-v1"
+  },
+  "campaign": "CRYPTO-DISCOVERY-2026Q4",
+  "params": {
+    "trigger": "MACD_CROSS",
+    "regimeFilter": "VOLUME_SURGE",
+    "direction": "LONG",
+    "fastPeriod": 12,
+    "slowPeriod": 26,
+    "targetR": 2,
+    "stopAtr": 1.5,
+    "rrRatio": 2,
+    "useBreakeven": true,
+    "maxHoldingBars": 24
+  },
+  "window": {
+    "days": 1095,
+    "endDaysAgo": 0,
+    "endIso": "2026-11-01T00:00:00.000Z",
+    "split": {
+      "trainPct": 60,
+      "validationPct": 20,
+      "testPct": 20
+    }
+  },
+  "costs": {
+    "roundTripBps": 15
+  },
+  "evidence": {
+    "minOosTrades": 100,
+    "alpha": 0.01
+  }
+}

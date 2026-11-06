@@ -26,11 +26,11 @@
  * Raw candles are fetched per run and never stored. Exit code 1 if any series fails the integrity gate or a ledger read is
  * refused (fail closed).
  */
-import { appendFileSync, closeSync, existsSync, mkdirSync, openSync, rmSync, writeFileSync } from 'node:fs';
+import { appendFileSync, closeSync, existsSync, mkdirSync, openSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { OllamaClient } from '@nemesis-oss/ollama-sdk';
 import { CandleIntegrityError } from '../src/backtesting/candleIntegrity.js';
-import { loadValidatedKlines, rateLimitedFetch, type LoadedKlines } from '../src/backtesting/klineLoader.js';
+import { intervalToMs, loadValidatedKlines, rateLimitedFetch, type LoadedKlines } from '../src/backtesting/klineLoader.js';
 import {
   buildRunId,
   describeSeries,
@@ -117,17 +117,21 @@ log(`[source] ${choice.source} (${choice.reason})`);
 
 const apiFetch = rateLimitedFetch(fetch, (ms, reason) => log(`[data] Binance rate limit: waiting ${(ms / 1000).toFixed(0)}s (${reason})`));
 
-// In-memory only: a series shared by several specs is fetched once per run. Nothing is written to disk.
+const cacheDir = path.resolve('data/cache/klines');
 const fetched = new Map<string, Promise<LoadedKlines>>();
-const load = (symbol: string, interval: string, fromMs: number, toMs: number): Promise<LoadedKlines> => {
+const load = async (symbol: string, interval: string, fromMs: number, toMs: number): Promise<LoadedKlines> => {
+  const cacheFile = path.join(cacheDir, `${symbol}_${interval}_${fromMs}_${toMs}.json`);
+  if (existsSync(cacheFile)) {
+    return { candles: JSON.parse(readFileSync(cacheFile, 'utf8')), window: { fromMs, toMs, intervalMs: intervalToMs(interval) }, missingDays: [] };
+  }
   const key = `${symbol}|${interval}|${fromMs}|${toMs}`;
   let pending = fetched.get(key);
   if (!pending) {
-    // A failed fetch is evicted, so a later caller (the agent retrying) fetches again instead of getting the cached failure.
-    pending = loadValidatedKlines({ symbol, interval, fromMs, toMs, source: choice.source, apiFetch }).catch((error: unknown) => {
-      fetched.delete(key);
-      throw error;
-    });
+    pending = loadValidatedKlines({ symbol, interval, fromMs, toMs, source: choice.source, apiFetch }).then((res) => {
+      mkdirSync(cacheDir, { recursive: true });
+      writeFileSync(cacheFile, JSON.stringify(res.candles));
+      return res;
+    }).catch((error: unknown) => { fetched.delete(key); throw error; });
     fetched.set(key, pending);
   }
   return pending;

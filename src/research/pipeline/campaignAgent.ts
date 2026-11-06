@@ -18,9 +18,11 @@ import {
 import { evaluateSpec, SUPPORTED_CONTEXT, SUPPORTED_FAMILY, type SegmentStats, type SeriesInput } from './evaluate.js';
 import { loadSpecs, parseSpec, RESEARCH_TIMEFRAMES, type HypothesisSpec, type LoadedSpec } from './hypothesis.js';
 import { checkProposal, writeProposals } from './propose.js';
+import { fetchBinanceMetrics } from './binanceDataTools.js';
+import { executeResearchScript } from './scriptExecutorTool.js';
 
-const MAX_ITERATIONS = 24;
-const MAX_TOOL_CALLS = 30;
+const MAX_ITERATIONS = 40;
+const MAX_TOOL_CALLS = 150;
 /** The SDK fails the run when one identical call repeats past this: the stuck-loop signature. */
 const MAX_REPEATED_TOOL_CALLS = 2;
 /** One evaluation fetches up to 12 multi-year series; ~5s each on the API, slower on the archive. */
@@ -195,6 +197,8 @@ export function buildTools(ctx: AgentContext): ToolRegistry {
       defineTool({ name: 'draft_spec', description: 'Write a new DRAFT spec for this campaign. Window, family, context and alpha are set by the campaign.', schema: draftInput, execute: async (input) => draftSpec(ctx, input) }),
       defineTool({ name: 'evaluate_draft', description: 'Backtest a campaign DRAFT on its train and validation segments (never test). Spends one campaign evaluation unless cached.', schema: z.object({ id: z.string() }), execute: async ({ id }) => evaluateDraft(ctx, id) }),
       defineTool({ name: 'shortlist_spec', description: 'Recommend an evaluated campaign draft for human registration. Uses one of the campaign registration slots.', schema: z.object({ id: z.string(), rationale: z.string().min(20) }), execute: async ({ id, rationale }) => shortlistSpec(ctx, id, rationale) }),
+      defineTool({ name: 'fetch_binance_metrics', description: 'Fetch live Binance USD-M futures metrics: funding rate, open interest, and long/short positioning ratios for a symbol.', schema: z.object({ symbol: z.string() }), execute: async ({ symbol }) => fetchBinanceMetrics(symbol) }),
+      defineTool({ name: 'execute_research_script', description: 'Run a sandboxed TypeScript research script with tsx to test custom formulas, inspect data, or verify indicators.', schema: z.object({ code: z.string(), description: z.string() }), execute: async ({ code }) => executeResearchScript(code) }),
     ],
   });
 }
@@ -203,19 +207,21 @@ export function systemPrompt(campaign: Campaign): string {
   const { window } = campaign;
   return `You run autonomous strategy research for a crypto-futures research pipeline in campaign ${campaign.id}: ${campaign.description}
 Discover working trading regimes, patterns, confluences, and risk/reward profiles across symbols (${campaign.symbols.join(' ')}) and timeframes (${campaign.timeframes.join(' ')}).
-Available discovery space in draft_spec:
-- Triggers: DONCHIAN_BREAK (breakouts), EMA_CROSS (ribbon cross), PULLBACK_RECLAIM (trend dip & reclaim), SQUEEZE_EXPANSION (volatility release), MACD_CROSS, STOCH_CROSS.
-- Regimes/Filters: NONE, TREND_EMA_50_200 (trend alignment), SUPERTREND_REGIME, ADX_TRENDING (>22), RSI_MOMENTUM, VOLUME_SURGE (>1.4x), VOL_AND_TREND, LOW_VOL_EXPANSION.
-- Target & Stops: targetPct (1.0% to 10.0%), stopAtr (0.75x to 2.0x), rrRatio (1.5, 2.0), useBreakeven (trail stop to entry at 50% target).
-Every draft shares campaign window: ${window.days} days ending ${window.endIso}, split train ${window.split.trainPct}% / validation ${window.split.validationPct}% / test ${window.split.testPct}%.
-You only ever see train and validation results. The test segment stays strictly unread until human registration.
+Available discovery tools:
+- list_specs: Inspect current campaign progress, evaluation budget, and past evidence.
+- fetch_binance_metrics: Query live Binance USD-M market metrics (funding rate, open interest, taker ratio).
+- execute_research_script: Run exploratory TypeScript scripts in a sandbox to calculate custom metrics or verify logic.
+- draft_spec: Propose a quantitative trading hypothesis (triggers, regimes, target % 1-10, stops).
+- evaluate_draft: Rigorously simulate on train/validation segments. The test segment stays strictly unread.
+- shortlist_spec: Recommend statistically verified winning hypotheses for human registration.
 Process:
-1. Call list_specs. Learn from earlier evaluations; avoid re-testing failing parameter sets.
-2. Draft 1-3 distinct specs with clear hypotheses testing different regimes and triggers.
-3. Call evaluate_draft to simulate on train/validation data. Inspect win rate, trade count, and net R.
-4. Refine promising setups (e.g. add volume or trend filter, adjust target % or stop ATR, test breakeven).
-5. Shortlist only specs with positive validation expectancy (mean Net R > 0) and sufficient sample size.
-6. Provide a concise summary of your findings across regimes and strategies.`;
+1. Call list_specs. Inspect past evaluations and avoid repeating negative setups.
+2. Check market metrics or execute scratch analysis scripts if needed to confirm market regime hypotheses.
+3. Draft 1-3 distinct specs with clear hypotheses testing different regimes and triggers.
+4. Call evaluate_draft to simulate on train/validation data. Inspect win rate, trade count, and net R.
+5. Refine promising setups (e.g. volume surge, trend filter, 1.5% to 5.0% target moves).
+6. Shortlist only specs with positive validation expectancy (mean Net R > 0) and sufficient sample size.
+7. Provide a concise summary of your findings across regimes and strategies.`;
 }
 
 function agentHooks(ctx: AgentContext, turns: AgentTurn[]): AgentHooks {

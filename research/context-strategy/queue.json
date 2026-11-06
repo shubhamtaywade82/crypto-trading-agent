@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAtUtc": "2026-11-06T00:25:52Z",
+  "updatedAtUtc": "2026-11-06T01:27:59.965Z",
   "items": [
     {
       "id": "Q1_ARCHIVE_MULTIYEAR",
@@ -11,15 +11,27 @@
         "Compatible bulk-data downloader or official Binance Vision access",
         "Persistent writable store"
       ],
-      "nextAction": "Backfill multi-year 5m/15m/1h for all four symbols from Binance Vision or another auditable bulk source; recover the 76-row delta provenance; continue incremental appends from 5m 00:20Z, 15m 00:00Z, 1h 23:00Z and 4h 20:00Z.",
-      "blocker": "4h archive extended and validated through 2026-11-05T20:00Z. Multi-year 5m/15m/1h remains absent; unresolved 76-row delta provenance remains open. Incremental recent bars do not substitute for multi-year lower-timeframe coverage.",
+      "nextAction": "Backfill multi-year 5m/15m/1h for all four symbols from Binance Vision or another auditable bulk source; recover the 76-row delta provenance; continue appends after 5m 01:20Z, 15m 01:00Z, 1h 00:00Z and 4h 20:00Z.",
+      "blocker": "4h canonical files contain 13,461 rows/symbol through 2026-11-05T16:00Z; incremental deltas extend the effective 4h high-water mark to 20:00Z. Multi-year 5m/15m/1h is still absent. The indexed 76-row delta remains inaccessible with unknown interval coverage.",
       "result": {
         "canonical4hRowsPerSymbol": 13462,
         "canonical4hRowsTotal": 53848,
         "canonicalEndUtc": "2026-11-05T20:00:00Z",
         "allFourContinuous": true,
         "missing76DeltaUnresolved": true,
-        "lowerTimeframeMultiYearBackfill": false
+        "lowerTimeframeMultiYearBackfill": false,
+        "canonicalFileRowsPerSymbol": 13461,
+        "canonicalFileEndUtc": "2026-11-05T16:00:00Z",
+        "effectiveHighwaterByInterval": {
+          "5m": "2026-11-06T01:20:00Z",
+          "15m": "2026-11-06T01:00:00Z",
+          "1h": "2026-11-06T00:00:00Z",
+          "4h": "2026-11-05T20:00:00Z"
+        },
+        "latestDeltaRows": 68,
+        "latestDeltaSha256": "7880266bf395b5d8243e4052de846e2fdc3f47bbcc0f764a2a989f5a27de1f39",
+        "latestDeltaReadbackVerified": true,
+        "unresolvedMissing76RowDelta": true
       }
     },
     {
@@ -29,8 +41,8 @@
       "prerequisites": [
         "Direct bounded HTTP or Binance SDK call"
       ],
-      "nextAction": "Restore direct DNS and obtain uncached /fapi/v1/time plus /fapi/v1/exchangeInfo; require <=60s drift before treating contract metadata as execution-authoritative.",
-      "blocker": "Direct fapi.binance.com DNS resolution failed in this run. Connector exchangeInfo.serverTime=2026-11-05T06:46:24.911Z versus current mark timestamp 2026-11-06T00:25:46Z (17.66h stale); TRADING/PERPETUAL metadata is not execution-authoritative."
+      "nextAction": "Restore direct DNS and obtain uncached /fapi/v1/time plus /fapi/v1/exchangeInfo; require <=60s server-time drift before treating contract metadata as execution-authoritative.",
+      "blocker": "Direct fapi.binance.com DNS resolution failed. Connector exchangeInfo.serverTime=2026-11-06T01:01:01.889Z versus local 2026-11-06T01:27:22Z (~26m20s stale); direct /fapi/v1/time was not reachable. Mark/ticker/OI snapshots were timestamped 01:23:14-01:23:21Z and best-book snapshots 01:24:31Z, so current market data is delayed and metadata is not execution-authoritative."
     },
     {
       "id": "Q3_RUN_REPOSITORY_BACKTEST",
@@ -52,8 +64,8 @@
       "prerequisites": [
         "Recorder process and persistent storage"
       ],
-      "nextAction": "Backfill historical funding for BTC/ETH/XRP and OI/taker/positioning histories for all symbols; preserve source timestamps and interval changes.",
-      "blocker": "SOL funding archive now persisted: 6,806 rows from 2020-09-14T08:00Z to 2026-11-05T16:00Z, zero duplicates/invalid rows and zero >8h gaps. 3,501 markPrice values blank. Other-symbol funding and historical OI/taker/positioning archives remain absent."
+      "nextAction": "Backfill historical funding for BTC/ETH/XRP and historical OI/taker/positioning for all four symbols; persist and read back the existing SOL funding archive; preserve source timestamps and funding interval changes.",
+      "blocker": "Only SOLUSDT historical funding is archived (6,806 rows through 2026-11-05T16:00Z; prior index says readbackVerified=false). Current 1h OI statistics and long/short ratios were retrieved for all four symbols but not archived; other-symbol historical funding/OI/taker archives remain absent."
     },
     {
       "id": "Q5_CONDITIONAL_STRATEGY_TEST",
@@ -863,13 +875,50 @@
         "Pre-registered distinct strategy specification",
         "Untouched forward test segment"
       ],
-      "nextAction": "Complete lower-timeframe backfill and runtime setup, then pre-register a distinct strategy family and evaluate only on a forward untouched segment; do not reuse the inspected SOL 4h holdout.",
-      "blocker": "No valid new strategy experiment was run. Multi-year lower-timeframe archive is absent; local repository harness cannot run under Node22.16/npm10.9; prior SOL 4h candidates have already inspected the available test window, so another family on the same window would add data-snooping risk.",
+      "nextAction": "Provision Node >=24/npm >=11 and a clean checkout; complete multi-year lower-timeframe backfill; commit and smoke-test the generic runner; then pre-register a distinct strategy family against a forward untouched test segment.",
+      "blocker": "No strategy experiment ran in this run. Multi-year 5m/15m/1h archive remains absent; local repo harness cannot run under Node22.16/npm10.9 and no local checkout exists. The inspected SOL 4h test window must not be reused for another family. No OOS_VALIDATED registry entries exist.",
       "result": {
         "experimentExecuted": false,
         "runClassification": "MONITORING_ONLY",
         "dailyCycleStatus": "BLOCKED",
         "oosEvaluated": false
+      }
+    },
+    {
+      "id": "Q38_INCREMENTAL_ARCHIVE_REFRESH_20261106T012524Z",
+      "priority": 1,
+      "status": "COMPLETED",
+      "prerequisites": [
+        "Binance USDⓈ-M kline connector",
+        "Existing high-water marks",
+        "GitHub archive branch write access"
+      ],
+      "nextAction": "Next run append only completed bars after 5m 01:20Z, 15m 01:00Z, 1h 00:00Z and 4h 20:00Z; exclude forming candles and verify manifest/hash/readback.",
+      "blocker": null,
+      "result": {
+        "rows": 68,
+        "row_counts_by_symbol_interval": {
+          "BTCUSDT:5m": 12,
+          "BTCUSDT:15m": 4,
+          "BTCUSDT:1h": 1,
+          "BTCUSDT:4h": 0,
+          "ETHUSDT:5m": 12,
+          "ETHUSDT:15m": 4,
+          "ETHUSDT:1h": 1,
+          "ETHUSDT:4h": 0,
+          "SOLUSDT:5m": 12,
+          "SOLUSDT:15m": 4,
+          "SOLUSDT:1h": 1,
+          "SOLUSDT:4h": 0,
+          "XRPUSDT:5m": 12,
+          "XRPUSDT:15m": 4,
+          "XRPUSDT:1h": 1,
+          "XRPUSDT:4h": 0
+        },
+        "delta_path": "research-data/binance-usdm/delta/binance_usdm_delta_20261106T012524Z_completed.jsonl",
+        "manifest_path": "research-data/binance-usdm/delta/binance_usdm_delta_20261106T012524Z.manifest.json",
+        "delta_sha256": "7880266bf395b5d8243e4052de846e2fdc3f47bbcc0f764a2a989f5a27de1f39",
+        "readbackVerified": true
       }
     }
   ],

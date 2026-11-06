@@ -189,7 +189,7 @@ module.exports = function runExperiment(input) {
     const th=fit(f.trainEnd);
     const val=simulate(f.trainEnd+embargo,f.valEnd,th,cfg.stopAtr,cfg.costBps,true);
     const test=simulate(f.valEnd+embargo,f.testEnd,th,cfg.stopAtr,cfg.costBps,true);
-    walkForward.push({name:f.name,trainEndUtc:new Date(sol[f.trainEnd-1].ct).toISOString(),validationStartUtc:new Date(sol[f.trainEnd+embargo].t).toISOString(),validationEndUtc:new Date(sol[f.valEnd-1].ct).toISOString(),testStartUtc:new Date(sol[f.valEnd+embargo].t).toISOString(),testEndUtc:new Date(sol[f.testEnd-1].ct).toISOString(),thresholds:th,validation:metrics(val,f.trainEnd+embargo,f.valEnd,.05),test:metrics(test,f.valEnd+embargo,f.testEnd,.05)});
+    walkForward.push({name:f.name,trainEndUtc:new Date(sol[f.trainEnd-1].ct).toISOString(),validationStartUtc:new Date(sol[f.trainEnd+embargo].t).toISOString(),validationEndUtc:new Date(sol[f.valEnd-1].ct).toISOString(),testStartUtc:new Date(sol[f.valEnd+embargo].t).toISOString(),testEndUtc:new Date(sol[f.testEnd-1].ct).toISOString(),thresholds:th,validation:metrics(val,f.trainEnd+embargo,f.valEnd,.05),test:metrics(test,f.valEnd+embargo,f.testEnd,.05),testTrades:test.trades});
   }
   const trainEnd=Math.floor(n*.60),valEnd=Math.floor(n*.80),testStart=valEnd+embargo,th=fit(trainEnd);
   const validation=simulate(trainEnd+embargo,valEnd,th,cfg.stopAtr,cfg.costBps,true);
@@ -205,8 +205,8 @@ module.exports = function runExperiment(input) {
   const costSensitivity=[10,15,20].map(costBps=>({roundTripBps:costBps,metrics:metrics(simulate(testStart,n,th,1.5,costBps,true),testStart,n,.05/6)}));
   const final={
     train:{startUtc:new Date(sol[warmup].t).toISOString(),endUtc:new Date(sol[trainEnd-1].ct).toISOString(),bars:trainEnd-warmup},
-    validation:{startUtc:new Date(sol[trainEnd+embargo].t).toISOString(),endUtc:new Date(sol[valEnd-1].ct).toISOString(),bars:valEnd-trainEnd-embargo,metrics:metrics(validation,trainEnd+embargo,valEnd,.05)},
-    untouchedTest:{startUtc:new Date(sol[testStart].t).toISOString(),endUtc:new Date(sol[n-1].ct).toISOString(),bars:n-testStart,metrics:primaryMetrics},
+    validation:{startUtc:new Date(sol[trainEnd+embargo].t).toISOString(),endUtc:new Date(sol[valEnd-1].ct).toISOString(),bars:valEnd-trainEnd-embargo,metrics:metrics(validation,trainEnd+embargo,valEnd,.05),trades:validation.trades},
+    untouchedTest:{startUtc:new Date(sol[testStart].t).toISOString(),endUtc:new Date(sol[n-1].ct).toISOString(),bars:n-testStart,metrics:primaryMetrics,trades:primary.trades},
     thresholds:th,
     contextDistribution:contextSummary(testStart,n,th),
     byContext,

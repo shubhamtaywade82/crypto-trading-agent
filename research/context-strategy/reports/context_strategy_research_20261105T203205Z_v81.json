@@ -1,0 +1,139 @@
+{
+  "schemaVersion": "1.0.0",
+  "runId": "CONTEXT-STRATEGY-2026-11-05T203205Z-V81",
+  "generatedAtUtc": "2026-11-05T20:33:10.000Z",
+  "runClass": "RESEARCH_BLOCKED",
+  "summary": {
+    "experimentExecuted": false,
+    "oosEvaluated": false,
+    "archiveRefreshExecuted": true,
+    "currentSnapshotExecuted": true,
+    "oosValidatedEntries": 0,
+    "decision": "NO_TRADE"
+  },
+  "preflight": {
+    "shell": "PASS: Linux 6.18.57; Python 3.13.5; Node 22.16.0; npm 10.9.2; 5 CPUs; 4.7 GiB available RAM; 30 GiB free disk.",
+    "repository": "DEGRADED: GitHub read/write works; no local checkout.",
+    "sdk": "BLOCKED: Binance Node SDK packages not installed/importable.",
+    "directRest": "BLOCKED: six bounded fapi.binance.com requests failed DNS; no HTTP status.",
+    "exchangeInfo": "BLOCKED: serverTime 2026-11-05T06:46:24.913Z is 49,565.087 seconds behind fresh mark time 2026-11-05T20:32:30Z.",
+    "backtestHarness": "BLOCKED: repository harness not invoked; deterministic fixture smoke test NOT_RUN.",
+    "storage": "PASS: GitHub writes and readback available."
+  },
+  "archive": {
+    "rowsAppended": 84,
+    "deltaPath": "research-data/binance-usdm/delta/binance_usdm_delta_20261105T203205Z_completed.jsonl",
+    "manifestPath": "research-data/binance-usdm/delta/binance_usdm_delta_20261105T203205Z.manifest.json",
+    "sha256": "d377e1fb88a0fb40cdbc55700b9cb97feff2280168ee9ebda530459809fef5cc",
+    "readbackVerified": true,
+    "rowCounts": {
+      "BTCUSDT:5m": 14,
+      "BTCUSDT:15m": 5,
+      "BTCUSDT:1h": 1,
+      "BTCUSDT:4h": 1,
+      "ETHUSDT:5m": 14,
+      "ETHUSDT:15m": 5,
+      "ETHUSDT:1h": 1,
+      "ETHUSDT:4h": 1,
+      "SOLUSDT:5m": 14,
+      "SOLUSDT:15m": 5,
+      "SOLUSDT:1h": 1,
+      "SOLUSDT:4h": 1,
+      "XRPUSDT:5m": 14,
+      "XRPUSDT:15m": 5,
+      "XRPUSDT:1h": 1,
+      "XRPUSDT:4h": 1
+    },
+    "latestCompleted": {
+      "5m": "2026-11-05T20:25:00Z",
+      "15m": "2026-11-05T20:15:00Z",
+      "1h": "2026-11-05T19:00:00Z",
+      "4h": "2026-11-05T16:00:00Z"
+    },
+    "qualityFailures": 0,
+    "archiveIndex": {
+      "indexedDeltaFiles": 22,
+      "declaredRows": 1092,
+      "accessibleFiles": 21,
+      "parseableRows": 1015,
+      "missing76RowDelta": true,
+      "malformedXrp4hOriginal": true,
+      "canonicalReassembly": "NOT_EXECUTED"
+    }
+  },
+  "context": {
+    "taxonomy": "CTX v2; no refit",
+    "currentStates": {
+      "BTCUSDT": "SIDEWAYS_NORMAL",
+      "ETHUSDT": "DOWN_NORMAL",
+      "SOLUSDT": "DOWN_LOW",
+      "XRPUSDT": "DOWN_NORMAL"
+    },
+    "featureWindow": "1499 completed 4h bars per symbol, 2026-03-01 through 2026-11-05 16:00Z",
+    "caveat": "Full-history training thresholds held fixed. Current labels are deterministic classifications, not calibrated probabilities."
+  },
+  "strategyRegistry": {
+    "oosValidatedEntries": 0,
+    "solDonchian": {
+      "status": "INSUFFICIENT_EVIDENCE",
+      "oosTrades": 55,
+      "meanNetR": 0.0431072598,
+      "ci95": [
+        -0.2798208358,
+        0.3899637338
+      ],
+      "totalQuotePnlPerSol": -19.8265
+    },
+    "otherFamilies": "HYPOTHESIS"
+  },
+  "currentMarket": {
+    "retrievedAtUtc": "2026-11-05T20:32:34.346Z",
+    "BTCUSDT": {
+      "mark": 76008.6,
+      "change24hPct": -5.348,
+      "openInterest": 95158.609,
+      "spreadBps": 0.01316
+    },
+    "ETHUSDT": {
+      "mark": 2246.32,
+      "change24hPct": -7.195,
+      "openInterest": 2352372.726,
+      "spreadBps": 0.04452
+    },
+    "SOLUSDT": {
+      "mark": 89.9083667,
+      "change24hPct": -5.471,
+      "openInterest": 9069884.23,
+      "spreadBps": 1.11216
+    },
+    "XRPUSDT": {
+      "mark": 1.2409,
+      "change24hPct": -5.073,
+      "openInterest": 350205621.6,
+      "spreadBps": 0.8059
+    },
+    "nextFundingUtc": "2026-11-06T00:00:00Z",
+    "fundingIntervalHours": 8,
+    "fundingAbsoluteThresholdPercent": 0.05,
+    "thresholdExceeded": false,
+    "completedBars": {
+      "5m": "2026-11-05T20:25:00Z",
+      "15m": "2026-11-05T20:15:00Z",
+      "1h": "2026-11-05T19:00:00Z",
+      "4h": "2026-11-05T16:00:00Z"
+    }
+  },
+  "decisions": {
+    "SOLUSDT": "NO_TRADE: no OOS_VALIDATED strategy entry",
+    "ETHUSDT": "NO_TRADE: no OOS_VALIDATED strategy entry",
+    "XRPUSDT": "NO_TRADE: no OOS_VALIDATED strategy entry"
+  },
+  "nextActions": [
+    "Recover the missing 76-row delta and exact coverage metadata.",
+    "Reassemble canonical 4h archive and apply the XRP correction.",
+    "Backfill multi-year 5m, 15m and 1h history.",
+    "Restore direct DNS and verify server time plus exchange metadata within 60 seconds.",
+    "Provision Node >=24 and npm >=11, obtain a local checkout, commit the exact research runner and deterministic fixtures.",
+    "Then pre-register a different strategy family; do not retest Donchian on its existing untouched test window."
+  ]
+}

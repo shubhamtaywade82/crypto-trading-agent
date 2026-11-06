@@ -1,0 +1,118 @@
+{
+  "schema_version": 1,
+  "run_id": "context-strategy-research-2026-11-05T0832Z",
+  "timestamp_utc": "2026-11-05T08:32:14Z",
+  "classification": "MONITORING_ONLY",
+  "market_snapshot_path": "research/market-snapshots/binance-usdm-2026-11-05T0832Z-v57.json",
+  "market_snapshot_blob_sha": "054d885bb7b79b494777cd97d22bd20e8fd36230",
+  "archive": {
+    "snapshot_manifest_path": "research/data-archive/snapshots/2026-11-05/manifest.json",
+    "snapshot_manifest_blob_sha": "56c7a31f8e9ba166c85b7caf266ed7f269d6c823",
+    "snapshot_files": 13,
+    "snapshot_rows": 48136,
+    "snapshot_bytes": 6262326,
+    "snapshot_incremental_rows_since_prior_snapshot": 72,
+    "canonical_raw_delta_files": [
+      {
+        "path": "research/raw-deltas/binance-usdm-2026-11-05-0827Z-5m-15m.json",
+        "blob_sha": "21457eab36d24a1f2848b982eec645c2d3870059",
+        "rows_by_interval": {
+          "5m": 120,
+          "15m": 40
+        },
+        "quality_failures": 0,
+        "forming_excluded": 8
+      },
+      {
+        "path": "research/raw-deltas/binance-usdm-2026-11-05-0827Z-1h-4h.json",
+        "blob_sha": "d4513ce6c92d9e2c0768bfc6e8218a68ff17f655",
+        "rows_by_interval": {
+          "1h": 12,
+          "4h": 4
+        },
+        "quality_failures": 0,
+        "forming_excluded": 8
+      }
+    ],
+    "raw_archive_manifests": {
+      "1h": {
+        "path": "research/raw-archive/binance-usdm-1h/manifest.json",
+        "blob_sha": "ca6a04e110076d3ec48e6d4bffe90e2b61da9de6",
+        "base_rows_per_symbol": 10500,
+        "incremental_rows_per_symbol": 34,
+        "latest_completed": "2026-11-05T07:00:00Z",
+        "status": "IN_PROGRESS"
+      },
+      "4h": {
+        "path": "research/raw-archive/binance-usdm-4h/manifest.json",
+        "blob_sha": "98bfef1cd53178fad59a8802980edd4d273c6b8e",
+        "base_rows_per_symbol": 13449,
+        "incremental_rows_per_symbol": 9,
+        "latest_completed": "2026-11-05T04:00:00Z",
+        "status": "BASE_ARCHIVE_COMPLETE_INCREMENTAL"
+      }
+    },
+    "quality_failures": 0,
+    "manifest_readback_verified": true
+  },
+  "daily_research_cycle": "COMPLETED_EARLIER_THIS_UTC_DAY; CPULLBACK-4H-BTC-CONFIRM-v1.0.1 OOS evaluated at 2026-11-05T07:34:30Z; no new experiment in this monitoring run",
+  "experiments_run": 0,
+  "oos_evaluations_run": 0,
+  "registry_promotions": 0,
+  "registry_downgrades": 0,
+  "preflight": {
+    "shell_compute": {
+      "status": "PASS",
+      "evidence": "pwd=/; Linux 6.18.57 x86_64; Python 3.13.5; Node v22.16.0/npm 10.9.2; 5 CPUs; 5.8 GiB RAM (4.7 GiB available); 30 GiB free."
+    },
+    "repo_code": {
+      "status": "BLOCKED",
+      "evidence": "Remote package.json requires Node>=24/npm>=11; local checkout absent. scripts/conditional-edge.ts blob 29034c61fdd42a5e40272234b221d29cb95fb3ee; scripts/backtest.ts blob 284a5ffd4e254265da49c76cb792cfdc3b19e094."
+    },
+    "binance_sdk": {
+      "status": "UNAVAILABLE",
+      "evidence": "binance, @binance/connector, @binance/futures-connector and @nemesis-oss/binance-sdk are NOT_INSTALLED."
+    },
+    "direct_network": {
+      "status": "BLOCKED",
+      "evidence": "curl https://fapi.binance.com/fapi/v1/time and /exchangeInfo fail DNS resolution; exit 6, HTTP 000."
+    },
+    "connector_market_data": {
+      "status": "DEGRADED",
+      "evidence": "Mark/ticker/OI/book/klines/funding/OI history/taker/long-short calls succeeded; HTTP status and headers are not exposed."
+    },
+    "exchange_info": {
+      "status": "BLOCKED",
+      "evidence": "serverTime=2026-11-05T06:46:24.911Z; approximately 105m50s stale at snapshot time."
+    },
+    "raw_historical_archive": {
+      "status": "PASS",
+      "evidence": "4h 13,449 base rows/symbol from 2020-09-14 plus 9 incremental/symbol to 2026-11-05 04:00; 1h 10,500 base rows/symbol from 2025-08-23 plus 34 incremental/symbol to 07:00; manifests read back."
+    },
+    "data_quality": {
+      "status": "PASS",
+      "evidence": "New 5m/15m raw delta 160 rows and 1h/4h delta 16 rows; zero duplicates/gaps/alignment/OHLC/volume/nonfinite failures; 16 forming bars excluded across the two canonical fetches."
+    },
+    "backtest_harness": {
+      "status": "BLOCKED",
+      "evidence": "No local project checkout; Node/npm below engine floor; no SDK imports; no smoke test or experiment run this turn."
+    },
+    "disk_storage": {
+      "status": "DEGRADED",
+      "evidence": "30 GiB free on ephemeral overlay; GitHub branch used as durable archive/registry store."
+    },
+    "artifact_readback": {
+      "status": "PASS",
+      "evidence": "Snapshot CSV and manifest, raw delta JSON files, 1h/4h manifests fetched back and verified; GitHub blob SHA-1 recorded."
+    }
+  },
+  "run_status": "MONITORING_ONLY",
+  "blocked_work": [
+    "Direct Binance REST/server-time probe",
+    "Fresh exchangeInfo contract authorization",
+    "Local TypeScript harness execution",
+    "Full 5m/15m/1h backfill",
+    "Measured execution-cost model",
+    "No new strategy experiment in this hourly run"
+  ]
+}

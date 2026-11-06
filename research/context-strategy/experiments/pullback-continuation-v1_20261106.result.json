@@ -1,0 +1,77 @@
+{
+  "schemaVersion": 1,
+  "experimentId": "PULLBACK-CONTINUATION-V1-20261106",
+  "status": "REJECTED_OOS_NEGATIVE",
+  "executedAtUtc": "2026-11-06T00:38:00Z",
+  "runner": {
+    "name": "Repository Native Research Harness",
+    "script": "scripts/context-strategy-harness.ts",
+    "version": "1.0.0",
+    "runtime": "Node v24.19.0 / Linux x86_64",
+    "reproducibilityStatus": "FULL_REPRODUCIBILITY: native repository script executed with clean test suite (2,070/2,070 pass)"
+  },
+  "universe": ["SOLUSDT", "ETHUSDT", "XRPUSDT"],
+  "timeframe": "4h",
+  "parameters": {
+    "stopAtrMultiple": 1.5,
+    "rewardRisk": 2.0,
+    "maxHoldBars": 12,
+    "roundTripCostBps": 15
+  },
+  "splits": {
+    "commonWindowStartUtc": "2020-09-14T08:00:00Z",
+    "baseArchiveLastOpenUtc": "2026-11-04T12:00:00Z",
+    "warmupBars": 210,
+    "trainBars": 9270,
+    "testBars": 3974
+  },
+  "results": {
+    "SOLUSDT": {
+      "train": { "n": 157, "winRate": "45.9%", "meanR": "0.086" },
+      "test": {
+        "n": 88,
+        "winRate": "36.4%",
+        "meanR": "-0.179",
+        "byRegime": {
+          "UP_LOW": { "n": 30, "winRate": "30.0%", "meanR": "-0.291" },
+          "UP_NORMAL": { "n": 8, "winRate": "37.5%", "meanR": "-0.005" },
+          "DOWN_LOW": { "n": 30, "winRate": "40.0%", "meanR": "-0.060" },
+          "DOWN_NORMAL": { "n": 20, "winRate": "40.0%", "meanR": "-0.258" }
+        }
+      }
+    },
+    "ETHUSDT": {
+      "train": { "n": 152, "winRate": "35.5%", "meanR": "-0.107" },
+      "test": {
+        "n": 94,
+        "winRate": "35.1%",
+        "meanR": "-0.191",
+        "byRegime": {
+          "UP_LOW": { "n": 23, "winRate": "39.1%", "meanR": "-0.094" },
+          "UP_NORMAL": { "n": 21, "winRate": "38.1%", "meanR": "-0.209" },
+          "DOWN_LOW": { "n": 20, "winRate": "45.0%", "meanR": "0.095" },
+          "DOWN_NORMAL": { "n": 30, "winRate": "23.3%", "meanR": "-0.444" }
+        }
+      }
+    },
+    "XRPUSDT": {
+      "train": { "n": 161, "winRate": "39.1%", "meanR": "-0.014" },
+      "test": {
+        "n": 85,
+        "winRate": "38.8%",
+        "meanR": "-0.065",
+        "byRegime": {
+          "UP_LOW": { "n": 7, "winRate": "28.6%", "meanR": "-0.543" },
+          "UP_NORMAL": { "n": 16, "winRate": "18.8%", "meanR": "-0.361" },
+          "DOWN_LOW": { "n": 37, "winRate": "43.2%", "meanR": "0.053" },
+          "DOWN_NORMAL": { "n": 25, "winRate": "48.0%", "meanR": "0.083" }
+        }
+      }
+    }
+  },
+  "interpretation": {
+    "evidenceStatus": "REJECTED_OOS_NEGATIVE",
+    "verdict": "Candidate Hypothesis #1 (TREND_PULLBACK_CONTINUATION) is rejected across all three target assets. In all three symbols, out-of-sample expectancy net of costs is negative (SOL: -0.179R, ETH: -0.191R, XRP: -0.065R) and does not clear promotion gates.",
+    "recommendation": "Do not promote to production decision engine. Retain in registry as audited negative empirical evidence."
+  }
+}

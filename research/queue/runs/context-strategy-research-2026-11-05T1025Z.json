@@ -1,0 +1,137 @@
+{
+  "schema_version": 1,
+  "run_id": "context-strategy-research-2026-11-05T1025Z",
+  "timestamp_utc": "2026-11-05T10:29:24.084Z",
+  "classification": "MONITORING_ONLY",
+  "daily_research_cycle": "COMPLETED_EARLIER_THIS_UTC_DAY",
+  "experiments_run": 0,
+  "raw_append": {
+    "delta_path": "research/raw-deltas/binance-usdm-2026-11-05T1023Z.json",
+    "delta_blob_sha": "f969a907a8b1e4eb910255d5974ae5880eaa49de",
+    "delta_file_sha256": "ea1185564943350e8c788bb84d3150d489004f382fc78ac962f99f65f5271024",
+    "bytes": 58200,
+    "total_rows": 124,
+    "rows_by_interval_total": {
+      "5m": 88,
+      "15m": 28,
+      "1h": 8,
+      "4h": 0
+    },
+    "rows_per_symbol": {
+      "BTCUSDT": 31,
+      "ETHUSDT": 31,
+      "SOLUSDT": 31,
+      "XRPUSDT": 31
+    },
+    "forming_candles_excluded": 16,
+    "quality_failures": 0,
+    "cross_symbol_alignment": true,
+    "readback_exact": true,
+    "latest_completed_open_utc_by_interval": {
+      "5m": "2026-11-05T10:15:00Z",
+      "15m": "2026-11-05T10:00:00Z",
+      "1h": "2026-11-05T09:00:00Z",
+      "4h": "2026-11-05T04:00:00Z"
+    }
+  },
+  "preflight": [
+    {
+      "capability": "shell_compute",
+      "status": "PASS",
+      "evidence": "Managed Debian 13 x86_64; cwd=/; Linux 6.18.57; Python 3.13.5; Node v22.16.0/npm 10.9.2; pnpm absent; 5 vCPU; 5.8 GiB RAM (4.7 GiB available); 30 GiB free.",
+      "impact": "Bounded data checks and transformations possible.",
+      "next_action": "Use a compatible persistent research host for full Node harness."
+    },
+    {
+      "capability": "repo_code",
+      "status": "BLOCKED",
+      "evidence": "No local crypto-trading-agent checkout. Remote GitHub source is readable; package.json requires Node>=24/npm>=11.",
+      "impact": "No local project execution or SDK import.",
+      "next_action": "Mount exact repository commit in a Node>=24/npm>=11 runtime."
+    },
+    {
+      "capability": "binance_sdk",
+      "status": "UNAVAILABLE",
+      "evidence": "binance, @binance/connector, @binance/futures-connector and @nemesis-oss/binance-sdk all NOT_INSTALLED.",
+      "impact": "No Binance SDK execution; market data came through connected Binance integration.",
+      "next_action": "Install pinned SDK only in compatible checkout if SDK execution is needed."
+    },
+    {
+      "capability": "direct_binance_network",
+      "status": "BLOCKED",
+      "evidence": "curl GET /fapi/v1/time and /fapi/v1/exchangeInfo: DNS resolution failed, exit 6, HTTP 000.",
+      "impact": "No direct REST server-time/metadata verification or direct historical backfill.",
+      "next_action": "Restore DNS/HTTPS egress or provide uncached direct endpoint access."
+    },
+    {
+      "capability": "connector_market_data",
+      "status": "DEGRADED",
+      "evidence": "Klines, mark/premium index, ticker24h, OI, funding history, OI history, global long/short ratio, taker volume and depth returned; HTTP status/headers not exposed.",
+      "impact": "Current snapshot usable for descriptive classification; endpoint-level HTTP audit incomplete.",
+      "next_action": "Retain response timestamps and obtain direct REST status/headers when network is restored."
+    },
+    {
+      "capability": "exchange_info_contract_status",
+      "status": "BLOCKED",
+      "evidence": "exchangeInfo serverTime=2026-11-05T06:46:24.911Z; 13,147 seconds stale at 10:25:32Z. Last reported symbols were TRADING, but not relied on.",
+      "impact": "Contract status/filter validation cannot authorize execution.",
+      "next_action": "Require uncached /time and exchangeInfo drift <=60s."
+    },
+    {
+      "capability": "raw_historical_archive",
+      "status": "PASS",
+      "evidence": "GitHub research branch contains verified 4h/1h base pages and incremental deltas; current 124-row delta and both manifests were read back exactly.",
+      "impact": "Durable append-only raw history advanced for 5m/15m/1h; 4h already current.",
+      "next_action": "Continue paginated backfill and Parquet conversion."
+    },
+    {
+      "capability": "data_quality_coverage",
+      "status": "DEGRADED",
+      "evidence": "Current 16 series x120 rows=1,920; 1,904 completed, 16 forming excluded; zero duplicates/gaps/OHLC/volume/nonfinite/alignment failures. Long history is 4h ~6.1y, 1h ~14.5mo, 15m ~31d, 5m ~10.5d.",
+      "impact": "4h taxonomy has multi-cycle coverage; intraday strategy inference remains under-sampled.",
+      "next_action": "Backfill 1h,15m,5m toward common 2020 start."
+    },
+    {
+      "capability": "backtest_harness_smoke_test",
+      "status": "BLOCKED",
+      "evidence": "No local checkout and Node/npm below engine floor. Prior CPULLBACK v1.0.1 bundle reports an 80-bar deterministic/no-lookahead fixture smoke PASS in V8 Code Mode; no project harness invocation this run.",
+      "impact": "No new experiment or OOS evaluation this run.",
+      "next_action": "Run repository fixture and harness in compatible Node runtime; align minN>=100 and CI95."
+    },
+    {
+      "capability": "disk_storage",
+      "status": "DEGRADED",
+      "evidence": "30 GiB free on ephemeral local overlay; GitHub branch research/registry-snapshots used as durable storage.",
+      "impact": "Local archive is absent; remote durable storage is available.",
+      "next_action": "Continue verified GitHub commits; later materialize/convert on a persistent host."
+    },
+    {
+      "capability": "artifact_readback",
+      "status": "PASS",
+      "evidence": "Raw delta SHA256 ea118556... and exact readback; 4h/1h manifests and market snapshot read back exactly; SHA256 sidecars committed.",
+      "impact": "Current append and snapshot are verifiably persisted.",
+      "next_action": "Verify immutable registry snapshot and queue-run artifacts after commit."
+    }
+  ],
+  "queue_path": "research/queue/latest.json",
+  "queue_blob_sha": "45a8e19b7a3bf7900c188a8b26ce48d62bf9c8fe",
+  "queue_status_counts": {
+    "PARTIALLY_RESOLVED": 4,
+    "BLOCKED": 9,
+    "HYPOTHESIS_BLOCKED": 1
+  },
+  "top_blockers": [
+    "Direct Binance DNS/HTTP failure and stale exchangeInfo.",
+    "No local Node>=24/npm>=11 checkout or Binance SDK.",
+    "Incomplete 5m/15m/1h multi-cycle history and unmeasured execution costs.",
+    "CPULLBACK bootstrap spec/output mismatch."
+  ],
+  "next_actions": [
+    "Backfill aligned intraday history.",
+    "Resolve CPULLBACK bootstrap mismatch.",
+    "Run compatible project harness and raise evidence gates.",
+    "Build measured execution cost model."
+  ],
+  "market_snapshot_path": "research/market-snapshots/binance-usdm-2026-11-05T1025Z-v58.json",
+  "registry_snapshot_path": "research/registry-snapshots/context-strategy-2026-11-05T102516Z.json"
+}

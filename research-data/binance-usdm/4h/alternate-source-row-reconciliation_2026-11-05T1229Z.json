@@ -1,0 +1,151 @@
+{
+  "schema_version": "1.0.0",
+  "created_at_utc": "2026-11-05T12:29:44Z",
+  "repository": "shubhamtaywade82/crypto-trading-agent",
+  "branch": "research/raw-ohlcv-archive-2026-11-05T0530Z",
+  "source_endpoint": "GET /fapi/v1/klines via Binance public market-data connector",
+  "interval": "4h",
+  "request_parameters": "For each listed symbol/page, fetch interval=4h, limit=1500, exact endTime_epoch_ms from page manifest; compare ordered raw kline arrays with the GitHub JSONL archive.",
+  "mismatched_page_symbol_pairs_tested": 14,
+  "total_rows_compared": 21000,
+  "results": [
+    {
+      "symbol": "BTCUSDT",
+      "page": 2,
+      "endTime": 1772222399999,
+      "rows_archived": 1500,
+      "rows_connector": 1500,
+      "exact_row_matches": 1500,
+      "full_exact": true
+    },
+    {
+      "symbol": "BTCUSDT",
+      "page": 3,
+      "endTime": 1750622399999,
+      "rows_archived": 1500,
+      "rows_connector": 1500,
+      "exact_row_matches": 1500,
+      "full_exact": true
+    },
+    {
+      "symbol": "BTCUSDT",
+      "page": 4,
+      "endTime": 1729022399999,
+      "rows_archived": 1500,
+      "rows_connector": 1500,
+      "exact_row_matches": 1500,
+      "full_exact": true
+    },
+    {
+      "symbol": "BTCUSDT",
+      "page": 5,
+      "endTime": 1707422399999,
+      "rows_archived": 1500,
+      "rows_connector": 1500,
+      "exact_row_matches": 1500,
+      "full_exact": true
+    },
+    {
+      "symbol": "BTCUSDT",
+      "page": 6,
+      "endTime": 1685822399999,
+      "rows_archived": 1500,
+      "rows_connector": 1500,
+      "exact_row_matches": 1500,
+      "full_exact": true
+    },
+    {
+      "symbol": "BTCUSDT",
+      "page": 9,
+      "endTime": 1621022399999,
+      "rows_archived": 1500,
+      "rows_connector": 1500,
+      "exact_row_matches": 1500,
+      "full_exact": true
+    },
+    {
+      "symbol": "BTCUSDT",
+      "page": 7,
+      "endTime": 1664222399999,
+      "rows_archived": 1500,
+      "rows_connector": 1500,
+      "exact_row_matches": 1500,
+      "full_exact": true
+    },
+    {
+      "symbol": "BTCUSDT",
+      "page": 8,
+      "endTime": 1642622399999,
+      "rows_archived": 1500,
+      "rows_connector": 1500,
+      "exact_row_matches": 1500,
+      "full_exact": true
+    },
+    {
+      "symbol": "ETHUSDT",
+      "page": 7,
+      "endTime": 1664222399999,
+      "rows_archived": 1500,
+      "rows_connector": 1500,
+      "exact_row_matches": 1500,
+      "full_exact": true
+    },
+    {
+      "symbol": "ETHUSDT",
+      "page": 8,
+      "endTime": 1642622399999,
+      "rows_archived": 1500,
+      "rows_connector": 1500,
+      "exact_row_matches": 1500,
+      "full_exact": true
+    },
+    {
+      "symbol": "SOLUSDT",
+      "page": 7,
+      "endTime": 1664222399999,
+      "rows_archived": 1500,
+      "rows_connector": 1500,
+      "exact_row_matches": 1500,
+      "full_exact": true
+    },
+    {
+      "symbol": "SOLUSDT",
+      "page": 8,
+      "endTime": 1642622399999,
+      "rows_archived": 1500,
+      "rows_connector": 1500,
+      "exact_row_matches": 1500,
+      "full_exact": true
+    },
+    {
+      "symbol": "XRPUSDT",
+      "page": 7,
+      "endTime": 1664222399999,
+      "rows_archived": 1500,
+      "rows_connector": 1500,
+      "exact_row_matches": 1500,
+      "full_exact": true
+    },
+    {
+      "symbol": "XRPUSDT",
+      "page": 8,
+      "endTime": 1642622399999,
+      "rows_archived": 1500,
+      "rows_connector": 1500,
+      "exact_row_matches": 1500,
+      "full_exact": true
+    }
+  ],
+  "summary": {
+    "full_exact_pairs": 14,
+    "row_level_mismatches": 0,
+    "total_exact_rows": 21000,
+    "conclusion": "All 14 page/symbol pairs whose expected manifest SHA-256 differed from the recorded actual hash were independently re-fetched from the Binance public kline connector using the same endTime and limit. All 21,000 ordered raw rows matched byte-for-byte at JSON-array serialization level.",
+    "hash_status": "Expected-vs-actual manifest SHA-256 divergences remain recorded (14); row-level source data is independently verified. Do not overwrite expected hashes. The remaining issue is expected-hash provenance/canonicalization, not a demonstrated OHLCV row discrepancy.",
+    "mismatch_scope_correction": "14 pairs: BTCUSDT pages 2-6 and 9; BTCUSDT/ETHUSDT/SOLUSDT/XRPUSDT pages 7-8. The prior hash_mismatch_scope text that said all four symbols pages 7-9 (17 pairs) was inconsistent with mismatch_symbols_by_page and original_manifest_hash_mismatches=14."
+  },
+  "raw_pages_modified": false,
+  "expected_hashes_modified": false,
+  "github_readback_method": "fetch_file",
+  "timestamp_utc": "2026-11-05T12:29:44Z"
+}

@@ -1,0 +1,854 @@
+{
+  "schemaVersion": "1.0.0",
+  "runId": "CONTEXT-STRATEGY-20261105T223514Z-V83",
+  "timestampUtc": "2026-11-05T22:35:14Z",
+  "localTimestamp": "2026-11-06T04:05:14+05:30",
+  "runClassification": "OOS_EVALUATED",
+  "researchExecuted": true,
+  "untouchedOosCompleted": true,
+  "summary": {
+    "newOhlcvRows": 56,
+    "newFundingRowsPersisted": 6806,
+    "newStrategyExperiment": true,
+    "evidenceStatus": "REJECTED",
+    "oosValidatedEntries": 0,
+    "decision": "NO_TRADE for SOLUSDT, ETHUSDT and XRPUSDT"
+  },
+  "researchProgress": {
+    "canonical4h": {
+      "status": "PASS",
+      "symbols": 4,
+      "rowsPerSymbol": 13461,
+      "totalRows": 53844,
+      "startUtc": "2020-09-14T08:00:00Z",
+      "lastCompletedOpenUtc": "2026-11-05T16:00:00Z",
+      "gaps": 0,
+      "duplicates": 0,
+      "ohlcFailures": 0,
+      "readbackVerified": true
+    },
+    "incremental": {
+      "rowsAddedThisRun": 56,
+      "totalIndexedRows": 1232,
+      "latestCompletedOpenUtcByInterval": {
+        "5m": "2026-11-05T22:30:00Z",
+        "15m": "2026-11-05T22:15:00Z",
+        "1h": "2026-11-05T21:00:00Z",
+        "4h": "2026-11-05T16:00:00Z"
+      },
+      "deltas": [
+        {
+          "path": "research-data/binance-usdm/delta/binance_usdm_delta_20261105T222546Z_completed.jsonl",
+          "rows": 44,
+          "sha256": "0233731e2e0da90be198b9edfe217f44f76ab9d543a04955c5b26b6fd49ef486"
+        },
+        {
+          "path": "research-data/binance-usdm/delta/binance_usdm_delta_20261105T223302Z_completed.jsonl",
+          "rows": 8,
+          "sha256": "a1e0889a2c20cfe757ef2216879ab224417f9ae3cada780553be8e90500a75f7"
+        },
+        {
+          "path": "research-data/binance-usdm/delta/binance_usdm_delta_20261105T223514Z_5m_completed.jsonl",
+          "rows": 4,
+          "sha256": "1afe32141e4386daef9791149137852ceeb6768b8384284b3cd2e990a88e06eb"
+        }
+      ],
+      "quality": {
+        "duplicates": 0,
+        "gaps": 0,
+        "ohlcFailures": 0,
+        "nonPositiveVolume": 0,
+        "nonFinite": 0,
+        "closeTimeFailures": 0,
+        "formingIncluded": 0,
+        "crossSymbolAlignmentFailures": 0,
+        "crossTimeframeAggregationFailures": 0
+      },
+      "crossTimeframeAggregationChecks": 20,
+      "readbackVerified": true
+    },
+    "unresolved": {
+      "missing76RowDelta": "binance_usdm_delta_2026-11-05T0524Z.jsonl remains inaccessible (declared 76 rows; SHA256 f5d9e50602f4ef4046fc4d39da053e45d3619ad147aa398a6bd1e281a7f3b93d). No 4h continuity gap remains through 2026-11-05T16:00Z; missing file may still contain lower-timeframe records.",
+      "multiYearLowerTimeframes": "Multi-year 5m/15m/1h archives remain absent; incremental bars are not a substitute."
+    }
+  },
+  "derivativesArchive": {
+    "symbol": "SOLUSDT",
+    "type": "fundingRateHistory",
+    "path": "research-data/binance-usdm/derivatives/funding/SOLUSDT_funding_20200914T0800Z_20261105T1600Z.jsonl",
+    "rows": 6806,
+    "startUtc": "2020-09-14T08:00:00.008Z",
+    "endUtc": "2026-11-05T16:00:00Z",
+    "sha256": "34bfd47393c7e9756e617a70669d8ee51349f6a3ba2b4931ae719993c6064549",
+    "normalizedPayloadSha256": "e20b34e38968818d767498dd2b075d708685d54103c58046a66676396738130f",
+    "blankMarkPriceRows": 3501,
+    "duplicates": 0,
+    "invalidRows": 0,
+    "intervalsOver8h": 0,
+    "observedSpacingHours": {
+      "2": 98,
+      "4": 3,
+      "8": 6704
+    },
+    "readbackVerified": true,
+    "limitation": "Blank markPrice retained as blank. Selected OOS trades used 154 funding settlements, all with observed markPrice and no price proxy."
+  },
+  "contextDiscovery": {
+    "taxonomy": "CTX v2 4h EMA50/EMA200 + ATR14/close + absolute-return shock; thresholds fitted on training data only",
+    "currentContextSource": "Latest completed 4h open 2026-11-05T16:00Z; 20:00Z candle forming and excluded; no taxonomy refit this run",
+    "currentContexts": {
+      "BTCUSDT": {
+        "context": "SIDEWAYS_NORMAL",
+        "emaSpreadPct": -2.124,
+        "atr14ClosePct": 1.592,
+        "lastCompleted4hReturnPct": 0.433
+      },
+      "ETHUSDT": {
+        "context": "DOWN_NORMAL",
+        "emaSpreadPct": -3.396,
+        "atr14ClosePct": 2.103,
+        "lastCompleted4hReturnPct": 0.432
+      },
+      "SOLUSDT": {
+        "context": "DOWN_LOW",
+        "emaSpreadPct": -6.422,
+        "atr14ClosePct": 2.562,
+        "lastCompleted4hReturnPct": -0.111
+      },
+      "XRPUSDT": {
+        "context": "DOWN_NORMAL",
+        "emaSpreadPct": -3.555,
+        "atr14ClosePct": 2.033,
+        "lastCompleted4hReturnPct": -0.112
+      }
+    },
+    "priorFullHistoryStability": {
+      "BTC": {
+        "testJsd": 0.1231,
+        "medianDurationBars": 6,
+        "selfTransitionPct": 95.09
+      },
+      "ETH": {
+        "testJsd": 0.0429,
+        "medianDurationBars": 6,
+        "selfTransitionPct": 93.58
+      },
+      "SOL": {
+        "testJsd": 0.131,
+        "medianDurationBars": 6,
+        "selfTransitionPct": 95.14
+      },
+      "XRP": {
+        "testJsd": 0.0467,
+        "medianDurationBars": 8,
+        "selfTransitionPct": 94.01
+      }
+    },
+    "classificationConfidence": "Not calibrated as a probability; deterministic feature labels only."
+  },
+  "experiment": {
+    "id": "SOL-FAILED-BREAKOUT-FADE-SIDEWAYS-LOW-V1-20261105T2225Z",
+    "symbol": "SOLUSDT",
+    "context": "SIDEWAYS_LOW",
+    "timeframe": "4h",
+    "status": "REJECTED",
+    "dataRows": 13461,
+    "dataStartUtc": "2020-09-14T08:00:00Z",
+    "dataEndUtc": "2026-11-05T16:00:00Z",
+    "split": {
+      "train": {
+        "startIndex": 199,
+        "endIndexExclusive": 8076,
+        "startUtc": "2020-10-17T12:00:00.000Z",
+        "endUtc": "2024-05-22T04:00:00.000Z"
+      },
+      "validation": {
+        "startIndex": 8082,
+        "endIndexExclusive": 10768,
+        "startUtc": "2024-05-23T08:00:00.000Z",
+        "endUtc": "2025-08-13T20:00:00.000Z"
+      },
+      "test": {
+        "startIndex": 10774,
+        "endIndexExclusive": 13461,
+        "startUtc": "2025-08-15T00:00:00.000Z",
+        "endUtc": "2026-11-05T16:00:00.000Z"
+      },
+      "purgeBars": 6
+    },
+    "trainOnlyThresholds": {
+      "flatSpreadQ30": 0.045618932689579235,
+      "atrQ33": 0.029802026018408416,
+      "absReturnQ99": 0.10278104682550071
+    },
+    "contextCounts": {
+      "DOWN_NORMAL": 2297,
+      "DOWN_LOW": 1770,
+      "SHOCK": 83,
+      "SIDEWAYS_NORMAL": 1205,
+      "UP_NORMAL": 2671,
+      "UP_LOW": 1604,
+      "SIDEWAYS_LOW": 3632
+    },
+    "contextFrequency": {
+      "train": 0.17532055351021963,
+      "validation": 0.3574087862993299,
+      "test": 0.48046148120580573
+    },
+    "rules": {
+      "lookbackCandidates": [
+        15,
+        20,
+        25
+      ],
+      "selectedLookback": 20,
+      "entry": "next 4h open after false Donchian break and close back inside",
+      "stop": "signal extreme +/- 0.25 ATR14",
+      "target": "1.5R",
+      "timeStopBars": 6,
+      "position": "1 SOL fixed",
+      "direction": "long/short",
+      "ambiguousBar": "NO_TRADE",
+      "intrabar": "stop-first; adverse gap-through stop at open"
+    },
+    "train": {
+      "eligibleContextObservations": 1381,
+      "trades": 120,
+      "signals": 120,
+      "upperFailures": 73,
+      "lowerFailures": 47,
+      "ambiguousBars": 0,
+      "overlapSkipped": 276,
+      "winRate": 0.475,
+      "targetBeforeStopProbability": 0.35,
+      "meanNetR": 0.06530780333402525,
+      "totalNetR": 7.83693640008303,
+      "meanQuotePnl": -0.07410153010822497,
+      "totalQuotePnl": -8.892183612986996,
+      "profitFactor": 0.9035495667757304,
+      "maxDrawdownR": 9.769511182940189,
+      "averageWinR": 1.2032113703040883,
+      "averageLossR": -0.9642239953531743,
+      "exposureBars": 396,
+      "exposurePct": 0.050272946553256315,
+      "averageHoldingBars": 3.3,
+      "turnoverQuote": 14569.99324502711,
+      "fundingSettlements": 167,
+      "fundingMarkProxySettlements": 140,
+      "fundingEntryPriceProxySettlements": 0,
+      "fundingUnpricedSettlements": 0
+    },
+    "validation": {
+      "eligibleContextObservations": 960,
+      "trades": 100,
+      "signals": 100,
+      "upperFailures": 67,
+      "lowerFailures": 33,
+      "ambiguousBars": 0,
+      "overlapSkipped": 205,
+      "winRate": 0.36,
+      "targetBeforeStopProbability": 0.26,
+      "meanNetR": -0.2526499159895826,
+      "totalNetR": -25.26499159895826,
+      "meanQuotePnl": -0.7914484819678741,
+      "totalQuotePnl": -79.14484819678741,
+      "profitFactor": 0.6492454184857777,
+      "maxDrawdownR": 31.888211178635874,
+      "averageWinR": 1.168262130620642,
+      "averageLossR": -1.051912942207834,
+      "exposureBars": 305,
+      "exposurePct": 0.11355174981384959,
+      "averageHoldingBars": 3.05,
+      "turnoverQuote": 32595.530844927984,
+      "fundingSettlements": 116,
+      "fundingMarkProxySettlements": 0,
+      "fundingEntryPriceProxySettlements": 0,
+      "fundingUnpricedSettlements": 0
+    },
+    "validationCandidates": [
+      {
+        "lookback": 15,
+        "metrics": {
+          "eligibleContextObservations": 960,
+          "trades": 113,
+          "signals": 113,
+          "upperFailures": 76,
+          "lowerFailures": 37,
+          "ambiguousBars": 0,
+          "overlapSkipped": 239,
+          "winRate": 0.3274336283185841,
+          "targetBeforeStopProbability": 0.23008849557522124,
+          "meanNetR": -0.30527316850087194,
+          "totalNetR": -34.49586804059853,
+          "meanQuotePnl": -0.8371474850944112,
+          "totalQuotePnl": -94.59766581566846,
+          "profitFactor": 0.6173278455758706,
+          "maxDrawdownR": 39.725730860523676,
+          "averageWinR": 1.1573431348435848,
+          "averageLossR": -1.0173363688133046,
+          "exposureBars": 352,
+          "exposurePct": 0.13104988830975428,
+          "averageHoldingBars": 3.1150442477876106,
+          "turnoverQuote": 36593.737249286685,
+          "fundingSettlements": 133,
+          "fundingMarkProxySettlements": 0,
+          "fundingEntryPriceProxySettlements": 0,
+          "fundingUnpricedSettlements": 0
+        }
+      },
+      {
+        "lookback": 20,
+        "metrics": {
+          "eligibleContextObservations": 960,
+          "trades": 100,
+          "signals": 100,
+          "upperFailures": 67,
+          "lowerFailures": 33,
+          "ambiguousBars": 0,
+          "overlapSkipped": 205,
+          "winRate": 0.36,
+          "targetBeforeStopProbability": 0.26,
+          "meanNetR": -0.2526499159895826,
+          "totalNetR": -25.26499159895826,
+          "meanQuotePnl": -0.7914484819678741,
+          "totalQuotePnl": -79.14484819678741,
+          "profitFactor": 0.6492454184857777,
+          "maxDrawdownR": 31.888211178635874,
+          "averageWinR": 1.168262130620642,
+          "averageLossR": -1.051912942207834,
+          "exposureBars": 305,
+          "exposurePct": 0.11355174981384959,
+          "averageHoldingBars": 3.05,
+          "turnoverQuote": 32595.530844927984,
+          "fundingSettlements": 116,
+          "fundingMarkProxySettlements": 0,
+          "fundingEntryPriceProxySettlements": 0,
+          "fundingUnpricedSettlements": 0
+        }
+      },
+      {
+        "lookback": 25,
+        "metrics": {
+          "eligibleContextObservations": 960,
+          "trades": 83,
+          "signals": 83,
+          "upperFailures": 56,
+          "lowerFailures": 27,
+          "ambiguousBars": 0,
+          "overlapSkipped": 161,
+          "winRate": 0.3373493975903614,
+          "targetBeforeStopProbability": 0.25301204819277107,
+          "meanNetR": -0.29133495929536146,
+          "totalNetR": -24.180801621515002,
+          "meanQuotePnl": -0.9122820141407696,
+          "totalQuotePnl": -75.71940717368388,
+          "profitFactor": 0.6165978532635206,
+          "maxDrawdownR": 30.090019070946823,
+          "averageWinR": 1.1944023181304064,
+          "averageLossR": -1.0477103005302981,
+          "exposureBars": 244,
+          "exposurePct": 0.09084139985107967,
+          "averageHoldingBars": 2.9397590361445785,
+          "turnoverQuote": 27200.415123046878,
+          "fundingSettlements": 91,
+          "fundingMarkProxySettlements": 0,
+          "fundingEntryPriceProxySettlements": 0,
+          "fundingUnpricedSettlements": 0
+        }
+      }
+    ],
+    "primaryOos": {
+      "lookback": 20,
+      "metrics": {
+        "eligibleContextObservations": 1291,
+        "trades": 113,
+        "signals": 113,
+        "upperFailures": 64,
+        "lowerFailures": 49,
+        "ambiguousBars": 0,
+        "overlapSkipped": 246,
+        "winRate": 0.4336283185840708,
+        "targetBeforeStopProbability": 0.2743362831858407,
+        "meanNetR": -0.1479703017321489,
+        "totalNetR": -16.720644095732826,
+        "meanQuotePnl": -0.23525570634062923,
+        "totalQuotePnl": -26.583894816491103,
+        "profitFactor": 0.7870525610801595,
+        "maxDrawdownR": 20.791692075760004,
+        "averageWinR": 1.0053574645219976,
+        "averageLossR": -1.03098687277048,
+        "exposureBars": 359,
+        "exposurePct": 0.13360625232601414,
+        "averageHoldingBars": 3.1769911504424777,
+        "turnoverQuote": 24935.142038543272,
+        "fundingSettlements": 154,
+        "fundingMarkProxySettlements": 0,
+        "fundingEntryPriceProxySettlements": 0,
+        "fundingUnpricedSettlements": 0
+      },
+      "bootstrap": {
+        "ci95": [
+          -0.31751343217234484,
+          0.019600128600543533
+        ],
+        "pValueOneSided": 0.9560219890054973,
+        "reps": 2000,
+        "blockLength": 5,
+        "pValueHolm": 1
+      }
+    },
+    "oosVariants": [
+      {
+        "lookback": 15,
+        "metrics": {
+          "eligibleContextObservations": 1291,
+          "trades": 133,
+          "signals": 133,
+          "upperFailures": 72,
+          "lowerFailures": 61,
+          "ambiguousBars": 0,
+          "overlapSkipped": 280,
+          "winRate": 0.39849624060150374,
+          "targetBeforeStopProbability": 0.2556390977443609,
+          "meanNetR": -0.21384405299567227,
+          "totalNetR": -28.441259048424413,
+          "meanQuotePnl": -0.3186247213152292,
+          "totalQuotePnl": -42.37708793492548,
+          "profitFactor": 0.7068313231747351,
+          "maxDrawdownR": 34.19865444486149,
+          "averageWinR": 1.0169945222645553,
+          "averageLossR": -1.0292746091055733,
+          "exposureBars": 413,
+          "exposurePct": 0.15370301451432825,
+          "averageHoldingBars": 3.1052631578947367,
+          "turnoverQuote": 28789.14034397903,
+          "fundingSettlements": 178,
+          "fundingMarkProxySettlements": 0,
+          "fundingEntryPriceProxySettlements": 0,
+          "fundingUnpricedSettlements": 0
+        },
+        "bootstrap": {
+          "ci95": [
+            -0.3916899868262575,
+            -0.03871319402330029
+          ],
+          "pValueOneSided": 0.9905047476261869,
+          "reps": 2000,
+          "blockLength": 5,
+          "pValueHolm": 1
+        }
+      },
+      {
+        "lookback": 20,
+        "metrics": {
+          "eligibleContextObservations": 1291,
+          "trades": 113,
+          "signals": 113,
+          "upperFailures": 64,
+          "lowerFailures": 49,
+          "ambiguousBars": 0,
+          "overlapSkipped": 246,
+          "winRate": 0.4336283185840708,
+          "targetBeforeStopProbability": 0.2743362831858407,
+          "meanNetR": -0.1479703017321489,
+          "totalNetR": -16.720644095732826,
+          "meanQuotePnl": -0.23525570634062923,
+          "totalQuotePnl": -26.583894816491103,
+          "profitFactor": 0.7870525610801595,
+          "maxDrawdownR": 20.791692075760004,
+          "averageWinR": 1.0053574645219976,
+          "averageLossR": -1.03098687277048,
+          "exposureBars": 359,
+          "exposurePct": 0.13360625232601414,
+          "averageHoldingBars": 3.1769911504424777,
+          "turnoverQuote": 24935.142038543272,
+          "fundingSettlements": 154,
+          "fundingMarkProxySettlements": 0,
+          "fundingEntryPriceProxySettlements": 0,
+          "fundingUnpricedSettlements": 0
+        },
+        "bootstrap": {
+          "ci95": [
+            -0.31751343217234484,
+            0.019600128600543533
+          ],
+          "pValueOneSided": 0.9560219890054973,
+          "reps": 2000,
+          "blockLength": 5,
+          "pValueHolm": 1
+        }
+      },
+      {
+        "lookback": 25,
+        "metrics": {
+          "eligibleContextObservations": 1291,
+          "trades": 103,
+          "signals": 103,
+          "upperFailures": 57,
+          "lowerFailures": 46,
+          "ambiguousBars": 0,
+          "overlapSkipped": 211,
+          "winRate": 0.4368932038834951,
+          "targetBeforeStopProbability": 0.2912621359223301,
+          "meanNetR": -0.11629669155963802,
+          "totalNetR": -11.978559230642716,
+          "meanQuotePnl": -0.2991467799072082,
+          "totalQuotePnl": -30.812118330442445,
+          "profitFactor": 0.7419083408441413,
+          "maxDrawdownR": 18.322648380300784,
+          "averageWinR": 1.0451080549873748,
+          "averageLossR": -1.0173865811219758,
+          "exposureBars": 314,
+          "exposurePct": 0.11685895050241905,
+          "averageHoldingBars": 3.0485436893203883,
+          "turnoverQuote": 23061.472055560236,
+          "fundingSettlements": 133,
+          "fundingMarkProxySettlements": 0,
+          "fundingEntryPriceProxySettlements": 0,
+          "fundingUnpricedSettlements": 0
+        },
+        "bootstrap": {
+          "ci95": [
+            -0.31373371248305915,
+            0.09433678600083087
+          ],
+          "pValueOneSided": 0.8675662168915542,
+          "reps": 2000,
+          "blockLength": 5,
+          "pValueHolm": 1
+        }
+      }
+    ],
+    "unconditionalBaseline": {
+      "eligibleContextObservations": 2687,
+      "trades": 214,
+      "signals": 214,
+      "upperFailures": 106,
+      "lowerFailures": 108,
+      "ambiguousBars": 1,
+      "overlapSkipped": 461,
+      "winRate": 0.4719626168224299,
+      "targetBeforeStopProbability": 0.3364485981308411,
+      "meanNetR": -0.011114326192463136,
+      "totalNetR": -2.378465805187111,
+      "meanQuotePnl": 0.08125819612426301,
+      "totalQuotePnl": 17.389253970592282,
+      "profitFactor": 1.064475254552342,
+      "maxDrawdownR": 23.007191993862342,
+      "averageWinR": 1.1152069136135938,
+      "averageLossR": -1.0178262307978772,
+      "exposureBars": 675,
+      "exposurePct": 0.2512095273539263,
+      "averageHoldingBars": 3.1542056074766354,
+      "turnoverQuote": 50451.56271640024,
+      "fundingSettlements": 281,
+      "fundingMarkProxySettlements": 0,
+      "fundingEntryPriceProxySettlements": 0,
+      "fundingUnpricedSettlements": 0
+    },
+    "buyHoldReference": {
+      "priceReturnPct": -53.1964656964657,
+      "startPrice": 192.4,
+      "endPrice": 90.05
+    },
+    "evidenceDecision": {
+      "provisionalMinimumTrades": 100,
+      "selectedOosTrades": 113,
+      "ciLowerBound": -0.31751343217234484,
+      "meanNetR": -0.1479703017321489,
+      "holmAdjustedP": 1,
+      "profitFactor": 0.7870525610801595,
+      "maxDrawdownR": 20.791692075760004,
+      "neighborMeanNetR": [
+        {
+          "lookback": 15,
+          "meanNetR": -0.21384405299567227
+        },
+        {
+          "lookback": 20,
+          "meanNetR": -0.1479703017321489
+        },
+        {
+          "lookback": 25,
+          "meanNetR": -0.11629669155963802
+        }
+      ],
+      "multipleWalkForwardWindowsRequired": 3,
+      "validatedPromotionAllowed": false,
+      "reason": "REJECTED for the specific SOLUSDT 4h SIDEWAYS_LOW failed-breakout-fade V1 rule family because the untouched OOS evaluation failed the predeclared profitability and drawdown gates across the tested parameter neighborhood. This rejection does not generalize to ETH/XRP or other contexts.",
+      "status": "REJECTED",
+      "reasons": [
+        "The selected lookback-20 conditional variant produced negative OOS mean net expectancy (-0.148R) and negative quote PnL (-26.58 USDT per 1 SOL).",
+        "Its 95% moving-block bootstrap CI [-0.318R, +0.020R] crosses zero; one-sided Holm-adjusted p-value is 1.0.",
+        "Profit factor 0.787 is below 1.0.",
+        "Maximum drawdown 20.79R exceeds the predeclared 10R research risk gate.",
+        "Both neighboring lookbacks also have negative OOS mean net R, profit factor below 1 and drawdown above 10R; lookback-15 CI is entirely negative.",
+        "The unconditional same-rule baseline is also not validated: mean net R -0.011R and maximum drawdown 23.01R."
+      ]
+    },
+    "interpretation": "The SIDEWAYS_LOW filter did not rescue the false-breakout fade. All three pre-registered lookbacks lost net R, all had PF<1 and drawdown above 10R. The unconditional baseline also failed the drawdown and expectancy-in-R gates."
+  },
+  "strategyContextScorecard": [
+    {
+      "symbol": "SOLUSDT",
+      "context": "SIDEWAYS_LOW",
+      "strategy": "FAILED_BREAKOUT_FADE_V1",
+      "status": "REJECTED",
+      "reason": "Untouched OOS negative net expectancy, PF<1, maxDD>10R across all tested lookbacks."
+    },
+    {
+      "symbol": "SOLUSDT",
+      "context": "BULL_LOW",
+      "strategy": "DONCHIAN_BREAKOUT_V1",
+      "status": "INSUFFICIENT_EVIDENCE",
+      "reason": "Prior OOS n=55, CI crosses zero, quote PnL negative."
+    },
+    {
+      "symbols": [
+        "SOLUSDT",
+        "ETHUSDT",
+        "XRPUSDT"
+      ],
+      "strategy": "TREND_PULLBACK_CONTINUATION",
+      "status": "HYPOTHESIS"
+    },
+    {
+      "symbols": [
+        "SOLUSDT",
+        "ETHUSDT",
+        "XRPUSDT"
+      ],
+      "strategy": "BREAKOUT_RETEST_CONTRACTION",
+      "status": "HYPOTHESIS"
+    },
+    {
+      "symbols": [
+        "ETHUSDT",
+        "XRPUSDT"
+      ],
+      "strategy": "FAILED_BREAKOUT_FADE",
+      "status": "HYPOTHESIS"
+    },
+    {
+      "symbols": [
+        "SOLUSDT",
+        "ETHUSDT",
+        "XRPUSDT"
+      ],
+      "strategy": "BTC_LED_RELATIVE_STRENGTH",
+      "status": "HYPOTHESIS"
+    },
+    {
+      "symbols": [
+        "SOLUSDT",
+        "ETHUSDT",
+        "XRPUSDT"
+      ],
+      "strategy": "FUNDING_OI_FILTER",
+      "status": "HYPOTHESIS"
+    }
+  ],
+  "discoveries": [
+    "SOL 4h SIDEWAYS_LOW failed-breakout-fade V1 is rejected for this exact symbol/context/rule version; do not generalize to ETH/XRP or other contexts.",
+    "Selected lookback-20 OOS: 113 trades, win 43.36%, target-before-stop 27.43%, mean -0.148R, 95% block-bootstrap CI [-0.318R,+0.020R], PF 0.787, maxDD 20.79R, quote PnL -26.58 USDT per 1 SOL.",
+    "Lookback-15/20/25 all had negative OOS mean net R; PF 0.707/0.787/0.742; maxDD 34.20/20.79/18.32R.",
+    "Unconditional baseline had 214 trades, +17.39 USDT quote PnL per SOL but mean -0.011R and maxDD 23.01R; it is not acceptable.",
+    "SIDEWAYS_LOW context frequency shifted from 17.53% in training to 35.74% validation and 48.05% test; context distribution drift is material."
+  ],
+  "currentMarketSnapshot": {
+    "timestampUtc": "2026-11-05T22:35:14Z",
+    "markAndTickerTimestampUtc": "2026-11-05T22:35:10Z",
+    "bookTimestampUtc": "2026-11-05T22:35:17Z",
+    "symbols": {
+      "BTCUSDT": {
+        "markPrice": 75931.8,
+        "lastPrice": 75931.8,
+        "change24hPct": -5.865,
+        "openInterest": 94872.274,
+        "spreadBps": 0.01317,
+        "premiumIndexLastFundingRatePct": 0.01,
+        "lastSettledFundingRatePct": 0.01,
+        "takerBuySellRatio15m": 0.8318,
+        "globalAccountLongShortRatio": 2.9604,
+        "context": "SIDEWAYS_NORMAL"
+      },
+      "ETHUSDT": {
+        "markPrice": 2234.09,
+        "lastPrice": 2233.92,
+        "change24hPct": -8.34,
+        "openInterest": 2332789.16,
+        "spreadBps": 0.04475,
+        "premiumIndexLastFundingRatePct": 0.01,
+        "lastSettledFundingRatePct": 0.01,
+        "takerBuySellRatio15m": 1.4929,
+        "globalAccountLongShortRatio": 3.7916,
+        "context": "DOWN_NORMAL"
+      },
+      "SOLUSDT": {
+        "markPrice": 89.71140898,
+        "lastPrice": 89.71,
+        "change24hPct": -6.298,
+        "openInterest": 9048430.17,
+        "spreadBps": 1.1154,
+        "premiumIndexLastFundingRatePct": -0.003854,
+        "lastSettledFundingRatePct": 0.008962,
+        "takerBuySellRatio15m": 0.9225,
+        "globalAccountLongShortRatio": 3.4326,
+        "context": "DOWN_LOW"
+      },
+      "XRPUSDT": {
+        "markPrice": 1.2201,
+        "lastPrice": 1.2201,
+        "change24hPct": -7.125,
+        "openInterest": 348088751,
+        "spreadBps": 0.8196,
+        "premiumIndexLastFundingRatePct": 0.01,
+        "lastSettledFundingRatePct": 0.01,
+        "takerBuySellRatio15m": 1.1479,
+        "globalAccountLongShortRatio": 3.2827,
+        "context": "DOWN_NORMAL"
+      }
+    },
+    "funding": {
+      "nextFundingUtc": "2026-11-06T00:00:00Z",
+      "intervalHours": 8,
+      "separatePredictedFundingFieldAvailable": false,
+      "warning": "premiumIndex.lastFundingRate is reported separately from funding-history settlement; it is not presented as a predicted next rate."
+    },
+    "completedCandles": {
+      "5m": "2026-11-05T22:30:00Z",
+      "15m": "2026-11-05T22:15:00Z",
+      "1h": "2026-11-05T21:00:00Z",
+      "4h": "2026-11-05T16:00:00Z"
+    },
+    "formingCandlesExcluded": {
+      "5m": "2026-11-05T22:35:00Z",
+      "15m": "2026-11-05T22:30:00Z",
+      "1h": "2026-11-05T22:00:00Z",
+      "4h": "2026-11-05T20:00:00Z"
+    },
+    "oneHourReturnsPct": {
+      "BTCUSDT": -0.4924,
+      "ETHUSDT": -0.9357,
+      "SOLUSDT": -0.0778,
+      "XRPUSDT": -0.8359
+    },
+    "note": "BTC is reference only. Taker/positioning observations are not liquidation or crowding evidence."
+  },
+  "decisions": {
+    "SOLUSDT": {
+      "strategy": null,
+      "trigger": false,
+      "decision": "NO_TRADE",
+      "reason": "No OOS_VALIDATED entry; current DOWN_LOW context has no validated setup."
+    },
+    "ETHUSDT": {
+      "strategy": null,
+      "trigger": false,
+      "decision": "NO_TRADE",
+      "reason": "No OOS_VALIDATED entry; no symbol-specific validated edge."
+    },
+    "XRPUSDT": {
+      "strategy": null,
+      "trigger": false,
+      "decision": "NO_TRADE",
+      "reason": "No OOS_VALIDATED entry; no symbol-specific validated edge."
+    }
+  },
+  "dataQualityAudit": {
+    "directRest": {
+      "status": "BLOCKED",
+      "endpoints": [
+        "/fapi/v1/time",
+        "/fapi/v1/exchangeInfo"
+      ],
+      "observed": "curl exit 6: Could not resolve host fapi.binance.com"
+    },
+    "connector": {
+      "status": "DEGRADED",
+      "httpStatusHeadersAvailable": false,
+      "markTimestampUtc": "2026-11-05T22:35:10.001Z"
+    },
+    "exchangeInfo": {
+      "status": "BLOCKED",
+      "serverTimeUtc": "2026-11-05T06:46:24.908Z",
+      "driftMs": 56925093,
+      "returnedSymbols": "TRADING/PERPETUAL but stale; not execution-authoritative"
+    },
+    "node": {
+      "status": "BLOCKED",
+      "node": "v22.16.0",
+      "npm": "10.9.2",
+      "required": "Node>=24/npm>=11"
+    },
+    "sdk": {
+      "status": "UNAVAILABLE",
+      "packagesChecked": [
+        "@binance/connector",
+        "binance-api-node",
+        "@binance/futures-connector"
+      ],
+      "installed": false
+    },
+    "repoCheckout": {
+      "status": "UNAVAILABLE",
+      "cwd": "/",
+      "localCheckout": false
+    },
+    "compute": {
+      "os": "Debian GNU/Linux 13 (trixie)",
+      "python": "3.13.5",
+      "cpu": 5,
+      "memAvailableKb": 4933980,
+      "diskAvailable": "30G"
+    },
+    "runner": {
+      "status": "PASS_IN_MANAGED_V8",
+      "repositoryHarnessInvoked": false,
+      "fixtureSmoke": "PASS",
+      "deterministic": true,
+      "noLookaheadPrefix": true,
+      "runnerBlobSha1": "b0fb55492c4beef3b3ccf5010bbf4fb39513d6d4"
+    },
+    "storage": {
+      "status": "PASS",
+      "githubWrites": true,
+      "artifactReadback": true
+    },
+    "costs": {
+      "roundTripAllInProxyBps": 15,
+      "actualFundingRatesUsed": true,
+      "historicalSpreadDepthUnavailable": true,
+      "latencyModel": false,
+      "partialFillModel": false
+    },
+    "unavailable": [
+      "Multi-year 5m/15m/1h archive",
+      "Historical OI/taker/positioning for all symbols",
+      "Historical spread/depth",
+      "Direct HTTP status/headers",
+      "Fresh exchange server time",
+      "Liquidation feed"
+    ]
+  },
+  "queue": {
+    "items": 35,
+    "updatedAtUtc": "2026-11-05T22:35:14Z",
+    "dailyCycle": "COMPLETED",
+    "priorityBlockers": [
+      "multi-year 5m/15m/1h backfill",
+      "missing 76-row delta provenance",
+      "direct DNS and fresh exchange metadata",
+      "Node>=24/npm>=11 and local checkout",
+      "historical derivatives for ETH/XRP/BTC"
+    ]
+  },
+  "artifacts": {
+    "experimentSpecPath": "research/context-strategy/experiments/sol-failed-breakout-fade-sideways-low-v1_20261105T2225Z.spec.json",
+    "runnerPath": "research/context-strategy/experiments/sol-failed-breakout-fade-sideways-low-v1.runner.js",
+    "experimentResultPath": "research/context-strategy/experiments/sol-failed-breakout-fade-sideways-low-v1_20261105T2225Z.result.json",
+    "experimentResultSha256": "ff7abf4ee4246c9dadfaa5cd9344a2d559f532925ce721b0c581d816c94d6692",
+    "fundingArchivePath": "research-data/binance-usdm/derivatives/funding/SOLUSDT_funding_20200914T0800Z_20261105T1600Z.jsonl",
+    "archiveIndexBlobSha1": "75ae907daab5001fd5bd4f42b3f11158a76a209f"
+  }
+}

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAtUtc": "2026-11-06T02:36:12.010Z",
+  "updatedAtUtc": "2026-11-06T02:37:48.891Z",
   "items": [
     {
       "id": "Q1_ARCHIVE_MULTIYEAR",
@@ -11,8 +11,8 @@
         "Compatible bulk-data downloader or official Binance Vision access",
         "Persistent writable store"
       ],
-      "nextAction": "Backfill multi-year 5m/15m/1h for all four symbols from Binance Vision or another auditable bulk source; recover the unresolved 76-row delta provenance; continue appends after 5m 02:25Z, 15m 02:15Z, 1h 01:00Z and 4h 20:00Z.",
-      "blocker": "Multi-year 5m/15m/1h history is still absent. Canonical 4h covers 2020-09-14 through 2026-11-05T16:00Z; verified incremental deltas extend effective 4h high-water to 2026-11-05T20:00Z. The separate 2026-11-05T0524Z 76-row artifact remains unrecovered with unknown interval coverage.",
+      "nextAction": "Continue oldest-first 1h backfill from 2020-11-15T20:00Z for all four symbols; then backfill multi-year 5m/15m from Binance Vision or another auditable bulk source; recover the unresolved 2026-11-05T0524Z 76-row delta provenance. Keep hourly appends current.",
+      "blocker": "Only 1,500 1h bars/symbol (2020-09-14T08:00Z to 2020-11-15T19:00Z) have now been backfilled and readback-verified. Full multi-year 1h and all multi-year 5m/15m remain absent. Canonical 4h remains continuous; the separate missing 76-row delta provenance remains unresolved.",
       "result": {
         "canonical4hRowsPerSymbol": 13462,
         "canonical4hRowsTotal": 53848,
@@ -32,7 +32,18 @@
         "latestDeltaSha256": "e3253a7d15fda18b3b0270a59bf903a145eae68621109691c7815131736f2a16",
         "latestDeltaReadbackVerified": true,
         "unresolvedMissing76RowDelta": true,
-        "latestDeltaPath": "research-data/binance-usdm/delta/binance_usdm_delta_20261106T023338Z_completed.jsonl"
+        "latestDeltaPath": "research-data/binance-usdm/delta/binance_usdm_delta_20261106T023338Z_completed.jsonl",
+        "oneHourBackfill": {
+          "pages": 1,
+          "rowsPerSymbol": 1500,
+          "rowsTotal": 6000,
+          "startUtc": "2020-09-14T08:00:00Z",
+          "lastCompletedOpenUtc": "2020-11-15T19:00:00Z",
+          "nextStartUtc": "2020-11-15T20:00:00Z",
+          "manifestPath": "research-data/binance-usdm/1h/manifest-page-0001.json",
+          "archiveIndexPath": "research-data/binance-usdm/1h/archive-index.json",
+          "readbackVerified": true
+        }
       }
     },
     {
@@ -973,6 +984,32 @@
           "1h": "2026-11-06T01:00:00Z",
           "4h": "2026-11-05T20:00:00Z"
         }
+      }
+    },
+    {
+      "id": "Q40_HISTORICAL_1H_BACKFILL_PAGE_0001_20261106T0237Z",
+      "priority": 1,
+      "status": "COMPLETED",
+      "prerequisites": [
+        "Binance USDⓈ-M kline connector",
+        "GitHub repository write access"
+      ],
+      "nextAction": "Continue oldest-first 1h page 0002 from 2020-11-15T20:00Z for all four symbols; keep 5m/15m backfill queued after 1h page coverage is established.",
+      "blocker": null,
+      "result": {
+        "rows": 6000,
+        "rowCountsBySymbol": {
+          "BTCUSDT": 1500,
+          "ETHUSDT": 1500,
+          "SOLUSDT": 1500,
+          "XRPUSDT": 1500
+        },
+        "startUtc": "2020-09-14T08:00:00Z",
+        "lastCompletedOpenUtc": "2020-11-15T19:00:00Z",
+        "nextStartUtc": "2020-11-15T20:00:00Z",
+        "manifestPath": "research-data/binance-usdm/1h/manifest-page-0001.json",
+        "archiveIndexPath": "research-data/binance-usdm/1h/archive-index.json",
+        "readbackVerified": true
       }
     }
   ],

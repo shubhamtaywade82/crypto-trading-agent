@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAtUtc": "2026-11-06T21:31:25.198Z",
+  "updatedAtUtc": "2026-11-06T21:36:07.357Z",
   "items": [
     {
       "id": "Q1_ARCHIVE_MULTIYEAR",
@@ -11,8 +11,8 @@
         "Compatible bulk-data downloader or official Binance Vision access",
         "Persistent writable store"
       ],
-      "nextAction": "Continue contiguous 1h page0025 from 2024-10-23T08:00:00.000Z for all four symbols; then reassemble canonical 4h through 2026-11-06T16:00:00Z and backfill multi-year 5m/15m.",
-      "blocker": "1h page0024 is now persisted and verified; 1h coverage ends 2024-10-23. Multi-year 5m/15m archive absent; exact 76-row delta remains inaccessible; 14 original page-symbol SHA provenance mismatches remain despite 21,000/21,000 row-level matches; canonical 4h files end 2026-11-05T16:00Z while verified incremental 4h high-water is 2026-11-06T16:00Z; derivatives histories incomplete.",
+      "nextAction": "Continue contiguous 1h page0026 from 2024-12-24T20:00:00.000Z for all four symbols; then reassemble canonical 4h through 2026-11-06T16:00:00Z and backfill multi-year 5m/15m.",
+      "blocker": "1h pages 0024 and 0025 are now persisted and verified; 1h coverage ends 2024-12-24. Multi-year 5m/15m archive absent; exact 76-row delta remains inaccessible; 14 original page-symbol SHA provenance mismatches remain despite 21,000/21,000 row-level matches; canonical 4h files end 2026-11-05T16:00Z while verified incremental 4h high-water is 2026-11-06T16:00Z; derivatives histories incomplete.",
       "result": {
         "canonicalFileRowsPerSymbol": 13461,
         "canonicalFileRowsTotal": 53844,
@@ -36,16 +36,17 @@
           "rowLevelMismatches": 0
         },
         "oneHourBackfill": {
-          "pages": 24,
-          "rowsPerSymbol": 36000,
-          "rowsTotal": 144000,
+          "pages": 25,
+          "rowsPerSymbol": 37500,
+          "rowsTotal": 150000,
           "startUtc": "2020-09-14T08:00:00.000Z",
-          "lastCompletedOpenUtc": "2024-10-23T07:00:00.000Z",
-          "nextStartUtc": "2024-10-23T08:00:00.000Z",
+          "lastCompletedOpenUtc": "2024-12-24T19:00:00.000Z",
+          "nextStartUtc": "2024-12-24T20:00:00.000Z",
           "pagesAddedThisRun": [
-            24
+            24,
+            25
           ],
-          "rowsAddedThisRun": 6000,
+          "rowsAddedThisRun": 12000,
           "latestPagePath": "research-data/binance-usdm/1h/BTCUSDT/page-0024.jsonl",
           "manifestPath": "research-data/binance-usdm/1h/manifest-page-0024.json",
           "manifestSha256": "2c501e93bbff5aaacefb540769ac272691536223c4bbaefefd4b2b9c6fca9700",
@@ -91,16 +92,56 @@
               "sha256": "c6796a6222c429abbed21cfcbffdc7f9b5f30c63b1a05b63ddecd823fee3f56c",
               "blobSha": "852572d810b52a9ecadeff04fa3321e2d4364ff9"
             }
-          ]
+          ],
+          "page25": {
+            "manifestPath": "research-data/binance-usdm/1h/manifest-page-0025.json",
+            "manifestSha256": "2c1e6413919ab2bfb939563a4631fcc2d144bbc08935131e2362cf26eb83e1e4",
+            "manifestBlobSha": "860d90a1273e7106e32f5ee35450fd1418489881",
+            "firstOpenUtc": "2024-10-23T08:00:00.000Z",
+            "lastOpenUtc": "2024-12-24T19:00:00.000Z",
+            "nextStartUtc": "2024-12-24T20:00:00.000Z",
+            "rowsPerSymbol": 1500,
+            "rowsTotal": 6000,
+            "readbackVerified": true,
+            "files": [
+              {
+                "symbol": "BTCUSDT",
+                "sha256": "90cfe89c5bb6ad62e7a108ab47f4fcec35c2bff9f29c3a7c856943883bd96480",
+                "blobSha": "0840e2127b0333b9564e56760f6e81999b9228d1"
+              },
+              {
+                "symbol": "ETHUSDT",
+                "sha256": "c38ebd0ce3770790a8705809eda5026bf628ddd5148a15e76552a071094f640d",
+                "blobSha": "d870a22c79275e6f98bf6e0b75930fba60f00656"
+              },
+              {
+                "symbol": "SOLUSDT",
+                "sha256": "08b65326c38fa92c806aeb73d00fc0738a14c76dda3a5b9f95dd42ab3152b42b",
+                "blobSha": "5eac36d409483e314dcc68190378d6e17c45352a"
+              },
+              {
+                "symbol": "XRPUSDT",
+                "sha256": "b94175afffbdb73ecb9e06b299a884a8f589d55bc3285467c6d0db6049244b4a",
+                "blobSha": "e9f4cbf9da1301fc321b257cfd11cae8cff54bcc"
+              }
+            ]
+          },
+          "archiveIndex": {
+            "path": "research-data/binance-usdm/1h/archive-index.json",
+            "rowsPerSymbol": 37500,
+            "rowsTotal": 150000,
+            "nextStartUtc": "2024-12-24T20:00:00.000Z",
+            "blobSha": "3fcb9b25cf787a55bfb663f771f61e14f95550b5",
+            "readbackVerified": true
+          }
         },
         "incrementalRowsAddedThisRun": 68,
         "canonical4h": {
           "rowsPerSymbol": 13461,
           "rowsTotal": 53844,
-          "startUtc": "2020-09-14T08:00:00Z",
-          "endUtc": "2026-11-05T16:00:00Z",
-          "latestDeltaHighwaterUtc": "2026-11-06T08:00:00Z",
-          "readbackVerified": true
+          "endUtc": "2026-11-05T16:00:00.000Z",
+          "incrementalHighwaterUtc": "2026-11-06T16:00:00.000Z",
+          "reassemblyRequired": true
         },
         "incrementalArtifacts": [
           {
@@ -2642,6 +2683,37 @@
           "SOLUSDT": "NO_TRADE",
           "ETHUSDT": "NO_TRADE",
           "XRPUSDT": "NO_TRADE"
+        }
+      }
+    },
+    {
+      "id": "Q79_HISTORICAL_1H_BACKFILL_PAGE_0025_20261106T2136Z",
+      "priority": 1,
+      "status": "COMPLETED",
+      "prerequisites": [
+        "Binance USD-M connector",
+        "GitHub archive write access",
+        "verified page0024 high-water"
+      ],
+      "nextAction": "Continue page0026 from 2024-12-24T20:00:00Z on the next archive run.",
+      "blocker": null,
+      "result": {
+        "page": 25,
+        "rowsPerSymbol": 1500,
+        "rowsTotal": 6000,
+        "firstOpenUtc": "2024-10-23T08:00:00.000Z",
+        "lastOpenUtc": "2024-12-24T19:00:00.000Z",
+        "nextStartUtc": "2024-12-24T20:00:00.000Z",
+        "manifestPath": "research-data/binance-usdm/1h/manifest-page-0025.json",
+        "manifestSha256": "2c1e6413919ab2bfb939563a4631fcc2d144bbc08935131e2362cf26eb83e1e4",
+        "readbackVerified": true,
+        "quality": {
+          "duplicates": 0,
+          "gaps": 0,
+          "ohlcFailures": 0,
+          "nonFinite": 0,
+          "nonPositiveVolume": 0,
+          "misaligned": 0
         }
       }
     }

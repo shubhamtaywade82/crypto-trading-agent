@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAtUtc": "2026-11-06T01:31:54.587Z",
+  "updatedAtUtc": "2026-11-06T02:34:06.286Z",
   "items": [
     {
       "id": "Q1_ARCHIVE_MULTIYEAR",
@@ -11,8 +11,8 @@
         "Compatible bulk-data downloader or official Binance Vision access",
         "Persistent writable store"
       ],
-      "nextAction": "Backfill multi-year 5m/15m/1h for all four symbols from Binance Vision or another auditable bulk source; recover the 76-row delta provenance; continue appends after 5m 01:20Z, 15m 01:00Z, 1h 00:00Z and 4h 20:00Z.",
-      "blocker": "4h canonical files contain 13,461 rows/symbol through 2026-11-05T16:00Z; incremental deltas extend the effective 4h high-water mark to 20:00Z. Multi-year 5m/15m/1h is still absent. The indexed 76-row delta remains inaccessible with unknown interval coverage.",
+      "nextAction": "Backfill multi-year 5m/15m/1h for all four symbols from Binance Vision or another auditable bulk source; recover the unresolved 76-row delta provenance; continue appends after 5m 02:25Z, 15m 02:15Z, 1h 01:00Z and 4h 20:00Z.",
+      "blocker": "Multi-year 5m/15m/1h history is still absent. Canonical 4h covers 2020-09-14 through 2026-11-05T16:00Z; verified incremental deltas extend effective 4h high-water to 2026-11-05T20:00Z. The separate 2026-11-05T0524Z 76-row artifact remains unrecovered with unknown interval coverage.",
       "result": {
         "canonical4hRowsPerSymbol": 13462,
         "canonical4hRowsTotal": 53848,
@@ -42,7 +42,7 @@
         "Direct bounded HTTP or Binance SDK call"
       ],
       "nextAction": "Restore direct DNS and obtain uncached /fapi/v1/time plus /fapi/v1/exchangeInfo; require <=60s server-time drift before using contract metadata for execution validation.",
-      "blocker": "Direct fapi.binance.com DNS resolution failed. Connector exchangeInfo.serverTime=2026-11-06T01:01:01.889Z versus current market snapshot 2026-11-06T01:28:54.833Z (~27m53s stale); direct /fapi/v1/time was not reachable. Market endpoints returned timestamped data, but metadata is not execution-authoritative."
+      "blocker": "Direct fapi.binance.com DNS resolution failed (curl exit 6, HTTP 000). Latest connector exchangeInfo.serverTime=2026-11-06T01:01:01.894Z versus fresh market endpoint timestamps around 2026-11-06T02:30:56Z (~1h29m54s stale); direct /fapi/v1/time unavailable. Metadata remains non-authoritative for execution validation."
     },
     {
       "id": "Q3_RUN_REPOSITORY_BACKTEST",
@@ -929,6 +929,49 @@
         "manifest_path": "research-data/binance-usdm/delta/binance_usdm_delta_20261106T012524Z.manifest.json",
         "delta_sha256": "7880266bf395b5d8243e4052de846e2fdc3f47bbcc0f764a2a989f5a27de1f39",
         "readbackVerified": true
+      }
+    },
+    {
+      "id": "Q39_INCREMENTAL_ARCHIVE_REFRESH_20261106T023338Z",
+      "priority": 1,
+      "status": "COMPLETED",
+      "prerequisites": [
+        "Binance USDⓈ-M kline connector",
+        "Prior archive high-water marks",
+        "GitHub repository write access"
+      ],
+      "nextAction": "Next run append only completed bars after 5m 02:25Z, 15m 02:15Z, 1h 01:00Z and 4h 20:00Z; exclude forming bars and verify manifest/hash/readback.",
+      "blocker": null,
+      "result": {
+        "rows": 76,
+        "row_counts_by_symbol_interval": {
+          "BTCUSDT:5m": 13,
+          "BTCUSDT:15m": 5,
+          "BTCUSDT:1h": 1,
+          "BTCUSDT:4h": 0,
+          "ETHUSDT:5m": 13,
+          "ETHUSDT:15m": 5,
+          "ETHUSDT:1h": 1,
+          "ETHUSDT:4h": 0,
+          "SOLUSDT:5m": 13,
+          "SOLUSDT:15m": 5,
+          "SOLUSDT:1h": 1,
+          "SOLUSDT:4h": 0,
+          "XRPUSDT:5m": 13,
+          "XRPUSDT:15m": 5,
+          "XRPUSDT:1h": 1,
+          "XRPUSDT:4h": 0
+        },
+        "deltaPath": "research-data/binance-usdm/delta/binance_usdm_delta_20261106T023338Z_completed.jsonl",
+        "manifestPath": "research-data/binance-usdm/delta/binance_usdm_delta_20261106T023338Z.manifest.json",
+        "sha256": "e3253a7d15fda18b3b0270a59bf903a145eae68621109691c7815131736f2a16",
+        "readbackVerified": true,
+        "latestCompletedOpenUtcByInterval": {
+          "5m": "2026-11-06T02:25:00Z",
+          "15m": "2026-11-06T02:15:00Z",
+          "1h": "2026-11-06T01:00:00Z",
+          "4h": "2026-11-05T20:00:00Z"
+        }
       }
     }
   ],

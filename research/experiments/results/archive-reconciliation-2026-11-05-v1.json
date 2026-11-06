@@ -1,0 +1,152 @@
+{
+  "schema_version": 1,
+  "experiment_id": "archive-reconciliation-2026-11-05-v1",
+  "type": "DATA_QUALITY_RECONCILIATION",
+  "status": "EXECUTED",
+  "evaluated_at_utc": "2026-11-05T06:04:25.290Z",
+  "reconciliation": {
+    "page_0001_all_symbols": {
+      "new_rows_per_symbol": 1499,
+      "range_utc": [
+        "2026-02-27T20:00:00.000Z",
+        "2026-11-04T12:00:00.000Z"
+      ],
+      "canonical_pages_07_08_overlap_per_symbol": 1493,
+      "exact_matches_per_symbol": 1493,
+      "mismatches_per_symbol": 0,
+      "newer_rows_not_in_canonical_base_per_symbol": 6,
+      "newer_range_utc": [
+        "2026-11-03T16:00:00.000Z",
+        "2026-11-04T12:00:00.000Z"
+      ],
+      "note": "The six newer rows per symbol are beyond the canonical base-page cutoff and are represented by incremental deltas; they are not missing bars."
+    },
+    "btc_pages_0002_to_0004": {
+      "new_rows": 4500,
+      "common_rows": 4456,
+      "exact_matches": 4456,
+      "mismatches": 0,
+      "first_page_common_rows": 1500,
+      "second_page_common_rows": 1500,
+      "third_page_common_rows": 1456,
+      "unmatched_older_rows": 44,
+      "unmatched_range_utc": [
+        "2024-02-08T20:00:00.000Z",
+        "2024-02-16T00:00:00.000Z"
+      ],
+      "manifest_hash_mismatch_rows": 0
+    },
+    "manifest_hash_divergence": {
+      "symbols": [
+        "BTCUSDT"
+      ],
+      "pages": [
+        "0002",
+        "0003",
+        "0004"
+      ],
+      "manifest_hash_match": false,
+      "overlapping_bar_mismatches": 0,
+      "interpretation": "Manifest hash lineage/canonicalization remains unresolved; overlapping raw OHLCV bars matched exactly. The 44 earliest page-0004 rows are outside the canonical archive's start and were not independently cross-checked."
+    },
+    "total_cross_branch_exact_common_rows": 10428,
+    "total_cross_branch_mismatches": 0
+  },
+  "appended_delta": {
+    "path": "research/raw-deltas/binance-usdm-2026-11-05-0557Z.json",
+    "blob_sha": "489b416bacb757828fd6bbe3aeb56395391e68c3",
+    "file_sha256": "f6af3854f9b63e456d607f96dd0b6ec9bf6024c68ddbb720f2484b31e6610198",
+    "payload_sha256": "ed50aec7009a0a4a3ad338f388d08c9343bc49bd5e3e469ff0d7df8cf3bcb2bb",
+    "size_bytes": 386140,
+    "total_rows": 2096,
+    "rows_per_symbol": 524,
+    "new_rows_by_interval_total_across_four_symbols": {
+      "5m": 1460,
+      "15m": 484,
+      "1h": 120,
+      "4h": 32
+    },
+    "new_rows_per_symbol_interval": {
+      "5m": 365,
+      "15m": 121,
+      "1h": 30,
+      "4h": 8
+    },
+    "latest_completed_open_utc": {
+      "5m": "2026-11-05T05:50:00.000Z",
+      "15m": "2026-11-05T05:30:00.000Z",
+      "1h": "2026-11-05T04:00:00.000Z",
+      "4h": "2026-11-05T00:00:00.000Z"
+    },
+    "forming_candles_excluded": 16,
+    "quality_failures": 0,
+    "all_quality_checks_pass": true,
+    "readback_exact": true,
+    "readback_sha256_verified": true,
+    "source_parts": [
+      {
+        "path": "research/raw-deltas/binance-usdm-2026-11-05-0557Z-BTC-ETH.json",
+        "blob_sha": "5126c427f5175aa30b7361cc082315b63724d27f",
+        "file_sha256": "be0f2e0b9fc6f07bf5600100611bbdece6bff74af197c26379959df65a47f272"
+      },
+      {
+        "path": "research/raw-deltas/binance-usdm-2026-11-05-0557Z-SOL-XRP.json",
+        "blob_sha": "25fbe5db7cc43c64d17466445b438a391b6cd634",
+        "file_sha256": "6771fd5a495491b24b8014e8c59bd159c3165b9f1253f2043bd98ad0197ffafe"
+      }
+    ]
+  },
+  "manifest_updates": [
+    {
+      "path": "research/raw-archive/binance-usdm-1h/manifest.json",
+      "blob_sha_after": "809894b189d5433aab57507c7a7dc883f7cb6479",
+      "readback_exact": true,
+      "latest_completed_open_utc": {
+        "5m": "2026-11-05T05:55:00.000Z",
+        "15m": "2026-11-05T05:45:00.000Z",
+        "1h": "2026-11-05T04:00:00.000Z",
+        "4h": "2026-11-05T00:00:00.000Z"
+      }
+    },
+    {
+      "path": "research/raw-archive/binance-usdm-4h/manifest.json",
+      "blob_sha_after": "fe7a9a2c7c59ac210edf6c6142c15e88bfc9cd26",
+      "readback_exact": true,
+      "latest_completed_open_utc": {
+        "5m": "2026-11-05T05:55:00.000Z",
+        "15m": "2026-11-05T05:45:00.000Z",
+        "1h": "2026-11-05T04:00:00.000Z",
+        "4h": "2026-11-05T00:00:00.000Z"
+      }
+    }
+  ],
+  "interpretation": "Archive reconciliation and hourly raw-data append completed. The six-year 4h archive and partial 1h archive are durably available on GitHub; 5m/15m still have only short deltas. No strategy experiment, backtest, untouched OOS or strategy promotion was performed.",
+  "limitations": [
+    "Direct shell DNS to fapi.binance.com failed; connector HTTP status/headers are not exposed.",
+    "ExchangeInfo serverTime was stale by approximately 2h50m at retrieval.",
+    "No local repository checkout, Node >=24/npm >=11 runtime or importable Binance SDK.",
+    "Historical measured spread, slippage, latency, impact, fee tier and funding cashflows remain unavailable.",
+    "The BTC manifest hash divergence and 44 unmatched earliest rows remain open."
+  ],
+  "next_action": "Backfill 5m/15m and 1h histories to the common 2020 start; resolve BTC manifest hash lineage; obtain measured execution costs and a compatible local harness before strategy OOS.",
+  "subsequent_hourly_append": {
+    "path": "research/raw-deltas/binance-usdm-2026-11-05-0601Z-5m-15m.json",
+    "blob_sha": "44032bafe1778f2312e9cb2cf4970e12165d3a5b",
+    "file_sha256": "84f178db48cf0ef51ee33f0698c3f71e382c5025ca385bd76c546f9783b9a421",
+    "rows": 8,
+    "rows_by_interval": {
+      "5m": 4,
+      "15m": 4,
+      "1h": 0,
+      "4h": 0
+    },
+    "latest_completed_open_utc": {
+      "5m": "2026-11-05T05:55:00.000Z",
+      "15m": "2026-11-05T05:45:00.000Z",
+      "1h": "2026-11-05T04:00:00.000Z",
+      "4h": "2026-11-05T00:00:00.000Z"
+    },
+    "quality_failures": 0,
+    "readback_exact": true
+  }
+}

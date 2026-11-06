@@ -230,3 +230,44 @@ test('renderMtfScreen: fills full terminal height and width dynamically', () => 
     assert.equal(strip(line).length, totalWidth);
   }
 });
+
+test('renderMtfScreen: shows live price marker, guideline, and microstructure metrics', () => {
+  const symbols = ['BTCUSDT'];
+  const mockMicro = {
+    view: () => ({
+      reading: {
+        spreadBps: 2.4,
+        flow: { cvd: 125.5 },
+      },
+    }),
+  };
+
+  const props: MtfScreenProps = {
+    symbols,
+    selectedSymbol: 'BTCUSDT',
+    selectedTimeframe: '15m',
+    spotPrices: {
+      BTCUSDT: { price: 65432.1, changePct: 1.5, high24h: 66000, low24h: 64000, volumeQuote: 1e9 },
+    },
+    mtfCandles: {
+      BTCUSDT: { '15m': mockCandles(20, 65000) },
+    },
+    microstructure: mockMicro as any,
+    time: '12:00:00',
+    totalWidth: 120,
+    totalHeight: 35,
+    wsStatus: 'connected',
+    mode: 'live',
+  };
+
+  const lines = renderMtfScreen(props);
+  const text = lines.map(strip).join('\n');
+
+  // Live price marker and guideline
+  assert.ok(text.includes('►$'), 'Should display live price marker arrow');
+  assert.ok(text.includes('┄'), 'Should display live guideline projecting to forming candle');
+
+  // Microstructure in sub-header
+  assert.ok(text.includes('Spread: 2.4 bps'), 'Should display spread from microstructure');
+  assert.ok(text.includes('CVD: +125.5'), 'Should display CVD from microstructure');
+});

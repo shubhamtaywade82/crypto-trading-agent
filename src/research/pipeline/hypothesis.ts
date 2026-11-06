@@ -17,7 +17,7 @@ const splitSchema = z
   .object({ trainPct: z.number().positive(), validationPct: z.number().positive(), testPct: z.number().positive() })
   .refine((s) => Math.abs(s.trainPct + s.validationPct + s.testPct - 100) < 1e-9, { message: 'splits must sum to 100' });
 
-export const hypothesisSpecSchema = z.object({
+const hypothesisFields = z.object({
   schemaVersion: z.literal(1),
   id: z.string().regex(/^[A-Z0-9][A-Z0-9_-]{2,79}$/, 'id: uppercase letters, digits, _ or -'),
   version: z.number().int().positive(),
@@ -31,9 +31,24 @@ export const hypothesisSpecSchema = z.object({
   timeframeRule: z.string().min(3),
   context: z.object({ id: z.string().min(2), taxonomyVersion: z.string().min(1) }),
   params: z.record(z.union([z.number(), z.string(), z.boolean()])),
-  window: z.object({ days: z.number().positive(), endDaysAgo: z.number().min(0).default(0), split: splitSchema }),
+  window: z.object({
+    days: z.number().positive(),
+    endDaysAgo: z.number().min(0).default(0),
+    /** Absolute window end. Without it the window slides with the clock, so every run would read a different test set. */
+    endIso: z.string().datetime().optional(),
+    split: splitSchema,
+  }),
   costs: z.object({ roundTripBps: z.number().min(0) }),
   evidence: z.object({ minOosTrades: z.number().int().min(1).default(100), alpha: z.number().gt(0).lt(1).default(0.05) }),
+});
+
+export const hypothesisSpecSchema = hypothesisFields.superRefine((spec, ctx) => {
+  if (spec.status === 'REGISTERED' && !spec.window.endIso) {
+    ctx.addIssue({ code: 'custom', path: ['window', 'endIso'], message: 'a REGISTERED spec needs window.endIso so its test window is fixed' });
+  }
+  if (spec.window.endIso && spec.window.endDaysAgo !== 0) {
+    ctx.addIssue({ code: 'custom', path: ['window', 'endDaysAgo'], message: 'endDaysAgo must be 0 when window.endIso is set' });
+  }
 });
 
 export type HypothesisSpec = z.infer<typeof hypothesisSpecSchema>;

@@ -43,6 +43,17 @@ describe('resolveResearchWindow', () => {
     assert.equal(w.anchor, 'start-of-previous-utc-day');
   });
 
+  it('endMs fixes the window regardless of source or clock, and cannot lie in the future', () => {
+    const endMs = NOW - 40 * DAY;
+    for (const source of ['api', 'archive'] as const) {
+      const w = resolveResearchWindow({ days: 10, endDaysAgo: 0, source, nowMs: NOW, endMs });
+      assert.equal(w.toMs, endMs);
+      assert.equal(w.fromMs, endMs - 10 * DAY);
+      assert.equal(w.anchor, 'absolute');
+    }
+    assert.throws(() => resolveResearchWindow({ days: 10, endDaysAgo: 0, source: 'api', nowMs: NOW, endMs: NOW + 1 }), /endMs/);
+  });
+
   it('archive: endDaysAgo 9 ends at 2026-10-27T00:00Z, before the 2026-10-28 15m hole in the archive', () => {
     const w = resolveResearchWindow({ days: 20, endDaysAgo: 9, source: 'archive', nowMs: NOW });
     assert.equal(w.toIso, '2026-10-27T00:00:00.000Z');

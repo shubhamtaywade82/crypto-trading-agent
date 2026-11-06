@@ -24,6 +24,8 @@ export interface ResearchWindowInput {
   endDaysAgo: number;
   source: WindowSource;
   nowMs: number;
+  /** Absolute window end; overrides the now-relative anchor so the same spec always reads the same bars. */
+  endMs?: number;
 }
 
 export interface ResearchWindow extends ResearchWindowInput {
@@ -38,7 +40,7 @@ export interface ResearchWindow extends ResearchWindowInput {
    * yesterday is usually missing too; the window ends where the archive is expected to be complete. If a day inside the
    * window is still missing, the integrity gate fails closed.
    */
-  anchor: 'now' | 'start-of-previous-utc-day';
+  anchor: 'now' | 'start-of-previous-utc-day' | 'absolute';
 }
 
 const iso = (ms: number): string => new Date(ms).toISOString();
@@ -53,9 +55,13 @@ export function resolveResearchWindow(input: ResearchWindowInput): ResearchWindo
   if (!Number.isFinite(endDaysAgo) || endDaysAgo < 0) throw new Error(`endDaysAgo must be >= 0, got ${endDaysAgo}`);
   if (!Number.isFinite(nowMs)) throw new Error(`nowMs must be finite, got ${nowMs}`);
   if (source !== 'api' && source !== 'archive') throw new Error(`source must be api or archive, got ${String(source)}`);
-  const anchor = source === 'archive' ? 'start-of-previous-utc-day' : 'now';
+  if (input.endMs !== undefined && !(Number.isFinite(input.endMs) && input.endMs <= nowMs)) {
+    throw new Error(`endMs must be a finite time not after now, got ${input.endMs}`);
+  }
+  const relativeAnchor = source === 'archive' ? 'start-of-previous-utc-day' : 'now';
+  const anchor = input.endMs === undefined ? relativeAnchor : 'absolute';
   const anchorMs = anchor === 'start-of-previous-utc-day' ? startOfUtcDay(nowMs) - DAY_MS : nowMs;
-  const toMs = anchorMs - endDaysAgo * DAY_MS;
+  const toMs = input.endMs ?? anchorMs - endDaysAgo * DAY_MS;
   const fromMs = toMs - days * DAY_MS;
   return { days, endDaysAgo, source, nowMs, fromMs, toMs, fromIso: iso(fromMs), toIso: iso(toMs), anchor };
 }

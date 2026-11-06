@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 1,
+  "id": "LLM-CC-MACDVS-MAX24-4H-BOTH-V1",
+  "version": 1,
+  "status": "DRAFT",
+  "hypothesis": "Longer 24-bar hold on original 4h MACD volume-surge setup; no breakeven. Tests capturing delayed expansion.",
+  "family": "MACD_CROSS",
+  "symbols": [
+    "BTCUSDT",
+    "ETHUSDT",
+    "SOLUSDT",
+    "XRPUSDT"
+  ],
+  "timeframes": [
+    "4h"
+  ],
+  "timeframeRule": "each timeframe tested independently",
+  "context": {
+    "id": "VOLUME_SURGE",
+    "taxonomyVersion": "ctx-v1"
+  },
+  "campaign": "CRYPTO-CONFLUENCE-2026Q4",
+  "params": {
+    "trigger": "MACD_CROSS",
+    "regimeFilter": "VOLUME_SURGE",
+    "direction": "BOTH",
+    "fastPeriod": 12,
+    "slowPeriod": 26,
+    "targetR": 1.5,
+    "stopAtr": 1,
+    "rrRatio": 1.5,
+    "useBreakeven": false,
+    "maxHoldingBars": 24
+  },
+  "window": {
+    "days": 1095,
+    "endDaysAgo": 0,
+    "endIso": "2026-11-01T00:00:00.000Z",
+    "split": {
+      "trainPct": 60,
+      "validationPct": 20,
+      "testPct": 20
+    }
+  },
+  "costs": {
+    "roundTripBps": 15
+  },
+  "evidence": {
+    "minOosTrades": 100,
+    "alpha": 0.01
+  }
+}

@@ -21,8 +21,8 @@ import { checkProposal, writeProposals } from './propose.js';
 import { fetchBinanceMetrics } from './binanceDataTools.js';
 import { executeResearchScript } from './scriptExecutorTool.js';
 
-const MAX_ITERATIONS = 40;
-const MAX_TOOL_CALLS = 150;
+const MAX_ITERATIONS = 100;
+const MAX_TOOL_CALLS = 300;
 /** The SDK fails the run when one identical call repeats past this: the stuck-loop signature. */
 const MAX_REPEATED_TOOL_CALLS = 2;
 /** One evaluation fetches up to 12 multi-year series; ~5s each on the API, slower on the archive. */

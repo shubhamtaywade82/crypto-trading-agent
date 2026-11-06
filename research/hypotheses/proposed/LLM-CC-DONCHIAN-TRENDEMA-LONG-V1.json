@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 1,
+  "id": "LLM-CC-DONCHIAN-TRENDEMA-LONG-V1",
+  "version": 1,
+  "status": "DRAFT",
+  "hypothesis": "Donchian 20-bar close breakout with EMA 50/200 trend alignment; long only captures sustained breakouts. Multi-TF (4h/1h/15m), 2R target, 1.5ATR stop, breakeven trailing.",
+  "family": "DONCHIAN_BREAK",
+  "symbols": [
+    "BTCUSDT",
+    "ETHUSDT",
+    "SOLUSDT",
+    "XRPUSDT"
+  ],
+  "timeframes": [
+    "4h",
+    "1h",
+    "15m"
+  ],
+  "timeframeRule": "each timeframe tested independently",
+  "context": {
+    "id": "TREND_EMA_50_200",
+    "taxonomyVersion": "ctx-v1"
+  },
+  "campaign": "CRYPTO-CONFLUENCE-2026Q4",
+  "params": {
+    "trigger": "DONCHIAN_BREAK",
+    "regimeFilter": "TREND_EMA_50_200",
+    "direction": "LONG",
+    "lookback": 20,
+    "targetR": 2,
+    "stopAtr": 1.5,
+    "rrRatio": 2,
+    "useBreakeven": true,
+    "maxHoldingBars": 24
+  },
+  "window": {
+    "days": 1095,
+    "endDaysAgo": 0,
+    "endIso": "2026-11-01T00:00:00.000Z",
+    "split": {
+      "trainPct": 60,
+      "validationPct": 20,
+      "testPct": 20
+    }
+  },
+  "costs": {
+    "roundTripBps": 15
+  },
+  "evidence": {
+    "minOosTrades": 100,
+    "alpha": 0.01
+  }
+}

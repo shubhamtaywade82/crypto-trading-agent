@@ -90,7 +90,14 @@ export class Orchestrator extends EventEmitter {
   private trendEnsemble = new TrendEnsembleAgent(this.binance);
   private emaCrossSwing = new EmaCrossSwingAgent(this.binance);
   private squeezeBreakout = new SqueezeBreakoutAgent(this.binance);
-  private donchianBreakout = new DonchianBreakoutAgent(this.binance);
+  private donchianBreakout = new DonchianBreakoutAgent(this.binance, {
+    timeframe: '4h',
+    period: 30,
+    volMultiplier: 1.4,
+    stopAtrMult: 1.0,
+    targetPct: 5.0,
+    symbols: ['BTCUSDT', 'ETHUSDT', 'SOLUSDT', 'XRPUSDT'],
+  });
   private agents: BaseAgent[] = [
     this.almaChampion,
     this.emaCrossSwing,

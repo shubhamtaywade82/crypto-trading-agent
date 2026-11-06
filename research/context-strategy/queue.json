@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAtUtc": "2026-11-06T23:31:42.000Z",
+  "updatedAtUtc": "2026-11-06T23:38:30.000Z",
   "items": [
     {
       "id": "Q1_ARCHIVE_MULTIYEAR",
@@ -11,23 +11,23 @@
         "Compatible bulk-data downloader or official Binance Vision access",
         "Persistent writable store"
       ],
-      "nextAction": "Continue contiguous 1h page0029 from 2025-06-30T08:00:00Z for all four symbols; then reassemble canonical 4h through the latest completed 4h bar and backfill multi-year 5m/15m.",
-      "blocker": "Page028 has now been fetched, quality-checked and readback-verified for all four symbols (1,500 rows each; 6,000 total) through 2025-06-30T07:00Z. Latest 5m/15m delta has 32 completed rows readback-verified through 2026-11-06T23:25Z/23:15Z. Multi-year 5m/15m archive remains absent; exact 76-row delta remains inaccessible; 14 historical page-symbol SHA provenance mismatches remain despite exact row-level reconciliation; canonical 4h file still ends 2026-11-05T16:00Z and requires reassembly with later deltas; historical derivatives archives remain incomplete.",
+      "nextAction": "Reassemble canonical 4h through 2026-11-06T16:00Z and backfill multi-year 5m/15m; reconcile the missing 76-row delta and 14 historical SHA provenance mismatches. The 1h archive is now contiguous through 2026-11-06T22:00Z; append the next 1h candle after it closes.",
+      "blocker": "1h archive pages 1-36 now cover 2020-09-14T08:00Z through 2026-11-06T22:00Z (53,871 rows/symbol; 215,484 total), with page36 partial and every page 28-36 readback/hash verified. Latest 5m delta through 23:30Z and 15m through 23:15Z are persisted. Multi-year 5m/15m archive remains absent; exact 76-row delta remains inaccessible; 14 historical page-symbol SHA provenance mismatches remain despite exact row-level reconciliation; canonical 4h file ends 2026-11-05T16:00Z and requires reassembly through 2026-11-06T16:00Z; historical derivatives archives remain incomplete.",
       "result": {
         "canonicalFileRowsPerSymbol": 13461,
         "canonicalFileRowsTotal": 53844,
         "canonicalFileEndUtc": "2026-11-05T16:00:00Z",
         "effectiveHighwaterByInterval": {
-          "5m": "2026-11-06T23:25:00Z",
+          "5m": "2026-11-06T23:30:00Z",
           "15m": "2026-11-06T23:15:00Z",
           "1h": "2026-11-06T22:00:00Z",
           "4h": "2026-11-06T16:00:00Z"
         },
-        "latestDeltaRows": 32,
-        "latestDeltaSha256": "e9aabfdbc2c0fc67c1e04295ad79f0c8262ae52b4227f0bf8f94d3de098b9400",
+        "latestDeltaRows": 4,
+        "latestDeltaSha256": "8a36cbc88c1159659d22e24401dd3b6cb883086c2b8469ee9c0a2f5f12ca4ad4",
         "latestDeltaReadbackVerified": true,
-        "latestDeltaPath": "research-data/binance-usdm/delta/binance_usdm_delta_20261106T2330Z_5m15m_completed.jsonl",
-        "latestDeltaManifest": "research-data/binance-usdm/delta/manifest-20261106T2330Z-5m15m.json",
+        "latestDeltaPath": "research-data/binance-usdm/delta/binance_usdm_delta_20261106T2338Z_5m_completed.jsonl",
+        "latestDeltaManifest": "research-data/binance-usdm/delta/manifest-20261106T2338Z-5m.json",
         "missing76DeltaUnresolved": true,
         "lowerTimeframeMultiYearBackfill": false,
         "hashMismatches": {
@@ -37,19 +37,27 @@
           "alternateReplayMatchedAll": true
         },
         "oneHourBackfill": {
-          "pages": 28,
-          "rowsPerSymbol": 42000,
-          "rowsTotal": 168000,
+          "pages": 36,
+          "rowsPerSymbol": 53871,
+          "rowsTotal": 215484,
           "startUtc": "2020-09-14T08:00:00Z",
-          "lastCompletedOpenUtc": "2025-06-30T07:00:00Z",
-          "nextStartUtc": "2025-06-30T08:00:00Z",
+          "lastCompletedOpenUtc": "2026-11-06T22:00:00Z",
+          "nextStartUtc": "2026-11-06T23:00:00Z",
           "pagesAddedOrVerifiedThisRun": [
-            28
+            28,
+            29,
+            30,
+            31,
+            32,
+            33,
+            34,
+            35,
+            36
           ],
-          "rowsAddedThisRun": 6000,
-          "latestPagePath": "research-data/binance-usdm/1h/BTCUSDT/page-0028.jsonl",
-          "manifestPath": "research-data/binance-usdm/1h/manifest-page-0028.json",
-          "manifestBlobSha": "2ad1498e2e1470ab1500bdc1d6707968da72c936",
+          "rowsAddedThisRun": 53484,
+          "latestPagePath": "research-data/binance-usdm/1h/BTCUSDT/page-0036.jsonl",
+          "manifestPath": "research-data/binance-usdm/1h/manifest-page-0036.json",
+          "manifestBlobSha": "084cf235d6491a2ea82b74398b48d1380ce7ee4a",
           "readbackVerified": true,
           "quality": {
             "duplicates": 0,
@@ -121,9 +129,18 @@
               "sha256": "e822fdd0f7bb905dc00a521962e21eff1d57b37881614cc926e11c8b64bc5c9c",
               "blobSha": "1c076e5b1fce8cfc11a327b1ee8fa3e370126acf"
             }
-          ]
+          ],
+          "partialLastPage": true,
+          "page36": {
+            "rowsPerSymbol": 1371,
+            "rowsTotal": 5484,
+            "firstOpenUtc": "2026-09-10T20:00:00Z",
+            "lastOpenUtc": "2026-11-06T22:00:00Z",
+            "nextStartUtc": "2026-11-06T23:00:00Z",
+            "readbackVerified": true
+          }
         },
-        "incrementalRowsAddedThisRun": 32,
+        "incrementalRowsAddedThisRun": 36,
         "canonical4h": {
           "rowsPerSymbol": 13461,
           "rowsTotal": 53844,
@@ -174,8 +191,8 @@
           }
         ],
         "latestDeltaPaths": [
-          "research-data/binance-usdm/delta/binance_usdm_delta_20261106T1441Z_5m_15m.jsonl",
-          "research-data/binance-usdm/delta/binance_usdm_delta_20261106T1444Z_1h.jsonl"
+          "research-data/binance-usdm/delta/binance_usdm_delta_20261106T2330Z_5m15m_completed.jsonl",
+          "research-data/binance-usdm/delta/binance_usdm_delta_20261106T2338Z_5m_completed.jsonl"
         ],
         "latestDeltaHashes": [
           "91a4c8e1a8cd673856663b9052064cedd3692ad11f72167a859cba1d0ad06ad4",
@@ -188,12 +205,12 @@
         "oneHourNextStartUtc": "2024-02-16T08:00:00Z",
         "fiveAndFifteenMinuteMultiYearArchivePresent": false,
         "latestCompletedOpenUtcByInterval": {
-          "5m": "2026-11-06T23:25:00Z",
+          "5m": "2026-11-06T23:30:00Z",
           "15m": "2026-11-06T23:15:00Z",
           "1h": "2026-11-06T22:00:00Z",
           "4h": "2026-11-06T16:00:00Z"
         },
-        "incrementalRowsIndexedTotal": 2676,
+        "incrementalRowsIndexedTotal": 2680,
         "formingRowsExcludedThisRun": 12,
         "latestDeltaManifestSha256": "c188bcae29c76aba2eb0ce5006fedc380b5f9fb7ea40fe7193b95bdc06b9d218",
         "oneHourArchiveIndex": {
@@ -226,7 +243,7 @@
         "Direct bounded HTTP or Binance SDK call"
       ],
       "nextAction": "Restore DNS/outbound access and obtain uncached /fapi/v1/time and /fapi/v1/exchangeInfo; require <=60s server-time drift before execution validation.",
-      "blocker": "All six direct bounded probes still fail DNS resolution (curl exit 6, HTTP000). Connector exchangeInfo.serverTime=2026-11-06T11:18:40.899Z while fresh mark-price time=2026-11-06T23:31:24Z; discrepancy=43,963.101s (12h12m43.101s). Exchange metadata is stale; do not use TRADING status or filters for execution validation.",
+      "blocker": "All six direct bounded probes fail DNS resolution (curl exit 6, HTTP000). Connector exchangeInfo.serverTime=2026-11-06T11:18:40.899Z while fresh mark-price time=2026-11-06T23:31:24Z; discrepancy=43,963.101s (12h12m43.101s). Exchange metadata is stale; do not use TRADING status or filters for execution validation.",
       "result": {
         "directEndpoints": {
           "time": "HTTP_000_DNS_FAILURE",
@@ -2982,10 +2999,10 @@
     "research-data/binance-usdm/delta/binance_usdm_delta_20261106T2034Z_1h4h_completed.jsonl"
   ],
   "lastRunSummary": {
-    "runId": "CONTEXT-STRATEGY-20261106T2331Z-V101",
+    "runId": "CONTEXT-STRATEGY-20261106T2338Z-V101",
     "classification": "RESEARCH_BLOCKED",
-    "archive1hRowsAdded": 6000,
-    "incrementalRowsAdded": 32,
+    "archive1hRowsAdded": 53484,
+    "incrementalRowsAdded": 36,
     "experimentsRun": 0,
     "oosEvaluations": 0,
     "validatedStrategies": 0

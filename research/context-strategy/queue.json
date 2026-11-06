@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAtUtc": "2026-11-05T22:35:14Z",
+  "updatedAtUtc": "2026-11-06T00:25:52Z",
   "items": [
     {
       "id": "Q1_ARCHIVE_MULTIYEAR",
@@ -11,12 +11,12 @@
         "Compatible bulk-data downloader or official Binance Vision access",
         "Persistent writable store"
       ],
-      "nextAction": "Backfill multi-year 5m/15m/1h history for all four symbols from an auditable source; recover the missing 76-row delta or exact creating-run coverage metadata. Continue incremental appends from 5m 22:30Z, 15m 22:15Z, 1h 21:00Z and 4h 16:00Z.",
-      "blocker": "Canonical 4h PASS: 13,461 rows/symbol through 2026-11-05T16:00Z. Incremental high-water marks are current, but multi-year 5m/15m/1h history remains absent. Missing indexed 76-row delta is still inaccessible; no 4h gap remains.",
+      "nextAction": "Backfill multi-year 5m/15m/1h for all four symbols from Binance Vision or another auditable bulk source; recover the 76-row delta provenance; continue incremental appends from 5m 00:20Z, 15m 00:00Z, 1h 23:00Z and 4h 20:00Z.",
+      "blocker": "4h archive extended and validated through 2026-11-05T20:00Z. Multi-year 5m/15m/1h remains absent; unresolved 76-row delta provenance remains open. Incremental recent bars do not substitute for multi-year lower-timeframe coverage.",
       "result": {
-        "canonical4hRowsPerSymbol": 13461,
-        "canonical4hRowsTotal": 53844,
-        "canonicalEndUtc": "2026-11-05T16:00:00Z",
+        "canonical4hRowsPerSymbol": 13462,
+        "canonical4hRowsTotal": 53848,
+        "canonicalEndUtc": "2026-11-05T20:00:00Z",
         "allFourContinuous": true,
         "missing76DeltaUnresolved": true,
         "lowerTimeframeMultiYearBackfill": false
@@ -29,8 +29,8 @@
       "prerequisites": [
         "Direct bounded HTTP or Binance SDK call"
       ],
-      "nextAction": "Restore direct DNS; obtain uncached /fapi/v1/time and /fapi/v1/exchangeInfo; require <=60s drift before execution-authoritative contract checks.",
-      "blocker": "Direct curl to fapi.binance.com /fapi/v1/time and /exchangeInfo fails curl exit 6 (DNS). Connector exchangeInfo.serverTime=2026-11-05T06:46:24.908Z versus mark timestamp 2026-11-05T22:35:10Z, drift about 15h48m45s. Returned TRADING/PERPETUAL statuses are stale."
+      "nextAction": "Restore direct DNS and obtain uncached /fapi/v1/time plus /fapi/v1/exchangeInfo; require <=60s drift before treating contract metadata as execution-authoritative.",
+      "blocker": "Direct fapi.binance.com DNS resolution failed in this run. Connector exchangeInfo.serverTime=2026-11-05T06:46:24.911Z versus current mark timestamp 2026-11-06T00:25:46Z (17.66h stale); TRADING/PERPETUAL metadata is not execution-authoritative."
     },
     {
       "id": "Q3_RUN_REPOSITORY_BACKTEST",
@@ -808,6 +808,68 @@
         "resultPath": "research/context-strategy/experiments/sol-failed-breakout-fade-sideways-low-v1_20261105T2225Z.result.json",
         "resultSha256": "ff7abf4ee4246c9dadfaa5cd9344a2d559f532925ce721b0c581d816c94d6692",
         "readbackVerified": true
+      }
+    },
+    {
+      "id": "Q36_INCREMENTAL_ARCHIVE_REFRESH_20261106T0025Z",
+      "priority": 1,
+      "status": "COMPLETED",
+      "prerequisites": [
+        "Binance USDⓈ-M connector",
+        "Existing high-water marks",
+        "GitHub archive branch write access"
+      ],
+      "nextAction": "Next run append only bars after 5m 00:20Z, 15m 00:00Z, 1h 23:00Z and 4h 20:00Z; exclude forming bars and verify manifest/hash/readback.",
+      "blocker": null,
+      "result": {
+        "rows": 128,
+        "row_counts_by_symbol_interval": {
+          "BTCUSDT:5m": 22,
+          "BTCUSDT:15m": 7,
+          "BTCUSDT:1h": 2,
+          "BTCUSDT:4h": 1,
+          "ETHUSDT:5m": 22,
+          "ETHUSDT:15m": 7,
+          "ETHUSDT:1h": 2,
+          "ETHUSDT:4h": 1,
+          "SOLUSDT:5m": 22,
+          "SOLUSDT:15m": 7,
+          "SOLUSDT:1h": 2,
+          "SOLUSDT:4h": 1,
+          "XRPUSDT:5m": 22,
+          "XRPUSDT:15m": 7,
+          "XRPUSDT:1h": 2,
+          "XRPUSDT:4h": 1
+        },
+        "latest_completed_open_utc_by_interval": {
+          "5m": "2026-11-06T00:20:00Z",
+          "15m": "2026-11-06T00:00:00Z",
+          "1h": "2026-11-05T23:00:00Z",
+          "4h": "2026-11-05T20:00:00Z"
+        },
+        "delta_path": "research-data/binance-usdm/delta/binance_usdm_delta_20261106T0025Z_completed.jsonl",
+        "manifest_path": "research-data/binance-usdm/delta/binance_usdm_delta_20261106T0025Z.manifest.json",
+        "delta_sha256": "576c96db466023017432454e8fc20294555da1f9daa6b10de899eefa4784be61",
+        "readbackVerified": true
+      }
+    },
+    {
+      "id": "Q37_DAILY_RESEARCH_CYCLE_BLOCKED_20261106T0025Z",
+      "priority": 2,
+      "status": "BLOCKED",
+      "prerequisites": [
+        "Multi-year 5m/15m/1h history or sufficient new forward data",
+        "Node>=24/npm>=11 clean repository checkout",
+        "Pre-registered distinct strategy specification",
+        "Untouched forward test segment"
+      ],
+      "nextAction": "Complete lower-timeframe backfill and runtime setup, then pre-register a distinct strategy family and evaluate only on a forward untouched segment; do not reuse the inspected SOL 4h holdout.",
+      "blocker": "No valid new strategy experiment was run. Multi-year lower-timeframe archive is absent; local repository harness cannot run under Node22.16/npm10.9; prior SOL 4h candidates have already inspected the available test window, so another family on the same window would add data-snooping risk.",
+      "result": {
+        "experimentExecuted": false,
+        "runClassification": "MONITORING_ONLY",
+        "dailyCycleStatus": "BLOCKED",
+        "oosEvaluated": false
       }
     }
   ],

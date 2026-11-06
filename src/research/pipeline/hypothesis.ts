@@ -39,7 +39,11 @@ const hypothesisFields = z.object({
     split: splitSchema,
   }),
   costs: z.object({ roundTripBps: z.number().min(0) }),
-  evidence: z.object({ minOosTrades: z.number().int().min(1).default(100), alpha: z.number().gt(0).lt(1).default(0.05) }),
+  evidence: z.object({
+    minOosTrades: z.number().int().min(1).default(100),
+    /** Below 0.5: the evaluator's two-sided interval level is 1 - 2*alpha, which must stay in (0, 1). */
+    alpha: z.number().gt(0).lt(0.5).default(0.05),
+  }),
 });
 
 export const hypothesisSpecSchema = hypothesisFields.superRefine((spec, ctx) => {

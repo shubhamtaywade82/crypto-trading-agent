@@ -18,10 +18,21 @@ const SUPPORTED_CONTEXT = 'EMA50_GT_EMA200_ATR14_Q33_TRAIN';
 const ATR_PERIOD = 14;
 const EMA_FAST_PERIOD = 50;
 const EMA_SLOW_PERIOD = 200;
-/** Bars skipped at the start so EMA200 has settled; no signal is taken before it. */
+/**
+ * No signal before this bar. ema() seeds from the first close, so at bar 200 the seed still weighs about 13% in EMA200: early
+ * train eligibility is seed-shaped, validation and test bars (hundreds of bars later) are not.
+ * ponytail: seed-from-first-close EMA; prefetch ~1000 warmup bars before the window if early-train stats start to matter.
+ */
 const WARMUP_BARS = EMA_SLOW_PERIOD;
 const ATR_PCT_QUANTILE = 0.33;
 const BOOTSTRAP_ITERATIONS = 2000;
+/** Hex digits of the spec hash used as the bootstrap seed (32 bits, the width mulberry32 takes). */
+const SEED_HEX_DIGITS = 8;
+/**
+ * A test segment spanning fewer UTC days is INSUFFICIENT_EVIDENCE whatever its p-value: with few day-clusters the cluster
+ * bootstrap rejects a true null well above alpha (measured: ~9% at 5 days, ~5% from ~18). Same floor as the admission policy.
+ */
+const MIN_TEST_CLUSTERS = 20;
 const BPS = 10_000;
 
 export interface BreakoutParams {
@@ -102,7 +113,7 @@ function numberParam(spec: HypothesisSpec, name: string, integer: boolean): numb
   return value;
 }
 
-function readParams(spec: HypothesisSpec): BreakoutParams {
+export function readParams(spec: HypothesisSpec): BreakoutParams {
   if (spec.family !== SUPPORTED_FAMILY) throw new Error(`${spec.id}: family ${spec.family} has no evaluator (supported: ${SUPPORTED_FAMILY})`);
   if (spec.context.id !== SUPPORTED_CONTEXT) throw new Error(`${spec.id}: context ${spec.context.id} has no evaluator (supported: ${SUPPORTED_CONTEXT})`);
   return {
@@ -114,7 +125,7 @@ function readParams(spec: HypothesisSpec): BreakoutParams {
 }
 
 /** Context flags per bar. The ATR/close ceiling is the train-segment quantile, so test bars never shape it. */
-function contextFlags(candles: Candle[], atr: number[], trainEnd: number): { eligible: boolean[]; atrPctMax: number } {
+export function contextFlags(candles: Candle[], atr: number[], trainEnd: number): { eligible: boolean[]; atrPctMax: number } {
   const closes = candles.map((c) => c.close);
   const fast = ema(closes, EMA_FAST_PERIOD);
   const slow = ema(closes, EMA_SLOW_PERIOD);
@@ -144,12 +155,12 @@ function walkToExit(candles: Candle[], entryIndex: number, levels: { stop: numbe
   return { index: lastIndex, price: candles[lastIndex]!.close };
 }
 
-/** Long trades with signal bar in [start, end). The whole hold stays inside the range, so a trade never straddles a split. */
+/** Long trades with signal bar in [start, end). The whole hold (signal + maxHoldingBars) ends inside the range, so no trade straddles a split. */
 export function simulateLong(input: SimInput, range: { start: number; end: number }): Trade[] {
   const { candles, eligible, atr, params, roundTripBps } = input;
   const trades: Trade[] = [];
   let nextFreeIndex = 0;
-  const lastSignal = range.end - params.maxHoldingBars - 1;
+  const lastSignal = range.end - params.maxHoldingBars;
   for (let i = Math.max(range.start, WARMUP_BARS, params.lookback); i < lastSignal; i += 1) {
     if (i < nextFreeIndex || !eligible[i] || !isBreakout(candles, i, params.lookback)) continue;
     const entry = candles[i + 1]!.open;
@@ -162,15 +173,31 @@ export function simulateLong(input: SimInput, range: { start: number; end: numbe
   return trades;
 }
 
-function segmentStats(trades: Trade[], seed: number, confidence: number): SegmentStats {
+interface BootConfig {
+  seed: number;
+  confidence: number;
+}
+
+function bootConfigOf(args: EvaluateArgs): BootConfig {
+  return {
+    // Seeded from the spec hash: a spec always resamples the same way, and a changed spec cannot pick a luckier seed.
+    seed: Number.parseInt(args.hash.slice(0, SEED_HEX_DIGITS), 16),
+    // Two-sided interval at 1 - 2*alpha puts alpha in the lower tail, matching the one-sided test that ciLow > 0 stands for.
+    confidence: 1 - 2 * args.spec.evidence.alpha,
+  };
+}
+
+function segmentStats(sim: SimInput, range: { start: number; end: number }, boot: BootConfig): SegmentStats {
+  const trades = simulateLong(sim, range);
   const samples = trades.map((t) => ({ value: t.netR, cluster: utcDay(t.entryTime) }));
-  return { trades: trades.length, summary: bootstrapMean(samples, { iterations: BOOTSTRAP_ITERATIONS, seed, confidence }) };
+  return { trades: trades.length, summary: bootstrapMean(samples, { iterations: BOOTSTRAP_ITERATIONS, ...boot }) };
 }
 
 type Claim = ReadDecision | { kind: 'not-read' };
+type TestWindow = { testFromIso: string; testToIso: string };
 
 /** Records the test-window read in the ledger BEFORE any test statistic exists. DRAFT specs never touch the ledger. */
-function claimTestRead(args: EvaluateArgs, series: SeriesInput, window: { testFromIso: string; testToIso: string }): Claim {
+function claimTestRead(args: EvaluateArgs, series: SeriesInput, window: TestWindow): Claim {
   if (args.spec.status !== 'REGISTERED') return { kind: 'not-read' };
   const read = { specId: args.spec.id, specVersion: args.spec.version, specHash: args.hash, symbol: series.symbol, timeframe: series.timeframe, ...window };
   const decision = decideRead(readLedger(args.ledgerFile), read);
@@ -183,11 +210,36 @@ function splitIndices(bars: number, split: HypothesisSpec['window']['split']): {
   return { trainEnd: Math.floor((bars * split.trainPct) / total), validationEnd: Math.floor((bars * (split.trainPct + split.validationPct)) / total) };
 }
 
-function testWindowOf(candles: Candle[], validationEnd: number): { testFromIso: string; testToIso: string } {
+function testWindowOf(candles: Candle[], validationEnd: number): TestWindow {
   const intervalMs = candles[1]!.openTime - candles[0]!.openTime;
   return {
     testFromIso: new Date(candles[validationEnd]!.openTime).toISOString(),
     testToIso: new Date(candles[candles.length - 1]!.openTime + intervalMs).toISOString(),
+  };
+}
+
+interface PreparedSeries {
+  series: SeriesInput;
+  sim: SimInput;
+  validationEnd: number;
+  window: TestWindow;
+  atrPctMax: number;
+  train: SegmentStats;
+  validation: SegmentStats;
+}
+
+/** Everything that can throw for a bad spec or a short series, plus the train and validation stats. Never reads the ledger. */
+function prepareSeries(args: EvaluateArgs, params: BreakoutParams, series: SeriesInput, boot: BootConfig): PreparedSeries {
+  const { candles } = series;
+  const { trainEnd, validationEnd } = splitIndices(candles.length, args.spec.window.split);
+  const atr = wilderAtr(candles, ATR_PERIOD);
+  const { eligible, atrPctMax } = contextFlags(candles, atr, trainEnd);
+  const sim: SimInput = { candles, eligible, atr, params, roundTripBps: args.spec.costs.roundTripBps };
+  return {
+    series, sim, validationEnd, atrPctMax,
+    window: testWindowOf(candles, validationEnd),
+    train: segmentStats(sim, { start: 0, end: trainEnd }, boot),
+    validation: segmentStats(sim, { start: trainEnd, end: validationEnd }, boot),
   };
 }
 
@@ -196,23 +248,14 @@ function initialVerdict(claim: Claim): SeriesVerdict {
   return claim.kind === 'not-read' ? 'TEST_UNREAD_DRAFT' : 'INSUFFICIENT_EVIDENCE';
 }
 
-function evaluateSeries(args: EvaluateArgs, params: BreakoutParams, series: SeriesInput): SeriesEvaluation {
-  const { candles } = series;
-  const { trainEnd, validationEnd } = splitIndices(candles.length, args.spec.window.split);
-  const window = testWindowOf(candles, validationEnd);
+function readTest(args: EvaluateArgs, prepared: PreparedSeries, boot: BootConfig): SeriesEvaluation {
+  const { series, sim, validationEnd, window } = prepared;
   const claim = claimTestRead(args, series, window);
-
-  const atr = wilderAtr(candles, ATR_PERIOD);
-  const { eligible, atrPctMax } = contextFlags(candles, atr, trainEnd);
-  const input: SimInput = { candles, eligible, atr, params, roundTripBps: args.spec.costs.roundTripBps };
-  const seed = Number.parseInt(args.hash.slice(0, 8), 16);
-  const confidence = 1 - 2 * args.spec.evidence.alpha;
-  const stats = (start: number, end: number): SegmentStats => segmentStats(simulateLong(input, { start, end }), seed, confidence);
   const isReadable = claim.kind === 'first-read' || claim.kind === 'replay';
   return {
-    symbol: series.symbol, timeframe: series.timeframe, bars: candles.length, atrPctMax, ...window,
-    train: stats(0, trainEnd), validation: stats(trainEnd, validationEnd),
-    test: isReadable ? stats(validationEnd, candles.length) : null,
+    symbol: series.symbol, timeframe: series.timeframe, bars: series.candles.length, atrPctMax: prepared.atrPctMax, ...window,
+    train: prepared.train, validation: prepared.validation,
+    test: isReadable ? segmentStats(sim, { start: validationEnd, end: series.candles.length }, boot) : null,
     ledger: claim.kind,
     verdict: initialVerdict(claim),
     note: claim.kind === 'refused' ? claim.reason : null,
@@ -220,21 +263,24 @@ function evaluateSeries(args: EvaluateArgs, params: BreakoutParams, series: Seri
 }
 
 function verdictOf(test: SegmentStats, holmRejected: boolean, spec: HypothesisSpec): SeriesVerdict {
-  if (!test.summary || test.trades < spec.evidence.minOosTrades) return 'INSUFFICIENT_EVIDENCE';
+  if (!test.summary || test.trades < spec.evidence.minOosTrades || test.summary.clusters < MIN_TEST_CLUSTERS) return 'INSUFFICIENT_EVIDENCE';
   if (test.summary.mean <= 0) return 'REJECTED';
   return test.summary.ciLow > 0 && holmRejected ? 'PROMISING' : 'NOT_SIGNIFICANT';
 }
 
 /**
- * Evaluates every series of one spec and applies the family-wise correction over them.
- * ponytail: Holm covers this spec's series only; reads by other spec ids are in the ledger but not yet counted in the family.
+ * Evaluates every series of one spec. All series are prepared before the first ledger write, so a spec that fails on any
+ * series fails before it can consume a test window. Holm runs over every declared series; an unread or tradeless test
+ * counts as p = 1, so a series dropping out never loosens the threshold for the others.
+ * ponytail: the family is this spec's series only; reads by other spec ids are in the ledger but not counted here.
  */
 export function evaluateSpec(args: EvaluateArgs): SpecEvaluation {
   if (args.spec.status === 'RETIRED') throw new Error(`${args.spec.id}@${args.spec.version} is RETIRED and cannot be evaluated`);
   const params = readParams(args.spec);
-  const series = args.series.map((s) => evaluateSeries(args, params, s));
-  const tested = series.filter((s) => s.test?.summary);
-  const rejected = holm(tested.map((s) => s.test!.summary!.pValue), args.spec.evidence.alpha);
-  tested.forEach((s, i) => { s.verdict = verdictOf(s.test!, rejected[i]!, args.spec); });
+  const boot = bootConfigOf(args);
+  const prepared = args.series.map((s) => prepareSeries(args, params, s, boot));
+  const series = prepared.map((p) => readTest(args, p, boot));
+  const rejected = holm(series.map((s) => s.test?.summary?.pValue ?? 1), args.spec.evidence.alpha);
+  series.forEach((s, i) => { if (s.test) s.verdict = verdictOf(s.test, rejected[i]!, args.spec); });
   return { fundingModeled: false, series };
 }

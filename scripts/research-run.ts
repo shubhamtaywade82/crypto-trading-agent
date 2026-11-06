@@ -2,9 +2,12 @@
  * Automated research run: one command for GitHub Actions, a local machine (cron) or a cloud host.
  *
  *   npm run research:run -- [--specs research/hypotheses] [--include-drafts] [--source auto|api|archive]
- *                           [--out data/research/runs]
+ *                           [--out data/research/runs] [--ledger research/oos-ledger.jsonl]
+ *                           [--propose N] [--model beam:cloud] [--llm-host http://127.0.0.1:11434]
  *
  * Stages:
+ *   0. optional (--propose N): an Ollama model drafts N new DRAFT specs into <specs>/proposed/. That folder is not loaded,
+ *      so a proposal enters a run only after a human moves it into <specs> (and registers it). LLM failures do not stop the run
  *   1. load + validate pre-registered specs (research/hypotheses/*.json); each gets a sha256 spec hash
  *   2. pick the kline source for this host (auto: api if fapi.binance.com answers, else archive)
  *   3. data: for every spec x symbol x timeframe, compute the window (no from/to input), fetch, run the integrity gate
@@ -15,8 +18,9 @@
  * Raw candles are fetched per run and never stored. Exit code 1 if any series fails the integrity gate or a ledger read is
  * refused (fail closed).
  */
-import { writeFileSync } from 'node:fs';
+import { existsSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
+import { OllamaClient } from '@nemesis-oss/ollama-sdk';
 import { CandleIntegrityError } from '../src/backtesting/candleIntegrity.js';
 import { loadValidatedKlines, type LoadedKlines } from '../src/backtesting/klineLoader.js';
 import {
@@ -28,7 +32,9 @@ import {
   type SeriesRecord,
 } from '../src/backtesting/researchRun.js';
 import { evaluateSpec, type SeriesInput, type SpecEvaluation } from '../src/research/pipeline/evaluate.js';
-import { loadSpecs } from '../src/research/pipeline/hypothesis.js';
+import { loadSpecs, type HypothesisSpec } from '../src/research/pipeline/hypothesis.js';
+import { proposeSpecs, writeProposals, type LlmClient } from '../src/research/pipeline/propose.js';
+import { jsonFormatFor } from '../src/ollama/jsonMode.js';
 import { selectSource, type SourcePreference } from '../src/research/pipeline/sourceSelect.js';
 
 function arg(name: string, fallback: string): string {
@@ -42,9 +48,32 @@ const ledgerFile = path.resolve(arg('ledger', 'research/oos-ledger.jsonl'));
 const includeDrafts = process.argv.includes('--include-drafts');
 const preference = arg('source', 'auto') as SourcePreference;
 if (!['auto', 'api', 'archive'].includes(preference)) throw new Error('--source must be auto, api or archive');
+const proposeCount = Number(arg('propose', '0'));
+if (!Number.isInteger(proposeCount) || proposeCount < 0) throw new Error(`--propose must be a non-negative integer, got ${arg('propose', '0')}`);
+// The local daemon proxies `:cloud` models with the signed-in account, so one host serves local and cloud models alike.
+const llmHost = arg('llm-host', 'http://127.0.0.1:11434');
+const llmModel = arg('model', process.env.RESEARCH_MODEL ?? 'beam:cloud');
+
+async function runProposals(existing: HypothesisSpec[]): Promise<void> {
+  const proposedDir = path.join(specsDir, 'proposed');
+  try {
+    const earlier = existsSync(proposedDir) ? loadSpecs(proposedDir).map((s) => s.spec) : [];
+    const sdk = new OllamaClient({ baseUrl: llmHost, retries: 0 });
+    const client: LlmClient = { generateText: (request) => sdk.generateText({ ...request, ...jsonFormatFor(llmHost) }) };
+    const result = await proposeSpecs({ client, model: llmModel, count: proposeCount, existing: [...existing, ...earlier] });
+    const written = writeProposals(result.proposals, proposedDir);
+    console.log(`proposals (${llmModel} via ${llmHost}): ${written.length} written to ${proposedDir}, ${result.rejected.length} rejected`);
+    for (const file of written) console.log(`  + ${file}`);
+    for (const reason of result.rejected) console.log(`  - rejected: ${reason}`);
+  } catch (error) {
+    console.log(`proposals: FAILED, run continues without them: ${error instanceof Error ? error.message : String(error)}`);
+  }
+}
 
 const runNowMs = Date.now();
-const specs = loadSpecs(specsDir).filter(({ spec }) => spec.status === 'REGISTERED' || (includeDrafts && spec.status === 'DRAFT'));
+const loadedSpecs = loadSpecs(specsDir);
+if (proposeCount > 0) await runProposals(loadedSpecs.map((s) => s.spec));
+const specs = loadedSpecs.filter(({ spec }) => spec.status === 'REGISTERED' || (includeDrafts && spec.status === 'DRAFT'));
 console.log(`research run ${new Date(runNowMs).toISOString()} · specs ${specs.length} from ${specsDir}${includeDrafts ? ' (drafts included)' : ''}`);
 if (specs.length === 0) {
   console.log('nothing to run: no REGISTERED specs (pass --include-drafts to exercise DRAFT specs)');
@@ -75,7 +104,9 @@ function verdictLine(evaluation: SpecEvaluation): string {
 function reportEvaluation(evaluation: SpecEvaluation, file: string): void {
   writeFileSync(file, `${JSON.stringify(evaluation, null, 2)}\n`);
   for (const s of evaluation.series) {
-    const test = s.test?.summary ? `test n=${s.test.trades} mean=${s.test.summary.mean.toFixed(3)}R p=${s.test.summary.pValue.toFixed(3)}` : 'test unread';
+    const test = s.test === null ? 'test unread'
+      : s.test.summary ? `test n=${s.test.trades} days=${s.test.summary.clusters} mean=${s.test.summary.mean.toFixed(3)}R p=${s.test.summary.pValue.toFixed(3)}`
+        : 'test read, no trades';
     console.log(`  ${s.symbol} ${s.timeframe}: ${s.verdict} · train n=${s.train.trades} · validation n=${s.validation.trades} · ${test}${s.note ? ` · ${s.note}` : ''}`);
   }
   console.log(`  evaluation: ${file}`);
@@ -120,7 +151,7 @@ for (const { spec, hash } of specs) {
   const manifestPath = writeRunManifest({
     schemaVersion: 1,
     runId,
-    kind: 'research-run:data+evaluation',
+    kind: evaluation ? 'research-run:data+evaluation' : 'research-run:data',
     createdAtIso: new Date(runNowMs).toISOString(),
     codeCommit: commit,
     codeDirty: dirty,

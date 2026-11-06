@@ -1,0 +1,385 @@
+{
+  "schema_version": "1.0.0",
+  "run_id": "context-strategy-2026-11-05T073430Z",
+  "evaluated_at_utc": "2026-11-05T07:34:30Z",
+  "run_status": [
+    "RESEARCH_EXECUTED",
+    "OOS_EVALUATED"
+  ],
+  "preflight": {
+    "shell_compute": {
+      "status": "PASS",
+      "evidence": "Linux x86_64; 5 CPUs; 5.8 GiB RAM; 30 GiB free; Python 3.13.5."
+    },
+    "repo_runtime": {
+      "status": "BLOCKED",
+      "evidence": "Local checkout absent; Node 22.16.0/npm 10.9.2; project requires Node >=24/npm >=11."
+    },
+    "binance_sdk": {
+      "status": "BLOCKED",
+      "evidence": "binance, @binance/connector, @binance/futures-connector not installed."
+    },
+    "network": {
+      "status": "DEGRADED",
+      "evidence": "Connected Binance integration works; direct fapi.binance.com DNS failed; HTTP status not exposed."
+    },
+    "exchange_info": {
+      "status": "BLOCKED",
+      "evidence": "exchangeInfo serverTime 2026-11-05T06:46:24.913Z, approximately 48m stale."
+    },
+    "raw_archive": {
+      "status": "PASS",
+      "evidence": "11 files, 48,064 rows, 6,253,317 bytes; manifest readback verified."
+    },
+    "data_quality": {
+      "status": "PASS",
+      "evidence": "No duplicate/gap/OHLC/volume failures in experiment 4h sample; funding histories 1,000 rows per tradable symbol with no 8h gaps."
+    },
+    "backtest": {
+      "status": "DEGRADED",
+      "evidence": "Independent JS harness executed; deterministic/no-lookahead 80-bar smoke test passed. Repository TypeScript harness not run."
+    },
+    "storage_readback": {
+      "status": "PASS",
+      "evidence": "Manifest, incremental CSVs, experiment input and bundle fetched back successfully."
+    }
+  },
+  "archive": {
+    "manifest": "research/data-archive/snapshots/2026-11-05/manifest.json",
+    "manifestBlobSha1": "3e77f3814f64a88267721d3fb4df3cf7e67b7df3",
+    "files": 11,
+    "rows": 48064,
+    "bytes": 6253317,
+    "incrementalRows": {
+      "5m": 52,
+      "15m": 20,
+      "1h": 4,
+      "4h": 0
+    },
+    "coverageDays": {
+      "5m": 10.46,
+      "15m": 31.28,
+      "1h": 124.96,
+      "4h": 499.7
+    },
+    "quality": {
+      "duplicates": 0,
+      "missingIntervals": 0,
+      "chunkBoundaryGaps": 0,
+      "ohlcFailures": 0,
+      "nonpositiveVolume": 0,
+      "formingCandlesPersisted": 0,
+      "readbackVerified": true
+    }
+  },
+  "experiment": {
+    "id": "CPULLBACK-4H-BTC-CONFIRM-v1.0.1",
+    "status": "OOS_EVALUATED; INSUFFICIENT_EVIDENCE",
+    "input": "research/experiments/inputs/CPULLBACK-4H-2026-11-05T0722Z.csv",
+    "inputBlobSha1": "355be0a0c61d8010ec5627cf1888a7b2cd1926dc",
+    "bundle": "research/experiments/bundles/CPULLBACK-4H-BTC-CONFIRM-v1.0.1-2026-11-05.json",
+    "bundleBlobSha1": "6c07dda2eaa237e771c9de8c14ce96b778ab38f2",
+    "dataWindow": "2026-02-28T08:00Z to 2026-11-05T03:59:59.999Z",
+    "train": "2026-03-09T12:00Z to 2026-07-28T03:59:59.999Z",
+    "validation": "2026-07-28T04:00Z to 2026-09-16T03:59:59.999Z",
+    "test": "2026-09-16T04:00Z to 2026-11-05T03:59:59.999Z",
+    "smokeTest": {
+      "passed": true,
+      "deterministic": true,
+      "noLookahead": true
+    },
+    "metrics": {
+      "ETHUSDT": {
+        "trainTrades": 15,
+        "trainExpR": -0.26,
+        "valTrades": 5,
+        "valExpR": -0.799,
+        "oosTrades": 9,
+        "winPct": 44.44,
+        "targetFirstPct": 22.22,
+        "expR": 0.003,
+        "pf": 1,
+        "pnlUSDT": -0.02,
+        "ci95": [
+          -0.657,
+          0.573
+        ],
+        "holmP": 0.617,
+        "status": "INSUFFICIENT_EVIDENCE"
+      },
+      "SOLUSDT": {
+        "trainTrades": 13,
+        "trainExpR": -0.242,
+        "valTrades": 7,
+        "valExpR": -0.391,
+        "oosTrades": 10,
+        "winPct": 60,
+        "targetFirstPct": 30,
+        "expR": 0.326,
+        "pf": 1.835,
+        "pnlUSDT": 162.38,
+        "ci95": [
+          -0.393,
+          1.035
+        ],
+        "holmP": 0.535,
+        "status": "INSUFFICIENT_EVIDENCE"
+      },
+      "XRPUSDT": {
+        "trainTrades": 16,
+        "trainExpR": -0.252,
+        "valTrades": 6,
+        "valExpR": -0.437,
+        "oosTrades": 8,
+        "winPct": 62.5,
+        "targetFirstPct": 12.5,
+        "expR": 0.196,
+        "pf": 1.479,
+        "pnlUSDT": 77.38,
+        "ci95": [
+          -0.539,
+          1.084
+        ],
+        "holmP": 0.617,
+        "status": "INSUFFICIENT_EVIDENCE"
+      }
+    },
+    "baselineNetPct": {
+      "ETHUSDT": {
+        "buyHold": 0.793,
+        "emaTrend": -2.717
+      },
+      "SOLUSDT": {
+        "buyHold": -1.148,
+        "emaTrend": 21.616
+      },
+      "XRPUSDT": {
+        "buyHold": 0.829,
+        "emaTrend": -14.802
+      }
+    },
+    "costModel": "5bp taker fee/side; 2bp slippage + 0.5bp half-spread/side; historical funding included.",
+    "uncertainty": "2,000 moving-block bootstrap iterations, 3-trade blocks; all CIs cross zero; Holm-adjusted p-values >=0.535."
+  },
+  "taxonomy_review": {
+    "status": "PRELIMINARY_WEEKLY_REVIEW_DONE",
+    "thresholds": "Training-only q60 EMA-gap/ATR strength; q25/q75 ATR%; q99 absolute 4h return.",
+    "trendFrequencyTVTrainTest": {
+      "ETHUSDT": 0.151,
+      "SOLUSDT": 0.122,
+      "XRPUSDT": 0.088
+    },
+    "volatilityFrequencyTVTrainTest": {
+      "ETHUSDT": 0.183,
+      "SOLUSDT": 0.213,
+      "XRPUSDT": 0.233
+    },
+    "testTrendDurationBars": {
+      "ETHUSDT": 23.08,
+      "SOLUSDT": 42.86,
+      "XRPUSDT": 13.04
+    },
+    "testTrendBars": {
+      "ETHUSDT": {
+        "bull": 106,
+        "bear": 175,
+        "transition": 19
+      },
+      "SOLUSDT": {
+        "bull": 114,
+        "bear": 173,
+        "transition": 13
+      },
+      "XRPUSDT": {
+        "bull": 78,
+        "bear": 178,
+        "transition": 44
+      }
+    },
+    "testVolatilityBars": {
+      "ETHUSDT": {
+        "low": 101,
+        "normal": 179,
+        "high": 20
+      },
+      "SOLUSDT": {
+        "low": 55,
+        "normal": 214,
+        "high": 31
+      },
+      "XRPUSDT": {
+        "low": 37,
+        "normal": 118,
+        "high": 145
+      }
+    },
+    "conclusion": "Retain compact taxonomy; volatility frequency drift is material, especially XRP. Do not add finer labels until longer multi-cycle data exists."
+  },
+  "market_snapshot": {
+    "timestamp": "2026-11-05T07:34:30Z",
+    "fundingIntervalHours": 8,
+    "lastFunding": "2026-11-05T00:00Z",
+    "nextFunding": "2026-11-05T08:00Z",
+    "fundingFlagThresholdPct": 0.05,
+    "flaggedFunding": [],
+    "BTCUSDT": {
+      "mark": 80380.7,
+      "change24hPct": 2.834,
+      "fundingNowPct": 0.01,
+      "lastFundingPct": 0.002405,
+      "oi": 95731.767,
+      "oi4hPct": -0.02935,
+      "takerRatio": 1.1499,
+      "longAccountPct": 58.01,
+      "spreadBps": 0.0124,
+      "imbalance": -0.039,
+      "ret20Pct": {
+        "m5": 0.14,
+        "m15": -0.163,
+        "h1": 2.585,
+        "h4": 3.529
+      },
+      "ema": {
+        "h1": "BULL",
+        "h4": "BEAR"
+      }
+    },
+    "ETHUSDT": {
+      "mark": 2414.16,
+      "change24hPct": 4.896,
+      "fundingNowPct": 0.003806,
+      "lastFundingPct": -0.00265,
+      "oi": 2371962.013,
+      "oi4hPct": 0.16688,
+      "takerRatio": 0.9628,
+      "longAccountPct": 65.4,
+      "spreadBps": 0.0414,
+      "imbalance": -0.429,
+      "ret20Pct": {
+        "m5": 0.078,
+        "m15": -0.33,
+        "h1": 4.355,
+        "h4": 7.316
+      },
+      "ema": {
+        "h1": "BULL",
+        "h4": "BULL"
+      }
+    },
+    "SOLUSDT": {
+      "mark": 95.73,
+      "change24hPct": 2.715,
+      "fundingNowPct": 0.01,
+      "lastFundingPct": 0.01,
+      "oi": 9217963.95,
+      "oi4hPct": -0.71407,
+      "takerRatio": 0.8869,
+      "longAccountPct": 73.73,
+      "spreadBps": 1.0445,
+      "imbalance": -0.189,
+      "ret20Pct": {
+        "m5": 0.251,
+        "m15": -0.239,
+        "h1": 2.778,
+        "h4": 2.437
+      },
+      "ema": {
+        "h1": "BULL",
+        "h4": "BEAR"
+      }
+    },
+    "XRPUSDT": {
+      "mark": 1.30860056,
+      "change24hPct": 2.531,
+      "fundingNowPct": 0.01,
+      "lastFundingPct": 0.01,
+      "oi": 343454092.2,
+      "oi4hPct": -0.33123,
+      "takerRatio": 0.9937,
+      "longAccountPct": 71.62,
+      "spreadBps": 0.7641,
+      "imbalance": 0.142,
+      "ret20Pct": {
+        "m5": 0.406,
+        "m15": 0.36,
+        "h1": 1.51,
+        "h4": 5.063
+      },
+      "ema": {
+        "h1": "BULL",
+        "h4": "BULL"
+      }
+    }
+  },
+  "decisions": {
+    "ETHUSDT": "NO_TRADE",
+    "SOLUSDT": "NO_TRADE",
+    "XRPUSDT": "NO_TRADE",
+    "reason": "No OOS_VALIDATED registry entries; a favorable context is not an entry trigger."
+  },
+  "queue": [
+    {
+      "id": "Q1",
+      "status": "BLOCKED",
+      "item": "Restore Node >=24/npm >=11 and local repository checkout",
+      "next": "Provision runtime, checkout repo and run project harness smoke test."
+    },
+    {
+      "id": "Q2",
+      "status": "PARTIAL",
+      "item": "Backfill 5m/15m/1h toward 4h coverage",
+      "next": "Prioritize 1h/15m history, then 5m; extend 4h if available."
+    },
+    {
+      "id": "Q3",
+      "status": "PRELIMINARY_REVIEW_DONE",
+      "item": "Context taxonomy stability",
+      "next": "Repeat on longer multi-cycle history; keep taxonomy compact."
+    },
+    {
+      "id": "Q4",
+      "status": "OOS_EVALUATED_INSUFFICIENT_EVIDENCE",
+      "item": "BTC-confirmed 4h EMA20 pullback",
+      "next": "Collect more OOS trades across multiple windows; no promotion."
+    },
+    {
+      "id": "Q5",
+      "status": "BLOCKED",
+      "item": "Purged multi-window walk-forward",
+      "next": "Restore project harness and historical liquidity cost inputs."
+    },
+    {
+      "id": "Q6",
+      "status": "BLOCKED",
+      "item": "Fresh exchange metadata",
+      "next": "Retry direct /fapi/v1/time and /fapi/v1/exchangeInfo when DNS recovers."
+    }
+  ],
+  "registry": {
+    "OOS_VALIDATED": [],
+    "candidates": [
+      {
+        "symbol": "ETHUSDT",
+        "strategy": "CPULLBACK-4H-BTC-CONFIRM-v1.0.1",
+        "status": "INSUFFICIENT_EVIDENCE"
+      },
+      {
+        "symbol": "SOLUSDT",
+        "strategy": "CPULLBACK-4H-BTC-CONFIRM-v1.0.1",
+        "status": "INSUFFICIENT_EVIDENCE"
+      },
+      {
+        "symbol": "XRPUSDT",
+        "strategy": "CPULLBACK-4H-BTC-CONFIRM-v1.0.1",
+        "status": "INSUFFICIENT_EVIDENCE"
+      }
+    ]
+  },
+  "limitations": [
+    "Experiment used 1,499 recent 4h bars per symbol (~250 days), not full 499.7-day archive.",
+    "50-day OOS test produced 8-10 trades per symbol; all 95% CIs cross zero.",
+    "Exchange metadata stale; execution validation blocked.",
+    "Historical spread/depth and account fee tier unavailable.",
+    "SHA-256 unavailable in runtime; GitHub blob SHA-1 readback checks used."
+  ]
+}

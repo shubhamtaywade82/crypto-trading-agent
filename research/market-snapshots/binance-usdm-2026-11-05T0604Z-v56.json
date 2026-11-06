@@ -1,0 +1,541 @@
+{
+  "schema_version": 1,
+  "snapshot_id": "binance-usdm-context-snapshot-2026-11-05T0604Z-v56",
+  "retrieved_at_utc": "2026-11-05T06:04:25.290Z",
+  "data_sources": {
+    "venue": "Binance USDⓈ-M perpetual public market data",
+    "transport": "Binance connector mapped to public endpoints; direct shell REST unavailable because DNS resolution failed",
+    "http_status_headers": "NOT_EXPOSED_BY_CONNECTOR",
+    "klines_refreshed_at_utc": "2026-11-05T06:01:57.122Z",
+    "mark_ticker_refreshed_at_utc": "2026-11-05T06:04:20.000Z",
+    "open_interest_book_refreshed_at_utc": "2026-11-05T06:04:25.290Z",
+    "funding_history_refreshed_at_utc": "2026-11-05T05:55:56Z",
+    "funding_info_refreshed_at_utc": "2026-11-05T05:56:07.804Z",
+    "exchange_info_server_time_utc": "2026-11-05T03:03:55.300Z",
+    "exchange_info_stale_by_at_least": "approximately 3 hours",
+    "exchange_info_execution_validation": "BLOCKED_STALE_METADATA",
+    "current_funding_semantics": "premiumIndex.lastFundingRate is the latest rate reported by premiumIndex; it is stored separately from the latest settled fundingRate history record. It is not treated as a guaranteed next settlement rate.",
+    "funding_threshold_pct": 0.05,
+    "funding_interval_hours": 8,
+    "next_funding_time_utc": "2026-11-05T08:00:00.000Z",
+    "funding_info_update_time": "not supplied"
+  },
+  "historical_context_thresholds": {
+    "source_artifact": "research/experiments/context-taxonomy-4h-2020-2026-v1.json",
+    "timeframe": "4h",
+    "thresholds_fitted_on_training_only": true,
+    "atr14_close_q33_pct": {
+      "BTCUSDT": 1.4707381,
+      "ETHUSDT": 1.80181,
+      "SOLUSDT": 3.02535,
+      "XRPUSDT": 2.03549
+    },
+    "classifier_note": "The context label is determined on completed 4h candles. Confidence below is feature agreement, not a calibrated trade-win probability."
+  },
+  "symbols": {
+    "BTCUSDT": {
+      "role": "reference_only",
+      "contract_metadata": {
+        "observed_status": "TRADING",
+        "contract_type": "PERPETUAL",
+        "metadata_fresh": false,
+        "execution_validation": "BLOCKED"
+      },
+      "mark": {
+        "mark_price": 80382.58902899,
+        "index_price": 80412.38217391,
+        "premium_index_last_funding_rate": 0.00009285,
+        "reported_rate_pct": 0.009285,
+        "next_funding_time_utc": "2026-11-05T08:00:00.000Z",
+        "time_utc": "2026-11-05T06:04:15.000Z"
+      },
+      "ticker_24h": {
+        "last_price": 80387.7,
+        "change_pct": 3.272,
+        "high": 81188,
+        "low": 77724.4,
+        "quote_volume": 15153594123.09,
+        "close_time_utc": "2026-11-05T06:04:09.640Z"
+      },
+      "funding": {
+        "premium_index_reported_rate_pct": 0.009285,
+        "latest_settled_rate_pct": 0.002405,
+        "latest_settled_time_utc": "2026-11-05T00:00:00.000Z",
+        "interval_hours": 8,
+        "next_funding_time_utc": "2026-11-05T08:00:00.000Z",
+        "above_abs_0_05_pct": false
+      },
+      "open_interest": {
+        "contracts": 95763.687,
+        "time_utc": "2026-11-05T06:04:20.763Z",
+        "change_00_to_04_utc_pct": -0.3835,
+        "change_04_to_now_approx_pct": -0.0361
+      },
+      "participation": {
+        "taker_buy_sell_ratio_1h": 1.0078,
+        "observation_open_utc": "2026-11-05T04:00:00.000Z",
+        "global_long_short_account_ratio": 1.3793,
+        "long_account_pct": 57.97,
+        "observation_open_utc_long_short": "2026-11-05T05:00:00.000Z"
+      },
+      "top_of_book": {
+        "bid": 80383.5,
+        "ask": 80383.6,
+        "bid_qty": 1.752,
+        "ask_qty": 17.108,
+        "spread_bps": 0.01244,
+        "top_level_imbalance": -0.8142,
+        "retrieved_at_utc": "2026-11-05T06:04:25.290Z"
+      },
+      "timeframes": {
+        "5m": {
+          "last_completed_open_utc": "2026-11-05T05:55:00.000Z",
+          "close": 80368,
+          "return_5_bars_pct": -0.1392,
+          "return_20_bars_pct": -0.0025,
+          "ema20_vs_ema50_pct": -0.0519,
+          "ema50_slope_10_pct": -0.0437,
+          "atr14_close_pct": 0.1118,
+          "volume_5_vs_20": 0.9398,
+          "donchian20": "INSIDE"
+        },
+        "15m": {
+          "last_completed_open_utc": "2026-11-05T05:45:00.000Z",
+          "close": 80368,
+          "return_5_bars_pct": -0.3621,
+          "return_20_bars_pct": -0.1756,
+          "ema20_vs_ema50_pct": 0.2714,
+          "ema50_slope_10_pct": 0.1228,
+          "atr14_close_pct": 0.2013,
+          "volume_5_vs_20": 0.7604,
+          "donchian20": "INSIDE"
+        },
+        "1h": {
+          "last_completed_open_utc": "2026-11-05T04:00:00.000Z",
+          "close": 80490.1,
+          "return_20_bars_pct": 2.569,
+          "return_60_bars_pct": 3.903,
+          "ema20_vs_ema50_pct": 1.235,
+          "ema50_slope_10_pct": 0.986,
+          "atr14_close_pct": 0.652,
+          "volume_5_vs_20": 0.445,
+          "donchian20": "INSIDE"
+        },
+        "4h": {
+          "last_completed_open_utc": "2026-11-05T00:00:00.000Z",
+          "close": 80514.9,
+          "return_20_bars_pct": 3.529,
+          "return_60_bars_pct": 1.194,
+          "ema20_vs_ema50_pct": -0.223,
+          "ema50_slope_10_pct": 0.079,
+          "atr14_close_pct": 1.328,
+          "volume_5_vs_20": 1.371,
+          "donchian20": "INSIDE"
+        }
+      },
+      "context_4h": {
+        "label": "TRANSITION_LOW",
+        "trend": "TRANSITION",
+        "volatility": "LOW",
+        "feature_agreement": "MEDIUM",
+        "reasons": [
+          "EMA20 remains 0.223% below EMA50 while EMA50 slope is slightly positive.",
+          "20/60-bar returns are positive; 4h ATR14/close 1.328% is below the training q33 threshold 1.471%."
+        ],
+        "warnings": [
+          "5m momentum is negative while 15m/1h are bullish; 4h alignment remains mixed."
+        ]
+      }
+    },
+    "ETHUSDT": {
+      "role": "tradable_universe",
+      "contract_metadata": {
+        "observed_status": "TRADING",
+        "contract_type": "PERPETUAL",
+        "metadata_fresh": false,
+        "execution_validation": "BLOCKED"
+      },
+      "mark": {
+        "mark_price": 2419.43630233,
+        "index_price": 2420.44069767,
+        "premium_index_last_funding_rate": 0.00001105,
+        "reported_rate_pct": 0.001105,
+        "next_funding_time_utc": "2026-11-05T08:00:00.000Z",
+        "time_utc": "2026-11-05T06:04:14.000Z"
+      },
+      "ticker_24h": {
+        "last_price": 2419.76,
+        "change_pct": 5.442,
+        "high": 2449.95,
+        "low": 2287.75,
+        "quote_volume": 11108062460.11,
+        "close_time_utc": "2026-11-05T06:04:15.405Z"
+      },
+      "funding": {
+        "premium_index_reported_rate_pct": 0.001105,
+        "latest_settled_rate_pct": -0.00265,
+        "latest_settled_time_utc": "2026-11-05T00:00:00.000Z",
+        "interval_hours": 8,
+        "next_funding_time_utc": "2026-11-05T08:00:00.000Z",
+        "above_abs_0_05_pct": false
+      },
+      "open_interest": {
+        "contracts": 2372151.649,
+        "time_utc": "2026-11-05T06:04:21.474Z",
+        "change_00_to_04_utc_pct": 0.1729,
+        "change_04_to_now_approx_pct": 0.1043
+      },
+      "participation": {
+        "taker_buy_sell_ratio_1h": 1.0657,
+        "observation_open_utc": "2026-11-05T04:00:00.000Z",
+        "global_long_short_account_ratio": 1.8785,
+        "long_account_pct": 65.26,
+        "observation_open_utc_long_short": "2026-11-05T05:00:00.000Z"
+      },
+      "top_of_book": {
+        "bid": 2419.32,
+        "ask": 2419.33,
+        "bid_qty": 26.693,
+        "ask_qty": 134.036,
+        "spread_bps": 0.04133,
+        "top_level_imbalance": -0.6679,
+        "retrieved_at_utc": "2026-11-05T06:04:25.290Z"
+      },
+      "timeframes": {
+        "5m": {
+          "last_completed_open_utc": "2026-11-05T05:55:00.000Z",
+          "close": 2418.02,
+          "return_5_bars_pct": -0.3146,
+          "return_20_bars_pct": 0.0108,
+          "ema20_vs_ema50_pct": -0.0562,
+          "ema50_slope_10_pct": -0.0432,
+          "atr14_close_pct": 0.1521,
+          "volume_5_vs_20": 1.1776,
+          "donchian20": "INSIDE"
+        },
+        "15m": {
+          "last_completed_open_utc": "2026-11-05T05:45:00.000Z",
+          "close": 2418.02,
+          "return_5_bars_pct": -0.4848,
+          "return_20_bars_pct": -0.0818,
+          "ema20_vs_ema50_pct": 0.3943,
+          "ema50_slope_10_pct": 0.1786,
+          "atr14_close_pct": 0.2721,
+          "volume_5_vs_20": 0.785,
+          "donchian20": "INSIDE"
+        },
+        "1h": {
+          "last_completed_open_utc": "2026-11-05T04:00:00.000Z",
+          "close": 2423.81,
+          "return_20_bars_pct": 4.354,
+          "return_60_bars_pct": 6.853,
+          "ema20_vs_ema50_pct": 2.058,
+          "ema50_slope_10_pct": 1.626,
+          "atr14_close_pct": 0.888,
+          "volume_5_vs_20": 0.366,
+          "donchian20": "INSIDE"
+        },
+        "4h": {
+          "last_completed_open_utc": "2026-11-05T00:00:00.000Z",
+          "close": 2423.42,
+          "return_20_bars_pct": 7.316,
+          "return_60_bars_pct": 5.274,
+          "ema20_vs_ema50_pct": 0.639,
+          "ema50_slope_10_pct": 0.815,
+          "atr14_close_pct": 1.723,
+          "volume_5_vs_20": 1.418,
+          "donchian20": "INSIDE"
+        }
+      },
+      "context_4h": {
+        "label": "BULL_LOW",
+        "trend": "BULL",
+        "volatility": "LOW",
+        "feature_agreement": "HIGH",
+        "reasons": [
+          "EMA20 is 0.639% above EMA50 and EMA50 slope is positive 0.815%.",
+          "20/60-bar returns are positive; 4h ATR14/close 1.723% is below the training q33 threshold 1.802%."
+        ],
+        "warnings": [
+          "5m/15m momentum has pulled back; no 20-bar breakout trigger."
+        ]
+      }
+    },
+    "SOLUSDT": {
+      "role": "tradable_universe",
+      "contract_metadata": {
+        "observed_status": "TRADING",
+        "contract_type": "PERPETUAL",
+        "metadata_fresh": false,
+        "execution_validation": "BLOCKED"
+      },
+      "mark": {
+        "mark_price": 95.75735883,
+        "index_price": 95.79395123,
+        "premium_index_last_funding_rate": 0.0001,
+        "reported_rate_pct": 0.01,
+        "next_funding_time_utc": "2026-11-05T08:00:00.000Z",
+        "time_utc": "2026-11-05T06:04:19.001Z"
+      },
+      "ticker_24h": {
+        "last_price": 95.76,
+        "change_pct": 2.968,
+        "high": 98.16,
+        "low": 92.45,
+        "quote_volume": 1857457833.2367,
+        "close_time_utc": "2026-11-05T06:04:15.747Z"
+      },
+      "funding": {
+        "premium_index_reported_rate_pct": 0.01,
+        "latest_settled_rate_pct": 0.01,
+        "latest_settled_time_utc": "2026-11-05T00:00:00.000Z",
+        "interval_hours": 8,
+        "next_funding_time_utc": "2026-11-05T08:00:00.000Z",
+        "above_abs_0_05_pct": false
+      },
+      "open_interest": {
+        "contracts": 9238384.81,
+        "time_utc": "2026-11-05T06:04:24.581Z",
+        "change_00_to_04_utc_pct": -0.1258,
+        "change_04_to_now_approx_pct": -0.2213
+      },
+      "participation": {
+        "taker_buy_sell_ratio_1h": 0.9629,
+        "observation_open_utc": "2026-11-05T04:00:00.000Z",
+        "global_long_short_account_ratio": 2.8226,
+        "long_account_pct": 73.84,
+        "observation_open_utc_long_short": "2026-11-05T05:00:00.000Z"
+      },
+      "top_of_book": {
+        "bid": 95.71,
+        "ask": 95.72,
+        "bid_qty": 1098.73,
+        "ask_qty": 1554.18,
+        "spread_bps": 1.04477,
+        "top_level_imbalance": -0.1717,
+        "retrieved_at_utc": "2026-11-05T06:04:25.290Z"
+      },
+      "timeframes": {
+        "5m": {
+          "last_completed_open_utc": "2026-11-05T05:55:00.000Z",
+          "close": 95.71,
+          "return_5_bars_pct": -0.3747,
+          "return_20_bars_pct": -0.2085,
+          "ema20_vs_ema50_pct": -0.0518,
+          "ema50_slope_10_pct": -0.0731,
+          "atr14_close_pct": 0.2433,
+          "volume_5_vs_20": 1.0633,
+          "donchian20": "INSIDE"
+        },
+        "15m": {
+          "last_completed_open_utc": "2026-11-05T05:45:00.000Z",
+          "close": 95.71,
+          "return_5_bars_pct": -0.6746,
+          "return_20_bars_pct": 0.0104,
+          "ema20_vs_ema50_pct": 0.3922,
+          "ema50_slope_10_pct": 0.224,
+          "atr14_close_pct": 0.4508,
+          "volume_5_vs_20": 0.8117,
+          "donchian20": "INSIDE"
+        },
+        "1h": {
+          "last_completed_open_utc": "2026-11-05T04:00:00.000Z",
+          "close": 96.01,
+          "return_20_bars_pct": 2.938,
+          "return_60_bars_pct": 2.805,
+          "ema20_vs_ema50_pct": 0.916,
+          "ema50_slope_10_pct": 0.734,
+          "atr14_close_pct": 1.144,
+          "volume_5_vs_20": 0.545,
+          "donchian20": "INSIDE"
+        },
+        "4h": {
+          "last_completed_open_utc": "2026-11-05T00:00:00.000Z",
+          "close": 96.24,
+          "return_20_bars_pct": 2.437,
+          "return_60_bars_pct": -3.933,
+          "ema20_vs_ema50_pct": -1.738,
+          "ema50_slope_10_pct": -0.918,
+          "atr14_close_pct": 2.092,
+          "volume_5_vs_20": 1.246,
+          "donchian20": "INSIDE"
+        }
+      },
+      "context_4h": {
+        "label": "BEAR_LOW",
+        "trend": "BEAR",
+        "volatility": "LOW",
+        "feature_agreement": "HIGH",
+        "reasons": [
+          "EMA20 is 1.738% below EMA50 and EMA50 slope is negative 0.918%.",
+          "60-bar return is -3.933%; 4h ATR14/close 2.092% is below the training q33 threshold 3.025%."
+        ],
+        "warnings": [
+          "1h/15m trends are bullish while 4h remains bearish; cross-timeframe conflict."
+        ]
+      }
+    },
+    "XRPUSDT": {
+      "role": "tradable_universe",
+      "contract_metadata": {
+        "observed_status": "TRADING",
+        "contract_type": "PERPETUAL",
+        "metadata_fresh": false,
+        "execution_validation": "BLOCKED"
+      },
+      "mark": {
+        "mark_price": 1.30658006,
+        "index_price": 1.30654857,
+        "premium_index_last_funding_rate": 0.0001,
+        "reported_rate_pct": 0.01,
+        "next_funding_time_utc": "2026-11-05T08:00:00.000Z",
+        "time_utc": "2026-11-05T06:04:20.000Z"
+      },
+      "ticker_24h": {
+        "last_price": 1.3065,
+        "change_pct": 2.23,
+        "high": 1.3424,
+        "low": 1.2724,
+        "quote_volume": 760767643.9174,
+        "close_time_utc": "2026-11-05T06:04:16.259Z"
+      },
+      "funding": {
+        "premium_index_reported_rate_pct": 0.01,
+        "latest_settled_rate_pct": 0.01,
+        "latest_settled_time_utc": "2026-11-05T00:00:00.000Z",
+        "interval_hours": 8,
+        "next_funding_time_utc": "2026-11-05T08:00:00.000Z",
+        "above_abs_0_05_pct": false
+      },
+      "open_interest": {
+        "contracts": 343170499.7,
+        "time_utc": "2026-11-05T06:04:24.418Z",
+        "change_00_to_04_utc_pct": 0.0552,
+        "change_04_to_now_approx_pct": -0.2172
+      },
+      "participation": {
+        "taker_buy_sell_ratio_1h": 1.198,
+        "observation_open_utc": "2026-11-05T04:00:00.000Z",
+        "global_long_short_account_ratio": 2.5348,
+        "long_account_pct": 71.71,
+        "observation_open_utc_long_short": "2026-11-05T05:00:00.000Z"
+      },
+      "top_of_book": {
+        "bid": 1.3062,
+        "ask": 1.3063,
+        "bid_qty": 11955.2,
+        "ask_qty": 57635.5,
+        "spread_bps": 0.76555,
+        "top_level_imbalance": -0.6564,
+        "retrieved_at_utc": "2026-11-05T06:04:25.290Z"
+      },
+      "timeframes": {
+        "5m": {
+          "last_completed_open_utc": "2026-11-05T05:55:00.000Z",
+          "close": 1.3063,
+          "return_5_bars_pct": -0.3661,
+          "return_20_bars_pct": 0.0383,
+          "ema20_vs_ema50_pct": 0.0101,
+          "ema50_slope_10_pct": 0.0022,
+          "atr14_close_pct": 0.1837,
+          "volume_5_vs_20": 0.9192,
+          "donchian20": "INSIDE"
+        },
+        "15m": {
+          "last_completed_open_utc": "2026-11-05T05:45:00.000Z",
+          "close": 1.3063,
+          "return_5_bars_pct": -0.48,
+          "return_20_bars_pct": 0.2533,
+          "ema20_vs_ema50_pct": 0.189,
+          "ema50_slope_10_pct": 0.1252,
+          "atr14_close_pct": 0.3341,
+          "volume_5_vs_20": 0.8152,
+          "donchian20": "INSIDE"
+        },
+        "1h": {
+          "last_completed_open_utc": "2026-11-05T04:00:00.000Z",
+          "close": 1.3086,
+          "return_20_bars_pct": 2.186,
+          "return_60_bars_pct": 4.68,
+          "ema20_vs_ema50_pct": 1.141,
+          "ema50_slope_10_pct": 0.784,
+          "atr14_close_pct": 0.854,
+          "volume_5_vs_20": 0.509,
+          "donchian20": "INSIDE"
+        },
+        "4h": {
+          "last_completed_open_utc": "2026-11-05T00:00:00.000Z",
+          "close": 1.3094,
+          "return_20_bars_pct": 5.063,
+          "return_60_bars_pct": 2.529,
+          "ema20_vs_ema50_pct": 0.192,
+          "ema50_slope_10_pct": 0.539,
+          "atr14_close_pct": 1.775,
+          "volume_5_vs_20": 1.23,
+          "donchian20": "INSIDE"
+        }
+      },
+      "context_4h": {
+        "label": "BULL_LOW",
+        "trend": "BULL",
+        "volatility": "LOW",
+        "feature_agreement": "MEDIUM_HIGH",
+        "reasons": [
+          "EMA20 is 0.192% above EMA50 and EMA50 slope is positive 0.539%.",
+          "20/60-bar returns are positive; 4h ATR14/close 1.775% is below the training q33 threshold 2.035%."
+        ],
+        "warnings": [
+          "5m momentum is negative; top-of-book ask quantity dominates this snapshot, but this is not a depth or order-flow signal."
+        ]
+      }
+    }
+  },
+  "cross_symbol_context": {
+    "btc_reference_4h": "TRANSITION_LOW",
+    "alt_4h_contexts": {
+      "ETHUSDT": "BULL_LOW",
+      "SOLUSDT": "BEAR_LOW",
+      "XRPUSDT": "BULL_LOW"
+    },
+    "one_hour_trend": "bullish across all four symbols",
+    "fifteen_minute_trend": "EMA alignment bullish across all four; latest five-bar returns negative",
+    "five_minute_trend": "short-term pullback/softness across all four",
+    "historical_same_bar_4h_correlation": {
+      "ETH_BTC": 0.8697,
+      "SOL_BTC": 0.8229,
+      "XRP_BTC": 0.7746
+    },
+    "lead_lag": "NOT_ESTABLISHED; same-bar correlation is not evidence of BTC lead/lag",
+    "shock_warning": "No Donchian20 breakout in the sampled timeframes. No validated shock detector was applied."
+  },
+  "data_quality": {
+    "rolling_samples_per_symbol_interval": {
+      "rows_observed": 100,
+      "completed": 99,
+      "forming_excluded": 1,
+      "quality_failures": 0
+    },
+    "latest_completed_open_utc_by_interval": {
+      "5m": "2026-11-05T05:55:00.000Z",
+      "15m": "2026-11-05T05:45:00.000Z",
+      "1h": "2026-11-05T04:00:00.000Z",
+      "4h": "2026-11-05T00:00:00.000Z"
+    },
+    "checks": [
+      "timestamp alignment",
+      "monotonicity",
+      "duplicate timestamps",
+      "interval continuity",
+      "OHLC invariants",
+      "positive volume",
+      "finite values",
+      "completed/forming exclusion"
+    ],
+    "unavailable": [
+      "full-depth order book history",
+      "liquidation feed",
+      "historical spread/impact/latency series",
+      "position-level crowding"
+    ]
+  }
+}

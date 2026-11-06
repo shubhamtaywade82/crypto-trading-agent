@@ -1,0 +1,118 @@
+{
+  "schema_version": "1.0.0",
+  "experiment_id": "CTX-4H-EMA50xEMA200-ATRQ-v2-FULL-ARCHIVE",
+  "created_at_utc": "2026-11-05T16:33:00Z",
+  "status": "EXPLORATORY_NOT_PREREGISTERED",
+  "purpose": "Re-estimate compact 4h trend/volatility/shock contexts over the full common 6.14-year archive and quantify chronological train/test frequency drift. This is context discovery only, not a strategy or trade-outcome experiment.",
+  "universe": [
+    "BTCUSDT",
+    "ETHUSDT",
+    "SOLUSDT",
+    "XRPUSDT"
+  ],
+  "timeframe": "4h",
+  "data_window": {
+    "start_utc": "2020-09-14T08:00:00Z",
+    "last_completed_open_utc": "2026-11-04T12:00:00Z",
+    "rows_per_symbol": 13454
+  },
+  "input_manifest_sha256": "767cbfe0dcd2caf393fb6763b818c5d8840a910e2abde82acaba0c7bc5953e07",
+  "input_manifest": {
+    "repository": "shubhamtaywade82/crypto-trading-agent",
+    "branch": "research/raw-ohlcv-archive-2026-11-05T0530Z",
+    "archivePathTemplate": "research-data/binance-usdm/4h/{SYMBOL}/page-{0001..0009}.jsonl",
+    "commonWindowStartUtc": "2020-09-14T08:00:00Z",
+    "baseArchiveLastOpenUtc": "2026-11-04T12:00:00Z",
+    "pageBlobSha1s": {
+      "BTCUSDT": [
+        "f754989f56536cbfd225af8c4566a6cb82153a1b",
+        "48d05a277ae2f476553c45d84407f59cdaf63439",
+        "7863faed329f469b92cc18cf40e5c9a6609b13a7",
+        "24344d3caaa40ad19eefbe6fb36e7bfd17845afd",
+        "e4a40f408ae5e418bdbdca96442830d9f514a215",
+        "a9c0facd1c622bdc73cc5ac0b593008516efb9af",
+        "c5f073448d6285e6103d2957e865e1673f958add",
+        "59594b454a69514f3db7397a7f93fe4f3164683f",
+        "f9f8a63220c20c95c2a812b30357bff26f1f89d6"
+      ],
+      "ETHUSDT": [
+        "104165b371251893999384bbf7a7a033b9deae07",
+        "852e8dd7edbcae5103dd7f79f6509cd0b7a27447",
+        "a0021449dbe12612bcff679aae9513ca54aeac29",
+        "dbd5f55cb648059221106c26e9b8435b58fa9dbd",
+        "a4637c84c8fbc292821b4f44f2c56798e0746d60",
+        "0ced7fec1c25650819e56c1259cf63bcd5d4eb7a",
+        "84b165bbc41294d3ed0af5720c0b5bbaadf717a4",
+        "00966c0b9d003bf24ffffa91d4bd226a20124fd5",
+        "bba1490cf7443f156ea276a05ce00474209e49e4"
+      ],
+      "SOLUSDT": [
+        "c29ed6c8a63e775c3c3cfb7d427ea4adfcff248c",
+        "f16be1fee2ace9eee40d272c1dbcffce2c400a2f",
+        "8dbe993f69b195f19cd5e168990b5dee6c1a985a",
+        "ea22d711e8dd9c10f52b6d0a74b45241f2a49d0d",
+        "cade8b74e0eaa968f0fe1b426f39079613b516e8",
+        "773404a20d49e2fd38a74129120ebf01a49d83f6",
+        "4d8c72c1686ddbf3dc29a00b664482211af95175",
+        "0725418a5534911d9f42612d61eb9c2ac947b88c",
+        "839e87ecf0245f233903a96850cbaea2dc73dce9"
+      ],
+      "XRPUSDT": [
+        "5b3a995fa2a21158bf6aa7c4d5b46dc298956987",
+        "1a91179242a0f1db92238b2f60c28587adf5f43a",
+        "eb6b6c029029f4f09a4d76ea090435ac6fe26a3f",
+        "b2a4e2033d8380436c0bcf348f939c0f962964da",
+        "3cbc5332c9432421979fe37461080f763a5fbb0f",
+        "59aa68e291731bcd12224886cb59529e14705ad1",
+        "4dda8225ed26ca01e820273d1735b64f4525ba69",
+        "01f83be31294b082c43e3c75f3fd20c9d28e531f",
+        "41f0c2f1056b9e309385106869751f8791c432ac"
+      ]
+    }
+  },
+  "warmup_bars": 210,
+  "split": {
+    "method": "chronological",
+    "train_fraction": 0.7,
+    "test_fraction": 0.3,
+    "feature_rows_per_symbol": 13244,
+    "train_rows_per_symbol": 9270,
+    "test_rows_per_symbol": 3974
+  },
+  "features": {
+    "ema50": "SMA-seeded EMA with alpha=2/(50+1), recursively updated on close",
+    "ema200": "SMA-seeded EMA with alpha=2/(200+1), recursively updated on close",
+    "trend_spread": "EMA50/EMA200 - 1",
+    "true_range": "max(high-low, abs(high-prevClose), abs(low-prevClose)); first bar uses high-low",
+    "atr14": "SMA seed over first 14 TR values, then Wilder recurrence ATR_t=(13*ATR_(t-1)+TR_t)/14",
+    "volatility": "ATR14/close",
+    "shock": "abs(close_t/close_(t-1)-1)"
+  },
+  "train_only_thresholds": {
+    "sideways": "30th percentile of abs(trend_spread)",
+    "volatilityLow": "33rd percentile of ATR14/close",
+    "volatilityHigh": "67th percentile of ATR14/close",
+    "shock": "99th percentile of absolute single-bar 4h return",
+    "quantileMethod": "linear interpolation at position (n-1)*q"
+  },
+  "classification": "SHOCK overrides all other states when abs 4h return > train q99; otherwise trend is SIDEWAYS when abs spread <= train q30, UP when spread > q30, DOWN when spread < -q30; volatility is LOW below q33, NORMAL from q33 through q67, HIGH above q67.",
+  "metrics": [
+    "train/test context counts and percentages",
+    "Jensen-Shannon divergence (natural logarithm) between train/test context frequencies",
+    "contiguous test-context run durations",
+    "median/mean duration",
+    "test self-transition percentage"
+  ],
+  "exclusions": [
+    "Rows before common SOL onboarding/full-bar start",
+    "forming candles",
+    "no 5m/15m/1h features",
+    "no derivatives features",
+    "no trade outcomes or PnL"
+  ],
+  "validation_limits": [
+    "Exploratory method was not committed before data inspection",
+    "No strategy OOS, no trade probability, no evidence promotion",
+    "Input manifest identifies GitHub blob SHA-1 values; original page SHA-256 provenance caveat remains"
+  ]
+}

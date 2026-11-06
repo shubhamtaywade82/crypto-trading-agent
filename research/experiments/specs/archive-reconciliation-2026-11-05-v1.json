@@ -1,0 +1,65 @@
+{
+  "schema_version": 1,
+  "experiment_id": "archive-reconciliation-2026-11-05-v1",
+  "type": "DATA_QUALITY_RECONCILIATION",
+  "status": "EXECUTED",
+  "registered_at_utc": "2026-11-05T05:57:00.000Z",
+  "objective": "Verify the newly persisted 4h archive branch against the six-year 4h archive, investigate BTC manifest hash divergences, and extend the durable raw archive with all newly completed 5m/15m/1h/4h bars.",
+  "hypothesis": "The 2026-11-05 raw-ohlcv branch contains a bar-identical overlapping subset of the canonical six-year 4h archive; the BTC page hash flags are manifest-lineage differences rather than OHLCV row differences.",
+  "preregistered_checks": [
+    "Read raw GitHub archive pages and manifests from both research branches.",
+    "Compare exact 12-field raw kline arrays by openTime for common symbol/time ranges.",
+    "Count duplicate timestamps, missing expected intervals, non-monotonic timestamps, OHLC invariant failures, non-finite values, non-positive volume and close-time alignment errors in newly appended bars.",
+    "Exclude every forming candle and append only completed bars.",
+    "Persist raw delta, update manifests, fetch them back and verify exact content and SHA-256."
+  ],
+  "inputs": {
+    "repository": "shubhamtaywade82/crypto-trading-agent",
+    "canonical_branch": "research/registry-snapshots",
+    "comparison_branch": "research/raw-ohlcv-archive-2026-11-05T0530Z",
+    "canonical_4h_manifest": {
+      "path": "research/raw-archive/binance-usdm-4h/manifest.json",
+      "blob_sha_before": "c7df2a71f2dcc3003a0c7ab20273f288c03e4981",
+      "rows_per_symbol": 13449,
+      "total_rows": 53796,
+      "start_utc": "2020-09-14T04:00:00.000Z",
+      "end_utc": "2026-11-03T12:00:00.000Z"
+    },
+    "canonical_1h_manifest": {
+      "path": "research/raw-archive/binance-usdm-1h/manifest.json",
+      "blob_sha_before": "99496b333470c31d887c2e5e22ecf302fb488b49",
+      "rows_per_symbol": 10500,
+      "coverage_start_utc": "2025-08-23T08:00:00.000Z"
+    },
+    "new_4h_branch_pages": "research-data/binance-usdm/4h/{BTCUSDT,ETHUSDT,SOLUSDT,XRPUSDT}/page-0001..0004.jsonl"
+  },
+  "method": {
+    "overlap_comparison": "Exact array equality on rows keyed by openTime; no tolerance or price rounding.",
+    "new_delta_previous_latest_open_utc": {
+      "5m": "2026-11-03T23:25:00.000Z",
+      "15m": "2026-11-03T23:15:00.000Z",
+      "1h": "2026-11-03T22:00:00.000Z",
+      "4h": "2026-11-03T16:00:00.000Z"
+    },
+    "requested_limits_per_symbol": {
+      "5m": 400,
+      "15m": 140,
+      "1h": 40,
+      "4h": 12
+    },
+    "completed_candle_rule": "closeTime < retrieval timestamp",
+    "expected_steps_ms": {
+      "5m": 300000,
+      "15m": 900000,
+      "1h": 3600000,
+      "4h": 14400000
+    },
+    "runtime": "Managed V8 JavaScript Code Mode; no repository harness invoked; deterministic arithmetic; no random seed."
+  },
+  "evidence_gates": {
+    "raw_row_comparison": "Zero mismatches across all overlapping rows.",
+    "continuity": "Zero duplicates, gaps, non-monotonic timestamps, OHLC failures, non-finite values, non-positive volume or close-time alignment errors in appended rows.",
+    "persistence": "GitHub write followed by fetch_file readback; exact byte-for-byte content and SHA-256 equality.",
+    "scope_limit": "This is a data-quality experiment, not a strategy backtest or OOS evaluation."
+  }
+}

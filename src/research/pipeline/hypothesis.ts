@@ -13,7 +13,7 @@ import { z } from 'zod';
 export const RESEARCH_TIMEFRAMES = ['15m', '1h', '4h'] as const;
 export type ResearchTimeframe = (typeof RESEARCH_TIMEFRAMES)[number];
 
-const splitSchema = z
+export const splitSchema = z
   .object({ trainPct: z.number().positive(), validationPct: z.number().positive(), testPct: z.number().positive() })
   .refine((s) => Math.abs(s.trainPct + s.validationPct + s.testPct - 100) < 1e-9, { message: 'splits must sum to 100' });
 
@@ -30,6 +30,8 @@ const hypothesisFields = z.object({
   /** A multi-timeframe rule must be stated here, before the run (e.g. "4h context gates 1h entries"); never searched. */
   timeframeRule: z.string().min(3),
   context: z.object({ id: z.string().min(2), taxonomyVersion: z.string().min(1) }),
+  /** Campaign this spec belongs to (research/campaigns/<id>.json); campaign specs share its window and registration budget. */
+  campaign: z.string().min(3).optional(),
   params: z.record(z.union([z.number(), z.string(), z.boolean()])),
   window: z.object({
     days: z.number().positive(),

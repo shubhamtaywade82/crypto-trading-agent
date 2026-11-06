@@ -72,7 +72,11 @@ function checkDraft(raw: unknown, taken: Set<string>): HypothesisSpec {
   const draft = { ...(raw as Record<string, unknown>) };
   const window = { ...(draft.window as Record<string, unknown>) };
   delete window.endIso;
-  const spec = parseSpec({ ...draft, status: 'DRAFT', version: 1, window }, 'llm proposal');
+  return checkProposal(parseSpec({ ...draft, status: 'DRAFT', version: 1, window }, 'llm proposal'), taken);
+}
+
+/** Limits every model-written spec must meet: id prefix, unused id, known symbols, evaluator params and policy floors. */
+export function checkProposal(spec: HypothesisSpec, taken: Set<string>): HypothesisSpec {
   if (!spec.id.startsWith(PROPOSAL_ID_PREFIX)) throw new Error(`${spec.id}: id must start with ${PROPOSAL_ID_PREFIX}`);
   if (taken.has(`${spec.id}@${spec.version}`)) throw new Error(`${spec.id}: id already exists`);
   const stray = spec.symbols.filter((s) => !RESEARCH_SYMBOLS.includes(s));

@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { CandleIntegrityError } from '../src/backtesting/candleIntegrity.js';
 import type { FetchLike } from '../src/backtesting/archiveKlines.js';
-import { fetchFuturesKlines, intervalToMs, loadValidatedKlines, type JsonFetchLike } from '../src/backtesting/klineLoader.js';
+import { fetchFuturesKlines, intervalToMs, loadValidatedKlines, rateLimitedFetch, type JsonFetchLike } from '../src/backtesting/klineLoader.js';
 
 const MIN = 60_000;
 const M15 = 15 * MIN;
@@ -114,4 +114,45 @@ test('archive window that reaches the publication lag fails with the lag hint an
       return true;
     },
   );
+});
+
+/** Answers with the given statuses in order, each with its headers; records the waits the limiter asked for. */
+function binanceReplies(replies: Array<{ status: number; headers?: Record<string, string> }>) {
+  const waits: number[] = [];
+  let calls = 0;
+  const fetchImpl = async () => {
+    const reply = replies[Math.min(calls, replies.length - 1)]!;
+    calls += 1;
+    return { ok: reply.status === 200, status: reply.status, headers: { get: (name: string) => reply.headers?.[name] ?? null }, json: async () => [] };
+  };
+  const limited = rateLimitedFetch(fetchImpl, () => undefined, async (ms) => { waits.push(ms); });
+  return { limited, waits, calls: () => calls };
+}
+
+test('rateLimitedFetch waits Retry-After on HTTP 429, then retries', async () => {
+  const { limited, waits, calls } = binanceReplies([{ status: 429, headers: { 'retry-after': '7' } }, { status: 200 }]);
+  assert.equal((await limited('u')).status, 200);
+  assert.deepEqual(waits, [7000]);
+  assert.equal(calls(), 2);
+});
+
+test('rateLimitedFetch gives up after five 429s and never retries an HTTP 418 ban', async () => {
+  const always429 = binanceReplies([{ status: 429 }]);
+  assert.equal((await always429.limited('u')).status, 429);
+  assert.equal(always429.calls(), 6);
+  assert.deepEqual(always429.waits, [60_000, 60_000, 60_000, 60_000, 60_000]);
+  const banned = binanceReplies([{ status: 418, headers: { 'retry-after': '600' } }]);
+  assert.equal((await banned.limited('u')).status, 418);
+  assert.equal(banned.calls(), 1);
+  assert.deepEqual(banned.waits, []);
+});
+
+test('rateLimitedFetch pauses until the next minute when the used weight nears the limit', async () => {
+  const busy = binanceReplies([{ status: 200, headers: { 'x-mbx-used-weight-1m': '2390' } }]);
+  await busy.limited('u');
+  assert.equal(busy.waits.length, 1);
+  assert.ok(busy.waits[0]! > 0 && busy.waits[0]! <= 60_000);
+  const quiet = binanceReplies([{ status: 200, headers: { 'x-mbx-used-weight-1m': '400' } }]);
+  await quiet.limited('u');
+  assert.deepEqual(quiet.waits, []);
 });

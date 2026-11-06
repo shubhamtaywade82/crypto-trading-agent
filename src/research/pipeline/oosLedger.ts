@@ -19,6 +19,8 @@ export interface OosRead {
   testToIso: string;
   readAtIso: string;
   runId: string;
+  /** Set for campaign specs, so a campaign's registration budget counts reads even after a spec file is deleted. */
+  campaign?: string;
 }
 
 export type ReadDecision =

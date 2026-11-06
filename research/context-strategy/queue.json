@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAtUtc": "2026-11-06T01:27:59.965Z",
+  "updatedAtUtc": "2026-11-06T01:31:54.587Z",
   "items": [
     {
       "id": "Q1_ARCHIVE_MULTIYEAR",
@@ -41,8 +41,8 @@
       "prerequisites": [
         "Direct bounded HTTP or Binance SDK call"
       ],
-      "nextAction": "Restore direct DNS and obtain uncached /fapi/v1/time plus /fapi/v1/exchangeInfo; require <=60s server-time drift before treating contract metadata as execution-authoritative.",
-      "blocker": "Direct fapi.binance.com DNS resolution failed. Connector exchangeInfo.serverTime=2026-11-06T01:01:01.889Z versus local 2026-11-06T01:27:22Z (~26m20s stale); direct /fapi/v1/time was not reachable. Mark/ticker/OI snapshots were timestamped 01:23:14-01:23:21Z and best-book snapshots 01:24:31Z, so current market data is delayed and metadata is not execution-authoritative."
+      "nextAction": "Restore direct DNS and obtain uncached /fapi/v1/time plus /fapi/v1/exchangeInfo; require <=60s server-time drift before using contract metadata for execution validation.",
+      "blocker": "Direct fapi.binance.com DNS resolution failed. Connector exchangeInfo.serverTime=2026-11-06T01:01:01.889Z versus current market snapshot 2026-11-06T01:28:54.833Z (~27m53s stale); direct /fapi/v1/time was not reachable. Market endpoints returned timestamped data, but metadata is not execution-authoritative."
     },
     {
       "id": "Q3_RUN_REPOSITORY_BACKTEST",
@@ -65,7 +65,17 @@
         "Recorder process and persistent storage"
       ],
       "nextAction": "Backfill historical funding for BTC/ETH/XRP and historical OI/taker/positioning for all four symbols; persist and read back the existing SOL funding archive; preserve source timestamps and funding interval changes.",
-      "blocker": "Only SOLUSDT historical funding is archived (6,806 rows through 2026-11-05T16:00Z; prior index says readbackVerified=false). Current 1h OI statistics and long/short ratios were retrieved for all four symbols but not archived; other-symbol historical funding/OI/taker archives remain absent."
+      "blocker": "Only SOLUSDT historical funding is archived (6,806 rows through 2026-11-05T16:00Z; prior index says readbackVerified=false). Current 1h OI statistics and long/short ratios were retrieved for all four symbols but not archived; other-symbol historical funding/OI/taker archives remain absent.",
+      "result": {
+        "currentFundingIntervalHoursBySymbol": {
+          "BTCUSDT": 8,
+          "ETHUSDT": 8,
+          "SOLUSDT": 8,
+          "XRPUSDT": 8
+        },
+        "fundingIntervalSource": "GET /fapi/v1/fundingInfo via Binance connector",
+        "historicalFundingArchiveCoverage": "SOLUSDT only; 6,806 rows through 2026-11-05T16:00Z; readback verification remains pending"
+      }
     },
     {
       "id": "Q5_CONDITIONAL_STRATEGY_TEST",

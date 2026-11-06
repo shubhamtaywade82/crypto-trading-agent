@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "id": "DONCHIAN-BREAKOUT-MTF-V1",
+  "version": 1,
+  "status": "DRAFT",
+  "hypothesis": "EXAMPLE ONLY, not registered: a long-only Donchian close breakout may have positive net expectancy in a bullish low-volatility context, tested independently on each timeframe.",
+  "family": "DONCHIAN_BREAKOUT",
+  "symbols": ["SOLUSDT", "ETHUSDT"],
+  "timeframes": ["4h", "1h", "15m"],
+  "timeframeRule": "each timeframe tested independently; no cross-timeframe gating in v1",
+  "context": { "id": "EMA50_GT_EMA200_ATR14_Q33_TRAIN", "taxonomyVersion": "ctx-v1" },
+  "params": { "lookback": 20, "stopAtr": 1.5, "targetR": 2, "maxHoldingBars": 12 },
+  "window": { "days": 90, "endDaysAgo": 0, "split": { "trainPct": 60, "validationPct": 20, "testPct": 20 } },
+  "costs": { "roundTripBps": 15 },
+  "evidence": { "minOosTrades": 100, "alpha": 0.05 }
+}

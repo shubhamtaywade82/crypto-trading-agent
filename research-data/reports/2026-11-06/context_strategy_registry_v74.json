@@ -1,0 +1,138 @@
+{
+  "schema_version": "1.0.0",
+  "registry_version": "v74",
+  "updated_at_utc": "2026-11-06T11:46:16.879Z",
+  "universe": {
+    "tradable": [
+      "SOLUSDT",
+      "ETHUSDT",
+      "XRPUSDT"
+    ],
+    "reference_only": [
+      "BTCUSDT"
+    ]
+  },
+  "primary_objective": "Observable context -> deterministic setup -> net OOS evidence -> uncertainty/failure modes/NO_TRADE.",
+  "data_state": {
+    "canonical_4h_rows_per_symbol": 13461,
+    "canonical_4h_total_rows": 53844,
+    "incremental_rows_total": 2128,
+    "incremental_delta_files": 39,
+    "latest_highwater": {
+      "5m": "2026-11-06T11:30:00Z",
+      "15m": "2026-11-06T11:15:00Z",
+      "1h": "2026-11-06T10:00:00Z",
+      "4h": "2026-11-06T04:00:00Z"
+    }
+  },
+  "context_experiment": {
+    "id": "CTX-4H-REGIME-001",
+    "status": "RESEARCH_EXECUTED",
+    "evidence_status": "INSUFFICIENT_EVIDENCE",
+    "result_path": "research-data/experiments/context_taxonomy_4h_v1_20261106T114508Z.json"
+  },
+  "strategy_entries": [
+    {
+      "key": "SOLUSDT|BULL_LOW|donchian20_breakout_v1",
+      "status": "OOS_PROMISING",
+      "eligible_context_observations": 12,
+      "oos_trades": 12,
+      "win_rate_pct": 66.7,
+      "target_before_stop_pct": 41.7,
+      "mean_net_r": 0.606,
+      "profit_factor": 2.72,
+      "max_drawdown_r": 1.3,
+      "block_bootstrap_95_ci_mean_net_r": [
+        0.086,
+        1.199
+      ],
+      "cost_model": "15bp round-trip proxy; funding/spread/slippage/latency incomplete",
+      "promotion_blockers": [
+        "12 trades < 100 provisional per-cell gate",
+        "parameter-neighborhood and multi-window stability incomplete",
+        "current context is BEAR_LOW, not BULL_LOW"
+      ],
+      "current_applicability": "NOT_APPLICABLE"
+    },
+    {
+      "key": "ALL_SYMBOLS|ALL_CONTEXTS|context_aligned_donchian20_wf_v2",
+      "status": "INSUFFICIENT_EVIDENCE",
+      "per_symbol_aggregate": {
+        "BTCUSDT": {
+          "trades": 200,
+          "win_rate_pct": 36.5,
+          "target_before_stop_pct": 21.5,
+          "mean_net_r": -0.100817
+        },
+        "ETHUSDT": {
+          "trades": 182,
+          "win_rate_pct": 38.46,
+          "target_before_stop_pct": 28.02,
+          "mean_net_r": 0.047803
+        },
+        "SOLUSDT": {
+          "trades": 208,
+          "win_rate_pct": 37.02,
+          "target_before_stop_pct": 24.52,
+          "mean_net_r": -0.017655
+        },
+        "XRPUSDT": {
+          "trades": 188,
+          "win_rate_pct": 37.77,
+          "target_before_stop_pct": 29.79,
+          "mean_net_r": 0.048855
+        }
+      },
+      "per_cell_trade_gate_met": false,
+      "nominal_block_bootstrap_ci_includes_zero": true,
+      "holm_adjusted_p": 1,
+      "cost_model": "15bp round-trip proxy; not execution-grade"
+    },
+    {
+      "key": "ALL_SYMBOLS|CONTEXT_CONDITIONAL|trend_pullback_continuation",
+      "status": "HYPOTHESIS",
+      "tested": false
+    },
+    {
+      "key": "ALL_SYMBOLS|CONTEXT_CONDITIONAL|breakout_retest",
+      "status": "HYPOTHESIS",
+      "tested": false
+    },
+    {
+      "key": "ALL_SYMBOLS|CONTEXT_CONDITIONAL|range_mean_reversion",
+      "status": "HYPOTHESIS",
+      "tested": false
+    },
+    {
+      "key": "ALL_SYMBOLS|CONTEXT_CONDITIONAL|failed_breakout_fade",
+      "status": "HYPOTHESIS",
+      "tested": false
+    },
+    {
+      "key": "ALL_SYMBOLS|CONTEXT_CONDITIONAL|volatility_expansion_momentum",
+      "status": "HYPOTHESIS",
+      "tested": false
+    },
+    {
+      "key": "ALL_SYMBOLS|CONTEXT_CONDITIONAL|btc_relative_strength",
+      "status": "HYPOTHESIS",
+      "tested": false
+    },
+    {
+      "key": "ALL_SYMBOLS|CONTEXT_CONDITIONAL|funding_oi_filter",
+      "status": "HYPOTHESIS",
+      "tested": false
+    }
+  ],
+  "oos_validated_entries": [],
+  "oos_validated_count": 0,
+  "rejected_count": 0,
+  "current_context": {
+    "BTCUSDT": "BEAR_NORMAL",
+    "ETHUSDT": "BEAR_NORMAL",
+    "SOLUSDT": "BEAR_LOW",
+    "XRPUSDT": "BEAR_NORMAL"
+  },
+  "decision": "NO_TRADE for SOLUSDT, ETHUSDT and XRPUSDT; no OOS_VALIDATED entry exists.",
+  "next_research_queue_path": "research-data/reports/2026-11-06/research_queue_v74.json"
+}

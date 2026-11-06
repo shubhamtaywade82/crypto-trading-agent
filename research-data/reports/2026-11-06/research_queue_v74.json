@@ -1,0 +1,187 @@
+{
+  "schema_version": "1.0.0",
+  "updated_at_utc": "2026-11-06T11:46:16.879Z",
+  "priority_order": [
+    "data_quality",
+    "context_stability",
+    "multi_timeframe_archive",
+    "cost_model",
+    "harness_smoke_test",
+    "strategy_oos"
+  ],
+  "items": [
+    {
+      "id": "RQ-001",
+      "title": "Verify canonical 4h archive integrity",
+      "status": "COMPLETED_WITH_CAVEATS",
+      "priority": 1,
+      "prerequisites": [],
+      "blocker": "14 manifest hash mismatches and 76-row missing delta remain unresolved.",
+      "next_action": "Recover missing delta and reconcile hash provenance; preserve immutable source records."
+    },
+    {
+      "id": "RQ-002",
+      "title": "Obtain fresh Binance server time and exchange metadata",
+      "status": "BLOCKED",
+      "priority": 2,
+      "prerequisites": [
+        "Direct fapi DNS or uncached connector metadata"
+      ],
+      "blocker": "Direct DNS failed (curl exit 6); exchangeInfo serverTime is 27m25s stale.",
+      "next_action": "Restore DNS or obtain uncached /fapi/v1/time and /fapi/v1/exchangeInfo; only then permit contract execution validation."
+    },
+    {
+      "id": "RQ-003",
+      "title": "Backfill multi-year 1h/15m/5m history",
+      "status": "BLOCKED",
+      "priority": 3,
+      "prerequisites": [
+        "Working network",
+        "Persistent storage"
+      ],
+      "blocker": "Only 300-row rolling probes and incremental deltas exist for 5m/15m/1h.",
+      "next_action": "Backfill oldest available history in bounded chunks; validate continuity and checksums per chunk."
+    },
+    {
+      "id": "RQ-004",
+      "title": "Calibrate execution cost model",
+      "status": "BLOCKED",
+      "priority": 4,
+      "prerequisites": [
+        "Fee tier",
+        "Historical funding cashflows",
+        "Spread/slippage/latency assumptions"
+      ],
+      "blocker": "Current model uses a 15bp round-trip proxy; no execution-grade cost archive.",
+      "next_action": "Capture account fee tier and construct symbol/time-dependent fee, spread, slippage and funding model."
+    },
+    {
+      "id": "RQ-005",
+      "title": "Run deterministic backtest-harness smoke test",
+      "status": "BLOCKED",
+      "priority": 5,
+      "prerequisites": [
+        "Local checkout",
+        "Node >=24",
+        "npm >=11",
+        "SDK install"
+      ],
+      "blocker": "Local checkout absent; runtime Node22.16/npm10.9 below repo floor; SDK not installed.",
+      "next_action": "Mount repo in compatible runtime, install pinned dependencies, run fixture repeatability and no-lookahead tests."
+    },
+    {
+      "id": "RQ-006",
+      "title": "Run strategy x context x symbol OOS experiment",
+      "status": "BLOCKED",
+      "priority": 6,
+      "prerequisites": [
+        "RQ-003",
+        "RQ-004",
+        "RQ-005"
+      ],
+      "blocker": "Lower-timeframe coverage, cost model and harness smoke test are incomplete.",
+      "next_action": "After prerequisites, freeze one candidate spec and run train/validation/untouched test with purge/embargo and >=100 OOS trades per cell."
+    },
+    {
+      "id": "RQ-007",
+      "title": "4h context taxonomy stability experiment",
+      "status": "COMPLETED",
+      "priority": 2,
+      "prerequisites": [
+        "Canonical 4h archive"
+      ],
+      "blocker": null,
+      "next_action": "Compare 2-level volatility plus shock overlay against 3-level taxonomy with anchored train windows."
+    },
+    {
+      "id": "RQ-008",
+      "title": "Append incremental completed bars and update manifests",
+      "status": "COMPLETED",
+      "priority": 1,
+      "prerequisites": [
+        "Binance connector",
+        "Writable GitHub branch"
+      ],
+      "blocker": null,
+      "next_action": "Continue hourly append; current highwater 5m11:30,15m11:15,1h10:00,4h04:00 UTC."
+    },
+    {
+      "id": "RQ-009",
+      "title": "Fix forming-candle exclusion in legacy backtest entrypoint",
+      "status": "OPEN",
+      "priority": 5,
+      "prerequisites": [
+        "Local checkout"
+      ],
+      "blocker": "scripts/backtest.ts drops closeTime before validation.",
+      "next_action": "Retain closeTime through ingestion and exclude closeTime >= server time; add forming-candle fixture."
+    },
+    {
+      "id": "RQ-010",
+      "title": "Reject zero-volume candles",
+      "status": "OPEN",
+      "priority": 5,
+      "prerequisites": [
+        "Local checkout"
+      ],
+      "blocker": "archiveKlines.ts accepts volume == 0.",
+      "next_action": "Change validation to volume <= 0 and add zero-volume regression test."
+    },
+    {
+      "id": "RQ-011",
+      "title": "Strengthen conditional-edge evidence gates",
+      "status": "OPEN",
+      "priority": 5,
+      "prerequisites": [
+        "Local checkout"
+      ],
+      "blocker": "conditional-edge.ts defaults to minN30 and 90% CI; no purge/embargo found in entrypoint.",
+      "next_action": "Enforce >=100 provisional cell trades, 95% CI, multiple-testing correction, purge/embargo and multi-window checks."
+    },
+    {
+      "id": "RQ-012",
+      "title": "Build historical funding archive and cashflow replay",
+      "status": "BLOCKED",
+      "priority": 4,
+      "prerequisites": [
+        "Network",
+        "Storage"
+      ],
+      "blocker": "Only recent settlement samples are available; no full historical funding cashflow archive.",
+      "next_action": "Backfill /fapi/v1/fundingRate by symbol and join funding events to open positions."
+    },
+    {
+      "id": "RQ-013",
+      "title": "Recover missing 76-row historical delta",
+      "status": "BLOCKED",
+      "priority": 1,
+      "prerequisites": [
+        "Original source response or raw export"
+      ],
+      "blocker": "Known 76-row archive gap has not been recovered.",
+      "next_action": "Locate original raw source or re-fetch exact timestamp range and reconcile row hashes."
+    },
+    {
+      "id": "RQ-014",
+      "title": "Clarify archive-index base-window versus canonical-window semantics",
+      "status": "OPEN",
+      "priority": 2,
+      "prerequisites": [
+        "Index and canonical manifests"
+      ],
+      "blocker": "aligned_analysis_window ends 2026-11-04T12:00Z while canonical_4h ends 2026-11-05T16:00Z; likely base versus extended layer, but semantics need documentation.",
+      "next_action": "Document base-window and canonical-window fields explicitly; do not overwrite without provenance."
+    },
+    {
+      "id": "RQ-015",
+      "title": "Weekly taxonomy review",
+      "status": "DUE_2026-11-11",
+      "priority": 7,
+      "prerequisites": [
+        "New completed 4h bars"
+      ],
+      "blocker": null,
+      "next_action": "Re-fit thresholds on training only, compare rolling windows, review multiple-testing burden and context transition stability."
+    }
+  ]
+}

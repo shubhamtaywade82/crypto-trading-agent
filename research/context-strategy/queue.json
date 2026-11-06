@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAtUtc": "2026-11-06T23:38:30.000Z",
+  "updatedAtUtc": "2026-11-06T23:39:57.000Z",
   "items": [
     {
       "id": "Q1_ARCHIVE_MULTIYEAR",
@@ -11,8 +11,8 @@
         "Compatible bulk-data downloader or official Binance Vision access",
         "Persistent writable store"
       ],
-      "nextAction": "Reassemble canonical 4h through 2026-11-06T16:00Z and backfill multi-year 5m/15m; reconcile the missing 76-row delta and 14 historical SHA provenance mismatches. The 1h archive is now contiguous through 2026-11-06T22:00Z; append the next 1h candle after it closes.",
-      "blocker": "1h archive pages 1-36 now cover 2020-09-14T08:00Z through 2026-11-06T22:00Z (53,871 rows/symbol; 215,484 total), with page36 partial and every page 28-36 readback/hash verified. Latest 5m delta through 23:30Z and 15m through 23:15Z are persisted. Multi-year 5m/15m archive remains absent; exact 76-row delta remains inaccessible; 14 historical page-symbol SHA provenance mismatches remain despite exact row-level reconciliation; canonical 4h file ends 2026-11-05T16:00Z and requires reassembly through 2026-11-06T16:00Z; historical derivatives archives remain incomplete.",
+      "nextAction": "Reassemble canonical 4h through 2026-11-06T16:00Z; backfill multi-year 5m/15m; recover the missing 76-row delta and resolve 14 SHA provenance mismatches. The 1h archive is contiguous through 2026-11-06T22:00Z; append the 23:00 candle after close.",
+      "blocker": "1h archive pages 1-36 now cover 2020-09-14T08:00Z through 2026-11-06T22:00Z (53,871 rows/symbol; 215,484 total). Pages 28-36 were fetched, validated and readback/hash verified in this run; page36 is partial (1,371 rows/symbol). Latest 5m/15m deltas through 23:30Z/23:15Z are persisted. Multi-year 5m/15m archive remains absent; exact 76-row delta remains inaccessible; 14 historical page-symbol SHA provenance mismatches remain despite exact row-level reconciliation; canonical 4h file ends 2026-11-05T16:00Z and requires reassembly through 2026-11-06T16:00Z; historical derivatives archives remain incomplete.",
       "result": {
         "canonicalFileRowsPerSymbol": 13461,
         "canonicalFileRowsTotal": 53844,
@@ -243,7 +243,7 @@
         "Direct bounded HTTP or Binance SDK call"
       ],
       "nextAction": "Restore DNS/outbound access and obtain uncached /fapi/v1/time and /fapi/v1/exchangeInfo; require <=60s server-time drift before execution validation.",
-      "blocker": "All six direct bounded probes fail DNS resolution (curl exit 6, HTTP000). Connector exchangeInfo.serverTime=2026-11-06T11:18:40.899Z while fresh mark-price time=2026-11-06T23:31:24Z; discrepancy=43,963.101s (12h12m43.101s). Exchange metadata is stale; do not use TRADING status or filters for execution validation.",
+      "blocker": "All six direct bounded probes at 2026-11-06T23:39Z fail DNS resolution (curl exit 6, HTTP000). Connector exchangeInfo.serverTime=2026-11-06T11:18:40.899Z while fresh mark-price time=2026-11-06T23:39:22.001Z; discrepancy=44,441.102s (12h20m41.102s). Exchange metadata is stale; do not use TRADING status or filters for execution validation.",
       "result": {
         "directEndpoints": {
           "time": "HTTP_000_DNS_FAILURE",
@@ -254,8 +254,8 @@
           "ticker24h": "HTTP_000_DNS_FAILURE"
         },
         "exchangeInfoServerTimeUtc": "2026-11-06T11:18:40.899Z",
-        "freshMarkPriceTimeUtc": "2026-11-06T23:31:24.000Z",
-        "driftSeconds": 43963.101,
+        "freshMarkPriceTimeUtc": "2026-11-06T23:39:22.001Z",
+        "driftSeconds": 44441.102,
         "executionStatus": "STALE_NOT_FOR_EXECUTION_VALIDATION",
         "connectorMarketData": "Fresh mark/ticker/OI/funding/klines/taker/depth/long-short payloads returned; raw HTTP status/headers unavailable.",
         "exchangeInfoToMarkDriftSeconds": 42293.117,
@@ -273,7 +273,7 @@
         "dependencies installed"
       ],
       "nextAction": "Provision Node>=24/npm>=11 and a clean local checkout; run npm ci, npm run check and deterministic fixtures; implement an archive-backed candle loader for the persisted research-data tree, historical funding/OI/taker joins, strict sample-size gates and rolling purged OOS; then invoke the per-symbol ablation/replay runner.",
-      "blocker": "Current workspace remains cwd=/ with no crypto-trading-agent checkout, Node22.16.0/npm10.9.2, and both @nemesis-oss/binance-sdk and binance are MODULE_NOT_FOUND. Remote package.json v2.4.1 requires Node>=24/npm>=11. scripts/ablation-study.ts exists but defaults holdout min10 and uses Binance Vision archive source; it is not wired to the persisted GitHub research-data archive. scripts/conditional-edge.ts defaults minN30, 90% CI and no embargo. No local harness or smoke test can run.",
+      "blocker": "Current workspace cwd=/ with no crypto-trading-agent checkout, Node22.16.0/npm10.9.2, and both @nemesis-oss/binance-sdk and binance are MODULE_NOT_FOUND. Remote package.json v2.4.1 requires Node>=24/npm>=11. scripts/ablation-study.ts exists but defaults holdout min10 and uses Binance Vision archive source; it is not wired to the persisted GitHub research-data archive. scripts/conditional-edge.ts defaults minN30, 90% CI and no embargo. No local harness or smoke test can run.",
       "result": {
         "environment": {
           "cwd": "/",
@@ -282,7 +282,7 @@
           "npm": "10.9.2",
           "cpus": 5,
           "ramTotalBytes": 6236844032,
-          "ramAvailableBytes": 5047930880,
+          "ramAvailableBytes": 5047390208,
           "diskFreeGiB": 30,
           "repositoryPresent": false,
           "binanceSdkInstalled": false,
@@ -2999,10 +2999,12 @@
     "research-data/binance-usdm/delta/binance_usdm_delta_20261106T2034Z_1h4h_completed.jsonl"
   ],
   "lastRunSummary": {
-    "runId": "CONTEXT-STRATEGY-20261106T2338Z-V101",
+    "runId": "CONTEXT-STRATEGY-20261106T2339Z-V101",
     "classification": "RESEARCH_BLOCKED",
     "archive1hRowsAdded": 53484,
     "incrementalRowsAdded": 36,
+    "oneHourRowsPerSymbol": 53871,
+    "oneHourLastCompleted": "2026-11-06T22:00:00Z",
     "experimentsRun": 0,
     "oosEvaluations": 0,
     "validatedStrategies": 0

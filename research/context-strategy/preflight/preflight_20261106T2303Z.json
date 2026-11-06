@@ -1,0 +1,96 @@
+{
+  "schemaVersion": "1.0.0",
+  "runId": "CONTEXT-STRATEGY-20261106T2303Z-V100",
+  "createdAtUtc": "2026-11-06T23:06:27.939Z",
+  "checks": [
+    {
+      "capability": "Shell / compute",
+      "status": "PASS",
+      "evidence": "cwd=/; Debian 13.3; Node v22.16.0; npm 10.9.2; 5 CPUs; RAM 5.8GiB total / 4.7GiB available; 30GiB free disk.",
+      "impact": "Compute and GitHub operations possible; package scripts cannot run below engine floor.",
+      "nextAction": "Provision Node>=24/npm>=11."
+    },
+    {
+      "capability": "Repository / code",
+      "status": "DEGRADED",
+      "evidence": "Remote GitHub source read succeeded; package.json and backtest/ablation/conditional-edge scripts inspected; no local crypto-trading-agent checkout.",
+      "impact": "Remote audit possible, execution impossible.",
+      "nextAction": "Create clean local checkout under supported runtime."
+    },
+    {
+      "capability": "Binance SDK dependencies",
+      "status": "BLOCKED",
+      "evidence": "require.resolve for @nemesis-oss/binance-sdk and binance both returned MODULE_NOT_FOUND.",
+      "impact": "No SDK execution.",
+      "nextAction": "Install declared packages after compatible checkout."
+    },
+    {
+      "capability": "Direct Binance REST",
+      "status": "BLOCKED",
+      "evidence": "All six official endpoints (/time, /exchangeInfo, /klines, /premiumIndex, /openInterest, /ticker/24hr) returned HTTP000, curl exit6, DNS resolution failure.",
+      "impact": "No direct HTTP status/header or /time response.",
+      "nextAction": "Restore DNS/outbound access."
+    },
+    {
+      "capability": "Binance connector",
+      "status": "DEGRADED",
+      "evidence": "Fresh mark/ticker/OI/funding/klines/taker/depth/global-LS data retrieved through connector at 23:03Z; raw HTTP status/headers unavailable.",
+      "impact": "Monitoring possible, HTTP-level freshness not auditable.",
+      "nextAction": "Keep connector provenance explicit and retry direct REST."
+    },
+    {
+      "capability": "Exchange metadata",
+      "status": "BLOCKED",
+      "evidence": "exchangeInfo.serverTime 11:18:40.883Z vs fresh mark timestamp 23:03:34Z; drift 42,293.117s.",
+      "impact": "TRADING statuses/filters stale; no execution validation.",
+      "nextAction": "Require uncached /time and /exchangeInfo with <=60s drift."
+    },
+    {
+      "capability": "Raw historical archive",
+      "status": "DEGRADED",
+      "evidence": "1h pages1-27 (40,500 rows/symbol) through 2025-04-28; 4h canonical through 2026-11-05; multi-year 5m/15m absent.",
+      "impact": "Historical coverage incomplete for full context-conditioned testing.",
+      "nextAction": "Continue page28; reassemble 4h; backfill 5m/15m."
+    },
+    {
+      "capability": "Data quality / coverage",
+      "status": "DEGRADED",
+      "evidence": "Page27 and 20 incremental rows passed continuity/OHLC/volume/finite/close-time/alignment checks. Missing 76-row delta and original hash provenance issues remain.",
+      "impact": "New segments clean; archive-wide provenance not closed.",
+      "nextAction": "Recover missing artifact/logs; preserve original hash provenance."
+    },
+    {
+      "capability": "Backtest harness",
+      "status": "BLOCKED",
+      "evidence": "Remote ablation runner supports 5m/15m/1h/4h but defaults holdout minimum10; conditional runner defaults n30/90% CI/zero embargo; backtest CLI supports 15m/1h/4h and Binance Vision source, not GitHub archive.",
+      "impact": "Existing defaults do not meet >=100 OOS trades/symbol/context and archive/derivatives path is not wired.",
+      "nextAction": "Implement archive-backed loader, historical derivatives join, strict gates and multiple purged OOS windows."
+    },
+    {
+      "capability": "Deterministic smoke test",
+      "status": "BLOCKED",
+      "evidence": "Not run; no local checkout and unsupported Node/npm.",
+      "impact": "No experiment or OOS can be claimed.",
+      "nextAction": "Run deterministic tiny fixture twice under Node24 and verify repeatability/no lookahead."
+    },
+    {
+      "capability": "Disk / storage",
+      "status": "PASS",
+      "evidence": "30GiB free; GitHub branch writes accepted.",
+      "impact": "Persistent remote artifacts possible.",
+      "nextAction": "Continue atomic writes and readback."
+    },
+    {
+      "capability": "Artifact readback",
+      "status": "PASS",
+      "evidence": "Page27 files/manifest, incremental delta files/manifests, raw indexes and queue fetched back and verified.",
+      "impact": "This run's archive and queue updates are durable.",
+      "nextAction": "Continue SHA/blob readback checks."
+    }
+  ],
+  "executionClassification": "RESEARCH_BLOCKED",
+  "researchExecuted": false,
+  "oosEvaluated": false,
+  "monitoringCompleted": true,
+  "archiveMaintenanceCompleted": true
+}

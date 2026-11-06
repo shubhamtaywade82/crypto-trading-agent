@@ -345,7 +345,7 @@
       "globalAccountRatio": "2026-11-06T05:00:00Z",
       "lastSettledFunding": "2026-11-06T00:00:00Z"
     },
-    "fundingSemantics": "markPrice.lastFundingRate is the latest premium-index rate field, not a guaranteed forecast of the next settlement; fundingRate history is the settled event series. fundingInfo returned no special interval entry for these four symbols; observed 8h cadence. Next settlement 08:00Z. No |rate| >0.05% flag.",
+    "fundingSemantics": "markPrice.lastFundingRate is the latest premium-index rate field, not a guaranteed forecast of the next settlement. fundingRate history reports the latest settled event at 2026-11-06T00:00:00Z. fundingInfo explicitly returned an 8h interval for all four symbols; next settlement is 08:00Z. No observed rate exceeds |0.05%.",
     "symbols": {
       "BTCUSDT": {
         "role": "REFERENCE_ONLY",
@@ -482,7 +482,37 @@
       "1h": "2026-11-06T04:00:00Z",
       "4h": "2026-11-06T00:00:00Z"
     },
-    "positioningCaveat": "Global long/short ratio is account-count based, not position notional. OI, account ratios and one order-book snapshot do not establish crowding or liquidation."
+    "positioningCaveat": "Global long/short ratio is account-count based, not position notional. OI, account ratios and one order-book snapshot do not establish crowding or liquidation.",
+    "fundingOverrides": {
+      "BTCUSDT": {
+        "fundingIntervalHours": 8,
+        "adjustedFundingRateCap": 0.003,
+        "adjustedFundingRateFloor": -0.003,
+        "disclaimer": true,
+        "updateTime": null
+      },
+      "ETHUSDT": {
+        "fundingIntervalHours": 8,
+        "adjustedFundingRateCap": 0.003,
+        "adjustedFundingRateFloor": -0.003,
+        "disclaimer": true,
+        "updateTime": null
+      },
+      "SOLUSDT": {
+        "fundingIntervalHours": 8,
+        "adjustedFundingRateCap": 0.00375,
+        "adjustedFundingRateFloor": -0.00375,
+        "disclaimer": true,
+        "updateTime": null
+      },
+      "XRPUSDT": {
+        "fundingIntervalHours": 8,
+        "adjustedFundingRateCap": 0.00375,
+        "adjustedFundingRateFloor": -0.00375,
+        "disclaimer": true,
+        "updateTime": null
+      }
+    }
   },
   "decisions": {
     "BTCUSDT": {
@@ -527,7 +557,26 @@
       "exchangeInfoServerTimeUtc": "2026-11-06T03:24:17.648Z",
       "markPriceTimeUtc": "2026-11-06T05:23:55Z",
       "exchangeInfoDriftSeconds": 7177.352,
-      "contractStatusValidation": "BLOCKED_STALE_METADATA"
+      "contractStatusValidation": "BLOCKED_STALE_METADATA",
+      "fundingInfoOverridesObserved": true,
+      "fundingIntervalHoursBySymbol": {
+        "BTCUSDT": 8,
+        "ETHUSDT": 8,
+        "SOLUSDT": 8,
+        "XRPUSDT": 8
+      },
+      "contractStatusSnapshot": {
+        "observedAtUtc": "2026-11-06T03:24:17.653Z",
+        "symbols": {
+          "BTCUSDT": "TRADING",
+          "ETHUSDT": "TRADING",
+          "SOLUSDT": "TRADING",
+          "XRPUSDT": "TRADING"
+        },
+        "contractType": "PERPETUAL",
+        "authoritativeForExecution": false,
+        "reason": "exchangeInfo.serverTime is 7,177.347 seconds behind fresh markPrice.time"
+      }
     },
     "history": {
       "fourHourCanonical": {

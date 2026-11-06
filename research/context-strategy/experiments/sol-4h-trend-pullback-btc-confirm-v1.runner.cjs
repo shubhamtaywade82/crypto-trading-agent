@@ -1,8 +1,8 @@
 module.exports = function runExperiment(input) {
   const solRows=input.solRows, btcRows=input.btcRows, fundingRows=input.fundingRows;
   const cfg={stopAtr:1.5,targetR:2,timeStopBars:12,costBps:15,seed:20261106,reps:2000,blockWeeks:4};
-  const n=solRows.length, warmup=200, embargo=12, weekMs=604800000;
-  if(n!==btcRows.length||n<2000) throw new Error("insufficient/misaligned 4h series");
+  const n=solRows.length, warmup=200, embargo=12, weekMs=604800000, minBars=input.minBars||2000;
+  if(n!==btcRows.length||n<minBars) throw new Error("insufficient/misaligned 4h series");
   const sol=solRows.map(r=>({t:+r[0],o:+r[1],h:+r[2],l:+r[3],c:+r[4],ct:+r[6]}));
   const btc=btcRows.map(r=>({t:+r[0],o:+r[1],h:+r[2],l:+r[3],c:+r[4],ct:+r[6]}));
   for(let i=0;i<n;i++) if(sol[i].t!==btc[i].t||sol[i].ct!==btc[i].ct) throw new Error("unaligned BTC/SOL timestamps");
@@ -154,7 +154,7 @@ module.exports = function runExperiment(input) {
     let eq=0,peak=0,maxDD=0;
     for(const x of t){eq+=x.netR;peak=Math.max(peak,eq);maxDD=Math.max(maxDD,peak-eq);}
     const sorted=[...rs].sort((a,b)=>a-b);
-    return {eligibleContextObservations:sim.eligibleContextBars,btcConfirmedContextObservations:sim.btcConfirmedContextBars,signals:sim.signals,trades:t.length,winRateNet:t.length?wins.length/t.length:null,targetBeforeStopProbability:t.length?t.filter(x=>x.reason.startsWith("TARGET")).length/t.length:null,meanNetR:mean(rs),medianNetR:sorted.length?sorted[Math.floor(sorted.length/2)]:null,profitFactor:neg<0?pos/Math.abs(neg):pos>0?null:0,maxDrawdownR:maxDD,averageWinR:mean(wins.map(x=>x.netR)),averageLossR:mean(losses.map(x=>x.netR)),totalQuotePnlPerSol:sum(t.map(x=>x.netPnl)),averageQuotePnlPerTradePerSol:mean(t.map(x=>x.netPnl)),netReturnPct:sum(t.map(x=>x.netPnl))/Math.max(1,sum(t.map(x=>x.entry)))*100,averageHoldHours:mean(t.map(x=>x.holdingBars*4)),exposurePct:sim.heldBars/Math.max(1,end-start)*100,turnoverQuotePerSol:sim.turnover,fundingSettlements:sim.fundingEvents,fundingMarkPriceProxySettlements:sim.fundingFallback,fundingUnpricedSettlements:sim.fundingUnpriced,bootstrap:bootstrap(t,alpha)};
+    return {eligibleContextObservations:sim.eligibleContextBars,btcConfirmedContextObservations:sim.btcConfirmedContextBars,signals:sim.signals,trades:t.length,winRateNet:t.length?wins.length/t.length:null,targetBeforeStopProbability:t.length?t.filter(x=>x.reason.startsWith("TARGET")).length/t.length:null,meanNetR:mean(rs),medianNetR:sorted.length?sorted[Math.floor(sorted.length/2)]:null,profitFactor:neg<0?pos/Math.abs(neg):pos>0?null:0,maxDrawdownR:maxDD,averageWinR:mean(wins.map(x=>x.netR)),averageLossR:mean(losses.map(x=>x.netR)),totalGrossPnlPerSol:sum(t.map(x=>x.grossPnl)),totalTransactionCostPerSol:sum(t.map(x=>x.transactionCost)),totalFundingCostPerSol:sum(t.map(x=>x.fundingCost)),totalQuotePnlPerSol:sum(t.map(x=>x.netPnl)),averageQuotePnlPerTradePerSol:mean(t.map(x=>x.netPnl)),netReturnPct:sum(t.map(x=>x.netPnl))/Math.max(1,sum(t.map(x=>x.entry)))*100,averageHoldHours:mean(t.map(x=>x.holdingBars*4)),exposurePct:sim.heldBars/Math.max(1,end-start)*100,turnoverQuotePerSol:sim.turnover,fundingSettlements:sim.fundingEvents,fundingMarkPriceProxySettlements:sim.fundingFallback,fundingUnpricedSettlements:sim.fundingUnpriced,bootstrap:bootstrap(t,alpha)};
   }
   function contextSummary(start,end,th){
     const counts={},durations={},transitions={};

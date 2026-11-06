@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAtUtc": "2026-11-06T02:37:48.891Z",
+  "updatedAtUtc": "2026-11-06T02:38:50.620Z",
   "items": [
     {
       "id": "Q1_ARCHIVE_MULTIYEAR",
@@ -76,8 +76,8 @@
       "prerequisites": [
         "Recorder process and persistent storage"
       ],
-      "nextAction": "Backfill historical funding for BTC/ETH/XRP and historical OI/taker/positioning for all four symbols; persist and read back the existing SOL funding archive; preserve source timestamps and funding interval changes.",
-      "blocker": "Only SOLUSDT historical funding is archived (6,806 rows through 2026-11-05T16:00Z; prior index says readbackVerified=false). Current 1h OI statistics and long/short ratios were retrieved for all four symbols but not archived; other-symbol historical funding/OI/taker archives remain absent.",
+      "nextAction": "Backfill historical funding for BTCUSDT, ETHUSDT and XRPUSDT; archive historical OI/taker/positioning for all four symbols. Preserve SOL funding raw markPrice blanks and historical interval changes without imputing them silently.",
+      "blocker": "SOLUSDT funding archive is present and readback-verified: 6,806 rows, 2020-09-14T08:00Z to 2026-11-05T16:00Z, SHA-256 34bfd47393c7e9756e617a70669d8ee51349f6a3ba2b4931ae719993c6064549. It has 3,501 blank markPrice rows and historical 2h/4h/8h spacing (98/3/6,704 observations). Historical funding for BTC/ETH/XRP and historical OI/taker/positioning archives remain absent.",
       "result": {
         "currentFundingIntervalHoursBySymbol": {
           "BTCUSDT": 8,
@@ -86,7 +86,18 @@
           "XRPUSDT": 8
         },
         "fundingIntervalSource": "GET /fapi/v1/fundingInfo via Binance connector",
-        "historicalFundingArchiveCoverage": "SOLUSDT only; 6,806 rows through 2026-11-05T16:00Z; readback verification remains pending"
+        "historicalFundingArchiveCoverage": "SOLUSDT only; 6,806 rows through 2026-11-05T16:00Z; GitHub file+manifest present; experiment artifact records archive readbackVerified=true",
+        "fundingArchivePath": "research-data/binance-usdm/derivatives/funding/SOLUSDT_funding_20200914T0800Z_20261105T1600Z.jsonl",
+        "fundingArchiveSha256": "34bfd47393c7e9756e617a70669d8ee51349f6a3ba2b4931ae719993c6064549",
+        "fundingArchiveReadbackVerified": true,
+        "blankMarkPriceRows": 3501,
+        "historicalIntervalHoursObserved": {
+          "2": 98,
+          "4": 3,
+          "8": 6704
+        },
+        "otherSymbolsHistoricalFunding": false,
+        "historicalOiTakerArchives": false
       }
     },
     {

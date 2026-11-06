@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAtUtc": "2026-11-06T07:30:06.656Z",
+  "updatedAtUtc": "2026-11-06T09:20:10.004Z",
   "evidencePolicy": {
     "minimumProvisionalOosTradesPerSymbolContext": 100,
     "strongerEvidenceTrades": 200,
@@ -287,6 +287,136 @@
         "to": "REJECTED",
         "reason": "Untouched OOS failed predeclared net-expectancy, profit-factor, drawdown and parameter-neighborhood gates."
       }
+    },
+    {
+      "id": "SOL-4H-TREND-PULLBACK-BTC-CONFIRM-V1_1-20261106T0830Z",
+      "symbol": "SOLUSDT",
+      "referenceSymbol": "BTCUSDT",
+      "context": "BEAR_NORMAL (final untouched test; detector admits BULL_NORMAL/BEAR_NORMAL with same-direction BTC confirmation)",
+      "timeframe": "4h",
+      "strategyVersion": "EMA20_PULLBACK_RECROSS_BTC_CONFIRM_V1_1",
+      "evidenceStatus": "INSUFFICIENT_EVIDENCE",
+      "detector": {
+        "trend": "EMA50/EMA200 spread; SIDEWAYS inside training q20 of abs spread",
+        "volatility": "Wilder ATR14/close between training q33 and q67",
+        "shock": "exclude abs completed 4h return above training q99",
+        "btcConfirmation": "BTC EMA50/EMA200 non-flat and same direction as SOL",
+        "finalTrainingThresholds": {
+          "sol": {
+            "flatSpreadPct": 2.8787192739089695,
+            "atrQ33Pct": 2.9800215877673213,
+            "atrQ67Pct": 4.223232553486839,
+            "absReturnQ99Pct": 10.278660868646572
+          },
+          "btc": {
+            "flatSpreadPct": 1.7239666575026291
+          }
+        },
+        "fitPolicy": "thresholds refit on each fold's training slice only; final test thresholds frozen from first 60%"
+      },
+      "selectedRules": {
+        "longEntry": "completed SOL 4h close crosses above EMA20 after prior close <= prior EMA20; bullish candle; SOL BULL_NORMAL; BTC trend BULL; enter next 4h open",
+        "shortEntry": "completed SOL 4h close crosses below EMA20 after prior close >= prior EMA20; bearish candle; SOL BEAR_NORMAL; BTC trend BEAR; enter next 4h open",
+        "stop": "1.5 * ATR14 at signal close from next-bar open",
+        "target": "2.0R",
+        "timeStopBars": 12,
+        "intrabar": "stop-first when both levels touch; adverse gap-through at open; conservative target gap fill",
+        "sizing": "1 SOL fixed quantity; one position at a time; no compounding",
+        "roundTripCostProxyBps": 15,
+        "funding": "historical SOL funding settlements; blank markPrice fallback to last completed 4h close; proxy events recorded"
+      },
+      "dataPeriod": {
+        "startUtc": "2020-09-14T08:00:00.000Z",
+        "endUtc": "2026-11-05T19:59:59.999Z",
+        "ohlcvRows": 13461,
+        "fundingRows": 6806,
+        "blankFundingMarkPriceRows": 3501
+      },
+      "splits": {
+        "method": "anchored walk-forward; 40/10/10, 50/10/10, 60/10/10 plus final 60/20/20",
+        "finalUntouchedTest": {
+          "startUtc": "2025-08-16T00:00:00.000Z",
+          "endUtc": "2026-11-05T19:59:59.999Z",
+          "bars": 2681
+        },
+        "walkForwardTestTrades": [
+          {
+            "name": "WF1",
+            "trades": 15,
+            "meanNetR": 0.10603963977380299
+          },
+          {
+            "name": "WF2",
+            "trades": 6,
+            "meanNetR": 0.24113427896447034
+          },
+          {
+            "name": "WF3",
+            "trades": 7,
+            "meanNetR": -0.25999804661699183
+          }
+        ]
+      },
+      "oos": {
+        "trades": 10,
+        "winRateNet": 0.4,
+        "targetBeforeStopProbability": 0.1,
+        "meanNetR": -0.18863486733002421,
+        "bootstrapConfidence": 0.9916666666666667,
+        "bootstrapCI": [
+          -0.8602547486073454,
+          0.7790949348300658
+        ],
+        "profitFactor": 0.7329887042875234,
+        "maxDrawdownR": 3.4844245757574503,
+        "averageWinR": 1.077749590031553,
+        "averageLossR": -1.0328911722377423,
+        "totalQuotePnlPerSol": -8.234058072805018,
+        "averageQuotePnlPerTradePerSol": -0.8234058072805018,
+        "exposurePct": 2.610966057441253,
+        "turnoverQuotePerSol": 2054.084972323629,
+        "averageHoldHours": 28,
+        "costProxyBps": 15
+      },
+      "parameterNeighborhood": [
+        {
+          "stopAtr": 1.25,
+          "meanNetR": -0.14674758965276535,
+          "profitFactor": 0.789495758060851
+        },
+        {
+          "stopAtr": 1.5,
+          "meanNetR": -0.18863486733002421,
+          "profitFactor": 0.7329887042875234
+        },
+        {
+          "stopAtr": 1.75,
+          "meanNetR": -0.2187116732285858,
+          "profitFactor": 0.6917442627984325
+        }
+      ],
+      "baselines": {
+        "btcFilterAblationMeanNetR": -0.1515424165771244,
+        "btcFilterAblationProfitFactor": 0.8151093668515939,
+        "buyAndHoldNetPnlPerSol": -95.41896704884603
+      },
+      "failureModes": [
+        "Final untouched test contains only 10 trades, below >=100 per symbol/context gate.",
+        "99.17% adjusted moving-block CI crosses zero.",
+        "Final untouched test mean net R is negative and profit factor is below 1.",
+        "All three stop-ATR neighborhood means are negative in the final test.",
+        "Funding archive fetched SHA-256 differs from its declared manifest SHA-256; promotion prohibited.",
+        "15bp round-trip cost is a proxy; latency and partial fills are not modeled.",
+        "Single tradable symbol; no ETH/XRP inference."
+      ],
+      "evaluatedAtUtc": "2026-11-06T08:44:43.358Z",
+      "artifactPath": "research/context-strategy/experiments/sol-4h-trend-pullback-btc-confirm-v1_1_20261106T0830Z.result.json",
+      "artifactSha256": "48262bf18e6af0fd9fe52cdf3ac7ef810d113313b36503215880b4e266e27db3",
+      "specPath": "research/context-strategy/experiments/sol-4h-trend-pullback-btc-confirm-v1_1_20261106T0830Z.spec.json",
+      "specSha256": "8105284a5779decc4afa0dcb17a1ec8cf01db74412d3e353d26e86eaee187743",
+      "runnerBlobSha": "512167493fbb9e3650c57e08dceb195d52bc5b34",
+      "executionEnvironment": "managed V8 Code Mode; repository Node CLI not invoked",
+      "promotionReason": "Retained INSUFFICIENT_EVIDENCE; sample, uncertainty, robustness and funding provenance gates do not pass."
     }
   ],
   "candidateHypotheses": [

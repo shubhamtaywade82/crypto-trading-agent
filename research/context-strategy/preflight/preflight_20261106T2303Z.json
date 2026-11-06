@@ -1,0 +1,97 @@
+{
+  "schemaVersion": "1.0.0",
+  "runId": "CONTEXT-STRATEGY-20261106T2303Z-V100",
+  "createdAtUtc": "2026-11-06T23:05:22.386Z",
+  "checks": [
+    {
+      "capability": "Shell / compute",
+      "status": "PASS",
+      "evidence": "cwd=/; Debian GNU/Linux 13.3; Node v22.16.0; npm 10.9.2; 5 CPUs; 5.8GiB RAM total / 4.7GiB available; 30GiB free disk.",
+      "impact": "Compute and GitHub API operations were possible; repository scripts cannot run because runtime is below declared engine.",
+      "nextAction": "Provision Node>=24/npm>=11."
+    },
+    {
+      "capability": "Repository / code",
+      "status": "DEGRADED",
+      "evidence": "GitHub remote source read succeeded; package.json and scripts/backtest.ts, scripts/ablation-study.ts, scripts/conditional-edge.ts inspected. No local crypto-trading-agent checkout.",
+      "impact": "Source can be audited but cannot be invoked in this workspace.",
+      "nextAction": "Create clean local checkout under supported Node/npm."
+    },
+    {
+      "capability": "Binance SDK dependencies",
+      "status": "BLOCKED",
+      "evidence": "require.resolve('@nemesis-oss/binance-sdk') and require.resolve('binance') both returned MODULE_NOT_FOUND.",
+      "impact": "No SDK execution; Binance connector used for market data.",
+      "nextAction": "Install declared packages only after compatible checkout/runtime."
+    },
+    {
+      "capability": "Direct Binance REST network",
+      "status": "BLOCKED",
+      "evidence": "GET /fapi/v1/time, /exchangeInfo, /klines, /premiumIndex, /openInterest and /ticker/24hr all returned HTTP 000, curl exit 6, 'Could not resolve host: fapi.binance.com'.",
+      "impact": "No raw HTTP status, headers, or direct server-time response; direct REST cannot be used.",
+      "nextAction": "Restore DNS/outbound access or keep connector data explicitly labeled as connector-sourced."
+    },
+    {
+      "capability": "Binance USD-M connector",
+      "status": "DEGRADED",
+      "evidence": "Fresh mark/ticker/OI/funding/klines/taker/depth/global-LS payloads returned at 23:03:48Z; connector does not expose raw HTTP status/headers.",
+      "impact": "Monitoring possible, but endpoint status cannot be audited at HTTP layer.",
+      "nextAction": "Retain connector provenance and retry direct endpoint checks on a future run."
+    },
+    {
+      "capability": "Exchange metadata freshness",
+      "status": "BLOCKED",
+      "evidence": "exchangeInfo.serverTime=2026-11-06T11:18:40.883Z; fresh mark time=2026-11-06T23:03:34.000Z; discrepancy=42,293.117s. Local clock was 1.086s ahead of mark time.",
+      "impact": "Returned TRADING statuses/filters are stale; no execution validation.",
+      "nextAction": "Obtain uncached /time and /exchangeInfo with <=60s drift."
+    },
+    {
+      "capability": "Raw historical archive",
+      "status": "DEGRADED",
+      "evidence": "1h pages 1-27; 40,500 rows/symbol, 162,000 total, through 2025-04-28T19:00Z. 4h canonical 13,461 rows/symbol through 2026-11-05T16:00Z. Multi-year 5m/15m archive absent.",
+      "impact": "Historical sample is substantial but incomplete for current 5m/15m context-conditioned tests.",
+      "nextAction": "Continue 1h page28; rebuild 4h canonical through 2026-11-06T16:00Z; backfill multi-year 5m/15m."
+    },
+    {
+      "capability": "Data quality / coverage",
+      "status": "DEGRADED",
+      "evidence": "Page27 and 20 new incremental rows passed continuity, OHLC, positive volume, finite values, close-time, and cross-symbol checks. 4h canonical has zero gaps/duplicates through its end. Missing 76-row delta and 14 original hash-provenance mismatches remain; row-level alternate replay matched all 21,000 records.",
+      "impact": "New segments are clean; archive-wide provenance and coverage are not fully closed.",
+      "nextAction": "Recover missing artifact/logs and preserve original hash provenance; do not infer its coverage."
+    },
+    {
+      "capability": "Backtest harness",
+      "status": "BLOCKED",
+      "evidence": "Remote scripts exist. ablation-study supports 5m/15m/1h/4h but defaults minHoldoutFilled=10 and minDays=10; conditional-edge defaults minN=30, 90% CI and zero embargo; backtest CLI supports only 15m/1h/4h and Binance Vision archive source.",
+      "impact": "Existing defaults do not meet >=100 OOS trades per symbol/context and full research archive/derivatives contract is not wired.",
+      "nextAction": "Implement archive-backed loader, historical derivatives join, strict gates and multi-window purged OOS."
+    },
+    {
+      "capability": "Deterministic smoke test",
+      "status": "BLOCKED",
+      "evidence": "Not run; no local checkout and Node/npm below package engine.",
+      "impact": "No full experiment or OOS result may be claimed.",
+      "nextAction": "Run known tiny fixture twice under supported Node24 environment and verify identical outputs/no lookahead."
+    },
+    {
+      "capability": "Disk / storage",
+      "status": "PASS",
+      "evidence": "30GiB free local disk; GitHub raw archive and research branches accepted writes.",
+      "impact": "Persistent artifacts could be committed remotely.",
+      "nextAction": "Continue atomic write/readback workflow."
+    },
+    {
+      "capability": "Artifact readback",
+      "status": "PASS",
+      "evidence": "Page27 files, manifest, 1h index, 5m/15m/1h delta files/manifests, 4h index and queue were fetched back and verified.",
+      "impact": "This run's archive and queue changes are durable.",
+      "nextAction": "Verify future artifacts by readback and hashes."
+    }
+  ],
+  "executionClassification": "RESEARCH_BLOCKED",
+  "researchExecuted": false,
+  "oosEvaluated": false,
+  "monitoringOnly": false,
+  "monitoringCompleted": true,
+  "archiveMaintenanceCompleted": true
+}

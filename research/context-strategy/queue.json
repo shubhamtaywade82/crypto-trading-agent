@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAtUtc": "2026-11-06T22:59:30.622Z",
+  "updatedAtUtc": "2026-11-06T23:02:49.926Z",
   "items": [
     {
       "id": "Q1_ARCHIVE_MULTIYEAR",
@@ -196,7 +196,7 @@
         "Direct bounded HTTP or Binance SDK call"
       ],
       "nextAction": "Restore DNS/outbound access and obtain uncached /fapi/v1/time and /fapi/v1/exchangeInfo; require <=60s server-time drift before execution validation.",
-      "blocker": "Direct bounded curl probes to https://fapi.binance.com/fapi/v1/time and /exchangeInfo return HTTP 000, curl exit 6 (Could not resolve host). Connector exchangeInfo serverTime=2026-11-06T11:18:40.886Z versus fresh mark response time=2026-11-06T22:54:26.600Z; observed drift=41,773.659s (11h36m13.659s). Contract statuses returned as TRADING are stale and not acceptable for execution validation.",
+      "blocker": "All six direct bounded probes (/time, /exchangeInfo, /klines, /premiumIndex, /openInterest, /ticker/24hr) returned HTTP 000, curl exit 6, DNS resolution failure. Connector exchangeInfo.serverTime=2026-11-06T11:18:40.885Z; freshest mark-price response time=2026-11-06T22:54:27.000Z, a 41,746.115s (11h35m46.115s) discrepancy. Managed local wall clock at preflight was 27.545s ahead of the mark timestamp. ExchangeInfo TRADING statuses and filters are stale; do not use for execution validation.",
       "result": {
         "directEndpoints": {
           "time": "HTTP_000_DNS_FAILURE",
@@ -206,11 +206,13 @@
           "openInterest": "HTTP_000_DNS_FAILURE",
           "ticker24h": "HTTP_000_DNS_FAILURE"
         },
-        "exchangeInfoServerTimeUtc": "2026-11-06T11:18:40.886Z",
-        "freshMarkPriceTimeUtc": "2026-11-06T22:54:26.600Z",
+        "exchangeInfoServerTimeUtc": "2026-11-06T11:18:40.885Z",
+        "freshMarkPriceTimeUtc": "2026-11-06T22:54:27.000Z",
         "driftSeconds": 41773.659,
         "executionStatus": "STALE_NOT_FOR_EXECUTION_VALIDATION",
-        "connectorMarketData": "Fresh mark/ticker/OI/funding/klines/flow/depth payloads returned; raw HTTP status/headers unavailable."
+        "connectorMarketData": "Fresh mark/ticker/OI/funding/klines/flow/depth payloads returned; raw HTTP status/headers unavailable.",
+        "exchangeInfoToMarkDriftSeconds": 41746.115,
+        "localClockAheadOfMarkSeconds": 27.545
       }
     },
     {
@@ -223,8 +225,8 @@
         "npm>=11",
         "dependencies installed"
       ],
-      "nextAction": "Provision Node>=24/npm>=11 and a clean crypto-trading-agent checkout; install declared dependencies; run typecheck/tests and a deterministic fixture smoke test before invoking the backtest.",
-      "blocker": "Current runtime: Debian 13.3, cwd=/, Node v22.16.0, npm 10.9.2, 5 CPUs, 5.8GiB RAM (4.7GiB available), 30GiB disk free. No crypto-trading-agent checkout. require.resolve reports @nemesis-oss/binance-sdk and binance both NOT_INSTALLED. Remote package engine requires Node>=24/npm>=11. scripts/backtest.ts exists remotely but was not invoked; no deterministic smoke test or backtest ran.",
+      "nextAction": "Provision Node>=24/npm>=11 and clean checkout; run npm ci, npm run check, deterministic fixtures; implement an archive-backed candle loader for the persisted research-data tree, historical funding/OI/taker joins, strict sample-size gates and rolling purged OOS; then invoke the per-symbol ablation/replay runner.",
+      "blocker": "Remote source inspection confirms the package requires Node>=24/npm>=11; current workspace is Node22.16/npm10.9, cwd=/, no checkout, and both Binance packages are NOT_INSTALLED. scripts/backtest.ts exists but only consumes 15m/1h/4h and its --source archive uses Binance Vision ZIPs, not the persisted GitHub research archive. scripts/ablation-study.ts exists and supports 5m/15m/1h/4h with train/validation/holdout and Holm correction, but defaults minHoldoutFilled=10/minDays=10 and is per-symbol; strict policy requires >=100 OOS trades per symbol/context. scripts/conditional-edge.ts consumes decision journals, defaults minN=30, 90% CI and no embargo; it is not sufficient alone. ReplayService returns derivatives:null and synthetic OI/taker/positioning values are null. No script was invoked.",
       "result": {
         "environment": {
           "cwd": "/",
@@ -247,6 +249,62 @@
           "invoked": false,
           "smokeTest": "NOT_RUN",
           "oos": "NOT_EVALUATED"
+        },
+        "remoteCodeAudit": {
+          "packageJsonSha": "6dc911871b1f0b671c0535a06e6c23c9c0577eea",
+          "engines": {
+            "node": ">=24",
+            "npm": ">=11"
+          },
+          "binanceDependencies": {
+            "@nemesis-oss/binance-sdk": "3.2.0",
+            "binance": "^2.15.22"
+          },
+          "backtestSha": "284a5ffd4e254265da49c76cb792cfdc3b19e094",
+          "conditionalEdgeSha": "29034c61fdd42a5e40272234b221d29cb95fb3ee",
+          "ablationStudySha": "a813f3dfbb9a134d8fc780268ced40584e4cf95e",
+          "ablationStudy": {
+            "frames": [
+              "5m",
+              "15m",
+              "1h",
+              "4h"
+            ],
+            "splits": {
+              "train": 0.5,
+              "validation": 0.25,
+              "holdout": 0.25
+            },
+            "bootstrapConfidence": 0.95,
+            "iterations": 2000,
+            "selectionDefaults": {
+              "minTrainFilled": 30,
+              "minValidationFilled": 10,
+              "minHoldoutFilled": 10,
+              "minDays": 10,
+              "alpha": 0.05,
+              "topK": 3
+            },
+            "holmCorrection": true,
+            "permutationControls": true,
+            "costCurve": true,
+            "delayControls": true,
+            "perSymbol": true
+          },
+          "conditionalEdge": {
+            "defaultMinN": 30,
+            "confidence": 0.9,
+            "trainDays": 60,
+            "testDays": 15,
+            "defaultEmbargoDays": 0,
+            "input": "decision journals with resolved outcomes"
+          },
+          "archiveLoader": {
+            "backtestSource": "data.binance.vision ZIP",
+            "readsGitHubResearchArchive": false
+          },
+          "replayDerivatives": "null / synthetic nulls for OI, taker, positioning and book fields",
+          "invoked": false
         }
       }
     },
@@ -2757,6 +2815,24 @@
           "ETHUSDT": "NO_TRADE",
           "XRPUSDT": "NO_TRADE"
         }
+      }
+    },
+    {
+      "id": "Q84_HARNESS_CAPABILITY_AUDIT_20261106T2300Z",
+      "priority": 2,
+      "status": "COMPLETED_WITH_GAPS",
+      "prerequisites": [
+        "GitHub remote source access"
+      ],
+      "nextAction": "Implement and test an archive-backed loader and historical derivatives join; raise OOS thresholds to the predeclared >=100 trades/symbol/context and require multiple walk-forward windows with purge/embargo before any promotion.",
+      "blocker": "Remote harness is inspectable but not runnable in this workspace; current Node/npm below engine floor and no local checkout. Existing ablation defaults are below the research evidence gate and the replay derivatives feed is null.",
+      "result": {
+        "packageJsonSha": "6dc911871b1f0b671c0535a06e6c23c9c0577eea",
+        "backtestSha": "284a5ffd4e254265da49c76cb792cfdc3b19e094",
+        "ablationStudySha": "a813f3dfbb9a134d8fc780268ced40584e4cf95e",
+        "conditionalEdgeSha": "29034c61fdd42a5e40272234b221d29cb95fb3ee",
+        "readbackVerified": true,
+        "executionPerformed": false
       }
     }
   ],

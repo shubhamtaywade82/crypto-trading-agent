@@ -1,0 +1,85 @@
+{
+  "schemaVersion": 1,
+  "createdAtUtc": "2026-11-06T05:26:03Z",
+  "repository": "shubhamtaywade82/crypto-trading-agent",
+  "mainCommit": "32298e5326fdd59b725db6db329f3d11ea53cd2b",
+  "contextBranch": "research/context-strategy-2026-11-05-run11",
+  "rawArchiveBranch": "research/raw-ohlcv-archive-2026-11-05T0530Z",
+  "environment": {
+    "cwd": "/",
+    "os": "Linux x86_64",
+    "python": "3.13.5",
+    "node": "v22.16.0",
+    "npm": "10.9.2",
+    "cpuCount": 5,
+    "memoryTotalGiB": 5.8,
+    "diskFreeGiB": 30,
+    "repoLocalCheckout": false
+  },
+  "checks": [
+    {
+      "capability": "Shell/compute",
+      "status": "PASS",
+      "evidence": "Linux x86_64; cwd=/; Python 3.13.5; Node v22.16.0; npm 10.9.2; 5 CPUs; ~5.8 GiB RAM; ~30 GiB free.",
+      "impact": "Bounded managed execution and repository reconnaissance work; project runtime floor is not met.",
+      "nextAction": "Provision Node >=24 and npm >=11."
+    },
+    {
+      "capability": "Repository/code",
+      "status": "DEGRADED",
+      "evidence": "GitHub repo accessible; main HEAD 32298e5326fdd59b725db6db329f3d11ea53cd2b; no local checkout; package.json engines require Node>=24/npm>=11.",
+      "impact": "Remote reads/writes possible; local tests and repository backtest CLI cannot run.",
+      "nextAction": "Create a clean local checkout at the verified commit under supported Node/npm."
+    },
+    {
+      "capability": "Binance SDK",
+      "status": "BLOCKED",
+      "evidence": "Node import checks: binance, @binance/connector, binance-api-node all NOT_INSTALLED. Binance connector actions used; no SDK execution.",
+      "impact": "No local SDK request or SDK-level HTTP status evidence.",
+      "nextAction": "Use connector until supported local runtime and package installation are available."
+    },
+    {
+      "capability": "Network/Binance endpoints",
+      "status": "DEGRADED",
+      "evidence": "curl https://fapi.binance.com/fapi/v1/time failed exit 6, HTTP 000, DNS. Connector markPrice.time=2026-11-06T05:23:55Z; exchangeInfo.serverTime=2026-11-06T03:24:17.648Z; drift=7,177.352s. Connector does not expose raw HTTP status.",
+      "impact": "Market snapshot available; exchange metadata stale and cannot validate current contract status for execution.",
+      "nextAction": "Restore direct DNS and probe /fapi/v1/time and /fapi/v1/exchangeInfo with bounded uncached requests."
+    },
+    {
+      "capability": "Raw historical archive",
+      "status": "DEGRADED",
+      "evidence": "4h canonical: 13,461 rows/symbol to 2026-11-05T16:00Z, ~6.14y, zero structural failures. 1h: 6,000 rows/symbol to 2021-05-22T07:00Z. Multi-year 5m/15m absent; indexed 76-row delta inaccessible.",
+      "impact": "CTX v2 historical 4h sample exists; multi-timeframe strategy research remains blocked.",
+      "nextAction": "Continue 1h page 0005 and obtain multi-year 5m/15m; recover exact 76-row artifact provenance."
+    },
+    {
+      "capability": "Data quality/coverage",
+      "status": "DEGRADED",
+      "evidence": "1h page 0004: 1,500 rows/symbol, 6,000 total, zero duplicates/gaps/misalignment/OHLC/volume/non-finite failures. Incremental delta: 56 rows (40x5m,12x15m,4x1h), cross-symbol aligned, forming candles excluded, zero quality failures. 4h canonical manifests report zero structural issues; 14 historical manifest hash mismatches have 21,000 exact row-level re-fetch matches.",
+      "impact": "New artifacts are clean; full archive still has missing lower-TF coverage and unresolved 76-row provenance.",
+      "nextAction": "Continue contiguous backfill and reconcile provenance without rewriting expected hashes."
+    },
+    {
+      "capability": "Backtest harness/smoke",
+      "status": "DEGRADED",
+      "evidence": "Remote scripts/backtest.ts exists; package requires Node>=24/npm>=11. Prior committed 600-bar managed-V8 deterministic/no-lookahead smoke artifact (2026-11-06T04:40Z) reads PASS; not rerun this run. No local checkout or strategy experiment.",
+      "impact": "Smoke evidence is from prior run only; repository harness and OOS not executed now.",
+      "nextAction": "Provision supported runtime/local checkout, rerun smoke, then invoke the repository harness."
+    },
+    {
+      "capability": "Disk/storage",
+      "status": "PASS",
+      "evidence": "~30 GiB free local disk; GitHub raw-archive and context branches writable.",
+      "impact": "Persistent GitHub storage available; local filesystem is not a mounted repository/archive.",
+      "nextAction": "Continue atomic branch commits and readback verification."
+    },
+    {
+      "capability": "Artifact readback",
+      "status": "PASS",
+      "evidence": "Page-0004 JSONL files, page manifest, 1h archive index, 56-row delta JSONL and delta manifest fetched back; exact content/SHA-256 checks passed.",
+      "impact": "New raw artifacts and queue update are persistent and verified.",
+      "nextAction": "Verify each subsequent artifact before indexing it."
+    }
+  ],
+  "status": "RESEARCH_BLOCKED"
+}

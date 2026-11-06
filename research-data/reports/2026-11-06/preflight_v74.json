@@ -1,0 +1,187 @@
+{
+  "schema_version": "1.0.0",
+  "run_id": "context-strategy-2026-11-06-v74",
+  "as_of_utc": "2026-11-06T11:46:16.879Z",
+  "overall_status": "RESEARCH_EXECUTED",
+  "checks": [
+    {
+      "capability": "shell/compute",
+      "status": "PASS",
+      "evidence": {
+        "os": "Linux 6.18.57 x86_64",
+        "node": "v22.16.0",
+        "npm": "10.9.2",
+        "python": "3.13.5",
+        "cpu_cores": 5,
+        "memory_total": "5.8GiB",
+        "memory_used": "1.1GiB",
+        "root_disk": "32G total / 30G available"
+      },
+      "impact": "Inline V8 analysis and bounded data processing completed; repo package runtime floor not met.",
+      "next_action": "Provide Node >=24 and npm >=11 for repository harness."
+    },
+    {
+      "capability": "repo/code",
+      "status": "DEGRADED",
+      "evidence": {
+        "local_checkout": "NOT_MOUNTED",
+        "remote_repo": "shubhamtaywade82/crypto-trading-agent",
+        "main_commit": "32298e5326fdd59b725db6db329f3d11ea53cd2b",
+        "package_version": "2.4.1",
+        "engines": "node>=24, npm>=11"
+      },
+      "impact": "Remote source inspection and branch writes succeeded; local repo tests/backtest could not run.",
+      "next_action": "Mount or clone the repo into a supported Node 24 environment."
+    },
+    {
+      "capability": "Binance SDK",
+      "status": "BLOCKED",
+      "evidence": {
+        "node_packages": [
+          {
+            "name": "@nemesis-oss/binance-sdk",
+            "status": "NOT_INSTALLED"
+          },
+          {
+            "name": "binance",
+            "status": "NOT_INSTALLED"
+          },
+          {
+            "name": "@binance/connector",
+            "status": "NOT_INSTALLED"
+          }
+        ],
+        "sdk_used": false
+      },
+      "impact": "No SDK execution; data was obtained through Binance public connector.",
+      "next_action": "Install pinned SDK only after compatible Node runtime and local repo are available."
+    },
+    {
+      "capability": "network/Binance endpoints",
+      "status": "DEGRADED",
+      "evidence": {
+        "direct_fapi_dns": "FAILED curl exit 6",
+        "connector_endpoints": [
+          "/fapi/v1/exchangeInfo",
+          "/fapi/v1/klines",
+          "/fapi/v1/premiumIndex",
+          "/fapi/v1/openInterest",
+          "/fapi/v1/ticker/24hr",
+          "/fapi/v1/depth",
+          "/fapi/v1/fundingRate",
+          "/futures/data/takerBuySellVol",
+          "/futures/data/globalLongShortAccountRatio"
+        ],
+        "http_status_headers": "NOT_EXPOSED_BY_CONNECTOR",
+        "exchangeInfo_serverTime_utc": "2026-11-06T11:18:40.886Z",
+        "exchangeInfo_age_seconds": 1644.793
+      },
+      "impact": "Market data is fresh via connector; contract metadata is stale and cannot authorize execution.",
+      "next_action": "Restore direct fapi DNS or obtain uncached exchangeInfo and dedicated /fapi/v1/time."
+    },
+    {
+      "capability": "raw historical archive",
+      "status": "PASS",
+      "evidence": {
+        "branch": "research/raw-ohlcv-archive-2026-11-05T0530Z",
+        "archive_index": "research-data/binance-usdm/4h/archive-index.json",
+        "index_blob_sha": "5f32db23dafd6593efafdedbb1510446451144bf",
+        "incremental_rows": 2128,
+        "delta_count": 39,
+        "highwater": {
+          "5m": "2026-11-06T11:30:00Z",
+          "15m": "2026-11-06T11:15:00Z",
+          "1h": "2026-11-06T10:00:00Z",
+          "4h": "2026-11-06T04:00:00Z"
+        },
+        "write_readback": "PASS"
+      },
+      "impact": "Completed bars appended and archive index read back exactly.",
+      "next_action": "Continue incremental append and reconcile unresolved historical gaps."
+    },
+    {
+      "capability": "data quality/coverage",
+      "status": "DEGRADED",
+      "evidence": {
+        "rolling_window_rows": 4800,
+        "completed_rows": 4784,
+        "forming_rows_excluded": 16,
+        "rolling_quality_failures": 0,
+        "new_delta_rows": 68,
+        "new_delta_quality_failures": 0,
+        "canonical_4h_rows": 53844,
+        "canonical_4h_years": 6.14,
+        "missing_76_row_delta": true,
+        "manifest_hash_mismatches": 14,
+        "lower_timeframe_multi_year_archive": false
+      },
+      "impact": "4h context research is feasible; full multi-timeframe strategy research remains blocked.",
+      "next_action": "Recover missing delta, resolve hash provenance, backfill 5m/15m/1h."
+    },
+    {
+      "capability": "backtest harness/smoke test",
+      "status": "BLOCKED",
+      "evidence": {
+        "remote_scripts_exist": true,
+        "local_checkout": false,
+        "node_engine_mismatch": true,
+        "smoke_test": "NOT_RUN",
+        "strategy_backtest": "NOT_RUN"
+      },
+      "impact": "No strategy experiment or trading OOS was executed.",
+      "next_action": "Fix runtime/repository access, then run deterministic fixture smoke test before strategy replay."
+    },
+    {
+      "capability": "disk/storage",
+      "status": "PASS",
+      "evidence": {
+        "local_disk_available": "30G",
+        "github_branch_writable": true,
+        "library_storage_available": true
+      },
+      "impact": "Remote archive and report artifacts can persist.",
+      "next_action": "Continue GitHub branch and Library persistence with readback."
+    },
+    {
+      "capability": "artifact readback",
+      "status": "PASS",
+      "evidence": {
+        "new_ohlcv_deltas": "EXACT_READBACK",
+        "delta_manifests": "EXACT_READBACK",
+        "archive_index": "EXACT_READBACK",
+        "context_experiment": "EXACT_READBACK"
+      },
+      "impact": "Raw archive and context experiment artifacts are durable on the research branch.",
+      "next_action": "Persist registry, queue and snapshot artifacts for this run."
+    }
+  ],
+  "repository_audit": {
+    "backtest_script": {
+      "path": "scripts/backtest.ts",
+      "sha": "284a5ffd4e254265da49c76cb792cfdc3b19e094",
+      "findings": [
+        "TIMEFRAMES excludes 5m.",
+        "Kline closeTime is discarded before replay validation, so forming-candle exclusion is not guaranteed."
+      ]
+    },
+    "conditional_edge_script": {
+      "path": "scripts/conditional-edge.ts",
+      "sha": "29034c61fdd42a5e40272234b221d29cb95fb3ee",
+      "findings": [
+        "Default minimum sample is 30.",
+        "Default confidence level is 90%.",
+        "No purge/embargo enforcement found in the inspected entrypoint; it consumes journal outcomes, not a full raw-candle cost-aware replay."
+      ]
+    },
+    "archive_klines": {
+      "path": "src/backtesting/archiveKlines.ts",
+      "sha": "20e66565c463976f2aa9ed11acba35e3e7abd365",
+      "finding": "Volume validation rejects volume < 0 but permits zero."
+    },
+    "replay_service": {
+      "path": "src/backtesting/ReplayService.ts",
+      "sha": "7fd164b7d3f4b4b3c54fd9fcb88d5bfa3e6b9a73",
+      "finding": "Native replay supports 5m, but the legacy backtest entrypoint does not request it."
+    }
+  }
+}

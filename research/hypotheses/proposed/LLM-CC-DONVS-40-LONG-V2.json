@@ -1,0 +1,51 @@
+{
+  "schemaVersion": 1,
+  "id": "LLM-CC-DONVS-40-LONG-V2",
+  "version": 1,
+  "status": "DRAFT",
+  "hypothesis": "Donchian 40-bar volume-surge breakout, long-only, 2R/1.5ATR/breakeven. Tests long drift and stronger target.",
+  "family": "DONCHIAN_BREAK",
+  "symbols": [
+    "BTCUSDT",
+    "ETHUSDT",
+    "SOLUSDT",
+    "XRPUSDT"
+  ],
+  "timeframes": [
+    "4h"
+  ],
+  "timeframeRule": "each timeframe tested independently",
+  "context": {
+    "id": "VOLUME_SURGE",
+    "taxonomyVersion": "ctx-v1"
+  },
+  "campaign": "CRYPTO-CONFLUENCE-2026Q4",
+  "params": {
+    "trigger": "DONCHIAN_BREAK",
+    "regimeFilter": "VOLUME_SURGE",
+    "direction": "LONG",
+    "lookback": 40,
+    "targetR": 2,
+    "stopAtr": 1.5,
+    "rrRatio": 2,
+    "useBreakeven": true,
+    "maxHoldingBars": 24
+  },
+  "window": {
+    "days": 1095,
+    "endDaysAgo": 0,
+    "endIso": "2026-11-01T00:00:00.000Z",
+    "split": {
+      "trainPct": 60,
+      "validationPct": 20,
+      "testPct": 20
+    }
+  },
+  "costs": {
+    "roundTripBps": 15
+  },
+  "evidence": {
+    "minOosTrades": 100,
+    "alpha": 0.01
+  }
+}

@@ -1,0 +1,51 @@
+{
+  "schemaVersion": 1,
+  "id": "LLM-CC-DONVS-40-VOLANDTREND-4H-BOTH-V1",
+  "version": 1,
+  "status": "DRAFT",
+  "hypothesis": "Donchian 40-bar breakout confirmed by volume AND trend (VOL_AND_TREND) on 4h, both directions, 1.5R/1ATR. Adds trend filter to volume-confirmed range break.",
+  "family": "DONCHIAN_BREAK",
+  "symbols": [
+    "BTCUSDT",
+    "ETHUSDT",
+    "SOLUSDT",
+    "XRPUSDT"
+  ],
+  "timeframes": [
+    "4h"
+  ],
+  "timeframeRule": "each timeframe tested independently",
+  "context": {
+    "id": "VOL_AND_TREND",
+    "taxonomyVersion": "ctx-v1"
+  },
+  "campaign": "CRYPTO-CONFLUENCE-2026Q4",
+  "params": {
+    "trigger": "DONCHIAN_BREAK",
+    "regimeFilter": "VOL_AND_TREND",
+    "direction": "BOTH",
+    "lookback": 40,
+    "targetR": 1.5,
+    "stopAtr": 1,
+    "rrRatio": 1.5,
+    "useBreakeven": false,
+    "maxHoldingBars": 12
+  },
+  "window": {
+    "days": 1095,
+    "endDaysAgo": 0,
+    "endIso": "2026-11-01T00:00:00.000Z",
+    "split": {
+      "trainPct": 60,
+      "validationPct": 20,
+      "testPct": 20
+    }
+  },
+  "costs": {
+    "roundTripBps": 15
+  },
+  "evidence": {
+    "minOosTrades": 100,
+    "alpha": 0.01
+  }
+}

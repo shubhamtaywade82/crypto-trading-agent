@@ -1,0 +1,170 @@
+{
+  "schemaVersion": 1,
+  "version": "v78",
+  "runId": "context-strategy-2026-11-07T1337Z-v78",
+  "asOfUtc": "2026-11-07T13:37:49.000Z",
+  "researchStatus": "RESEARCH_BLOCKED",
+  "sdkUsed": false,
+  "universe": {
+    "tradable": [
+      "SOLUSDT",
+      "ETHUSDT",
+      "XRPUSDT"
+    ],
+    "referenceOnly": [
+      "BTCUSDT"
+    ]
+  },
+  "rawArchive": {
+    "branch": "research/raw-ohlcv-archive-2026-11-05T0530Z",
+    "newRowsAppended": 80,
+    "cumulativeIncrementalRows": 3656,
+    "highwaterUtc": {
+      "5m": "2026-11-07T13:30:00Z",
+      "15m": "2026-11-07T13:15:00Z",
+      "1h": "2026-11-07T12:00:00Z",
+      "4h": "2026-11-07T08:00:00Z"
+    },
+    "readbackVerified": true,
+    "unresolvedMissing76RowDelta": true,
+    "fourHourCanonicalEndUtc": "2026-11-05T16:00:00Z",
+    "deltas": [
+      {
+        "path": "research-data/binance-usdm/delta/binance_usdm_delta_20261107T1329Z_5m15m1h_completed.jsonl",
+        "rows": 68,
+        "sha256": "c043a4d251c8cfd972dd2a562b273eb799d6db84d268a8e8232a62f79746a752",
+        "manifest": "research-data/binance-usdm/delta/manifest-20261107T1329Z-5m15m1h.json",
+        "manifestSha256": "9603df6b8642529b00b1894d79b9ea3f99f71c2f3b83541575b0e82530e873df"
+      },
+      {
+        "path": "research-data/binance-usdm/delta/binance_usdm_delta_20261107T1335Z_5m15m_completed.jsonl",
+        "rows": 8,
+        "sha256": "c7b378ddf4361a906c3ba532ae0b69ef239f6209b1d3ba0453ca53335502831a",
+        "manifest": "research-data/binance-usdm/delta/manifest-20261107T1335Z-5m15m.json",
+        "manifestSha256": "872ddf449aba9ef509249250c941a228a08a290d42ef9fe1018be8f959af381e"
+      },
+      {
+        "path": "research-data/binance-usdm/delta/binance_usdm_delta_20261107T1337Z_5m_completed.jsonl",
+        "rows": 4,
+        "sha256": "a25d8ae272bb8ef590e4ebee500ea46ac691092db3d54d8a32fad842cbead1ba",
+        "manifest": "research-data/binance-usdm/delta/manifest-20261107T1337Z-5m.json",
+        "manifestSha256": "19c67262b4ac860526b1be9542e2437e99cadce2826e5df05e03ed3c5cf32c82"
+      }
+    ]
+  },
+  "researchProgress": {
+    "oneHourBaseRowsPerSymbol": 53871,
+    "oneHourBaseRowsTotal": 215484,
+    "oneHourRangeUtc": [
+      "2020-09-14T08:00:00Z",
+      "2026-11-06T22:00:00Z"
+    ],
+    "oneHourIncrementalHighwaterUtc": "2026-11-07T12:00:00Z",
+    "fourHourCanonicalRowsPerSymbol": 13461,
+    "fourHourCanonicalRowsTotal": 53844,
+    "fourHourCanonicalEndUtc": "2026-11-05T16:00:00Z",
+    "fourHourIncrementalHighwaterUtc": "2026-11-07T08:00:00Z",
+    "multiYear5m15mPresent": false,
+    "rollingRawRows": 3200,
+    "rollingCompletedRows": 3184,
+    "rollingFormingRows": 16,
+    "newExperiments": 0,
+    "newOosEvaluations": 0
+  },
+  "strategyScorecard": {
+    "asOfUtc": "2026-11-05T09:43:57.448Z",
+    "carriedForwardFrom": "v77",
+    "newExperiments": 0,
+    "newOosEvaluations": 0,
+    "oosValidatedCount": 0,
+    "rejectedCount": 0,
+    "contextAlignedDonchian20WfV2": {
+      "status": "INSUFFICIENT_EVIDENCE",
+      "all36Cells": "Below 100 OOS trades per cell; nominal block-bootstrap CI includes zero; Holm-adjusted p=1.0.",
+      "costModel": "15bp round-trip proxy only; actual fee tier, historical funding cashflows, spread/slippage, latency and impact not modeled.",
+      "perSymbolAggregate": {
+        "BTCUSDT": {
+          "trades": 200,
+          "winRatePct": 36.5,
+          "targetBeforeStopPct": 21.5,
+          "meanNetR": -0.100817
+        },
+        "ETHUSDT": {
+          "trades": 182,
+          "winRatePct": 38.46,
+          "targetBeforeStopPct": 28.02,
+          "meanNetR": 0.047803
+        },
+        "SOLUSDT": {
+          "trades": 208,
+          "winRatePct": 37.02,
+          "targetBeforeStopPct": 24.52,
+          "meanNetR": -0.017655
+        },
+        "XRPUSDT": {
+          "trades": 188,
+          "winRatePct": 37.77,
+          "targetBeforeStopPct": 29.79,
+          "meanNetR": 0.048855
+        }
+      },
+      "strongestCandidate": {
+        "symbol": "SOLUSDT",
+        "context": "BULL_LOW",
+        "strategy": "4h Donchian20 breakout",
+        "version": "inherited-v75",
+        "status": "OOS_PROMISING",
+        "oosTrades": 12,
+        "winRatePct": 66.7,
+        "targetBeforeStopPct": 41.7,
+        "meanNetR": 0.606,
+        "profitFactor": 2.72,
+        "maxDrawdownR": 1.3,
+        "blockBootstrapCi95MeanR": [
+          0.086,
+          1.199
+        ],
+        "lastEvaluationUtc": "2026-11-05T09:43:57.448Z",
+        "promotionBlocker": "12 OOS trades below >=100 per-symbol/context gate; costs and robustness incomplete."
+      },
+      "otherFamilies": {
+        "trendPullback": "HYPOTHESIS",
+        "breakoutRetest": "HYPOTHESIS",
+        "rangeMeanReversion": "HYPOTHESIS",
+        "failedBreakoutFade": "HYPOTHESIS",
+        "volatilityExpansion": "HYPOTHESIS",
+        "btcRelativeStrength": "HYPOTHESIS",
+        "fundingOiFilters": "HYPOTHESIS"
+      },
+      "contextDiscovery": "NO_NEW_TAXONOMY_FIT; context frequency/duration/transitions not recomputed."
+    }
+  },
+  "registryEntries": [
+    {
+      "symbol": "SOLUSDT",
+      "context": "BULL_LOW",
+      "strategy": "4h Donchian20 breakout",
+      "version": "inherited-v75",
+      "status": "OOS_PROMISING",
+      "oosTrades": 12,
+      "winRatePct": 66.7,
+      "targetBeforeStopPct": 41.7,
+      "meanNetR": 0.606,
+      "profitFactor": 2.72,
+      "maxDrawdownR": 1.3,
+      "blockBootstrapCi95MeanR": [
+        0.086,
+        1.199
+      ],
+      "lastEvaluationUtc": "2026-11-05T09:43:57.448Z",
+      "promotionBlocker": "12 OOS trades below >=100 per-symbol/context gate; costs and robustness incomplete."
+    }
+  ],
+  "tradeSelection": {
+    "oosValidatedEntries": 0,
+    "SOLUSDT": "NO_TRADE",
+    "ETHUSDT": "NO_TRADE",
+    "XRPUSDT": "NO_TRADE",
+    "reason": "No OOS_VALIDATED entry; OOS_PROMISING/hypotheses are not actionable."
+  }
+}

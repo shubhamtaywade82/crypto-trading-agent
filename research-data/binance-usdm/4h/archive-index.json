@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "created_at_utc": "2026-11-05T09:43:57.448Z",
   "repository": "shubhamtaywade82/crypto-trading-agent",
-  "branch": "research/raw-ohlcv-archive-2026-11-05T0530Z",
+  "branch": "research/raw-ohlcv-archive-20261107T1525Z-run11",
   "interval": "4h",
   "source_endpoint": "GET /fapi/v1/klines",
   "symbols": [
@@ -54,11 +54,11 @@
   "integrity": {
     "structural_quality": "Base 4h pages were reassembled with deduplicated incremental rows and the XRP correction. Canonical 4h series for BTC/ETH/SOL/XRP each contain 13,461 aligned rows through 2026-11-05T16:00Z with zero gaps, duplicates, OHLC failures, non-positive volume, non-finite values or close-time failures. Four identical 04:00Z 4h duplicate keys across the 09:33Z delta and 18:36Z gap-repair delta were removed in the canonical input. The 76-row delta remains missing and multi-year lower-timeframe history is still incomplete.",
     "readback": "PASS for raw pages 1-9 via GitHub fetch_file readback.",
-    "original_manifest_hash_matches": 22,
-    "original_manifest_hash_mismatches": 14,
-    "hash_mismatch_scope": "14 page/symbol pairs: BTCUSDT pages 2-6 and 9 (6); BTCUSDT, ETHUSDT, SOLUSDT and XRPUSDT pages 7-8 (8).",
+    "original_manifest_hash_matches": 23,
+    "original_manifest_hash_mismatches": 13,
+    "hash_mismatch_scope": "13 page/symbol pairs: BTCUSDT pages 2-6 (5 pairs); all four symbols pages 7-8 (8 pairs). Page-0009 BTCUSDT was independently reverified against its expected SHA-256 and removed from the mismatch set.",
     "source_revision_policy": "Store actual and expected hashes side-by-side; do not normalize mismatches without provenance.",
-    "mismatch_scope": "14 page/symbol pairs: BTCUSDT pages 2-6 and 9 (6); all four symbols pages 7-8 (8).",
+    "mismatch_scope": "13 page/symbol pairs: BTCUSDT pages 2-6 (5 pairs); all four symbols pages 7-8 (8 pairs). Page-0009 BTCUSDT was independently reverified against its expected SHA-256 and removed from the mismatch set.",
     "mismatch_symbols_by_page": {
       "page1": [],
       "page2": [
@@ -88,9 +88,7 @@
         "SOLUSDT",
         "XRPUSDT"
       ],
-      "page9": [
-        "BTCUSDT"
-      ]
+      "page9": []
     },
     "row_level_reconciliation": {
       "file": "research-data/binance-usdm/4h/alternate-source-row-reconciliation_2026-11-05T1229Z.json",
@@ -232,7 +230,49 @@
         "git_blob_sha": "839e87ecf0245f233903a96850cbaea2dc73dce9",
         "status": "HASH_MISMATCH_PRESERVE_EXPECTED"
       }
-    ]
+    ],
+    "hash_reverification": {
+      "verified_at_utc": "2026-11-07T15:33:17.147Z",
+      "algorithm": "SHA-256",
+      "implementation": "Known-vector verified with 'abc' and 'The quick brown fox jumps over the lazy dog'; exact GitHub fetch_file readback content.",
+      "reverified_files": [
+        {
+          "symbol": "BTCUSDT",
+          "interval": "4h",
+          "path": "research-data/binance-usdm/4h/BTCUSDT/page-0009.jsonl",
+          "rows": 1500,
+          "sha256": "ea41621bcfb6aa0db12d15636939478d9c7874bcac8fa6e1b408e1b7ebb60eb0",
+          "gitBlobSha": "f9f8a63220c20c95c2a812b30357bff26f1f89d6"
+        },
+        {
+          "symbol": "ETHUSDT",
+          "interval": "4h",
+          "path": "research-data/binance-usdm/4h/ETHUSDT/page-0009.jsonl",
+          "rows": 1500,
+          "sha256": "07c423ee220ed4cdf58d3a5431952e94b8ac4359808eedcb9dab188e243b51fb",
+          "gitBlobSha": "bba1490cf7443f156ea276a05ce00474209e49e4"
+        },
+        {
+          "symbol": "SOLUSDT",
+          "interval": "4h",
+          "path": "research-data/binance-usdm/4h/SOLUSDT/page-0009.jsonl",
+          "rows": 1456,
+          "sha256": "212f6881361004029b7d46d2f75b7af132ba6d1cf9cfdb5b77b2a0488ee877aa",
+          "gitBlobSha": "839e87ecf0245f233903a96850cbaea2dc73dce9"
+        },
+        {
+          "symbol": "XRPUSDT",
+          "interval": "4h",
+          "path": "research-data/binance-usdm/4h/XRPUSDT/page-0009.jsonl",
+          "rows": 1500,
+          "sha256": "493bab3ad769d36bb3251ef8bd87e083bad91abb74c0f0c55ace7f9811b80992",
+          "gitBlobSha": "41f0c2f1056b9e309385106869751f8791c432ac"
+        }
+      ],
+      "verified_matches": 4,
+      "failed_matches": 0,
+      "note": "Prior readback mismatch observations for BTCUSDT and SOLUSDT page-0009 were not reproduced. Expected manifest hashes were preserved."
+    }
   },
   "incremental_deltas": [
     {
@@ -2007,7 +2047,7 @@
       "supersedes_line": 16
     }
   ],
-  "updated_at_utc": "2026-11-07T14:42:25.609Z",
+  "updated_at_utc": "2026-11-07T15:33:17.147Z",
   "canonical_4h": {
     "status": "PASS",
     "start_utc": "2020-09-14T08:00:00.000Z",
@@ -2157,5 +2197,39 @@
   ],
   "latest_incremental_delta_manifest_sha256": "326cce567db1cec4232202c239957a69b82bb8b595dd45fcec99a7306a82256a",
   "latest_incremental_delta_rows": 16,
-  "latest_incremental_delta_readback_verified": true
+  "latest_incremental_delta_readback_verified": true,
+  "readback_sha256_observations": [
+    {
+      "observed_at_utc": "2026-11-07T15:33:17.147Z",
+      "path": "research-data/binance-usdm/4h/BTCUSDT/page-0009.jsonl",
+      "expected_sha256": "ea41621bcfb6aa0db12d15636939478d9c7874bcac8fa6e1b408e1b7ebb60eb0",
+      "observed_sha256": "ea41621bcfb6aa0db12d15636939478d9c7874bcac8fa6e1b408e1b7ebb60eb0",
+      "git_blob_sha": "f9f8a63220c20c95c2a812b30357bff26f1f89d6",
+      "status": "REVERIFIED_MATCH"
+    },
+    {
+      "observed_at_utc": "2026-11-07T15:33:17.147Z",
+      "path": "research-data/binance-usdm/4h/ETHUSDT/page-0009.jsonl",
+      "expected_sha256": "07c423ee220ed4cdf58d3a5431952e94b8ac4359808eedcb9dab188e243b51fb",
+      "observed_sha256": "07c423ee220ed4cdf58d3a5431952e94b8ac4359808eedcb9dab188e243b51fb",
+      "git_blob_sha": "bba1490cf7443f156ea276a05ce00474209e49e4",
+      "status": "REVERIFIED_MATCH"
+    },
+    {
+      "observed_at_utc": "2026-11-07T15:33:17.147Z",
+      "path": "research-data/binance-usdm/4h/SOLUSDT/page-0009.jsonl",
+      "expected_sha256": "212f6881361004029b7d46d2f75b7af132ba6d1cf9cfdb5b77b2a0488ee877aa",
+      "observed_sha256": "212f6881361004029b7d46d2f75b7af132ba6d1cf9cfdb5b77b2a0488ee877aa",
+      "git_blob_sha": "839e87ecf0245f233903a96850cbaea2dc73dce9",
+      "status": "REVERIFIED_MATCH"
+    },
+    {
+      "observed_at_utc": "2026-11-07T15:33:17.147Z",
+      "path": "research-data/binance-usdm/4h/XRPUSDT/page-0009.jsonl",
+      "expected_sha256": "493bab3ad769d36bb3251ef8bd87e083bad91abb74c0f0c55ace7f9811b80992",
+      "observed_sha256": "493bab3ad769d36bb3251ef8bd87e083bad91abb74c0f0c55ace7f9811b80992",
+      "git_blob_sha": "41f0c2f1056b9e309385106869751f8791c432ac",
+      "status": "REVERIFIED_MATCH"
+    }
+  ]
 }

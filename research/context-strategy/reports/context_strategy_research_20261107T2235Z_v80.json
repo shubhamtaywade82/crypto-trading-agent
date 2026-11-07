@@ -1,0 +1,170 @@
+{
+  "schema_version": "1.0.0",
+  "run_id": "context-strategy-2026-11-08-run30",
+  "version": "v80",
+  "created_at_utc": "2026-11-07T22:35:03Z",
+  "market_data_as_of_utc": "2026-11-07T22:27:01.001Z",
+  "run_status": "RESEARCH_EXECUTED",
+  "status_detail": "A reproducible data-quality append completed and its 68 rows plus manifest/checksum were read back. No strategy backtest or OOS evaluation ran; strategy research remains blocked by the listed prerequisites.",
+  "sections": {
+    "research_progress": {
+      "rolling_rows_checked": 2400,
+      "completed_rows": 2384,
+      "forming_rows_excluded": 16,
+      "new_completed_rows_appended": 68,
+      "append_readback_verified": true,
+      "raw_branch": "research/raw-ohlcv-archive-20261107T2227Z-run16",
+      "archive_index_updated": false,
+      "missing_76_row_artifact_unresolved": true,
+      "strategy_experiments_run": 0,
+      "strategy_experiments_blocked": 1,
+      "remaining": [
+        "recover missing 76-row artifact",
+        "reconcile 1h/4h delta indexes",
+        "backfill multi-year 5m/15m",
+        "fix closeTime and zero-volume validation",
+        "provision Node24/npm11 local checkout",
+        "archive historical funding/OI and execution costs"
+      ]
+    },
+    "context_discovery": {
+      "taxonomy_revision": "NONE",
+      "training_thresholds_fitted": false,
+      "context_frequency_duration_transitions": "NOT_COMPUTED",
+      "current_descriptive_context": "HTF_BEARISH_LTF_REBOUND",
+      "classification_confidence": "LOW",
+      "sample_adequacy": "119 completed 5m and 15m bars, 239 1h bars, 119 4h bars per symbol in current rolling sample; multi-year 5m/15m absent and canonical 4h stale.",
+      "note": "No future-win probability can be inferred from this descriptive classification."
+    },
+    "strategy_context_scorecard": {
+      "oos_validated_entries": 0,
+      "oos_promising_entries": 1,
+      "sol_bull_low_donchian20": {
+        "status": "OOS_PROMISING",
+        "trades": 12,
+        "win_rate_pct": 66.7,
+        "target_before_stop_pct": 41.7,
+        "mean_net_R": 0.606,
+        "profit_factor": 2.72,
+        "max_drawdown_R": 1.3,
+        "block_bootstrap_interval_R": [
+          0.086,
+          1.199
+        ],
+        "gates": {
+          "minimum_oos_trades": 100,
+          "passed": false,
+          "multi_window_stability": false
+        },
+        "current_applicability": "NOT_APPLICABLE"
+      },
+      "all_symbol_donchian20_baselines": {
+        "BTCUSDT": {
+          "trades": 200,
+          "win_rate_pct": 36.5,
+          "target_before_stop_pct": 21.5,
+          "mean_net_R": -0.100817,
+          "status": "INSUFFICIENT_EVIDENCE"
+        },
+        "ETHUSDT": {
+          "trades": 182,
+          "win_rate_pct": 38.46,
+          "target_before_stop_pct": 28.02,
+          "mean_net_R": 0.047803,
+          "status": "INSUFFICIENT_EVIDENCE"
+        },
+        "SOLUSDT": {
+          "trades": 208,
+          "win_rate_pct": 37.02,
+          "target_before_stop_pct": 24.52,
+          "mean_net_R": -0.017655,
+          "status": "INSUFFICIENT_EVIDENCE"
+        },
+        "XRPUSDT": {
+          "trades": 188,
+          "win_rate_pct": 37.77,
+          "target_before_stop_pct": 29.79,
+          "mean_net_R": 0.048855,
+          "status": "INSUFFICIENT_EVIDENCE"
+        }
+      },
+      "untested_families": [
+        {
+          "family": "trend_pullback_continuation",
+          "status": "HYPOTHESIS"
+        },
+        {
+          "family": "breakout_retest_volatility_contraction",
+          "status": "HYPOTHESIS"
+        },
+        {
+          "family": "range_mean_reversion_failed_breakout_fade",
+          "status": "HYPOTHESIS"
+        },
+        {
+          "family": "volatility_expansion_momentum",
+          "status": "HYPOTHESIS"
+        },
+        {
+          "family": "btc_led_relative_strength",
+          "status": "HYPOTHESIS"
+        },
+        {
+          "family": "funding_oi_filters",
+          "status": "HYPOTHESIS"
+        }
+      ]
+    },
+    "key_discoveries": [
+      "All four symbols show a 5m rebound above EMA20/EMA50 while 15m/1h/4h remain bearish; this is a transition warning, not a reversal signal.",
+      "Latest 1h taker buy/sell ratios are below 1 for all four symbols; taker volume imbalance remains negative.",
+      "Open interest declined over the observed five-hour window for all four symbols, most sharply XRP (-1.271%); this does not establish liquidations or directional positioning.",
+      "Observed funding rates are below 0.05% per 8h interval; no funding-extreme flag.",
+      "No context-conditioned strategy has OOS_VALIDATED evidence; no edge is established by this snapshot."
+    ],
+    "current_snapshot": {
+      "path": "research/context-strategy/snapshots/current_market_snapshot_20261107T2227Z_v80.json",
+      "label": "HTF_BEARISH_LTF_REBOUND",
+      "confidence": "LOW",
+      "transition_warning": true
+    },
+    "decisions": {
+      "SOLUSDT": {
+        "decision": "NO_TRADE",
+        "reason": "No OOS_VALIDATED rule for current context; SOL BULL_LOW Donchian20 is OOS_PROMISING only and not applicable; contract metadata stale."
+      },
+      "ETHUSDT": {
+        "decision": "NO_TRADE",
+        "reason": "No OOS_VALIDATED rule for current context; 5m rebound conflicts with bearish 15m/1h/4h; contract metadata stale."
+      },
+      "XRPUSDT": {
+        "decision": "NO_TRADE",
+        "reason": "No OOS_VALIDATED rule for current context; 5m rebound conflicts with bearish 15m/1h/4h; OI decline and negative taker imbalance are not entry triggers; contract metadata stale."
+      }
+    },
+    "data_quality_costs_risks": {
+      "audit_path": "research/context-strategy/audits/data_quality_audit_20261107T2235Z_v80.json",
+      "direct_http_status": "NOT_EXPOSED",
+      "exchange_metadata": "STALE - execution validation blocked",
+      "historical_5m_15m": "MISSING",
+      "missing_76_row_delta": "NOT_FOUND",
+      "cost_model": "NOT_FROZEN",
+      "historical_funding_oi": "INCOMPLETE",
+      "backtest_smoke_test": "NOT_RUN"
+    },
+    "next_experiments": [
+      "Recover original 76-row artifact or explicitly retire its provenance and rebuild from a verified baseline.",
+      "Reconcile archive indexes and canonical 4h; do not silently skip missing rows.",
+      "Backfill multi-year 5m/15m from a reliable public source.",
+      "Fix closeTime preservation and volume<=0 validation, then run deterministic fixture/no-lookahead smoke tests.",
+      "Only after prerequisites pass, pre-register SOL/ETH/XRP trend-pullback and breakout/retest strategy x context tests with untouched walk-forward OOS and realistic costs."
+    ]
+  },
+  "artifacts": {
+    "raw_branch": "research/raw-ohlcv-archive-20261107T2227Z-run16",
+    "context_branch": "research/context-strategy-2026-11-08-run30",
+    "experiment_id": "DQ-20261107-2227Z",
+    "queue_version": "v80",
+    "registry_version": "v80"
+  }
+}

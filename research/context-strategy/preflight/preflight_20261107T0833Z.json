@@ -97,9 +97,9 @@
     {
       "capability": "Artifact readback",
       "status": "PASS",
-      "evidence": "80-row OHLCV delta SHA-256=20ecdd7a4972e7528400fc37f55020f7b1199e0a36fcc6f53169b93fff94a633; manifest readback VERIFIED_READBACK; 4h archive-index readback PASS on branch research/raw-ohlcv-archive-202611070831Z.",
+      "evidence": "80-row raw delta SHA-256 verified; delta manifest VERIFIED_READBACK; 4h archive-index readback PASS; research report, preflight, registry and 98-item queue all fetched back and identity-checked on the unified research branch.",
       "impact": "This run's raw archive append and index update are durable and verified.",
-      "nextAction": "Read back the new preflight, report, registry and queue artifacts after creation."
+      "nextAction": "Continue atomic writes with exact readback and checksum verification; do not infer persistence from write acknowledgements."
     },
     {
       "capability": "Current context classification",
@@ -211,5 +211,31 @@
   "researchExperimentExecuted": false,
   "oosEvaluated": false,
   "monitoringCompleted": true,
-  "archiveMaintenanceCompleted": true
+  "archiveMaintenanceCompleted": true,
+  "researchArtifactsReadback": {
+    "report": {
+      "path": "research/context-strategy/reports/context_strategy_research_20261107T0833Z_v103.json",
+      "blobSha": "d4a481477468e29986cbdba8fbc1bbfc31add138",
+      "verified": true
+    },
+    "registry": {
+      "path": "research/context-strategy/registry/conditional_strategy_registry_20261107T0833Z_v103.json",
+      "blobSha": "16111b2e03826b45c91dc5496951f9a3880f747a",
+      "verified": true
+    },
+    "queue": {
+      "path": "research/context-strategy/queue.json",
+      "verified": true,
+      "blobShaRecordedInQueue": false
+    },
+    "rawDelta": {
+      "path": "research-data/binance-usdm/delta/binance_usdm_delta_202611070831Z_5m15m1h4h_completed.jsonl",
+      "sha256": "20ecdd7a4972e7528400fc37f55020f7b1199e0a36fcc6f53169b93fff94a633",
+      "verified": true
+    },
+    "archiveIndex": {
+      "path": "research-data/binance-usdm/4h/archive-index.json",
+      "verified": true
+    }
+  }
 }

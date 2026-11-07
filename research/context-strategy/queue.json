@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAtUtc": "2026-11-07T04:37:12.681Z",
+  "updatedAtUtc": "2026-11-07T05:27:06.588Z",
   "items": [
     {
       "id": "Q1_ARCHIVE_MULTIYEAR",
@@ -11,8 +11,8 @@
         "Compatible bulk-data downloader or official Binance Vision access",
         "Persistent writable store"
       ],
-      "nextAction": "Backfill multi-year 5m/15m from a verified source; recover the exact missing 76-row artifact; preserve expected/actual hashes; next append only after 5m 04:20Z, 15m 04:00Z, 1h 03:00Z and 4h 00:00Z.",
-      "blocker": "4h canonical 13,468 rows/symbol through 2026-11-06T20:00Z plus verified delta through 2026-11-07T00:00Z; 1h pages1-36 with 53,876 logical rows/symbol through 03:00Z. Multi-year 5m/15m remains absent. The 76-row delta remains HTTP404 and 14 page/symbol hash-provenance mismatches remain.",
+      "nextAction": "Continue append-only refresh after 5m 05:20Z, 15m 05:00Z, 1h 04:00Z and 4h 00:00Z. Backfill multi-year 5m/15m, recover the exact missing 76-row artifact, and preserve the 14 original page/symbol hash-provenance mismatches.",
+      "blocker": "4h canonical 13,468 rows/symbol through 2026-11-06T20:00Z; 1h logical 53,877 rows/symbol through 2026-11-07T04:00Z. Multi-year 5m/15m remains absent. The indexed 76-row delta is still inaccessible and 14 original page/symbol manifest hash mismatches remain unresolved.",
       "result": {
         "fourHour": {
           "rowsPerSymbol": 13468,
@@ -57,8 +57,8 @@
       "prerequisites": [
         "Direct bounded HTTP or Binance SDK call"
       ],
-      "nextAction": "Restore direct DNS/outbound access; obtain uncached /fapi/v1/time and /fapi/v1/exchangeInfo with <=60s drift before any execution validation.",
-      "blocker": "Direct fapi DNS resolution failed. Connector exchangeInfo.serverTime=2026-11-06T11:18:40.878Z versus local 2026-11-07T04:19:59Z: 61,278.122 seconds stale. Connector market payloads are fresh but raw HTTP status/headers are unavailable.",
+      "nextAction": "Restore direct DNS/outbound access and obtain uncached /fapi/v1/time plus /fapi/v1/exchangeInfo with <=60s drift before any execution validation.",
+      "blocker": "Direct fapi DNS resolution fails. Connector exchangeInfo.serverTime=2026-11-06T11:18:40.885Z versus local 2026-11-07T05:27:06.588Z; metadata drift=65305.703 seconds. Connector market payloads are timestamped but raw HTTP status/headers are unavailable.",
       "result": {
         "directEndpoints": {
           "time": "HTTP000_DNS_FAILURE",
@@ -85,8 +85,8 @@
         "npm>=11",
         "dependencies installed"
       ],
-      "nextAction": "Provision Node24/npm11 and checkout the research branch; implement streaming JSONL loader; run deterministic no-lookahead fixture twice; then execute frozen purged walk-forward/OOS only after historical funding and costs are ready.",
-      "blocker": "No local checkout; Node22.16/npm10.9 below package v2.4.1 requirement Node>=24/npm>=11; no SDK packages. Remote archiveKlines reads Binance Vision ZIP/CSV, not committed research JSONL; no smoke test run.",
+      "nextAction": "Provision Node24/npm11 and a local checkout; implement a streaming JSONL loader; run the deterministic fixture/no-lookahead smoke test twice; then execute the frozen pre-registered experiment only after funding and cost prerequisites are resolved.",
+      "blocker": "No local checkout; Node22.16.0/npm10.9.2 below package v2.4.1 floor Node>=24/npm>=11; Binance SDK dependencies absent; archive loader reads Binance Vision ZIP/CSV, not research JSONL; no deterministic smoke test; historical funding and execution-cost inputs incomplete.",
       "result": {
         "environment": {
           "cwd": "/",
@@ -114,8 +114,8 @@
       "prerequisites": [
         "Recorder process and persistent storage"
       ],
-      "nextAction": "Backfill historical funding for BTC/ETH/XRP and OI/taker/positioning for all symbols; reconcile SOL funding serialization/hash without imputing blank markPrice; calibrate spread/slippage.",
-      "blocker": "Current funding/OI/taker/basis/account-ratio snapshots are available, but historical funding archive is SOL-only (6,806 rows), expected/actual SHA mismatch and 3,501 blank markPrice rows; BTC/ETH/XRP funding and all-symbol historical OI/taker/positioning remain absent.",
+      "nextAction": "Backfill historical funding for BTC/ETH/XRP and OI/taker/positioning for all symbols; reconcile SOL funding hash without imputing blank markPrice; calibrate spread/slippage from timestamped depth/trades.",
+      "blocker": "Only SOL historical funding archive is present (6,806 rows) with declared/actual SHA mismatch and 3,501 blank markPrice rows. BTC/ETH/XRP historical funding and all-symbol historical OI/taker/positioning archives remain absent; current snapshots do not replace historical series.",
       "result": {
         "currentFundingIntervalHoursBySymbol": {
           "BTCUSDT": 8,
@@ -3422,6 +3422,71 @@
         "manifestPath": "research-data/binance-usdm/delta/manifest-20261107T0436Z-5m15m.json",
         "sha256": "49143f692af943c998c736d249b71327c677c8f4715f9c81c3f39fbe8c6bb6f3"
       }
+    },
+    {
+      "id": "Q108_INCREMENTAL_ARCHIVE_REFRESH_20261107T052241Z",
+      "priority": 1,
+      "status": "COMPLETED",
+      "prerequisites": [
+        "Binance USD-M kline connector",
+        "Existing archive high-water marks",
+        "GitHub write access"
+      ],
+      "nextAction": "Next append only completed bars after 5m 05:15Z, 15m 05:00Z, 1h 04:00Z and 4h 00:00Z; exclude forming candles and verify manifest/hash/readback.",
+      "blocker": null,
+      "artifacts": {
+        "branch": "research/raw-ohlcv-archive-20261107T052241Z",
+        "deltaPath": "research-data/binance-usdm/delta/binance_usdm_delta_20261107T052241Z_5m15m1h_completed.jsonl",
+        "rows": 52,
+        "sha256": "6413c3ef45e9cc98da39ee3350a0c8f3bc1e00e1684ec2f22c8697c1e5895c5f",
+        "readbackVerified": true
+      }
+    },
+    {
+      "id": "Q109_INCREMENTAL_ARCHIVE_REFRESH_20261107T052536Z",
+      "priority": 1,
+      "status": "COMPLETED",
+      "prerequisites": [
+        "Binance USD-M kline connector",
+        "Previous 5m high-water 2026-11-07T05:15:00Z",
+        "GitHub write access"
+      ],
+      "nextAction": "Next append only completed 5m bars after 05:20Z; 15m remains 05:00Z, 1h 04:00Z and 4h 00:00Z until next close. Exclude forming candles.",
+      "blocker": null,
+      "artifacts": {
+        "branch": "research/raw-ohlcv-archive-20261107T052536Z",
+        "deltaPath": "research-data/binance-usdm/delta/binance_usdm_delta_20261107T052536Z_5m_completed.jsonl",
+        "rows": 4,
+        "sha256": "ab58c88ffe4ccd4db28e9817c7972d76176750159becdd387bb1dd6a87db3e94",
+        "readbackVerified": true
+      }
+    },
+    {
+      "id": "Q110_HOURLY_MONITORING_20261107T0525Z",
+      "priority": 2,
+      "status": "COMPLETED_MONITORING_ONLY",
+      "prerequisites": [
+        "Fresh Binance USD-M connector snapshot",
+        "Completed candles",
+        "Accessible OOS registry"
+      ],
+      "nextAction": "Refresh next hour; consult only OOS_VALIDATED entries; keep SOL/ETH/XRP NO_TRADE until a symbol-specific validated entry and exact trigger exist.",
+      "blocker": "Registry has zero OOS_VALIDATED entries; stale exchangeInfo blocks execution validation; direct fapi DNS remains unavailable."
+    },
+    {
+      "id": "Q111_DAILY_RESEARCH_CYCLE_BLOCKED_20261107T0525Z",
+      "priority": 0,
+      "status": "BLOCKED",
+      "prerequisites": [
+        "Node>=24/npm>=11 runtime",
+        "Local repository checkout",
+        "JSONL archive adapter",
+        "Deterministic fixture/no-lookahead smoke test",
+        "Complete timestamp-aligned funding and calibrated costs",
+        "Frozen untouched test window"
+      ],
+      "nextAction": "Provision Node24/npm11 and checkout the research branch; implement and test JSONL archive loading; reconcile historical funding and calibrate costs; then run the frozen BKR-4H-COMPRESSION-RETEST-BTC-CONFIRM-V1 specification with 60/20/20 split, 12-bar purge/embargo, three anchored windows, three lookback neighborhoods and Holm correction.",
+      "blocker": "No experiment or OOS evaluation can be run honestly in this runtime: no local checkout, Node/npm below package floor, SDK absent, JSONL loader absent, direct Binance DNS failure, historical funding incomplete and spread/slippage uncalibrated."
     }
   ],
   "lastRun": {

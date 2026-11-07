@@ -1,0 +1,97 @@
+{
+  "schemaVersion": "1.0.0",
+  "runId": "CONTEXT-STRATEGY-20261107T0728Z-RUN20",
+  "createdAtUtc": "2026-11-07T07:28:30.000Z",
+  "rawArchiveBranch": "research/raw-ohlcv-archive-20261107T0727Z",
+  "delta": {
+    "path": "research-data/binance-usdm/delta/binance_usdm_delta_20261107T0727Z_5m15m1h_completed.jsonl",
+    "manifest": "research-data/binance-usdm/delta/manifest-20261107T0727Z-5m15m1h.json",
+    "rows": 72,
+    "bytes": 19978,
+    "sha256": "94ebf30057a007b8bdb1ae7e9e29c9a6e1266adf151d8cb43bbf000f9d657921",
+    "gitBlobSha1": "98788d8dbcbcea4692557e67c84e8e35b24b9a53",
+    "readbackVerified": true,
+    "rowCounts": {
+      "BTCUSDT:5m": 13,
+      "BTCUSDT:15m": 4,
+      "BTCUSDT:1h": 1,
+      "ETHUSDT:5m": 13,
+      "ETHUSDT:15m": 4,
+      "ETHUSDT:1h": 1,
+      "SOLUSDT:5m": 13,
+      "SOLUSDT:15m": 4,
+      "SOLUSDT:1h": 1,
+      "XRPUSDT:5m": 13,
+      "XRPUSDT:15m": 4,
+      "XRPUSDT:1h": 1
+    },
+    "latestCompletedOpenUtc": {
+      "5m": "2026-11-07T07:20:00.000Z",
+      "15m": "2026-11-07T07:00:00.000Z",
+      "1h": "2026-11-07T06:00:00.000Z",
+      "4h": "2026-11-07T00:00:00.000Z"
+    },
+    "formingRowsExcluded": 12,
+    "overlapCompletedRows": 84,
+    "quality": {
+      "duplicates": 0,
+      "gaps": 0,
+      "offGrid": 0,
+      "ohlcFailures": 0,
+      "nonPositiveVolume": 0,
+      "nonFinite": 0,
+      "closeTimeFailures": 0,
+      "crossSymbolAlignment": true,
+      "contiguousSinceHighWater": true
+    }
+  },
+  "historicalCoverage": {
+    "fourHour": {
+      "rowsPerSymbol": 13468,
+      "startUtc": "2020-09-14T08:00:00.000Z",
+      "canonicalEndUtc": "2026-11-06T20:00:00.000Z",
+      "latestDeltaOpenUtc": "2026-11-07T00:00:00.000Z",
+      "readbackVerified": true,
+      "canonicalBytesBySymbol": {
+        "BTCUSDT": 1972822,
+        "ETHUSDT": 1934511,
+        "SOLUSDT": 1852217,
+        "XRPUSDT": 1865037
+      }
+    },
+    "oneHour": {
+      "baseRowsPerSymbol": 53871,
+      "logicalRowsPerSymbol": 53879,
+      "pages": 36,
+      "startUtc": "2020-09-14T08:00:00.000Z",
+      "latestCompletedOpenUtc": "2026-11-07T06:00:00.000Z",
+      "page36RowsPerSymbol": 1371,
+      "page36ReadbackVerified": true
+    },
+    "fiveMinute": "No multi-year canonical archive; only rolling windows and incremental deltas.",
+    "fifteenMinute": "No multi-year canonical archive; only rolling windows and incremental deltas."
+  },
+  "knownIssues": [
+    "Missing 76-row delta from 2026-11-05 remains inaccessible; exact symbol/interval/time coverage unknown.",
+    "14 legacy 4h page/symbol SHA-256 manifest mismatches remain; 21,000 rows across 14 pairs were independently re-fetched and matched exactly, so the issue is hash provenance/canonicalization, not observed OHLCV row mismatch.",
+    "SOL historical funding archive has 6,806 rows with 3,501 blank markPrice values and a declared-vs-readback hash mismatch; funding completeness for BTC/ETH/XRP is unavailable.",
+    "Historical OI, taker flow, book depth, global long/short positioning and liquidation data are not archived for the full universe.",
+    "Current 4h canonical file is not reassembled through the 00:00Z delta; canonical end remains 20:00Z with a separate verified 00:00Z row."
+  ],
+  "archiveIndexesUpdated": {
+    "fourHour": "research-data/binance-usdm/4h/archive-index.json",
+    "oneHour": "research-data/binance-usdm/1h/archive-index.json",
+    "readbackVerified": true,
+    "highwater": {
+      "5m": "2026-11-07T07:20:00.000Z",
+      "15m": "2026-11-07T07:00:00.000Z",
+      "1h": "2026-11-07T06:00:00.000Z",
+      "4h": "2026-11-07T00:00:00.000Z"
+    }
+  },
+  "persistence": {
+    "remoteGitHubBranch": "research/raw-ohlcv-archive-20261107T0727Z",
+    "localRawArchive": "NOT_PRESENT_IN_CURRENT_SHELL_RUNTIME",
+    "deltaReadbackVerified": true
+  }
+}

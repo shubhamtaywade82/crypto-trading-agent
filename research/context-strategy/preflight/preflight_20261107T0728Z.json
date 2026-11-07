@@ -1,0 +1,86 @@
+{
+  "schemaVersion": "1.0.0",
+  "runId": "CONTEXT-STRATEGY-20261107T0728Z-RUN20",
+  "checkedAtUtc": "2026-11-07T07:28:30.000Z",
+  "executionEnvironment": {
+    "shell": "available",
+    "cwd": "/",
+    "os": "Linux x86_64 kernel 6.14.0",
+    "node": "v22.16.0",
+    "npm": "10.9.2",
+    "pnpm": "not installed",
+    "yarn": "not installed",
+    "cpuCores": 5,
+    "memoryTotal": "5.8 GiB",
+    "memoryAvailable": "4.7 GiB",
+    "diskFree": "30 GiB",
+    "localRepositoryCheckout": false,
+    "binanceSdkImport": "ERR_MODULE_NOT_FOUND (@nemesis-oss/binance-sdk)",
+    "binanceConnectorImport": "NOT_FOUND"
+  },
+  "checks": [
+    {
+      "capability": "shell/compute",
+      "status": "PASS",
+      "evidence": "Linux x86_64; Node 22.16.0; npm 10.9.2; 5 CPU cores; 5.8 GiB RAM; 30 GiB free disk.",
+      "impact": "Shell and bounded analysis work ran; package floor still fails.",
+      "nextAction": "Provision Node>=24/npm>=11 before invoking the repository harness."
+    },
+    {
+      "capability": "repo/code",
+      "status": "DEGRADED",
+      "evidence": "Remote repo and run19 branch accessible; no local checkout. package.json requires Node>=24/npm>=11. scripts/backtest.ts and scripts/conditional-edge.ts exist. archiveKlines.ts reads Binance Vision ZIP/CSV, not committed JSONL. SDK import failed.",
+      "impact": "Repository backtest CLI cannot be invoked in this runtime.",
+      "nextAction": "Checkout the research branch, install supported runtime/dependencies, implement JSONL adapter."
+    },
+    {
+      "capability": "network/Binance endpoints",
+      "status": "DEGRADED",
+      "evidence": "Direct curl probes: /time HTTP000 DNS error; /exchangeInfo HTTP000 DNS timeout; /klines HTTP000 DNS error; /premiumIndex HTTP000 DNS timeout; /openInterest HTTP000 DNS error; /ticker/24hr HTTP000 DNS timeout. Binance connector supplied timestamped market data, but no raw HTTP status/headers. exchangeInfo serverTime is 2026-11-06T11:18:40.899Z, 72,589.101s old.",
+      "impact": "Current snapshot usable as indicative data; contract validation and raw endpoint status remain blocked.",
+      "nextAction": "Restore direct DNS/network or expose fresh exchangeInfo and server-time through a trusted adapter."
+    },
+    {
+      "capability": "raw historical archive",
+      "status": "DEGRADED",
+      "evidence": "4h canonical files: 13,468 rows/symbol from 2020-09-14T08:00Z to 2026-11-06T20:00Z, SHA/readback verified; 00:00Z 4h row exists as separate delta. 1h base 53,871 rows/symbol across 36 pages; logical 53,879 rows/symbol through 2026-11-07T06:00Z. Multi-year 5m/15m archive absent. One 76-row delta remains NOT_FOUND.",
+      "impact": "4h context research has multi-year coverage; lower-timeframe and derivative coverage remain incomplete.",
+      "nextAction": "Resolve missing 76-row delta, continue 5m/15m backfill, reassemble 4h canonical through 00:00Z."
+    },
+    {
+      "capability": "data quality/coverage",
+      "status": "DEGRADED",
+      "evidence": "New delta 72 rows; 13 5m + 4 15m + 1 1h per symbol. 168 fetched, 156 completed, 12 forming excluded, 84 overlap rows retained only as overlap. Duplicates/gaps/off-grid/OHLC/nonpositive-volume/nonfinite/close-time failures all zero; cross-symbol alignment and contiguous high-water checks PASS.",
+      "impact": "Current incremental window is clean; historical coverage is not complete.",
+      "nextAction": "Keep interval high-water marks aligned and complete missing lower-timeframe history."
+    },
+    {
+      "capability": "backtest harness/smoke test",
+      "status": "BLOCKED",
+      "evidence": "Remote scripts exist but no local checkout; Node/npm below declared engine floor; JSONL adapter absent; deterministic fixture/no-lookahead smoke test NOT_RUN.",
+      "impact": "No valid experiment or untouched OOS can be executed.",
+      "nextAction": "Provision Node24/npm11 + checkout; implement adapter; run deterministic fixture smoke test before BKR-4H experiment."
+    },
+    {
+      "capability": "disk/storage",
+      "status": "PASS",
+      "evidence": "30 GiB free in current shell runtime; GitHub branch writes succeeded.",
+      "impact": "Remote persistent archive and research artifacts can be maintained.",
+      "nextAction": "Continue atomic GitHub commits and verify readback."
+    },
+    {
+      "capability": "artifact readback",
+      "status": "PASS",
+      "evidence": "72-row JSONL readback exact; SHA-256 94ebf30057a007b8bdb1ae7e9e29c9a6e1266adf151d8cb43bbf000f9d657921; Git blob SHA-1 98788d8dbcbcea4692557e67c84e8e35b24b9a53. Delta manifest and 1h/4h archive indexes re-read.",
+      "impact": "Incremental archive persistence is verified.",
+      "nextAction": "Maintain readback checks for every new artifact."
+    }
+  ],
+  "executionClassification": "RESEARCH_BLOCKED",
+  "researchExecuted": false,
+  "oosEvaluated": false,
+  "monitoringCompleted": true,
+  "archiveMaintenanceCompleted": true,
+  "reason": "The daily experiment is blocked by no local checkout, Node/npm below repository engine requirements, missing JSONL adapter, failed direct Binance DNS, incomplete historical funding and uncalibrated spread/slippage. Archive refresh and monitoring completed, but they are not strategy experiments.",
+  "nextAction": "Provision Node>=24/npm>=11 and local checkout; add JSONL adapter; run deterministic fixture/no-lookahead smoke test; reconcile historical derivatives and costs; then execute the frozen BKR-4H compression/retest BTC-confirmation experiment."
+}

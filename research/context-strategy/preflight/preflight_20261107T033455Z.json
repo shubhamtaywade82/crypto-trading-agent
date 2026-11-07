@@ -1,0 +1,401 @@
+{
+  "schemaVersion": "1.0.0",
+  "runId": "CONTEXT-STRATEGY-20261107T033455Z-V105",
+  "checkedAtUtc": "2026-11-07T03:34:55.179Z",
+  "executionClassification": "RESEARCH_BLOCKED",
+  "environment": {
+    "runtime": "Managed container + GitHub/Binance connectors",
+    "cwd": "/",
+    "os": "Debian GNU/Linux 13 (trixie)",
+    "kernel": "6.18.57",
+    "python": "3.13.5",
+    "node": "v22.16.0",
+    "npm": "10.9.2",
+    "cpuCores": 5,
+    "memoryTotalGiB": 5.8,
+    "memoryAvailableGiB": 4.7,
+    "diskFreeGiB": 30,
+    "localRepositoryPresent": false,
+    "binanceSdkPackages": {
+      "@nemesis-oss/binance-sdk": "NOT_INSTALLED",
+      "binance": "NOT_INSTALLED",
+      "@binance/connector": "NOT_INSTALLED"
+    }
+  },
+  "checks": [
+    {
+      "capability": "Shell/compute",
+      "status": "PASS",
+      "evidence": {
+        "cwd": "/",
+        "os": "Debian GNU/Linux 13 (trixie)",
+        "kernel": "6.18.57",
+        "python": "3.13.5",
+        "node": "v22.16.0",
+        "npm": "10.9.2",
+        "cpuCores": 5,
+        "memoryTotalGiB": 5.8,
+        "memoryAvailableGiB": 4.7,
+        "diskFreeGiB": 30
+      },
+      "impact": "Managed compute works, but Node/npm are below the repository engine floor.",
+      "nextAction": "Provision Node>=24 and npm>=11."
+    },
+    {
+      "capability": "Repository/code",
+      "status": "DEGRADED",
+      "evidence": {
+        "remoteRepository": "shubhamtaywade82/crypto-trading-agent",
+        "contextBranch": "research/context-strategy-2026-11-07-run16",
+        "rawBranch": "research/raw-ohlcv-archive-2026-11-07T0226Z",
+        "localCheckoutPresent": false,
+        "packageVersion": "2.4.1",
+        "engines": {
+          "node": ">=24",
+          "npm": ">=11"
+        },
+        "backtestPath": "scripts/backtest.ts",
+        "backtestBlobSha": "284a5ffd4e254265da49c76cb792cfdc3b19e094",
+        "archiveLoaderSupportsJsonl": false
+      },
+      "impact": "Remote source is inspectable and writable; repository scripts cannot be invoked in this runtime.",
+      "nextAction": "Checkout the research branch in a supported Node24/npm11 environment and implement the committed-JSONL loader."
+    },
+    {
+      "capability": "Node/npm and Binance SDK",
+      "status": "BLOCKED",
+      "evidence": {
+        "actualNode": "v22.16.0",
+        "requiredNode": ">=24",
+        "actualNpm": "10.9.2",
+        "requiredNpm": ">=11",
+        "packages": {
+          "@nemesis-oss/binance-sdk": "NOT_INSTALLED",
+          "binance": "NOT_INSTALLED",
+          "@binance/connector": "NOT_INSTALLED"
+        }
+      },
+      "impact": "No SDK import or repository CLI execution.",
+      "nextAction": "Provision the supported runtime, install locked dependencies and verify imports."
+    },
+    {
+      "capability": "Network/Binance endpoints",
+      "status": "DEGRADED",
+      "evidence": {
+        "directProbes": {
+          "/fapi/v1/time": "HTTP000 DNS failure (curl exit 6)",
+          "/fapi/v1/exchangeInfo": "HTTP000 DNS timeout (curl exit 28; 5s)",
+          "/fapi/v1/klines": "HTTP000 DNS failure (curl exit 6)",
+          "/fapi/v1/premiumIndex": "HTTP000 DNS timeout (curl exit 28; 5s)",
+          "/fapi/v1/openInterest": "HTTP000 DNS failure (curl exit 6)",
+          "/fapi/v1/ticker/24hr": "HTTP000 DNS timeout (curl exit 28; 5s)"
+        },
+        "connectorPayloads": [
+          "exchangeInfo",
+          "klines",
+          "premiumIndex/mark",
+          "ticker24h",
+          "fundingRate",
+          "openInterest",
+          "openInterestHist",
+          "takerBuySellVolume",
+          "globalLongShortAccountRatio",
+          "bookTicker"
+        ],
+        "exchangeInfoServerTimeUtc": "2026-11-06T11:18:40.878Z",
+        "exchangeInfoLocalComparisonUtc": "2026-11-07T03:34:39.477Z",
+        "exchangeInfoDriftSeconds": 58558.599,
+        "latestMarkTimeUtc": "2026-11-07T03:30:45.000Z",
+        "rawHttpStatusHeaders": "NOT_EXPOSED"
+      },
+      "impact": "Connector market data supports monitoring, but stale exchange metadata and unavailable /time block contract execution validation.",
+      "nextAction": "Restore direct DNS and obtain uncached /fapi/v1/time plus /fapi/v1/exchangeInfo; require <=60s drift."
+    },
+    {
+      "capability": "Raw historical archive",
+      "status": "DEGRADED",
+      "evidence": {
+        "rawBranch": "research/raw-ohlcv-archive-2026-11-07T0226Z",
+        "fourHourRowsPerSymbol": 13468,
+        "fourHourRowsTotal": 53872,
+        "fourHourStartUtc": "2020-09-14T08:00:00Z",
+        "fourHourLatestCompletedOpenUtc": "2026-11-06T20:00:00Z",
+        "oneHourBaseRowsPerSymbol": 53871,
+        "oneHourBaseRowsTotal": 215484,
+        "oneHourLogicalRowsPerSymbol": 53875,
+        "oneHourLogicalRowsTotal": 215500,
+        "oneHourLatestCompletedOpenUtc": "2026-11-07T02:00:00Z",
+        "multiYear5m": false,
+        "multiYear15m": false,
+        "missing76RowArtifactUnresolved": true,
+        "shaProvenanceMismatchPairs": 14
+      },
+      "impact": "Multi-year 1h/4h coverage is present; 5m/15m long history and a missing 76-row artifact remain unresolved.",
+      "nextAction": "Backfill 5m/15m from an auditable source and recover the exact missing 76-row artifact."
+    },
+    {
+      "capability": "Data quality/coverage",
+      "status": "DEGRADED",
+      "evidence": {
+        "rollingRowsFetched": 14000,
+        "completedRows": 13984,
+        "formingRowsExcluded": 16,
+        "duplicates": 0,
+        "gaps": 0,
+        "ohlcFailures": 0,
+        "nonFinite": 0,
+        "nonPositiveVolume": 0,
+        "timestampAlignmentFailures": 0,
+        "nonMonotonic": 0,
+        "closeTimeFailures": 0,
+        "crossSymbolAlignment": true,
+        "incrementalRowsAppended": 76,
+        "incrementalRowsByInterval": {
+          "5m": 52,
+          "15m": 20,
+          "1h": 4,
+          "4h": 0
+        },
+        "incrementalFormingRowsExcluded": 12
+      },
+      "impact": "Current rolling windows and new deltas pass structural checks; long-horizon 5m/15m and derivatives completeness remain inadequate.",
+      "nextAction": "Continue completed-bar-only appends and complete lower-timeframe/derivatives archives."
+    },
+    {
+      "capability": "Backtest harness/smoke test",
+      "status": "BLOCKED",
+      "evidence": {
+        "remoteHarnessExists": true,
+        "backtestPath": "scripts/backtest.ts",
+        "archiveLoader": "src/backtesting/archiveKlines.ts",
+        "archiveLoaderSupportsJsonl": false,
+        "localInvocation": false,
+        "fixtureSmokeTest": "NOT_RUN",
+        "strategyExperiment": "NOT_EXECUTED",
+        "oos": "NOT_EVALUATED"
+      },
+      "impact": "No experiment or OOS result can be claimed.",
+      "nextAction": "Implement JSONL adapter, provision Node24/npm11, run deterministic fixture and no-lookahead smoke tests, then execute the frozen specification."
+    },
+    {
+      "capability": "Disk/storage",
+      "status": "PASS",
+      "evidence": {
+        "diskFreeGiB": 30,
+        "githubWriteAccess": true,
+        "rawArchiveBranchWritable": true,
+        "contextBranchWritable": true
+      },
+      "impact": "Persistent GitHub storage is available; no local raw archive is mounted.",
+      "nextAction": "Continue atomic branch writes and exact readback verification."
+    },
+    {
+      "capability": "Artifact readback",
+      "status": "PASS",
+      "evidence": {
+        "newDeltaFiles": 2,
+        "newDeltaRows": 76,
+        "newDeltaManifests": 2,
+        "deltaSha256ReadbackVerified": true,
+        "deltaBlobShaReadbackVerified": true,
+        "fourHourIndexBlobSha": "434c1c4f984a649248440cc2fadfd0933ffca7b7",
+        "oneHourIndexBlobSha": "0105e6cf5589c25aa7e797870cfd9c501fe16063",
+        "indexReadbackVerified": true
+      },
+      "impact": "New raw deltas, manifests and both archive indexes are persisted and retrievable.",
+      "nextAction": "Store report/preflight/queue/registry updates and verify their Git blob identities."
+    }
+  ],
+  "endpointEvidence": {
+    "/fapi/v1/time": "BLOCKED_DIRECT_DNS_HTTP000",
+    "/fapi/v1/exchangeInfo": {
+      "status": "CONNECTOR_RESPONSE_STALE",
+      "serverTimeUtc": "2026-11-06T11:18:40.878Z",
+      "driftSeconds": 58558.599,
+      "reportedSymbols": [
+        "BTCUSDT",
+        "ETHUSDT",
+        "SOLUSDT",
+        "XRPUSDT"
+      ],
+      "executionUse": "BLOCKED"
+    },
+    "/fapi/v1/klines": {
+      "status": "CONNECTOR_OK",
+      "symbols": [
+        "BTCUSDT",
+        "ETHUSDT",
+        "SOLUSDT",
+        "XRPUSDT"
+      ],
+      "intervals": [
+        "5m",
+        "15m",
+        "1h",
+        "4h"
+      ],
+      "rollingRowsFetched": 14000,
+      "latestCompletedOpenUtc": {
+        "5m": "2026-11-07T03:25:00Z",
+        "15m": "2026-11-07T03:15:00Z",
+        "1h": "2026-11-07T02:00:00Z",
+        "4h": "2026-11-06T20:00:00Z"
+      },
+      "formingCandlesExcluded": true
+    },
+    "/fapi/v1/premiumIndex": {
+      "status": "CONNECTOR_OK",
+      "markTimeUtc": "2026-11-07T03:30:45Z",
+      "nextFundingUtc": "2026-11-07T08:00:00Z"
+    },
+    "/fapi/v1/openInterest": {
+      "status": "CONNECTOR_OK",
+      "retrievedAtUtc": "2026-11-07T03:33:25Z"
+    },
+    "/fapi/v1/ticker/24hr": {
+      "status": "CONNECTOR_OK",
+      "retrievedAtUtc": "2026-11-07T03:33:25Z"
+    },
+    "/fapi/v1/fundingRate": {
+      "status": "CONNECTOR_OK",
+      "retrievedAtUtc": "2026-11-07T03:34:55Z",
+      "latestSettledFundingUtc": "2026-11-07T00:00:00.001Z",
+      "intervalHours": 8
+    },
+    "/futures/data/openInterestHist": {
+      "status": "CONNECTOR_OK",
+      "period": "1h",
+      "observationsPerSymbol": 3
+    },
+    "/futures/data/globalLongShortAccountRatio": {
+      "status": "CONNECTOR_OK",
+      "period": "1h",
+      "observationsPerSymbol": 3
+    },
+    "/futures/data/takerlongshortRatio": {
+      "status": "CONNECTOR_OK",
+      "period": "1h",
+      "observationsPerSymbol": 2
+    },
+    "/fapi/v1/ticker/bookTicker": {
+      "status": "CONNECTOR_OK",
+      "retrievedAtUtc": "2026-11-07T03:33:30Z",
+      "scope": "best bid/ask only"
+    }
+  },
+  "archive": {
+    "fourHour": {
+      "pathPrefix": "research-data/binance-usdm/4h/canonical/",
+      "rowsPerSymbol": 13468,
+      "rowsTotal": 53872,
+      "startUtc": "2020-09-14T08:00:00Z",
+      "latestCompletedOpenUtc": "2026-11-06T20:00:00Z",
+      "coverageYears": 6.14,
+      "gaps": 0,
+      "duplicates": 0,
+      "ohlcFailures": 0,
+      "nonPositiveVolume": 0,
+      "readbackVerified": true
+    },
+    "oneHour": {
+      "indexPath": "research-data/binance-usdm/1h/archive-index.json",
+      "basePages": 36,
+      "baseRowsPerSymbol": 53871,
+      "baseRowsTotal": 215484,
+      "logicalRowsPerSymbol": 53875,
+      "logicalRowsTotal": 215500,
+      "startUtc": "2020-09-14T08:00:00Z",
+      "latestCompletedOpenUtc": "2026-11-07T02:00:00Z",
+      "gaps": 0,
+      "duplicates": 0,
+      "ohlcFailures": 0,
+      "readbackVerified": true
+    },
+    "fiveMinute": {
+      "multiYearArchive": false,
+      "currentRollingBarsPerSymbol": 500,
+      "approxCoverageHours": 41.67
+    },
+    "fifteenMinute": {
+      "multiYearArchive": false,
+      "currentRollingBarsPerSymbol": 500,
+      "approxCoverageDays": 5.21
+    },
+    "incremental": {
+      "rowsAppendedThisRun": 76,
+      "rowsByInterval": {
+        "5m": 52,
+        "15m": 20,
+        "1h": 4,
+        "4h": 0
+      },
+      "formingRowsExcluded": 12,
+      "qualityFailures": 0,
+      "deltaFiles": [
+        {
+          "path": "research-data/binance-usdm/delta/binance_usdm_delta_20261107T033045Z_5m_completed.jsonl",
+          "rows": 52,
+          "bytes": 14427,
+          "sha256": "c626aa30778f617229b504ac0e836019fa8bb383988fabae6e434df3fa523dff",
+          "gitBlobSha": "ef47c5adbcb60d4ce6a79d667672ee3b00e757d2",
+          "manifestPath": "research-data/binance-usdm/delta/binance_usdm_delta_20261107T033045Z_5m_completed.manifest.json",
+          "manifestBlobSha": "43d5d3c72200107ae95d350d3c317c27c4fb2aaf"
+        },
+        {
+          "path": "research-data/binance-usdm/delta/binance_usdm_delta_20261107T033045Z_15m1h_completed.jsonl",
+          "rows": 24,
+          "bytes": 6746,
+          "sha256": "6955a9a3340e911a0bc9edc4a26a46b355dfffdc76f2882ae4bd7b35566363f8",
+          "gitBlobSha": "439746917f80276f0d8795fc1fb5bd1e7b92c60a",
+          "manifestPath": "research-data/binance-usdm/delta/binance_usdm_delta_20261107T033045Z_15m1h_completed.manifest.json",
+          "manifestBlobSha": "07f115eda8d52a858157512e8a679b40966c874f"
+        }
+      ],
+      "archiveIndex4hBlobSha": "434c1c4f984a649248440cc2fadfd0933ffca7b7",
+      "archiveIndex1hBlobSha": "0105e6cf5589c25aa7e797870cfd9c501fe16063",
+      "archiveIndexReadbackVerified": true
+    },
+    "unresolved": {
+      "missingDeltaPath": "research-data/binance-usdm/delta/binance_usdm_delta_2026-11-05T0524Z.jsonl",
+      "expectedRows": 76,
+      "status": "NOT_FOUND",
+      "hashMismatchPairs": 14,
+      "rowLevelReconciliation": {
+        "pairsTested": 14,
+        "rowsCompared": 21000,
+        "exactPairs": 14,
+        "rowLevelMismatches": 0
+      }
+    }
+  },
+  "backtestReadiness": {
+    "specification": "BKR-4H-COMPRESSION-RETEST-BTC-CONFIRM-V1",
+    "status": "PRE_REGISTERED_NOT_EXECUTED",
+    "chronologicalSplit": {
+      "train": 0.6,
+      "validation": 0.2,
+      "untouchedTest": 0.2
+    },
+    "purgeEmbargoBars": 12,
+    "anchoredWalkForwardWindows": 3,
+    "parameterNeighborhoods": 3,
+    "multipleTestingCorrection": "Holm",
+    "smokeTest": "NOT_RUN",
+    "blockers": [
+      "No local checkout",
+      "Node/npm below required versions",
+      "No JSONL archive adapter",
+      "Historical funding and calibrated execution costs incomplete"
+    ]
+  },
+  "persistence": {
+    "rawArchiveBranch": "research/raw-ohlcv-archive-2026-11-07T0226Z",
+    "contextResearchBranch": "research/context-strategy-2026-11-07-run16",
+    "deltaReadbackVerified": true,
+    "manifestReadbackVerified": true,
+    "archiveIndex4hReadbackVerified": true,
+    "archiveIndex1hReadbackVerified": true,
+    "reportReadbackVerified": "PENDING",
+    "preflightReadbackVerified": "PENDING"
+  }
+}

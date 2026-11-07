@@ -1,0 +1,61 @@
+{
+  "schema_version": "1.0.0",
+  "preflight_version": "v82",
+  "created_at_utc": "2026-11-07T23:26:30Z",
+  "environment": {
+    "os": "Linux 6.18.57",
+    "python": "3.13.5",
+    "node": "v22.16.0",
+    "npm": "10.9.2",
+    "cpu_cores": 5,
+    "memory_available_gib": 4.7,
+    "disk_free_gib": 30,
+    "local_repo": "NOT_PRESENT",
+    "binance_sdk_import": "ERR_MODULE_NOT_FOUND",
+    "direct_dns": "FAILED"
+  },
+  "checks": [
+    {
+      "capability": "shell/compute",
+      "status": "PASS",
+      "evidence": "Linux6.18.57; Python3.13.5; 5 CPUs; ~4.7GiB RAM; ~30GiB free."
+    },
+    {
+      "capability": "repo/code",
+      "status": "DEGRADED",
+      "evidence": "GitHub remote only; no local checkout; required Node>=24/npm>=11, observed Node22.16/npm10.9."
+    },
+    {
+      "capability": "network/Binance",
+      "status": "DEGRADED",
+      "evidence": "Connector endpoints succeeded; direct fapi DNS failed; exchangeInfo serverTime stale ~36h; HTTP statuses not exposed."
+    },
+    {
+      "capability": "raw archive",
+      "status": "DEGRADED",
+      "evidence": "Two deltas, 68 rows total, both SHA/readback verified; canonical index unresolved."
+    },
+    {
+      "capability": "data quality/coverage",
+      "status": "DEGRADED",
+      "evidence": "1,584 completed rolling bars pass; historical 5m/15m missing; canonical 1h/4h provenance unresolved."
+    },
+    {
+      "capability": "backtest/smoke",
+      "status": "BLOCKED",
+      "evidence": "No local repo, incompatible Node/npm, SDK absent; no fixture test."
+    },
+    {
+      "capability": "disk/storage",
+      "status": "PASS",
+      "evidence": "~30GiB free; GitHub branches writable."
+    },
+    {
+      "capability": "artifact readback",
+      "status": "PASS",
+      "evidence": "Both raw deltas verified against SHA sidecars/manifests; context v81 artifacts verified."
+    }
+  ],
+  "overall": "RESEARCH_EXECUTED",
+  "oos_evaluated": false
+}

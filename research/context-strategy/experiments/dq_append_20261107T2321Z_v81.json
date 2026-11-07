@@ -1,0 +1,63 @@
+{
+  "schema_version": "1.0.0",
+  "experiment_id": "DQ-20261107-2321Z",
+  "created_at_utc": "2026-11-07T23:23:39Z",
+  "status": "RESEARCH_EXECUTED",
+  "type": "DATA_QUALITY_AND_INCREMENTAL_ARCHIVE",
+  "hypothesis": "Append only fully completed candles strictly after the previous high-water; verify continuity, timestamps, OHLC invariants and positive volume.",
+  "input": {
+    "endpoint": "GET /fapi/v1/klines",
+    "symbols": [
+      "BTCUSDT",
+      "ETHUSDT",
+      "SOLUSDT",
+      "XRPUSDT"
+    ],
+    "intervals": [
+      "5m",
+      "15m",
+      "1h"
+    ],
+    "limit_per_series": 100,
+    "server_time_reference_utc": "2026-11-07T23:21:02Z",
+    "returned_rows": 1200,
+    "completed_new_rows": 64,
+    "forming_rows_excluded": 12
+  },
+  "rules": [
+    "openTime > prior high-water",
+    "closeTime < server-time reference",
+    "exact interval continuity",
+    "closeTime=openTime+interval_ms-1",
+    "low<=open/close<=high",
+    "volume>0",
+    "no duplicate openTime"
+  ],
+  "result": {
+    "rows": 64,
+    "by_interval": {
+      "5m": 44,
+      "15m": 16,
+      "1h": 4
+    },
+    "duplicates": 0,
+    "gaps": 0,
+    "ohlc_failures": 0,
+    "non_positive_volume": 0,
+    "continuity_failures": 0,
+    "readback_verified": true,
+    "bytes": 17767,
+    "sha256": "7211bf8d7e72aa07fa2680817cc8d1e7b50ce0bac4e2bd950af0bb75d0ec4f57"
+  },
+  "artifact": {
+    "branch": "research/raw-ohlcv-archive-20261107T2321Z-run17",
+    "path": "research-data/binance-usdm/delta/binance_usdm_delta_20261107T2321Z_5m15m1h_completed.jsonl",
+    "manifest_path": "research-data/binance-usdm/manifests/binance_usdm_delta_20261107T2321Z_5m15m1h_completed.jsonl.manifest.json"
+  },
+  "not_performed": [
+    "No strategy backtest",
+    "No train/validation/test evaluation",
+    "No OOS metrics"
+  ],
+  "next_action": "Continue incremental append; resolve historical provenance before advancing canonical index."
+}

@@ -1,0 +1,157 @@
+{
+  "schema_version": "1.0.0",
+  "created_at_utc": "2026-11-07T19:30:00.000Z",
+  "as_of_utc": "2026-11-07T19:30:00.000Z",
+  "repository": "shubhamtaywade82/crypto-trading-agent",
+  "branch": "research/raw-ohlcv-archive-20261107T193000Z-run14",
+  "base_branch": "research/raw-ohlcv-archive-20261107T1823Z-run13",
+  "source_endpoint": "GET /fapi/v1/klines",
+  "source_access": "Binance USD-M public market-data connector; SDK not used; raw HTTP status and headers are not exposed by the connector. Direct shell DNS/HTTPS probe failed with HTTP 000 and curl exit 6.",
+  "exchange_time_source": "Maximum markPrice.time across BTCUSDT, ETHUSDT, SOLUSDT, XRPUSDT; /fapi/v1/time unavailable. ExchangeInfo serverTime was stale and was not used for candle completion.",
+  "symbols": [
+    "BTCUSDT",
+    "ETHUSDT",
+    "SOLUSDT",
+    "XRPUSDT"
+  ],
+  "intervals": [
+    "5m",
+    "15m",
+    "1h"
+  ],
+  "requested_intervals": [
+    "5m",
+    "15m",
+    "1h",
+    "4h"
+  ],
+  "completed_candle_rule": "closeTime < as_of_utc and openTime strictly after the last readback-verified delta high-water for each interval.",
+  "previous_highwater_utc": {
+    "5m": "2026-11-07T18:15:00.000Z",
+    "15m": "2026-11-07T18:00:00.000Z",
+    "1h": "2026-11-07T17:00:00.000Z",
+    "4h": "2026-11-07T12:00:00.000Z"
+  },
+  "first_new_open_utc": {
+    "5m": "2026-11-07T18:20:00.000Z",
+    "15m": "2026-11-07T18:15:00.000Z",
+    "1h": "2026-11-07T18:00:00.000Z",
+    "4h": null
+  },
+  "latest_completed_open_utc": {
+    "5m": "2026-11-07T19:25:00.000Z",
+    "15m": "2026-11-07T19:15:00.000Z",
+    "1h": "2026-11-07T18:00:00.000Z",
+    "4h": "2026-11-07T12:00:00.000Z"
+  },
+  "next_start_utc": {
+    "5m": "2026-11-07T19:30:00.000Z",
+    "15m": "2026-11-07T19:30:00.000Z",
+    "1h": "2026-11-07T19:00:00.000Z",
+    "4h": "2026-11-07T16:00:00.000Z"
+  },
+  "raw_rows_checked": 3200,
+  "completed_rows_checked": 3186,
+  "forming_rows_excluded_from_quality_sample": 14,
+  "rows_fetched_after_highwater": 94,
+  "rows_appended": 80,
+  "forming_rows_excluded_from_append": 14,
+  "rows_excluded_before_highwater": 0,
+  "rows_appended_by_interval": {
+    "5m": 56,
+    "15m": 20,
+    "1h": 4,
+    "4h": 0
+  },
+  "row_counts_by_symbol_interval": {
+    "BTCUSDT:5m": 14,
+    "BTCUSDT:15m": 5,
+    "BTCUSDT:1h": 1,
+    "BTCUSDT:4h": 0,
+    "ETHUSDT:5m": 14,
+    "ETHUSDT:15m": 5,
+    "ETHUSDT:1h": 1,
+    "ETHUSDT:4h": 0,
+    "SOLUSDT:5m": 14,
+    "SOLUSDT:15m": 5,
+    "SOLUSDT:1h": 1,
+    "SOLUSDT:4h": 0,
+    "XRPUSDT:5m": 14,
+    "XRPUSDT:15m": 5,
+    "XRPUSDT:1h": 1,
+    "XRPUSDT:4h": 0
+  },
+  "quality": {
+    "duplicates": 0,
+    "missing_intervals": 0,
+    "off_grid": 0,
+    "ohlc_failures": 0,
+    "non_finite": 0,
+    "non_positive_volume": 0,
+    "close_time_failures": 0,
+    "cross_symbol_alignment": true
+  },
+  "raw_files": [
+    {
+      "symbol": "BTCUSDT",
+      "path": "research-data/binance-usdm/delta/20261107T193000Z_BTCUSDT_5m15m1h4h_completed.jsonl",
+      "rows": 20,
+      "bytes": 5581,
+      "sha256": "9f7c1b8e0aeae631d630ded2dd83a35ede7457cdce7c2dca0ea595d58d8d2047",
+      "blob_sha": "5c1d5ca76f6025a875a6004af147969d7cf4c62c",
+      "readback_verified": true,
+      "sha256_method": "SHA-256 over exact UTF-8 file content including final LF"
+    },
+    {
+      "symbol": "ETHUSDT",
+      "path": "research-data/binance-usdm/delta/20261107T193000Z_ETHUSDT_5m15m1h4h_completed.jsonl",
+      "rows": 20,
+      "bytes": 5559,
+      "sha256": "0a4720213a3ef60399ede93844c7bb58dcaece8f5180238566b1b179a6ded7a4",
+      "blob_sha": "295ee278059c4dce098b2e985697166ed76c95a5",
+      "readback_verified": true,
+      "sha256_method": "SHA-256 over exact UTF-8 file content including final LF"
+    },
+    {
+      "symbol": "SOLUSDT",
+      "path": "research-data/binance-usdm/delta/20261107T193000Z_SOLUSDT_5m15m1h4h_completed.jsonl",
+      "rows": 20,
+      "bytes": 5565,
+      "sha256": "d840998c1df81b43e92504733b80075a5e4d772a39f700cb2a097e02d01507d0",
+      "blob_sha": "ebcb206eff093a9f5e5dbc811d4f94f863f1b0aa",
+      "readback_verified": true,
+      "sha256_method": "SHA-256 over exact UTF-8 file content including final LF"
+    },
+    {
+      "symbol": "XRPUSDT",
+      "path": "research-data/binance-usdm/delta/20261107T193000Z_XRPUSDT_5m15m1h4h_completed.jsonl",
+      "rows": 20,
+      "bytes": 5464,
+      "sha256": "fb2736adddc38d8fc4db6099e11005e7d432a887e815d14acae59cec73800e1b",
+      "blob_sha": "3c8f09e3938c4e9b9d660e0be35f87b0732fc369",
+      "readback_verified": true,
+      "sha256_method": "SHA-256 over exact UTF-8 file content including final LF"
+    }
+  ],
+  "status": "RAW_DELTA_FILES_READBACK_VERIFIED",
+  "archive_index_reconciliation": {
+    "status": "BLOCKED_NOT_UPDATED",
+    "path": "research-data/binance-usdm/1h/archive-index.json",
+    "blob_sha": "bb90dadd1cebdf34f43e914b531af9de5e94996f",
+    "index_updated_at_utc": "2026-11-07T16:28:03.603Z",
+    "index_incremental_highwater_utc": {
+      "5m": "2026-11-07T16:20:00.000Z",
+      "15m": "2026-11-07T16:00:00.000Z",
+      "1h": "2026-11-07T15:00:00.000Z",
+      "4h": "2026-11-07T12:00:00.000Z"
+    },
+    "latest_delta_manifest_path": "research-data/binance-usdm/delta/manifest-20261107T1823Z-5m15m1h.json",
+    "latest_delta_highwater_utc": {
+      "5m": "2026-11-07T18:15:00.000Z",
+      "15m": "2026-11-07T18:00:00.000Z",
+      "1h": "2026-11-07T17:00:00.000Z"
+    },
+    "blocker": "The 18:23Z manifest declares prior high-water 5m=17:15Z, 15m=17:00Z, 1h=16:00Z, while the inspected archive-index delta history ends at 5m=16:20Z, 15m=16:00Z, 1h=15:00Z. Intermediate provenance is not present in the inspected index history; index advancement is withheld pending reconciliation.",
+    "next_action": "Recover and verify the intermediate delta(s) between the 16:25Z append and the 18:23Z append, then rebuild archive-index.json from all verified manifests."
+  }
+}

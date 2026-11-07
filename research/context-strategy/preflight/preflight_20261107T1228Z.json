@@ -1,0 +1,151 @@
+{
+  "schemaVersion": "1.0.0",
+  "runId": "CONTEXT-STRATEGY-20261107T122824Z-V78",
+  "createdAtUtc": "2026-11-07T12:28:24.000Z",
+  "classification": "RESEARCH_BLOCKED",
+  "checks": [
+    {
+      "capability": "Shell / compute",
+      "status": "PASS",
+      "evidence": {
+        "cwd": "/",
+        "os": "Linux x86_64",
+        "node": "v22.16.0",
+        "npm": "10.9.2",
+        "python": "3.13.5",
+        "pnpm": "NOT_INSTALLED",
+        "cpuCores": 5,
+        "memory": "5.8 GiB total; approximately 4.7 GiB available",
+        "disk": "30 GiB available on 32 GiB overlay"
+      },
+      "impact": "Python and bounded compute available; repository engine floor unmet.",
+      "nextAction": "Use supported runtime or separately verified Python harness."
+    },
+    {
+      "capability": "Repository / code",
+      "status": "DEGRADED",
+      "evidence": {
+        "localCheckout": "NOT_PRESENT",
+        "remoteRepo": "shubhamtaywade82/crypto-trading-agent",
+        "defaultBranch": "main",
+        "remoteScripts": [
+          "scripts/backtest.ts",
+          "research/alma/src/data-quality.ts"
+        ],
+        "packageEngine": "Node >=24, npm >=11",
+        "sdkPackages": "binance, binance-api-node, @binance/connector, @binance/futures-connector NOT_INSTALLED"
+      },
+      "impact": "Remote code inspectable but no local project command can be invoked.",
+      "nextAction": "Provision Node24/npm11 and checkout the exact repository revision."
+    },
+    {
+      "capability": "Network / direct Binance REST",
+      "status": "BLOCKED",
+      "evidence": {
+        "probes": [
+          "/fapi/v1/time",
+          "/fapi/v1/exchangeInfo",
+          "/fapi/v1/klines",
+          "/fapi/v1/premiumIndex",
+          "/fapi/v1/openInterest",
+          "/fapi/v1/ticker/24hr"
+        ],
+        "outcome": "All direct shell DNS probes failed: Temporary failure in name resolution."
+      },
+      "impact": "Raw HTTP status/headers and direct server-time probe unavailable.",
+      "nextAction": "Restore DNS/HTTPS or use an uncached trusted endpoint probe."
+    },
+    {
+      "capability": "Binance connector / freshness",
+      "status": "DEGRADED",
+      "evidence": {
+        "connector": "USDⓈ-M market-data connector returned exchangeInfo, mark, ticker, klines, OI, funding history, order book and taker flow",
+        "exchangeInfoServerTimeUtc": "2026-11-06T11:18:40.899Z",
+        "markTimeUtc": "2026-11-07T12:28:21.001Z",
+        "stalenessSeconds": 90580.102,
+        "symbolMetadata": "TRADING listed but stale"
+      },
+      "impact": "Market monitoring possible; contract status cannot be used for execution validation.",
+      "nextAction": "Require fresh /time and /exchangeInfo with <=60s drift."
+    },
+    {
+      "capability": "Raw historical archive",
+      "status": "PASS",
+      "evidence": {
+        "localRawArchive": "NOT_MOUNTED",
+        "remoteRawBranch": "research/raw-ohlcv-archive-2026-11-05T0530Z",
+        "deltaPath": "research-data/binance-usdm/delta/binance_usdm_delta_20261107T122824Z_5m15m1h4h_completed.jsonl",
+        "deltaRows": 72,
+        "deltaSha256": "9a937be905a55b02e9ded54ac03e9d1a332c54d57126e1f6fffc2c7dc544b94c",
+        "manifestPath": "research-data/binance-usdm/delta/manifest-20261107T122824Z-5m15m1h4h.json",
+        "manifestSha256": "b5fde5737d31659c8839393b9540ef1835a379a9c9f225eebad8f817bfeec448",
+        "oneHourIndexReadback": true,
+        "fourHourIndexReadback": true
+      },
+      "impact": "Incremental raw history persisted remotely; canonical 4h merge remains behind.",
+      "nextAction": "Rebuild canonical 4h from verified deltas and backfill lower intervals."
+    },
+    {
+      "capability": "Data quality / coverage",
+      "status": "DEGRADED",
+      "evidence": {
+        "rollingSeries": 16,
+        "rawRows": 1920,
+        "completedRows": 1904,
+        "formingExcluded": 16,
+        "duplicates": 0,
+        "gaps": 0,
+        "offgrid": 0,
+        "ohlcFailures": 0,
+        "nonPositiveVolume": 0,
+        "nonFinite": 0,
+        "crossSymbolAligned": true,
+        "historical5m15m": "MULTIYEAR_ARCHIVE_MISSING",
+        "historical1h": "36 pages; 53,871 rows/symbol",
+        "historical4h": "13,461 canonical rows/symbol through 2026-11-05T16:00Z; delta high-water 2026-11-07T08:00Z"
+      },
+      "impact": "Recent windows pass; full cross-timeframe research coverage remains incomplete.",
+      "nextAction": "Backfill multi-year 5m/15m and reconcile archive debt."
+    },
+    {
+      "capability": "Backtest harness / smoke test",
+      "status": "BLOCKED",
+      "evidence": {
+        "remoteHarness": "scripts/backtest.ts exists",
+        "localHarness": "NOT_PRESENT",
+        "smokeTest": "NOT_RUN",
+        "knownDefects": [
+          "backtest.ts Candle mapping drops closeTime",
+          "data-quality.ts rejects volume<0 but permits volume==0"
+        ],
+        "repositoryEngineMismatch": "Node22/npm10 vs Node24/npm11"
+      },
+      "impact": "No valid experiment or OOS evaluation can be claimed.",
+      "nextAction": "Fix closeTime and volume<=0 validation, provision compatible checkout, then run deterministic fixture."
+    },
+    {
+      "capability": "Disk / storage",
+      "status": "PASS",
+      "evidence": {
+        "freeDisk": "30 GiB",
+        "persistentStore": "GitHub repository branch writable",
+        "writeReadback": "Delta, manifest and both archive indexes verified"
+      },
+      "impact": "Remote persistence available; local filesystem is ephemeral.",
+      "nextAction": "Continue atomic remote writes with readback and checksums."
+    },
+    {
+      "capability": "Artifact readback",
+      "status": "PASS",
+      "evidence": {
+        "deltaReadback": true,
+        "manifestReadback": true,
+        "oneHourIndexReadback": true,
+        "fourHourIndexReadback": true
+      },
+      "impact": "Raw append verified; report/queue/registry readback will be recorded after commit.",
+      "nextAction": "Verify each research artifact by exact content and SHA-256."
+    }
+  ],
+  "conclusion": "No SDK used. Binance connector used for current public data; direct shell network unavailable. No research experiment or OOS evaluation ran."
+}

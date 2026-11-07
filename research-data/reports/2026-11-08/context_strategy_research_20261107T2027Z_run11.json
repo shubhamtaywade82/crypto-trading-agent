@@ -1,0 +1,542 @@
+{
+  "schema_version": "1.0.0",
+  "run_id": "context-strategy-2026-11-07T2027Z-run11",
+  "as_of_utc": "2026-11-07T20:27:01.567Z",
+  "run_classification": "RESEARCH_BLOCKED",
+  "research_progress": {
+    "completed": [
+      "Preflight executed against current runtime",
+      "Fresh Binance connector snapshot acquired for BTC/ETH/SOL/XRP",
+      "Current 5m/15m/1h/4h rolling windows checked; forming bars excluded",
+      "60 completed OHLCV rows appended to remote raw archive with SHA-256 sidecars and readback verification",
+      "Prior 19:35Z 5m delta independently read back and its SHA-256 matched"
+    ],
+    "new_data": {
+      "rows_appended": 60,
+      "forming_rows_excluded": 20,
+      "rows_by_interval": {
+        "5m": 40,
+        "15m": 12,
+        "1h": 4,
+        "4h": 4
+      },
+      "latest_completed_open_utc": {
+        "5m": "2026-11-07T20:20:00Z",
+        "15m": "2026-11-07T20:00:00Z",
+        "1h": "2026-11-07T19:00:00Z",
+        "4h": "2026-11-07T16:00:00Z"
+      }
+    },
+    "historical_coverage": {
+      "one_hour": {
+        "rows_per_symbol": 53871,
+        "total_rows": 215484,
+        "range_utc": [
+          "2020-09-14T08:00:00Z",
+          "2026-11-06T22:00:00Z"
+        ],
+        "status": "BASE_ARCHIVE_PRESENT_INCREMENTAL_INDEX_DEGRADED"
+      },
+      "four_hour": {
+        "canonical_rows_per_symbol": 13461,
+        "total_rows": 53844,
+        "canonical_through_utc": "2026-11-05T16:00:00Z",
+        "latest_incremental_open_utc": "2026-11-07T16:00:00Z",
+        "status": "CANONICAL_MERGE_DEGRADED"
+      },
+      "five_minute_fifteen_minute": {
+        "multi_year_history": "ABSENT",
+        "status": "INCOMPLETE"
+      }
+    },
+    "experiments_run": 0,
+    "oos_evaluations": 0,
+    "remaining": [
+      "Backfill multi-year 5m/15m",
+      "Recover missing 76-row delta and reconcile 4h/index provenance",
+      "Provision compatible Node24/npm11 runner and deterministic smoke test",
+      "Fix closeTime and zero-volume validation",
+      "Build historical execution-cost and funding cashflow model",
+      "Run pre-registered strategy x context x symbol experiment only after prerequisites"
+    ]
+  },
+  "context_discovery": {
+    "source_experiment": "CTX-4H-REGIME-001",
+    "evaluated_at_utc": "2026-11-06T11:45:08.745Z",
+    "status": "INSUFFICIENT_EVIDENCE",
+    "interval": "4h",
+    "rows_per_symbol": 13461,
+    "split": {
+      "train": 8076,
+      "validation": 2692,
+      "untouched_test": 2693
+    },
+    "per_symbol": {
+      "BTCUSDT": {
+        "test_context_counts": {
+          "BEAR_LOW": 629,
+          "BEAR_NORMAL": 300,
+          "BEAR_HIGH": 122,
+          "BULL_LOW": 656,
+          "BULL_NORMAL": 137,
+          "BULL_HIGH": 33,
+          "TRANSITION_LOW": 625,
+          "TRANSITION_NORMAL": 182,
+          "TRANSITION_HIGH": 9
+        },
+        "trend_counts": {
+          "BULL": 826,
+          "TRANSITION": 816,
+          "BEAR": 1051
+        },
+        "median_run_bars": 3,
+        "p90_run_bars": 16,
+        "trend_persistence_pct": {
+          "BEAR": 92,
+          "BULL": 91.28,
+          "TRANSITION": 81.5
+        },
+        "shock_pct": 0.297,
+        "volume_expanded_pct": 29.3,
+        "breakouts": {
+          "UP": 126,
+          "DOWN": 107,
+          "INSIDE": 2460
+        },
+        "train_test_js_divergence": 0.1574,
+        "atr_threshold_drift": {
+          "q33": 0.697,
+          "q67": 0.635
+        }
+      },
+      "ETHUSDT": {
+        "test_context_counts": {
+          "BEAR_LOW": 472,
+          "BEAR_NORMAL": 376,
+          "BEAR_HIGH": 198,
+          "BULL_LOW": 514,
+          "BULL_NORMAL": 280,
+          "BULL_HIGH": 46,
+          "TRANSITION_LOW": 484,
+          "TRANSITION_NORMAL": 287,
+          "TRANSITION_HIGH": 36
+        },
+        "trend_counts": {
+          "BULL": 840,
+          "TRANSITION": 807,
+          "BEAR": 1046
+        },
+        "median_run_bars": 3,
+        "p90_run_bars": 13,
+        "trend_persistence_pct": {
+          "BEAR": 90.54,
+          "BULL": 90.6,
+          "TRANSITION": 78.54
+        },
+        "shock_pct": 0.52,
+        "volume_expanded_pct": 27.03,
+        "breakouts": {
+          "UP": 114,
+          "DOWN": 99,
+          "INSIDE": 2480
+        },
+        "train_test_js_divergence": 0.0854,
+        "atr_threshold_drift": {
+          "q33": 0.831,
+          "q67": 0.738
+        }
+      },
+      "SOLUSDT": {
+        "test_context_counts": {
+          "BEAR_LOW": 853,
+          "BEAR_NORMAL": 155,
+          "BEAR_HIGH": 61,
+          "BULL_LOW": 792,
+          "BULL_NORMAL": 70,
+          "BULL_HIGH": 3,
+          "TRANSITION_LOW": 699,
+          "TRANSITION_NORMAL": 60,
+          "TRANSITION_HIGH": 0
+        },
+        "trend_counts": {
+          "BULL": 865,
+          "TRANSITION": 759,
+          "BEAR": 1069
+        },
+        "median_run_bars": 3,
+        "p90_run_bars": 17,
+        "trend_persistence_pct": {
+          "BEAR": 91.2,
+          "BULL": 91.68,
+          "TRANSITION": 78.66
+        },
+        "shock_pct": 0,
+        "volume_expanded_pct": 22.58,
+        "breakouts": {
+          "UP": 124,
+          "DOWN": 120,
+          "INSIDE": 2449
+        },
+        "train_test_js_divergence": 0.2733,
+        "atr_threshold_drift": {
+          "q33": 0.576,
+          "q67": 0.535
+        }
+      },
+      "XRPUSDT": {
+        "test_context_counts": {
+          "BEAR_LOW": 805,
+          "BEAR_NORMAL": 354,
+          "BEAR_HIGH": 145,
+          "BULL_LOW": 375,
+          "BULL_NORMAL": 155,
+          "BULL_HIGH": 60,
+          "TRANSITION_LOW": 555,
+          "TRANSITION_NORMAL": 213,
+          "TRANSITION_HIGH": 31
+        },
+        "trend_counts": {
+          "BULL": 590,
+          "TRANSITION": 799,
+          "BEAR": 1304
+        },
+        "median_run_bars": 3.5,
+        "p90_run_bars": 14,
+        "trend_persistence_pct": {
+          "BEAR": 92.41,
+          "BULL": 89.66,
+          "TRANSITION": 81.08
+        },
+        "shock_pct": 0.446,
+        "volume_expanded_pct": 23.69,
+        "breakouts": {
+          "UP": 111,
+          "DOWN": 132,
+          "INSIDE": 2450
+        },
+        "train_test_js_divergence": 0.1078,
+        "atr_threshold_drift": {
+          "q33": 0.744,
+          "q67": 0.683
+        }
+      }
+    },
+    "interpretation": "Established trend states persisted on 89.7-92.4% of next observations; median context runs were 3-3.5 bars and p90 13-17 bars. Test distribution divergence 0.085-0.273 bits and ATR threshold drift ratios 0.535-0.831 show non-trivial instability, strongest on SOL. These are context statistics, not strategy win probabilities. No new taxonomy fit this run."
+  },
+  "strategy_context_scorecard": {
+    "donchian20_4h": {
+      "status": "INSUFFICIENT_EVIDENCE",
+      "cells": "All 36 prior symbol-context cells below 100 OOS trades; nominal block-bootstrap CI includes zero; Holm-adjusted p=1.0."
+    },
+    "sol_bull_low_candidate": {
+      "status": "OOS_PROMISING",
+      "trades": 12,
+      "win_rate_pct": 66.7,
+      "target_before_stop_pct": 41.7,
+      "mean_net_R": 0.606,
+      "profit_factor": 2.72,
+      "max_drawdown_R": 1.3,
+      "ci95_mean_R": [
+        0.086,
+        1.199
+      ]
+    },
+    "other_families": {
+      "trend_pullback": "HYPOTHESIS",
+      "breakout_retest": "HYPOTHESIS",
+      "range_mean_reversion": "HYPOTHESIS",
+      "failed_breakout_fade": "HYPOTHESIS",
+      "volatility_expansion": "HYPOTHESIS",
+      "btc_relative_strength": "HYPOTHESIS",
+      "funding_oi_filters": "HYPOTHESIS"
+    },
+    "oos_validated_entries": 0
+  },
+  "key_discoveries": [
+    "Trend-state persistence is high in the prior 4h test, but regime distribution/ATR thresholds drift; taxonomy needs stability work before strategy conditioning.",
+    "No strategy family is OOS_VALIDATED. The SOL BULL_LOW Donchian candidate is research-only with 12 trades, far below the predeclared gate.",
+    "The current cross-symbol lower-timeframe state is broadly bearish, but this is not an entry trigger and no validated edge exists.",
+    "No context can yet be labeled intrinsically untradeable; evidence is insufficient."
+  ],
+  "current_market_snapshot": {
+    "timestamps": {
+      "mark_price_utc": "2026-11-07T20:25:26.004Z",
+      "ticker_close_time_utc": "2026-11-07T20:25:11Z",
+      "open_interest_utc": "2026-11-07T20:25:20Z",
+      "five_minute_completed_bar_open_utc": "2026-11-07T20:20:00Z",
+      "higher_timeframe_snapshot_utc": "2026-11-07T20:20Z",
+      "order_book_retrieved_utc": "2026-11-07T20:27Z_no_exchange_timestamp"
+    },
+    "funding": {
+      "interval_hours": 8,
+      "latest_settled_time_utc": "2026-11-07T16:00:00Z",
+      "next_funding_time_utc": "2026-11-08T00:00:00Z",
+      "premiumIndex_lastFundingRate_semantics": "Recorded as returned; not asserted to be a forecast. Settled rate is separately read from fundingRate history.",
+      "threshold_abs_0_05pct_exceeded": false
+    },
+    "symbols": {
+      "BTCUSDT": {
+        "role": "reference_only",
+        "mark": 75736.70903623,
+        "index": 75767.52913043,
+        "mark_index_premium_pct": -0.04068,
+        "last": 75733.9,
+        "change_24h_pct": -0.027,
+        "high_24h": 76210.4,
+        "low_24h": 75562,
+        "quote_volume_24h": 2859552122.32,
+        "open_interest": 96257.483,
+        "oi_change_18_to_20_utc_pct": 0.0297,
+        "premiumIndex_lastFundingRate_pct": 0.006041,
+        "latest_settled_funding_pct": 0.001302,
+        "global_long_short_ratio": 3.0552,
+        "long_account_pct": 75.34,
+        "spread_bps": 0.013,
+        "top10_depth_imbalance_pct": 50.03,
+        "five_minute": {
+          "trend": "BEAR",
+          "atr14_pct": 0.0333,
+          "vol_bucket": "NORMAL",
+          "volume_vs_prev20": 0.939,
+          "taker_buy_share": 0.295,
+          "close": 75734
+        },
+        "timeframes": {
+          "15m": {
+            "trend": "MIXED",
+            "atr14_pct": 0.0649,
+            "vol_bucket": "LOW"
+          },
+          "1h": {
+            "trend": "MIXED",
+            "atr14_pct": 0.1841,
+            "vol_bucket": "LOW"
+          },
+          "4h": {
+            "trend": "BEAR",
+            "atr14_pct": 1.307,
+            "vol_bucket": "HIGH"
+          }
+        },
+        "context": "4h BEAR / 1h MIXED / 15m MIXED / 5m BEAR",
+        "confidence": "LOW_TO_MEDIUM_UNCALIBRATED",
+        "warning": "Higher timeframe bearish; 1h/15m mixed. 5m selling pressure, no validated trigger."
+      },
+      "ETHUSDT": {
+        "role": "tradable",
+        "mark": 2230.63,
+        "index": 2231.54534884,
+        "mark_index_premium_pct": -0.04102,
+        "last": 2231.04,
+        "change_24h_pct": 0.171,
+        "high_24h": 2253.43,
+        "low_24h": 2224.34,
+        "quote_volume_24h": 2124667284.79,
+        "open_interest": 2363336.973,
+        "oi_change_18_to_20_utc_pct": -0.1042,
+        "premiumIndex_lastFundingRate_pct": 0.006248,
+        "latest_settled_funding_pct": 0.007427,
+        "global_long_short_ratio": 3.5005,
+        "long_account_pct": 77.78,
+        "spread_bps": 0.045,
+        "top10_depth_imbalance_pct": -0.18,
+        "five_minute": {
+          "trend": "BEAR",
+          "atr14_pct": 0.051,
+          "vol_bucket": "LOW",
+          "volume_vs_prev20": 2.622,
+          "taker_buy_share": 0.4066,
+          "close": 2230.88
+        },
+        "timeframes": {
+          "15m": {
+            "trend": "BEAR",
+            "atr14_pct": 0.108,
+            "vol_bucket": "LOW"
+          },
+          "1h": {
+            "trend": "MIXED",
+            "atr14_pct": 0.2811,
+            "vol_bucket": "LOW"
+          },
+          "4h": {
+            "trend": "BEAR",
+            "atr14_pct": 1.6329,
+            "vol_bucket": "HIGH"
+          }
+        },
+        "context": "4h BEAR / 1h MIXED / 15m BEAR / 5m BEAR",
+        "confidence": "LOW_TO_MEDIUM_UNCALIBRATED",
+        "warning": "5m volume 2.62x recent mean with sell-initiated flow; 1h mixed against bearish 4h/5m."
+      },
+      "SOLUSDT": {
+        "role": "tradable",
+        "mark": 89.45027246,
+        "index": 89.50207521,
+        "mark_index_premium_pct": -0.05788,
+        "last": 89.46,
+        "change_24h_pct": -0.478,
+        "high_24h": 90.69,
+        "low_24h": 89.13,
+        "quote_volume_24h": 480965097.5824,
+        "open_interest": 9364386.84,
+        "oi_change_18_to_20_utc_pct": -0.0533,
+        "premiumIndex_lastFundingRate_pct": 0.000137,
+        "latest_settled_funding_pct": 0.001115,
+        "global_long_short_ratio": 3.6168,
+        "long_account_pct": 78.34,
+        "spread_bps": 1.118,
+        "top10_depth_imbalance_pct": -3.1,
+        "five_minute": {
+          "trend": "BEAR",
+          "atr14_pct": 0.079,
+          "vol_bucket": "LOW",
+          "volume_vs_prev20": 1.245,
+          "taker_buy_share": 0.3651,
+          "close": 89.46
+        },
+        "timeframes": {
+          "15m": {
+            "trend": "MIXED",
+            "atr14_pct": 0.1666,
+            "vol_bucket": "LOW"
+          },
+          "1h": {
+            "trend": "BEAR",
+            "atr14_pct": 0.3835,
+            "vol_bucket": "LOW"
+          },
+          "4h": {
+            "trend": "BEAR",
+            "atr14_pct": 1.891,
+            "vol_bucket": "NORMAL"
+          }
+        },
+        "context": "4h BEAR / 1h BEAR / 15m MIXED / 5m BEAR",
+        "confidence": "LOW_TO_MEDIUM_UNCALIBRATED",
+        "warning": "Bearish 4h/1h/5m but 15m mixed; spread wider than BTC/ETH; no validated trigger."
+      },
+      "XRPUSDT": {
+        "role": "tradable",
+        "mark": 1.1604,
+        "index": 1.16078281,
+        "mark_index_premium_pct": -0.03298,
+        "last": 1.1603,
+        "change_24h_pct": -1.192,
+        "high_24h": 1.1848,
+        "low_24h": 1.1509,
+        "quote_volume_24h": 491562313.0576,
+        "open_interest": 338324819.9,
+        "oi_change_18_to_20_utc_pct": 0.0214,
+        "premiumIndex_lastFundingRate_pct": 0.01,
+        "latest_settled_funding_pct": 0.01,
+        "global_long_short_ratio": 2.785,
+        "long_account_pct": 73.58,
+        "spread_bps": 0.862,
+        "top10_depth_imbalance_pct": -14.33,
+        "five_minute": {
+          "trend": "BEAR",
+          "atr14_pct": 0.1077,
+          "vol_bucket": "LOW",
+          "volume_vs_prev20": 0.995,
+          "taker_buy_share": 0.3547,
+          "close": 1.1603
+        },
+        "timeframes": {
+          "15m": {
+            "trend": "MIXED",
+            "atr14_pct": 0.1998,
+            "vol_bucket": "LOW"
+          },
+          "1h": {
+            "trend": "BEAR",
+            "atr14_pct": 0.5921,
+            "vol_bucket": "LOW"
+          },
+          "4h": {
+            "trend": "BEAR",
+            "atr14_pct": 2.4091,
+            "vol_bucket": "HIGH"
+          }
+        },
+        "context": "4h BEAR / 1h BEAR / 15m MIXED / 5m BEAR",
+        "confidence": "LOW_TO_MEDIUM_UNCALIBRATED",
+        "warning": "Bearish 4h/1h/5m, mixed 15m; 4h volatility high; no validated trigger."
+      }
+    },
+    "notes": [
+      "Rolling context labels use recent 200-bar windows and EMA alignment; ATR buckets are local rolling ranks, not training-fitted global thresholds.",
+      "Global long/short ratio is account share, not top-trader position size.",
+      "Order-book imbalance is one visible-depth snapshot, no historical timestamp.",
+      "No liquidation stream retrieved; no liquidation or crowding inference."
+    ]
+  },
+  "decisions": {
+    "SOLUSDT": {
+      "decision": "NO_TRADE",
+      "eligible_oos_validated_strategy": null,
+      "trigger_status": "NOT_EVALUATED_NO_VALIDATED_ENTRY",
+      "reason": [
+        "No OOS_VALIDATED registry entry",
+        "No validated deterministic trigger",
+        "Historical costs incomplete",
+        "Fresh exchange metadata unavailable"
+      ]
+    },
+    "ETHUSDT": {
+      "decision": "NO_TRADE",
+      "eligible_oos_validated_strategy": null,
+      "trigger_status": "NOT_EVALUATED_NO_VALIDATED_ENTRY",
+      "reason": [
+        "No OOS_VALIDATED registry entry",
+        "No validated deterministic trigger",
+        "5m volume expansion/sell flow is descriptive only",
+        "Historical costs incomplete"
+      ]
+    },
+    "XRPUSDT": {
+      "decision": "NO_TRADE",
+      "eligible_oos_validated_strategy": null,
+      "trigger_status": "NOT_EVALUATED_NO_VALIDATED_ENTRY",
+      "reason": [
+        "No OOS_VALIDATED registry entry",
+        "No validated deterministic trigger",
+        "4h volatility elevated in local window",
+        "Historical costs incomplete"
+      ]
+    }
+  },
+  "audit": {
+    "cost_assumptions": "No live trade cost estimate or strategy expectancy computed. Prior Donchian result used 15bp round-trip proxy only. Actual fee tier, historical funding cashflows, spread/slippage, latency and impact remain unavailable.",
+    "unavailable": [
+      "Fresh /fapi/v1/time",
+      "Fresh /fapi/v1/exchangeInfo",
+      "Multi-year 5m/15m archive",
+      "Historical funding cashflow archive",
+      "Historical spread/depth/impact/latency",
+      "Top-trader USD-M positioning series",
+      "Liquidation stream"
+    ],
+    "risks": [
+      "Stale contract metadata prevents execution validation",
+      "No compatible backtest runtime or smoke test",
+      "Data archive chain/index provenance unresolved",
+      "Context threshold drift and distribution shift",
+      "No OOS_VALIDATED strategies"
+    ],
+    "next_experiments": [
+      "Resolve archive/index provenance and lower-timeframe history",
+      "Fix closeTime and volume<=0 checks and run deterministic fixture",
+      "Backfill funding and execution-cost inputs",
+      "Then preregister a simple strategy x context x symbol experiment with untouched OOS and multiplicity controls"
+    ]
+  },
+  "persistence": {
+    "raw_archive_branch": "research/raw-ohlcv-archive-20261107T193000Z-run14",
+    "rows_appended": 60,
+    "forming_excluded": 20,
+    "readback_verified": true,
+    "archive_index_updated": false,
+    "report_artifacts": "to be written in this run"
+  }
+}

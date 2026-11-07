@@ -1,0 +1,111 @@
+{
+  "schemaVersion": "1.0.0",
+  "experimentId": "BKR-4H-COMPRESSION-RETEST-BTC-CONFIRM-V1",
+  "status": "HYPOTHESIS",
+  "preregistrationOnly": true,
+  "createdAtUtc": "2026-11-07T01:38:30.000Z",
+  "universe": {
+    "tradableSymbols": [
+      "SOLUSDT",
+      "ETHUSDT",
+      "XRPUSDT"
+    ],
+    "referenceOnly": [
+      "BTCUSDT"
+    ],
+    "timeframe": "4h"
+  },
+  "hypothesis": "After a training-defined volatility-compression state, a completed Donchian breakout that retests and reclaims the broken boundary, with BTC trend confirmation, may have positive net expectancy. Evaluate each symbol and context independently; do not pool symbols for promotion.",
+  "features": {
+    "donchian": "Prior N completed bars; exclude the current signal bar.",
+    "compression": "ATR14/close on the completed bar immediately before breakout <= symbol-specific training-only q33.",
+    "trend": "EMA50/EMA200 non-flat using the symbol-specific training-only flat-spread threshold; direction is the spread sign.",
+    "btcConfirmation": "BTC EMA50/EMA200 non-flat and same direction at retest confirmation close.",
+    "shock": "Exclude if absolute completed 4h close-to-close log return exceeds symbol training q99."
+  },
+  "rules": {
+    "parameterNeighborhood": {
+      "donchianLookbackBars": [
+        15,
+        20,
+        25
+      ],
+      "retestWindowBars": [
+        3
+      ],
+      "retestToleranceAtr": [
+        0.2
+      ]
+    },
+    "breakoutLong": "Completed 4h close > prior N-bar highest high after preceding bar met compression condition.",
+    "breakoutShort": "Completed 4h close < prior N-bar lowest low after preceding bar met compression condition.",
+    "retestLong": "Within next 1-3 completed bars, low touches breakout level within 0.2*ATR14 and close reclaims above; BTC trend UP.",
+    "retestShort": "Within next 1-3 completed bars, high touches breakout level within 0.2*ATR14 and close reclaims below; BTC trend DOWN.",
+    "entry": "Next 4h bar open after retest confirmation; no same-bar fill.",
+    "stop": "Retest swing low - 0.25*ATR14 for long; retest swing high + 0.25*ATR14 for short.",
+    "target": "2.0R from entry.",
+    "timeStopBars": 12,
+    "intrabar": "Stop-first when both stop and target touch; adverse gap-through fills at bar open; conservative target gap fill.",
+    "sizing": "Risk-normalized 1R per trade; one position per symbol; no compounding."
+  },
+  "validation": {
+    "splits": "Chronological 60% train / 20% validation / 20% untouched test; 12-bar purge/embargo.",
+    "walkForward": "At least 3 anchored walk-forward test windows plus final frozen untouched test.",
+    "costs": {
+      "baselineRoundTripBps": 15,
+      "sensitivityRoundTripBps": [
+        10,
+        15,
+        25
+      ],
+      "funding": "Actual timestamp-aligned settlements required.",
+      "spreadSlippage": "Historical calibration required; 15bp is only a proxy."
+    },
+    "multipleTesting": "Holm correction across the three predeclared Donchian lookbacks per symbol/context.",
+    "comparators": [
+      "Unconditional Donchian breakout",
+      "Buy-and-hold on identical intervals",
+      "No-trade baseline"
+    ],
+    "evidenceGates": {
+      "minimumOosTradesPerSymbolContext": 100,
+      "strongerTradesAcrossWindows": 200,
+      "meanNetR": "strictly positive",
+      "bootstrap95CILowerBound": "strictly above zero using serial-dependence-aware block bootstrap",
+      "profitFactor": ">1.2",
+      "maxDrawdownR": "<10R",
+      "walkForward": "positive net expectancy in at least 3 independent windows",
+      "parameterStability": "no sign reversal or severe degradation across neighboring lookbacks",
+      "holmAdjustedP": "<0.05"
+    }
+  },
+  "noTrade": [
+    "UNKNOWN/TRANSITION/INSUFFICIENT_DATA context",
+    "shock or abnormal-volume exclusion",
+    "BTC direction not confirmed",
+    "missing or misaligned OHLCV/funding",
+    "stale contract metadata for execution validation",
+    "unpriced funding or uncalibrated cost model",
+    "spread above 10 bps or inadequate depth",
+    "ambiguous same-bar stop/target ordering",
+    "insufficient OOS evidence"
+  ],
+  "knownFailureModes": [
+    "Breakout continuation may fail in persistent low-volatility ranges.",
+    "Retests can be shallow or missed, creating fill-model sensitivity.",
+    "BTC confirmation can lag or reverse during alt-specific shocks.",
+    "Funding and spread costs can erase small gross edges.",
+    "Three-lookback search creates data-snooping risk; Holm correction and untouched test are mandatory."
+  ],
+  "blockers": [
+    "Node engine is >=24 and npm >=11; current runtime is Node 22.16.0/npm 10.9.2.",
+    "No local crypto-trading-agent checkout exists.",
+    "src/backtesting/archiveKlines.ts reads Binance Vision ZIP/CSV and has no custom JSONL archive loader.",
+    "Historical funding for ETH/XRP is incomplete; SOL funding provenance/hash issue remains.",
+    "Direct shell DNS resolution to fapi.binance.com fails; current connector snapshots do not provide multi-year backfill."
+  ],
+  "nextExecutableAction": "Implement a JSONL archive adapter with strict schema/continuity validation, provision Node 24/npm 11 and a local checkout, repair historical funding provenance, then run a deterministic fixture smoke test before this frozen experiment.",
+  "evidenceStatus": "HYPOTHESIS",
+  "results": null,
+  "validated": false
+}

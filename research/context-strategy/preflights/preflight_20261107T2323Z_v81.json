@@ -1,0 +1,61 @@
+{
+  "schema_version": "1.0.0",
+  "preflight_version": "v81",
+  "created_at_utc": "2026-11-07T23:23:39Z",
+  "environment": {
+    "os": "Linux 6.18.57",
+    "python": "3.13.5",
+    "node": "v22.16.0",
+    "npm": "10.9.2",
+    "cpu_cores": 5,
+    "memory_available_gib": 4.7,
+    "disk_free_gib": 30,
+    "local_repo": "NOT_PRESENT",
+    "sdk_import": "ERR_MODULE_NOT_FOUND",
+    "direct_binance_dns": "FAILED"
+  },
+  "checks": [
+    {
+      "capability": "shell/compute",
+      "status": "PASS",
+      "evidence": "Linux 6.18.57; Python3.13.5; 5 CPUs; ~4.7 GiB available RAM; ~30 GiB free."
+    },
+    {
+      "capability": "repo/code",
+      "status": "DEGRADED",
+      "evidence": "Remote GitHub accessible; no local checkout. package.json requires Node>=24/npm>=11; observed Node22.16/npm10.9."
+    },
+    {
+      "capability": "network/Binance",
+      "status": "DEGRADED",
+      "evidence": "Connector endpoints succeeded; direct curl to fapi.binance.com DNS failed, HTTP000; exchangeInfo serverTime stale ~36h; connector HTTP status not exposed."
+    },
+    {
+      "capability": "raw archive",
+      "status": "DEGRADED",
+      "evidence": "64-row delta committed/readback SHA verified; canonical index not advanced; missing 76-row artifact remains."
+    },
+    {
+      "capability": "data quality/coverage",
+      "status": "DEGRADED",
+      "evidence": "1,584 completed rolling bars pass; 16 forming excluded; multi-year 5m/15m missing and 1h/4h provenance unresolved."
+    },
+    {
+      "capability": "backtest harness/smoke",
+      "status": "BLOCKED",
+      "evidence": "No local repo; Node/npm below engine floor; SDK absent; deterministic fixture not run."
+    },
+    {
+      "capability": "disk/storage",
+      "status": "PASS",
+      "evidence": "~30 GiB free; GitHub branches writable."
+    },
+    {
+      "capability": "artifact readback",
+      "status": "PASS",
+      "evidence": "Raw delta 64 rows, 17,767 bytes, SHA-256 7211bf8d... matched sidecar and manifest."
+    }
+  ],
+  "overall": "RESEARCH_EXECUTED",
+  "oos_evaluated": false
+}

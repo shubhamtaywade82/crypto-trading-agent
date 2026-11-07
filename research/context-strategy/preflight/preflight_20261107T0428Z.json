@@ -1,0 +1,180 @@
+{
+  "schemaVersion": "1.0.0",
+  "runId": "CONTEXT-STRATEGY-20261107T0428Z-V106",
+  "checkedAtUtc": "2026-11-07T04:28:56.452Z",
+  "executionClassification": "RESEARCH_BLOCKED",
+  "environment": {
+    "cwd": "/",
+    "os": "Debian GNU/Linux 13.3",
+    "node": "v22.16.0",
+    "npm": "10.9.2",
+    "python": "3.13.5",
+    "cpuCores": 5,
+    "memoryTotalGiB": 6.1,
+    "memoryAvailableGiB": 4.9,
+    "diskFreeGiB": 30
+  },
+  "checks": [
+    {
+      "capability": "Shell / compute",
+      "status": "PASS",
+      "evidence": "cwd=/; Debian 13.3; Node v22.16.0; npm 10.9.2; Python 3.13.5; 5 CPUs; approximately 6.1 GiB RAM total / 4.9 GiB available; 30 GiB free disk.",
+      "impact": "Managed compute and GitHub/connector orchestration are available; repository CLI cannot run at declared engine floor.",
+      "nextAction": "Provision Node>=24/npm>=11 in a compatible local checkout."
+    },
+    {
+      "capability": "Repository / code",
+      "status": "DEGRADED",
+      "evidence": "Remote GitHub source inspected; no local crypto-trading-agent checkout is mounted. Main package v2.4.1 declares Node>=24/npm>=11. Relevant source blobs: package.json 6dc911871b1f0b671c0535a06e6c23c9c0577eea; scripts/backtest.ts 284a5ffd4e254265da49c76cb792cfdc3b19e094; archiveKlines.ts 20e66565c463976f2aa9ed11acba35e3e7abd365; data-quality.ts 1ec0955d57e355f4ad834cde9dee3e2a5c3c81e3.",
+      "impact": "Source audit possible; no local repository execution.",
+      "nextAction": "Checkout research branch under Node24/npm11."
+    },
+    {
+      "capability": "Binance SDK dependencies",
+      "status": "BLOCKED",
+      "evidence": "require.resolve returned NOT_INSTALLED for @nemesis-oss/binance-sdk, binance, @binance/connector, ccxt and @binance/futures-connector.",
+      "impact": "No SDK use; Binance connector supplied data.",
+      "nextAction": "Install declared SDK dependencies only after compatible checkout/runtime."
+    },
+    {
+      "capability": "Direct Binance REST network",
+      "status": "BLOCKED",
+      "evidence": "Direct request to https://fapi.binance.com/fapi/v1/time failed DNS resolution (temporary name-resolution failure); no HTTP status/headers; /fapi/v1/time server-time probe unavailable.",
+      "impact": "Cannot directly verify server time or endpoint HTTP status; direct REST backfill unavailable.",
+      "nextAction": "Restore DNS/outbound access and repeat bounded probes to /fapi/v1/time, /exchangeInfo, /klines, /premiumIndex, /openInterest and /ticker/24hr."
+    },
+    {
+      "capability": "Binance USD-M connector",
+      "status": "DEGRADED",
+      "evidence": "Fresh connector payloads returned at 04:28:42Z-04:28:56Z for mark/premiumIndex, 24h ticker, OI, funding history, depth, taker flow, global long/short account ratio and basis; connector exposes no raw HTTP status/headers.",
+      "impact": "Monitoring and incremental archive maintenance possible; endpoint-layer audit unavailable.",
+      "nextAction": "Keep connector provenance explicit and retry direct REST when DNS recovers."
+    },
+    {
+      "capability": "Exchange metadata freshness",
+      "status": "BLOCKED",
+      "evidence": "exchangeInfo.serverTime=2026-11-06T11:18:40.878Z; local time at probe=2026-11-07T04:19:59Z; drift=61,278.122 seconds. Returned TRADING/PERPETUAL fields are stale.",
+      "impact": "Contract status/filters cannot validate execution.",
+      "nextAction": "Obtain uncached /time and /exchangeInfo with <=60s drift before any execution validation."
+    },
+    {
+      "capability": "Raw historical archive",
+      "status": "DEGRADED",
+      "evidence": "4h canonical 13,468 rows/symbol through 2026-11-06T20:00Z (6.14 years) plus verified delta through 2026-11-07T00:00Z. 1h pages1-36, 53,871 base rows/symbol through 2026-11-06T22:00Z plus verified deltas through 03:00Z (53,876 logical rows/symbol). Multi-year 5m/15m archive absent.",
+      "impact": "4h/1h history substantial; lower-timeframe multi-cycle context research remains blocked.",
+      "nextAction": "Backfill multi-year 5m/15m from verified Binance Vision/public source; preserve provenance."
+    },
+    {
+      "capability": "Data quality / coverage",
+      "status": "DEGRADED",
+      "evidence": "New 64-row delta: 44 5m, 12 15m, 4 1h, 4 4h; 16 forming rows excluded; zero duplicate/gap/off-grid/OHLC/non-positive-volume/non-finite/close-time failures; cross-symbol alignment passed. Missing 76-row artifact and 14 hash-provenance mismatches remain.",
+      "impact": "New segment clean; archive-wide provenance and 5m/15m coverage incomplete.",
+      "nextAction": "Recover exact missing delta and resolve original hash provenance; do not infer missing coverage."
+    },
+    {
+      "capability": "Backtest harness",
+      "status": "BLOCKED",
+      "evidence": "Remote scripts exist. scripts/backtest.ts supports 15m/1h/4h only and maps klines to OHLCV without closeTime/taker fields. archiveKlines.ts reads Binance Vision ZIP/CSV, not committed research JSONL. conditional-edge defaults minN=30 and 90% CI; existing ablation defaults remain below >=100 OOS trades/context.",
+      "impact": "Research JSONL archive cannot be loaded by existing harness; default statistical gates are too weak for this mandate.",
+      "nextAction": "Implement streaming JSONL loader; enforce >=100 provisional/200 stronger trades, 95% CI, purge/embargo, multi-window OOS and Holm correction."
+    },
+    {
+      "capability": "Deterministic smoke test",
+      "status": "BLOCKED",
+      "evidence": "Not run: no local checkout, Node/npm below engine floor and no SDK dependencies.",
+      "impact": "No strategy experiment or OOS result can be claimed.",
+      "nextAction": "Run known tiny fixture twice under Node24 and verify identical metrics and no lookahead."
+    },
+    {
+      "capability": "Disk / storage",
+      "status": "PASS",
+      "evidence": "Approximately 30 GiB free; GitHub raw archive and context branches accepted writes.",
+      "impact": "Durable artifact persistence available remotely.",
+      "nextAction": "Continue append-only raw data and report commits with readback."
+    },
+    {
+      "capability": "Artifact readback",
+      "status": "PASS",
+      "evidence": "64-row raw delta, sidecar manifest, 1h archive index and central 4h index were fetched back; SHA-256 and row counts matched; raw archive branch is persistent.",
+      "impact": "This run's raw data update is durable.",
+      "nextAction": "Read back all report/queue/registry artifacts after committing."
+    }
+  ],
+  "endpointEvidence": {
+    "directRest": {
+      "status": "UNAVAILABLE_DNS_FAILURE",
+      "attempted": [
+        "GET /fapi/v1/time"
+      ],
+      "httpStatus": null,
+      "headers": null
+    },
+    "connectorEndpoints": {
+      "exchangeInfo": "GET /fapi/v1/exchangeInfo (stale serverTime)",
+      "klines": "GET /fapi/v1/klines",
+      "premiumIndex": "GET /fapi/v1/premiumIndex",
+      "ticker24h": "GET /fapi/v1/ticker/24hr",
+      "openInterest": "GET /fapi/v1/openInterest",
+      "depth": "GET /fapi/v1/depth",
+      "fundingHistory": "GET /fapi/v1/fundingRate",
+      "takerVolume": "GET /futures/data/takerlongshortRatio",
+      "globalLongShort": "GET /futures/data/globalLongShortAccountRatio",
+      "basis": "GET /futures/data/basis"
+    },
+    "symbols": [
+      "BTCUSDT",
+      "ETHUSDT",
+      "SOLUSDT",
+      "XRPUSDT"
+    ],
+    "intervals": [
+      "5m",
+      "15m",
+      "1h",
+      "4h"
+    ],
+    "latestCompletedOpenUtc": {
+      "5m": "2026-11-07T04:20:00.000Z",
+      "15m": "2026-11-07T04:00:00.000Z",
+      "1h": "2026-11-07T03:00:00.000Z",
+      "4h": "2026-11-07T00:00:00.000Z"
+    },
+    "metadataServerTimeUtc": "2026-11-06T11:18:40.878Z",
+    "metadataDriftSeconds": 61278.122
+  },
+  "archive": {
+    "branch": "research/raw-ohlcv-archive-2026-11-07T0426Z",
+    "deltaPath": "research-data/binance-usdm/delta/binance_usdm_delta_20261107T0426Z_5m15m1h4h_completed.jsonl",
+    "manifestPath": "research-data/binance-usdm/delta/manifest-20261107T0426Z-5m15m1h4h.json",
+    "deltaSha256": "dca493ad730234ad090815baaa940f9cafcfd1f3fbefbdf0c3c0c7dbceaac154",
+    "rowsAppended": 64,
+    "formingRowsExcluded": 16,
+    "highwater": {
+      "5m": "2026-11-07T04:20:00.000Z",
+      "15m": "2026-11-07T04:00:00.000Z",
+      "1h": "2026-11-07T03:00:00.000Z",
+      "4h": "2026-11-07T00:00:00.000Z"
+    },
+    "readbackVerified": true,
+    "centralIndexBlobSha": "f3cc35776b87afed73bdcaabe339827baac0e878",
+    "oneHourIndexBlobSha": "e04ad9c3a43082516adb39255e41c6020e09d6be"
+  },
+  "backtestReadiness": {
+    "localCheckout": false,
+    "nodeRequirement": ">=24",
+    "npmRequirement": ">=11",
+    "actualNode": "v22.16.0",
+    "actualNpm": "10.9.2",
+    "sdkInstalled": false,
+    "jsonlArchiveAdapter": false,
+    "smokeTest": "NOT_RUN",
+    "strategyExperiment": "NOT_EXECUTED",
+    "untouchedOos": "NOT_EVALUATED"
+  },
+  "persistence": {
+    "rawDeltaReadbackVerified": true,
+    "contextBranch": "research/context-strategy-2026-11-07-run17",
+    "registryWillBeUpdated": true,
+    "queueWillBeUpdated": true
+  }
+}

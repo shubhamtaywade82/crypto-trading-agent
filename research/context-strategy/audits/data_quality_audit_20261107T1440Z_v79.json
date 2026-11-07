@@ -1,0 +1,171 @@
+{
+  "schemaVersion": 1,
+  "runId": "context-strategy-2026-11-07T1440Z-v79",
+  "asOfUtc": "2026-11-07T14:40:24.277Z",
+  "archive": {
+    "branch": "research/raw-ohlcv-archive-20261107T1440Z",
+    "oneHour": {
+      "rowsPerSymbol": 53871,
+      "totalRows": 215484,
+      "startUtc": "2020-09-14T08:00:00Z",
+      "canonicalEndUtc": "2026-11-06T22:00:00Z",
+      "incrementalHighwaterUtc": "2026-11-07T13:00:00Z"
+    },
+    "fourHour": {
+      "rowsPerSymbol": 13461,
+      "totalRows": 53844,
+      "canonicalEndUtc": "2026-11-05T16:00:00Z",
+      "incrementalHighwaterUtc": "2026-11-07T08:00:00Z",
+      "incrementalMerged": false,
+      "missingDeltaRows": 76,
+      "priorPageSymbolHashMismatches": 14
+    },
+    "fiveMinuteAndFifteenMinute": {
+      "multiYearHistoryPresent": false,
+      "rollingRowsPerSymbolInterval": 200,
+      "latestCompletedOpenUtc": {
+        "5m": "2026-11-07T14:35:00Z",
+        "15m": "2026-11-07T14:15:00Z"
+      }
+    },
+    "rollingWindowQuality": {
+      "series": 16,
+      "rowsPerSeries": 200,
+      "rawRows": 3200,
+      "completedRows": 3184,
+      "formingRows": 16,
+      "duplicates": 0,
+      "missingIntervals": 0,
+      "offGrid": 0,
+      "ohlcFailures": 0,
+      "nonPositiveVolume": 0,
+      "nonFinite": 0,
+      "nonMonotonic": 0
+    },
+    "newRowsAppendedThisRun": 72,
+    "rowsByInterval": {
+      "5m": 52,
+      "15m": 16,
+      "1h": 4
+    },
+    "rowsBySymbol": {
+      "BTCUSDT": 18,
+      "ETHUSDT": 18,
+      "SOLUSDT": 18,
+      "XRPUSDT": 18
+    },
+    "cumulativeIndexedDeltaRows": 3728,
+    "highwaterUtc": {
+      "5m": "2026-11-07T14:35:00Z",
+      "15m": "2026-11-07T14:15:00Z",
+      "1h": "2026-11-07T13:00:00Z",
+      "4h": "2026-11-07T08:00:00Z"
+    },
+    "deltaArtifacts": [
+      {
+        "path": "research-data/binance-usdm/delta/binance_usdm_delta_20261107T1430Z_5m15m1h_completed.jsonl",
+        "rows": 56,
+        "sha256": "9cb90cfe88ff9036b9b3cc8530bb3b48ea782d89ef5c8166368ccd4e5cc4722a",
+        "manifest": "research-data/binance-usdm/delta/manifest-20261107T1430Z-5m15m1h.json",
+        "manifestSha256": "16af3aa0a698f53de6f4ed7054907906259e0de2cccb1291665f72988196971a"
+      },
+      {
+        "path": "research-data/binance-usdm/delta/binance_usdm_delta_20261107T1440Z_5m15m_completed.jsonl",
+        "rows": 16,
+        "sha256": "8e3a910b28623d9b69f717827c25558c332eb824ce8f9502436bd00f2a973670",
+        "manifest": "research-data/binance-usdm/delta/manifest-20261107T1440Z-5m15m.json",
+        "manifestSha256": "326cce567db1cec4232202c239957a69b82bb8b595dd45fcec99a7306a82256a"
+      }
+    ]
+  },
+  "checksumAudit": {
+    "status": "DEGRADED",
+    "priorPageSymbolHashMismatches": 14,
+    "independentReadbackMismatches": [
+      {
+        "path": "research-data/binance-usdm/1h/BTCUSDT/page-0036.jsonl",
+        "rows": 1371,
+        "bytes": 194900,
+        "expectedSha256": "c6f8055f275746c0f51b659dd1d3a4898d7140cbc33a72d919889b925ad70b82",
+        "observedSha256": "37ea7e227c6396b4d0e03e0b012c13d01d439827a13e9f8c88a8704b88959e86",
+        "gitBlobSha": "2085c4c8d655694ca4fb77144d26f378f15f041b"
+      },
+      {
+        "path": "research-data/binance-usdm/4h/SOLUSDT/page-0009.jsonl",
+        "rows": 1456,
+        "bytes": 184555,
+        "expectedSha256": "212f6881361004029b7d46d2f75b7af132ba6d1cf9cfdb5b77b2a0488ee877aa",
+        "observedSha256": "03c1b4c36d237b5dc3423fcf3289c20a691a809026e9445ef0e2a3459aff9cb5",
+        "gitBlobSha": "839e87ecf0245f233903a96850cbaea2dc73dce9"
+      }
+    ],
+    "expectedHashesPreserved": true,
+    "interpretation": "Git blob identities match the page manifests, but independently computed SHA-256 over fetched JSONL text differs from the manifest JSONL SHA fields. Do not silently rewrite expected hashes."
+  },
+  "endpoints": {
+    "directRest": {
+      "/fapi/v1/time": "HTTP000 DNS failure",
+      "/fapi/v1/exchangeInfo": "HTTP000 5s timeout",
+      "/fapi/v1/klines": "not directly reachable; connector wrapper used",
+      "/fapi/v1/premiumIndex": "not directly reachable; connector wrapper used",
+      "/fapi/v1/openInterest": "not directly reachable; connector wrapper used",
+      "/fapi/v1/ticker/24hr": "not directly reachable; connector wrapper used"
+    },
+    "connector": {
+      "klines": "16 symbol/interval rolling requests, 200 rows each, asOf 2026-11-07T14:40:24.277Z",
+      "premiumIndex": "mark/index/lastFundingRate/nextFundingTime; 14:39:21Z",
+      "ticker24hr": "24h last/high/low/quote volume; closeTime 14:39:14Z",
+      "openInterest": "current OI; 14:39:21Z",
+      "fundingRate": "last two settled records; latest 08:00Z",
+      "depth": "20 levels; event 14:40:24.277Z",
+      "takerFlow": "5m; latest completed bar 14:30Z",
+      "globalLongShortAccountRatio": "1h; latest 14:00Z",
+      "openInterestHist": "1h; latest 14:00Z"
+    }
+  },
+  "funding": {
+    "intervalHours": 8,
+    "lastSettledUtc": "2026-11-07T08:00:00Z",
+    "nextFundingUtc": "2026-11-07T16:00:00Z",
+    "lastSettledRatePct": {
+      "BTCUSDT": 0.001332,
+      "ETHUSDT": 0.004541,
+      "SOLUSDT": 0.005614,
+      "XRPUSDT": 0.007693
+    },
+    "premiumIndexLastFundingRateFieldPct": {
+      "BTCUSDT": 0.00088,
+      "ETHUSDT": 0.00791,
+      "SOLUSDT": 0.001866,
+      "XRPUSDT": 0.01
+    },
+    "anyAbsoluteFundingAbove0_05Pct": false,
+    "predictedFundingRateAvailable": false
+  },
+  "costs": {
+    "actualFeeTierAvailable": false,
+    "historicalFundingCashflowsAvailable": false,
+    "historicalSpreadSlippageImpactLatencyAvailable": false,
+    "currentDepthSnapshotOnly": true,
+    "inheritedRoundTripProxyBps": 15,
+    "proxyValidated": false
+  },
+  "unavailable": [
+    "Fresh exchangeInfo and server time",
+    "Direct Binance HTTP statuses/headers",
+    "Multi-year 5m and 15m history",
+    "Historical depth/trade/liquidation series",
+    "Account fee tier",
+    "Historical execution-cost model",
+    "Local checkout and compatible backtest runner",
+    "Deterministic smoke test",
+    "Independent root-cause explanation for page hash discrepancies"
+  ],
+  "risks": [
+    "Stale contract metadata blocks execution validation",
+    "No OOS_VALIDATED registry entry",
+    "OOS_PROMISING SOL candidate is too small and not actionable",
+    "No context thresholds or frequency/duration/transition estimates",
+    "Historical archive provenance remains degraded"
+  ]
+}

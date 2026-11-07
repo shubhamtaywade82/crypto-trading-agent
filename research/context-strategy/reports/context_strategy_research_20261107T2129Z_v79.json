@@ -1,0 +1,118 @@
+{
+  "schema_version": "1.0.0",
+  "run_id": "context-strategy-2026-11-08-run29",
+  "version": "v79",
+  "created_at_utc": "2026-11-07T21:29:34.064Z",
+  "status": "RESEARCH_EXECUTED",
+  "status_detail": "A reproducible rolling data-quality and append experiment completed: 68 completed OHLCV rows were appended to the raw delta branch, validated and read back with SHA-256. No strategy backtest or untouched OOS evaluation ran; those remain blocked by the recorded archive, runtime, data-contract, cost and derivatives prerequisites.",
+  "artifact_sha256": {
+    "research/context-strategy/preflight/preflight_20261107T2129Z_v79.json": {
+      "sha256": "5fae69ed984dfeb819977e2c5a4ead45a0cbc602ff0fc6302d39ce401c825310",
+      "bytes": 7689
+    },
+    "research/context-strategy/queues/research_queue_20261107T2129Z_v79.json": {
+      "sha256": "40f2aff3bb7a9aae645c0ec71ca3ffcd60bfd7961e5c181b65304e5e129ef8a1",
+      "bytes": 6783
+    },
+    "research/context-strategy/registries/context_strategy_registry_20261107T2129Z_v79.json": {
+      "sha256": "a85b747a536567a4b3401f708b845298f242b12d635f90b055fdac2f4a766bb4",
+      "bytes": 3919
+    },
+    "research/context-strategy/snapshots/current_market_snapshot_20261107T2129Z_v79.json": {
+      "sha256": "59bb3fbe85f157570953c0e9357dabf38926964da235834ec4ff337c7fc3537b",
+      "bytes": 11717
+    },
+    "research/context-strategy/audits/data_quality_audit_20261107T2129Z_v79.json": {
+      "sha256": "b8fdda2dc30bb8484b13c1bbf2eeb157e39fe50b07274001dd02a32e6b316359",
+      "bytes": 5794
+    }
+  },
+  "sections": {
+    "research_progress": {
+      "data_quality_experiment_id": "DQ-20261107-2129Z",
+      "rolling_rows_checked": 5600,
+      "completed_rows": 5584,
+      "forming_rows_excluded": 16,
+      "completed_rows_appended": 68,
+      "append_readback_verified": true,
+      "raw_branch": "research/raw-ohlcv-archive-20261107T2125Z-run15",
+      "manifest_path": "research-data/binance-usdm/delta/manifest-20261107T2125Z-5m15m1h.json",
+      "archive_index_updated": false,
+      "strategy_experiment": "BLOCKED",
+      "oos_evaluation": "NOT_RUN",
+      "remaining": [
+        "recover the missing 76-row and intermediate delta provenance",
+        "backfill multi-year 5m/15m",
+        "merge verified 4h deltas into canonical files",
+        "provision Node24/npm11 and local checkout",
+        "preserve closeTime and reject zero volume; run deterministic smoke/no-lookahead fixtures",
+        "archive historical fees, spread/slippage/latency, funding and OI"
+      ]
+    },
+    "context_discovery": {
+      "taxonomy_status": "UNCHANGED_NOT_REFIT",
+      "training_thresholds": "NONE_FIT_THIS_RUN",
+      "current_observation": "All four symbols bearish-aligned across 5m/15m/1h/4h in the rolling sample. ETH 15m and SOL 1h close below prior 20-bar lows; XRP 4h local ATR percentile is 93.",
+      "sample_adequacy": "Current rolling samples are 199 completed 5m/15m bars and 499 completed 1h/4h bars per symbol. 1h/4h multi-year archives exist but chain/merge is incomplete; multi-year 5m/15m is missing. No multi-cycle context frequency/duration/transition analysis was run.",
+      "context_frequency_duration_transitions": "NOT_COMPUTED",
+      "classification_confidence": "LOW_TO_MODERATE; heuristic features, not calibrated probabilities"
+    },
+    "strategy_context_scorecard": {
+      "oos_validated_entries": 0,
+      "oos_promising_entries": 1,
+      "registry_snapshot": "context_strategy_registry_20261107T2129Z_v79.json",
+      "candidate": {
+        "symbol": "SOLUSDT",
+        "context": "4h BULL_LOW",
+        "strategy": "Donchian20 breakout continuation v0.1.0",
+        "status": "OOS_PROMISING",
+        "oos_trades": 12,
+        "win_rate_pct": 66.7,
+        "target_before_stop_pct": 41.7,
+        "mean_net_R": 0.606,
+        "profit_factor": 2.72,
+        "max_drawdown_R": 1.3,
+        "block_bootstrap_interval_R": [
+          0.086,
+          1.199
+        ],
+        "gate": "FAIL: 12 trades < 100 minimum and no multi-window stability",
+        "actionable": false
+      },
+      "baseline": "BTC/ETH/SOL/XRP Donchian20 all-context aggregates remain INSUFFICIENT_EVIDENCE; not context-conditioned proof.",
+      "other_families": "HYPOTHESIS; no strategy experiment run."
+    },
+    "key_discoveries": [
+      "The current sample is broadly bearish across BTC/ETH/SOL/XRP; BTC remains reference only.",
+      "5m ATR local percentiles are elevated (78/92/100/86) while 1h percentiles are low (5/8/10/2), a cross-timeframe volatility mismatch rather than a validated regime.",
+      "ETH 15m and SOL 1h have completed closes below their prior 20-bar ranges; these are observations, not entries.",
+      "XRP 4h 20-bar return is -9.848% with local ATR percentile 93; elevated risk, but formal shock threshold was not fitted.",
+      "One SOL 4h BULL_LOW Donchian20 candidate remains OOS_PROMISING at n=12; it is not current-context applicable and is not actionable.",
+      "No OOS_VALIDATED strategy exists; all tradable symbols remain NO_TRADE."
+    ],
+    "current_market_snapshot_ref": "current_market_snapshot_20261107T2129Z_v79.json",
+    "decisions": {
+      "BTCUSDT": "REFERENCE_ONLY; bearish alignment, no trade selection.",
+      "SOLUSDT": "NO_TRADE: no OOS_VALIDATED entry; only OOS_PROMISING SOL BULL_LOW candidate does not match current bearish context.",
+      "ETHUSDT": "NO_TRADE: no ETH-specific OOS_VALIDATED entry; 15m breakdown observation is not a validated trigger.",
+      "XRPUSDT": "NO_TRADE: no XRP-specific OOS_VALIDATED entry; elevated 4h downside/volatility risk and no proven setup."
+    },
+    "data_quality_audit_ref": "data_quality_audit_20261107T2129Z_v79.json",
+    "preflight_ref": "preflight_20261107T2129Z_v79.json",
+    "costs_and_unavailable_inputs": {
+      "actual_fee_tier": "UNAVAILABLE",
+      "historical_spread_slippage_impact": "UNAVAILABLE",
+      "historical_funding": "DEGRADED",
+      "historical_open_interest": "UNAVAILABLE",
+      "latency_model": "UNAVAILABLE",
+      "note": "Repository documentation's generic dual-leg taker/slippage assumptions are not an account-verified cost model and were not used for any new strategy result."
+    },
+    "next_experiments": [
+      "Recover missing archive deltas and reconcile the 1h index.",
+      "Backfill multi-year 5m/15m and merge 4h canonical deltas.",
+      "Fix closeTime/zero-volume validation and run deterministic fixture twice under Node24.",
+      "Build verified historical funding/OI and cost datasets.",
+      "Then pre-register strategy x context x symbol experiments with train/validation/untouched OOS and purging/embargo."
+    ]
+  }
+}

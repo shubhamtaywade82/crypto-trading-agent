@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "runId": "context-strategy-2026-11-07T1440Z-v79",
-  "updatedAtUtc": "2026-11-07T14:44:36.732Z",
+  "runId": "context-strategy-2026-11-07T1532Z-v80",
+  "updatedAtUtc": "2026-11-07T15:33:17.147Z",
   "items": [
     {
       "id": "Q1_ARCHIVE_MULTIYEAR",
@@ -12,8 +12,8 @@
         "Persistent archive",
         "Checksum/readback"
       ],
-      "nextAction": "Backfill multi-year 5m/15m; rebuild canonical 4h through the 08:00Z incremental high-water; recover the missing 76-row delta; independently reconcile the two newly observed page SHA-256 discrepancies without rewriting expected hashes.",
-      "blocker": "1h base: 53,871 rows/symbol from 2020-09-14T08:00Z to 2026-11-06T22:00Z; incremental high-water 2026-11-07T13:00Z. 4h canonical: 13,461 rows/symbol through 2026-11-05T16:00Z; incremental high-water 08:00Z Nov7 is not merged. Multi-year 5m/15m absent; one 76-row delta unresolved; 14 prior page-symbol hash provenance mismatches remain. Independent readback also found 1h BTC page-0036 JSONL SHA mismatch and 4h SOL page-0009 JSONL SHA mismatch; expected values preserved."
+      "nextAction": "Backfill multi-year 5m/15m; rebuild canonical 4h through the 08:00Z incremental high-water; recover the missing 76-row delta; re-audit the remaining 13 page/symbol hash provenance mismatches using the verified SHA-256 implementation.",
+      "blocker": "1h base: 53,871 rows/symbol from 2020-09-14T08:00Z to 2026-11-06T22:00Z; incremental high-water now 2026-11-07T14:00Z. 4h canonical: 13,461 rows/symbol through 2026-11-05T16:00Z; incremental high-water 08:00Z Nov7 is not merged. Multi-year 5m/15m absent; one 76-row delta unresolved; 13 original 4h page-symbol hash mismatches remain (BTC pages 2-6; all symbols pages 7-8)."
     },
     {
       "id": "Q2_VERIFY_EXCHANGE_TIME_METADATA",
@@ -22,8 +22,8 @@
       "prerequisites": [
         "Direct bounded HTTP or uncached official endpoint"
       ],
-      "nextAction": "Restore DNS/HTTPS or obtain uncached official /fapi/v1/time and /fapi/v1/exchangeInfo; require <=60s drift and confirm all four contracts are TRADING before execution validation.",
-      "blocker": "Direct /fapi/v1/time and /fapi/v1/exchangeInfo shell probes returned HTTP000 (DNS failure/5s timeout). Connector exchangeInfo serverTime 2026-11-06T11:18:40.896Z versus fresh market time 2026-11-07T14:39:23Z; stale by 98,442.104s (27h20m42.104s)."
+      "nextAction": "Restore DNS/HTTPS or obtain uncached official /fapi/v1/time and /fapi/v1/exchangeInfo; require <=60s drift and verify all four contracts are TRADING before execution validation.",
+      "blocker": "Direct /fapi/v1/time and /fapi/v1/exchangeInfo shell probes returned HTTP000 due DNS failure. Connector exchangeInfo serverTime 2026-11-06T11:18:40.899Z versus fresh market time 2026-11-07T15:32:05Z; stale by about 101,676s (28h14m). Connector did not expose raw HTTP status/headers."
     },
     {
       "id": "Q3_RUN_REPOSITORY_BACKTEST",
@@ -36,8 +36,8 @@
         "Dependencies",
         "Deterministic fixture"
       ],
-      "nextAction": "Provision a local checkout with Node24+/npm11+, preserve closeTime end-to-end, reject volume<=0, run deterministic fixture twice and verify no-lookahead before any full backtest.",
-      "blocker": "No local checkout; runtime Node22.16.0/npm10.9.2 below package floor Node>=24/npm>=11; @binance/connector, binance-api-node and binance packages NOT_FOUND. Remote main commit fce8afd0cad347d2e9dbb0ecebfbaf43889295e0 is inspectable but not invokable. scripts/backtest.ts omits 5m and drops closeTime; archiveKlines.ts rejects volume<0 but accepts zero."
+      "nextAction": "Provision local checkout with Node24+/npm11+, carry closeTime through the Candle schema, reject volume<=0, add 5m support, then run the deterministic fixture twice and verify no-lookahead before any full backtest.",
+      "blocker": "No local checkout; runtime Node22.16.0/npm10.9.2 below package floor Node>=24/npm>=11; pnpm unavailable; @nemesis-oss/binance-sdk, binance and @binance/connector are NOT_INSTALLED. Remote scripts/backtest.ts exists but only uses 15m/1h/4h and drops closeTime; archiveKlines.validateCandles accepts volume=0 because it only rejects volume<0. No smoke test was run."
     },
     {
       "id": "Q4_CALIBRATE_EXECUTION_COSTS",
@@ -49,8 +49,8 @@
         "Spread/depth/trades",
         "Latency model"
       ],
-      "nextAction": "Acquire actual fee tier and timestamp-aligned historical funding, trades, spread/depth and latency; estimate maker/taker fills, slippage, impact and funding cashflows.",
-      "blocker": "No account fee tier, historical spread/slippage/impact/latency series or historical depth. Latest funding and OI/taker/positioning snapshots are insufficient; inherited 15bp round-trip proxy is not validated."
+      "nextAction": "Acquire actual account fee tier plus timestamp-aligned historical funding, trades, spread/depth and latency; calibrate maker/taker fills, slippage and impact.",
+      "blocker": "No account fee tier, historical spread/slippage/impact/latency series or historical depth. Latest snapshots cannot calibrate execution costs; inherited 15bp round-trip proxy is unvalidated."
     },
     {
       "id": "Q5_APPEND_COMPLETED_BARS",
@@ -62,7 +62,7 @@
         "Writable archive",
         "Readback"
       ],
-      "nextAction": "Continue after 5m 14:35Z, 15m 14:15Z, 1h 13:00Z and 4h 08:00Z only after closeTime passes.",
+      "nextAction": "Continue after 5m 15:20Z, 15m 15:00Z, 1h 14:00Z and 4h 08:00Z only after each closeTime passes.",
       "blocker": null,
       "result": {
         "rowsAppended": 72,
@@ -112,8 +112,8 @@
         "Historical funding archive",
         "Longer OI/taker/positioning"
       ],
-      "nextAction": "Backfill full fundingRate history and longer OI/taker/positioning series; align to completed candles.",
-      "blocker": "Only the latest two settled funding records and short OI/taker/global-long-short snapshots were retrieved; no historical depth or full funding archive."
+      "nextAction": "Backfill full fundingRate history and longer OI/taker/global-long-short series for all four symbols; align to completed candles.",
+      "blocker": "Current mark-price funding fields, three recent settled funding records, current OI, 5m taker volume and global account long/short snapshots were retrieved. Historical derivatives archive remains incomplete; SOL funding archive has 6,806 rows through Nov5 but readback SHA mismatch and 3,501 blank mark-price rows."
     },
     {
       "id": "Q7_CONTEXT_TAXONOMY_STABILITY",
@@ -123,8 +123,8 @@
         "Aligned multi-year history",
         "Training-only thresholds"
       ],
-      "nextAction": "Fit compact thresholds on training only; measure context frequency, duration, transitions and classification stability.",
-      "blocker": "No threshold refit or weekly review this run; multi-year 5m/15m history absent; 4h canonical merge incomplete. Current 200-bar windows are descriptive only."
+      "nextAction": "Fit compact thresholds on training only; measure context frequency, duration, transition probabilities and classification stability over the full aligned archive.",
+      "blocker": "No threshold refit or weekly stability review this run. Current 100-bar windows per symbol/timeframe are descriptive only; multi-year 5m/15m absent and 4h canonical merge incomplete."
     },
     {
       "id": "Q8_DAILY_CONTEXT_EXPERIMENT",
@@ -136,8 +136,8 @@
         "Frozen experiment specification",
         "Untouched test"
       ],
-      "nextAction": "Do not lower evidence gates. After Q1-Q4 and Q3 smoke test pass, pre-register one symbol/context/family with train/validation/untouched OOS, purging/embargo, realistic costs, block bootstrap and Holm correction.",
-      "blocker": "No compatible local harness/smoke test; multi-year 5m/15m absent; cost model incomplete; fresh exchange metadata unavailable; archive hash discrepancies remain."
+      "nextAction": "Do not lower evidence gates. After archive, metadata, local harness and cost prerequisites pass, pre-register one symbol/context/family with chronological train/validation/untouched OOS, purging/embargo, realistic costs, block bootstrap and Holm correction.",
+      "blocker": "No compatible local harness/smoke test; multi-year 5m/15m absent; cost model incomplete; fresh exchange metadata unavailable; 76-row delta unresolved; 13 page-symbol hash provenance mismatches remain."
     },
     {
       "id": "Q9_RECONCILE_MISSING_76_DELTA",
@@ -147,8 +147,8 @@
         "Original delta or independent replay",
         "Canonical merge"
       ],
-      "nextAction": "Recover original artifact or record irrecoverable provenance; do not synthesize rows.",
-      "blocker": "One 76-row delta remains NOT_FOUND. Canonical 4h has no gap through Nov5 16:00Z, but the missing artifact may contain lower-timeframe rows; no synthetic reconstruction permitted."
+      "nextAction": "Recover the original artifact or record irrecoverable provenance; do not synthesize rows.",
+      "blocker": "The 76-row delta remains NOT_FOUND. Canonical 4h has no gap through Nov5 16:00Z, but the missing artifact may contain lower-timeframe rows; exact symbol/interval/time coverage remains unknown."
     },
     {
       "id": "Q10_ENFORCE_OOS_GATES",
@@ -159,21 +159,21 @@
         "Compatible runner",
         "Purging/multiple-testing tests"
       ],
-      "nextAction": "Enforce >=100 OOS trades per symbol/context and >=200 across multiple windows for stronger evidence, 95% CIs, block bootstrap, purging/embargo and Holm correction.",
-      "blocker": "Remote conditional-edge defaults minN=30 and confidence=0.90, below required >=100 OOS trades per symbol/context, 95% intervals and 200+ trades across multiple windows for stronger evidence; no local runner to patch or test."
+      "nextAction": "Raise conditional-edge evidence gates to >=100 OOS trades per symbol/context, 95% CIs, block bootstrap, purging/embargo and Holm correction; require >=200 trades across multiple windows for stronger evidence.",
+      "blocker": "Remote conditional-edge defaults minN=30 and confidence=0.90, below the required gates. No local runner to patch or test."
     },
     {
       "id": "Q11_RECONCILE_PAGE_SHA256",
       "priority": 1,
-      "status": "BLOCKED",
+      "status": "PARTIALLY_COMPLETED",
       "prerequisites": [
         "Raw page files",
         "Page manifests",
         "Independent SHA-256 over exact UTF-8 bytes",
         "Preserve Git blob identity"
       ],
-      "nextAction": "Verify the two page files with a second independent checksum implementation and compare exact raw bytes to manifest generation; preserve expected hashes and update status only after root cause is proven.",
-      "blocker": "1h BTCUSDT/page-0036.jsonl: manifest SHA c6f8055f275746c0f51b659dd1d3a4898d7140cbc33a72d919889b925ad70b82 vs observed 37ea7e227c6396b4d0e03e0b012c13d01d439827a13e9f8c88a8704b88959e86 (Git blob 2085c4c8d655694ca4fb77144d26f378f15f041b matches manifest identity). 4h SOLUSDT/page-0009.jsonl: manifest JSONL SHA 212f6881361004029b7d46d2f75b7af132ba6d1cf9cfdb5b77b2a0488ee877aa vs observed 03c1b4c36d237b5dc3423fcf3289c20a691a809026e9445ef0e2a3459aff9cb5 (Git blob 839e87ecf0245f233903a96850cbaea2dc73dce9 matches manifest identity)."
+      "nextAction": "Re-audit the remaining 13 original 4h page/symbol hash provenance mismatches (BTC pages2-6 and all symbols pages7-8) with the same known-vector-tested SHA-256 implementation; do not rewrite expected hashes.",
+      "blocker": "Two prior independent readback mismatch flags were not reproduced: 1h BTC page-0036 and 4h SOL page-0009 now match expected SHA-256. All four 1h page-0036 files and all four 4h page-0009 files match their manifest hashes. One original 4h manifest mismatch (BTC page-0009) was cleared; 13 original mismatch flags remain."
     }
   ],
   "dailyResearchCycle": {

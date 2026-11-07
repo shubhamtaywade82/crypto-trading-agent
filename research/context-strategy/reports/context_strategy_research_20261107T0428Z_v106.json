@@ -2,20 +2,22 @@
   "schemaVersion": "1.0.0",
   "runId": "CONTEXT-STRATEGY-20261107T0428Z-V106",
   "version": "V106",
-  "createdAtUtc": "2026-11-07T04:28:56.452Z",
+  "createdAtUtc": "2026-11-07T04:37:12.681Z",
   "executionClassification": "RESEARCH_BLOCKED",
   "researchExecuted": false,
   "oosEvaluated": false,
   "monitoringCompleted": true,
   "archiveMaintenanceCompleted": true,
-  "summary": "64 completed OHLCV bars were appended and readback-verified across 5m/15m/1h/4h. Current context monitoring completed. No strategy experiment, deterministic repository smoke test or untouched OOS evaluation ran. Registry has zero OOS_VALIDATED strategies; SOL/ETH/XRP remain NO_TRADE.",
+  "summary": "76 completed OHLCV bars were appended and readback-verified across two deltas: 52 x 5m, 16 x 15m, 4 x 1h and 4 x 4h. Current context and microstructure snapshot refreshed. No strategy experiment, deterministic repository smoke test or untouched OOS evaluation ran. Registry has zero OOS_VALIDATED strategies; SOL/ETH/XRP remain NO_TRADE.",
   "researchProgress": {
     "completed": [
       "Refreshed Binance USD-M mark, 24h ticker, open interest, funding history, basis, global long/short account ratio, taker flow and top-20 depth for BTC/ETH/SOL/XRP.",
       "Retrieved 7,600 rolling OHLCV rows across 5m/15m/1h/4h; final context calculation used 6,784 completed rows (1,000 4h + 500 1h + 100 15m + 100 5m per symbol), excluding forming candles.",
       "Appended 64 completed bars to the latest raw archive branch: 44 x 5m, 12 x 15m, 4 x 1h and 4 x 4h. Excluded 16 forming rows. All structural checks passed.",
       "Created and readback-verified the delta JSONL and manifest; updated and readback-verified the 1h and central 4h indexes.",
-      "Recomputed current 4h context features with persisted training thresholds and a 1,000-bar window; no thresholds were refit."
+      "Recomputed current 4h context features with persisted training thresholds and a 1,000-bar window; no thresholds were refit.",
+      "A second incremental refresh appended 12 completed bars (8 x 5m, 4 x 15m) and excluded 8 forming rows; the 5m/15m high-water advanced to 04:30Z/04:15Z.",
+      "Refreshed current mark/ticker/OI/funding/book/taker/long-short/basis and 5m/15m completed-candle features at approximately 04:36Z."
     ],
     "notCompleted": [
       "No deterministic repository fixture smoke test, strategy experiment, walk-forward evaluation or untouched OOS run.",
@@ -28,7 +30,7 @@
         "canonicalRowsPerSymbol": 13468,
         "canonicalRowsTotal": 53872,
         "canonicalEndUtc": "2026-11-06T20:00:00Z",
-        "logicalEndUtc": "2026-11-07T00:00:00Z",
+        "logicalEndUtc": "2026-11-07T00:00:00.000Z",
         "logicalRowsPerSymbol": 13469,
         "startUtc": "2020-09-14T08:00:00Z",
         "approxYears": 6.14
@@ -40,18 +42,20 @@
         "logicalRowsPerSymbol": 53876,
         "logicalRowsTotal": 215504,
         "baseEndUtc": "2026-11-06T22:00:00Z",
-        "logicalEndUtc": "2026-11-07T03:00:00Z",
+        "logicalEndUtc": "2026-11-07T03:00:00.000Z",
         "startUtc": "2020-09-14T08:00:00Z"
       },
       "fifteenMinute": {
         "multiYearArchivePresent": false,
         "rollingBarsPerSymbol": 500,
-        "approxDays": 5.21
+        "approxDays": 5.21,
+        "latestCompletedOpenUtc": "2026-11-07T04:15:00.000Z"
       },
       "fiveMinute": {
         "multiYearArchivePresent": false,
         "rollingBarsPerSymbol": 500,
-        "approxHours": 41.67
+        "approxHours": 41.67,
+        "latestCompletedOpenUtc": "2026-11-07T04:30:00.000Z"
       }
     },
     "blocker": "Daily strategy experiment remains blocked by no local checkout, Node22.16/npm10.9 below package floor Node>=24/npm>=11, no SDK, direct Binance DNS failure, no JSONL archive adapter, incomplete historical funding and uncalibrated spread/slippage."
@@ -314,9 +318,9 @@
     "No ETH or XRP strategy has symbol-specific OOS evidence; do not transfer SOL results.",
     "SIDEWAYS_LOW is the most frequent single 4h context in the six-year descriptive sample for all four symbols; this is not a profitability statement.",
     "BTC/ETH/SOL have positive recent 20-hour returns but bearish 4h/1h EMA structure; XRP remains materially weaker.",
-    "The completed 04:00Z 15m taker bucket is sell-leaning for all four symbols; the prior bucket was buy-leaning. This is flow context only, not a liquidation signal.",
     "Global long/short account ratios are 3.03-3.87, while basis is negative and taker flow is sell-leaning; account ratios are not position-size data and do not establish crowding.",
-    "Binance fundingInfo reports an 8-hour interval for BTC/ETH/SOL/XRP. premiumIndex.lastFundingRate is documented as the latest funding-rate field, not a guaranteed forward estimate; the settled rate is separately read from fundingRate history."
+    "Binance fundingInfo reports an 8-hour interval for BTC/ETH/SOL/XRP. premiumIndex.lastFundingRate is documented as the latest funding-rate field, not a guaranteed forward estimate; the settled rate is separately read from fundingRate history.",
+    "The completed 04:15Z 15m taker bucket is sell-leaning for BTC (ratio 0.7503) but buy-leaning for ETH/SOL/XRP (1.18-1.94); top-20 book imbalance is bid-heavy BTC and ask-heavy across the tradable alts. This is a transient divergence, not a trade signal."
   ],
   "currentMarketSnapshotPath": "research/context-strategy/market-snapshots/market_snapshot_20261107T0428Z.json",
   "decisions": {
@@ -413,7 +417,15 @@
     "archiveIndex1hBlobSha": "e04ad9c3a43082516adb39255e41c6020e09d6be",
     "contextResearchBranch": "research/context-strategy-2026-11-07-run17",
     "registryPath": "research/context-strategy/registry.json",
-    "queuePath": "research/context-strategy/queue.json"
+    "queuePath": "research/context-strategy/queue.json",
+    "secondDeltaPath": "research-data/binance-usdm/delta/binance_usdm_delta_20261107T0436Z_5m15m_completed.jsonl",
+    "secondDeltaSha256": "49143f692af943c998c736d249b71327c677c8f4715f9c81c3f39fbe8c6bb6f3",
+    "latestCompletedOpenUtc": {
+      "5m": "2026-11-07T04:30:00.000Z",
+      "15m": "2026-11-07T04:15:00.000Z",
+      "1h": "2026-11-07T03:00:00.000Z",
+      "4h": "2026-11-07T00:00:00.000Z"
+    }
   },
   "fundingSemanticsVerified": true
 }

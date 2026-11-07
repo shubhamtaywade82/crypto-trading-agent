@@ -1,0 +1,239 @@
+{
+  "schemaVersion": "1.0.0",
+  "runId": "CONTEXT-STRATEGY-20261107T022924Z-V104",
+  "checkedAtUtc": "2026-11-07T02:29:24.565Z",
+  "executionClassification": "RESEARCH_BLOCKED",
+  "checks": [
+    {
+      "capability": "Shell/compute",
+      "status": "PASS",
+      "evidence": {
+        "cwd": "/",
+        "os": "Linux Debian 13.3",
+        "node": "v22.16.0",
+        "npm": "10.9.2",
+        "python": "3.13.5",
+        "cpuCores": 5,
+        "memoryTotalGiB": 5.8,
+        "memoryAvailableGiB": 4.7,
+        "diskFreeGiB": 30
+      },
+      "impact": "Compute and connector operations work; repository runtime floor is not met.",
+      "nextAction": "Provision Node>=24/npm>=11."
+    },
+    {
+      "capability": "Repository/code",
+      "status": "DEGRADED",
+      "evidence": {
+        "remoteRepository": "shubhamtaywade82/crypto-trading-agent",
+        "contextBranch": "research/context-strategy-2026-11-07-run15",
+        "rawBranch": "research/raw-ohlcv-archive-2026-11-07T0226Z",
+        "localCheckoutPresent": false,
+        "remoteScripts": [
+          "scripts/backtest.ts",
+          "scripts/conditional-edge.ts",
+          "scripts/ablation-study.ts"
+        ]
+      },
+      "impact": "Remote code is inspectable/writable, but no local checkout exists to invoke scripts.",
+      "nextAction": "Checkout the research branch in a supported Node24/npm11 environment."
+    },
+    {
+      "capability": "Node/npm and Binance SDK",
+      "status": "BLOCKED",
+      "evidence": {
+        "actualNode": "v22.16.0",
+        "requiredNode": ">=24",
+        "actualNpm": "10.9.2",
+        "requiredNpm": ">=11",
+        "packages": {
+          "@nemesis-oss/binance-sdk": "NOT_INSTALLED",
+          "binance": "NOT_INSTALLED",
+          "@binance/connector": "NOT_INSTALLED"
+        }
+      },
+      "impact": "No SDK or repository CLI execution.",
+      "nextAction": "Install runtime/dependencies and verify imports."
+    },
+    {
+      "capability": "Network/Binance endpoints",
+      "status": "DEGRADED",
+      "evidence": {
+        "directDns": "fapi.binance.com DNS failure (HTTP000)",
+        "directEndpoints": {
+          "/fapi/v1/time": "HTTP000",
+          "/fapi/v1/exchangeInfo": "HTTP000",
+          "/fapi/v1/klines": "HTTP000",
+          "/fapi/v1/premiumIndex": "HTTP000",
+          "/fapi/v1/openInterest": "HTTP000",
+          "/fapi/v1/ticker/24hr": "HTTP000"
+        },
+        "connectorPayloads": [
+          "exchangeInfo",
+          "klines",
+          "premiumIndex/mark",
+          "ticker24h",
+          "fundingRate",
+          "fundingInfo",
+          "openInterest",
+          "openInterestHist",
+          "takerBuySellVolume",
+          "globalLongShortAccountRatio",
+          "depth"
+        ],
+        "latestMarketTimestampUtc": "2026-11-07T02:25:19Z",
+        "exchangeInfoServerTimeUtc": "2026-11-06T11:18:40.886Z",
+        "metadataDriftSeconds": 54398.114,
+        "rawHttpStatusHeaders": "NOT_EXPOSED"
+      },
+      "impact": "Monitoring works, but stale exchange metadata and unavailable /time block execution validation.",
+      "nextAction": "Restore direct DNS or obtain fresh uncached /time and /exchangeInfo; require <=60s drift."
+    },
+    {
+      "capability": "Raw historical archive",
+      "status": "DEGRADED",
+      "evidence": {
+        "rawBranch": "research/raw-ohlcv-archive-2026-11-07T0226Z",
+        "fourHourRowsPerSymbol": 13468,
+        "fourHourRowsTotal": 53872,
+        "fourHourStartUtc": "2020-09-14T08:00:00Z",
+        "fourHourEndUtc": "2026-11-06T20:00:00Z",
+        "oneHourBasePages": 36,
+        "oneHourBaseRowsPerSymbol": 53871,
+        "oneHourLatestCompletedOpenUtc": "2026-11-07T01:00:00Z",
+        "multiYear5m": false,
+        "multiYear15m": false,
+        "missing76RowArtifactUnresolved": true,
+        "shaProvenanceMismatchPairs": 14
+      },
+      "impact": "4h/1h multi-cycle coverage exists; 5m/15m long history and one artifact remain incomplete.",
+      "nextAction": "Backfill multi-year 5m/15m and resolve missing-artifact provenance."
+    },
+    {
+      "capability": "Data quality/coverage",
+      "status": "PASS",
+      "evidence": {
+        "rowsFetched": 4000,
+        "rowsAppended": 56,
+        "rowsByInterval": {
+          "5m": 40,
+          "15m": 12,
+          "1h": 4,
+          "4h": 0
+        },
+        "formingRowsExcluded": 16,
+        "duplicates": 0,
+        "gaps": 0,
+        "ohlcFailures": 0,
+        "nonFinite": 0,
+        "nonPositiveVolume": 0,
+        "timestampAlignmentFailures": 0,
+        "closeTimeFailures": 0,
+        "crossSymbolAlignment": true,
+        "deltaReadbackVerified": true,
+        "manifestReadbackVerified": true
+      },
+      "impact": "Incremental batch passed all measured checks; overall archive coverage remains degraded.",
+      "nextAction": "Continue completed-bar-only incremental appends."
+    },
+    {
+      "capability": "Backtest harness/smoke test",
+      "status": "BLOCKED",
+      "evidence": {
+        "remoteHarnessExists": true,
+        "backtestPath": "scripts/backtest.ts",
+        "archiveLoader": "src/backtesting/archiveKlines.ts",
+        "loaderSupportsJsonl": false,
+        "localInvocation": false,
+        "fixtureSmokeTest": "NOT_RUN",
+        "strategyExperiment": "NOT_EXECUTED",
+        "oos": "NOT_EVALUATED"
+      },
+      "impact": "No valid experiment or OOS claim.",
+      "nextAction": "Implement JSONL adapter, provision Node24/npm11, run deterministic fixture smoke test, then execute frozen experiment."
+    },
+    {
+      "capability": "Disk/storage",
+      "status": "PASS",
+      "evidence": {
+        "diskFreeGiB": 30,
+        "githubWriteAccess": true,
+        "rawBranchWrites": true,
+        "researchBranchWrites": true
+      },
+      "impact": "Remote persistence available; no local checkout.",
+      "nextAction": "Continue atomic branch writes and verify readback."
+    },
+    {
+      "capability": "Artifact readback",
+      "status": "PASS",
+      "evidence": {
+        "newDeltaFiles": 2,
+        "newDeltaRows": 56,
+        "newManifests": 2,
+        "rawDataReadbackVerified": true,
+        "manifestReadbackVerified": true,
+        "priorContextRegistryQueueReadbackVerified": true
+      },
+      "impact": "New raw data and manifests are retrievable with matching hashes.",
+      "nextAction": "Read back this report/preflight and store blob identities."
+    }
+  ],
+  "endpointEvidence": {
+    "/fapi/v1/time": "BLOCKED_DIRECT_DNS",
+    "/fapi/v1/exchangeInfo": {
+      "status": "CONNECTOR_RESPONSE_STALE",
+      "serverTimeUtc": "2026-11-06T11:18:40.886Z",
+      "symbolsReportedTrading": [
+        "BTCUSDT",
+        "ETHUSDT",
+        "SOLUSDT",
+        "XRPUSDT"
+      ],
+      "executionUse": "BLOCKED"
+    },
+    "/fapi/v1/klines": {
+      "status": "CONNECTOR_OK",
+      "symbols": [
+        "BTCUSDT",
+        "ETHUSDT",
+        "SOLUSDT",
+        "XRPUSDT"
+      ],
+      "intervals": [
+        "5m",
+        "15m",
+        "1h",
+        "4h"
+      ],
+      "rowsFetched": 4000,
+      "completedRowsPerSeries": 249,
+      "formingRowsExcluded": 16,
+      "latestCompletedOpenUtc": {
+        "5m": "2026-11-07T02:20:00Z",
+        "15m": "2026-11-07T02:00:00Z",
+        "1h": "2026-11-07T01:00:00Z",
+        "4h": "2026-11-06T20:00:00Z"
+      }
+    },
+    "/fapi/v1/premiumIndex": "CONNECTOR_OK; latest market timestamp 2026-11-07T02:25:19Z",
+    "/fapi/v1/openInterest": "CONNECTOR_OK; latest timestamp 2026-11-07T02:25:20Z",
+    "/fapi/v1/ticker/24hr": "CONNECTOR_OK; latest close time 2026-11-07T02:25:17Z",
+    "/fapi/v1/fundingRate": "CONNECTOR_OK; last settled 2026-11-07T00:00:00Z",
+    "/fapi/v1/fundingInfo": "CONNECTOR_OK; all four intervals 8h",
+    "/futures/data/openInterestHist": "CONNECTOR_OK; 1h period, three observations",
+    "/futures/data/takerlongshortRatio": "CONNECTOR_OK; 15m period, three observations",
+    "/futures/data/globalLongShortAccountRatio": "CONNECTOR_OK; 1h period, three observations",
+    "/fapi/v1/depth": "CONNECTOR_OK; limit 20, 2026-11-07T02:29:24.565Z"
+  },
+  "experimentReadiness": {
+    "specification": "BKR-4H-COMPRESSION-RETEST-BTC-CONFIRM-V1",
+    "status": "PRE_REGISTERED_NOT_EXECUTED",
+    "chronologicalSplit": "60/20/20",
+    "purgeEmbargoBars": 12,
+    "anchoredWalkForwardWindows": 3,
+    "parameterNeighborhoods": 3,
+    "multipleTestingCorrection": "Holm",
+    "statusReason": "No local checkout; Node/npm below required versions; JSONL loader absent; historical funding/cost inputs incomplete."
+  }
+}

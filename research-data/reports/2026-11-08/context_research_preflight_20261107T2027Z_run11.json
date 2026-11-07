@@ -1,0 +1,119 @@
+{
+  "schema_version": "1.0.0",
+  "run_id": "context-strategy-2026-11-07T2027Z-run11",
+  "as_of_utc": "2026-11-07T20:27:01.567Z",
+  "run_classification": "RESEARCH_BLOCKED",
+  "environment": {
+    "os": "Debian GNU/Linux 13 (trixie)",
+    "kernel": "6.18.57",
+    "cwd": "/",
+    "python": "3.13.5",
+    "node": "v22.16.0",
+    "npm": "10.9.2",
+    "pnpm": "NOT_INSTALLED",
+    "docker": "NOT_INSTALLED",
+    "cpu_cores": 5,
+    "memory_total_kb": 6090668,
+    "memory_available_kb": 4929932,
+    "disk_total_gib": 32,
+    "disk_free_gib": 30,
+    "local_repo_checkout": "ABSENT",
+    "local_node_modules": "ABSENT",
+    "binance_sdk_packages": {
+      "@nemesis-oss/binance-sdk": "NOT_INSTALLED",
+      "binance": "NOT_INSTALLED",
+      "@binance/connector": "NOT_INSTALLED",
+      "ccxt": "NOT_INSTALLED",
+      "@binance/futures-connector": "NOT_INSTALLED"
+    }
+  },
+  "checks": [
+    {
+      "capability": "shell_compute",
+      "status": "PASS",
+      "evidence": "Debian 13 / kernel 6.18.57; Python 3.13.5; 5 CPU cores; 6.09 GB RAM total / 4.93 GB available; 30 GB free disk. Node v22.16.0/npm 10.9.2; pnpm and Docker absent.",
+      "impact": "Bounded validation and artifact work completed; project-compatible backtest runtime unavailable.",
+      "next_action": "Provision Node >=24 and npm >=11 runner."
+    },
+    {
+      "capability": "repo_code",
+      "status": "DEGRADED",
+      "evidence": "No local checkout. Remote GitHub source inspected on archive branch; package engines require Node >=24/npm >=11. scripts/backtest.ts maps klines without closeTime. archiveKlines.ts and data-quality.ts reject volume <0, so zero volume passes. Binance SDK packages absent.",
+      "impact": "Remote source audit only; no project code execution or smoke test.",
+      "next_action": "Provision compatible checkout/CI; fix closeTime propagation and volume <=0 validation before experiment."
+    },
+    {
+      "capability": "network_binance",
+      "status": "DEGRADED",
+      "evidence": "getent hosts fapi.binance.com failed; bounded curl returned DNS failure/HTTP 000; web open to official /time and /exchangeInfo inaccessible. Binance market-data connector calls succeeded but expose no HTTP status/headers. /fapi/v1/time NOT_AVAILABLE. exchangeInfo.serverTime=2026-11-06T11:18:40.886Z, 33h06m45s behind fresh markPrice.time=2026-11-07T20:25:26.004Z.",
+      "impact": "Current market snapshot available; contract status and exchange clock cannot be validated from fresh metadata.",
+      "next_action": "Restore direct DNS/HTTPS or obtain uncached official /fapi/v1/time and /fapi/v1/exchangeInfo."
+    },
+    {
+      "capability": "raw_historical_archive",
+      "status": "DEGRADED",
+      "evidence": "Remote GitHub branch accessible; no raw archive mounted locally. 1h archive pages 1-36: 53,871 base rows/symbol, 215,484 total, 2020-09-14T08:00Z to 2026-11-06T22:00Z. 4h canonical: 13,461 rows/symbol, 53,844 total, through 2026-11-05T16:00Z. Multi-year 5m/15m history absent; 76-row delta missing; 14 page/symbol SHA provenance mismatches and 4h canonical merge remain unresolved.",
+      "impact": "1h/4h support long-horizon context analysis; lower-timeframe multi-year strategy research and full canonical alignment remain blocked.",
+      "next_action": "Backfill 5m/15m oldest-first; recover 76-row provenance and reconcile 4h canonical/index without rewriting source hashes."
+    },
+    {
+      "capability": "data_quality_coverage",
+      "status": "DEGRADED",
+      "evidence": "16 rolling series (4 symbols x 4 intervals) x 200 raw bars; 199 completed per series, 1 forming excluded; 3,184 completed rows; zero duplicate/gap/off-grid/OHLC/non-finite/non-positive-volume failures. Refreshed 5m windows: 4 x 200 raw, 199 completed each, zero quality failures. Archive append: 56 rows + 4 rows = 60 completed, 20 forming excluded, zero quality failures.",
+      "impact": "Recent windows and new delta are clean; long-history coverage and archive provenance remain incomplete.",
+      "next_action": "Continue append-only deltas and run full archive quality scan after index reconciliation."
+    },
+    {
+      "capability": "backtest_harness_smoke_test",
+      "status": "BLOCKED",
+      "evidence": "Remote scripts/backtest.ts exists but no local checkout or Node24 runtime; deterministic fixture smoke test NOT_RUN. Source drops closeTime from Candle mapping; volume==0 passes two validators.",
+      "impact": "No valid experiment or OOS evaluation can be claimed.",
+      "next_action": "Fix closeTime and volume<=0, provision Node24/npm11, run deterministic no-lookahead/forming-bar fixture."
+    },
+    {
+      "capability": "disk_storage",
+      "status": "PASS",
+      "evidence": "30 GB free on 32 GB overlay. GitHub raw archive branch accepted new delta files and manifests.",
+      "impact": "Remote persistent storage available; local repo checkout absent.",
+      "next_action": "Continue append-only remote persistence; keep archive index frozen until provenance chain repaired."
+    },
+    {
+      "capability": "artifact_readback",
+      "status": "PASS",
+      "evidence": "All eight new raw JSONL files and two manifests fetched back from GitHub; SHA-256 sidecars matched. 20:20:50Z delta manifest SHA-256 69cfe9c3afeebcb2ca79a98ae998c04c902e40b574f56f5384fa600c2fca3ff5. 20:25:27Z 5m manifest SHA-256 c97d9a9a407df29ca8c64a08359f6a861dcd74922c7e4a722b6a61bc88ce582a.",
+      "impact": "New raw deltas are durably persisted and verified; canonical archive index remains unreconciled.",
+      "next_action": "Verify subsequent manifests and reconcile index only after missing provenance recovered."
+    }
+  ],
+  "endpoint_outcomes": {
+    "GET /fapi/v1/time": "UNAVAILABLE: direct DNS/web route failed; no server timestamp",
+    "GET /fapi/v1/exchangeInfo": "CONNECTOR_RESPONSE_STALE: serverTime 2026-11-06T11:18:40.886Z",
+    "GET /fapi/v1/klines": "CONNECTOR_SUCCESS: 4 symbols x 4 intervals x 200 rolling bars; 199 completed each; 1 forming excluded",
+    "GET /fapi/v1/premiumIndex": "CONNECTOR_SUCCESS: mark/index/lastFundingRate/nextFundingTime for 4 symbols",
+    "GET /fapi/v1/openInterest": "CONNECTOR_SUCCESS: 4 symbols",
+    "GET /fapi/v1/ticker/24hr": "CONNECTOR_SUCCESS: 4 symbols",
+    "GET /fapi/v1/fundingRate": "CONNECTOR_SUCCESS: latest 2 settled records per symbol",
+    "GET /futures/data/openInterestHist": "CONNECTOR_SUCCESS: 3 hourly observations per symbol",
+    "GET /futures/data/takerlongshortRatio": "CONNECTOR_SUCCESS: recent 5m taker buy/sell observations",
+    "GET /futures/data/globalLongShortAccountRatio": "CONNECTOR_SUCCESS: latest 5m global account ratios",
+    "GET /fapi/v1/depth": "CONNECTOR_SUCCESS: 20 levels each side; no exchange timestamp exposed"
+  },
+  "daily_cycle": {
+    "status": "BLOCKED",
+    "experiment_executed": false,
+    "data_quality_archive_maintenance_executed": true,
+    "blockers": [
+      "No compatible local repository/harness runtime",
+      "No deterministic smoke test",
+      "Multi-year 5m/15m history absent",
+      "Historical execution-cost model incomplete",
+      "Fresh /time and exchangeInfo unavailable"
+    ],
+    "next_executable_action": "Resolve fresh metadata, compatible runner, closeTime/zero-volume validation, lower-interval archive and cost inputs; then freeze and execute one context-conditioned experiment."
+  },
+  "weekly_review": {
+    "last_review_reference": "2026-11-04 partial taxonomy review",
+    "next_review_due_utc": "2026-11-11T00:00:00Z",
+    "status": "NOT_DUE"
+  }
+}

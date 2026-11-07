@@ -1,0 +1,121 @@
+{
+  "schema_version": "1.0.0",
+  "experiment_id": "DQ-20261107-2227Z",
+  "run_id": "context-strategy-2026-11-08-run30",
+  "type": "incremental_archive_data_quality_append",
+  "status": "COMPLETED",
+  "hypothesis": "All newly completed Binance USD-M bars strictly after the last readback-verified high-water can be appended without gaps, duplicates, timestamp misalignment or OHLCV invariant failures, while forming bars are excluded.",
+  "specification": {
+    "symbols": [
+      "BTCUSDT",
+      "ETHUSDT",
+      "SOLUSDT",
+      "XRPUSDT"
+    ],
+    "intervals": [
+      "5m",
+      "15m",
+      "1h"
+    ],
+    "source_endpoint": "GET /fapi/v1/klines",
+    "as_of_utc": "2026-11-07T22:27:01.001Z",
+    "previous_highwater_utc": {
+      "5m": "2026-11-07T21:20:00.000Z",
+      "15m": "2026-11-07T21:00:00.000Z",
+      "1h": "2026-11-07T20:00:00.000Z",
+      "4h": "2026-11-07T16:00:00.000Z"
+    },
+    "expected_rows_per_symbol": 17,
+    "expected_rows_by_interval": {
+      "5m": 12,
+      "15m": 4,
+      "1h": 1
+    },
+    "completed_rule": "closeTime < as_of_utc and openTime > previous verified high-water",
+    "random_seed": null,
+    "train_validation_test_split": "NOT_APPLICABLE - data integrity append only",
+    "cost_model": "NOT_APPLICABLE - no trade simulation"
+  },
+  "observations": {
+    "rows_fetched": 80,
+    "rows_appended": 68,
+    "forming_rows_excluded": 12,
+    "rows_excluded_before_highwater": 0,
+    "rows_by_interval": {
+      "5m": 48,
+      "15m": 16,
+      "1h": 4,
+      "4h": 0
+    },
+    "rows_per_symbol": 17
+  },
+  "results": {
+    "duplicates": 0,
+    "missing_intervals": 0,
+    "off_grid": 0,
+    "ohlc_failures": 0,
+    "non_finite": 0,
+    "non_positive_volume": 0,
+    "close_time_failures": 0,
+    "cross_symbol_alignment": true,
+    "readback_verified": true,
+    "manifest_sidecar_verified": true
+  },
+  "artifacts": {
+    "raw_branch": "research/raw-ohlcv-archive-20261107T2227Z-run16",
+    "files": [
+      {
+        "symbol": "BTCUSDT",
+        "path": "research-data/binance-usdm/delta/20261107T2227Z_BTCUSDT_5m15m1h_completed.jsonl",
+        "rows": 17,
+        "bytes": 4756,
+        "sha256": "503a0a55762a6dc7f2ac36029d93de429f53e23df3793667b9036f949ee04efe",
+        "readback_verified": true
+      },
+      {
+        "symbol": "ETHUSDT",
+        "path": "research-data/binance-usdm/delta/20261107T2227Z_ETHUSDT_5m15m1h_completed.jsonl",
+        "rows": 17,
+        "bytes": 4750,
+        "sha256": "a4f2aa53b4ec872e91ecafd009a86b519472fb9efe8792c505c4cd18799bee8c",
+        "readback_verified": true
+      },
+      {
+        "symbol": "SOLUSDT",
+        "path": "research-data/binance-usdm/delta/20261107T2227Z_SOLUSDT_5m15m1h_completed.jsonl",
+        "rows": 17,
+        "bytes": 4757,
+        "sha256": "2e72d33d0f47c8012385758871c49423ee83c2198f6339cc131bdf934bcf7a13",
+        "readback_verified": true
+      },
+      {
+        "symbol": "XRPUSDT",
+        "path": "research-data/binance-usdm/delta/20261107T2227Z_XRPUSDT_5m15m1h_completed.jsonl",
+        "rows": 17,
+        "bytes": 4667,
+        "sha256": "e85468bf622e490484aa6c0e8f27eb3fe08a3a4b7e36112a6679383bf2cce26e",
+        "readback_verified": true
+      }
+    ],
+    "manifest_path": "research-data/binance-usdm/delta/manifest-20261107T2227Z-5m15m1h.json",
+    "manifest_sha256": "efcac25da14c969aac7309e0e168112eb978bd275ff9dba444fc538c19cde1fb",
+    "manifest_sidecar": "research-data/binance-usdm/delta/manifest-20261107T2227Z-5m15m1h.json.sha256",
+    "raw_branch_head_commit": "db0fdc88e239285fb4b26751ef67911763e4788e"
+  },
+  "limitations": [
+    "This is a data-quality/archive experiment, not a strategy backtest.",
+    "Archive indexes were not advanced because the unresolved 76-row delta and 4h provenance remain blocked.",
+    "No OOS segment, expectancy, win probability or strategy metrics were produced."
+  ],
+  "reproducibility": {
+    "local_code_commit": null,
+    "repository_branch": "research/context-strategy-2026-11-08-run29",
+    "environment": {
+      "python": "3.13.5",
+      "node": "v22.16.0",
+      "npm": "10.9.2",
+      "sdk_used": false
+    },
+    "exact_tool_execution_start_end": "Not exposed by runtime; source-data as_of_utc and Git commit/readback evidence retained."
+  }
+}

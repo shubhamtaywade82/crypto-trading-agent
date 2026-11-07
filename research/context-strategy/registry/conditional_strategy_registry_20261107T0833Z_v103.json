@@ -1,0 +1,132 @@
+{
+  "schemaVersion": "1.0.0",
+  "registryId": "BINANCE_USDM_CONDITIONAL_STRATEGY_REGISTRY",
+  "registryVersion": "V103",
+  "asOfUtc": "2026-11-07T08:33:13.394Z",
+  "lastStrategyEvaluationUtc": "2026-11-06T23:06:27.939Z",
+  "sourceReportPath": "research/context-strategy/reports/context_strategy_research_20261106T2303Z_v100.json",
+  "sourceRegistryGitBlobSha": "cffb6131a12c3cefa3c0135018db95d24482ffd3",
+  "evidenceGates": {
+    "minOosTradesPerSymbolContext": 100,
+    "strongerEvidenceTradesAcrossMultipleWindows": 200,
+    "confidenceInterval": 0.95,
+    "positiveNetExpectancyAfterVerifiedCosts": true,
+    "requireDrawdownAndParameterNeighborhoodStability": true,
+    "holmMultipleTestingCorrection": true,
+    "purgingAndEmbargoRequired": true,
+    "pointEstimatesAreNotCertainty": true
+  },
+  "statusCounts": {
+    "OOS_VALIDATED": 0,
+    "OOS_PROMISING": 0,
+    "REJECTED": 1,
+    "INSUFFICIENT_EVIDENCE": 2
+  },
+  "oosValidatedEntries": [],
+  "entries": [
+    {
+      "symbol": "SOLUSDT",
+      "context": "BULL_LOW",
+      "strategy": "DONCHIAN_BREAKOUT_BULL_LOW_V1",
+      "strategyVersion": "V1",
+      "evidenceStatus": "INSUFFICIENT_EVIDENCE",
+      "dataWindow": "V100 untouched OOS; exact boundaries in source report",
+      "oosTrades": 55,
+      "winPct": 43.64,
+      "targetBeforeStopPct": 21.82,
+      "meanNetR": 0.0431,
+      "bootstrap95CI": [
+        -0.2798,
+        0.39
+      ],
+      "profitFactor": 1.0824,
+      "maxDrawdownR": 7.8879,
+      "quotePnlPerSol": -19.8265,
+      "detectorDefinition": "Exact frozen detector/rule artifact not included in the accessible V100 report; do not infer missing rule parameters.",
+      "knownFailureModes": [
+        "OOS trade count below 100",
+        "95% bootstrap interval crosses zero",
+        "negative quote PnL per SOL"
+      ],
+      "lastEvaluationUtc": "2026-11-06T23:06:27.939Z"
+    },
+    {
+      "symbol": "SOLUSDT",
+      "context": "SIDEWAYS_LOW",
+      "strategy": "FAILED_BREAKOUT_FADE_V1",
+      "strategyVersion": "V1",
+      "evidenceStatus": "REJECTED",
+      "oosTrades": 113,
+      "winPct": 43.36,
+      "targetBeforeStopPct": 27.43,
+      "meanNetR": -0.148,
+      "bootstrap95CI": [
+        -0.3175,
+        0.0196
+      ],
+      "profitFactor": 0.7871,
+      "maxDrawdownR": 20.7917,
+      "holmAdjustedP": 1,
+      "detectorDefinition": "Exact frozen detector/rule artifact not included in the accessible V100 report; do not infer missing rule parameters.",
+      "knownFailureModes": [
+        "Negative OOS expectancy",
+        "Profit factor below 1",
+        "Large drawdown",
+        "Holm-adjusted p=1"
+      ],
+      "lastEvaluationUtc": "2026-11-06T23:06:27.939Z"
+    },
+    {
+      "symbol": "SOLUSDT",
+      "context": "BEAR_NORMAL",
+      "strategy": "EMA20_PULLBACK_RECROSS_BTC_CONFIRM_V1_1",
+      "strategyVersion": "V1.1",
+      "evidenceStatus": "INSUFFICIENT_EVIDENCE",
+      "oosTrades": 10,
+      "winPct": 40,
+      "targetBeforeStopPct": 10,
+      "meanNetR": -0.1886,
+      "bootstrap95CI": [
+        -0.8603,
+        0.7791
+      ],
+      "profitFactor": 0.733,
+      "maxDrawdownR": 3.4844,
+      "detectorDefinition": "Exact frozen detector/rule artifact not included in the accessible V100 report; do not infer missing rule parameters.",
+      "knownFailureModes": [
+        "OOS trade count far below 100",
+        "95% interval crosses zero",
+        "Negative point expectancy"
+      ],
+      "lastEvaluationUtc": "2026-11-06T23:06:27.939Z"
+    }
+  ],
+  "unreconciledPriorEvidence": [
+    {
+      "source": "Earlier v75 report",
+      "strategy": "SOLUSDT DONCHIAN20 BULL_LOW",
+      "statusClaimed": "OOS_PROMISING",
+      "oosTrades": 12,
+      "reconciliationStatus": "UNRECONCILED",
+      "queueItem": "Q13_RECONCILE_OOS_PROMISING_REGISTRY_ENTRY",
+      "policy": "Do not include as active registry evidence until the original frozen rules and trade-level artifact are reconciled."
+    }
+  ],
+  "currentApplicability": {
+    "asOfUtc": "2026-11-07T08:33:13.394Z",
+    "validatedEntriesAvailable": false,
+    "tradableSymbols": [
+      "SOLUSDT",
+      "ETHUSDT",
+      "XRPUSDT"
+    ],
+    "decision": "NO_TRADE",
+    "reason": "No OOS_VALIDATED entries exist; current contexts do not supply a validated exact trigger."
+  },
+  "notes": [
+    "No experiment, promotion, downgrade or new strategy evaluation occurred in this run.",
+    "The failed-breakout fade rejection applies to the tested SOLUSDT SIDEWAYS_LOW implementation only; it does not prove the entire context intrinsically untradeable.",
+    "No ETHUSDT or XRPUSDT strategy-specific OOS evidence is present in the accessible V100 scorecard.",
+    "Historical strategy evidence is not extrapolated across symbols."
+  ]
+}

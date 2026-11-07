@@ -1,0 +1,165 @@
+{
+  "schema_version": "1.0.0",
+  "queue_version": "v80",
+  "updated_at_utc": "2026-11-07T22:35:03Z",
+  "last_run_id": "context-strategy-2026-11-08-run30",
+  "items": [
+    {
+      "id": "RQ-DQ-01",
+      "priority": 1,
+      "status": "COMPLETED",
+      "title": "Current rolling sample validation and append completed bars",
+      "prerequisites": [
+        "fresh Binance USD-M connector data",
+        "readback-capable GitHub storage"
+      ],
+      "last_action": "Validated 2,400 rolling rows across 16 symbol/interval series (2,384 completed; 16 forming excluded); appended 68 new completed rows (48x5m, 16x15m, 4x1h) across four symbols; all raw files, manifest and SHA-256 sidecar readback verified.",
+      "next_action": "Continue from 5m=2026-11-07T22:20Z, 15m=2026-11-07T22:00Z, 1h=2026-11-07T21:00Z, 4h=2026-11-07T16:00Z; next expected opens 22:25, 22:15, 22:00 and 20:00 respectively.",
+      "blocker": null
+    },
+    {
+      "id": "RQ-ARCH-01",
+      "priority": 1,
+      "status": "BLOCKED",
+      "title": "Reconcile 1h archive-index delta chain",
+      "prerequisites": [
+        "recover missing intermediate delta artifact(s)",
+        "verify every manifest and SHA-256"
+      ],
+      "next_action": "Recover the original artifact from the source runner/backup using its exact path and expected SHA-256; if unrecoverable, document it as irrecoverable and rebuild reconciliation from a verified base without synthesizing the 76 rows.",
+      "blocker": "Missing file research-data/binance-usdm/delta/binance_usdm_delta_2026-11-05T0524Z.jsonl; expected_rows=76; expected_sha256=f5d9e50602f4ef4046fc4d39da053e45d3619ad147aa398a6bd1e281a7f3b93d. Fetch returned 404 in seven candidate branches; GitHub commits?path=... returned an empty list. Coverage is unknown; do not reconstruct from row count.",
+      "last_action": "Inspected current 4h archive-index and searched seven candidate raw-archive branches plus GitHub path commit history. The exact 76-row file remains absent."
+    },
+    {
+      "id": "RQ-ARCH-02",
+      "priority": 1,
+      "status": "BLOCKED",
+      "title": "Backfill multi-year 5m and 15m history",
+      "prerequisites": [
+        "working Binance/Vision network access",
+        "durable storage",
+        "rate-limit-safe downloader"
+      ],
+      "next_action": "Backfill earliest reliable USD-M 5m/15m history for BTC/ETH/SOL/XRP; validate all intervals and checksums.",
+      "blocker": "Only rolling 199-bar samples and recent deltas exist; direct DNS/HTTPS unavailable."
+    },
+    {
+      "id": "RQ-ARCH-03",
+      "priority": 1,
+      "status": "BLOCKED",
+      "title": "Merge 4h incremental deltas into canonical archive",
+      "prerequisites": [
+        "resolve missing delta provenance",
+        "verify every 4h delta and index"
+      ],
+      "next_action": "Resolve the missing 76-row provenance, then reassemble canonical 4h from verified base pages and all verified deltas; only then advance the 4h index.",
+      "blocker": "Canonical 4h pages are not reconciled through the latest 2026-11-07T16:00Z completed bar, and the exact 76-row historical delta is still missing.",
+      "last_action": "Confirmed canonical 4h index still ends 2026-11-05T16:00Z; latest verified 4h incremental high-water remains 2026-11-07T16:00Z. Current run added no new completed 4h bar."
+    },
+    {
+      "id": "RQ-ENV-01",
+      "priority": 1,
+      "status": "BLOCKED",
+      "title": "Provision compatible local research runtime",
+      "prerequisites": [
+        "Node.js >=24",
+        "npm >=11",
+        "local repository checkout",
+        "locked dependencies"
+      ],
+      "next_action": "Provision Node >=24/npm >=11, clone the selected research branch, install locked dependencies, and run the deterministic fixture twice.",
+      "blocker": "No local checkout; runtime below declared engine floor; @nemesis-oss/binance-sdk and binance packages are not installed.",
+      "last_action": "Rechecked current runtime: Node v22.16.0, npm 10.9.2; repository is not mounted locally; Binance SDK packages are not importable. Remote package.json requires Node >=24 and npm >=11."
+    },
+    {
+      "id": "RQ-CODE-01",
+      "priority": 1,
+      "status": "BLOCKED",
+      "title": "Fix candle completion and strict validation contract",
+      "prerequisites": [
+        "compatible runtime",
+        "unit fixtures"
+      ],
+      "next_action": "Preserve closeTime in REST and archive parsers; reject volume <= 0; add forming-candle, exact-boundary, zero-volume and no-lookahead fixtures before running the harness.",
+      "blocker": "Repository code cannot be changed and tested safely in this run because the local checkout and compatible Node24/npm11 runtime are unavailable.",
+      "last_action": "Remote source inspection confirmed scripts/backtest.ts maps only the first six kline fields, src/backtesting/archiveKlines.ts CSV parser drops closeTime, and validators accept zero volume; research/alma/src/data-quality.ts also accepts volume=0."
+    },
+    {
+      "id": "RQ-COST-01",
+      "priority": 2,
+      "status": "BLOCKED",
+      "title": "Build realistic historical execution-cost model",
+      "prerequisites": [
+        "actual fee tier",
+        "historical spread/depth",
+        "slippage/impact and funding data"
+      ],
+      "next_action": "Freeze maker/taker fee schedule, spread/slippage/impact, funding accrual and latency assumptions before strategy tests.",
+      "blocker": "Actual account fee tier and historical spread/slippage/latency inputs are not archived or verified."
+    },
+    {
+      "id": "RQ-DERIV-01",
+      "priority": 2,
+      "status": "BLOCKED",
+      "title": "Build historical funding and open-interest archive",
+      "prerequisites": [
+        "network",
+        "funding history pagination",
+        "historical OI source"
+      ],
+      "next_action": "Backfill funding settlements and OI for each symbol across train/validation/test windows; verify mark-price completeness and hashes.",
+      "blocker": "Only current funding samples and recent OI statistics are verified; the SOL funding archive has a SHA mismatch and 3,501 blank mark-price rows; historical OI archive absent."
+    },
+    {
+      "id": "RQ-CTX-01",
+      "priority": 2,
+      "status": "BLOCKED",
+      "title": "Refit and stability-test context taxonomy",
+      "prerequisites": [
+        "reconciled multi-year archive",
+        "multi-year 5m/15m",
+        "Node24 harness"
+      ],
+      "next_action": "Fit compact thresholds on train only; measure frequency, duration, transitions, classification stability and uncertainty.",
+      "blocker": "Lower-timeframe multi-year history missing; archive chain incomplete; current 199/499-bar rolling samples are descriptive only."
+    },
+    {
+      "id": "RQ-EXP-01",
+      "priority": 3,
+      "status": "BLOCKED",
+      "title": "Run pre-registered strategy x context x symbol experiment",
+      "prerequisites": [
+        "RQ-ARCH-01/02/03",
+        "RQ-ENV-01",
+        "RQ-CODE-01",
+        "RQ-COST-01",
+        "RQ-DERIV-01"
+      ],
+      "next_action": "After prerequisites pass, freeze SOLUSDT 4h Donchian20 BULL_LOW and trend-pullback candidates with train/validation/untouched OOS, purge/embargo and cost model.",
+      "blocker": "Historical coverage, data contract, compatible runtime, historical costs and derivatives inputs are not ready."
+    },
+    {
+      "id": "RQ-MON-01",
+      "priority": 4,
+      "status": "COMPLETED",
+      "title": "Current BTC/ETH/SOL/XRP snapshot and validated-entry selection",
+      "prerequisites": [
+        "fresh mark/klines/funding/OI"
+      ],
+      "last_action": "Refreshed BTC/ETH/SOL/XRP mark, 24h ticker, OI, top-of-book, funding history, taker flow, long/short account ratio and 5m/15m/1h/4h klines as of 2026-11-07T22:27:01Z. All tradable symbols NO_TRADE; no OOS_VALIDATED entry exists.",
+      "next_action": "Refresh next hourly run; consult only OOS_VALIDATED registry entries and keep BTC as reference only.",
+      "blocker": null
+    },
+    {
+      "id": "RQ-WEEKLY-01",
+      "priority": 4,
+      "status": "PLANNED",
+      "title": "Weekly context taxonomy and strategy-family review",
+      "prerequisites": [
+        "archive/harness readiness"
+      ],
+      "next_action": "Review taxonomy stability, transition matrix, multiple-testing burden and family comparisons on 2026-11-14.",
+      "blocker": "Not due yet; archive/harness prerequisites remain blocked."
+    }
+  ]
+}

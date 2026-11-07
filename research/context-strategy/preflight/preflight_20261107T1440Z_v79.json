@@ -1,0 +1,86 @@
+{
+  "schemaVersion": 1,
+  "runId": "context-strategy-2026-11-07T1440Z-v79",
+  "asOfUtc": "2026-11-07T14:40:24.277Z",
+  "checkedAtUtc": "2026-11-07T14:46:42.564Z",
+  "runClassification": "RESEARCH_BLOCKED",
+  "checks": [
+    {
+      "capability": "Shell and compute",
+      "status": "PASS",
+      "evidence": "Debian GNU/Linux 13 (trixie); Linux 6.18.57; cwd=/; Node v22.16.0; npm 10.9.2; 5 CPUs; RAM 5.8 GiB total / 4.7 GiB available; overlay 32 GiB total / 30 GiB free.",
+      "impact": "Shell and bounded compute are available; Node floor is not met.",
+      "nextAction": "Provision Node >=24 and npm >=11."
+    },
+    {
+      "capability": "Repository and code",
+      "status": "DEGRADED",
+      "evidence": "Remote GitHub repository accessible; main commit fce8afd0cad347d2e9dbb0ecebfbaf43889295e0; no local checkout found in expected workspace paths.",
+      "impact": "Source inspection and remote artifact writes work; local harness invocation is blocked.",
+      "nextAction": "Create a local checkout in a compatible runtime."
+    },
+    {
+      "capability": "Binance SDK",
+      "status": "BLOCKED",
+      "evidence": "@binance/connector, binance-api-node and binance all NOT_FOUND; SDK not used.",
+      "impact": "All market data came through the Binance public market-data connector wrapper, not an SDK.",
+      "nextAction": "Install and import SDK only after compatible Node runtime is provisioned."
+    },
+    {
+      "capability": "Direct Binance network",
+      "status": "BLOCKED",
+      "evidence": "curl /fapi/v1/time HTTP000 (DNS failure); /fapi/v1/exchangeInfo HTTP000 after 5.0s timeout. Raw HTTP status/headers for other endpoints unavailable.",
+      "impact": "Cannot independently verify server time, metadata freshness or endpoint status.",
+      "nextAction": "Restore DNS/HTTPS and probe all required official endpoints with bounded timeouts."
+    },
+    {
+      "capability": "Binance connector market data",
+      "status": "DEGRADED",
+      "evidence": "Klines, premiumIndex, 24h ticker, openInterest, funding history, depth, taker flow, global long/short account ratio and OI history returned data; connector does not expose HTTP status.",
+      "impact": "Fresh monitoring and bar append are possible; contract execution validation is not.",
+      "nextAction": "Keep monitoring but require direct uncached time and exchangeInfo before any execution decision."
+    },
+    {
+      "capability": "Exchange metadata",
+      "status": "BLOCKED",
+      "evidence": "Connector exchangeInfo serverTime 2026-11-06T11:18:40.896Z versus market time 2026-11-07T14:39:23Z; drift 98,442.104s (27h20m42.104s), versus <=60s requirement.",
+      "impact": "Contract status reported by stale metadata is not trusted.",
+      "nextAction": "Fetch fresh /fapi/v1/exchangeInfo and /fapi/v1/time."
+    },
+    {
+      "capability": "Raw historical archive",
+      "status": "PASS",
+      "evidence": "Remote raw branch research/raw-ohlcv-archive-20261107T1440Z; 72 new completed rows this run; delta files, manifests, SHA sidecars and archive indexes read back; cumulative indexed deltas 3,728.",
+      "impact": "New bars are durably archived; long-term 5m/15m and 4h canonical merge remain incomplete.",
+      "nextAction": "Backfill 5m/15m multi-year and reconcile the 4h archive."
+    },
+    {
+      "capability": "Data quality and coverage",
+      "status": "DEGRADED",
+      "evidence": "16 rolling series x 200 rows; 3,184 completed / 16 forming; zero duplicates, missing intervals, off-grid timestamps, OHLC failures, non-positive volume or non-finite values. Historical archive still has one missing 76-row delta, 14 prior hash provenance mismatches and two independent page SHA discrepancies.",
+      "impact": "Recent window passes structural checks; long-history provenance is not fully clean.",
+      "nextAction": "Resolve Q9 and Q11 before experiments."
+    },
+    {
+      "capability": "Backtest harness and smoke test",
+      "status": "BLOCKED",
+      "evidence": "Remote harness exists but was not invoked. No local checkout; Node22.16/npm10.9 below Node24/npm11 floor; no SDK dependencies; no deterministic fixture smoke test. scripts/backtest.ts omits 5m and drops closeTime; archiveKlines.ts accepts zero volume.",
+      "impact": "No valid experiment or OOS evaluation was executed.",
+      "nextAction": "Provision compatible checkout, repair data contract/validation, run fixture twice and verify no-lookahead."
+    },
+    {
+      "capability": "Disk and persistent storage",
+      "status": "PASS",
+      "evidence": "30 GiB free local scratch space; remote GitHub branches are writable and readback-verified.",
+      "impact": "Sufficient for bounded artifacts; raw archive persistence is remote, not local.",
+      "nextAction": "Continue atomic-ish branch commits and readback."
+    },
+    {
+      "capability": "Artifact readback",
+      "status": "DEGRADED",
+      "evidence": "New 5m/15m/1h delta files, manifests, sidecars and indexes verified. Independent historical readback found mismatches in 1h BTC page-0036 and 4h SOL page-0009 JSONL SHA fields.",
+      "impact": "New delta integrity is verified; historical page hash provenance remains unresolved.",
+      "nextAction": "Recompute with an independent checksum tool and preserve expected values until root cause is known."
+    }
+  ]
+}

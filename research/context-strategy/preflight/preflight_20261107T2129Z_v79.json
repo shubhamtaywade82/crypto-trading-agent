@@ -1,0 +1,197 @@
+{
+  "schema_version": "1.0.0",
+  "run_id": "context-strategy-2026-11-08-run29",
+  "created_at_utc": "2026-11-07T21:29:34.064Z",
+  "checks": [
+    {
+      "capability": "shell_compute",
+      "status": "PASS",
+      "evidence": {
+        "cwd": "/",
+        "os": "Linux 6.18.57 x86_64",
+        "utc": "2026-11-07T21:29:06Z",
+        "node": "v22.16.0",
+        "npm": "10.9.2",
+        "pnpm": "NOT_INSTALLED",
+        "cpu_count": 5,
+        "memory_total_kb": 6090668,
+        "memory_available_kb": 4936424,
+        "disk_total_bytes": 33770192896,
+        "disk_free_bytes": 32029913088
+      },
+      "impact": "Compute and disk are sufficient for bounded data work; runtime is below repository engine floor.",
+      "next_action": "Provision Node >=24 and npm >=11 before invoking repository scripts."
+    },
+    {
+      "capability": "repository_code",
+      "status": "DEGRADED",
+      "evidence": {
+        "remote_repository": "shubhamtaywade82/crypto-trading-agent",
+        "remote_branch": "research/context-strategy-2026-11-08-run28",
+        "remote_commit": "f8619bc182257ddfd3bc66d71caf72bd600cdb06",
+        "local_checkout": false,
+        "package_engine_node": ">=24",
+        "package_engine_npm": ">=11",
+        "sdk_packages": {
+          "@nemesis-oss/binance-sdk": "NOT_INSTALLED",
+          "binance": "NOT_INSTALLED"
+        },
+        "source_files_inspected": [
+          "scripts/backtest.ts",
+          "src/backtesting/archiveKlines.ts",
+          "tests/archiveKlines.test.ts"
+        ]
+      },
+      "impact": "Remote source audit possible; no local repository execution.",
+      "next_action": "Provision compatible runner and clone the research branch."
+    },
+    {
+      "capability": "binance_sdk",
+      "status": "BLOCKED",
+      "evidence": "Node package resolution for @nemesis-oss/binance-sdk and binance returned NOT_INSTALLED; Node v22.16.0/npm10.9.2 below declared engine.",
+      "impact": "No Binance SDK execution; data came from Binance USD-M connector.",
+      "next_action": "Install lockfile dependencies only in compatible Node24/npm11 checkout."
+    },
+    {
+      "capability": "network_binance",
+      "status": "DEGRADED",
+      "evidence": {
+        "direct_dns": "fapi.binance.com name resolution failed in urllib/curl",
+        "direct_http_status": "HTTP 000 / no response",
+        "probed": [
+          "/fapi/v1/time",
+          "/fapi/v1/exchangeInfo",
+          "/fapi/v1/klines",
+          "/fapi/v1/premiumIndex",
+          "/fapi/v1/openInterest",
+          "/fapi/v1/ticker/24hr"
+        ],
+        "connector": "fresh mark/klines/ticker/OI/funding/depth/taker/long-short responses; raw HTTP status/headers unavailable"
+      },
+      "impact": "Monitoring and append possible through connector; endpoint-level status and headers cannot be audited.",
+      "next_action": "Restore direct DNS/HTTPS or retain explicit connector provenance."
+    },
+    {
+      "capability": "exchange_metadata_freshness",
+      "status": "BLOCKED",
+      "evidence": {
+        "exchangeInfo_server_time_utc": "2026-11-06T11:18:40.886Z",
+        "fresh_mark_time_utc": "2026-11-07T21:27:37.000Z",
+        "age_seconds": 122936.114,
+        "returned_symbol_statuses": "TRADING, but stale"
+      },
+      "impact": "Contract status and filters cannot be trusted for execution validation.",
+      "next_action": "Obtain uncached /fapi/v1/time and /fapi/v1/exchangeInfo with <=60s drift."
+    },
+    {
+      "capability": "raw_historical_archive",
+      "status": "DEGRADED",
+      "evidence": {
+        "one_hour_rows_per_symbol": 53871,
+        "one_hour_rows_total": 215484,
+        "one_hour_range_utc": [
+          "2020-09-14T08:00:00Z",
+          "2026-11-06T22:00:00Z"
+        ],
+        "one_hour_pages_per_symbol": 36,
+        "four_hour_canonical_rows_per_symbol": 13461,
+        "four_hour_rows_total": 53844,
+        "four_hour_canonical_range_utc": [
+          "2020-09-14T08:00:00Z",
+          "2026-11-05T16:00:00Z"
+        ],
+        "five_minute_fifteen_minute_multiyear": "MISSING",
+        "latest_verified_delta_branch": "research/raw-ohlcv-archive-20261107T2125Z-run15",
+        "latest_delta_rows_appended": 68,
+        "archive_indexes_updated": false
+      },
+      "impact": "Long 1h/4h histories exist, but delta-chain provenance and lower-timeframe history remain incomplete.",
+      "next_action": "Reconcile missing intermediate delta and rebuild indexes; backfill multi-year 5m/15m; merge 4h deltas."
+    },
+    {
+      "capability": "data_quality_coverage",
+      "status": "PASS",
+      "evidence": {
+        "rolling_series_count": 16,
+        "raw_rows": 5600,
+        "completed_rows": 5584,
+        "forming_rows_excluded": 16,
+        "completed_rows_per_series": {
+          "5m": 199,
+          "15m": 199,
+          "1h": 499,
+          "4h": 499
+        },
+        "duplicates": 0,
+        "non_monotonic": 0,
+        "missing_intervals": 0,
+        "off_grid": 0,
+        "ohlc_or_volume_failures": 0,
+        "non_finite": 0,
+        "non_positive_volume": 0,
+        "cross_symbol_alignment": true,
+        "new_delta_rows_appended": 68,
+        "new_delta_quality": {
+          "duplicates": 0,
+          "gaps": 0,
+          "off_grid": 0,
+          "ohlc_failures": 0,
+          "non_finite": 0,
+          "non_positive_volume": 0,
+          "close_time_failures": 0,
+          "cross_symbol_alignment": true
+        }
+      },
+      "impact": "Current rolling sample and new delta are clean; this does not resolve historical archive-chain gaps.",
+      "next_action": "Continue completed-bar append and run archive-wide reconciliation after recovery."
+    },
+    {
+      "capability": "backtest_harness_smoke_test",
+      "status": "BLOCKED",
+      "evidence": {
+        "remote_script_exists": true,
+        "local_checkout": false,
+        "node": "v22.16.0",
+        "required_node": ">=24",
+        "smoke_test": "NOT_RUN",
+        "source_findings": [
+          "API kline mapping drops closeTime",
+          "archive CSV parser retains only first six columns and drops closeTime",
+          "validateCandles rejects volume < 0 but accepts volume == 0"
+        ]
+      },
+      "impact": "No valid strategy backtest or OOS result can be claimed.",
+      "next_action": "Preserve closeTime, reject volume <= 0, add deterministic fixture/no-lookahead tests, then run smoke test under Node24."
+    },
+    {
+      "capability": "disk_storage",
+      "status": "PASS",
+      "evidence": {
+        "local_disk_free_bytes": 32029913088,
+        "github_storage": "raw and research branches accepted writes"
+      },
+      "impact": "Remote durable artifact storage is available.",
+      "next_action": "Continue append-only branch workflow with manifests and sidecars."
+    },
+    {
+      "capability": "artifact_readback",
+      "status": "PASS",
+      "evidence": {
+        "raw_files_readback_verified": 4,
+        "raw_rows_readback_verified": 68,
+        "manifest_path": "research-data/binance-usdm/delta/manifest-20261107T2125Z-5m15m1h.json",
+        "manifest_sha256": "a7b5d5aaef0e45953fe89b0d103774eb7a9af041b49e5a5ad76f3530f1ff1d1c",
+        "manifest_sidecar_readback_verified": true,
+        "raw_branch": "research/raw-ohlcv-archive-20261107T2125Z-run15"
+      },
+      "impact": "This run's 68 raw rows and manifest are durable and independently read back.",
+      "next_action": "Verify the new research snapshot/report artifacts after commit."
+    }
+  ],
+  "execution_classification": "RESEARCH_EXECUTED",
+  "research_executed": true,
+  "strategy_experiment_executed": false,
+  "oos_evaluated": false,
+  "monitoring_completed": true,
+  "archive_append_completed": true
+}

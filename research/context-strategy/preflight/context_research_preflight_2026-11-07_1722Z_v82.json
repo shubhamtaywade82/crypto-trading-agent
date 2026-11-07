@@ -1,0 +1,87 @@
+{
+  "schemaVersion": 1,
+  "runId": "context-strategy-2026-11-07T1722Z-v82",
+  "asOfUtc": "2026-11-07T17:22:01.714Z",
+  "status": "RESEARCH_BLOCKED",
+  "checks": [
+    {
+      "capability": "shell_compute",
+      "status": "PASS",
+      "evidence": "Container Linux x86_64; Node v22.16.0; npm 10.9.2; Python 3.13.5; 5 CPUs; 5.8 GiB RAM; 30 GiB free disk.",
+      "impact": "Compute exists but runtime does not meet repository engine floor.",
+      "nextAction": "Provision Node >=24 and npm >=11."
+    },
+    {
+      "capability": "repo_code",
+      "status": "DEGRADED",
+      "evidence": "No local crypto-trading-agent checkout found at /workspace or /mnt/data. GitHub connector read package.json, scripts/backtest.ts, src/types.ts and src/backtesting/archiveKlines.ts. Package requires Node >=24/npm >=11.",
+      "impact": "Remote source review possible; no local command can run.",
+      "nextAction": "Provision checkout and compatible runtime."
+    },
+    {
+      "capability": "binance_sdk",
+      "status": "BLOCKED",
+      "evidence": "Node module resolution found no @binance/connector, binance-api-node, @binance/futures-connector or binance package installed; SDK not used.",
+      "impact": "All market retrieval used Binance public market-data connector, not SDK.",
+      "nextAction": "Install the repository-pinned SDK only after runtime and checkout are available."
+    },
+    {
+      "capability": "network_binance",
+      "status": "DEGRADED",
+      "evidence": "Direct curl https://fapi.binance.com/fapi/v1/time failed DNS resolution (curl exit 6). Connector returned klines, premiumIndex, ticker24hr, openInterest, depth, fundingRate history, fundingInfo, taker volume and global long/short data. Connector does not expose raw HTTP status/headers. ExchangeInfo serverTime 2026-11-06T11:18:40.883Z, stale by 108200.831s.",
+      "impact": "Market snapshot available; fresh server-time and contract-status verification blocked.",
+      "nextAction": "Restore direct DNS/HTTPS or obtain uncached official /time and /exchangeInfo; require <=60s drift."
+    },
+    {
+      "capability": "raw_historical_archive",
+      "status": "PASS",
+      "evidence": "Remote raw branch research/raw-ohlcv-archive-20261107T1625Z-run12. Appended 64 rows to delta file (17,799 bytes, SHA-256 cd966858dfbb3a8da20fdde45f5bb0393dd99f83e84b8008c1075e02aa6b48b4); manifest readback verified (SHA-256 60f7ec29574e18dcabaeec79e4ae2c44af99faeccedeabeb17279d14b97a4500).",
+      "impact": "Incremental 5m/15m/1h archive advanced; 4h unchanged.",
+      "nextAction": "Continue incremental append and merge 4h into canonical archive."
+    },
+    {
+      "capability": "data_quality_coverage",
+      "status": "DEGRADED",
+      "evidence": "Current rolling audit: 16 symbol/interval series x120 returned; 119 completed and 1 forming per series; 1,904 completed/16 forming; duplicates, gaps, off-grid, OHLC, non-positive-volume, non-finite and close-time failures all zero. New 64-row delta passed continuity and OHLCV checks.",
+      "impact": "Recent window clean; long-history readiness still insufficient because multi-year 5m/15m absent, canonical 4h merge incomplete, missing 76-row delta and 13 hash provenance mismatches.",
+      "nextAction": "Backfill 5m/15m, merge 4h, recover missing delta and reconcile hashes."
+    },
+    {
+      "capability": "backtest_harness_smoke_test",
+      "status": "BLOCKED",
+      "evidence": "Remote scripts/backtest.ts exists but supports only 15m/1h/4h. Candle type omits closeTime. archiveKlines validator accepts volume=0 (rejects only volume<0). No local checkout; smoke test NOT_RUN.",
+      "impact": "No deterministic replay or OOS experiment executed.",
+      "nextAction": "Fix candle closeTime/volume validation, add 5m, run fixture twice and verify no lookahead."
+    },
+    {
+      "capability": "disk_storage",
+      "status": "PASS",
+      "evidence": "30 GiB free in current container. GitHub raw archive branch accepted delta and manifest writes.",
+      "impact": "Remote persistence available; local repo/archive absent.",
+      "nextAction": "Continue verified remote writes; avoid assuming local files persist."
+    },
+    {
+      "capability": "artifact_readback",
+      "status": "PASS",
+      "evidence": "New raw delta fetched back byte-for-byte; manifest fetched back and its delta SHA verified. Research artifacts to be written and read back in this run.",
+      "impact": "New raw archive append is durable and verified.",
+      "nextAction": "Verify registry, queue, snapshot, report and preflight after writes."
+    }
+  ],
+  "experimentReadiness": {
+    "status": "BLOCKED",
+    "experimentExecuted": false,
+    "oosEvaluated": false,
+    "reason": "No local checkout/runtime, no deterministic smoke test, missing multi-year 5m/15m archive, incomplete canonical 4h merge, stale exchangeInfo/server time, incomplete execution-cost calibration, unresolved 76-row delta and 13 hash provenance discrepancies."
+  },
+  "classification": "RESEARCH_BLOCKED",
+  "nextExecutableRemediation": [
+    "Provision Node>=24/npm>=11 and local checkout.",
+    "Backfill multi-year 5m/15m and merge 4h canonical data.",
+    "Recover or formally quarantine the missing 76-row delta; reconcile 13 provenance mismatches.",
+    "Restore fresh /fapi/v1/time and /fapi/v1/exchangeInfo.",
+    "Fix Candle.closeTime and reject volume<=0; add 5m support.",
+    "Run deterministic smoke fixture twice and verify no-lookahead.",
+    "Calibrate fees, spread, slippage, impact, funding and latency before preregistered OOS experiment."
+  ]
+}

@@ -1,0 +1,126 @@
+{
+  "schemaVersion": 1,
+  "runId": "context-strategy-2026-11-07T1440Z-v79",
+  "asOfUtc": "2026-11-07T14:40:24.277Z",
+  "generatedAtUtc": "2026-11-07T14:46:42.564Z",
+  "runClassification": "RESEARCH_BLOCKED",
+  "experimentExecuted": false,
+  "oosEvaluated": false,
+  "monitoringPerformed": true,
+  "researchProgress": {
+    "newRowsAppended": 72,
+    "rowsByInterval": {
+      "5m": 52,
+      "15m": 16,
+      "1h": 4
+    },
+    "rowsBySymbol": {
+      "BTCUSDT": 18,
+      "ETHUSDT": 18,
+      "SOLUSDT": 18,
+      "XRPUSDT": 18
+    },
+    "cumulativeIndexedDeltaRows": 3728,
+    "highwaterUtc": {
+      "5m": "2026-11-07T14:35:00Z",
+      "15m": "2026-11-07T14:15:00Z",
+      "1h": "2026-11-07T13:00:00Z",
+      "4h": "2026-11-07T08:00:00Z"
+    },
+    "oneHourBaseRowsPerSymbol": 53871,
+    "fourHourCanonicalRowsPerSymbol": 13461,
+    "multiYear5m15mPresent": false,
+    "newExperiments": 0,
+    "newOosEvaluations": 0
+  },
+  "contextDiscovery": {
+    "taxonomyRevision": "NONE",
+    "thresholdsFitted": false,
+    "frequencyCounts": null,
+    "durationStatistics": null,
+    "transitionMatrix": null,
+    "status": "INSUFFICIENT_EVIDENCE",
+    "note": "No training-only context threshold refit; 200-bar rolling features are descriptive only."
+  },
+  "strategyContextScorecard": {
+    "carriedForwardFrom": "v78",
+    "newExperiments": 0,
+    "newOosEvaluations": 0,
+    "oosValidatedCount": 0,
+    "rejectedCount": 0,
+    "strongestCandidate": {
+      "symbol": "SOLUSDT",
+      "context": "BULL_LOW",
+      "strategy": "4h Donchian20 breakout",
+      "version": "inherited-v75",
+      "status": "OOS_PROMISING",
+      "oosTrades": 12,
+      "winRatePct": 66.7,
+      "targetBeforeStopPct": 41.7,
+      "meanNetR": 0.606,
+      "profitFactor": 2.72,
+      "maxDrawdownR": 1.3,
+      "blockBootstrapCi95MeanR": [
+        0.086,
+        1.199
+      ],
+      "lastEvaluationUtc": "2026-11-05T09:43:57.448Z",
+      "promotionBlocker": "12 OOS trades below >=100 per symbol/context; costs and robustness incomplete."
+    },
+    "contextAlignedDonchian20WfV2": {
+      "status": "INSUFFICIENT_EVIDENCE",
+      "all36Cells": "Below 100 OOS trades per cell; nominal block-bootstrap CI includes zero; Holm-adjusted p=1.0."
+    },
+    "perSymbolAggregate": {
+      "BTCUSDT": {
+        "trades": 200,
+        "winRatePct": 36.5,
+        "targetBeforeStopPct": 21.5,
+        "meanNetR": -0.100817
+      },
+      "ETHUSDT": {
+        "trades": 182,
+        "winRatePct": 38.46,
+        "targetBeforeStopPct": 28.02,
+        "meanNetR": 0.047803
+      },
+      "SOLUSDT": {
+        "trades": 208,
+        "winRatePct": 37.02,
+        "targetBeforeStopPct": 24.52,
+        "meanNetR": -0.017655
+      },
+      "XRPUSDT": {
+        "trades": 188,
+        "winRatePct": 37.77,
+        "targetBeforeStopPct": 29.79,
+        "meanNetR": 0.048855
+      }
+    },
+    "otherFamilies": {
+      "trendPullback": "HYPOTHESIS",
+      "breakoutRetest": "HYPOTHESIS",
+      "rangeMeanReversion": "HYPOTHESIS",
+      "failedBreakoutFade": "HYPOTHESIS",
+      "volatilityExpansion": "HYPOTHESIS",
+      "btcRelativeStrength": "HYPOTHESIS",
+      "fundingOiFilters": "HYPOTHESIS"
+    }
+  },
+  "keyDiscoveries": [
+    "No new strategy experiment or OOS evaluation completed.",
+    "The only carried-forward OOS_PROMISING cell is SOLUSDT BULL_LOW 4h Donchian20 with 12 OOS trades; it is not actionable.",
+    "No OOS_VALIDATED registry entry exists; no context is proven untradeable and no candidate is newly rejected.",
+    "Short-horizon buy flow coexists with negative 1h/4h EMA alignment across the universe; treat all contexts as UNKNOWN/TRANSITION until thresholds are trained."
+  ],
+  "currentMarketSnapshotPath": "research/context-strategy/snapshots/current_market_snapshot_20261107T1440Z_v79.json",
+  "decisions": {
+    "SOLUSDT": "NO_TRADE",
+    "ETHUSDT": "NO_TRADE",
+    "XRPUSDT": "NO_TRADE",
+    "reason": "No OOS_VALIDATED entry or validated trigger; contexts uncalibrated; fresh exchange metadata and complete costs unavailable."
+  },
+  "dataQualityAuditPath": "research/context-strategy/audits/data_quality_audit_20261107T1440Z_v79.json",
+  "preflightPath": "research/context-strategy/preflight/preflight_20261107T1440Z_v79.json",
+  "rawArchiveBranch": "research/raw-ohlcv-archive-20261107T1440Z"
+}

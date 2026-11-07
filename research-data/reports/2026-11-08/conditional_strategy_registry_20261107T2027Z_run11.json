@@ -1,0 +1,174 @@
+{
+  "schema_version": "1.0.0",
+  "version": "run11",
+  "run_id": "context-strategy-2026-11-07T2027Z-run11",
+  "as_of_utc": "2026-11-07T20:27:01.567Z",
+  "research_status": "RESEARCH_BLOCKED",
+  "universe": {
+    "tradable": [
+      "SOLUSDT",
+      "ETHUSDT",
+      "XRPUSDT"
+    ],
+    "reference_only": [
+      "BTCUSDT"
+    ]
+  },
+  "oos_validated_count": 0,
+  "context_taxonomy": {
+    "experiment_id": "CTX-4H-REGIME-001",
+    "last_evaluated_utc": "2026-11-06T11:45:08.745Z",
+    "status": "INSUFFICIENT_EVIDENCE",
+    "source_interval": "4h",
+    "source_rows_per_symbol": 13461,
+    "source_rows_total": 53844,
+    "source_range_utc": [
+      "2020-09-14T08:00:00Z",
+      "2026-11-05T16:00:00Z"
+    ],
+    "split": {
+      "train_rows": 8076,
+      "validation_rows": 2692,
+      "untouched_test_rows": 2693,
+      "train_start": "2020-09-14T08:00:00Z",
+      "train_end": "2024-05-22T04:00:00Z",
+      "validation_start": "2024-05-22T08:00:00Z",
+      "validation_end": "2025-08-13T20:00:00Z",
+      "test_start": "2025-08-14T00:00:00Z",
+      "test_end": "2026-11-05T16:00:00Z"
+    },
+    "stability_summary": {
+      "median_context_duration_bars_by_symbol": {
+        "BTCUSDT": 3,
+        "ETHUSDT": 3,
+        "SOLUSDT": 3,
+        "XRPUSDT": 3.5
+      },
+      "p90_context_duration_bars_by_symbol": {
+        "BTCUSDT": 16,
+        "ETHUSDT": 13,
+        "SOLUSDT": 17,
+        "XRPUSDT": 14
+      },
+      "trend_persistence_pct": {
+        "BTCUSDT": {
+          "bear": 92,
+          "bull": 91.28,
+          "transition": 81.5
+        },
+        "ETHUSDT": {
+          "bear": 90.54,
+          "bull": 90.6,
+          "transition": 78.54
+        },
+        "SOLUSDT": {
+          "bear": 91.2,
+          "bull": 91.68,
+          "transition": 78.66
+        },
+        "XRPUSDT": {
+          "bear": 92.41,
+          "bull": 89.66,
+          "transition": 81.08
+        }
+      },
+      "train_test_js_divergence_bits": {
+        "BTCUSDT": 0.1574,
+        "ETHUSDT": 0.0854,
+        "SOLUSDT": 0.2733,
+        "XRPUSDT": 0.1078
+      },
+      "atr_threshold_drift_ratio": {
+        "BTCUSDT": {
+          "q33": 0.697,
+          "q67": 0.635
+        },
+        "ETHUSDT": {
+          "q33": 0.831,
+          "q67": 0.738
+        },
+        "SOLUSDT": {
+          "q33": 0.576,
+          "q67": 0.535
+        },
+        "XRPUSDT": {
+          "q33": 0.744,
+          "q67": 0.683
+        }
+      }
+    },
+    "notes": [
+      "Context duration and trend persistence are descriptive, not trade-win probabilities.",
+      "ATR threshold drift and test-distribution divergence show instability, especially SOLUSDT.",
+      "No taxonomy refit was performed this run."
+    ]
+  },
+  "strategy_scorecard": {
+    "context_aligned_donchian20_wf_v2": {
+      "status": "INSUFFICIENT_EVIDENCE",
+      "scope": "4h Donchian20 breakout across prior symbol-context grid",
+      "evidence": "All 36 symbol-context cells below 100 OOS trades; nominal block-bootstrap CI includes zero; Holm-adjusted p=1.0.",
+      "cost_model": "15bp round-trip proxy only; actual fee tier, historical funding cashflows, spread/slippage, latency and market impact not modeled."
+    },
+    "strongest_candidate": {
+      "symbol": "SOLUSDT",
+      "context": "BULL_LOW",
+      "strategy": "4h Donchian20 breakout",
+      "version": "inherited-v75",
+      "status": "OOS_PROMISING",
+      "oos_trades": 12,
+      "win_rate_pct": 66.7,
+      "target_before_stop_pct": 41.7,
+      "mean_net_R": 0.606,
+      "profit_factor": 2.72,
+      "max_drawdown_R": 1.3,
+      "block_bootstrap_ci95_mean_R": [
+        0.086,
+        1.199
+      ],
+      "last_evaluation_utc": "2026-11-05T09:43:57.448Z",
+      "promotion_blocker": "12 OOS trades below >=100 per-symbol/context gate; costs and robustness incomplete."
+    },
+    "other_families": {
+      "trend_pullback": "HYPOTHESIS",
+      "breakout_retest": "HYPOTHESIS",
+      "range_mean_reversion": "HYPOTHESIS",
+      "failed_breakout_fade": "HYPOTHESIS",
+      "volatility_expansion": "HYPOTHESIS",
+      "btc_relative_strength": "HYPOTHESIS",
+      "funding_oi_filters": "HYPOTHESIS"
+    }
+  },
+  "registry_entries": [
+    {
+      "symbol": "SOLUSDT",
+      "context": "BULL_LOW",
+      "strategy": "4h Donchian20 breakout",
+      "version": "inherited-v75",
+      "status": "OOS_PROMISING",
+      "oos_trades": 12,
+      "win_rate_pct": 66.7,
+      "target_before_stop_pct": 41.7,
+      "mean_net_R": 0.606,
+      "profit_factor": 2.72,
+      "max_drawdown_R": 1.3,
+      "block_bootstrap_ci95_mean_R": [
+        0.086,
+        1.199
+      ],
+      "last_evaluation_utc": "2026-11-05T09:43:57.448Z",
+      "promotion_blocker": "12 OOS trades below >=100 per-symbol/context gate; costs and robustness incomplete."
+    }
+  ],
+  "current_applicability": {
+    "oos_validated_entries": 0,
+    "SOLUSDT": "NO_TRADE",
+    "ETHUSDT": "NO_TRADE",
+    "XRPUSDT": "NO_TRADE",
+    "reason": "No OOS_VALIDATED registry entry exists; current regime does not create an entry trigger."
+  },
+  "status_transitions_this_run": [],
+  "last_strategy_experiment_utc": "2026-11-05T09:43:57.448Z",
+  "new_experiments_this_run": 0,
+  "new_oos_evaluations_this_run": 0
+}

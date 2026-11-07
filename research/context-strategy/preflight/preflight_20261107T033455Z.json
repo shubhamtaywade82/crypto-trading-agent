@@ -1,7 +1,7 @@
 {
   "schemaVersion": "1.0.0",
   "runId": "CONTEXT-STRATEGY-20261107T033455Z-V105",
-  "checkedAtUtc": "2026-11-07T03:34:55.179Z",
+  "checkedAtUtc": "2026-11-07T03:40:18Z",
   "executionClassification": "RESEARCH_BLOCKED",
   "environment": {
     "runtime": "Managed container + GitHub/Binance connectors",
@@ -20,6 +20,31 @@
       "@nemesis-oss/binance-sdk": "NOT_INSTALLED",
       "binance": "NOT_INSTALLED",
       "@binance/connector": "NOT_INSTALLED"
+    },
+    "runtimeRecheck": {
+      "checkedAtUtc": "2026-11-07T03:40:18Z",
+      "cwd": "/",
+      "os": "Debian GNU/Linux 13 (trixie)",
+      "kernel": "6.18.57",
+      "python": "3.13.5",
+      "node": "v22.16.0",
+      "npm": "10.9.2",
+      "cpuCores": 5,
+      "memoryTotalKiB": 6090668,
+      "memoryAvailableKiB": 4938140,
+      "diskFree": "30G",
+      "localCheckoutPathsChecked": [
+        "/workspace/crypto-trading-agent",
+        "/mnt/data/crypto-trading-agent",
+        "/root/crypto-trading-agent",
+        "/home/oai/share/crypto-trading-agent"
+      ],
+      "allAbsent": true,
+      "sdkImports": {
+        "@nemesis-oss/binance-sdk": "NOT_INSTALLED",
+        "binance": "NOT_INSTALLED",
+        "@binance/connector": "NOT_INSTALLED"
+      }
     }
   },
   "checks": [
@@ -83,12 +108,12 @@
       "status": "DEGRADED",
       "evidence": {
         "directProbes": {
-          "/fapi/v1/time": "HTTP000 DNS failure (curl exit 6)",
-          "/fapi/v1/exchangeInfo": "HTTP000 DNS timeout (curl exit 28; 5s)",
-          "/fapi/v1/klines": "HTTP000 DNS failure (curl exit 6)",
-          "/fapi/v1/premiumIndex": "HTTP000 DNS timeout (curl exit 28; 5s)",
-          "/fapi/v1/openInterest": "HTTP000 DNS failure (curl exit 6)",
-          "/fapi/v1/ticker/24hr": "HTTP000 DNS timeout (curl exit 28; 5s)"
+          "/fapi/v1/time": "HTTP000; DNS failure returned immediately (~0.0001s)",
+          "/fapi/v1/exchangeInfo": "HTTP000; 2s DNS/connect timeout",
+          "/fapi/v1/klines": "HTTP000; 2s DNS/connect timeout",
+          "/fapi/v1/premiumIndex": "HTTP000; 2s DNS/connect timeout",
+          "/fapi/v1/openInterest": "HTTP000; 2s DNS/connect timeout",
+          "/fapi/v1/ticker/24hr": "HTTP000; 2s DNS/connect timeout"
         },
         "connectorPayloads": [
           "exchangeInfo",
@@ -103,13 +128,13 @@
           "bookTicker"
         ],
         "exchangeInfoServerTimeUtc": "2026-11-06T11:18:40.878Z",
-        "exchangeInfoLocalComparisonUtc": "2026-11-07T03:34:39.477Z",
-        "exchangeInfoDriftSeconds": 58558.599,
+        "exchangeInfoLocalComparisonUtc": "2026-11-07T03:40:18Z",
+        "exchangeInfoDriftSeconds": 58897.122,
         "latestMarkTimeUtc": "2026-11-07T03:30:45.000Z",
         "rawHttpStatusHeaders": "NOT_EXPOSED"
       },
       "impact": "Connector market data supports monitoring, but stale exchange metadata and unavailable /time block contract execution validation.",
-      "nextAction": "Restore direct DNS and obtain uncached /fapi/v1/time plus /fapi/v1/exchangeInfo; require <=60s drift."
+      "nextAction": "Restore direct DNS and obtain uncached /fapi/v1/time plus /fapi/v1/exchangeInfo; require <=60s drift before execution validation."
     },
     {
       "capability": "Raw historical archive",

@@ -1,0 +1,82 @@
+{
+  "schema_version": "1.0.0",
+  "created_at_utc": "2026-11-07T17:22:01.714Z",
+  "as_of_utc": "2026-11-07T17:22:01.714Z",
+  "repository": "shubhamtaywade82/crypto-trading-agent",
+  "branch": "research/raw-ohlcv-archive-20261107T1625Z-run12",
+  "source_endpoint": "GET /fapi/v1/klines",
+  "source_access": "Binance USD-M public market-data connector; Binance SDK not used; raw HTTP status/headers not exposed; direct shell DNS probe failed (curl exit 6).",
+  "exchange_time_source": "Kline closeTime and fresh mark/order-book event timestamps; /fapi/v1/time unavailable; exchangeInfo serverTime observed stale at 2026-11-06T11:18:40.883Z and not used for execution validation.",
+  "symbols": [
+    "BTCUSDT",
+    "ETHUSDT",
+    "SOLUSDT",
+    "XRPUSDT"
+  ],
+  "intervals": [
+    "5m",
+    "15m",
+    "1h",
+    "4h"
+  ],
+  "completed_candle_rule": "closeTime < as_of_utc and openTime strictly after the prior verified high-water for each symbol/interval.",
+  "previous_highwater_utc": {
+    "5m": "2026-11-07T16:20:00.000Z",
+    "15m": "2026-11-07T16:00:00.000Z",
+    "1h": "2026-11-07T15:00:00.000Z",
+    "4h": "2026-11-07T12:00:00.000Z"
+  },
+  "first_new_open_utc": {
+    "5m": "2026-11-07T16:25:00.000Z",
+    "15m": "2026-11-07T16:15:00.000Z",
+    "1h": "2026-11-07T16:00:00.000Z",
+    "4h": null
+  },
+  "latest_completed_open_utc": {
+    "5m": "2026-11-07T17:15:00.000Z",
+    "15m": "2026-11-07T17:00:00.000Z",
+    "1h": "2026-11-07T16:00:00.000Z",
+    "4h": "2026-11-07T12:00:00.000Z"
+  },
+  "rows_fetched": 360,
+  "rows_appended": 64,
+  "forming_rows_excluded": 8,
+  "rows_excluded_before_highwater": 288,
+  "rows_appended_by_interval": {
+    "5m": 44,
+    "15m": 16,
+    "1h": 4,
+    "4h": 0
+  },
+  "row_counts_by_symbol_interval": {
+    "BTCUSDT:5m": 11,
+    "ETHUSDT:5m": 11,
+    "SOLUSDT:5m": 11,
+    "XRPUSDT:5m": 11,
+    "BTCUSDT:15m": 4,
+    "ETHUSDT:15m": 4,
+    "SOLUSDT:15m": 4,
+    "XRPUSDT:15m": 4,
+    "BTCUSDT:1h": 1,
+    "ETHUSDT:1h": 1,
+    "SOLUSDT:1h": 1,
+    "XRPUSDT:1h": 1
+  },
+  "quality": {
+    "duplicates": 0,
+    "missing_intervals": 0,
+    "off_grid": 0,
+    "ohlc_invariant_failures": 0,
+    "non_positive_volume": 0,
+    "non_finite": 0,
+    "close_time_failures": 0,
+    "cross_symbol_alignment": true
+  },
+  "delta_path": "research-data/binance-usdm/delta/binance_usdm_delta_20261107T1722_5m15m1h_completed.jsonl",
+  "delta_sha256": "cd966858dfbb3a8da20fdde45f5bb0393dd99f83e84b8008c1075e02aa6b48b4",
+  "delta_bytes": 17799,
+  "delta_blob_sha": "407af05f77430aaf8f6a48253432ffe802428272",
+  "readback_verified": true,
+  "readback_verified_at_utc": "2026-11-07T17:22:06.736Z",
+  "status": "APPENDED_READBACK_VERIFIED"
+}

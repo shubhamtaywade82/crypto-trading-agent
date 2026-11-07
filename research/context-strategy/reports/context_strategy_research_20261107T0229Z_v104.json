@@ -82,7 +82,7 @@
       "formingRowsExcluded": 16,
       "readbackVerified": true
     },
-    "blocker": "No local checkout; Node 22.16/npm 10.9.2 below required Node>=24/npm>=11; SDK packages absent; archiveKlines.ts does not read JSONL; historical funding and calibrated costs incomplete."
+    "blocker": "No local checkout; Node 22.16/npm 10.9.2 below required Node>=24/npm>=11; SDK packages absent; archiveKlines.ts does not read JSONL; historical funding and calibrated costs incomplete. Direct data.binance.vision DNS also failed on two tested archive URLs; no verified bulk-download transport is available."
   },
   "contextDiscovery": {
     "taxonomy": "CTX-4H-EMA50xEMA200-ATRQ-v2-FULL-ARCHIVE",
@@ -440,7 +440,13 @@
             "scripts/backtest.ts",
             "scripts/conditional-edge.ts",
             "scripts/ablation-study.ts"
-          ]
+          ],
+          "packageVersion": "2.4.1",
+          "engines": {
+            "node": ">=24",
+            "npm": ">=11"
+          },
+          "archiveLoaderSupportsJsonl": false
         },
         "impact": "Remote code is inspectable/writable, but no local checkout exists to invoke scripts.",
         "nextAction": "Checkout the research branch in a supported Node24/npm11 environment."
@@ -491,7 +497,9 @@
           "latestMarketTimestampUtc": "2026-11-07T02:25:19Z",
           "exchangeInfoServerTimeUtc": "2026-11-06T11:18:40.886Z",
           "metadataDriftSeconds": 54398.114,
-          "rawHttpStatusHeaders": "NOT_EXPOSED"
+          "rawHttpStatusHeaders": "NOT_EXPOSED",
+          "dataBinanceVisionDns": "DNS_FAILED",
+          "dataArchiveProbeUrls": 2
         },
         "impact": "Monitoring works, but stale exchange metadata and unavailable /time block execution validation.",
         "nextAction": "Restore direct DNS or obtain fresh uncached /time and /exchangeInfo; require <=60s drift."
@@ -554,7 +562,9 @@
           "localInvocation": false,
           "fixtureSmokeTest": "NOT_RUN",
           "strategyExperiment": "NOT_EXECUTED",
-          "oos": "NOT_EVALUATED"
+          "oos": "NOT_EVALUATED",
+          "backtestScriptPath": "scripts/backtest.ts",
+          "archiveLoaderSupportsJsonl": false
         },
         "impact": "No valid experiment or OOS claim.",
         "nextAction": "Implement JSONL adapter, provision Node24/npm11, run deterministic fixture smoke test, then execute frozen experiment."
@@ -642,6 +652,35 @@
       "parameterNeighborhoods": 3,
       "multipleTestingCorrection": "Holm",
       "statusReason": "No local checkout; Node/npm below required versions; JSONL loader absent; historical funding/cost inputs incomplete."
+    },
+    "followupProbes": {
+      "checkedAtUtc": "2026-11-07T02:33:28.598Z",
+      "dataBinanceVision": {
+        "status": "BLOCKED_DNS",
+        "testedUrls": [
+          "https://data.binance.vision/data/futures/um/daily/klines/BTCUSDT/5m/BTCUSDT-5m-2026-11-06.zip",
+          "https://data.binance.vision/data/futures/um/daily/klines/SOLUSDT/15m/SOLUSDT-15m-2026-11-06.zip"
+        ],
+        "observed": "Both HEAD requests failed with URLError: Temporary failure in name resolution."
+      },
+      "repositoryInspection": {
+        "packageVersion": "2.4.1",
+        "engines": {
+          "node": ">=24",
+          "npm": ">=11"
+        },
+        "packageManager": "not declared",
+        "archiveLoaderPath": "src/backtesting/archiveKlines.ts",
+        "archiveLoaderSupportsJsonl": false,
+        "archiveLoaderUsesBinanceVisionZip": true,
+        "backtestScriptPath": "scripts/backtest.ts",
+        "backtestScriptImports": [
+          "ReplayService",
+          "fetchArchiveKlines",
+          "validateCandles"
+        ],
+        "localInvocation": false
+      }
     }
   },
   "costsAndLimitations": {
@@ -650,7 +689,8 @@
     "funding": "Current 8h interval and latest settlement available; multi-year funding history incomplete. SOL file has 6,806 rows with 3,501 blank markPrice rows and a provenance/readback issue; BTC/ETH/XRP history absent.",
     "execution": "No latency, queue position, partial-fill, funding cash-flow or realistic stop-fill model executed.",
     "positioning": "Global long/short is account-count based; no liquidation feed or top-trader positioning archive.",
-    "coverage": "Multi-year 5m/15m absent; unresolved 76-row artifact and 14 SHA provenance mismatches remain."
+    "coverage": "Multi-year 5m/15m absent; unresolved 76-row artifact and 14 SHA provenance mismatches remain.",
+    "network": "Direct fapi.binance.com and data.binance.vision DNS resolution both failed in the shell runtime; connector market data remains available but raw HTTP status/headers are not exposed."
   },
   "nextExperiments": [
     {
@@ -697,10 +737,11 @@
     "queueItemsAfterUpdate": 102,
     "reportReadbackVerified": true,
     "preflightReadbackVerified": true,
-    "preflightGitBlobSha1": "e8dfff1e1b5ec955d03c81e8bae7f6c887b40317",
-    "preflightSha256": "07d991991504f0470dff83609d1a1cc8e274f95078a39c78963ba22990cce092",
+    "preflightGitBlobSha1": "586f3cf46a460f8d74e7714b80f950567554c572",
+    "preflightSha256": "PENDING_RECOMPUTE",
     "reportGitBlobSha1BeforeFinalization": "b6dfd2c5a137a2820dbfb837eb87bcd9950002bc",
     "reportSha256BeforeFinalization": "52d45657293ba50387a7b7f4e36ec3b3b66d8891821d6037a55bc012aa5e67ff",
-    "readbackVerifiedAtUtc": "2026-11-07T02:31:27.443Z"
+    "readbackVerifiedAtUtc": "2026-11-07T02:31:27.443Z",
+    "followupProbeAtUtc": "2026-11-07T02:33:28.598Z"
   }
 }

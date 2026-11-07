@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "version": "v82",
-  "runId": "context-strategy-2026-11-07T1722Z-v82",
-  "asOfUtc": "2026-11-07T17:22:01.714Z",
+  "version": "v83",
+  "runId": "context-strategy-2026-11-07T1826Z-v83",
+  "asOfUtc": "2026-11-07T18:26:39.352Z",
   "researchStatus": "RESEARCH_BLOCKED",
   "sdkUsed": false,
   "universe": {
@@ -16,13 +16,13 @@
     ]
   },
   "rawArchive": {
-    "branch": "research/raw-ohlcv-archive-20261107T1625Z-run12",
-    "newRowsAppended": 64,
-    "cumulativeIncrementalRows": 3916,
+    "branch": "research/raw-ohlcv-archive-20261107T1823Z-run13",
+    "newRowsAppended": 72,
+    "cumulativeIncrementalRows": 3988,
     "highwaterUtc": {
-      "5m": "2026-11-07T17:15:00Z",
-      "15m": "2026-11-07T17:00:00Z",
-      "1h": "2026-11-07T16:00:00Z",
+      "5m": "2026-11-07T18:20:00Z",
+      "15m": "2026-11-07T18:00:00Z",
+      "1h": "2026-11-07T17:00:00Z",
       "4h": "2026-11-07T12:00:00Z"
     },
     "readbackVerified": true,
@@ -84,6 +84,20 @@
         "sha256": "cd966858dfbb3a8da20fdde45f5bb0393dd99f83e84b8008c1075e02aa6b48b4",
         "manifest": "research-data/binance-usdm/delta/manifest-20261107T1722-5m15m1h.json",
         "manifestSha256": "60f7ec29574e18dcabaeec79e4ae2c44af99faeccedeabeb17279d14b97a4500"
+      },
+      {
+        "path": "research-data/binance-usdm/delta/binance_usdm_delta_20261107T1823Z_5m15m1h_completed.jsonl",
+        "rows": 68,
+        "sha256": "908c28435fc1175fcb83050045b7d966522a81ce84400300a839e0733479b0c0",
+        "manifest": "research-data/binance-usdm/delta/manifest-20261107T1823Z-5m15m1h.json",
+        "manifestSha256": "f60a60c99ddf83cb48944f704a2403081bae53a1a0eb33667f4b5306e51fcd8e"
+      },
+      {
+        "path": "research-data/binance-usdm/delta/binance_usdm_delta_20261107T1825Z_5m_completed.jsonl",
+        "rows": 4,
+        "sha256": "9e9d15f0e3e0ea56cd7e9df7f644b662bd5aa2e05569b96643e9265ca15644df",
+        "manifest": "research-data/binance-usdm/delta/manifest-20261107T1825Z-5m.json",
+        "manifestSha256": "2b116c8e27c9881d4e0bccc8d88dfd05a0823ac71c737eaaeba1745ec00a9ff2"
       }
     ],
     "existingPageHashDiscrepancies": {
@@ -92,7 +106,8 @@
       "independentReadbackMismatches": 0,
       "verifiedPageSymbolFiles": 8,
       "expectedHashesPreserved": true
-    }
+    },
+    "rawBranchHead": "8ee6f9500595b5d84a5e7bb1a93804cfc438b94d"
   },
   "researchProgress": {
     "oneHourBaseRowsPerSymbol": 53871,
@@ -101,7 +116,7 @@
       "2020-09-14T08:00:00Z",
       "2026-11-06T22:00:00Z"
     ],
-    "oneHourIncrementalHighwaterUtc": "2026-11-07T16:00:00Z",
+    "oneHourIncrementalHighwaterUtc": "2026-11-07T17:00:00Z",
     "fourHourCanonicalRowsPerSymbol": 13461,
     "fourHourCanonicalRowsTotal": 53844,
     "fourHourCanonicalEndUtc": "2026-11-05T16:00:00Z",
@@ -112,7 +127,7 @@
     "rollingFormingRows": 16,
     "newExperiments": 0,
     "newOosEvaluations": 0,
-    "newRowsAppendedThisRun": 64,
+    "newRowsAppendedThisRun": 72,
     "archiveIndexStatus": "DEGRADED_MISSING_76_ROW_DELTA_AND_13_HASH_PROVENANCE_MISMATCHES",
     "rollingWindowQuality": {
       "series": 16,
@@ -129,6 +144,12 @@
       "nonFinite": 0,
       "closeTimeFailures": 0,
       "crossSymbolAlignment": true
+    },
+    "latestCompletedOpenUtc": {
+      "5m": "2026-11-07T18:20:00Z",
+      "15m": "2026-11-07T18:00:00Z",
+      "1h": "2026-11-07T17:00:00Z",
+      "4h": "2026-11-07T12:00:00Z"
     }
   },
   "strategyScorecard": {
@@ -199,8 +220,14 @@
       "contextDiscovery": "NO_NEW_TAXONOMY_FIT; context frequency/duration/transitions not recomputed."
     },
     "note": "Carried forward unchanged in v81; no experiment or OOS evaluation ran.",
-    "reviewedAtUtc": "2026-11-07T17:22:01.714Z",
-    "reviewNote": "Carried forward unchanged; no new experiment or OOS evaluation in v82."
+    "reviewedAtUtc": "2026-11-07T18:26:39.352Z",
+    "reviewNote": "Carried forward unchanged from v82; no new experiment or OOS evaluation. Current descriptive context is bearish on all 15m/1h/4h cells; no OOS_VALIDATED entry exists.",
+    "provenanceReview": {
+      "status": "REVIEW_REQUIRED",
+      "candidate": "SOLUSDT / BULL_LOW / 4h Donchian20 breakout / inherited-v75",
+      "issue": "Stored record labels its interval 95%, but original experiment artifact, data/code hashes, seed, split and exact bootstrap configuration are absent. Current scripts/conditional-edge.ts defaults to 90% confidence; do not assume it generated the stored result.",
+      "action": "Recover original experiment artifact and verify CI level, untouched split, sample counts, costs and hash provenance before relying on the interval."
+    }
   },
   "registryEntries": [
     {
@@ -220,7 +247,9 @@
         1.199
       ],
       "lastEvaluationUtc": "2026-11-05T09:43:57.448Z",
-      "promotionBlocker": "12 OOS trades below >=100 per-symbol/context gate; costs and robustness incomplete."
+      "promotionBlocker": "12 OOS trades below >=100 per-symbol/context gate; costs and robustness incomplete.",
+      "lastReviewedUtc": "2026-11-07T18:26:39.352Z",
+      "provenanceWarning": "Original experiment artifact/data hash/code hash/seed/split/bootstrap configuration not present in accessible registry; interval labelled 95% requires provenance reconciliation."
     }
   ],
   "tradeSelection": {
@@ -228,21 +257,62 @@
     "SOLUSDT": "NO_TRADE",
     "ETHUSDT": "NO_TRADE",
     "XRPUSDT": "NO_TRADE",
-    "reason": "No OOS_VALIDATED entry exists. Current EMA context is BEAR across all timeframes; inherited SOL BULL_LOW candidate is not applicable; no Donchian20 trigger; fresh contract metadata and execution costs remain unavailable."
+    "reason": "No OOS_VALIDATED symbol/context strategy exists. 15m/1h/4h EMA alignment is bearish for all tradables; 5m recovery has no completed 20-bar breakout. Fresh contract metadata and execution costs remain unavailable."
   },
   "runSummary": {
     "runClassification": "RESEARCH_BLOCKED",
     "experimentExecuted": false,
     "oosEvaluated": false,
     "marketMonitoringPerformed": true,
-    "archiveRowsAppended": 64,
-    "reason": "64-row 5m/15m/1h archive delta and manifest persisted/read back; current context snapshot generated. No experiment: no local checkout, Node22/npm10 below repository floor, SDK absent, direct DNS failed, exchangeInfo stale 30.05h, multi-year 5m/15m absent, canonical 4h merge incomplete, 76-row delta unresolved, 13 hash provenance mismatches and execution costs uncalibrated."
+    "archiveRowsAppended": 72,
+    "reason": "72 completed bars across 5m/15m/1h were persisted and SHA-256 readback-verified; current snapshot refreshed. No experiment: no local checkout, Node22/npm10 below repository floor, SDK absent, direct DNS failed, exchangeInfo stale 111,968.601s, multi-year 5m/15m absent, canonical 4h merge incomplete, 76-row delta unresolved, 13 provenance mismatches, execution costs uncalibrated, no smoke test, and conditional-edge defaults/gates need correction."
   },
   "currentMarketSnapshot": {
-    "path": "research/context-strategy/snapshots/current_market_snapshot_2026-11-07_1722Z_v82.json",
-    "asOfUtc": "2026-11-07T17:22:01.714Z",
-    "classification": "DESCRIPTIVE_ONLY",
+    "path": "research/context-strategy/snapshots/current_market_snapshot_2026-11-07_1826Z_v83.json",
+    "asOfUtc": "2026-11-07T18:26:39.352Z",
+    "classification": "DESCRIPTIVE_ONLY_NOT_TRAIN_CALIBRATED",
     "oosValidatedEntries": 0
   },
-  "preflightStatus": "RESEARCH_BLOCKED"
+  "preflightStatus": "RESEARCH_BLOCKED",
+  "executionAudit": {
+    "sourceCommit": "13e2961e23f6d0a7ff9251b50b3e66716e93d705",
+    "sourceFiles": {
+      "src/types.ts": "fe0ef0bc50433f71802870ac77655e9ed67f94f3",
+      "src/backtesting/archiveKlines.ts": "20e66565c463976f2aa9ed11acba35e3e7abd365",
+      "scripts/conditional-edge.ts": "29034c61fdd42a5e40272234b221d29cb95fb3ee",
+      "src/research/ConditionalEdge.ts": "56b9f70368c16c3be74b9d099ec83bdb08a984bf",
+      "src/research/Bootstrap.ts": "f13903dde9e248d8bb9d288b222e31e44ba061ba"
+    },
+    "findings": [
+      "backtest CLI omits 5m",
+      "Candle omits closeTime",
+      "forming candles not explicitly filtered in CLI fetch mapping",
+      "fetchKlines has no explicit timeout",
+      "archive validator accepts zero volume",
+      "conditional-edge consumes existing decision journals, not raw OHLCV",
+      "conditional-edge defaults minN=30 and 90% CI",
+      "CLI walk-forward does not require Holm-significant cells",
+      "CLI does not expose embargo/purging policy",
+      "UTC-day cluster bootstrap does not model dependence across adjacent days"
+    ],
+    "smokeTest": "NOT_RUN"
+  },
+  "artifacts": {
+    "snapshot": {
+      "path": "research/context-strategy/snapshots/current_market_snapshot_2026-11-07_1826Z_v83.json",
+      "sha256": "ba89176a5cdf368d19424c58f2e74320c2c6899415bef116044c9ddfce59d6bf"
+    },
+    "preflight": {
+      "path": "research/context-strategy/preflight/context_research_preflight_2026-11-07_1826Z_v83.json",
+      "sha256": "57c24c2a561ced9d9d08bd35d65dcb30cc6a9ccff72c2b0be7bd44ae099b4701"
+    },
+    "report": {
+      "path": "research/context-strategy/reports/context_strategy_report_2026-11-07_1826Z_v83.md",
+      "sha256": "73f3981d30c60de862aace66e8f9c9166f589d14a71a174156acccf441f7b5cd"
+    },
+    "harnessAudit": {
+      "path": "research/context-strategy/audits/backtest_harness_audit_2026-11-07_1826Z_v83.md",
+      "sha256": "c4e68b574d55bf6ab1d9245dc00b0ffb979de65429955a2ae0309aa651b8dc8b"
+    }
+  }
 }

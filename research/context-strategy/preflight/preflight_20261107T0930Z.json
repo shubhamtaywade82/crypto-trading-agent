@@ -83,10 +83,10 @@
     },
     {
       "capability": "Artifact readback",
-      "status": "DEGRADED",
-      "evidence": "Both new raw JSONL deltas and manifests were fetched back; SHA-256 matched exactly (56-row 5m/15m delta and 4-row 1h delta). Archive-index/report/registry/queue final readback is pending.",
-      "impact": "Raw delta persistence is verified; final run artifact set is not yet fully verified.",
-      "nextAction": "Read back and identity-check indexes, registry, report, preflight and queue; then upgrade this check to PASS."
+      "status": "PASS",
+      "evidence": "At 2026-11-07T09:36:13.352Z, GitHub readback returned exact identity for both raw delta JSONL files (56 and 4 rows), both manifests, 1h and 4h archive indexes, V104 registry, V104 report, V104 preflight and queue. Raw delta SHA-256 values matched manifest values; archive-index/registry/report/preflight/queue blob IDs were read back.",
+      "impact": "All persisted raw and research artifacts for this run are verified; remote storage is durable.",
+      "nextAction": "Continue atomic writes and repeat readback/hash verification on the next refresh."
     },
     {
       "capability": "Current context classification",
@@ -113,5 +113,17 @@
     "Binance SDK was not used.",
     "All current market data came from the Binance USDⓈ-M public market-data connector; raw HTTP status/headers are not exposed.",
     "No backtest, experiment or OOS evaluation was executed."
-  ]
+  ],
+  "artifactReadback": {
+    "status": "PASS",
+    "verifiedAtUtc": "2026-11-07T09:36:13.352Z",
+    "rawDeltaSha256Verified": true,
+    "manifestReadbackVerified": true,
+    "archiveIndexesReadbackVerified": true,
+    "registryReadbackVerified": true,
+    "reportReadbackVerified": true,
+    "queueReadbackVerified": true,
+    "preflightReadbackVerifiedAfterFinalWrite": true
+  },
+  "updatedAtUtc": "2026-11-07T09:36:13.352Z"
 }

@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "created_at_utc": "2026-11-06T02:37:11.714Z",
   "repository": "shubhamtaywade82/crypto-trading-agent",
-  "branch": "research/raw-ohlcv-archive-2026-11-05T0530Z",
+  "branch": "research/raw-ohlcv-archive-2026-11-07T0226Z",
   "interval": "1h",
   "source_endpoint": "GET /fapi/v1/klines",
   "symbols": [
@@ -117,11 +117,11 @@
   },
   "status": "COMPLETE_HISTORICAL_1H_PAGES_WITH_INCREMENTAL_DELTA",
   "next_actions": [
-    "Continue hourly 1h incremental appends strictly after 2026-11-07T00:00:00Z; exclude forming candles and verify hashes/readback.",
+    "Continue hourly 1h incremental appends strictly after 2026-11-07T02:00:00Z; the 03:00Z candle is forming and must be excluded until it closes.",
     "Backfill multi-year 5m and 15m histories from an auditable source; this 1h index does not imply lower-timeframe completeness.",
     "Keep historical derivatives backfill and missing 76-row delta provenance work in the separate research queue."
   ],
-  "updated_at_utc": "2026-11-07T01:39:11.000Z",
+  "updated_at_utc": "2026-11-07T03:30:45.000Z",
   "page_progress": {
     "completedPages": 36,
     "rowsPerSymbol": 53871,
@@ -748,22 +748,26 @@
   },
   "incremental_coverage": {
     "previousCanonicalHighWaterUtc": "2026-11-06T22:00:00.000Z",
-    "lastCompletedOpenUtc": "2026-11-07T00:00:00.000Z",
-    "nextStartUtc": "2026-11-07T01:00:00.000Z",
-    "rowsAppendedSinceCanonicalPerSymbol": 2,
-    "rowsAppendedSinceCanonicalTotal": 8,
+    "lastCompletedOpenUtc": "2026-11-07T02:00:00.000Z",
+    "nextStartUtc": "2026-11-07T03:00:00.000Z",
+    "rowsAppendedSinceCanonicalPerSymbol": 4,
+    "rowsAppendedSinceCanonicalTotal": 16,
     "rowsAppendedThisRunPerSymbol": 1,
     "rowsAppendedThisRunTotal": 4,
     "deltaFiles": [
       "research-data/binance-usdm/delta/binance_usdm_delta_20261107T0024Z_1h_completed.jsonl",
-      "research-data/binance-usdm/delta/binance_usdm_delta_20261107T0127Z_1h_completed.jsonl"
+      "research-data/binance-usdm/delta/binance_usdm_delta_20261107T0127Z_1h_completed.jsonl",
+      "research-data/binance-usdm/delta/binance_usdm_delta_20261107T022742Z_1h_completed.jsonl",
+      "research-data/binance-usdm/delta/binance_usdm_delta_20261107T033045Z_15m1h_completed.jsonl"
     ],
     "deltaManifests": [
       "research-data/binance-usdm/delta/manifest-20261107T0024Z-1h.json",
-      "research-data/binance-usdm/delta/manifest-20261107T0127Z-1h.json"
+      "research-data/binance-usdm/delta/manifest-20261107T0127Z-1h.json",
+      "research-data/binance-usdm/delta/binance_usdm_delta_20261107T022742Z_1h_completed.manifest.json",
+      "research-data/binance-usdm/delta/binance_usdm_delta_20261107T033045Z_15m1h_completed.manifest.json"
     ],
     "readbackVerified": true
   },
-  "logical_rows_per_symbol": 53873,
-  "logical_rows_total": 215492
+  "logical_rows_per_symbol": 53875,
+  "logical_rows_total": 215500
 }

@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "version": "v79",
-  "runId": "context-strategy-2026-11-07T1440Z-v79",
-  "asOfUtc": "2026-11-07T14:40:24.277Z",
+  "version": "v80",
+  "runId": "context-strategy-2026-11-07T1532Z-v80",
+  "asOfUtc": "2026-11-07T15:32:07.895Z",
   "researchStatus": "RESEARCH_BLOCKED",
   "sdkUsed": false,
   "universe": {
@@ -16,13 +16,13 @@
     ]
   },
   "rawArchive": {
-    "branch": "research/raw-ohlcv-archive-20261107T1440Z",
-    "newRowsAppended": 72,
-    "cumulativeIncrementalRows": 3728,
+    "branch": "research/raw-ohlcv-archive-20261107T1525Z-run11",
+    "newRowsAppended": 52,
+    "cumulativeIncrementalRows": 3780,
     "highwaterUtc": {
-      "5m": "2026-11-07T14:35:00Z",
-      "15m": "2026-11-07T14:15:00Z",
-      "1h": "2026-11-07T13:00:00Z",
+      "5m": "2026-11-07T15:20:00Z",
+      "15m": "2026-11-07T15:00:00Z",
+      "1h": "2026-11-07T14:00:00Z",
       "4h": "2026-11-07T08:00:00Z"
     },
     "readbackVerified": true,
@@ -63,11 +63,20 @@
         "sha256": "8e3a910b28623d9b69f717827c25558c332eb824ce8f9502436bd00f2a973670",
         "manifest": "research-data/binance-usdm/delta/manifest-20261107T1440Z-5m15m.json",
         "manifestSha256": "326cce567db1cec4232202c239957a69b82bb8b595dd45fcec99a7306a82256a"
+      },
+      {
+        "path": "research-data/binance-usdm/delta/binance_usdm_delta_20261107T1525Z_5m15m1h_completed.jsonl",
+        "rows": 52,
+        "sha256": "0cb8bf4413838f39005b24fb07e118f28a234d8b06a432ed77cfcb01180b266f",
+        "manifest": "research-data/binance-usdm/delta/manifest-20261107T1525Z-5m15m1h.json",
+        "manifestSha256": "a530819b773fef43c8c4beba4a94e526a77037fbfef37ffe7ced8010fc9c11d6"
       }
     ],
     "existingPageHashDiscrepancies": {
-      "priorPageSymbolMismatches": 14,
-      "independentReadbackMismatches": 2,
+      "priorManifestMismatches": 14,
+      "remainingManifestMismatches": 13,
+      "independentReadbackMismatches": 0,
+      "verifiedPageSymbolFiles": 8,
       "expectedHashesPreserved": true
     }
   },
@@ -78,23 +87,38 @@
       "2020-09-14T08:00:00Z",
       "2026-11-06T22:00:00Z"
     ],
-    "oneHourIncrementalHighwaterUtc": "2026-11-07T13:00:00Z",
+    "oneHourIncrementalHighwaterUtc": "2026-11-07T14:00:00Z",
     "fourHourCanonicalRowsPerSymbol": 13461,
     "fourHourCanonicalRowsTotal": 53844,
     "fourHourCanonicalEndUtc": "2026-11-05T16:00:00Z",
     "fourHourIncrementalHighwaterUtc": "2026-11-07T08:00:00Z",
     "multiYear5m15mPresent": false,
-    "rollingRawRows": 3200,
-    "rollingCompletedRows": 3184,
+    "rollingRawRows": 1600,
+    "rollingCompletedRows": 1584,
     "rollingFormingRows": 16,
     "newExperiments": 0,
     "newOosEvaluations": 0,
-    "newRowsAppendedThisRun": 72,
-    "archiveIndexStatus": "DEGRADED_MISSING_DELTA_REFERENCE_AND_READBACK_HASH_MISMATCH"
+    "newRowsAppendedThisRun": 52,
+    "archiveIndexStatus": "DEGRADED_MISSING_76_ROW_DELTA_AND_13_HASH_PROVENANCE_MISMATCHES",
+    "rollingWindowQuality": {
+      "series": 16,
+      "rowsPerSeries": 100,
+      "rawRows": 1600,
+      "completedRows": 1584,
+      "formingRows": 16,
+      "duplicates": 0,
+      "missingIntervals": 0,
+      "offGrid": 0,
+      "nonMonotonic": 0,
+      "ohlcFailures": 0,
+      "nonPositiveVolume": 0,
+      "nonFinite": 0,
+      "closeTimeFailures": 0
+    }
   },
   "strategyScorecard": {
     "asOfUtc": "2026-11-05T09:43:57.448Z",
-    "carriedForwardFrom": "v78",
+    "carriedForwardFrom": "v79",
     "newExperiments": 0,
     "newOosEvaluations": 0,
     "oosValidatedCount": 0,
@@ -158,7 +182,8 @@
         "fundingOiFilters": "HYPOTHESIS"
       },
       "contextDiscovery": "NO_NEW_TAXONOMY_FIT; context frequency/duration/transitions not recomputed."
-    }
+    },
+    "note": "No strategy metrics were recomputed or promoted in this run; preserve the prior evaluation timestamp and evidence labels."
   },
   "registryEntries": [
     {
@@ -186,14 +211,21 @@
     "SOLUSDT": "NO_TRADE",
     "ETHUSDT": "NO_TRADE",
     "XRPUSDT": "NO_TRADE",
-    "reason": "No OOS_VALIDATED entry; OOS_PROMISING/hypotheses are not actionable."
+    "reason": "No OOS_VALIDATED entry exists. The only registry candidate remains OOS_PROMISING with 12 OOS trades; it is not actionable."
   },
   "runSummary": {
     "runClassification": "RESEARCH_BLOCKED",
     "experimentExecuted": false,
     "oosEvaluated": false,
     "marketMonitoringPerformed": true,
-    "archiveRowsAppended": 72,
-    "reason": "Historical and execution prerequisites still block a reproducible experiment; monitoring/archive refresh completed."
-  }
+    "archiveRowsAppended": 52,
+    "reason": "Current snapshot and archive maintenance completed, but no valid experiment could run: no local repository checkout, Node/npm below package floor, no installed SDK, stale exchange metadata/direct DNS failure, incomplete multi-year 5m/15m archive and uncalibrated costs."
+  },
+  "currentMarketSnapshot": {
+    "path": "research/context-strategy/snapshots/current_market_snapshot_2026-11-07_1532Z_v80.json",
+    "asOfUtc": "2026-11-07T15:32:07.895Z",
+    "classification": "DESCRIPTIVE_ONLY",
+    "oosValidatedEntries": 0
+  },
+  "preflightStatus": "RESEARCH_BLOCKED"
 }

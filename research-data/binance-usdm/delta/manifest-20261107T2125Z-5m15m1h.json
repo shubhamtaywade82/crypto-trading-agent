@@ -1,0 +1,138 @@
+{
+  "schema_version": "1.0.0",
+  "created_at_utc": "2026-11-07T21:27:37.000Z",
+  "as_of_utc": "2026-11-07T21:27:37.000Z",
+  "repository": "shubhamtaywade82/crypto-trading-agent",
+  "branch": "research/raw-ohlcv-archive-20261107T2125Z-run15",
+  "source_endpoint": "GET /fapi/v1/klines",
+  "source_access": "Binance USD-M public market-data connector; SDK not used; raw HTTP status/headers not exposed. Direct shell DNS/HTTPS and web open to fapi.binance.com unavailable.",
+  "exchange_time_source": "Maximum markPrice.time across BTCUSDT, ETHUSDT, SOLUSDT, XRPUSDT; /fapi/v1/time unavailable; exchangeInfo serverTime stale and excluded from candle completion.",
+  "symbols": [
+    "BTCUSDT",
+    "ETHUSDT",
+    "SOLUSDT",
+    "XRPUSDT"
+  ],
+  "intervals": [
+    "5m",
+    "15m",
+    "1h",
+    "4h"
+  ],
+  "completed_candle_rule": "closeTime < as_of_utc and openTime strictly after last readback-verified delta high-water for that interval.",
+  "previous_highwater_utc": {
+    "5m": "2026-11-07T20:20:00.000Z",
+    "15m": "2026-11-07T20:00:00.000Z",
+    "1h": "2026-11-07T19:00:00.000Z",
+    "4h": "2026-11-07T16:00:00.000Z"
+  },
+  "first_new_open_utc": {
+    "5m": "2026-11-07T20:25:00.000Z",
+    "15m": "2026-11-07T20:15:00.000Z",
+    "1h": "2026-11-07T20:00:00.000Z",
+    "4h": null
+  },
+  "latest_completed_open_utc": {
+    "5m": "2026-11-07T21:20:00.000Z",
+    "15m": "2026-11-07T21:00:00.000Z",
+    "1h": "2026-11-07T20:00:00.000Z",
+    "4h": "2026-11-07T16:00:00.000Z"
+  },
+  "next_start_utc": {
+    "5m": "2026-11-07T21:25:00.000Z",
+    "15m": "2026-11-07T21:15:00.000Z",
+    "1h": "2026-11-07T21:00:00.000Z",
+    "4h": "2026-11-07T20:00:00.000Z"
+  },
+  "rows_fetched": 124,
+  "rows_appended": 68,
+  "forming_rows_excluded": 12,
+  "rows_excluded_before_highwater": 44,
+  "rows_appended_by_interval": {
+    "5m": 48,
+    "15m": 16,
+    "1h": 4,
+    "4h": 0
+  },
+  "row_counts_by_symbol_interval": {
+    "BTCUSDT": {
+      "5m": 12,
+      "15m": 4,
+      "1h": 1,
+      "4h": 0
+    },
+    "ETHUSDT": {
+      "5m": 12,
+      "15m": 4,
+      "1h": 1,
+      "4h": 0
+    },
+    "SOLUSDT": {
+      "5m": 12,
+      "15m": 4,
+      "1h": 1,
+      "4h": 0
+    },
+    "XRPUSDT": {
+      "5m": 12,
+      "15m": 4,
+      "1h": 1,
+      "4h": 0
+    }
+  },
+  "quality": {
+    "duplicates": 0,
+    "missing_intervals": 0,
+    "off_grid": 0,
+    "ohlc_failures": 0,
+    "non_finite": 0,
+    "non_positive_volume": 0,
+    "close_time_failures": 0,
+    "cross_symbol_alignment": true
+  },
+  "raw_files": [
+    {
+      "path": "research-data/binance-usdm/delta/20261107T2125Z_BTCUSDT_5m15m1h_completed.jsonl",
+      "rows": 17,
+      "bytes": 4767,
+      "sha256": "63b2ff5a7728ca6c0c36a3c5a8a45e5be9094c8d9ec4eb460ddc71e48b5426cc",
+      "commit": "958c7fd334bc841c9ed8671f870fcc75984308f8",
+      "blobSha": "5b5f758c45019a91c172d9069fefdf93a689427e",
+      "readbackVerified": true
+    },
+    {
+      "path": "research-data/binance-usdm/delta/20261107T2125Z_ETHUSDT_5m15m1h_completed.jsonl",
+      "rows": 17,
+      "bytes": 4749,
+      "sha256": "235b26f4d93204833e9b2fd04f3c73b6a56f22a13522d4804385ff438cf867eb",
+      "commit": "0d650331a7bed7735ebd904c4a40a71e06e26cd8",
+      "blobSha": "095f6d614df19d83b7d64a28a01cdf738701d729",
+      "readbackVerified": true
+    },
+    {
+      "path": "research-data/binance-usdm/delta/20261107T2125Z_SOLUSDT_5m15m1h_completed.jsonl",
+      "rows": 17,
+      "bytes": 4769,
+      "sha256": "9ac08a622de92a60a60e92639310ee81476ab6e361413419a3ffb86dcf858ab0",
+      "commit": "ae2fba1da0dee39e46134ff45b019e8eabc4df9d",
+      "blobSha": "b7a85d6c66888b17804a29a9f0c0459e735b62f3",
+      "readbackVerified": true
+    },
+    {
+      "path": "research-data/binance-usdm/delta/20261107T2125Z_XRPUSDT_5m15m1h_completed.jsonl",
+      "rows": 17,
+      "bytes": 4679,
+      "sha256": "6df181f227201f279ebc366cd95facb883917b4bbdaa0d7a81bb25f345d39e48",
+      "commit": "bbd65c701f8bc2d0e6d49aadf200da33156a326c",
+      "blobSha": "db344cc1dfc7f347c2eb7c83096c9d0c70209764",
+      "readbackVerified": true
+    }
+  ],
+  "archive_index_reconciliation": {
+    "status": "BLOCKED_NOT_UPDATED",
+    "blocker": "The earlier 18:23Z delta-chain provenance gap and 76-row missing artifact remain unresolved. This append is retained as a verified append-only delta and does not advance 1h/4h archive indexes or canonical files.",
+    "next_action": "Recover the missing intermediate delta and reconcile all manifests before rebuilding archive indexes/canonical 4h files."
+  },
+  "readback_verified": true,
+  "status": "APPENDED_AND_READBACK_VERIFIED"
+}

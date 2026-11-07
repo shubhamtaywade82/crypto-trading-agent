@@ -1,0 +1,108 @@
+{
+  "schema_version": "1.0.0",
+  "run_id": "context-strategy-2026-11-08-run28",
+  "as_of_utc": "2026-11-07T19:35:32.000Z",
+  "local_time": "2026-11-08T01:05:32+05:30",
+  "status": "RESEARCH_EXECUTED",
+  "status_detail": "A reproducible data-quality and archive-append experiment completed. No strategy backtest or untouched OOS evaluation ran; strategy research remains blocked by explicit prerequisites.",
+  "sections": {
+    "research_progress": {
+      "data_quality_experiment_id": "DQ-20261107-1935Z",
+      "raw_rows_checked": 3200,
+      "completed_rows": 3184,
+      "forming_rows_excluded": 16,
+      "completed_rows_appended": 84,
+      "append_readback_verified": true,
+      "raw_branch": "research/raw-ohlcv-archive-20261107T193000Z-run14",
+      "archive_index_updated": false,
+      "strategy_experiment": "BLOCKED",
+      "remaining": [
+        "reconcile archive index and intermediate delta provenance",
+        "backfill multi-year 5m/15m",
+        "merge 4h incremental data",
+        "provision Node24/npm11 and local checkout",
+        "fix closeTime and zero-volume validation",
+        "archive historical costs and derivatives"
+      ]
+    },
+    "context_discovery": {
+      "taxonomy_status": "UNCHANGED_NOT_REFIT",
+      "thresholds": "No new training-derived thresholds fitted",
+      "sample_adequacy": "Rolling samples of 199 completed bars per symbol/interval are descriptive only; 5m/15m history is under 2.2 days and 4h sample is about 33 days. Not adequate for multi-cycle context taxonomy or stability claims.",
+      "observed_context": "Broad bearish multi-timeframe alignment across BTC/ETH/SOL; XRP has a 5m bounce against bearish 15m/1h/4h. No Donchian20 break in the rolling sample.",
+      "context_frequency_duration_transitions": "NOT_COMPUTED; training archive and reproducible harness blocked."
+    },
+    "strategy_context_scorecard": {
+      "oos_validated_entries": 0,
+      "oos_promising_entries": 1,
+      "prior_baseline": "Donchian20 walk-forward aggregate only; not a context-conditioned proof.",
+      "baseline_by_symbol": {
+        "BTCUSDT": {
+          "trades": 200,
+          "win_rate_pct": 36.5,
+          "target_before_stop_pct": 21.5,
+          "mean_net_R": -0.100817
+        },
+        "ETHUSDT": {
+          "trades": 182,
+          "win_rate_pct": 38.46,
+          "target_before_stop_pct": 28.02,
+          "mean_net_R": 0.047803
+        },
+        "SOLUSDT": {
+          "trades": 208,
+          "win_rate_pct": 37.02,
+          "target_before_stop_pct": 24.52,
+          "mean_net_R": -0.017655
+        },
+        "XRPUSDT": {
+          "trades": 188,
+          "win_rate_pct": 37.77,
+          "target_before_stop_pct": 29.79,
+          "mean_net_R": 0.048855
+        }
+      },
+      "candidate": {
+        "symbol": "SOLUSDT",
+        "context": "4h BULL_LOW",
+        "strategy": "Donchian20 breakout continuation v0.1.0",
+        "status": "OOS_PROMISING",
+        "trades": 12,
+        "win_rate_pct": 66.7,
+        "target_before_stop_pct": 41.7,
+        "mean_net_R": 0.606,
+        "profit_factor": 2.72,
+        "max_drawdown_R": 1.3,
+        "block_bootstrap_interval_R": [
+          0.086,
+          1.199
+        ],
+        "gate": "FAIL: 12 trades < 100 minimum; not multi-window stable",
+        "actionable": false
+      },
+      "other_families": "HYPOTHESIS; no new experiments."
+    },
+    "key_discoveries": [
+      "Current feature state is bearish across 1h/4h for BTC, ETH, SOL and XRP; XRP 5m is a counter-trend bounce.",
+      "Lower-timeframe ATR ranks are low in the rolling sample; XRP 4h ATR rank is elevated at 88.65%.",
+      "Funding is positive but below 0.05% for all four symbols on the 8h interval.",
+      "BTC-alt contemporaneous 1h return correlations are high (ETH 0.901, SOL 0.835, XRP 0.728); this is not lead-lag evidence.",
+      "No OOS_VALIDATED setup exists; no trade is eligible."
+    ],
+    "current_snapshot_ref": "current_market_snapshot_20261107T1935Z_v78.json",
+    "decisions": {
+      "SOLUSDT": "NO_TRADE: no OOS_VALIDATED registry entry and no validated trigger.",
+      "ETHUSDT": "NO_TRADE: no OOS_VALIDATED registry entry and no validated trigger.",
+      "XRPUSDT": "NO_TRADE: no OOS_VALIDATED registry entry; lower-timeframe bounce conflicts with higher-timeframe bearish context."
+    },
+    "data_quality_audit_ref": "data_quality_audit_20261107T1935Z_v78.json",
+    "preflight_ref": "preflight_20261107T1935Z_v78.json",
+    "next_experiments": [
+      "Recover the missing intermediate archive delta and rebuild the 1h index.",
+      "Backfill 5m/15m and merge 4h canonical data.",
+      "Fix closeTime preservation and strict positive-volume validation; run deterministic no-lookahead smoke fixture.",
+      "Build fee/spread/slippage/funding cost model.",
+      "Then pre-register SOL/ETH/XRP Donchian20 and trend-pullback context experiments with train/validation/untouched OOS splits."
+    ]
+  }
+}

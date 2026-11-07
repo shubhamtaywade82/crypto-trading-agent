@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAtUtc": "2026-11-07T06:23:00.000Z",
+  "updatedAtUtc": "2026-11-07T07:28:30.000Z",
   "items": [
     {
       "id": "Q1_ARCHIVE_MULTIYEAR",
@@ -3489,7 +3489,9 @@
         "Frozen untouched test window"
       ],
       "nextAction": "Provision Node24/npm11 and checkout the research branch; implement and test JSONL archive loading; reconcile historical funding and calibrate costs; then run the frozen BKR-4H-COMPRESSION-RETEST-BTC-CONFIRM-V1 specification with 60/20/20 split, 12-bar purge/embargo, three anchored windows, three lookback neighborhoods and Holm correction.",
-      "blocker": "No experiment or OOS evaluation can be run honestly in this runtime: no local checkout, Node/npm below package floor, SDK absent, JSONL loader absent, direct Binance DNS failure, historical funding incomplete and spread/slippage uncalibrated."
+      "blocker": "No experiment or OOS evaluation can be run honestly in this runtime: no local checkout, Node/npm below package floor, SDK absent, JSONL loader absent, direct Binance DNS failure, historical funding incomplete and spread/slippage uncalibrated.",
+      "lastRecheckedAtUtc": "2026-11-07T07:28:30.000Z",
+      "lastRecheckEvidence": "Same blockers persist: no local checkout, Node/npm below package floor, JSONL adapter absent, direct Binance DNS failure, historical funding incomplete and execution costs uncalibrated."
     },
     {
       "id": "Q112_INCREMENTAL_ARCHIVE_REFRESH_20261107T0621Z",
@@ -3569,62 +3571,139 @@
           "XRPUSDT": "NO_TRADE"
         }
       }
+    },
+    {
+      "id": "Q114_INCREMENTAL_ARCHIVE_REFRESH_20261107T0727Z",
+      "priority": 1,
+      "status": "COMPLETED",
+      "prerequisites": [
+        "Fresh Binance USD-M kline connector data",
+        "Previous verified high-water marks",
+        "Writable GitHub raw archive branch"
+      ],
+      "nextAction": "At the next refresh append only completed bars after 5m 07:20Z, 15m 07:00Z, 1h 06:00Z and 4h 00:00Z. The 4h 04:00Z candle is still forming and must remain excluded until its close.",
+      "blocker": null,
+      "result": {
+        "rawArchiveBranch": "research/raw-ohlcv-archive-20261107T0727Z",
+        "deltaPath": "research-data/binance-usdm/delta/binance_usdm_delta_20261107T0727Z_5m15m1h_completed.jsonl",
+        "manifestPath": "research-data/binance-usdm/delta/manifest-20261107T0727Z-5m15m1h.json",
+        "rowsAppended": 72,
+        "rowsByInterval": {
+          "5m": 52,
+          "15m": 16,
+          "1h": 4,
+          "4h": 0
+        },
+        "formingRowsExcluded": 12,
+        "sha256": "94ebf30057a007b8bdb1ae7e9e29c9a6e1266adf151d8cb43bbf000f9d657921",
+        "readbackVerified": true,
+        "quality": {
+          "duplicates": 0,
+          "gaps": 0,
+          "offGrid": 0,
+          "ohlcFailures": 0,
+          "nonPositiveVolume": 0,
+          "nonFinite": 0,
+          "closeTimeFailures": 0,
+          "crossSymbolAlignment": true,
+          "contiguousSinceHighWater": true
+        },
+        "latestCompletedOpenUtc": {
+          "5m": "2026-11-07T07:20:00.000Z",
+          "15m": "2026-11-07T07:00:00.000Z",
+          "1h": "2026-11-07T06:00:00.000Z",
+          "4h": "2026-11-07T00:00:00.000Z"
+        },
+        "archiveIndexesUpdated": true
+      }
+    },
+    {
+      "id": "Q115_HOURLY_MONITORING_20261107T0728Z",
+      "priority": 2,
+      "status": "COMPLETED_MONITORING_ONLY",
+      "prerequisites": [
+        "Fresh mark/ticker/OI/funding and completed klines",
+        "Depth/positioning snapshot",
+        "Current registry readback"
+      ],
+      "nextAction": "Refresh at the next hourly run; evaluate only OOS_VALIDATED entries and keep NO_TRADE until a symbol-specific validated rule and exact trigger exist.",
+      "blocker": "Registry has zero OOS_VALIDATED entries; exchangeInfo metadata is stale by 72,589.101 seconds; direct Binance REST DNS/timeouts remain unresolved.",
+      "result": {
+        "retrievedAtUtc": "2026-11-07T07:28:30.000Z",
+        "snapshotPath": "research/context-strategy/snapshots/context_snapshot_20261107T0728Z.json",
+        "registryEntries": 3,
+        "oosValidatedEntries": 0,
+        "contexts": {
+          "BTCUSDT": "DOWN_LOW",
+          "ETHUSDT": "DOWN_LOW_BOUNDARY",
+          "SOLUSDT": "DOWN_LOW",
+          "XRPUSDT": "DOWN_NORMAL"
+        },
+        "decisions": {
+          "SOLUSDT": "NO_TRADE",
+          "ETHUSDT": "NO_TRADE",
+          "XRPUSDT": "NO_TRADE"
+        },
+        "nextFundingTimeUtc": "2026-11-07T08:00:00.000Z"
+      }
     }
   ],
   "lastRun": {
-    "timestampUtc": "2026-11-07T04:37:12.681Z",
+    "timestampUtc": "2026-11-07T07:28:30.000Z",
     "status": "RESEARCH_BLOCKED",
-    "archiveRowsAppended": 76,
+    "archiveRowsAppended": 72,
     "archiveRowsByInterval": {
       "5m": 52,
       "15m": 16,
       "1h": 4,
-      "4h": 4
+      "4h": 0
     },
-    "formingRowsExcluded": 24,
-    "rollingRowsFetched": 7600,
-    "rollingCompletedRows": 6784,
+    "formingRowsExcluded": 12,
+    "rollingRowsFetched": 168,
+    "rollingCompletedRows": 156,
     "canonical4hRowsReassembled": 0,
-    "contextDiscovery": "REUSED_TRAINING_THRESHOLDS_CURRENT_RECOMPUTE",
+    "contextDiscovery": "REUSED_TRAINING_THRESHOLDS_UPDATED_CURRENT_CLASSIFICATION",
     "strategyExperiment": "BLOCKED_NOT_EXECUTED",
     "oosEvaluation": "NOT_EXECUTED",
     "monitoringCompleted": true,
     "archiveMaintenanceCompleted": true,
-    "nextAction": "Provision Node24/npm11, checkout the repository, implement the JSONL loader, run deterministic fixture smoke test, and complete historical funding/cost inputs before the preregistered BKR-4H experiment.",
     "fundingInfoVerified": true,
     "latestCompletedOpenUtc": {
-      "5m": "2026-11-07T04:30:00.000Z",
-      "15m": "2026-11-07T04:15:00.000Z",
-      "1h": "2026-11-07T03:00:00.000Z",
+      "5m": "2026-11-07T07:20:00.000Z",
+      "15m": "2026-11-07T07:00:00.000Z",
+      "1h": "2026-11-07T06:00:00.000Z",
       "4h": "2026-11-07T00:00:00.000Z"
-    }
+    },
+    "nextAction": "Provision Node24/npm11 and local checkout; implement JSONL adapter; run deterministic fixture smoke test; reconcile historical derivatives/costs; then execute frozen BKR-4H compression/retest BTC-confirmation experiment."
   },
-  "lastRunReport": "research/context-strategy/reports/context_strategy_research_20261107T0428Z_v106.json",
-  "lastRunId": "CONTEXT-STRATEGY-20261107T0428Z-V106",
+  "lastRunReport": "research/context-strategy/reports/context_strategy_research_20261107T0728Z_run20.json",
+  "lastRunId": "CONTEXT-STRATEGY-20261107T0728Z-RUN20",
   "incremental_highwater_marks": {
-    "5m": "2026-11-07T04:30:00.000Z",
-    "15m": "2026-11-07T04:15:00.000Z",
-    "1h": "2026-11-07T03:00:00.000Z",
+    "5m": "2026-11-07T07:20:00.000Z",
+    "15m": "2026-11-07T07:00:00.000Z",
+    "1h": "2026-11-07T06:00:00.000Z",
     "4h": "2026-11-07T00:00:00.000Z"
   },
-  "last_incremental_refresh_utc": "2026-11-07T04:37:12.681Z",
+  "last_incremental_refresh_utc": "2026-11-07T07:27:15.738Z",
   "latest_incremental_delta_files": [
     "research-data/binance-usdm/delta/binance_usdm_delta_20261107T022714Z_5m15m_completed.jsonl",
     "research-data/binance-usdm/delta/binance_usdm_delta_20261107T022742Z_1h_completed.jsonl",
     "research-data/binance-usdm/delta/binance_usdm_delta_20261107T033045Z_5m_completed.jsonl",
     "research-data/binance-usdm/delta/binance_usdm_delta_20261107T033045Z_15m1h_completed.jsonl",
     "research-data/binance-usdm/delta/binance_usdm_delta_20261107T0426Z_5m15m1h4h_completed.jsonl",
-    "research-data/binance-usdm/delta/binance_usdm_delta_20261107T0436Z_5m15m_completed.jsonl"
+    "research-data/binance-usdm/delta/binance_usdm_delta_20261107T0436Z_5m15m_completed.jsonl",
+    "research-data/binance-usdm/delta/binance_usdm_delta_20261107T0621Z_5m15m1h_completed.jsonl",
+    "research-data/binance-usdm/delta/binance_usdm_delta_20261107T0727Z_5m15m1h_completed.jsonl"
   ],
-  "lastRunSummary": "76 completed bars appended and verified across two deltas (52 5m, 16 15m, 4 1h, 4 4h); 24 forming rows excluded. Current context and microstructure refreshed at 04:36Z. No strategy experiment or OOS because Node24/npm11, local checkout, JSONL adapter, fresh metadata and historical derivatives/cost inputs remain unavailable. Zero OOS_VALIDATED entries; SOL/ETH/XRP NO_TRADE.",
-  "lastRunPreflightPath": "research/context-strategy/preflight/preflight_20261107T0428Z.json",
+  "lastRunSummary": "72 completed OHLCV rows appended and readback-verified (52 5m, 16 15m, 4 1h; 4h unchanged at 00:00Z); 12 forming rows excluded. 4h and 1h archive high-water indexes updated. Current snapshot refreshed. No strategy experiment or OOS ran because Node24/npm11, local checkout, JSONL adapter, fresh metadata and historical derivatives/cost inputs remain unavailable. Zero OOS_VALIDATED entries; SOL/ETH/XRP NO_TRADE.",
+  "lastRunPreflightPath": "research/context-strategy/preflight/preflight_20261107T0728Z.json",
   "lastRunStatus": "RESEARCH_BLOCKED",
-  "rawArchiveBranch": "research/raw-ohlcv-archive-2026-11-07T0426Z",
-  "contextResearchBranch": "research/context-strategy-2026-11-07-run17",
-  "lastRunReportSha256": "e7ae2549456a3239ed5fb06789627f6c0a4f4acf20a3e9e3c0b7d32e3ea0958f",
-  "lastRunPreflightSha256": "51aa35a31680a3fd0b57f25dfde7df89db3fe7d436f0b30f4a9611c309efa1ff",
-  "lastRunFollowupProbeAtUtc": "2026-11-07T04:28:56.452Z",
-  "lastRunReportBlobSha1": "0a9ac0a429c5f2ca1e3f69ddf64e59727175fc48",
-  "lastRunPreflightBlobSha1": "5531b661ca47cdf4ceaab0b1301d5749645a9205",
-  "itemCount": 116
+  "rawArchiveBranch": "research/raw-ohlcv-archive-20261107T0727Z",
+  "contextResearchBranch": "research/context-strategy-2026-11-07-run20",
+  "lastRunReportSha256": "6ccbc0ae1c2b5a1c8fe6d78dd3843cf9f9a69ac7b8e11b7eb7211126664d2b2f",
+  "lastRunPreflightSha256": "5455d86fc0955ad18f391bec24903f7523ef1bae763ac187e559703cb70389bb",
+  "lastRunFollowupProbeAtUtc": "2026-11-07T07:28:30.000Z",
+  "lastRunReportBlobSha1": "59ca48394741e36269c4918ebe57fde9112994c3",
+  "lastRunPreflightBlobSha1": "d9a0ab166c2758f8bf3f3976bcaaaf2fa9c135ab",
+  "itemCount": 118
 }

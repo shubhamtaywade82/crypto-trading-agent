@@ -1747,10 +1747,9 @@
   ],
   "incremental_delta_rows_total": 2876,
   "next_actions": [
-    "On the next hourly run append only completed bars strictly after 5m 01:20Z, 15m 01:00Z, 1h 00:00Z and 4h 20:00Z; exclude forming bars and verify hashes/readback.",
-    "Reassemble and readback-verify canonical 4h files through the 2026-11-06T20:00:00Z high-water using the verified incremental 4h delta.",
+    "Canonical 4h files are reassembled and readback-verified through 2026-11-06T20:00:00Z; next append only after this high-water mark.",
+    "Resolve the still-missing 76-row delta artifact and preserve the 14 page/symbol provenance mismatches until their source hashes are reconciled.",
     "Backfill multi-year 5m and 15m histories from an auditable source.",
-    "Recover the exact missing 76-row delta and retain the 14 original page/symbol hash mismatches with provenance.",
     "Backfill historical funding for BTC/ETH/XRP and historical OI/taker/positioning for all four symbols."
   ],
   "last_incremental_refresh_utc": "2026-11-07T01:27:00.000Z",
@@ -1801,75 +1800,105 @@
       "supersedes_line": 16
     }
   ],
-  "updated_at_utc": "2026-11-07T01:27:00.000Z",
+  "updated_at_utc": "2026-11-07T01:33:40.000Z",
   "canonical_4h": {
-    "status": "PASS",
+    "status": "PASS_4H_CANONICAL_SERIES",
     "start_utc": "2020-09-14T08:00:00.000Z",
-    "end_last_completed_open_utc": "2026-11-05T16:00:00.000Z",
-    "rows_per_symbol": 13461,
-    "rows_total": 53844,
+    "end_last_completed_open_utc": "2026-11-06T20:00:00.000Z",
+    "rows_per_symbol": 13468,
+    "rows_total": 53872,
     "interval_ms": 14400000,
     "per_symbol": {
       "BTCUSDT": {
-        "path": "research-data/binance-usdm/4h/canonical/BTCUSDT_4h_20200914T0800Z_20261105T1600Z.jsonl",
-        "manifest": "research-data/binance-usdm/4h/canonical/BTCUSDT_4h_20200914T0800Z_20261105T1600Z.manifest.json",
-        "rows": 13461,
+        "path": "research-data/binance-usdm/4h/canonical/BTCUSDT_4h_20200914T0800Z_20261106T2000Z.jsonl",
+        "manifest": "research-data/binance-usdm/4h/canonical/BTCUSDT_4h_20200914T0800Z_20261106T2000Z.manifest.json",
+        "rows": 13468,
         "base_rows": 13454,
-        "incremental_rows": 7,
-        "sha256": "7088aa2b2cc48c3895fd77dfc2ece0ae812062f24a70374ec556273a2d8380d7",
-        "git_blob_sha1": "a465025b2276a0e9cfbf805ba64be4da6ed08868",
+        "incremental_rows": 14,
+        "sha256": "057d815fae09cad0a44b61a7b480601331473abe63caedb8c94b0709851a0bc6",
+        "git_blob_sha1": "07cbc52a4fe725015ea100a5a4a59b86237cf405",
         "readback_verified": true,
         "gaps": 0,
         "duplicates": 0,
-        "rows_sha256": "f14ce6a0fc2938840d7cb69059a8b3f02748ed544c0b65694c0cb2aea32f45b1"
+        "rows_sha256": null,
+        "rows_sha256_status": "NOT_COMPUTED"
       },
       "ETHUSDT": {
-        "path": "research-data/binance-usdm/4h/canonical/ETHUSDT_4h_20200914T0800Z_20261105T1600Z.jsonl",
-        "manifest": "research-data/binance-usdm/4h/canonical/ETHUSDT_4h_20200914T0800Z_20261105T1600Z.manifest.json",
-        "rows": 13461,
+        "path": "research-data/binance-usdm/4h/canonical/ETHUSDT_4h_20200914T0800Z_20261106T2000Z.jsonl",
+        "manifest": "research-data/binance-usdm/4h/canonical/ETHUSDT_4h_20200914T0800Z_20261106T2000Z.manifest.json",
+        "rows": 13468,
         "base_rows": 13454,
-        "incremental_rows": 7,
-        "sha256": "0e1ba53fb3c4c42e89440f2aaabfc7eead44ac84bc67a083c86df96a2f12dce2",
-        "git_blob_sha1": "26034cbb638d45295504f8e1a52862adca63eea6",
+        "incremental_rows": 14,
+        "sha256": "18a8b0864858451a34f8c2ad1a1715f39b22396b3d736958cbe7fcaa580ad8c9",
+        "git_blob_sha1": "d6de71cc419a150bcc38006f81f24a51607f19f0",
         "readback_verified": true,
         "gaps": 0,
         "duplicates": 0,
-        "rows_sha256": "606dc793a8658bf2a74e5784efaa4a599f44c8ad3000d0a92b0b14c6d44f1fa1"
+        "rows_sha256": null,
+        "rows_sha256_status": "NOT_COMPUTED"
       },
       "SOLUSDT": {
-        "path": "research-data/binance-usdm/4h/canonical/SOLUSDT_4h_20200914T0800Z_20261105T1600Z.jsonl",
-        "manifest": "research-data/binance-usdm/4h/canonical/SOLUSDT_4h_20200914T0800Z_20261105T1600Z.manifest.json",
-        "rows": 13461,
+        "path": "research-data/binance-usdm/4h/canonical/SOLUSDT_4h_20200914T0800Z_20261106T2000Z.jsonl",
+        "manifest": "research-data/binance-usdm/4h/canonical/SOLUSDT_4h_20200914T0800Z_20261106T2000Z.manifest.json",
+        "rows": 13468,
         "base_rows": 13454,
-        "incremental_rows": 7,
-        "sha256": "148389f0347fe05307e2a274c579ccc1c495e32eaad2e49cfb19ca211df89156",
-        "git_blob_sha1": "77af5caa7d5e76c8efc3fd8571c55a20376ac97f",
+        "incremental_rows": 14,
+        "sha256": "2a93288d7ee486f35a041ea672fe6b81a1bd4f1fc82a9ad252937022995ee8b7",
+        "git_blob_sha1": "41d39a4ae2e5474814af3f1f0b4ac3362be25e66",
         "readback_verified": true,
         "gaps": 0,
         "duplicates": 0,
-        "rows_sha256": "e72bb0e341d54d972c27f3db24dafffe3cce8ae4b5184df1c073891d986a65f6"
+        "rows_sha256": null,
+        "rows_sha256_status": "NOT_COMPUTED"
       },
       "XRPUSDT": {
-        "path": "research-data/binance-usdm/4h/canonical/XRPUSDT_4h_20200914T0800Z_20261105T1600Z.jsonl",
-        "manifest": "research-data/binance-usdm/4h/canonical/XRPUSDT_4h_20200914T0800Z_20261105T1600Z.manifest.json",
-        "rows": 13461,
+        "path": "research-data/binance-usdm/4h/canonical/XRPUSDT_4h_20200914T0800Z_20261106T2000Z.jsonl",
+        "manifest": "research-data/binance-usdm/4h/canonical/XRPUSDT_4h_20200914T0800Z_20261106T2000Z.manifest.json",
+        "rows": 13468,
         "base_rows": 13454,
-        "incremental_rows": 7,
-        "sha256": "b1a96c24f0e91aff7368facc428dffa22360093ce74dfe186d259b66d19f8023",
-        "git_blob_sha1": "242e2c96a05feb175e869edbdea23ee85a136f69",
+        "incremental_rows": 14,
+        "sha256": "b31635a71fd400f3fe589f8bfb15827e475301549a3aa316718918ec3110213d",
+        "git_blob_sha1": "69a34aa9abc2035c9050dd81a7a0fa70ce88ab86",
         "readback_verified": true,
         "gaps": 0,
         "duplicates": 0,
-        "rows_sha256": "40b9420ca1862a8a2b4ecd3ee0bb6b5fc81f3cc3e8126143ae74cf19f65c62c5"
+        "rows_sha256": null,
+        "rows_sha256_status": "NOT_COMPUTED"
       }
     },
     "deduplicatedDeltaArtifact": "research-data/binance-usdm/4h/reconciliation/accessible_4h_delta_rows_20261105T2118Z_deduped.jsonl",
     "unresolvedMissing76RowDelta": "The missing file's coverage remains unknown. No 4h gap remains in the canonical series through 2026-11-05T16:00Z; this does not prove the missing file contained no lower-timeframe rows.",
     "hashAudit": {
-      "method": "SHA-256 recomputed with self-tested implementation (abc and quick-brown-fox vectors); GitHub blob SHA-1 independently recomputed from exact bytes and matched fetch_file blob metadata.",
+      "method": "SHA-256 recomputed from exact Git blob readback bytes with abc, quick-brown-fox, and 1,000,000-byte test vectors; Git blob SHA-1 independently recomputed and matched GitHub blob IDs.",
       "allFourGitBlobSha1Verified": true,
       "allFourCanonicalSha256Verified": true,
-      "correctedAtUtc": "2026-11-05T21:36:00.000Z"
+      "correctedAtUtc": "2026-11-07T01:33:40.000Z"
+    },
+    "reassembly": {
+      "completed_at_utc": "2026-11-07T01:33:40.000Z",
+      "previous_canonical_end_utc": "2026-11-05T16:00:00.000Z",
+      "new_canonical_end_utc": "2026-11-06T20:00:00.000Z",
+      "rows_appended_total": 28,
+      "rows_appended_per_symbol": 7,
+      "source_delta_files": [
+        "research-data/binance-usdm/delta/binance_usdm_delta_20261106T0025Z_completed.jsonl",
+        "research-data/binance-usdm/delta/binance_usdm_delta_20261106T090214Z_completed.jsonl",
+        "research-data/binance-usdm/delta/binance_usdm_delta_20261106T120048Z_completed.jsonl",
+        "research-data/binance-usdm/delta/binance_usdm_delta_20261106T1632Z_1h4h_completed.jsonl",
+        "research-data/binance-usdm/delta/binance_usdm_delta_20261106T2034Z_1h4h_completed.jsonl",
+        "research-data/binance-usdm/delta/binance_usdm_delta_20261107T0024Z_4h_completed.jsonl"
+      ],
+      "quality": {
+        "duplicates": 0,
+        "gaps": 0,
+        "ohlc_failures": 0,
+        "non_positive_volume": 0,
+        "close_time_failures": 0,
+        "cross_symbol_alignment": true
+      },
+      "all_four_sha256_verified": true,
+      "all_four_git_blob_sha1_verified": true,
+      "readback_verified": true
     }
   },
   "last_refresh_validation": {

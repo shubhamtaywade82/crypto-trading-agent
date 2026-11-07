@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "runId": "context-strategy-2026-11-07T1629Z-v81",
-  "updatedAtUtc": "2026-11-07T16:29:30.509Z",
+  "updatedAtUtc": "2026-11-07T17:22:01.714Z",
   "items": [
     {
       "id": "Q1_ARCHIVE_MULTIYEAR",
@@ -13,7 +13,7 @@
         "Checksum/readback"
       ],
       "nextAction": "Backfill multi-year 5m/15m; merge incremental 4h through 2026-11-07T12:00Z into canonical; recover the exact missing 76-row delta; re-audit 13 page/symbol hash provenance mismatches.",
-      "blocker": "1h base 53,871 rows/symbol through 2026-11-06T22:00Z; incremental high-water 15:00Z Nov7. 4h canonical 13,461 rows/symbol through 2026-11-05T16:00Z; incremental high-water 12:00Z Nov7 not merged. Multi-year 5m/15m absent; 76-row artifact unresolved; 13 original 4h page/symbol mismatches remain."
+      "blocker": "1h base 53,871 rows/symbol through 2026-11-06T22:00Z; incremental high-water now 16:00Z Nov7. 4h canonical 13,461 rows/symbol through Nov5 16:00Z; incremental high-water 12:00Z Nov7 not merged. Multi-year 5m/15m absent; 76-row artifact unresolved; 13 original page/symbol hash discrepancies remain."
     },
     {
       "id": "Q2_VERIFY_EXCHANGE_TIME_METADATA",
@@ -23,7 +23,7 @@
         "Direct bounded HTTP or uncached official endpoint"
       ],
       "nextAction": "Restore DNS/HTTPS or obtain uncached official /fapi/v1/time and /fapi/v1/exchangeInfo; require <=60s drift and verify all four contracts are TRADING before execution validation.",
-      "blocker": "Direct /time and /exchangeInfo probes HTTP000 due DNS failure. Connector exchangeInfo serverTime 2026-11-06T11:18:40.886Z versus fresh mark 2026-11-07T16:28:37Z; stale 104,996s (29.17h). Raw HTTP status not exposed."
+      "blocker": "Direct /fapi/v1/time probe failed DNS (curl exit 6). Connector exchangeInfo serverTime 2026-11-06T11:18:40.883Z versus fresh mark event 2026-11-07T17:19:59Z; stale 108,200.831s (30.06h). Connector raw HTTP status/headers are not exposed."
     },
     {
       "id": "Q3_RUN_REPOSITORY_BACKTEST",
@@ -36,8 +36,8 @@
         "Dependencies",
         "Deterministic fixture"
       ],
-      "nextAction": "Provision Node>=24/npm>=11 local checkout; carry closeTime through Candle; reject volume<=0; add 5m support; run deterministic fixture twice and verify no-lookahead.",
-      "blocker": "No local checkout; Node22.16/npm10.9 below floor; SDK packages absent. scripts/backtest.ts supports 15m/1h/4h only. src/types.ts Candle omits closeTime; API fetch path drops it. src/backtesting/archiveKlines.validateCandles rejects volume<0 but accepts zero. Separate research/alma validator is not imported by main harness and also accepts zero. Smoke test NOT_RUN."
+      "nextAction": "Provision Node>=24/npm>=11 local checkout; carry closeTime through Candle; change volume validation to reject <=0; add 5m support; run deterministic fixture twice and verify no-lookahead.",
+      "blocker": "No local checkout; Node22.16/npm10.9.2 below floor; SDK packages absent. Remote scripts/backtest.ts supports 15m/1h/4h only. src/types.ts Candle omits closeTime; API fetch path drops it. src/backtesting/archiveKlines.ts rejects volume<0 but accepts zero. Smoke test NOT_RUN."
     },
     {
       "id": "Q4_CALIBRATE_EXECUTION_COSTS",
@@ -50,7 +50,7 @@
         "Latency model"
       ],
       "nextAction": "Acquire actual account fee tier plus timestamp-aligned historical funding, trades, spread/depth and latency; calibrate maker/taker fills, slippage and impact.",
-      "blocker": "No account fee tier, historical spread/slippage/impact/latency series or historical depth. Latest snapshots cannot calibrate execution costs; inherited 15bp round-trip proxy is unvalidated."
+      "blocker": "No account fee tier or historical spread/slippage/impact/latency series. Current snapshots cannot calibrate execution costs; inherited 15bp round-trip proxy is unvalidated."
     },
     {
       "id": "Q5_APPEND_COMPLETED_BARS",
@@ -62,24 +62,24 @@
         "Writable archive",
         "Readback"
       ],
-      "nextAction": "Continue after 5m 16:20Z, 15m 16:00Z, 1h 15:00Z and 4h 12:00Z only after each next closeTime passes.",
+      "nextAction": "Continue after 5m 17:15Z, 15m 17:00Z, 1h 16:00Z and 4h 12:00Z only after each next closeTime passes.",
       "blocker": null,
       "result": {
-        "rowsFetched": 88,
-        "rowsAppended": 72,
-        "formingRowsExcluded": 16,
+        "rowsFetched": 360,
+        "rowsAppended": 64,
+        "formingRowsExcluded": 8,
+        "rowsExcludedBeforeHighwater": 288,
         "rowsByInterval": {
-          "5m": 48,
+          "5m": 44,
           "15m": 16,
           "1h": 4,
-          "4h": 4
+          "4h": 0
         },
-        "rowsPerSymbol": 18,
         "qualityFailures": 0,
-        "deltaPath": "research-data/binance-usdm/delta/binance_usdm_delta_20261107T1625Z_5m15m1h4h_completed.jsonl",
-        "deltaSha256": "27a360d93bd4f235bc43f8a9802b1dfaf25ec430faa7123703e663f02a215f58",
-        "manifestPath": "research-data/binance-usdm/delta/manifest-20261107T1625Z-5m15m1h4h.json",
-        "manifestSha256": "d99957069c78ee1908762ef0c99df115ce4d92f544e7b5d5c212586f5dfbb465",
+        "deltaPath": "research-data/binance-usdm/delta/binance_usdm_delta_20261107T1722_5m15m1h_completed.jsonl",
+        "deltaSha256": "cd966858dfbb3a8da20fdde45f5bb0393dd99f83e84b8008c1075e02aa6b48b4",
+        "manifestPath": "research-data/binance-usdm/delta/manifest-20261107T1722-5m15m1h.json",
+        "manifestSha256": "60f7ec29574e18dcabaeec79e4ae2c44af99faeccedeabeb17279d14b97a4500",
         "readbackVerified": true,
         "rawBranch": "research/raw-ohlcv-archive-20261107T1625Z-run12"
       }
@@ -93,7 +93,7 @@
         "Longer OI/taker/positioning"
       ],
       "nextAction": "Backfill full fundingRate history and longer OI/taker/global-long-short series; align to completed candles.",
-      "blocker": "Current indicated and settled funding, current OI, completed 5m taker-buy share and 1h global long/short snapshots retrieved. Funding interval 8h. Historical derivatives archive remains incomplete; point snapshots do not establish crowding."
+      "blocker": "Current PremiumIndex indication, settled funding history, 8h FundingInfo, current OI, completed 1h taker share and last completed 1h global long/short snapshots retrieved. Historical derivatives archive remains incomplete; point snapshots do not establish crowding."
     },
     {
       "id": "Q7_CONTEXT_TAXONOMY_STABILITY",
@@ -104,7 +104,7 @@
         "Training-only thresholds"
       ],
       "nextAction": "Fit compact thresholds on training only; measure context frequency, duration, transition probabilities and stability over the full aligned archive.",
-      "blocker": "No training-only threshold refit or weekly stability review. Current 120-bar windows are descriptive only; multi-year 5m/15m absent and canonical 4h merge incomplete."
+      "blocker": "Current 120-row windows (119 completed per series) are descriptive only. No training-only threshold refit or weekly stability review; multi-year 5m/15m absent and canonical 4h merge incomplete."
     },
     {
       "id": "Q8_DAILY_CONTEXT_EXPERIMENT",
@@ -116,7 +116,7 @@
         "Frozen experiment specification",
         "Untouched test"
       ],
-      "nextAction": "Do not lower evidence gates. After archive, metadata, local harness and cost prerequisites pass, preregister one strategy x context x symbol with chronological train/validation/untouched OOS, purging/embargo, realistic costs, block bootstrap and Holm correction.",
+      "nextAction": "After archive, fresh metadata, local harness, smoke test and cost prerequisites pass, preregister one strategy x context x symbol with chronological train/validation/untouched OOS, purging/embargo, realistic costs, block bootstrap and Holm correction.",
       "blocker": "No compatible local harness or smoke test; multi-year 5m/15m absent; costs incomplete; fresh exchange metadata unavailable; 76-row delta unresolved; 13 hash discrepancies remain."
     },
     {
@@ -128,7 +128,7 @@
         "Canonical merge"
       ],
       "nextAction": "Recover the original artifact or record irrecoverable provenance; do not synthesize rows.",
-      "blocker": "The 76-row delta remains NOT_FOUND. Canonical 4h has no gap through Nov5 16:00Z, but the missing artifact may contain lower-timeframe rows; exact symbol/interval/time coverage remains unknown."
+      "blocker": "The 76-row delta remains NOT_FOUND. Exact symbol/interval/time coverage remains unknown."
     },
     {
       "id": "Q10_ENFORCE_OOS_GATES",
@@ -139,8 +139,8 @@
         "Compatible runner",
         "Purging/multiple-testing tests"
       ],
-      "nextAction": "Raise conditional-edge evidence gates to >=100 OOS trades per symbol/context, 95% CIs, block bootstrap, purging/embargo and Holm correction; require >=200 trades across multiple windows for stronger evidence.",
-      "blocker": "Remote conditional-edge defaults minN=30 and confidence=0.90, below the required gates. No local runner to patch or test."
+      "nextAction": "Raise conditional-edge evidence gates to >=100 OOS trades per symbol/context and add serial-dependence/multiple-testing tests once a compatible local runner is available.",
+      "blocker": "Remote conditional-edge defaults remain below required evidence gates; no local runner to patch or test."
     },
     {
       "id": "Q11_RECONCILE_PAGE_SHA256",
@@ -152,8 +152,8 @@
         "Independent SHA-256 over exact UTF-8 bytes",
         "Preserve Git blob identity"
       ],
-      "nextAction": "Re-audit remaining 13 original 4h page/symbol hash mismatches with known-vector-tested SHA-256; do not rewrite expected hashes.",
-      "blocker": "Eight prior page-symbol files independently verified; two previous readback mismatch flags not reproduced; 13 original manifest mismatch flags remain."
+      "nextAction": "Resolve the 13 remaining original manifest/page-symbol provenance mismatches without rewriting expected hashes; preserve verified readback evidence.",
+      "blocker": "Eight prior page-symbol files independently verified; 13 original manifest mismatch flags remain."
     }
   ],
   "dailyResearchCycle": {

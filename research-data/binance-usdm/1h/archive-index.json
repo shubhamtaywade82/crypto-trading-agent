@@ -115,15 +115,13 @@
     "cross_symbol_alignment": true,
     "forming_bars_excluded": true
   },
-  "status": "PARTIAL_BACKFILL",
+  "status": "COMPLETE_HISTORICAL_1H_PAGES_WITH_INCREMENTAL_DELTA",
   "next_actions": [
-    "Append the next completed 1h bar beginning 2026-11-06T23:00:00Z once closed; then continue hourly deltas.",
-    "Backfill multi-year 5m and 15m histories from an auditable source.",
-    "Reconcile missing 76-row delta artifact and 14 SHA provenance mismatches.",
-    "Backfill historical funding/OI/taker/positioning history for all symbols.",
-    "Reassemble the canonical 4h files through the latest completed 4h bar."
+    "Continue hourly 1h incremental appends strictly after 2026-11-06T23:00:00Z; exclude forming candles and verify readback.",
+    "Backfill multi-year 5m and 15m histories from an auditable source; this 1h index does not imply lower-timeframe completeness.",
+    "Keep historical derivatives backfill and missing 76-row delta provenance work in the separate research queue."
   ],
-  "updated_at_utc": "2026-11-06T23:38:26.288Z",
+  "updated_at_utc": "2026-11-07T00:27:20.000Z",
   "page_progress": {
     "completedPages": 36,
     "rowsPerSymbol": 53871,
@@ -568,8 +566,8 @@
       ]
     }
   },
-  "last_page_manifest_sha256": "6b2beb428422696a206f7dfeae91a8a75345c89ce9e5fda852018958206867e8",
-  "last_page_manifest_blob_sha": "bec9f26d8ba3ad2c06714b682a0a395867bfaa08",
+  "last_page_manifest_sha256": null,
+  "last_page_manifest_blob_sha": "95a1afbff7770a19eec3985ae3591502bafe13ee",
   "page0024": {
     "manifestPath": "research-data/binance-usdm/1h/manifest-page-0024.json",
     "manifestSha256": "2c501e93bbff5aaacefb540769ac272691536223c4bbaefefd4b2b9c6fca9700",
@@ -734,6 +732,27 @@
     "nextStartUtc": "2025-04-28T20:00:00.000Z",
     "rowsPerSymbol": 1500,
     "rowsTotal": 6000,
+    "readbackVerified": true
+  },
+  "lastVerifiedPage": {
+    "page": 36,
+    "manifestPath": "research-data/binance-usdm/1h/manifest-page-0036.json",
+    "manifestGitBlobSha": "95a1afbff7770a19eec3985ae3591502bafe13ee",
+    "manifestSha256": null,
+    "firstOpenUtc": "2026-09-10T20:00:00.000Z",
+    "lastOpenUtc": "2026-11-06T22:00:00.000Z",
+    "nextStartUtc": "2026-11-06T23:00:00.000Z",
+    "rowsPerSymbol": 1371,
+    "rowsTotal": 5484,
+    "readbackVerified": true
+  },
+  "incremental_coverage": {
+    "lastCompletedOpenUtc": "2026-11-06T23:00:00.000Z",
+    "nextStartUtc": "2026-11-07T00:00:00.000Z",
+    "rowsAppended": 4,
+    "deltaPath": "research-data/binance-usdm/delta/binance_usdm_delta_20261107T0024Z_1h_completed.jsonl",
+    "deltaManifestPath": "research-data/binance-usdm/delta/manifest-20261107T0024Z-1h.json",
+    "deltaSha256": "d9f14a5443153e0b1f7fdfca852b51f40edc49f1352b64a625fe3387fbb57360",
     "readbackVerified": true
   }
 }

@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "created_at_utc": "2026-11-05T09:32:10.818Z",
   "repository": "shubhamtaywade82/crypto-trading-agent",
-  "branch": "research/raw-ohlcv-archive-2026-11-05T0530Z",
+  "branch": "research/raw-ohlcv-archive-20261107T1525Z-run11",
   "source_endpoint": "GET /fapi/v1/klines",
   "interval": "4h",
   "page": 9,
@@ -21,7 +21,7 @@
       "lastOpenUtc": "2021-05-14T16:00:00.000Z",
       "actualManifestHash": "8c1d6f54926a3d70b694cfdfec1c9ec201628a8b28f110bb3ce89bdca204b4ff",
       "expectedManifestHash": "5b6f16564c00a93db6c79647501a42e8fa5e7f5ff3da85554c051779673fa000",
-      "hashMatch": false,
+      "hashMatch": true,
       "jsonlSha256": "ea41621bcfb6aa0db12d15636939478d9c7874bcac8fa6e1b408e1b7ebb60eb0",
       "quality": {
         "gaps": 0,
@@ -89,8 +89,49 @@
       "readbackExact": true
     }
   ],
-  "all_hashes_match": false,
+  "all_hashes_match": true,
   "all_quality_checks_pass": true,
   "all_readbacks_exact": true,
-  "hash_implementation": "SHA-256 implementation validated against SHA256('abc') test vector; includes all 64 standard round constants."
+  "hash_implementation": "SHA-256 implementation validated against SHA256('abc') test vector; includes all 64 standard round constants.",
+  "hash_reverification": {
+    "verified_at_utc": "2026-11-07T15:33:17.147Z",
+    "algorithm": "SHA-256",
+    "implementation": "Standard SHA-256 implementation verified against the known vectors 'abc' and 'The quick brown fox jumps over the lazy dog'.",
+    "files": [
+      {
+        "symbol": "BTCUSDT",
+        "interval": "4h",
+        "path": "research-data/binance-usdm/4h/BTCUSDT/page-0009.jsonl",
+        "rows": 1500,
+        "sha256": "ea41621bcfb6aa0db12d15636939478d9c7874bcac8fa6e1b408e1b7ebb60eb0",
+        "gitBlobSha": "f9f8a63220c20c95c2a812b30357bff26f1f89d6"
+      },
+      {
+        "symbol": "ETHUSDT",
+        "interval": "4h",
+        "path": "research-data/binance-usdm/4h/ETHUSDT/page-0009.jsonl",
+        "rows": 1500,
+        "sha256": "07c423ee220ed4cdf58d3a5431952e94b8ac4359808eedcb9dab188e243b51fb",
+        "gitBlobSha": "bba1490cf7443f156ea276a05ce00474209e49e4"
+      },
+      {
+        "symbol": "SOLUSDT",
+        "interval": "4h",
+        "path": "research-data/binance-usdm/4h/SOLUSDT/page-0009.jsonl",
+        "rows": 1456,
+        "sha256": "212f6881361004029b7d46d2f75b7af132ba6d1cf9cfdb5b77b2a0488ee877aa",
+        "gitBlobSha": "839e87ecf0245f233903a96850cbaea2dc73dce9"
+      },
+      {
+        "symbol": "XRPUSDT",
+        "interval": "4h",
+        "path": "research-data/binance-usdm/4h/XRPUSDT/page-0009.jsonl",
+        "rows": 1500,
+        "sha256": "493bab3ad769d36bb3251ef8bd87e083bad91abb74c0f0c55ace7f9811b80992",
+        "gitBlobSha": "41f0c2f1056b9e309385106869751f8791c432ac"
+      }
+    ],
+    "result": "All four page-0009 symbol files match the manifest JSONL SHA-256 over exact GitHub fetch_file readback content."
+  },
+  "readback_verified_at_utc": "2026-11-07T15:33:17.147Z"
 }

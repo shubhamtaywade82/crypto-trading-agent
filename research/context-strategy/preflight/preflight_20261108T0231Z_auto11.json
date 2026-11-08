@@ -1,0 +1,145 @@
+{
+  "schemaVersion": "1.0.0",
+  "runId": "CONTEXT-STRATEGY-20261108T0231Z-AUTO11",
+  "createdAtUtc": "2026-11-08T02:31:29.770Z",
+  "classification": "RESEARCH_BLOCKED",
+  "checks": [
+    {
+      "capability": "Shell / compute",
+      "status": "PASS",
+      "evidence": {
+        "cwd": "/",
+        "os": "Linux x86_64",
+        "node": "v22.16.0",
+        "npm": "10.9.2",
+        "python": "3.13.5",
+        "cpuCores": 5,
+        "memory": "5.8 GiB total; ~4.7 GiB available",
+        "disk": "~30 GiB available on 32 GiB overlay"
+      },
+      "impact": "Bounded local compute available; repository engine floor unmet.",
+      "nextAction": "Provision Node 24/npm 11 or a verified compatible runner."
+    },
+    {
+      "capability": "Repository / code",
+      "status": "DEGRADED",
+      "evidence": {
+        "localCheckout": "NOT_PRESENT",
+        "remoteRepository": "shubhamtaywade82/crypto-trading-agent",
+        "reportBaseBranch": "research/context-strategy-2026-11-07-run13",
+        "remoteBacktestScript": "scripts/backtest.ts exists",
+        "packageEngine": "Node >=24, npm >=11",
+        "sdkPackages": "binance, @binance/connector, binance-api-node NOT_INSTALLED"
+      },
+      "impact": "Remote code inspectable but no local project command can be invoked.",
+      "nextAction": "Create a clean checkout at the audited commit under compatible Node/npm."
+    },
+    {
+      "capability": "Network / direct Binance REST",
+      "status": "BLOCKED",
+      "evidence": {
+        "probes": [
+          "/fapi/v1/time",
+          "/fapi/v1/exchangeInfo",
+          "/fapi/v1/klines",
+          "/fapi/v1/premiumIndex",
+          "/fapi/v1/openInterest",
+          "/fapi/v1/ticker/24hr"
+        ],
+        "outcome": "Direct shell DNS resolution failed; Node fetch failed name resolution."
+      },
+      "impact": "No direct HTTP status/headers or fresh server-time endpoint result.",
+      "nextAction": "Restore DNS/HTTPS and probe the six official endpoints with explicit timeouts."
+    },
+    {
+      "capability": "Binance connector / market freshness",
+      "status": "DEGRADED",
+      "evidence": {
+        "connector": "USDⓈ-M public market-data connector returned klines, mark/premium index, 24h ticker, OI, funding history, depth, taker volume and long/short ratio",
+        "premiumIndexTimeUtc": "2026-11-08T02:20:56Z",
+        "exchangeInfoServerTimeUtc": "2026-11-06T11:18:40.886Z",
+        "exchangeInfoAgeSeconds": 140535.114,
+        "metadataStatus": "TRADING observed but stale"
+      },
+      "impact": "Current monitoring possible; contract-status validation blocked.",
+      "nextAction": "Require fresh exchangeInfo and server-time drift <=60 seconds."
+    },
+    {
+      "capability": "Raw historical archive",
+      "status": "PASS",
+      "evidence": {
+        "localRawArchive": "NOT_MOUNTED",
+        "remoteBranch": "research/raw-ohlcv-archive-2026-11-05T0530Z",
+        "fourHourCanonicalRows": 53844,
+        "oneHourCanonicalRows": 215484,
+        "newDeltaRows": 880,
+        "deltaSha256": "57c81a69880eadd7d652b511e8c4914aac9b0429abe52999a17022d4b59456d3",
+        "manifestSha256": "9fe7c5c846ba16a08c4797ec225495e33bcd36d266bf7edc1d34f6d5647a8b2f",
+        "contextArtifactSha256": "3a5ccd1f56f4c4aaa344a27bdc5b9c894ac803008e26f4740610f147430dda36"
+      },
+      "impact": "Remote history and incremental write path are accessible and verified.",
+      "nextAction": "Continue canonical merge and multi-year 5m/15m backfill."
+    },
+    {
+      "capability": "Data quality / coverage",
+      "status": "DEGRADED",
+      "evidence": {
+        "currentRollingSeries": 16,
+        "currentRawRows": 4800,
+        "currentCompletedRows": 4784,
+        "formingExcluded": 16,
+        "rollingDataFailures": 0,
+        "full4hCanonicalRows": 53844,
+        "full4hQualityFailures": 0,
+        "oneHourPages": 36,
+        "oneHourRowsPerSymbol": 53871,
+        "multiYear5m15m": "MISSING",
+        "missing76RowDelta": "UNRESOLVED"
+      },
+      "impact": "4h and 1h multi-year samples exist; lower-timeframe and derivatives coverage still block comprehensive tests.",
+      "nextAction": "Backfill 5m/15m and reconcile archive debt."
+    },
+    {
+      "capability": "Backtest harness / smoke test",
+      "status": "BLOCKED",
+      "evidence": {
+        "remoteHarness": "scripts/backtest.ts exists",
+        "localHarness": "NOT_PRESENT",
+        "smokeTest": "NOT_RUN",
+        "runtimeMismatch": "Node22.16/npm10.9 vs required Node>=24/npm>=11",
+        "knownDefects": [
+          "Candle mapping drops closeTime",
+          "validator permits volume==0"
+        ]
+      },
+      "impact": "No strategy experiment or OOS evaluation can be claimed.",
+      "nextAction": "Fix the two data-integrity defects, provision compatible runtime, run deterministic fixture and no-lookahead smoke tests."
+    },
+    {
+      "capability": "Disk / storage",
+      "status": "PASS",
+      "evidence": {
+        "freeDisk": "~30 GiB",
+        "persistentStore": "GitHub branch writable",
+        "localFilesystem": "ephemeral"
+      },
+      "impact": "Remote persistence is available; local archive is not mounted.",
+      "nextAction": "Continue atomic GitHub writes with SHA-256 and readback."
+    },
+    {
+      "capability": "Artifact readback",
+      "status": "PASS",
+      "evidence": {
+        "deltaReadback": true,
+        "manifestReadback": true,
+        "oneHourIndexReadback": true,
+        "fourHourIndexReadback": true,
+        "contextArtifactReadback": true,
+        "contextArtifactSha256": "3a5ccd1f56f4c4aaa344a27bdc5b9c894ac803008e26f4740610f147430dda36"
+      },
+      "impact": "Archive and context-discovery artifacts persisted and verified.",
+      "nextAction": "Read back report, preflight, queue and registry after this commit."
+    }
+  ],
+  "conclusion": "RESEARCH_BLOCKED: incremental archive maintenance and a reproducible frozen-taxonomy context-distribution analysis completed. No strategy experiment, smoke test, or untouched OOS evaluation ran. Binance SDK not used; Binance connector used for current public data; direct shell REST unavailable."
+}

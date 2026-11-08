@@ -1,0 +1,479 @@
+{
+  "schemaVersion": "1.0.0",
+  "runId": "CONTEXT-STRATEGY-20261107T122824Z-V78",
+  "version": "V78",
+  "createdAtUtc": "2026-11-07T12:28:24.000Z",
+  "classification": "RESEARCH_BLOCKED",
+  "sdkUsed": false,
+  "summary": "Current Binance USDⓈ-M monitoring and 72-row append completed with verified GitHub readback. No strategy experiment, smoke test, or untouched OOS evaluation ran because the local repository/runtime is incompatible, exchange metadata is stale, and historical cost/derivatives coverage remains incomplete.",
+  "researchProgress": {
+    "newArchiveRows": 72,
+    "rowsByInterval": {
+      "5m": 48,
+      "15m": 16,
+      "1h": 4,
+      "4h": 4
+    },
+    "formingRowsExcluded": 16,
+    "deltaPath": "research-data/binance-usdm/delta/binance_usdm_delta_20261107T122824Z_5m15m1h4h_completed.jsonl",
+    "deltaSha256": "9a937be905a55b02e9ded54ac03e9d1a332c54d57126e1f6fffc2c7dc544b94c",
+    "deltaReadbackVerified": true,
+    "manifestPath": "research-data/binance-usdm/delta/manifest-20261107T122824Z-5m15m1h4h.json",
+    "manifestSha256": "b5fde5737d31659c8839393b9540ef1835a379a9c9f225eebad8f817bfeec448",
+    "manifestReadbackVerified": true,
+    "indexUpdates": [
+      {
+        "path": "research-data/binance-usdm/1h/archive-index.json",
+        "latestCompletedOpenUtc": "2026-11-07T11:00:00Z",
+        "readbackVerified": true
+      },
+      {
+        "path": "research-data/binance-usdm/4h/archive-index.json",
+        "highwaterMarks": {
+          "5m": "2026-11-07T12:20:00Z",
+          "15m": "2026-11-07T12:00:00Z",
+          "1h": "2026-11-07T11:00:00Z",
+          "4h": "2026-11-07T08:00:00Z"
+        },
+        "canonical4hStillThrough": "2026-11-05T16:00:00Z",
+        "readbackVerified": true
+      }
+    ],
+    "historicalCoverage": {
+      "1h": {
+        "pages": 36,
+        "rowsPerSymbol": 53871,
+        "totalRows": 215484,
+        "baseStartUtc": "2020-09-14T08:00:00Z",
+        "baseEndUtc": "2026-11-06T22:00:00Z",
+        "incrementalLatestOpenUtc": "2026-11-07T11:00:00Z"
+      },
+      "4h": {
+        "canonicalRowsPerSymbol": 13461,
+        "totalRows": 53844,
+        "canonicalStartUtc": "2020-09-14T08:00:00Z",
+        "canonicalEndUtc": "2026-11-05T16:00:00Z",
+        "incrementalLatestOpenUtc": "2026-11-07T08:00:00Z",
+        "canonicalMergePending": true
+      },
+      "5m15m": {
+        "multiYearHistory": false,
+        "coverage": "recent rolling windows and incremental deltas only"
+      }
+    },
+    "experimentsRun": 0,
+    "oosEvaluations": 0,
+    "smokeTests": 0,
+    "workRemaining": [
+      "Rebuild canonical 4h files through the verified 2026-11-07T08:00Z delta high-water.",
+      "Backfill multi-year 5m/15m history oldest-first.",
+      "Recover or formally retire the missing 76-row delta with unknown coverage; preserve the 14 manifest SHA provenance mismatches and row-level reconciliation evidence.",
+      "Backfill historical funding for BTC/ETH/XRP and historical OI/taker/positioning; audit the SOL funding archive hash issue.",
+      "Provision Node>=24/npm>=11 and a clean checkout; preserve closeTime and reject volume<=0; run deterministic smoke fixtures.",
+      "Calibrate actual account fees, spread, slippage, impact, latency and funding cashflows before a new pre-registered experiment."
+    ]
+  },
+  "contextDiscovery": {
+    "taxonomyStatus": "NO_REFIT",
+    "descriptiveDetector": "EMA20/EMA50 alignment plus 5-bar EMA50 slope; ATR14/close rank within the trailing 120 completed bars.",
+    "thresholds": "Not training-fitted in this run; current labels are descriptive and uncalibrated.",
+    "frequenciesDurationsTransitions": "NOT_RECOMPUTED",
+    "currentSnapshot": {
+      "BTCUSDT": {
+        "role": "reference_only",
+        "trend": {
+          "5m": "MIXED",
+          "15m": "MIXED",
+          "1h": "BEAR",
+          "4h": "BEAR"
+        },
+        "volatilityRank120": {
+          "5m": 18,
+          "15m": 21,
+          "1h": 1,
+          "4h": 74
+        },
+        "atr14Pct": {
+          "5m": 0.0314,
+          "15m": 0.0895,
+          "1h": 0.2122,
+          "4h": 1.3301
+        }
+      },
+      "ETHUSDT": {
+        "trend": {
+          "5m": "BEAR",
+          "15m": "MIXED",
+          "1h": "MIXED",
+          "4h": "BEAR"
+        },
+        "volatilityRank120": {
+          "5m": 22,
+          "15m": 20,
+          "1h": 1,
+          "4h": 71
+        },
+        "atr14Pct": {
+          "5m": 0.051,
+          "15m": 0.1225,
+          "1h": 0.3079,
+          "4h": 1.6589
+        }
+      },
+      "SOLUSDT": {
+        "trend": {
+          "5m": "MIXED",
+          "15m": "BEAR",
+          "1h": "BEAR",
+          "4h": "BEAR"
+        },
+        "volatilityRank120": {
+          "5m": 39,
+          "15m": 22,
+          "1h": 1,
+          "4h": 70
+        },
+        "atr14Pct": {
+          "5m": 0.0945,
+          "15m": 0.1875,
+          "1h": 0.4218,
+          "4h": 1.9436
+        }
+      },
+      "XRPUSDT": {
+        "trend": {
+          "5m": "BEAR",
+          "15m": "BEAR",
+          "1h": "BEAR",
+          "4h": "BEAR"
+        },
+        "volatilityRank120": {
+          "5m": 3,
+          "15m": 10,
+          "1h": 18,
+          "4h": 90
+        },
+        "atr14Pct": {
+          "5m": 0.1371,
+          "15m": 0.2978,
+          "1h": 0.7353,
+          "4h": 2.3613
+        }
+      }
+    },
+    "warning": "Rolling-120 ATR ranks are local descriptive ranks, not a stable multi-year regime taxonomy or win probabilities."
+  },
+  "strategyContextScorecard": {
+    "oosValidatedEntries": 0,
+    "existingRegistrySnapshot": {
+      "branch": "research/context-strategy-2026-11-07-run13",
+      "updatedAtUtc": "2026-11-06T21:37:59.973Z",
+      "entries": [
+        {
+          "id": "SOL-DONCHIAN20-BULL-LOW-V1-20261105T1825Z",
+          "symbol": "SOLUSDT",
+          "context": "EMA50_GT_EMA200_ATR14_Q33_TRAIN_EX_SHOCK_Q99",
+          "strategyVersion": "DONCHIAN_BREAKOUT_BULL_LOW_V1",
+          "status": "INSUFFICIENT_EVIDENCE",
+          "oosTrades": 55,
+          "meanNetR": 0.04310725980179393,
+          "ci": [
+            -0.27982083578522227,
+            0.3899637337756116
+          ],
+          "profitFactor": 1.082381347767158,
+          "maxDrawdownR": 7.887869012414981
+        },
+        {
+          "id": "SOL-FAILED-BREAKOUT-FADE-SIDEWAYS-LOW-V1-20261105T2225Z",
+          "symbol": "SOLUSDT",
+          "context": "SIDEWAYS_LOW",
+          "strategyVersion": "FAILED_BREAKOUT_FADE_V1",
+          "status": "REJECTED",
+          "oosTrades": 113,
+          "meanNetR": -0.1479703017321489,
+          "ci": [
+            -0.31751343217234484,
+            0.019600128600543533
+          ],
+          "profitFactor": 0.7870525610801595,
+          "maxDrawdownR": 20.791692075760004
+        },
+        {
+          "id": "SOL-4H-TREND-PULLBACK-BTC-CONFIRM-V1_1-20261106T0830Z",
+          "symbol": "SOLUSDT",
+          "context": "BEAR_NORMAL (final untouched test; detector admits BULL_NORMAL/BEAR_NORMAL with same-direction BTC confirmation)",
+          "strategyVersion": "EMA20_PULLBACK_RECROSS_BTC_CONFIRM_V1_1",
+          "status": "INSUFFICIENT_EVIDENCE",
+          "oosTrades": 10,
+          "meanNetR": -0.18863486733002421,
+          "profitFactor": 0.7329887042875234,
+          "maxDrawdownR": 3.4844245757574503
+        }
+      ]
+    },
+    "separateAccessibleV77Summary": {
+      "source": "context_strategy_registry_2026-11-07_1658IST_v77.json",
+      "symbol": "SOLUSDT",
+      "context": "BULL_LOW",
+      "strategy": "4h Donchian20 breakout",
+      "status": "OOS_PROMISING",
+      "oosTrades": 12,
+      "winRatePct": 66.7,
+      "targetBeforeStopPct": 41.7,
+      "meanNetR": 0.606,
+      "profitFactor": 2.72,
+      "maxDrawdownR": 1.3,
+      "blockBootstrapCi95": [
+        0.086,
+        1.199
+      ],
+      "limitation": "Summary-only carry-forward; exact detector/trade-level artifact not present in this snapshot. Do not merge as an executable rule."
+    },
+    "evidenceNote": "No entry is OOS_VALIDATED. Historical registry records remain unchanged; no new strategy status transition."
+  },
+  "keyDiscoveries": [
+    "No validated conditional edge is available for trade selection.",
+    "All four symbols show a bearish 4h trend under the descriptive EMA rule; BTC is reference-only.",
+    "XRP has the highest current 4h ATR rank (90th percentile of its trailing 120 completed bars), indicating elevated recent volatility, not a trade signal.",
+    "ETH and SOL have positive latest available 5m taker-buy/sell ratios, but the observation is 12:15Z and conflicts with bearish higher-timeframe context; it is not an entry trigger.",
+    "Prior SOL failed-breakout fade experiment is REJECTED; prior Donchian and EMA pullback candidates remain INSUFFICIENT_EVIDENCE."
+  ],
+  "currentMarketSnapshot": {
+    "asOfUtc": "2026-11-07T12:28:24.000Z",
+    "markPriceTimeUtc": "2026-11-07T12:28:21.001Z",
+    "tickerTimeUtc": "2026-11-07T12:28:19Z to 12:28:24Z",
+    "fundingIntervalHours": 8,
+    "nextFundingUtc": "2026-11-07T16:00:00.000Z",
+    "symbols": {
+      "BTCUSDT": {
+        "role": "reference_only",
+        "markPrice": 75974,
+        "change24hPct": -0.408,
+        "high24h": 76313.4,
+        "low24h": 74810.8,
+        "quoteVolume24h": 8094523095.41,
+        "premiumIndexLastFundingRatePct": -0.000432,
+        "latestSettledFundingRatePct": 0.001332,
+        "latestSettledFundingUtc": "2026-11-07T12:00:00Z",
+        "openInterest": 95892.406,
+        "openInterestTimeUtc": "2026-11-07T12:24:47Z",
+        "oiChange10to12UtcPct": -0.07137,
+        "bookSpreadBps": 0.01316,
+        "bookSnapshotUtcApprox": "2026-11-07T12:24:47Z",
+        "takerBuySellRatio": 0.7639,
+        "takerObservationUtc": "2026-11-07T12:15:00Z",
+        "context": {
+          "role": "reference_only",
+          "trend": {
+            "5m": "MIXED",
+            "15m": "MIXED",
+            "1h": "BEAR",
+            "4h": "BEAR"
+          },
+          "volatilityRank120": {
+            "5m": 18,
+            "15m": 21,
+            "1h": 1,
+            "4h": 74
+          },
+          "atr14Pct": {
+            "5m": 0.0314,
+            "15m": 0.0895,
+            "1h": 0.2122,
+            "4h": 1.3301
+          }
+        }
+      },
+      "ETHUSDT": {
+        "markPrice": 2243.59047287,
+        "change24hPct": -0.19,
+        "high24h": 2253.43,
+        "low24h": 2208.81,
+        "quoteVolume24h": 4762144328.72,
+        "premiumIndexLastFundingRatePct": 0.00707,
+        "latestSettledFundingRatePct": 0.004541,
+        "latestSettledFundingUtc": "2026-11-07T12:00:00Z",
+        "openInterest": 2375303.478,
+        "openInterestTimeUtc": "2026-11-07T12:24:47Z",
+        "oiChange10to12UtcPct": -0.27475,
+        "bookSpreadBps": 0.04457,
+        "bookSnapshotUtcApprox": "2026-11-07T12:24:47Z",
+        "takerBuySellRatio": 1.7346,
+        "takerObservationUtc": "2026-11-07T12:15:00Z",
+        "context": {
+          "trend": {
+            "5m": "BEAR",
+            "15m": "MIXED",
+            "1h": "MIXED",
+            "4h": "BEAR"
+          },
+          "volatilityRank120": {
+            "5m": 22,
+            "15m": 20,
+            "1h": 1,
+            "4h": 71
+          },
+          "atr14Pct": {
+            "5m": 0.051,
+            "15m": 0.1225,
+            "1h": 0.3079,
+            "4h": 1.6589
+          }
+        }
+      },
+      "SOLUSDT": {
+        "markPrice": 89.94,
+        "change24hPct": -0.903,
+        "high24h": 91.58,
+        "low24h": 89.55,
+        "quoteVolume24h": 912169290.4247,
+        "premiumIndexLastFundingRatePct": 0.001035,
+        "latestSettledFundingRatePct": 0.005614,
+        "latestSettledFundingUtc": "2026-11-07T12:00:00Z",
+        "openInterest": 9368261.66,
+        "openInterestTimeUtc": "2026-11-07T12:24:47Z",
+        "oiChange10to12UtcPct": 0.09387,
+        "bookSpreadBps": 1.11167,
+        "bookSnapshotUtcApprox": "2026-11-07T12:24:47Z",
+        "takerBuySellRatio": 1.9074,
+        "takerObservationUtc": "2026-11-07T12:15:00Z",
+        "context": {
+          "trend": {
+            "5m": "MIXED",
+            "15m": "BEAR",
+            "1h": "BEAR",
+            "4h": "BEAR"
+          },
+          "volatilityRank120": {
+            "5m": 39,
+            "15m": 22,
+            "1h": 1,
+            "4h": 70
+          },
+          "atr14Pct": {
+            "5m": 0.0945,
+            "15m": 0.1875,
+            "1h": 0.4218,
+            "4h": 1.9436
+          }
+        }
+      },
+      "XRPUSDT": {
+        "markPrice": 1.1654,
+        "change24hPct": -2.908,
+        "high24h": 1.2005,
+        "low24h": 1.1509,
+        "quoteVolume24h": 687276084.4145,
+        "premiumIndexLastFundingRatePct": 0.01,
+        "latestSettledFundingRatePct": 0.007693,
+        "latestSettledFundingUtc": "2026-11-07T12:00:00Z",
+        "openInterest": 334153187.1,
+        "openInterestTimeUtc": "2026-11-07T12:24:47Z",
+        "oiChange10to12UtcPct": -0.24546,
+        "bookSpreadBps": 0.85671,
+        "bookSnapshotUtcApprox": "2026-11-07T12:24:47Z",
+        "takerBuySellRatio": 0.3879,
+        "takerObservationUtc": "2026-11-07T12:15:00Z",
+        "context": {
+          "trend": {
+            "5m": "BEAR",
+            "15m": "BEAR",
+            "1h": "BEAR",
+            "4h": "BEAR"
+          },
+          "volatilityRank120": {
+            "5m": 3,
+            "15m": 10,
+            "1h": 18,
+            "4h": 90
+          },
+          "atr14Pct": {
+            "5m": 0.1371,
+            "15m": 0.2978,
+            "1h": 0.7353,
+            "4h": 2.3613
+          }
+        }
+      }
+    },
+    "warnings": [
+      "All premiumIndex lastFundingRate fields are below |0.05%|; settled funding history is separately recorded at 12:00Z.",
+      "Taker-flow observations are only through the 12:15Z 5m bucket and are not entry triggers.",
+      "Top-of-book spreads are single snapshots, not a historical execution-cost model.",
+      "No liquidation feed was retrieved; do not infer liquidations or crowding from OI or positioning."
+    ]
+  },
+  "decisions": {
+    "SOLUSDT": {
+      "eligibleOosValidatedStrategy": null,
+      "trigger": false,
+      "decision": "NO_TRADE",
+      "reason": "No OOS_VALIDATED registry entry; 4h/1h bearish context is descriptive only; no validated trigger; exchange metadata stale."
+    },
+    "ETHUSDT": {
+      "eligibleOosValidatedStrategy": null,
+      "trigger": false,
+      "decision": "NO_TRADE",
+      "reason": "No OOS_VALIDATED registry entry; 4h bearish and lower-timeframe mixed/bearish; taker buying is not a validated entry trigger."
+    },
+    "XRPUSDT": {
+      "eligibleOosValidatedStrategy": null,
+      "trigger": false,
+      "decision": "NO_TRADE",
+      "reason": "No OOS_VALIDATED registry entry; 4h ATR rank is elevated; no validated trigger and execution metadata is stale."
+    }
+  },
+  "dataQualityAudit": {
+    "rollingWindows": {
+      "series": 16,
+      "rowsPerSeries": 120,
+      "rawRows": 1920,
+      "completedRows": 1904,
+      "formingRowsExcluded": 16,
+      "duplicates": 0,
+      "missingIntervals": 0,
+      "offGrid": 0,
+      "ohlcFailures": 0,
+      "nonPositiveVolume": 0,
+      "nonFinite": 0,
+      "closeTimeFailures": 0,
+      "nonMonotonic": 0,
+      "crossSymbolAlignment": true
+    },
+    "archiveDebt": [
+      "76-row delta remains missing and its coverage is unknown.",
+      "14 4h page/symbol SHA provenance mismatches remain; 21,000 rows were previously reconciled exactly by alternate replay.",
+      "One malformed XRP 4h source row remains immutable with a separate correction artifact.",
+      "Canonical 4h merge remains through 2026-11-05T16:00Z despite separate incremental high-water through 2026-11-07T08:00Z."
+    ]
+  },
+  "costsAndUnavailableInputs": {
+    "currentSpreadSnapshotsBps": {
+      "BTCUSDT": 0.01316,
+      "ETHUSDT": 0.04457,
+      "SOLUSDT": 1.11167,
+      "XRPUSDT": 0.85671
+    },
+    "actualFeeTier": "UNAVAILABLE",
+    "historicalSpreadDepth": "UNAVAILABLE",
+    "slippageImpactLatency": "UNAVAILABLE",
+    "historicalFundingCashflows": "INCOMPLETE",
+    "historicalOiTakerPositioning": "INCOMPLETE",
+    "previousResearchCostProxy": "15bp round-trip proxy; not calibrated and not sufficient for OOS_VALIDATED status.",
+    "liquidationFeed": "NOT_RETRIEVED"
+  },
+  "nextExperiments": [
+    "Do not retune the existing Donchian or failed-breakout test windows.",
+    "After compatible harness and data prerequisites, pre-register a distinct strategy-family x context x symbol test with training-only thresholds, validation freeze, untouched chronological test, purge/embargo, realistic funding/costs, block bootstrap and multiple-testing control.",
+    "Weekly taxonomy stability review is due 2026-11-11 UTC; no refit performed today."
+  ],
+  "persistence": {
+    "rawArchiveBranch": "research/raw-ohlcv-archive-2026-11-05T0530Z",
+    "reportBranch": "research/context-strategy-2026-11-07-run13",
+    "rawDeltaReadbackVerified": true,
+    "manifestReadbackVerified": true,
+    "indexReadbacksVerified": true,
+    "registryAndQueueUpdated": true
+  }
+}

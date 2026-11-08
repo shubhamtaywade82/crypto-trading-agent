@@ -182,6 +182,16 @@ export function aggregateMinutes(minutes: readonly FlowBar[], timeframe: Rejecti
 
 const sum = (xs: readonly FlowBar[], f: (x: FlowBar) => number): number => xs.reduce((acc, x) => acc + f(x), 0);
 
+/** Validates one closed kline and returns it as a complete FlowBar of the given timeframe. */
+export function flowBarFromInput(
+  input: OhlcvInput,
+  timeframe: RejectionTimeframe,
+): { ok: true; bar: FlowBar } | { ok: false; reason: string } {
+  const check = validateOhlcv(input, timeframe);
+  if (!check.ok) return { ok: false, reason: check.reason };
+  return { ok: true, bar: toFlowBar(input, timeframe, TIMEFRAME_MS[timeframe] / MINUTE_MS) };
+}
+
 /**
  * Converts an exchange kline that is already closed (for example a native 5m/15m/1h bar from a recorded file) into a
  * complete FlowBar. Returns a validation reason instead of throwing, so one bad record cannot abort a replay.

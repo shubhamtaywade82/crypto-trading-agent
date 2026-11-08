@@ -10,6 +10,7 @@ import type { FundingLine, FundingObservation } from './remoteFunding.js';
 import { RemoteStore } from './remoteState.js';
 import { roundPrice, roundQty, rulesFromExchangeInfo, setSymbolRules } from './symbolRules.js';
 import type { AgentId, Candle, Position, Side, TradeRecord, WsStatus } from '../types.js';
+import type { OhlcvInput } from '../market/rejection/types.js';
 import { MarketDataService } from '../market/MarketDataService.js';
 import type { MarketDataSnapshot } from '../market/MarketDataTypes.js';
 import { LiveBook, LiveStateStore, type LiveManagerMode, type LiveOrderPort } from './liveBook.js';
@@ -210,6 +211,29 @@ export class BinanceService {
       setSymbolRules(entry.symbol, rulesFromExchangeInfo(entry));
       this.symbolStatus.set(entry.symbol, String((entry as { status?: string }).status ?? 'TRADING'));
     }
+  }
+
+  /**
+   * Read-only klines with the fields the flow features need. getKlines keeps six columns and is unchanged. Each row is
+   * [openTime, open, high, low, close, volume, closeTime, quoteVolume, trades, takerBuyBaseVolume, takerBuyQuoteVolume, ignore].
+   */
+  async getFlowKlines(symbol: string, interval: string, limit: number): Promise<OhlcvInput[]> {
+    const rawKlines = await this.futures.getKlines({ symbol, interval: interval as any, limit });
+    return (rawKlines as any[]).map((k: any[]) => {
+      const [openTime, open, high, low, close, volume, , quoteVolume, trades, takerBuy] = k.map(Number);
+      return {
+        symbol,
+        openTime: openTime as number,
+        open: open as number,
+        high: high as number,
+        low: low as number,
+        close: close as number,
+        baseVolume: volume as number,
+        quoteVolume: quoteVolume as number,
+        trades: trades as number,
+        takerBuyBaseVolume: takerBuy as number,
+      };
+    });
   }
 
   async getKlines(symbol: string, interval = '15m', limit = 200): Promise<Candle[]> {

@@ -14,6 +14,8 @@ export type DecisionStatus =
   | 'FRICTION_REJECTED'
   /** The Tev1 decision-intelligence gate classified the candidate as not tradable (TEV1_GATE=on). */
   | 'TEV1_REJECTED'
+  /** The directional gate (DIRECTIONAL_GATE=enforce) found a calibrated opposing verdict, or could not evaluate one. */
+  | 'DIRECTIONAL_REJECTED'
   | 'EXECUTION_REFUSED'
   | 'EXECUTION_FAILED';
 
@@ -64,6 +66,15 @@ export interface DecisionOutcome {
  * the research dataset that answers "which conditions produced profitable
  * decisions?" — the question the learning system was previously guessing at.
  */
+/** What the directional gate decided for one entry. Present only while DIRECTIONAL_GATE is on. */
+export interface DirectionalJournal {
+  mode: 'shadow' | 'enforce';
+  blocked: boolean;
+  wouldBlock: boolean;
+  reason: string;
+  verdicts: { LONG: string; SHORT: string };
+}
+
 export interface DecisionRecord {
   decisionId: string;
   timestamp: number;
@@ -86,6 +97,8 @@ export interface DecisionRecord {
   /** Regime and volatility phase at decision time; absent on records written before it existed. */
   context?: DecisionContext;
   execution?: DecisionExecution;
+  /** Directional gate verdict; absent while DIRECTIONAL_GATE is off. */
+  directional?: DirectionalJournal;
   outcome?: DecisionOutcome;
 }
 

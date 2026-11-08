@@ -8,7 +8,7 @@
  * already exist. Funding comes from perp_funding_history when the config says `fundingSource: "db"` (PIT_DATABASE_URL),
  * or from <data-dir>/<SYMBOL>-funding.json when it says `"file"`.
  *
- * Outputs under <out>/<experiment>/<UTC timestamp>/: results.json, REPORT.md, manifest.json.
+ * Outputs under <out>/<experiment>/<UTC timestamp>/: results.json, REPORT.md, manifest.json, config.json.
  */
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
@@ -124,6 +124,8 @@ async function main(): Promise<void> {
     excluded: result.excluded,
   };
   writeFileSync(path.join(outDir, 'manifest.json'), JSON.stringify(manifest, null, 2) + '\n');
+  // The exact config bytes, so the live gate can reproduce the rules this table was built with (hash checked on load).
+  writeFileSync(path.join(outDir, 'config.json'), raw);
 
   console.log(`\nwrote ${outDir}/{results.json,REPORT.md,manifest.json}`);
   console.log(`labels: ${result.labelCount}; excluded: ${result.excluded.length}; cells with a publishable probability: `

@@ -62,6 +62,12 @@ import { OptionsDesk } from '../options/OptionsDesk.js';
 import { BinanceClient } from '@nemesis-oss/binance-sdk';
 import { MicrostructureFeed, microConfigFromEnv, sdkMicroSource } from '../microstructure/MicrostructureFeed.js';
 import { entrySide, frictionVerdict, type FrictionGateMode } from '../microstructure/FrictionGate.js';
+import {
+  closedFlowBars, DIRECTIONAL_KLINE_LIMIT, DIRECTIONAL_REFRESH_MS, directionalConflict, directionalGateFromEnv,
+  evaluateDirectionalSnapshot, type DirectionalGateState,
+} from '../market/directional/live-gate.js';
+import type { FlowBar } from '../market/rejection/types.js';
+import type { Side } from '../types.js';
 import { ZodError } from 'zod';
 
 type CycleContext = MarketContext & { tickers: Record<string, MarketPriceInfo>; nextFundingTime: number };
@@ -133,6 +139,10 @@ export class Orchestrator extends EventEmitter {
   private microFeed: MicrostructureFeed | null = null;
   /** Pre-trade execution-cost gate on entries. Starts 'on' so a refused or missing configuration fails closed. */
   private frictionGate: FrictionGateMode = 'on';
+  /** Directional gate state. Off until DIRECTIONAL_GATE is set; see live-gate.ts. */
+  private directional: DirectionalGateState = { mode: 'off', experiment: null, maxStopPct: null, maxBarAgeMs: 0, refusal: null };
+  private directionalBars = new Map<string, FlowBar[]>();
+  private directionalTimer: ReturnType<typeof setInterval> | null = null;
   private livePrices: Record<string, number> = {};
   private liveTickers: Record<string, MarketPriceInfo> = {};
   private stopWs: (() => void) | null = null;
@@ -207,8 +217,65 @@ export class Orchestrator extends EventEmitter {
     this.hooks.start(this.binance);
     this.startOptionsDesk();
     this.startMicrostructure();
+    this.startDirectional();
   }
-  stop() { if (this.timer) clearInterval(this.timer); if (this.optionsTimer) clearInterval(this.optionsTimer); this.microFeed?.stop(); this.stopWs?.(); this.stopWs = null; this.hooks.stop(); }
+  stop() { if (this.timer) clearInterval(this.timer); if (this.optionsTimer) clearInterval(this.optionsTimer); this.microFeed?.stop(); if (this.directionalTimer) clearInterval(this.directionalTimer); this.stopWs?.(); this.stopWs = null; this.hooks.stop(); }
+
+  /**
+   * Directional gate (live-gate.ts). Off unless DIRECTIONAL_GATE is set. Shadow records verdicts and blocks nothing.
+   * Enforce is a conflict veto: it blocks an entry only against a calibrated opposing verdict, and it refuses to start
+   * unless the experiment behind it is committed and holds an admitted, holdout-accepted cell.
+   */
+  private startDirectional(): void {
+    const state = directionalGateFromEnv(process.env);
+    if (state.refusal) {
+      this.log('SYSTEM', `DIRECTIONAL gate ${state.mode} refused: ${state.refusal}${state.mode === 'enforce' ? '. New entries are refused until this is fixed' : '. The gate stays off'}`, 'error');
+      if (state.mode === 'shadow') {
+        this.directional = { ...state, mode: 'off' };
+        return;
+      }
+    }
+    this.directional = state;
+    if (state.mode === 'off' || state.refusal || !state.experiment) return;
+    this.log('SYSTEM', `DIRECTIONAL gate ${state.mode}: experiment ${state.experiment.experiment} with ${state.experiment.calibratedCells} calibrated cell(s); ${state.mode === 'enforce' ? 'blocks an entry only against a calibrated opposing verdict' : 'records verdicts and blocks nothing'}`, 'info');
+    void this.refreshDirectionalBars();
+    this.directionalTimer = setInterval(() => { void this.refreshDirectionalBars(); }, DIRECTIONAL_REFRESH_MS);
+  }
+
+  /** Read-only: the latest closed 5m bars per symbol. A failed refresh keeps the old bars, which then go stale and fail closed. */
+  private async refreshDirectionalBars(): Promise<void> {
+    if (!this.directional.experiment) return;
+    for (const symbol of config.symbols) {
+      try {
+        const raw = await this.binance.getFlowKlines(symbol, '5m', DIRECTIONAL_KLINE_LIMIT);
+        this.directionalBars.set(symbol, closedFlowBars(raw, Date.now()).bars);
+      } catch (err) {
+        this.log('SYSTEM', `DIRECTIONAL ${symbol}: bars not refreshed: ${errorText(err)}`, 'warn');
+      }
+    }
+  }
+
+  /** The directional verdict for one entry, from cached bars. Enforce blocks on a conflict or on unavailable data. */
+  private directionalCheck(symbol: string, side: Side, now: number): { blocked: boolean; reason: string; journal: import('../decision/DecisionJournal.js').DirectionalJournal } {
+    const state = this.directional;
+    const mode = state.mode === 'enforce' ? 'enforce' : 'shadow';
+    if (state.refusal !== null || !state.experiment || state.maxStopPct === null) {
+      const reason = state.refusal !== null ? `gate refused: ${state.refusal}` : 'gate has no experiment loaded';
+      const blocked = state.mode === 'enforce';
+      return { blocked, reason, journal: { mode, blocked, wouldBlock: true, reason, verdicts: { LONG: 'UNAVAILABLE', SHORT: 'UNAVAILABLE' } } };
+    }
+    const snapshot = evaluateDirectionalSnapshot({
+      symbol, bars: this.directionalBars.get(symbol) ?? [], experiment: state.experiment, maxStopPct: state.maxStopPct, nowMs: now, maxBarAgeMs: state.maxBarAgeMs,
+    });
+    const conflict = directionalConflict(snapshot, side);
+    const wouldBlock = conflict.conflict || conflict.unavailable;
+    const blocked = state.mode === 'enforce' && wouldBlock;
+    return {
+      blocked,
+      reason: conflict.reason,
+      journal: { mode, blocked, wouldBlock, reason: conflict.reason, verdicts: { LONG: snapshot.sides.LONG.verdict, SHORT: snapshot.sides.SHORT.verdict } },
+    };
+  }
 
   /**
    * Feeds the LIQUIDITY view: a sequence-checked local book and the aggressor tape per symbol, sampled once a second.
@@ -516,13 +583,25 @@ export class Orchestrator extends EventEmitter {
         this.counters.monitored += 1;
         continue;
       }
+      // Directional gate: entries only. Shadow records a verdict; enforce blocks a calibrated conflict and never creates an entry.
+      const directional = signal.type.startsWith('OPEN_') && this.directional.mode !== 'off'
+        ? this.directionalCheck(signal.symbol, signal.type.includes('SHORT') ? 'SHORT' : 'LONG', Date.now())
+        : null;
+      if (directional?.blocked) {
+        this.persistDecision({ ...record, status: 'DIRECTIONAL_REJECTED', rejectionReason: `directional: ${directional.reason}`, directional: directional.journal });
+        this.log(signal.agent, `DIRECTIONAL BLOCK ${signal.symbol} ${signal.type.includes('SHORT') ? 'SHORT' : 'LONG'}: ${directional.reason}`, 'warn');
+        this.counters.monitored += 1;
+        continue;
+      }
+      if (directional?.journal.wouldBlock) this.log(signal.agent, `DIRECTIONAL (shadow) would block ${signal.symbol} ${signal.type.includes('SHORT') ? 'SHORT' : 'LONG'}: ${directional.reason}`, 'info');
+
       // Last check before the order: the freshest book, this entry's own side and size. Exits never reach this gate.
       const friction = signal.type.startsWith('OPEN_')
         ? frictionVerdict({ mode: this.frictionGate, source: this.microFeed, symbol: signal.symbol, side: entrySide(signal.type), notional: decision.positionSizeUsdt, now: Date.now() })
         : null;
       const frictionLabel = friction && `${signal.symbol} ${entrySide(signal.type)} $${decision.positionSizeUsdt.toFixed(0)}: ${friction.reason}`;
       if (friction && !friction.allowed) {
-        this.persistDecision({ ...record, status: 'FRICTION_REJECTED', rejectionReason: `friction: ${friction.reason}`, execution: { ts: Date.now(), spreadBps: friction.spreadBps, slippageBps: friction.slipBps, effectiveCostBps: null, friction: { status: friction.status, spreadBps: friction.spreadBps, slipBps: friction.slipBps } } });
+        this.persistDecision({ ...record, ...(directional ? { directional: directional.journal } : {}), status: 'FRICTION_REJECTED', rejectionReason: `friction: ${friction.reason}`, execution: { ts: Date.now(), spreadBps: friction.spreadBps, slippageBps: friction.slipBps, effectiveCostBps: null, friction: { status: friction.status, spreadBps: friction.spreadBps, slipBps: friction.slipBps } } });
         this.log(signal.agent, `FRICTION BLOCK ${frictionLabel}`, 'warn');
         this.counters.monitored += 1;
         continue;
@@ -531,6 +610,7 @@ export class Orchestrator extends EventEmitter {
       const log = await this.executor.execute(signal, decision, decisionId);
       const executed: import('../decision/DecisionJournal.js').DecisionRecord = {
         ...record,
+        ...(directional ? { directional: directional.journal } : {}),
         execution: {
           ts: Date.now(), spreadBps: eq.spreadBps, slippageBps: eq.estimatedSlippageBps, effectiveCostBps: eq.effectiveCostBps,
           ...(friction && friction.mode !== 'off' ? { friction: { status: friction.status, spreadBps: friction.spreadBps, slipBps: friction.slipBps } } : {}),

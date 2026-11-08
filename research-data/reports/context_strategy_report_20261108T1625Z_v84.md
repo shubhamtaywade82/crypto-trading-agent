@@ -19,7 +19,7 @@ Historical coverage remains uneven: 1h has 53,871 base rows per symbol through 6
 
 Taxonomy: CTX-4H-EMA50xEMA200-ATRQ-v2-FULL-ARCHIVE. Thresholds are frozen from V100/V102 training-only estimates. Classification: SHOCK overrides; otherwise SIDEWAYS when absolute EMA50/EMA200 spread is below training q30; UP/DOWN by spread sign; volatility LOW/NORMAL/HIGH using training q33/q67 of ATR14/close.
 
-Historical descriptive sample: 13,468 rows per symbol, 13,269 classified bars per symbol, 4h, 14 September 2020 through 6 November 2026 20:00Z. Top contexts and median run duration:
+Historical descriptive sample: 13,468 rows per symbol, 13,269 classified bars per symbol, 4h, 14 September 2020 through 6 November 2026 20:00Z. This is a separately versioned full-history context artifact, not the current archive branch's canonical 4h file; do not treat the two archive manifests as reconciled. Top contexts and median run duration:
 
 | Symbol | Top contexts (frequency; median run bars) |
 |---|---|
@@ -92,7 +92,7 @@ Reasons: zero OOS_VALIDATED registry entries; no exact validated trigger; fresh 
 
 Last settled funding timestamp is 16:00Z; next funding is 00:00Z on 9 November; observed interval is 8 hours. Premium-index lastFundingRate differs from settled funding and is not treated as a guaranteed next settlement. No observed rate exceeds 0.05%.
 
-Latest 5m/15m taker-buy shares: BTC 42.61%/39.20%; ETH 40.54%/42.34%; SOL 35.04%/44.12%; XRP 49.95%/44.48%. Top-of-book spreads: BTC 0.0132 bps, ETH 0.0446 bps, SOL 1.1163 bps, XRP 0.8639 bps. Top-20 depth imbalance: BTC +0.564, ETH +0.017, SOL +0.018, XRP -0.096. These are snapshots, not execution-cost estimates.
+Latest 5m/15m taker-buy shares: BTC 42.61%/39.20%; ETH 40.54%/42.34%; SOL 35.04%/44.12%; XRP 49.95%/44.48%. Global account long/short ratios at 16:00Z: BTC 3.0420, ETH 3.5025, SOL 3.6318, XRP 2.8685. Current OI is shown above; 24h OI change is unavailable because no historical OI archive is present. Top-of-book spreads: BTC 0.0132 bps, ETH 0.0446 bps, SOL 1.1163 bps, XRP 0.8639 bps. Top-20 depth imbalance: BTC +0.564, ETH +0.017, SOL +0.018, XRP -0.096. These are snapshots, not execution-cost estimates.
 
 ### Mandatory preflight
 

@@ -3,7 +3,7 @@ import type { BinanceService } from '../binance/client.js';
 import type { Candle, Signal } from '../types.js';
 import { resampleCandles } from '../market/TimeframeEngine.js';
 
-interface AlmaConfig {
+export interface AlmaConfig {
   length: number;
   offset: number;
   sigma: number;
@@ -67,12 +67,26 @@ function calculateWilderAtr(candles: Candle[], period = 14): number[] {
   return atr;
 }
 
-const FAST_ALMA: AlmaConfig = { length: 21, offset: 0.70, sigma: 8.0 };
-const SLOW_ALMA: AlmaConfig = { length: 50, offset: 0.70, sigma: 8.0 };
-const HTF_FAST: AlmaConfig = { length: 21, offset: 0.85, sigma: 6.0 };
-const HTF_SLOW: AlmaConfig = { length: 50, offset: 0.85, sigma: 6.0 };
-const ATR_STOP_MULTIPLIER = 2.5;
-const RISK_REWARD_RATIO = 1.5;
+/** Every tunable of the strategy; research candidates mutate these, live runs the defaults. */
+export interface AlmaMtfParams {
+  fast: AlmaConfig;
+  slow: AlmaConfig;
+  htfFast: AlmaConfig;
+  htfSlow: AlmaConfig;
+  atrPeriod: number;
+  atrStopMultiplier: number;
+  riskRewardRatio: number;
+}
+
+export const DEFAULT_ALMA_MTF_PARAMS: AlmaMtfParams = {
+  fast: { length: 21, offset: 0.70, sigma: 8.0 },
+  slow: { length: 50, offset: 0.70, sigma: 8.0 },
+  htfFast: { length: 21, offset: 0.85, sigma: 6.0 },
+  htfSlow: { length: 50, offset: 0.85, sigma: 6.0 },
+  atrPeriod: 14,
+  atrStopMultiplier: 2.5,
+  riskRewardRatio: 1.5,
+};
 
 export class AlmaMtfChampionAgent extends BaseAgent {
   readonly id = 'ALMA-CHAMPION-λ' as const;
@@ -80,7 +94,7 @@ export class AlmaMtfChampionAgent extends BaseAgent {
   override readonly cooldownMs = 0;
   private lastHandledTime = new Map<string, number>();
 
-  constructor(binance: BinanceService) {
+  constructor(binance: BinanceService, private readonly params: AlmaMtfParams = DEFAULT_ALMA_MTF_PARAMS) {
     super(binance);
   }
 
@@ -101,10 +115,11 @@ export class AlmaMtfChampionAgent extends BaseAgent {
   }
 
   private checkHtfTrend(candles4h: Candle[]): 'BULLISH' | 'BEARISH' | 'NEUTRAL' {
-    if (candles4h.length < HTF_SLOW.length + 2) return 'NEUTRAL';
+    const { htfFast, htfSlow } = this.params;
+    if (candles4h.length < htfSlow.length + 2) return 'NEUTRAL';
     const closes = candles4h.map((c) => c.close);
-    const fast = calculateAlma(closes, HTF_FAST);
-    const slow = calculateAlma(closes, HTF_SLOW);
+    const fast = calculateAlma(closes, htfFast);
+    const slow = calculateAlma(closes, htfSlow);
     const i = closes.length - 1;
 
     if (isNaN(fast[i]) || isNaN(slow[i]) || isNaN(slow[i - 1])) return 'NEUTRAL';
@@ -117,10 +132,12 @@ export class AlmaMtfChampionAgent extends BaseAgent {
     symbol: string,
     isLong: boolean,
     mark: number,
-    stopDist: number
+    stopDist: number,
+    barOpenTime: number
   ): Signal {
+    const { riskRewardRatio } = this.params;
     const stopLoss = isLong ? mark - stopDist : mark + stopDist;
-    const takeProfit = isLong ? mark + stopDist * RISK_REWARD_RATIO : mark - stopDist * RISK_REWARD_RATIO;
+    const takeProfit = isLong ? mark + stopDist * riskRewardRatio : mark - stopDist * riskRewardRatio;
     return this.signal({
       symbol,
       type: isLong ? 'OPEN_LONG' : 'OPEN_SHORT',
@@ -129,6 +146,8 @@ export class AlmaMtfChampionAgent extends BaseAgent {
       stopLoss,
       takeProfit,
       reason: `ALMA MTF Champion ${isLong ? 'BULL' : 'BEAR'} crossover with confirmed 4H trend (stop dist ${stopDist.toFixed(2)})`,
+      // Bar time, not wall clock: keeps signal ids deterministic under replay
+      ts: barOpenTime,
     });
   }
 
@@ -145,9 +164,9 @@ export class AlmaMtfChampionAgent extends BaseAgent {
     if (htfRegime === 'NEUTRAL') return null;
 
     const closes1h = bars1h.map((c) => c.close);
-    const fast1h = calculateAlma(closes1h, FAST_ALMA);
-    const slow1h = calculateAlma(closes1h, SLOW_ALMA);
-    const atr1h = calculateWilderAtr(bars1h, 14);
+    const fast1h = calculateAlma(closes1h, this.params.fast);
+    const slow1h = calculateAlma(closes1h, this.params.slow);
+    const atr1h = calculateWilderAtr(bars1h, this.params.atrPeriod);
 
     const i = closes1h.length - 1;
     if (isNaN(fast1h[i]) || isNaN(slow1h[i]) || isNaN(fast1h[i - 1]) || isNaN(slow1h[i - 1])) return null;
@@ -157,9 +176,9 @@ export class AlmaMtfChampionAgent extends BaseAgent {
 
     if ((isBullCross && htfRegime === 'BULLISH') || (isBearCross && htfRegime === 'BEARISH')) {
       const mark = ctx.marks[symbol] || lastBar.close;
-      const stopDist = atr1h[i] * ATR_STOP_MULTIPLIER;
+      const stopDist = atr1h[i] * this.params.atrStopMultiplier;
       this.lastHandledTime.set(symbol, lastBar.openTime);
-      return this.buildEntrySignal(symbol, isBullCross, mark, stopDist);
+      return this.buildEntrySignal(symbol, isBullCross, mark, stopDist, lastBar.openTime);
     }
 
     return null;

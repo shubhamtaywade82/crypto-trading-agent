@@ -1,0 +1,147 @@
+{
+  "schema_version": "1.0.0",
+  "run_id": "context-strategy-2026-11-08T2027Z-v88",
+  "as_of_utc": "2026-11-08T20:27:55.000Z",
+  "classification": "RESEARCH_BLOCKED",
+  "environment": {
+    "runtime": "managed container + Code Mode V8; no local repository checkout",
+    "cwd": "/",
+    "os": "Debian GNU/Linux 13 (trixie)",
+    "python": "3.13.5",
+    "node": "v22.16.0",
+    "npm": "10.9.2",
+    "cpus": 5,
+    "memAvailableKb": 4937408,
+    "diskFree": "30G of 32G",
+    "repoCheckout": false,
+    "binanceSdkInstalled": false
+  },
+  "repository": {
+    "name": "shubhamtaywade82/crypto-trading-agent",
+    "sourceCodeBranch": "main",
+    "sourceCodeCommit": "22b513a671e251415aa34e18946c55d1ae5f8113",
+    "sourceCodeCommitVerified": true,
+    "packageJsonBlobSha": "65606741eeb623d8123d9e58934540d24ca31d92",
+    "engineRequirement": "Node >=24; npm >=11",
+    "backtestScriptPath": "scripts/backtest.ts",
+    "backtestScriptBlobSha": "65bb03853382be1ed0d82aed373f805173aaa6f5",
+    "localCheckoutPresent": false,
+    "localPackageJsonPresent": false,
+    "nodeModulesPresent": false,
+    "binanceSdkImportable": false
+  },
+  "checks": [
+    {
+      "capability": "shell/compute",
+      "status": "PASS",
+      "evidence": "Debian 13; Python 3.13.5; Node 22.16.0/npm 10.9.2; 5 CPUs; 4,937,408 kB MemAvailable; 30G free of 32G.",
+      "impact": "Reconnaissance and bounded Code Mode calculations ran; Node is below project engine floor.",
+      "nextAction": "Provision Node 24/npm 11."
+    },
+    {
+      "capability": "repository/code",
+      "status": "BLOCKED",
+      "evidence": "No local checkout; remote main commit 22b513a verified; package.json requires Node>=24/npm>=11; remote scripts/backtest.ts exists; Binance SDK package not installed/importable.",
+      "impact": "Repository harness cannot be invoked in this runtime.",
+      "nextAction": "Clone at verified main commit in compatible runtime and install lockfile-pinned dependencies."
+    },
+    {
+      "capability": "network/Binance endpoints",
+      "status": "DEGRADED",
+      "evidence": "Direct curl https://fapi.binance.com/fapi/v1/time failed DNS resolution after 5 seconds; HTTP 000. Connector market endpoints returned fresh data but no HTTP status/headers. Connector exchangeInfo.serverTime=2026-11-06T11:18:40.886Z versus mark time 2026-11-08T20:25:52Z; drift 205631.114 seconds.",
+      "impact": "Market snapshot usable; contract-status and execution validation blocked.",
+      "nextAction": "Restore direct DNS; verify /fapi/v1/time and /fapi/v1/exchangeInfo with <=5s drift."
+    },
+    {
+      "capability": "raw historical archive",
+      "status": "DEGRADED",
+      "evidence": "68 completed rows persisted; 5m/15m/1h/4h indexes updated. 4h canonical 13,461 rows/symbol through Nov 5 16:00; raw deltas through Nov 8 16:00 with 13 provenance mismatches. 1h base 53,871 rows/symbol through Nov 6 22:00 plus deltas through Nov 8 19:00. 5m/15m base history and 1m history absent.",
+      "impact": "Current monitoring works; multi-year intraday and clean 4h provenance remain inadequate for new inference.",
+      "nextAction": "Reconcile 4h provenance; backfill multi-year 5m/15m and acquire 1m."
+    },
+    {
+      "capability": "data quality/coverage",
+      "status": "PASS",
+      "evidence": "New delta: 104 rows fetched across 16 series; 20 pre-highwater and 16 forming rows excluded; 68 appended; 0 duplicates/gaps/OHLC failures/non-positive volume/non-finite/off-grid/non-monotonic. Current 1h/4h windows: 1,499 completed bars per symbol/timeframe, zero structural errors.",
+      "impact": "Incremental data and current context windows pass structural checks; historical base reconciliation remains a separate blocker.",
+      "nextAction": "Continue highwater-based append and validate full archive after canonical reconciliation."
+    },
+    {
+      "capability": "backtest harness/smoke test",
+      "status": "BLOCKED",
+      "evidence": "Remote scripts/backtest.ts exists but no compatible local checkout/runtime. Deterministic smoke test NOT_RUN; no experiment entrypoint invoked.",
+      "impact": "No experiment or untouched OOS evaluation this run.",
+      "nextAction": "Provision compatible runtime, run tiny deterministic fixture and no-lookahead perturbation test, then freeze experiment."
+    },
+    {
+      "capability": "disk/storage",
+      "status": "PASS",
+      "evidence": "30G free of 32G; GitHub archive branch writable; delta, manifest and all four interval indexes were updated.",
+      "impact": "Durable archive persistence available remotely.",
+      "nextAction": "Continue atomic GitHub writes and readback."
+    },
+    {
+      "capability": "artifact readback",
+      "status": "PASS",
+      "evidence": "Delta (26,499 bytes/68 lines), manifest (8,872 bytes), and 5m/15m/1h/4h indexes fetched back; delta and manifest SHA-256 matched; index contents matched exactly.",
+      "impact": "Archive append is persisted and verified; run documentation readback follows.",
+      "nextAction": "Fetch back queue, registry snapshot, market snapshot, preflight, report and run manifest; record blob identities."
+    }
+  ],
+  "directRestProbes": {
+    "serverTime": {
+      "url": "https://fapi.binance.com/fapi/v1/time",
+      "status": "BLOCKED_DNS",
+      "httpStatus": 0,
+      "timeoutSeconds": 5
+    },
+    "exchangeInfo": {
+      "url": "https://fapi.binance.com/fapi/v1/exchangeInfo",
+      "status": "BLOCKED_DNS_DIRECT",
+      "connectorServerTimeUtc": "2026-11-06T11:18:40.886Z",
+      "driftSeconds": 205631.114
+    },
+    "klines": {
+      "status": "CONNECTOR_PASS_HTTP_STATUS_UNAVAILABLE",
+      "rowsFetched": 104,
+      "newRows": 68
+    },
+    "premiumIndex": {
+      "status": "CONNECTOR_PASS_HTTP_STATUS_UNAVAILABLE"
+    },
+    "openInterest": {
+      "status": "CONNECTOR_PASS_HTTP_STATUS_UNAVAILABLE"
+    },
+    "ticker24h": {
+      "status": "CONNECTOR_PASS_HTTP_STATUS_UNAVAILABLE"
+    },
+    "fundingRate": {
+      "status": "CONNECTOR_PASS_HTTP_STATUS_UNAVAILABLE"
+    }
+  },
+  "experiment": {
+    "executed": false,
+    "oosEvaluated": false,
+    "smokeTest": "NOT_RUN",
+    "entrypoint": "scripts/backtest.ts exists remotely but local invocation blocked",
+    "specification": null,
+    "parameters": null,
+    "seed": null,
+    "reason": "No compatible local checkout/runtime, direct REST DNS unavailable, 5m/15m/1m historical coverage incomplete, 4h provenance unresolved and execution costs uncalibrated."
+  },
+  "persistence": {
+    "branch": "research/raw-ohlcv-archive-20261108T1026Z",
+    "deltaPath": "research-data/binance-usdm/delta/binance_usdm_delta_20261108T2020Z_5m15m1h4h_completed.jsonl",
+    "deltaSha256": "cb6f3f60d43aa93ef266ea99848a4b8b3fa24fc6fc245ca7fdb6f19ae69f670a",
+    "manifestPath": "research-data/binance-usdm/delta/manifest-20261108T2020Z-5m15m1h4h.json",
+    "manifestSha256": "3fe9edecf43d43ced843bcb690d4461e43a9df499ca756a05bd357c17bcb68c0",
+    "indexesReadbackVerified": [
+      "5m",
+      "15m",
+      "1h",
+      "4h"
+    ],
+    "runArtifactsReadback": "PENDING_FINAL_READBACK"
+  },
+  "nextAction": "Resolve RQ-002/RQ-005/RQ-025/RQ-003/RQ-004/RQ-037 before any experiment."
+}

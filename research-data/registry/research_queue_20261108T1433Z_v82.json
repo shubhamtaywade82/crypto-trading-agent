@@ -1,0 +1,183 @@
+{
+  "schema_version": "1.0.0",
+  "queue_version": "v82",
+  "run_id": "context-strategy-2026-11-08T1433Z-v82",
+  "updated_at_utc": "2026-11-08T14:33:10.000Z",
+  "storage": "Persisted in GitHub research branch; this snapshot was readback-verified.",
+  "items": [
+    {
+      "id": "RQ-019",
+      "priority": "P0",
+      "status": "COMPLETED_THIS_RUN",
+      "prerequisites": [
+        "Binance connector market data",
+        "GitHub archive branch"
+      ],
+      "next_action": "Next refresh: append only bars whose closeTime is earlier than the observed mark endpoint time.",
+      "completed": {
+        "rows": 68,
+        "by_interval": {
+          "5m": 48,
+          "15m": 16,
+          "1h": 4,
+          "4h": 0
+        },
+        "delta_path": "research-data/binance-usdm/delta/binance_usdm_delta_20261108T143034Z_5m15m1h4h_completed.jsonl",
+        "delta_sha256": "1f38983f5ed43a60d81e47cb187e604b8e79f50ddd7818aad823d6cc36be0ed0",
+        "manifest_path": "research-data/binance-usdm/delta/manifest-20261108T143034Z-5m15m1h4h.json",
+        "manifest_sha256": "e7d2021383e4bf987c7b9f1fd76c9ee5f9af5171a742277e40e5f6958ca2b87a",
+        "readback_verified": true,
+        "branch_head": "07e15cb0f8c8244e455df86cac61b52914aa0e04"
+      }
+    },
+    {
+      "id": "RQ-002",
+      "priority": "P0",
+      "status": "BLOCKED",
+      "prerequisites": [
+        "Direct outbound DNS or uncached official REST access"
+      ],
+      "blocker": "GET /fapi/v1/time failed DNS (HTTP 000); /fapi/v1/exchangeInfo direct request timed out; connector exchangeInfo serverTime is 51.24h stale.",
+      "next_action": "Restore DNS/network route; probe /fapi/v1/time and /fapi/v1/exchangeInfo; enforce a strict server-time drift gate."
+    },
+    {
+      "id": "RQ-005",
+      "priority": "P0",
+      "status": "BLOCKED",
+      "prerequisites": [
+        "Local repository checkout",
+        "Node >=24",
+        "npm >=11"
+      ],
+      "blocker": "No local crypto-trading-agent checkout; Node v22.16.0 and npm 10.9.2 are below package requirements; Binance SDK packages are not importable.",
+      "next_action": "Provision Node 24/npm 11, clone main at the verified SHA, install lockfile dependencies and run deterministic harness smoke test."
+    },
+    {
+      "id": "RQ-012",
+      "priority": "P0",
+      "status": "BLOCKED",
+      "prerequisites": [
+        "Compatible local runner"
+      ],
+      "blocker": "Candle interface omits closeTime; backtest CLI supports 15m/1h/4h but not 5m.",
+      "next_action": "Preserve closeTime end-to-end, add 5m to the research path, and add completed/forming/no-lookahead fixtures."
+    },
+    {
+      "id": "RQ-013",
+      "priority": "P0",
+      "status": "BLOCKED",
+      "prerequisites": [
+        "Archive validator source and tests"
+      ],
+      "blocker": "Existing archive validator has not been verified to reject zero volume.",
+      "next_action": "Change validation to volume <= 0 and add zero/negative/NaN/missing fixtures."
+    },
+    {
+      "id": "RQ-025",
+      "priority": "P0",
+      "status": "PARTIALLY_COMPLETED",
+      "prerequisites": [
+        "Raw 4h pages and all page manifests"
+      ],
+      "blocker": "Canonical 4h base/index lags incremental data; 13 expected-vs-actual page/symbol hash mismatches remain; raw-vs-canonical row-count deltas remain unresolved.",
+      "next_action": "Reconcile row keys and hashes, rebuild canonical 4h through the latest verified delta while preserving malformed XRP source and correction artifact."
+    },
+    {
+      "id": "RQ-003",
+      "priority": "P1",
+      "status": "PARTIALLY_COMPLETED",
+      "prerequisites": [
+        "Auditable historical 5m/15m source",
+        "Storage and network"
+      ],
+      "blocker": "Multi-year 5m/15m history is absent; current rolling windows cover hours/day only.",
+      "next_action": "Backfill oldest-first from an auditable source and build aligned multi-symbol history."
+    },
+    {
+      "id": "RQ-004",
+      "priority": "P1",
+      "status": "BLOCKED",
+      "prerequisites": [
+        "Fee-tier evidence",
+        "Historical funding settlements",
+        "Historical spread/depth/trades"
+      ],
+      "blocker": "Only recent funding history and transient order-book snapshots are available; no actual account fee tier or calibrated slippage/impact model.",
+      "next_action": "Collect fee tier, full funding settlement history and synchronized book/trade samples; fit per-symbol cost curves."
+    },
+    {
+      "id": "RQ-014",
+      "priority": "P1",
+      "status": "BLOCKED",
+      "prerequisites": [
+        "Funding archive or PIT database"
+      ],
+      "blocker": "Only the latest three funding settlements per symbol were retrieved; no complete 2025-2026 funding series is accessible.",
+      "next_action": "Backfill /fapi/v1/fundingRate oldest-first and align settlement cashflows with holding periods."
+    },
+    {
+      "id": "RQ-021",
+      "priority": "P0",
+      "status": "BLOCKED",
+      "prerequisites": [
+        "Compatible runner",
+        "1m archive",
+        "Funding data",
+        "BTC reference-only fix",
+        "Candle contract fix",
+        "Smoke test"
+      ],
+      "blocker": "EXP-001 is configured for 5m but requires a 1m archive, fundingSource=db, and includes BTCUSDT in the tradable symbols array.",
+      "next_action": "Satisfy prerequisites, split referenceSymbols from tradable symbols, freeze the experiment and run purged chronological evaluation."
+    },
+    {
+      "id": "RQ-007",
+      "priority": "P1",
+      "status": "PARTIALLY_COMPLETED",
+      "prerequisites": [
+        "Aligned multi-year BTC and alt returns"
+      ],
+      "blocker": "Prior correlation/lead-lag review is descriptive and ends 2026-11-04; no new multi-year estimate this run.",
+      "next_action": "Recompute rolling correlation and lead/lag on canonical aligned history with training-only windows and uncertainty."
+    },
+    {
+      "id": "RQ-010",
+      "priority": "P1",
+      "status": "PARTIALLY_COMPLETED",
+      "prerequisites": [
+        "Funding semantic regression tests"
+      ],
+      "blocker": "premiumIndex.lastFundingRate differed from the latest fundingRate history settlement in this snapshot; do not label it a guaranteed next settlement estimate.",
+      "next_action": "Document and test premiumIndex field semantics separately from settled funding history."
+    },
+    {
+      "id": "RQ-011",
+      "priority": "P0",
+      "status": "BLOCKED",
+      "prerequisites": [
+        "PromotionGate and experiment harness"
+      ],
+      "blocker": "Existing per-cell sample and uncertainty gates are not proven to meet the full user policy.",
+      "next_action": "Enforce >=100 OOS trades per symbol/context provisionally, stronger multi-window >=200 evidence, block-bootstrap uncertainty, Holm correction and robustness gates."
+    },
+    {
+      "id": "RQ-029",
+      "priority": "P0",
+      "status": "BLOCKED",
+      "prerequisites": [
+        "EXP-001 config and runner"
+      ],
+      "blocker": "EXP-001 currently lists BTCUSDT in its symbols array; BTC must be reference-only and must never produce a trade outcome.",
+      "next_action": "Separate referenceSymbols from tradable symbols and add a regression test that rejects BTC trade generation."
+    },
+    {
+      "id": "RQ-028",
+      "priority": "P2",
+      "status": "NOT_DUE",
+      "prerequisites": [
+        "Canonical archive and compatible runner"
+      ],
+      "next_action": "Weekly taxonomy/stability review due 2026-11-11 UTC; retain taxonomy unless train-only re-estimation and stability tests support a change."
+    }
+  ]
+}

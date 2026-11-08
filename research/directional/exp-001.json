@@ -1,0 +1,24 @@
+{
+  "experiment": "EXP-001",
+  "description": "Liquidity sweep and rejection, confirmed, then structure shift. Target window 1-2%. Context-tagged cells against the untagged rejection baseline.",
+  "symbols": ["SOLUSDT", "ETHUSDT", "XRPUSDT", "BTCUSDT"],
+  "window": { "from": "2025-01-01", "to": "2026-11-01" },
+  "timeframe": "5m",
+  "costs": { "feeBpsPerSide": 4, "slippageBpsPerSide": 2 },
+  "fundingSource": "db",
+  "stopBufferAtr": 0.1,
+  "targetsPct": [1, 2],
+  "horizonsHours": [1, 4, 12, 24, 48],
+  "holdoutFraction": 0.3,
+  "criterionId": "HOLDOUT_V1",
+  "tagsOfInterest": ["REJECTION_CONFIRMED", "STRUCTURE_SHIFT"],
+  "scaleout": {
+    "maxBars": 288,
+    "singleTargetPct": 2,
+    "ladder": {
+      "rungs": [{ "targetPct": 1, "fraction": 0.25 }, { "targetPct": 2, "fraction": 0.25 }],
+      "trail": { "kind": "CHANDELIER", "atrPeriod": 14, "multiple": 2.5 },
+      "breakEvenAfterFirstRung": true
+    }
+  }
+}

@@ -18,6 +18,16 @@ Code: `src/market/directional/`. Builds on `src/market/rejection/` (see `docs/re
 | Moves, capacity and expectancy conflated | Three separate outputs: `moveProbability`, `capacity`, `tradeExpectancy` | `potential.ts` |
 | No way to check history completeness | Per-day 1m coverage and gap count | `rejection/bars.ts` `minuteCoverageByDay` |
 
+## Defects found while building the runner
+
+| Defect | Effect | Fix |
+| --- | --- | --- |
+| The existing archive loader keeps six kline columns | Quote and taker-buy volume are missing, so the rejection and flow features cannot be computed from the archive | `archive-flow.ts`: a twelve-column loader that fails closed on bad timestamps, short rows and missing files |
+| An experiment in which every symbol is excluded crashed in the table builder | The exclusions were lost | `runExperiment` reports an empty table with the exclusion reasons |
+| A sweep bar that is large, high-volume and up-closing counted as directional expansion | A held rejection was overwritten by `VOLATILITY_EXPANSION` on the next sweep. 299 of 300 synthetic setups were tagged that way, so the tags would have selected the wrong population for EXP-001 | Expansion and exhaustion evidence exclude sweep bars. Regression test: `directionalContext.test.ts` (fails without the fix) |
+
+No experiment result depends on the third defect, because none has been run.
+
 ## Reuse
 
 | Need | Existing module | Used as |
@@ -148,8 +158,7 @@ The trailing rule is a simple research control. It is not the trailing engine's 
 
 ## Running
 
-```bash
-npx tsx --test tests/directional*.test.ts    # 65 tests
-```
+- Experiments, step by step: `docs/directional-runbook.md`. Command: `npx tsx scripts/directional-experiment.ts --config research/directional/exp-001.json [--fetch]`.
+- Tests: `npx tsx --test tests/directional*.test.ts` (76 tests).
 
-Bars, labels, settlements and costs are explicit inputs, so a research script can drive these once the data exists.
+Bars, labels, settlements and costs are explicit inputs to every function, so the runner is a thin layer over them.

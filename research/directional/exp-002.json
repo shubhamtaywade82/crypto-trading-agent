@@ -1,0 +1,24 @@
+{
+  "experiment": "EXP-002",
+  "description": "Rejection with volatility expansion at entry. Target window 2-5%. Context-tagged cells against the untagged rejection baseline. Absorption is not split out as its own cell in this version.",
+  "symbols": ["SOLUSDT", "ETHUSDT", "XRPUSDT", "BTCUSDT"],
+  "window": { "from": "2025-01-01", "to": "2026-11-01" },
+  "timeframe": "5m",
+  "costs": { "feeBpsPerSide": 4, "slippageBpsPerSide": 2 },
+  "fundingSource": "db",
+  "stopBufferAtr": 0.1,
+  "targetsPct": [2, 3, 5],
+  "horizonsHours": [4, 12, 24, 48, 72],
+  "holdoutFraction": 0.3,
+  "criterionId": "HOLDOUT_V1",
+  "tagsOfInterest": ["VOLATILITY_EXPANSION", "REJECTION_CONFIRMED"],
+  "scaleout": {
+    "maxBars": 864,
+    "singleTargetPct": 3,
+    "ladder": {
+      "rungs": [{ "targetPct": 2, "fraction": 0.25 }, { "targetPct": 3, "fraction": 0.25 }, { "targetPct": 5, "fraction": 0.25 }],
+      "trail": { "kind": "CHANDELIER", "atrPeriod": 14, "multiple": 2.5 },
+      "breakEvenAfterFirstRung": true
+    }
+  }
+}

@@ -159,3 +159,24 @@ test('a confirmed rejection becomes a setup entered at the confirming close, sto
   assert.equal(built.skippedNotBeyondEntry, 0);
   assert.throws(() => setupsFromRejections(bars, events, series, { side: 'SHORT', stopBufferAtr: 0.1 }), /context is for LONG/);
 });
+
+test('a sweep bar that is large and up is a rejection attempt, not directional expansion; the next large up bar is expansion', () => {
+  // Regression: sweep bars are usually large, high-volume, up-closing bars. They must not turn a held rejection into expansion.
+  const big: Px = { o: 100, h: 104.5, l: 100, c: 104, quote: 30_000 };
+  const bars = flowSeries('5m', [
+    ...Array.from({ length: 20 }, () => FLAT),
+    SWEEP_DEMAND,
+    FOLLOW,
+    big,
+    { o: 104, h: 108.5, l: 104, c: 108, quote: 30_000 },
+  ]);
+  const events = [
+    ...detectRejections(bars, SMALL_CONFIG),
+    { ...makeEvent({ id: 'second-sweep', direction: 'DEMAND', zoneLow: 99, zoneHigh: 100, resolvedAt: null, atr: 2, status: 'CANDIDATE' }),
+      sweepOpenTime: bars[22]!.openTime, kind: 'REJECTION' as const },
+  ];
+  const series = classifyExpansionContext(bars, events, LONG);
+  assert.equal(series.states[21], 'REJECTION_CONFIRMED');
+  assert.equal(series.states[22], 'REJECTION_CONFIRMED', 'the second sweep bar is not expansion');
+  assert.equal(series.states[23], 'VOLATILITY_EXPANSION', 'a later large, up bar is');
+});

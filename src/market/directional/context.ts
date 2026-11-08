@@ -221,8 +221,6 @@ export function classifyExpansionContext(
     const range = bar.high - bar.low;
     const big = atr !== null && rel !== null && range >= opts.expansionAtr * atr && rel >= opts.minRelativeVolume;
     const up = (xClose[t] as number) > (xOpen[t] as number);
-    const expansion = big && up;
-    const opposing = big && !up;
     const breakLost = breakLevel !== null && (xClose[t] as number) < breakLevel;
 
     const sweeps = bySweep.get(bar.openTime) ?? [];
@@ -231,6 +229,10 @@ export function classifyExpansionContext(
     const absorb = sweeps.some((e) => e.kind === 'ABSORPTION_LIKE');
     const confirm = resolves.some((e) => e.status === 'CONFIRMED');
     const failed = resolves.some((e) => e.status === 'FAILED');
+    // A sweep bar is a rejection attempt, not the directional move that follows one. Sweep bars are usually large,
+    // high-volume bars, so without this exclusion every rejection would be labelled as expansion on its own bar.
+    const expansion = big && up && !sweep;
+    const opposing = big && !up && !sweep;
     const compressed = classifyVolatilityPhase(pct[t] ?? null) === 'COMPRESSED';
     const inStructureFamily = state === 'STRUCTURE_SHIFT' || state === 'VOLATILITY_EXPANSION' || state === 'TREND_CONTINUATION';
 

@@ -1,0 +1,86 @@
+{
+  "schemaVersion": 1,
+  "runId": "CONTEXT-STRATEGY-20261108T0632Z-AUTO11",
+  "checkedAtUtc": "2026-11-08T06:32:56.001Z",
+  "environment": {
+    "cwd": "/",
+    "os": "Debian GNU/Linux 13.3",
+    "node": "v22.16.0",
+    "npm": "10.9.2",
+    "cpuCores": 5,
+    "memoryTotalBytes": 6236844032,
+    "memoryAvailableBytes": 5047390208,
+    "diskFreeGiB": 30,
+    "localRepositoryPresent": false,
+    "binanceSdkInstalled": false
+  },
+  "checks": [
+    {
+      "capability": "shell/compute",
+      "status": "PASS",
+      "evidence": "Shell available; cwd=/; Debian 13.3; Node22.16.0; npm10.9.2; 5 CPUs; 6.24GB RAM; 30GiB free.",
+      "impact": "Managed compute available; project runtime floor not met.",
+      "nextAction": "Provision Node24/npm11 for repository CLI."
+    },
+    {
+      "capability": "repo/code",
+      "status": "BLOCKED",
+      "evidence": "No local checkout; GitHub remote files accessible; repository requires Node>=24/npm>=11; local Node22.16/npm10.9; Binance SDK absent.",
+      "impact": "Repository scripts/backtest.ts not invoked; inline experiment has no repository code hash.",
+      "nextAction": "Provision compatible runtime and clean checkout; run npm ci and repo tests."
+    },
+    {
+      "capability": "network/Binance endpoints",
+      "status": "DEGRADED",
+      "evidence": "Direct fapi.binance.com probes returned HTTP_000/DNS failure for /time,/exchangeInfo,/klines,/premiumIndex,/openInterest,/ticker/24hr. Binance connector returned market data. exchangeInfo.serverTime=2026-11-06T11:18:40.899Z; mark time=2026-11-08T06:32:56.001Z; drift=155655.102s.",
+      "impact": "Snapshot usable as observed data; contract metadata stale and not execution-valid.",
+      "nextAction": "Restore uncached DNS/HTTPS and require <=60s server-time drift."
+    },
+    {
+      "capability": "raw historical archive",
+      "status": "PASS",
+      "evidence": "GitHub raw branch research/raw-ohlcv-archive-20261108T0625Z-run21; 96 completed rows persisted at research-data/binance-usdm/delta/binance_usdm_delta_20261108T063256Z_5m15m1h_completed.jsonl; SHA256 fdbc99e1c38c84f6907f5b02904c552edafdb49fcc788fb90110fb726393a49d; manifest research-data/binance-usdm/delta/manifest-20261108T063256Z-5m15m1h.json; delta/manifest/index readback verified.",
+      "impact": "Incremental 5m/15m/1h history advanced; 4h highwater unchanged because 04:00 candle is forming.",
+      "nextAction": "Continue hourly append; backfill multi-year 5m/15m."
+    },
+    {
+      "capability": "data quality/coverage",
+      "status": "DEGRADED",
+      "evidence": "SOL/BTC 4h input 13,454 aligned rows each, 2020-09-14T08:00Z to 2026-11-04T12:00Z; zero row-level gaps/invariant failures. Four page manifest SHA mismatches remain, while GitHub blob SHA checks pass. Multi-year 5m/15m absent.",
+      "impact": "SOL 4h experiment possible; complete multi-timeframe/provenance gates remain open.",
+      "nextAction": "Resolve page provenance and lower-interval history before broad strategy claims."
+    },
+    {
+      "capability": "backtest harness/smoke test",
+      "status": "DEGRADED",
+      "evidence": "Inline V8 harness completed a frozen SOL OOS experiment; stop-first/adverse-gap fixture and future-mutation no-lookahead test passed. Repository CLI smoke test NOT_RUN.",
+      "impact": "OOS result exists, but repository harness is not certified.",
+      "nextAction": "Port runner to repo and execute under Node24/npm11."
+    },
+    {
+      "capability": "disk/storage",
+      "status": "PASS",
+      "evidence": "30GiB local free; GitHub branch writes succeeded for raw delta, manifest and index.",
+      "impact": "Remote durable storage available; no local raw archive materialized.",
+      "nextAction": "Continue atomic writes and readback verification."
+    },
+    {
+      "capability": "artifact readback",
+      "status": "PASS",
+      "evidence": "Raw delta/manifest/index and experiment/registry artifacts read back exactly; report/preflight/run/queue readback pending.",
+      "impact": "Raw archive and experiment/registry persistence verified.",
+      "nextAction": "Verify remaining report and queue artifacts after commit."
+    },
+    {
+      "capability": "Binance SDK",
+      "status": "BLOCKED",
+      "evidence": "No package importable; Node22 below repository requirement; market data in this run used Binance connector.",
+      "impact": "No SDK use claimed.",
+      "nextAction": "Install pinned SDK in compatible checkout."
+    }
+  ],
+  "classification": "OOS_EVALUATED",
+  "researchExecuted": true,
+  "oosEvaluated": true,
+  "validatedEntries": 0
+}

@@ -1,0 +1,241 @@
+{
+  "schemaVersion": "1.0.0",
+  "runId": "CONTEXT-STRATEGY-20261107T0833Z-V103",
+  "createdAtUtc": "2026-11-07T08:33:13.394Z",
+  "environment": {
+    "runtime": "Managed tool runtime with container shell",
+    "cwd": "/",
+    "os": "Debian GNU/Linux 13 (trixie)",
+    "kernel": "6.18.57",
+    "node": "v22.16.0",
+    "npm": "10.9.2",
+    "pnpm": "NOT_INSTALLED",
+    "cpuCores": 5,
+    "memoryTotalKiB": 6090668,
+    "memoryAvailableKiB": 4933560,
+    "diskTotalGiB": 32,
+    "diskFreeGiB": 30,
+    "localRepositoryCheckout": false,
+    "sdkPackages": {
+      "@nemesis-oss/binance-sdk": "NOT_INSTALLED",
+      "binance": "NOT_INSTALLED",
+      "@binance/connector": "NOT_INSTALLED",
+      "ccxt": "NOT_INSTALLED"
+    }
+  },
+  "checks": [
+    {
+      "capability": "Shell / compute",
+      "status": "PASS",
+      "evidence": "cwd=/; Debian 13 (trixie), kernel 6.18.57; Node v22.16.0; npm 10.9.2; 5 CPUs; RAM 5.8GiB total / 4.7GiB available; 30GiB free disk.",
+      "impact": "Shell, lightweight feature computation and file operations are available; the Node runtime is below the repository engine floor.",
+      "nextAction": "Use a compatible Node 24+/npm 11+ runner for repository execution."
+    },
+    {
+      "capability": "Repository / code",
+      "status": "DEGRADED",
+      "evidence": "GitHub remote source read succeeded; no local crypto-trading-agent checkout under accessible paths; package v2.4.1 requires Node>=24/npm>=11; remote scripts inspected but not invoked.",
+      "impact": "Remote source audit and GitHub writes possible; local repository tests/backtests unavailable.",
+      "nextAction": "Provision a clean local checkout under Node 24+/npm 11+."
+    },
+    {
+      "capability": "Binance SDK dependencies",
+      "status": "BLOCKED",
+      "evidence": "require.resolve probes for @nemesis-oss/binance-sdk, binance, @binance/connector and ccxt all returned NOT_INSTALLED.",
+      "impact": "No Binance SDK execution occurred.",
+      "nextAction": "Install pinned SDK dependencies after a compatible checkout is available."
+    },
+    {
+      "capability": "Direct Binance REST",
+      "status": "BLOCKED",
+      "evidence": "Six bounded curl probes to fapi.binance.com returned HTTP 000. /time, /klines and /openInterest failed curl exit 6; /exchangeInfo, /premiumIndex and /ticker/24hr failed DNS resolution timeout (exit 28).",
+      "impact": "No direct REST headers/status payloads or fresh /fapi/v1/time response are available.",
+      "nextAction": "Restore DNS/HTTPS or provide an uncached, timestamped Binance REST route."
+    },
+    {
+      "capability": "Binance public market-data connector",
+      "status": "DEGRADED",
+      "evidence": "Fresh USD-M mark, ticker, OI, top-of-book, funding history, OI statistics, taker flow, global long/short ratio and klines retrieved at 2026-11-07T08:33Z; connector does not expose raw HTTP status/headers.",
+      "impact": "Current monitoring and raw-bar archival are possible; HTTP-level provenance is not auditable.",
+      "nextAction": "Retain connector provenance and retry direct REST when DNS is restored."
+    },
+    {
+      "capability": "Exchange metadata freshness",
+      "status": "BLOCKED",
+      "evidence": "exchangeInfo.serverTime=2026-11-06T11:18:40.896Z; fresh BTC mark timestamp=2026-11-07T08:33:19.001Z; drift=76,478.105s. TRADING/PERPETUAL statuses were returned but are stale.",
+      "impact": "Contract status and filters cannot be used for execution validation.",
+      "nextAction": "Require fresh /time and /exchangeInfo with <=60s drift before any execution validation."
+    },
+    {
+      "capability": "Raw historical archive",
+      "status": "DEGRADED",
+      "evidence": "Remote 1h archive pages 1-36: 53,871 rows/symbol, 215,484 total, 2020-09-14T08:00Z to 2026-11-06T22:00Z; incremental 1h high-water 2026-11-07T07:00Z. Canonical 4h: 13,468 rows/symbol, 53,872 total, through 2026-11-06T20:00Z; incremental 4h high-water 2026-11-07T04:00Z. Multi-year 5m/15m absent; missing 76-row artifact remains NOT_FOUND; 14 source-manifest hash provenance mismatches remain despite row-identical alternate replay.",
+      "impact": "Long-cycle 1h/4h research is possible in principle, but the complete multi-timeframe archive and provenance closure are not complete.",
+      "nextAction": "Backfill multi-year 5m/15m; rebuild/readback canonical 4h through its incremental high-water; recover the 76-row artifact and preserve original hash provenance."
+    },
+    {
+      "capability": "Data quality / coverage",
+      "status": "DEGRADED",
+      "evidence": "Current rolling sample: 4 symbols x 4 intervals; 100 rows each for 5m/15m/1h and 250 for 4h; 99/99/99/249 completed per symbol, 1 forming excluded per series. All rolling checks returned zero duplicates, gaps, off-grid timestamps, close-time failures, OHLC failures, non-positive volume and non-finite values; cross-symbol alignment passed. Archive-wide caveats remain.",
+      "impact": "Current feature classification is usable; historical 5m/15m strategy research is not adequately covered.",
+      "nextAction": "Continue verified incremental appends and complete multi-year lower-timeframe backfill."
+    },
+    {
+      "capability": "Backtest harness / deterministic smoke test",
+      "status": "BLOCKED",
+      "evidence": "Remote scripts exist but no local checkout or compatible Node runtime; smoke test NOT_RUN. Existing CLI defaults (minN 30 / 90% CI / zero embargo; ablation holdout minimum 10) are below the requested gates. Legacy backtest path drops closeTime, and archiveKlines reads Binance Vision ZIPs rather than the GitHub research-data JSONL archive.",
+      "impact": "No valid backtest, experiment or untouched OOS evaluation can be claimed.",
+      "nextAction": "Provision Node 24+/npm 11+, implement the GitHub JSONL archive adapter, preserve closeTime, reject volume<=0, add deterministic no-lookahead fixtures, and enforce >=100 OOS trades per symbol/context with purging/embargo and 95% CI."
+    },
+    {
+      "capability": "Disk / storage",
+      "status": "PASS",
+      "evidence": "Container root filesystem: 32GiB total, 30GiB free; GitHub branch writes succeeded.",
+      "impact": "Persistent raw and research artifacts can be written.",
+      "nextAction": "Continue atomic GitHub writes and exact readback verification."
+    },
+    {
+      "capability": "Artifact readback",
+      "status": "PASS",
+      "evidence": "80-row raw delta SHA-256 verified; delta manifest VERIFIED_READBACK; 4h archive-index readback PASS; research report, preflight, registry and 98-item queue all fetched back and identity-checked on the unified research branch.",
+      "impact": "This run's raw archive append and index update are durable and verified.",
+      "nextAction": "Continue atomic writes with exact readback and checksum verification; do not infer persistence from write acknowledgements."
+    },
+    {
+      "capability": "Current context classification",
+      "status": "PASS",
+      "evidence": "Completed candles only; frozen CTX v2 training thresholds applied to 249 completed 4h bars/symbol; no q99 shock threshold exceeded.",
+      "impact": "Current context labels are available for monitoring, not evidence of a profitable setup.",
+      "nextAction": "Keep taxonomy thresholds frozen until the scheduled weekly review."
+    },
+    {
+      "capability": "Research experiment / OOS",
+      "status": "BLOCKED",
+      "evidence": "No repository smoke test; no experiment harness invocation; no experiment metrics or untouched test evaluation produced.",
+      "impact": "No RESEARCH_EXECUTED or OOS_EVALUATED status is justified.",
+      "nextAction": "Resolve runtime, archive and cost prerequisites before the next pre-registered experiment."
+    }
+  ],
+  "directEndpointProbes": [
+    {
+      "endpoint": "GET /fapi/v1/time",
+      "status": "BLOCKED",
+      "httpStatus": 0,
+      "curlExit": 6,
+      "evidence": "DNS could not resolve fapi.binance.com."
+    },
+    {
+      "endpoint": "GET /fapi/v1/exchangeInfo",
+      "status": "BLOCKED",
+      "httpStatus": 0,
+      "curlExit": 28,
+      "evidence": "DNS resolution timed out after 5s."
+    },
+    {
+      "endpoint": "GET /fapi/v1/klines",
+      "status": "BLOCKED",
+      "httpStatus": 0,
+      "curlExit": 6,
+      "evidence": "DNS could not resolve fapi.binance.com."
+    },
+    {
+      "endpoint": "GET /fapi/v1/premiumIndex",
+      "status": "BLOCKED",
+      "httpStatus": 0,
+      "curlExit": 28,
+      "evidence": "DNS resolution timed out after 5s."
+    },
+    {
+      "endpoint": "GET /fapi/v1/openInterest",
+      "status": "BLOCKED",
+      "httpStatus": 0,
+      "curlExit": 6,
+      "evidence": "DNS could not resolve fapi.binance.com."
+    },
+    {
+      "endpoint": "GET /fapi/v1/ticker/24hr",
+      "status": "BLOCKED",
+      "httpStatus": 0,
+      "curlExit": 28,
+      "evidence": "DNS resolution timed out after 5s."
+    }
+  ],
+  "exchangeMetadata": {
+    "serverTimeUtc": "2026-11-06T11:18:40.896Z",
+    "freshMarkTimeUtc": "2026-11-07T08:33:19.001Z",
+    "driftSeconds": 76478.105,
+    "observedSymbols": [
+      "BTCUSDT",
+      "ETHUSDT",
+      "SOLUSDT",
+      "XRPUSDT"
+    ],
+    "observedStatus": "TRADING",
+    "usableForExecutionValidation": false
+  },
+  "archiveAppend": {
+    "branch": "research/raw-ohlcv-archive-202611070831Z",
+    "deltaPath": "research-data/binance-usdm/delta/binance_usdm_delta_202611070831Z_5m15m1h4h_completed.jsonl",
+    "manifestPath": "research-data/binance-usdm/delta/manifest-202611070831Z-5m15m1h4h.json",
+    "archiveIndexPath": "research-data/binance-usdm/4h/archive-index.json",
+    "rowsFetched": 96,
+    "completedRows": 80,
+    "formingRowsExcluded": 16,
+    "rowCountsByInterval": {
+      "5m": 52,
+      "15m": 20,
+      "1h": 4,
+      "4h": 4
+    },
+    "highWaterUtc": {
+      "5m": "2026-11-07T08:25:00.000Z",
+      "15m": "2026-11-07T08:15:00.000Z",
+      "1h": "2026-11-07T07:00:00.000Z",
+      "4h": "2026-11-07T04:00:00.000Z"
+    },
+    "sha256": "20ecdd7a4972e7528400fc37f55020f7b1199e0a36fcc6f53169b93fff94a633",
+    "quality": {
+      "duplicates": 0,
+      "gaps": 0,
+      "offGrid": 0,
+      "closeTimeFailures": 0,
+      "ohlcFailures": 0,
+      "nonPositiveVolume": 0,
+      "nonFinite": 0,
+      "crossSymbolAlignment": true
+    },
+    "manifestReadbackVerified": true,
+    "archiveIndexReadbackVerified": true
+  },
+  "executionClassification": "RESEARCH_BLOCKED",
+  "researchExperimentExecuted": false,
+  "oosEvaluated": false,
+  "monitoringCompleted": true,
+  "archiveMaintenanceCompleted": true,
+  "researchArtifactsReadback": {
+    "report": {
+      "path": "research/context-strategy/reports/context_strategy_research_20261107T0833Z_v103.json",
+      "blobSha": "d4a481477468e29986cbdba8fbc1bbfc31add138",
+      "verified": true
+    },
+    "registry": {
+      "path": "research/context-strategy/registry/conditional_strategy_registry_20261107T0833Z_v103.json",
+      "blobSha": "16111b2e03826b45c91dc5496951f9a3880f747a",
+      "verified": true
+    },
+    "queue": {
+      "path": "research/context-strategy/queue.json",
+      "verified": true,
+      "blobShaRecordedInQueue": false
+    },
+    "rawDelta": {
+      "path": "research-data/binance-usdm/delta/binance_usdm_delta_202611070831Z_5m15m1h4h_completed.jsonl",
+      "sha256": "20ecdd7a4972e7528400fc37f55020f7b1199e0a36fcc6f53169b93fff94a633",
+      "verified": true
+    },
+    "archiveIndex": {
+      "path": "research-data/binance-usdm/4h/archive-index.json",
+      "verified": true
+    }
+  }
+}

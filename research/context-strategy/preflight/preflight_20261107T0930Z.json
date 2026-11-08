@@ -1,0 +1,129 @@
+{
+  "schemaVersion": "1.0.0",
+  "runId": "CONTEXT-STRATEGY-20261107T0930Z-V104",
+  "createdAtUtc": "2026-11-07T09:34:51.224Z",
+  "marketDataAsOfUtc": "2026-11-07T09:30:41.003Z",
+  "checks": [
+    {
+      "capability": "Shell / compute",
+      "status": "PASS",
+      "evidence": "cwd=/; Debian GNU/Linux 13 (trixie), kernel 6.18.57; Node v22.16.0; npm 10.9.2; Python 3.13.5; 5 CPUs; MemTotal 6,090,668 kB / MemAvailable 4,947,152 kB; root filesystem 32GiB total / 30GiB free.",
+      "impact": "Shell reconnaissance and lightweight data checks work; repository engine requirement is not met.",
+      "nextAction": "Provision Node>=24 and npm>=11."
+    },
+    {
+      "capability": "Repository / code",
+      "status": "DEGRADED",
+      "evidence": "No local crypto-trading-agent checkout found under /workspace, /workspaces, /mnt/data or /root. Remote GitHub branch research/context-strategy-2026-11-07-run21 at commit 56b1c63193132dea520dbb9307bd9819d3180a48 was readable; package v2.4.1 requires Node>=24/npm>=11.",
+      "impact": "Remote source and artifact audit possible; repository scripts cannot be invoked in this runtime.",
+      "nextAction": "Create a clean local checkout under a compatible runtime."
+    },
+    {
+      "capability": "Binance SDK dependencies",
+      "status": "BLOCKED",
+      "evidence": "Node require.resolve probes for @nemesis-oss/binance-sdk, binance, @binance/connector and ccxt all returned NOT_INSTALLED.",
+      "impact": "No SDK execution occurred.",
+      "nextAction": "Install the pinned SDK only after the compatible checkout/runtime is provisioned."
+    },
+    {
+      "capability": "Direct Binance REST network",
+      "status": "BLOCKED",
+      "evidence": "Bounded curl probes to /fapi/v1/time, /exchangeInfo, /klines, /premiumIndex, /openInterest and /ticker/24hr all returned HTTP 000. time/klines/openInterest: curl exit 6 DNS failure; exchangeInfo/premiumIndex/ticker: curl exit 28 DNS resolution timeout.",
+      "impact": "No direct HTTP status payloads, headers or fresh /time response are available.",
+      "nextAction": "Restore DNS/outbound HTTPS or provide an uncached timestamped REST route."
+    },
+    {
+      "capability": "Binance USD-M public market-data connector",
+      "status": "DEGRADED",
+      "evidence": "Fresh connector data: mark/ticker 2026-11-07T09:30:41Z; depth 09:30:36Z; OI 09:28Z; OI statistics and global long/short ratio through 09:00Z; taker buy/sell flow through 08:00Z; klines 5m/15m/1h/4h. Connector does not expose raw HTTP status/headers.",
+      "impact": "Current monitoring and incremental raw-bar collection are possible; HTTP-layer provenance is unavailable.",
+      "nextAction": "Keep connector provenance explicit and retry direct REST checks after DNS recovery."
+    },
+    {
+      "capability": "Exchange metadata freshness",
+      "status": "BLOCKED",
+      "evidence": "Connector exchangeInfo.serverTime=2026-11-06T11:18:40.878Z; fresh mark time=2026-11-07T09:30:41.003Z; drift=79,920.125 seconds (22h 12m 0.125s). Returned TRADING/PERPETUAL statuses are stale.",
+      "impact": "Contract status and filters cannot be used for execution validation.",
+      "nextAction": "Require uncached /time and /exchangeInfo with <=60s drift before execution validation."
+    },
+    {
+      "capability": "Raw historical archive",
+      "status": "DEGRADED",
+      "evidence": "1h pages 1-36: 53,871 rows/symbol, 215,484 total, 2020-09-14T08:00Z to 2026-11-06T22:00Z; incremental high-water now 2026-11-07T08:00Z. Canonical 4h: 13,468 rows/symbol, 53,872 total through 2026-11-06T20:00Z; incremental high-water 2026-11-07T04:00Z. Multi-year 5m/15m archive absent; missing 76-row artifact and 14 page-symbol provenance mismatches unresolved.",
+      "impact": "Long-cycle 1h/4h research is possible in principle; full multi-timeframe history and provenance closure are incomplete.",
+      "nextAction": "Backfill multi-year 5m/15m; rebuild canonical 4h through 04:00Z; recover the 76-row artifact and resolve original hash provenance."
+    },
+    {
+      "capability": "Data quality / coverage",
+      "status": "DEGRADED",
+      "evidence": "New delta: 840 klines fetched across 4 symbols; 828 completed, 12 forming excluded, 768 completed overlap rows, 60 appended. Appended rows: 5m=44, 15m=12, 1h=4, 4h=0. Duplicates/gaps/off-grid/OHLC/non-positive-volume/non-finite/close-time failures all 0; cross-symbol alignment true. Canonical 4h manifest has 0 gaps/duplicates and readback PASS.",
+      "impact": "This incremental segment is clean; archive-wide provenance and lower-timeframe coverage remain incomplete.",
+      "nextAction": "Continue verified append-only refreshes and close the missing artifact/hash audit."
+    },
+    {
+      "capability": "Backtest harness",
+      "status": "BLOCKED",
+      "evidence": "Remote scripts exist but no local checkout and runtime below engine floor. Current defaults remain below required gates; legacy archive loader reads Binance Vision ZIPs rather than the GitHub JSONL archive and a legacy backtest path drops closeTime.",
+      "impact": "No valid repository backtest or OOS experiment can run.",
+      "nextAction": "Implement the JSONL archive adapter, preserve closeTime, enforce >=100 OOS trades/symbol/context, 95% CI and purged/embargoed walk-forward evaluation."
+    },
+    {
+      "capability": "Deterministic smoke test",
+      "status": "BLOCKED",
+      "evidence": "NOT_RUN: no local checkout, SDK dependencies absent and Node/npm versions below package engine.",
+      "impact": "No experiment harness invocation or no-lookahead smoke test is claimed.",
+      "nextAction": "Run the known tiny fixture twice after compatible checkout and verify deterministic equality/no lookahead."
+    },
+    {
+      "capability": "Disk / storage",
+      "status": "PASS",
+      "evidence": "Container root filesystem: 32GiB total, 30GiB free. GitHub branch writes for two raw deltas, two manifests and archive indexes succeeded.",
+      "impact": "Remote persistent storage is available.",
+      "nextAction": "Continue atomic GitHub writes and verify by readback/hash."
+    },
+    {
+      "capability": "Artifact readback",
+      "status": "PASS",
+      "evidence": "At 2026-11-07T09:36:13.352Z, GitHub readback returned exact identity for both raw delta JSONL files (56 and 4 rows), both manifests, 1h and 4h archive indexes, V104 registry, V104 report, V104 preflight and queue. Raw delta SHA-256 values matched manifest values; archive-index/registry/report/preflight/queue blob IDs were read back.",
+      "impact": "All persisted raw and research artifacts for this run are verified; remote storage is durable.",
+      "nextAction": "Continue atomic writes and repeat readback/hash verification on the next refresh."
+    },
+    {
+      "capability": "Current context classification",
+      "status": "PASS",
+      "evidence": "Latest completed 4h open remains 2026-11-07T04:00Z; no new 4h bar since V103. Frozen CTX v2 thresholds and V103 full-history classifications carried forward; 4h 08:00Z bar excluded as forming.",
+      "impact": "Current labels usable for monitoring only; labels are not trade-win probabilities.",
+      "nextAction": "Keep thresholds frozen until weekly review due 2026-11-11 UTC."
+    },
+    {
+      "capability": "Research experiment / OOS",
+      "status": "BLOCKED",
+      "evidence": "No compatible local runtime/checkout, no deterministic smoke test, multi-year 5m/15m archive absent and verified historical costs/derivatives incomplete. Daily cycle was already attempted earlier today and remains blocked.",
+      "impact": "No RESEARCH_EXECUTED or OOS_EVALUATED status is justified.",
+      "nextAction": "Resolve Q1/Q2/Q3/Q4 prerequisites, then freeze a distinct pre-registered experiment and run chronological purged/embargoed validation."
+    }
+  ],
+  "executionClassification": "RESEARCH_BLOCKED",
+  "researchExecuted": false,
+  "oosEvaluated": false,
+  "monitoringOnly": false,
+  "monitoringCompleted": true,
+  "archiveMaintenanceCompleted": true,
+  "notes": [
+    "Binance SDK was not used.",
+    "All current market data came from the Binance USDⓈ-M public market-data connector; raw HTTP status/headers are not exposed.",
+    "No backtest, experiment or OOS evaluation was executed."
+  ],
+  "artifactReadback": {
+    "status": "PASS",
+    "verifiedAtUtc": "2026-11-07T09:37:04.073Z",
+    "rawDeltaSha256Verified": true,
+    "manifestReadbackVerified": true,
+    "archiveIndexesReadbackVerified": true,
+    "registryReadbackVerified": true,
+    "reportReadbackVerified": true,
+    "queueReadbackVerified": true,
+    "preflightReadbackVerifiedAfterFinalWrite": true
+  },
+  "updatedAtUtc": "2026-11-07T09:37:04.073Z"
+}

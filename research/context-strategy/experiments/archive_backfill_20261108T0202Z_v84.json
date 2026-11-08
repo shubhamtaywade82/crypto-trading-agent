@@ -1,0 +1,80 @@
+{
+  "schema_version": "1.0.0",
+  "experiment_id": "DQ-ARCHIVE-BACKFILL-20261108T0154Z-V84",
+  "created_at_utc": "2026-11-08T02:04:31.806Z",
+  "experiment_type": "historical_data_backfill_and_incremental_append",
+  "hypothesis": "A bounded historical kline page and incremental completed-bar append can extend the raw sample without duplicate, missing, off-grid or malformed OHLCV records while preserving cross-symbol alignment.",
+  "pre_registered": false,
+  "experiment_scope": "DATA_QUALITY_ONLY; not a trading strategy experiment",
+  "sources": {
+    "provider": "Binance USDⓈ-M connector",
+    "raw_http_status_available": false,
+    "endpoints": [
+      "GET /fapi/v1/klines"
+    ]
+  },
+  "backfill_spec": {
+    "symbols": [
+      "BTCUSDT",
+      "ETHUSDT",
+      "SOLUSDT",
+      "XRPUSDT"
+    ],
+    "intervals": [
+      "5m",
+      "15m"
+    ],
+    "limit_per_request": 1500,
+    "end_time_utc": "2026-11-04T23:59:59.999Z",
+    "rows": 12000,
+    "rows_per_symbol_interval": 1500
+  },
+  "backfill_result": {
+    "sha256": "fa92a4ee1f45a51fe92adb6aa45e47a62501bcd72cff4c7b2cbb730866e95a00",
+    "git_blob_sha1": "067e4f6f6fdb8fa6917ff57756017f452cb49ca8",
+    "bytes": 3366716,
+    "branch": "research/raw-ohlcv-archive-20261108T0154Z-run21",
+    "path": "research-data/binance-usdm/backfill/binance_usdm_backfill_20261105T0000Z_5m15m_1500bars.jsonl",
+    "blob_identity_verified": true,
+    "full_content_body_readback": false
+  },
+  "incremental_result": [
+    {
+      "rows": 100,
+      "sha256": "fe48bf50cff5c6188630fbf1ba68305306740445a6ed2945e8a15b5ac5d0dbc0",
+      "branch": "research/raw-ohlcv-archive-20261108T0154Z-run20",
+      "path": "research-data/binance-usdm/delta/binance_usdm_delta_20261108T0154Z_5m15m1h_completed.jsonl"
+    },
+    {
+      "rows": 16,
+      "sha256": "190d2db9ba26ad96bf0e8a2f836b81fc45ae3be16b8efdb845552ffe88f10ccd",
+      "branch": "research/raw-ohlcv-archive-20261108T0202Z-run22",
+      "path": "research-data/binance-usdm/delta/binance_usdm_delta_20261108T0202Z_5m15m1h_completed.jsonl"
+    }
+  ],
+  "validation": {
+    "backfill_rows": 12000,
+    "incremental_rows": 116,
+    "duplicates": 0,
+    "missing_intervals": 0,
+    "off_grid": 0,
+    "ohlc_invariant_failures": 0,
+    "non_finite": 0,
+    "non_positive_volume": 0,
+    "forming_bars_excluded": true,
+    "cross_symbol_alignment": true
+  },
+  "outcomes": {
+    "data_quality_experiment": "COMPLETED",
+    "strategy_experiments": 0,
+    "oos_evaluations": 0,
+    "canonical_index_advanced": false
+  },
+  "limitations": [
+    "No multi-year 5m/15m coverage yet.",
+    "Nov 5 missing 76-row artifact remains unresolved.",
+    "Connector does not expose HTTP status/headers.",
+    "No local harness or OOS evaluation."
+  ],
+  "evidence_status": "DATA_QUALITY_EXPERIMENT_COMPLETED"
+}

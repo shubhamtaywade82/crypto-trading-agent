@@ -1,0 +1,192 @@
+{
+  "schema_version": "1.0.0",
+  "run_id": "context-strategy-2026-11-08-run34",
+  "version": "v84",
+  "created_at_utc": "2026-11-08T02:04:31.806Z",
+  "market_data_as_of_utc": "2026-11-08T02:02:13.000Z",
+  "run_status": "RESEARCH_EXECUTED",
+  "status_detail": "A 12,000-row historical 5m/15m backfill and 116-row incremental completed-bar append were validated and persisted. No strategy backtest or untouched OOS evaluation ran.",
+  "research_progress": {
+    "data_quality_experiments": 2,
+    "backfill_rows": 12000,
+    "incremental_completed_rows": 116,
+    "incremental_rows_by_delta": {
+      "16": 16,
+      "100": 100
+    },
+    "backfill_rows_by_interval": {
+      "5m": 6000,
+      "15m": 6000
+    },
+    "backfill_rows_per_symbol_interval": 1500,
+    "backfill_window_utc": {
+      "5m": [
+        "2026-10-30T19:00:00Z",
+        "2026-11-04T23:55:00Z"
+      ],
+      "15m": [
+        "2026-10-20T09:00:00Z",
+        "2026-11-04T23:45:00Z"
+      ]
+    },
+    "new_highwatermarks_utc": {
+      "5m": "2026-11-08T01:55:00Z",
+      "15m": "2026-11-08T01:45:00Z",
+      "1h": "2026-11-08T01:00:00Z",
+      "4h": "2026-11-07T20:00:00Z"
+    },
+    "raw_branches": [
+      "research/raw-ohlcv-archive-20261108T0154Z-run21",
+      "research/raw-ohlcv-archive-20261108T0202Z-run22"
+    ],
+    "backfill_sha256": "fa92a4ee1f45a51fe92adb6aa45e47a62501bcd72cff4c7b2cbb730866e95a00",
+    "incremental_sha256": [
+      "fe48bf50cff5c6188630fbf1ba68305306740445a6ed2945e8a15b5ac5d0dbc0",
+      "190d2db9ba26ad96bf0e8a2f836b81fc45ae3be16b8efdb845552ffe88f10ccd"
+    ],
+    "quality_checks": "All new chunks clean; current rolling samples 59/59/99/99 bars per symbol; zero duplicates/gaps/OHLC/volume failures.",
+    "historical_archive": {
+      "five_minute_fifteen_minute": "Recent backfill chunks only; multi-year coverage remains absent and Nov 5+ deltas not reconciled.",
+      "one_hour": "53,871 rows/symbol index-reported through 2026-11-06T22:00Z in prior report; not re-read this run.",
+      "four_hour": "13,461 canonical rows/symbol index-reported through 2026-11-05T16:00Z in prior report; not re-read this run.",
+      "missing_delta_76_rows": "Unresolved; coverage unknown.",
+      "canonical_archive_index_advanced": false
+    },
+    "strategy_experiments": 0,
+    "oos_evaluations": 0
+  },
+  "context_discovery": {
+    "label": "HTF_BEARISH_LTF_MIXED",
+    "classification_confidence": "MODERATE for observable EMA/return features only; not calibrated",
+    "trade_win_probability": "NOT_ESTIMATED",
+    "method": "Close relative to EMA20/EMA50 and 10-bar EMA20 slope; 20-bar returns and ATR14 are descriptive only. No training-derived thresholds.",
+    "timeframe_summary": {
+      "BTCUSDT": {
+        "five_minute": "MIXED",
+        "fifteen_minute": "MIXED",
+        "one_hour": "BEAR",
+        "four_hour": "BEAR",
+        "return20_1h_pct": -0.3706,
+        "return20_4h_pct": -5.5289,
+        "ema20_4h": 76546.946911,
+        "ema50_4h": 77498.673947,
+        "ema20_slope10_4h_pct": -1.5039,
+        "atr14_4h_pct": 0.8824
+      },
+      "ETHUSDT": {
+        "five_minute": "MIXED",
+        "fifteen_minute": "MIXED",
+        "one_hour": "BEAR",
+        "four_hour": "BEAR",
+        "return20_1h_pct": -0.6473,
+        "return20_4h_pct": -7.6956,
+        "ema20_4h": 2262.125889,
+        "ema50_4h": 2282.560504,
+        "ema20_slope10_4h_pct": -1.7407,
+        "atr14_4h_pct": 1.0998
+      },
+      "SOLUSDT": {
+        "five_minute": "BEAR",
+        "fifteen_minute": "MIXED",
+        "one_hour": "BEAR",
+        "four_hour": "BEAR",
+        "return20_1h_pct": -1.2968,
+        "return20_4h_pct": -7.1569,
+        "ema20_4h": 90.969519,
+        "ema50_4h": 93.254755,
+        "ema20_slope10_4h_pct": -1.8907,
+        "atr14_4h_pct": 1.394
+      },
+      "XRPUSDT": {
+        "five_minute": "MIXED",
+        "fifteen_minute": "MIXED",
+        "one_hour": "BEAR",
+        "four_hour": "BEAR",
+        "return20_1h_pct": -0.2067,
+        "return20_4h_pct": -11.6092,
+        "ema20_4h": 1.202809,
+        "ema50_4h": 1.236668,
+        "ema20_slope10_4h_pct": -4.3574,
+        "atr14_4h_pct": 2.0089
+      }
+    },
+    "btc_correlation_1h_60": {
+      "ETHUSDT": 0.9587,
+      "SOLUSDT": 0.8436,
+      "XRPUSDT": 0.7666
+    },
+    "relative_strength_vs_btc_20h_pct": {
+      "ETHUSDT": -0.2767,
+      "SOLUSDT": -0.9262,
+      "XRPUSDT": 0.1639
+    },
+    "frequency_duration_transitions": "NOT_COMPUTED",
+    "threshold_refit": "NOT_PERFORMED",
+    "structure_labels": "UNKNOWN",
+    "shock_state": "UNKNOWN; no train-derived shock threshold"
+  },
+  "strategy_scorecard": {
+    "registry_version": "v82",
+    "oos_validated": 0,
+    "oos_promising": 1,
+    "insufficient_evidence_baselines": 4,
+    "new_status_transitions": 0,
+    "carried_forward_entry": {
+      "key": "SOLUSDT|4h|BULL_LOW|donchian20-v0.1.0",
+      "status": "OOS_PROMISING",
+      "trades": 12,
+      "win_rate_pct": 66.7,
+      "target_before_stop_pct": 41.7,
+      "mean_net_R": 0.606,
+      "profit_factor": 2.72,
+      "max_drawdown_R": 1.3,
+      "block_bootstrap_interval_R": [
+        0.086,
+        1.199
+      ],
+      "minimum_oos_trades": 100,
+      "multi_window_stability": false,
+      "actionable": false,
+      "source": "research/context-strategy/registries/context_strategy_registry_20261107T2323Z_v81.json",
+      "note": "Carried forward unchanged; not re-run or re-evaluated."
+    },
+    "untested_families": [
+      "trend_pullback_continuation",
+      "breakout_retest_volatility_contraction",
+      "range_mean_reversion_failed_breakout_fade",
+      "volatility_expansion_momentum",
+      "btc_led_relative_strength",
+      "funding_oi_filters"
+    ],
+    "untested_status": "HYPOTHESIS"
+  },
+  "discoveries": [
+    "All four symbols remain BEAR on 1h and 4h using the descriptive EMA alignment/slope rule; 5m/15m are mixed, not a confirmed reversal.",
+    "20-bar 4h returns: BTC -5.53%, ETH -7.70%, SOL -7.16%, XRP -11.61%; these are descriptive, not strategy outcomes.",
+    "60-hour rolling 1h correlation with BTC: ETH 0.9587, SOL 0.8436, XRP 0.7666; short sample only.",
+    "Latest completed OI 00:00→01:00 changes: BTC -0.0229%, ETH -0.1044%, SOL +0.1198%, XRP +0.1240%; OI alone does not identify liquidation or side.",
+    "Latest available completed taker buy/sell ratios are not timestamp-aligned for every symbol; BTC 1.0552 at 01:00, ETH 0.7717 at 00:00, SOL 0.7777 at 00:00, XRP 0.9540 at 01:00.",
+    "Current 8h funding indications are positive and all below 0.05%; no funding threshold alert.",
+    "Top-20 book imbalance changed materially from the previous snapshot, reinforcing that it is ephemeral and not a validated signal."
+  ],
+  "decisions": {
+    "SOLUSDT": "NO_TRADE",
+    "ETHUSDT": "NO_TRADE",
+    "XRPUSDT": "NO_TRADE"
+  },
+  "decision_reasons": [
+    "No OOS_VALIDATED registry entry exists.",
+    "The only OOS_PROMISING entry is SOL 4h BULL_LOW; current SOL 4h/1h states are BEAR.",
+    "No exact validated trigger or frozen positive net-cost edge is available.",
+    "Fresh exchange metadata is unavailable; cached exchangeInfo is 38.60h stale."
+  ],
+  "current_snapshot_reference": "current_market_snapshot_20261108T0202Z_v84.json",
+  "data_quality_audit_reference": "data_quality_audit_20261108T0202Z_v84.json",
+  "experiment_reference": "archive_backfill_20261108T0202Z_v84.json",
+  "preflight_reference": "preflight_20261108T0202Z_v84.json",
+  "result_classification": {
+    "RESEARCH_EXECUTED": true,
+    "OOS_EVALUATED": false,
+    "MONITORING_ONLY": false
+  }
+}

@@ -1,0 +1,100 @@
+{
+  "schema_version": "1.0.0",
+  "run_id": "context-strategy-2026-11-08-run34",
+  "created_at_utc": "2026-11-08T02:04:31.806Z",
+  "current_rolling_sample": {
+    "bars_per_symbol_by_interval": {
+      "5m": 59,
+      "15m": 59,
+      "1h": 99,
+      "4h": 99
+    },
+    "symbols": 4,
+    "duplicates": 0,
+    "gaps": 0,
+    "off_grid": 0,
+    "ohlc_failures": 0,
+    "non_finite": 0,
+    "non_positive_volume": 0,
+    "forming_bars_excluded": 16,
+    "cross_symbol_alignment": true
+  },
+  "backfill": {
+    "path": "research-data/binance-usdm/backfill/binance_usdm_backfill_20261105T0000Z_5m15m_1500bars.jsonl",
+    "branch": "research/raw-ohlcv-archive-20261108T0154Z-run21",
+    "rows": 12000,
+    "bytes": 3366716,
+    "sha256": "fa92a4ee1f45a51fe92adb6aa45e47a62501bcd72cff4c7b2cbb730866e95a00",
+    "git_blob_sha1": "067e4f6f6fdb8fa6917ff57756017f452cb49ca8",
+    "ranges_utc": {
+      "5m": {
+        "per_symbol_rows": 1500,
+        "first_open": "2026-10-30T19:00:00Z",
+        "last_open": "2026-11-04T23:55:00Z"
+      },
+      "15m": {
+        "per_symbol_rows": 1500,
+        "first_open": "2026-10-20T09:00:00Z",
+        "last_open": "2026-11-04T23:45:00Z"
+      }
+    },
+    "checks": {
+      "duplicates": 0,
+      "gaps": 0,
+      "off_grid": 0,
+      "ohlc_failures": 0,
+      "non_finite": 0,
+      "non_positive_volume": 0,
+      "forming": 0,
+      "cross_symbol_alignment": true
+    },
+    "readback": "GitHub fetch_file returned remote blob SHA; locally recomputed Git blob SHA-1 matched exactly. Large file body was omitted by connector; manifest and SHA-256 sidecar were fetched. Full content-body readback unavailable."
+  },
+  "incremental_deltas": [
+    {
+      "branch": "research/raw-ohlcv-archive-20261108T0154Z-run20",
+      "path": "research-data/binance-usdm/delta/binance_usdm_delta_20261108T0154Z_5m15m1h_completed.jsonl",
+      "rows": 100,
+      "bytes": 27724,
+      "sha256": "fe48bf50cff5c6188630fbf1ba68305306740445a6ed2945e8a15b5ac5d0dbc0",
+      "readback": "SHA-256 and row count verified in raw branch run21"
+    },
+    {
+      "branch": "research/raw-ohlcv-archive-20261108T0202Z-run22",
+      "path": "research-data/binance-usdm/delta/binance_usdm_delta_20261108T0202Z_5m15m1h_completed.jsonl",
+      "rows": 16,
+      "bytes": 4446,
+      "sha256": "190d2db9ba26ad96bf0e8a2f836b81fc45ae3be16b8efdb845552ffe88f10ccd",
+      "readback": "16 rows and SHA-256 verified; sidecar and manifest fetched"
+    }
+  ],
+  "previous_archive_index_reported": {
+    "one_hour": {
+      "rows_per_symbol": 53871,
+      "total_rows": 215484,
+      "first_open_utc": "2020-09-14T08:00:00Z",
+      "last_completed_open_utc": "2026-11-06T22:00:00Z",
+      "verification_this_run": "NOT_RECHECKED"
+    },
+    "four_hour": {
+      "rows_per_symbol": 13461,
+      "total_rows": 53844,
+      "first_open_utc": "2020-09-14T08:00:00Z",
+      "canonical_last_open_utc": "2026-11-05T16:00:00Z",
+      "verification_this_run": "NOT_RECHECKED"
+    }
+  },
+  "unresolved": {
+    "missing_delta_path": "research-data/binance-usdm/delta/binance_usdm_delta_2026-11-05T0524Z.jsonl",
+    "expected_rows": 76,
+    "expected_sha256": "f5d9e50602f4ef4046fc4d39da053e45d3619ad147aa398a6bd1e281a7f3b93d",
+    "coverage_unknown": true,
+    "canonical_index_advanced": false,
+    "five_minute_fifteen_minute_multicycle_coverage": false
+  },
+  "notes": [
+    "The new backfill is a single recent segment per symbol/interval, not a multi-year archive.",
+    "Do not claim continuous 5m/15m coverage across the Nov 5 chain until the missing 76-row artifact and all deltas are reconciled.",
+    "No strategy backtest or OOS evaluation ran."
+  ]
+}

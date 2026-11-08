@@ -1,0 +1,96 @@
+{
+  "schema_version": "1.0.0",
+  "run_id": "context-strategy-2026-11-08-run34",
+  "created_at_utc": "2026-11-08T02:04:31.806Z",
+  "checks": [
+    {
+      "capability": "Shell / compute",
+      "status": "PASS",
+      "evidence": "cwd=/; Linux 6.18.57; Python 3.13.5; Node v22.16.0; npm10.9.2; 5 CPUs; 5.8GiB RAM total / 4.7GiB available; 30GiB free disk.",
+      "impact": "Python/JS validation and remote GitHub operations possible.",
+      "next_action": "Provision Node>=24/npm>=11 for repository runtime."
+    },
+    {
+      "capability": "Repository / code",
+      "status": "DEGRADED",
+      "evidence": "No local crypto-trading-agent checkout. GitHub remote files package.json, scripts/conditional-edge.ts, scripts/ablation-study.ts and scripts/backtest.ts fetched successfully.",
+      "impact": "Source review possible; scripts cannot be invoked locally.",
+      "next_action": "Create local checkout in compatible runtime."
+    },
+    {
+      "capability": "Node SDK / dependencies",
+      "status": "BLOCKED",
+      "evidence": "Node22.16.0/npm10.9.2 below package engines Node>=24/npm>=11; no node_modules; Python import checks binance=false and binance_sdk=false.",
+      "impact": "Binance SDK not used; connector supplied data.",
+      "next_action": "Provision compatible runtime, install dependencies, verify @nemesis-oss/binance-sdk import."
+    },
+    {
+      "capability": "Direct network / Binance REST",
+      "status": "BLOCKED",
+      "evidence": "Bounded curl probes for /fapi/v1/time, /exchangeInfo, /klines, /premiumIndex, /openInterest and /ticker/24hr returned HTTP000; curl exit 6 DNS failure or exit 28 DNS timeout.",
+      "impact": "No direct raw HTTP status/headers or fresh server time.",
+      "next_action": "Restore DNS/outbound access; continue to label connector data separately."
+    },
+    {
+      "capability": "Binance USD-M connector",
+      "status": "DEGRADED",
+      "evidence": "Fresh mark, ticker24hr, OI, klines, funding history, funding interval info, orderbook, taker flow, global long-short and OI history returned around 02:02Z; connector omits HTTP status/headers.",
+      "impact": "Monitoring and historical kline pages possible; transport status not auditable.",
+      "next_action": "Retain endpoint provenance and direct REST checks when network recovers."
+    },
+    {
+      "capability": "Exchange metadata freshness",
+      "status": "BLOCKED",
+      "evidence": "exchangeInfo.serverTime=2026-11-06T11:18:40.878Z; market snapshot=2026-11-08T02:02:13Z; lag=38.73h. Payload lists symbols TRADING but is stale.",
+      "impact": "Contract status/filter validation not accepted for execution.",
+      "next_action": "Obtain uncached /time and /exchangeInfo with <=60s drift."
+    },
+    {
+      "capability": "Raw historical archive",
+      "status": "DEGRADED",
+      "evidence": "12,000 new 5m/15m rows persisted; 116 completed incremental rows persisted. Prior 1h/4h indexes are index-reported only and not re-read this run; missing 76-row delta remains unresolved.",
+      "impact": "5m/15m coverage improved but still short and discontinuous; no canonical index advancement.",
+      "next_action": "Continue paginated older backfill and reconcile all deltas after provenance recovery."
+    },
+    {
+      "capability": "Data quality / coverage",
+      "status": "PASS",
+      "evidence": "12,000 backfill rows plus 116 incremental rows passed duplicates/gaps/alignment/OHLC/finite/positive-volume checks; current 16-series rolling sample 59/59/99/99 bars per symbol passed.",
+      "impact": "New segments are structurally clean; archive-wide continuity remains unproven.",
+      "next_action": "Re-run archive-wide checks after canonical merge."
+    },
+    {
+      "capability": "Backtest harness",
+      "status": "BLOCKED",
+      "evidence": "Remote conditional-edge CLI defaults minN=30 and 90% CI; backtest CLI supports only 15m/1h/4h and optional funding uses a constant rate; no local invocation.",
+      "impact": "Existing harness contract does not meet strict gates or full data requirements.",
+      "next_action": "Build archive-backed multi-symbol harness with purging/embargo, historical derivatives and realistic costs."
+    },
+    {
+      "capability": "Deterministic smoke test",
+      "status": "BLOCKED",
+      "evidence": "No local checkout and Node below declared engine; repository harness smoke fixture not run.",
+      "impact": "No strategy experiment or OOS result may be claimed.",
+      "next_action": "Run tiny fixture twice under Node24 and assert deterministic outputs and no lookahead."
+    },
+    {
+      "capability": "Disk / storage",
+      "status": "PASS",
+      "evidence": "30GiB free local disk; GitHub raw branches accepted writes.",
+      "impact": "Remote artifact persistence available.",
+      "next_action": "Continue atomic write/manifest workflow."
+    },
+    {
+      "capability": "Artifact readback",
+      "status": "DEGRADED",
+      "evidence": "16-row and 100-row deltas read back with SHA-256 match. 12,000-row backfill: fetch_file returned Git blob SHA matching locally recomputed Git blob SHA-1; full body omitted by connector, manifest and sidecar fetched.",
+      "impact": "Identity verified for large blob, but full text readback unavailable via connector.",
+      "next_action": "Optionally split large pages below connector content limit for full body readback; retain Git blob identity and SHA-256."
+    }
+  ],
+  "execution_classification": "RESEARCH_EXECUTED",
+  "research_executed": true,
+  "oos_evaluated": false,
+  "monitoring_only": false,
+  "note": "Two data-quality/archive experiments completed; no strategy backtest or untouched OOS evaluation."
+}

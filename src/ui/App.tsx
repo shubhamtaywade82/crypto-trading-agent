@@ -98,8 +98,7 @@ export default function App() {
 
   useEffect(() => {
     const handleResize = () => {
-      // Clear viewport to prevent ghost borders when narrowing the terminal
-      process.stdout.write('\x1b[2J\x1b[H');
+      // No manual screen clear: termina-core erases/redraws its own frame on resize; a raw 2J desyncs its diff and leaves only changed cells painted.
       setTerminalSize({
         cols: process.stdout.columns || 128,
         rows: process.stdout.rows || 58,

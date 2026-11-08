@@ -59,6 +59,25 @@ Chronological splits:
 
 Overall OOS: 103 trades; mean -0.0958R; PF 0.791; net PnL -992.39 USDT on 10,000 USDT starting equity (-9.92%); maximum drawdown 18.98%. There were 43 stop exits, 14 target exits and 46 time exits. Fees were 333.57 USDT, estimated spread/slippage 266.85 USDT and funding cashflow -34.71 USDT.
 
+Additional OOS execution metrics (exposure is the share of all 2,219 OOS bars spent in trades from that context; turnover is entry-plus-exit notional divided by initial equity):
+
+| Context | Eligible bars | Average win (R) | Average loss (R) | Average hold (bars) | Exposure | Turnover |
+|---|---:|---:|---:|---:|---:|---:|
+| BULL | 774 | +0.977 | -0.904 | 4.17 | 8.65% | 33.20x |
+| BEAR | 1,129 | +0.996 | -0.792 | 4.51 | 11.58% | 33.52x |
+
+The reported 97.5% mean-R intervals use 2,000 circular block-bootstrap replicates, block length 5 trades, seed 20261108 and Bonferroni alpha 0.025 for the two predeclared contexts. Win rate is the fraction of trades with positive net PnL after modeled costs. Target-before-stop is target hits divided by all trades; time exits count as no target. The confidence intervals cross zero in both contexts.
+
+Training/validation diagnostics:
+- Train BULL: 232 trades, +0.025R, PF 1.045; BEAR: 184 trades, -0.028R, PF 0.919.
+- Validation BULL: 63 trades, +0.050R, PF 1.105; BEAR: 54 trades, +0.114R, PF 1.302.
+- The validation block-bootstrap intervals also crossed zero. The 18/20/22 lookback neighborhood was positive in validation, but the frozen 20-bar rule failed OOS.
+
+Quarter-window OOS mean net R (trade counts in parentheses):
+- BULL: -0.357 (10), -0.839 (9), -0.076 (11), +0.381 (16).
+- BEAR: -0.026 (21), -0.330 (13), +0.270 (12), -0.221 (11).
+Only one of four windows was positive in each context.
+
 **Overall status: REJECTED.** The predeclared maximum drawdown gate was 15%; observed drawdown was 18.98%. Net expectancy was negative and PF was below 1. Per-context entries remain **INSUFFICIENT_EVIDENCE** because neither context reached 100 OOS trades and both adjusted confidence intervals cross zero.
 
 Validation looked better: BULL mean +0.050R / PF 1.105; BEAR +0.114R / PF 1.302. Validation-only lookbacks 18/20/22 were positive in both contexts. That validation strength did not survive OOS. Only one of four OOS subwindows was positive in each context.

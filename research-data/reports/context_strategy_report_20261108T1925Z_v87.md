@@ -25,7 +25,7 @@ The 12-series fetch returned 360 rows: 12 forming rows and 280 rows at/before th
 - SHA-256: `f3046c2731bde784bbbc07752681ac452a99634574ab84b0dcfe8961b3221803`
 - Manifest: `research-data/binance-usdm/delta/manifest-20261108T1925Z-5m15m1h.json`
 - Manifest SHA-256: `608d5f125366f4286d0f11766dd17ce9d2da84df8275081d021743d0b2648774`
-- The delta and manifest were fetched back; the delta SHA-256, byte count and 68-line count matched. The manifest checksum was independently recomputed with a SHA-256 implementation verified against the standard `abc` test vector; dependent index hashes were corrected and are being read back again.
+- The delta and manifest were fetched back; the delta SHA-256, byte count and 68-line count matched. The manifest checksum was independently recomputed with a SHA-256 implementation verified against the standard `abc` test vector; dependent index hashes were corrected and all three indexes were fetched back with readback=true.
 
 Structural checks on the 68 appended rows: **0 duplicates, 0 missing intervals, 0 OHLC invariant failures, 0 non-positive volumes, 0 non-finite values, 0 off-grid timestamps, 0 non-monotonic rows.**
 

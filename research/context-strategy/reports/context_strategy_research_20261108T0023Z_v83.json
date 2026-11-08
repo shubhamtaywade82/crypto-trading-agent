@@ -1,0 +1,213 @@
+{
+  "schema_version": "1.0.0",
+  "run_id": "context-strategy-2026-11-08-run32",
+  "version": "v83",
+  "created_at_utc": "2026-11-08T00:23:00.000Z",
+  "market_data_as_of_utc": "2026-11-08T00:23:00.000Z",
+  "run_status": "RESEARCH_EXECUTED",
+  "status_detail": "One reproducible data-quality append experiment completed. 68 completed OHLCV rows were appended to a dedicated raw-data branch; raw file, SHA-256 sidecar and manifest were read back and verified. No strategy backtest or untouched OOS evaluation ran.",
+  "research_progress": {
+    "rolling_validation": {
+      "series": 16,
+      "rows_requested": 3200,
+      "completed_rows": 3184,
+      "forming_rows_excluded": 16,
+      "duplicates": 0,
+      "missing_intervals": 0,
+      "off_grid": 0,
+      "ohlc_failures": 0,
+      "non_finite": 0,
+      "non_positive_volume": 0,
+      "close_time_failures": 0,
+      "cross_symbol_alignment": true
+    },
+    "new_delta": {
+      "rows": 68,
+      "rows_by_interval": {
+        "5m": 44,
+        "15m": 16,
+        "1h": 4,
+        "4h": 4
+      },
+      "bytes": 18949,
+      "sha256": "e2b005df65b6761b60b264454ce285fb111b279c210a2665f0b7ffbac784face",
+      "readback_verified": true,
+      "branch": "research/raw-ohlcv-archive-20261108T0023Z-run18",
+      "path": "research-data/binance-usdm/delta/binance_usdm_delta_20261108T0023Z_5m15m1h4h_completed.jsonl",
+      "branch_commit": "39d95f58a7a02ea65ef774a0962dac47f11db971",
+      "previous_high_watermark_utc": {
+        "5m": "2026-11-07T23:20:00Z",
+        "15m": "2026-11-07T23:00:00Z",
+        "1h": "2026-11-07T22:00:00Z",
+        "4h": "2026-11-07T16:00:00Z"
+      },
+      "new_high_watermark_utc": {
+        "5m": "2026-11-08T00:15:00Z",
+        "15m": "2026-11-08T00:00:00Z",
+        "1h": "2026-11-07T23:00:00Z",
+        "4h": "2026-11-07T20:00:00Z"
+      }
+    },
+    "historical_archive": {
+      "one_hour": {
+        "index_reported_rows_per_symbol": 53871,
+        "total_rows": 215484,
+        "symbols": 4,
+        "first_open_utc": "2020-09-14T08:00:00Z",
+        "last_completed_open_utc": "2026-11-06T22:00:00Z",
+        "pages": 36,
+        "index_sha": "bb90dadd1cebdf34f43e914b531af9de5e94996f",
+        "status": "INDEX_REPORTED; canonical index not advanced with recent deltas"
+      },
+      "four_hour": {
+        "canonical_rows_per_symbol": 13461,
+        "total_rows": 53844,
+        "first_open_utc": "2020-09-14T08:00:00Z",
+        "canonical_last_open_utc": "2026-11-05T16:00:00Z",
+        "latest_delta_open_utc": "2026-11-07T20:00:00Z",
+        "canonical_index_sha": "215a005e9c09ca6572e98e2b781cc66c0f948737",
+        "status": "CANONICAL FILES PRESENT; recent deltas not merged; 13 page/symbol hash provenance discrepancies remain documented"
+      },
+      "five_minute_and_fifteen_minute": {
+        "canonical_archive_present": false,
+        "coverage": "incremental deltas only; earliest chain references 2026-11-05; continuous coverage start/end not reconciled",
+        "status": "INSUFFICIENT_HISTORICAL_COVERAGE"
+      },
+      "derivatives": {
+        "funding_archive": "SOLUSDT only through 2026-11-05T16:00Z",
+        "historical_oi": "not complete across all four symbols",
+        "status": "INCOMPLETE"
+      }
+    },
+    "data_quality_experiment_count": 1,
+    "strategy_experiments": 0,
+    "oos_evaluations": 0,
+    "canonical_archive_index_advanced": false
+  },
+  "context_discovery": {
+    "label": "HTF_BEARISH_LTF_RECOVERY",
+    "classification_confidence": "MODERATE for current observable features only",
+    "trade_win_probability": "NOT_ESTIMATED",
+    "four_hour": "All four symbols below EMA20 and EMA50 with negative 20-bar return and negative EMA20 slope.",
+    "one_hour": "Mixed-to-bearish; all four below EMA50, ETH/SOL close marginally above EMA20, BTC/XRP below EMA20.",
+    "fifteen_minute": "Positive 20-bar returns across all four; EMA alignment mixed to positive.",
+    "five_minute": "Positive 20-bar returns across all four; ETH/SOL/XRP above EMA20 and EMA50; BTC slightly below EMA20.",
+    "frequency_duration_transitions": "NOT_COMPUTED",
+    "threshold_refit": "NOT_PERFORMED",
+    "structure_labels": "UNKNOWN; no training-derived breakout/retest/failed-breakout detector"
+  },
+  "strategy_scorecard": {
+    "registry_version": "v81",
+    "oos_validated": 0,
+    "oos_promising": 1,
+    "insufficient_evidence_baselines": 4,
+    "new_status_transitions": 0,
+    "carried_forward_entry": {
+      "key": "SOLUSDT|4h|BULL_LOW|donchian20-v0.1.0",
+      "status": "OOS_PROMISING",
+      "trades": 12,
+      "win_rate_pct": 66.7,
+      "target_before_stop_pct": 41.7,
+      "mean_net_R": 0.606,
+      "profit_factor": 2.72,
+      "max_drawdown_R": 1.3,
+      "block_bootstrap_interval_R": [
+        0.086,
+        1.199
+      ],
+      "minimum_oos_trades": 100,
+      "multi_window_stability": false,
+      "actionable": false,
+      "source": "research/context-strategy/registries/context_strategy_registry_20261107T2323Z_v81.json",
+      "note": "Carried forward from accessible registry artifact; not re-run or re-evaluated this run."
+    },
+    "untested_families": [
+      "trend_pullback_continuation",
+      "breakout_retest_volatility_contraction",
+      "range_mean_reversion_failed_breakout_fade",
+      "volatility_expansion_momentum",
+      "btc_led_relative_strength",
+      "funding_oi_filters"
+    ],
+    "untested_status": "HYPOTHESIS"
+  },
+  "discoveries": [
+    "All four 4h series show negative 20-bar returns and close below EMA20/EMA50; this is a broad higher-timeframe bearish feature state.",
+    "All four 5m and 15m 20-bar returns are positive; this is a short-term recovery, not a confirmed higher-timeframe reversal.",
+    "18:00-23:00 UTC OI change: BTC -0.1465%, ETH -0.5370%, SOL -0.5402%, XRP -1.6709%. OI decline alone does not identify liquidation or side.",
+    "Latest completed 23:00 UTC taker buy/sell ratio: BTC 1.3717, ETH 1.1847, SOL 0.8546, XRP 0.9916.",
+    "00:00 UTC global long-account shares: BTC 75.50%, ETH 77.98%, SOL 78.42%, XRP 73.71%; account skew is not position-size concentration.",
+    "Funding remains positive but below 0.05% per 8h; premiumIndex.lastFundingRate is recorded separately from the 00:00 UTC settled funding history."
+  ],
+  "decisions": {
+    "SOLUSDT": "NO_TRADE",
+    "ETHUSDT": "NO_TRADE",
+    "XRPUSDT": "NO_TRADE"
+  },
+  "decision_reasons": [
+    "No OOS_VALIDATED registry entry exists.",
+    "The only OOS_PROMISING entry is SOL 4h BULL_LOW; current SOL 4h feature context is bearish, so it is not applicable.",
+    "No exact validated trigger or frozen net-cost edge is available.",
+    "Fresh exchange metadata is blocked by a 37.07h stale exchangeInfo serverTime."
+  ],
+  "preflight": {
+    "shell_compute": {
+      "status": "PASS",
+      "evidence": "Linux 6.18.57; Python 3.13.5; Node v22.16.0; npm 10.9.2; 5 CPUs; 5.8 GiB RAM, 4.7 GiB available; 30 GiB free disk."
+    },
+    "repo_code": {
+      "status": "DEGRADED",
+      "evidence": "GitHub repository and research branches accessible via connector; no local crypto-trading-agent checkout in this runtime."
+    },
+    "node_sdk": {
+      "status": "BLOCKED",
+      "evidence": "Node/npm below queued target floor Node24/npm11; no local node_modules; Python imports binance and binance_sdk both false; SDK not used."
+    },
+    "direct_network": {
+      "status": "BLOCKED",
+      "evidence": "DNS resolution failed for fapi.binance.com, api.binance.com and github.com from shell; direct /fapi/v1/time unavailable."
+    },
+    "binance_connector": {
+      "status": "DEGRADED",
+      "evidence": "Fresh mark/ticker/OI/book/klines/funding/positioning calls succeeded; connector does not expose HTTP status or headers."
+    },
+    "exchange_metadata": {
+      "status": "BLOCKED",
+      "evidence": "exchangeInfo.serverTime=2026-11-06T11:18:40.883Z; 37.07 hours behind market-data timestamp; TRADING statuses not accepted for execution validation."
+    },
+    "raw_archive": {
+      "status": "DEGRADED",
+      "evidence": "GitHub 1h index and 4h canonical manifests accessible; 5m/15m canonical archive absent; missing 76-row delta unresolved; canonical indexes stale."
+    },
+    "data_quality": {
+      "status": "PASS",
+      "evidence": "Current 16-series rolling sample and new 68-row delta passed duplicates/gaps/alignment/OHLC/volume/closeTime checks; 16 forming candles excluded."
+    },
+    "backtest_harness": {
+      "status": "BLOCKED",
+      "evidence": "No local repository or compatible Node runtime; harness existence/invocation and deterministic smoke test not verified."
+    },
+    "disk_storage": {
+      "status": "PASS",
+      "evidence": "30 GiB free; GitHub raw branch commit and subsequent readback succeeded."
+    },
+    "artifact_readback": {
+      "status": "PASS",
+      "evidence": "Raw delta readback SHA-256 e2b005df65b6761b60b264454ce285fb111b279c210a2665f0b7ffbac784face; 68 rows, 18,949 bytes; sidecar and manifest matched."
+    }
+  },
+  "result_classification": {
+    "RESEARCH_EXECUTED": true,
+    "OOS_EVALUATED": false,
+    "MONITORING_ONLY": false
+  },
+  "next_actions": [
+    "Recover or formally retire missing 76-row delta after checking branch history and exact path/hash; do not synthesize rows.",
+    "Reconcile 1h/4h canonical indexes with append-only deltas after provenance is resolved.",
+    "Build continuous multi-year 5m/15m archives; current delta history is not sufficient.",
+    "Provision compatible Node24/npm11 environment and local checkout; verify package requirements and SDK imports.",
+    "Audit closeTime and volume<=0 validation in repository; run deterministic no-lookahead smoke fixture.",
+    "Freeze actual fee tier, spread, slippage, impact, funding and latency assumptions.",
+    "Then run training-only context taxonomy and pre-registered strategy x context x symbol experiment."
+  ]
+}

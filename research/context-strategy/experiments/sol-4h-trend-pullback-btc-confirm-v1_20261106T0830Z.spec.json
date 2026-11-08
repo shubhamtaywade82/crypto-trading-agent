@@ -1,0 +1,134 @@
+{
+  "schemaVersion": 1,
+  "experimentId": "SOL-4H-TREND-PULLBACK-BTC-CONFIRM-V1-20261106T0830Z",
+  "createdAtUtc": "2026-11-06T08:34:40.476Z",
+  "status": "HYPOTHESIS",
+  "hypothesis": "A 4h EMA20 pullback recross in a training-defined SOL trend/normal-volatility context, with BTC 4h trend confirmation, may produce positive net expectancy after an all-in round-trip cost proxy and historical SOL funding.",
+  "scope": {
+    "tradableSymbol": "SOLUSDT",
+    "referenceSymbol": "BTCUSDT",
+    "timeframe": "4h",
+    "direction": "long_and_short",
+    "positionSize": "1 SOL fixed quantity; no compounding; one position at a time"
+  },
+  "inputs": {
+    "sol4h": {
+      "path": "research-data/binance-usdm/4h/canonical/SOLUSDT_4h_20200914T0800Z_20261105T1600Z.jsonl",
+      "rows": 13461,
+      "firstOpenUtc": "2020-09-14T08:00:00.000Z",
+      "lastOpenUtc": "2026-11-05T16:00:00.000Z",
+      "sha256": "148389f0347fe05307e2a274c579ccc1c495e32eaad2e49cfb19ca211df89156",
+      "blobSha": "77af5caa7d5e76c8efc3fd8571c55a20376ac97f"
+    },
+    "btc4h": {
+      "path": "research-data/binance-usdm/4h/canonical/BTCUSDT_4h_20200914T0800Z_20261105T1600Z.jsonl",
+      "rows": 13461,
+      "firstOpenUtc": "2020-09-14T08:00:00.000Z",
+      "lastOpenUtc": "2026-11-05T16:00:00.000Z",
+      "sha256": "7088aa2b2cc48c3895fd77dfc2ece0ae812062f24a70374ec556273a2d8380d7",
+      "blobSha": "a465025b2276a0e9cfbf805ba64be4da6ed08868"
+    },
+    "solFunding": {
+      "path": "research-data/binance-usdm/derivatives/funding/SOLUSDT_funding_20200914T0800Z_20261105T1600Z.jsonl",
+      "rows": 6806,
+      "blankMarkPriceRows": 3501,
+      "actualFetchedSha256": "6440cb653acb4e5b363523a7c65dc5c4b9ccfe8267605cf0814881a9d8b4f60f",
+      "declaredManifestSha256": "34bfd47393c7e9756e617a70669d8ee51349f6a3ba2b4931ae719993c6064549",
+      "blobSha": "8639dc5c48936bedcb2e7792ec180fcabc1689e2",
+      "integrity": "DEGRADED_HASH_MISMATCH; preserve both hashes; do not overwrite prior manifest"
+    }
+  },
+  "detector": {
+    "ema": {
+      "periods": [
+        20,
+        50,
+        200
+      ],
+      "method": "recursive EMA; current bar close included only after bar completion"
+    },
+    "atr": {
+      "period": 14,
+      "method": "Wilder ATR; ATR14/close"
+    },
+    "trainOnlyThresholds": {
+      "flatTrend": "q20 of abs(EMA50/EMA200 - 1)",
+      "volatility": [
+        "q33",
+        "q67 of ATR14/close"
+      ],
+      "shock": "q99 of abs one-bar 4h return"
+    },
+    "contexts": [
+      "BULL_NORMAL",
+      "BEAR_NORMAL",
+      "SIDEWAYS_*",
+      "*_LOW",
+      "*_HIGH",
+      "SHOCK"
+    ],
+    "eligibleContext": "SOL trend is BULL or BEAR; ATR14/close is between train q33 and q67; not SHOCK",
+    "btcConfirmation": "BTC EMA50/EMA200 trend is non-flat and has the same direction as SOL"
+  },
+  "rules": {
+    "longEntry": "At completed 4h bar i: SOL close[i-1] <= EMA20[i-1], close[i] > EMA20[i], close[i] > open[i], SOL context BULL_NORMAL, BTC trend BULL. Enter at bar i+1 open.",
+    "shortEntry": "At completed 4h bar i: SOL close[i-1] >= EMA20[i-1], close[i] < EMA20[i], close[i] < open[i], SOL context BEAR_NORMAL, BTC trend BEAR. Enter at bar i+1 open.",
+    "stop": "1.5 * ATR14 at signal close from next-bar open; adverse gap-through exits at open.",
+    "target": "2.0R; if stop and target both touch within one bar, stop is assumed first; favorable gap-through target fills at target.",
+    "timeStopBars": 12,
+    "sizing": "1 SOL fixed quantity; no leverage/compounding; one active position; no same-bar re-entry.",
+    "noTrade": [
+      "shock context",
+      "sideways or non-normal volatility",
+      "BTC trend not aligned",
+      "forming/missing/malformed bars",
+      "insufficient warmup",
+      "entry gap beyond stop",
+      "last 12 bars of a test segment"
+    ]
+  },
+  "evaluation": {
+    "chronologicalSplits": "Anchored walk-forward: train 40%, validate 10%, test 10%; train 50%, validate 10%, test 10%; train 60%, validate 10%, test 10%; final split train 60%, validation 20%, untouched test 20%.",
+    "purgeEmbargoBars": 12,
+    "thresholdFit": "Re-fit context thresholds on each fold's training slice only. Final test thresholds use first 60% only. Validation is diagnostic only; no parameter selection.",
+    "parameterNeighborhood": {
+      "stopAtrMultiples": [
+        1.25,
+        1.5,
+        1.75
+      ],
+      "targetR": 2,
+      "primaryStopAtrMultiple": 1.5
+    },
+    "baselines": [
+      "same pullback rules without BTC confirmation",
+      "SOL buy-and-hold over final test"
+    ],
+    "uncertainty": "Moving-block bootstrap by 4-week UTC clusters, 2,000 resamples, deterministic seed 20261106; Bonferroni family alpha 0.05/6 for BTC-filter/stop-neighborhood comparisons.",
+    "evidenceGates": {
+      "minimumOosTradesPerSymbolContext": 100,
+      "strongerEvidenceTradesAcrossMultipleWindows": 200,
+      "requirePositiveNetExpectancy": true,
+      "requireAdjustedConfidenceIntervalLowerBoundAboveZero": true,
+      "minimumProfitFactor": 1.2,
+      "maximumDrawdownR": 10,
+      "requirePositiveNeighborStability": true
+    }
+  },
+  "costs": {
+    "roundTripAllInProxyBps": 15,
+    "funding": "Use historical SOL fundingRate events; markPrice when present, otherwise last completed 4h close at/before settlement as a notional proxy; record proxy count.",
+    "sensitivityRoundTripBps": [
+      10,
+      15,
+      20
+    ],
+    "latencyAndPartialFills": "not modeled; report limitation"
+  },
+  "reproducibility": {
+    "codeRuntime": "managed V8 Code Mode; repository Node CLI is not invoked because local checkout is absent and Node/npm are below package engine floor",
+    "seed": 20261106,
+    "dataReadbackRequired": true,
+    "outputReadbackRequired": true
+  }
+}

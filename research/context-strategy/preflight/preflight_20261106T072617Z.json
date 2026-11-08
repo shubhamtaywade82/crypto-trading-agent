@@ -1,0 +1,93 @@
+{
+  "schemaVersion": 1,
+  "createdAtUtc": "2026-11-06T07:30:06.656Z",
+  "runId": "CONTEXT-STRATEGY-20261106T072617Z-V89",
+  "repository": "shubhamtaywade82/crypto-trading-agent",
+  "mainCommit": "32298e5326fdd59b725db6db329f3d11ea53cd2b",
+  "contextBranch": "research/context-strategy-2026-11-05-run11",
+  "rawArchiveBranch": "research/raw-ohlcv-archive-2026-11-05T0530Z",
+  "environment": {
+    "cwd": "/",
+    "os": "Debian GNU/Linux 13 (trixie), Linux 6.18.57 x86_64",
+    "python": "3.13.5",
+    "node": "v22.16.0",
+    "npm": "10.9.2",
+    "pnpm": "NOT_INSTALLED",
+    "cpuCount": 5,
+    "memoryTotalGiB": 5.8,
+    "diskFreeGiB": 30,
+    "repoLocalCheckout": false,
+    "binanceSdkImports": {
+      "binance": "NOT_INSTALLED",
+      "atBinanceConnector": "NOT_INSTALLED",
+      "binanceApiNode": "NOT_INSTALLED",
+      "nemesisBinanceSdk": "NOT_INSTALLED"
+    }
+  },
+  "checks": [
+    {
+      "capability": "Shell/compute",
+      "status": "PASS",
+      "evidence": "pwd=/; Debian 13; Linux 6.18.57 x86_64; Python 3.13.5; Node v22.16.0; npm 10.9.2; 5 CPUs; 5.8 GiB RAM; ~30 GiB free disk.",
+      "impact": "Bounded managed processing and GitHub connector operations ran; repository runtime floor not met.",
+      "nextAction": "Provision Node >=24 and npm >=11."
+    },
+    {
+      "capability": "Repository/code",
+      "status": "DEGRADED",
+      "evidence": "GitHub repository accessible; main HEAD 32298e5326fdd59b725db6db329f3d11ea53cd2b; research branch contains v88; no local checkout; package.json engines require Node>=24/npm>=11.",
+      "impact": "Remote read/write works; local typecheck/tests/backtest CLI unavailable.",
+      "nextAction": "Create clean local checkout at verified commit and provision supported Node/npm."
+    },
+    {
+      "capability": "Binance SDK",
+      "status": "BLOCKED",
+      "evidence": "Node import probes for binance, @binance/connector, binance-api-node and @nemesis-oss/binance-sdk all returned ERR_MODULE_NOT_FOUND.",
+      "impact": "No SDK used; market data came from Binance connector actions.",
+      "nextAction": "Install project SDK dependencies in supported local runtime before claiming SDK execution."
+    },
+    {
+      "capability": "Network/Binance endpoints",
+      "status": "DEGRADED",
+      "evidence": "Direct curl https://fapi.binance.com/fapi/v1/time failed DNS resolution (exit 6, HTTP 000). Connector returned klines, mark/premium index, ticker, OI, funding history, OI statistics, taker flow, long/short ratio and order book; raw HTTP status not exposed. exchangeInfo.serverTime=2026-11-06T03:24:17.653Z vs fresh mark time 07:26:17.002Z; drift=14519.349s.",
+      "impact": "Fresh monitoring and archive ingestion possible; contract metadata is stale and prohibited for execution validation.",
+      "nextAction": "Restore direct DNS; probe uncached /fapi/v1/time and /fapi/v1/exchangeInfo with explicit timeouts; require <=60s drift."
+    },
+    {
+      "capability": "Raw historical archive",
+      "status": "DEGRADED",
+      "evidence": "GitHub archive branch verified. 4h canonical archive 13,461 rows/symbol from 2020-09-14T08:00Z through 2026-11-05T16:00Z plus deltas through 2026-11-06T00:00Z. 1h now 9,000 rows/symbol through 2021-09-24T07:00Z. Multi-year 5m/15m remain absent.",
+      "impact": "4h context history available; 1h and lower-timeframe strategy archive remains incomplete.",
+      "nextAction": "Continue 1h page 0007 from 2021-09-24T08:00Z; obtain auditable multi-year 5m/15m history."
+    },
+    {
+      "capability": "Data quality/coverage",
+      "status": "DEGRADED",
+      "evidence": "1h page 0006: 1,500 rows/symbol, 6,000 total, zero duplicates/gaps/OHLC/volume/non-finite/close-time/alignment failures. Incremental delta: 68 rows (48x5m,16x15m,4x1h,0x4h), zero quality failures, cross-symbol aligned, forming bars excluded. Current requested windows: 5m 19/20 completed, 15m 11/12, 1h 99/100, 4h 1,499/1,500; all tested structural checks zero.",
+      "impact": "New page/delta are clean; full archive coverage and prior provenance/hash reconciliation remain incomplete.",
+      "nextAction": "Resolve missing 76-row delta provenance and 14 historical 4h page/symbol hash mismatches; continue contiguous backfill."
+    },
+    {
+      "capability": "Backtest harness/smoke test",
+      "status": "BLOCKED",
+      "evidence": "Remote scripts/backtest.ts exists. No local checkout; Node22.16/npm10.9 below package engines. Prior committed 600-bar deterministic/no-lookahead smoke passed at 04:36Z but was not rerun; no strategy experiment or OOS this run.",
+      "impact": "No executable repository harness and no valid experiment/OOS.",
+      "nextAction": "Provision supported runtime and checkout; rerun fixture smoke, then invoke repository harness."
+    },
+    {
+      "capability": "Disk/storage",
+      "status": "PASS",
+      "evidence": "~30 GiB free local disk; GitHub raw archive and context branches accepted writes.",
+      "impact": "Remote GitHub branches provide verified persistent storage; no local archive mounted.",
+      "nextAction": "Continue atomic GitHub writes and readback/hash verification."
+    },
+    {
+      "capability": "Artifact readback",
+      "status": "PASS",
+      "evidence": "Four 1h page-0006 JSONL files, page manifest, archive index, 68-row delta JSONL and delta manifest were fetched back; SHA-256 and row counts verified.",
+      "impact": "Current archive artifacts are persisted remotely and independently read back.",
+      "nextAction": "Verify each subsequent artifact before updating indexes or queue."
+    }
+  ],
+  "status": "RESEARCH_BLOCKED"
+}

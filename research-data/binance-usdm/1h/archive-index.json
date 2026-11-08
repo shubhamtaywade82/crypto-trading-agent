@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "created_at_utc": "2026-11-06T02:37:11.714Z",
   "repository": "shubhamtaywade82/crypto-trading-agent",
-  "branch": "research/raw-ohlcv-archive-20261108T0723Z-run22",
+  "branch": "research/raw-ohlcv-archive-20261108T1026Z",
   "interval": "1h",
   "source_endpoint": "GET /fapi/v1/klines",
   "symbols": [
@@ -117,10 +117,13 @@
   },
   "status": "COMPLETE_HISTORICAL_1H_PAGES_WITH_INCREMENTAL_DELTA",
   "next_actions": [
-    "Continue 1h incremental append strictly after 2026-11-08T08:00Z; next open 09:00Z only after closeTime passes.",
-    "Keep historical page backfill and raw-vs-canonical reconciliation in the research queue."
+    "Continue 5m append after the latest completed 5m open; append only after closeTime passes.",
+    "Continue 15m append after the latest completed 15m open; the next 15m bar may still be forming.",
+    "Continue 1h append after 2026-11-08T09:00:00.000Z; next 1h open 10:00Z must close before append.",
+    "Continue 4h append after 2026-11-08T04:00:00.000Z; next 4h open 08:00Z must close before append.",
+    "Backfill multi-year 5m/15m and preserve unresolved 4h canonical/provenance caveats."
   ],
-  "updated_at_utc": "2026-11-08T09:30:00.000Z",
+  "updated_at_utc": "2026-11-08T10:27:06.775Z",
   "page_progress": {
     "completedPages": 36,
     "rowsPerSymbol": 53871,
@@ -1074,7 +1077,7 @@
     "verified_matches": 4,
     "failed_matches": 0
   },
-  "incremental_highwater_utc": "2026-11-08T08:00:00.000Z",
+  "incremental_highwater_utc": "2026-11-08T09:00:00.000Z",
   "incremental_deltas": [
     {
       "as_of_utc": "2026-11-08T09:30:00.000Z",
@@ -1094,6 +1097,34 @@
       "latest_completed_open_utc_by_interval": {
         "1h": "2026-11-08T08:00:00.000Z",
         "4h": "2026-11-08T04:00:00.000Z"
+      }
+    },
+    {
+      "as_of_utc": "2026-11-08T10:27:06.775Z",
+      "delta_path": "research-data/binance-usdm/delta/binance_usdm_delta_20261108T1026Z_5m15m1h_completed.jsonl",
+      "manifest_path": "research-data/binance-usdm/delta/manifest-20261108T1026Z-5m15m1h.json",
+      "rows": 40,
+      "rows_total_file": 40,
+      "sha256": "532f83e23d34bc371cf7da0f521b1c0f884bb58567c859fbf0ccab769275ffbd",
+      "manifest_sha256": "78544a55f02471a6047f782e22407c3c3024c1794e8ad84c376e505b109f62e7",
+      "readback_verified": false,
+      "rows_fetched": 1200,
+      "forming_rows_excluded": 12,
+      "row_counts_by_symbol": {
+        "BTCUSDT": 10,
+        "ETHUSDT": 10,
+        "SOLUSDT": 10,
+        "XRPUSDT": 10
+      },
+      "row_counts_by_interval": {
+        "5m": 28,
+        "15m": 8,
+        "1h": 4
+      },
+      "latest_completed_open_utc_by_interval": {
+        "5m": "2026-11-08T10:20:00.000Z",
+        "15m": "2026-11-08T10:00:00.000Z",
+        "1h": "2026-11-08T09:00:00.000Z"
       }
     }
   ]

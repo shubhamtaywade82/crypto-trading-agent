@@ -1885,12 +1885,20 @@
         "5m": "2026-11-07T13:30:00.000Z"
       },
       "readback_verified": true
+    },
+    {
+      "as_of_utc": "2026-11-08T08:54:53.000Z",
+      "delta_path": "research-data/binance-usdm/delta/binance_usdm_delta_20261108T0854Z_1h4h_completed.jsonl",
+      "manifest_path": "research-data/binance-usdm/delta/manifest-20261108T0854Z-1h4h.json",
+      "rows": 8,
+      "sha256": "48cfad7cc4f677b7e408e280a56f19ca86037d1a4e7c585154788471d02b1c62",
+      "readback_verified": true
     }
   ],
   "incremental_delta_rows_total": 4536,
   "next_actions": [
-    "Next incremental refresh: append only completed bars after 5m 12:20Z, 15m 12:00Z, 1h 11:00Z and 4h 08:00Z; expected next opens 12:25Z, 12:15Z, 12:00Z and 12:00Z respectively, only after closeTime passes.",
-    "Rebuild canonical 4h files through the verified incremental high-water; current canonical files remain through 2026-11-05T16:00Z.",
+    "Canonical 4h archive remains through 2026-11-05T16:00Z; do not treat incremental deltas as merged canonical rows.",
+    "Incremental high-water is 2026-11-08T04:00Z; next 4h open 08:00Z is still forming and may be appended only after closeTime passes.",
     "Backfill multi-year 5m/15m history and reconcile missing 76-row delta provenance; preserve original SHA mismatches."
   ],
   "last_incremental_refresh_utc": "2026-11-07T13:37:49.000Z",
@@ -1941,7 +1949,7 @@
       "supersedes_line": 16
     }
   ],
-  "updated_at_utc": "2026-11-08T02:24:12.741Z",
+  "updated_at_utc": "2026-11-08T08:54:53.000Z",
   "canonical_4h": {
     "status": "PASS",
     "start_utc": "2020-09-14T08:00:00.000Z",
@@ -2116,5 +2124,6 @@
   },
   "latest_incremental_delta_manifests": [
     "research-data/binance-usdm/delta/manifest-20261108T0221Z-5m15m1h4h.json"
-  ]
+  ],
+  "incremental_highwater_utc": "2026-11-08T04:00:00Z"
 }

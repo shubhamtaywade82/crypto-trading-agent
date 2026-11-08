@@ -33,6 +33,7 @@ The fixed EMA50 rule classified 2,219 untouched OOS bars:
 | TRANSITION | 316 | 14.24% | 131 | 2.41 bars |
 
 Transitions were mostly routed through TRANSITION: BULL->TRANSITION 58; BEAR->TRANSITION 73; TRANSITION->BULL 57; TRANSITION->BEAR 74; BEAR->BULL 1. This is descriptive for SOL 4h only, not a fitted multi-symbol taxonomy. Context labels are not win probabilities.
+Transition probabilities conditional on a context change: BULL->TRANSITION 100%; BEAR->TRANSITION 98.65% and BEAR->BULL 1.35%; TRANSITION->BULL 43.51% and TRANSITION->BEAR 56.49%. Mean run lengths correspond to about 53.4 hours BULL, 60.2 hours BEAR and 9.6 hours TRANSITION. These estimates are OOS-window descriptions and have not been stability-tested across multiple years.
 
 ## 3. Strategy-context scorecard
 

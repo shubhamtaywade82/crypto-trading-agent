@@ -1,0 +1,109 @@
+{
+  "schema_version": "1.0.0",
+  "run_id": "context-strategy-2026-11-08-run31",
+  "version": "v81",
+  "created_at_utc": "2026-11-07T23:23:39Z",
+  "market_data_as_of_utc": "2026-11-07T23:21:02Z",
+  "run_status": "RESEARCH_EXECUTED",
+  "status_detail": "A reproducible 64-row incremental data-quality append completed and was read back with matching SHA-256. No strategy backtest or untouched OOS evaluation ran.",
+  "sections": {
+    "research_progress": {
+      "rolling_rows_checked": 1600,
+      "completed_rows": 1584,
+      "forming_rows_excluded": 16,
+      "new_completed_rows_appended": 64,
+      "append_readback_verified": true,
+      "raw_branch": "research/raw-ohlcv-archive-20261107T2321Z-run17",
+      "raw_delta_path": "research-data/binance-usdm/delta/binance_usdm_delta_20261107T2321Z_5m15m1h_completed.jsonl",
+      "raw_delta_sha256": "7211bf8d7e72aa07fa2680817cc8d1e7b50ce0bac4e2bd950af0bb75d0ec4f57",
+      "archive_index_updated": false,
+      "missing_76_row_artifact_unresolved": true,
+      "data_quality_experiments_run": 1,
+      "strategy_experiments_run": 0,
+      "oos_evaluations_run": 0,
+      "remaining": [
+        "recover or retire missing 76-row provenance",
+        "reconcile 1h/4h indexes and canonical archive",
+        "backfill multi-year 5m/15m",
+        "fix closeTime and zero-volume validation",
+        "provision Node24/npm11 checkout and SDK",
+        "complete historical funding/OI and execution-cost archives"
+      ]
+    },
+    "context_discovery": {
+      "taxonomy_revision": "NONE",
+      "training_thresholds_fitted": false,
+      "context_frequency_duration_transitions": "NOT_COMPUTED",
+      "current_descriptive_context": "HTF_BEARISH_LTF_REBOUND",
+      "classification_confidence": "LOW",
+      "sample_adequacy": "99 completed bars per symbol/interval only; insufficient for multi-regime discovery or strategy OOS."
+    },
+    "strategy_context_scorecard": {
+      "oos_validated_entries": 0,
+      "oos_promising_entries": 1,
+      "sol_bull_low_donchian20": {
+        "status": "OOS_PROMISING",
+        "trades": 12,
+        "win_rate_pct": 66.7,
+        "target_before_stop_pct": 41.7,
+        "mean_net_R": 0.606,
+        "profit_factor": 2.72,
+        "max_drawdown_R": 1.3,
+        "block_bootstrap_interval_R": [
+          0.086,
+          1.199
+        ],
+        "minimum_oos_trades": 100,
+        "multi_window_stability": false,
+        "current_applicability": "NOT_APPLICABLE"
+      },
+      "baselines": "INSUFFICIENT_EVIDENCE"
+    },
+    "key_discoveries": [
+      "All four symbols have negative 1h/4h 20-bar returns and close below both 1h/4h EMA20/EMA50; 5m returns are positive, with BTC near flat and alts above short EMAs.",
+      "15m context is mixed-to-bearish and does not confirm a higher-timeframe reversal.",
+      "Latest completed 1h taker buy/sell ratio: BTC 1.1857; ETH 0.9237; SOL 0.9236; XRP 0.9805.",
+      "OI declined 18:00-23:00 UTC: BTC -0.171%, ETH -0.464%, SOL -0.394%, XRP -1.591%.",
+      "Long-account shares 73.67%-78.48%; account-based ratio is not position-size or liquidation evidence.",
+      "Current indicated and last settled funding rates are below 0.05% per 8h interval."
+    ],
+    "current_snapshot": {
+      "path": "research/context-strategy/snapshots/current_market_snapshot_20261107T2323Z_v81.json",
+      "label": "HTF_BEARISH_LTF_REBOUND",
+      "confidence": "LOW",
+      "transition_warning": true
+    },
+    "decisions": {
+      "SOLUSDT": "NO_TRADE",
+      "ETHUSDT": "NO_TRADE",
+      "XRPUSDT": "NO_TRADE"
+    },
+    "data_quality_costs_risks": {
+      "audit_path": "research/context-strategy/audits/data_quality_audit_20261107T2323Z_v81.json",
+      "preflight_path": "research/context-strategy/preflights/preflight_20261107T2323Z_v81.json",
+      "direct_http": "DNS_FAILURE",
+      "exchange_metadata": "STALE_BY_36H; execution validation blocked",
+      "historical_5m_15m": "MISSING",
+      "missing_76_row_delta": "NOT_FOUND",
+      "cost_model": "NOT_FROZEN",
+      "historical_funding_oi": "INCOMPLETE",
+      "backtest_smoke_test": "NOT_RUN"
+    },
+    "next_experiments": [
+      "Recover original 76-row artifact or document irrecoverable provenance and rebuild from verified base.",
+      "Reconcile 1h/4h index chains and canonical data.",
+      "Backfill multi-year 5m/15m.",
+      "Fix closeTime and volume<=0 validation; run deterministic no-lookahead fixtures.",
+      "Backfill historical funding/OI and freeze realistic costs.",
+      "Only then run pre-registered strategy x context x symbol experiments with untouched OOS."
+    ]
+  },
+  "artifacts": {
+    "raw_branch": "research/raw-ohlcv-archive-20261107T2321Z-run17",
+    "context_branch": "research/context-strategy-2026-11-08-run31",
+    "experiment_id": "DQ-20261107-2321Z",
+    "queue_version": "v81",
+    "registry_version": "v81",
+    "raw_delta_sha256": "7211bf8d7e72aa07fa2680817cc8d1e7b50ce0bac4e2bd950af0bb75d0ec4f57"
+  }
+}

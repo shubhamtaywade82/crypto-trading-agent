@@ -1,0 +1,104 @@
+{
+  "schema_version": "1.0.0",
+  "queue_version": "v82",
+  "updated_at_utc": "2026-11-07T23:26:30Z",
+  "last_run_id": "context-strategy-2026-11-08-run31",
+  "items": [
+    {
+      "id": "RQ-DQ-01",
+      "priority": 1,
+      "status": "COMPLETED",
+      "last_action": "Validated 1,584 completed rolling bars with zero structural failures; appended 68 rows total since prior high-water (48x5m,16x15m,4x1h), including a final 4-row 5m delta through 23:20Z. Both deltas/manifests SHA/readback verified.",
+      "next_action": "Continue from 5m=23:20Z, 15m=23:00Z, 1h=22:00Z, 4h=16:00Z; next expected opens 23:25,23:15,23:00,20:00 UTC.",
+      "raw_branch": "research/raw-ohlcv-archive-20261107T2321Z-run17",
+      "deltas": [
+        {
+          "path": "research-data/binance-usdm/delta/binance_usdm_delta_20261107T2321Z_5m15m1h_completed.jsonl",
+          "rows": 64,
+          "sha256": "7211bf8d7e72aa07fa2680817cc8d1e7b50ce0bac4e2bd950af0bb75d0ec4f57"
+        },
+        {
+          "path": "research-data/binance-usdm/delta/binance_usdm_delta_20261107T2326Z_5m_completed.jsonl",
+          "rows": 4,
+          "sha256": "7e490948d5844ec799e76ec79dee8a862dee9644d69667f4896eebde1248db30"
+        }
+      ]
+    },
+    {
+      "id": "RQ-ARCH-01",
+      "priority": 1,
+      "status": "BLOCKED",
+      "next_action": "Recover original 76-row artifact by exact path/hash; if irrecoverable, document and rebuild from verified base.",
+      "blocker": "Missing binance_usdm_delta_2026-11-05T0524Z.jsonl; expected SHA f5d9e50602f4ef4046fc4d39da053e45d3619ad147aa398a6bd1e281a7f3b93d."
+    },
+    {
+      "id": "RQ-ARCH-02",
+      "priority": 1,
+      "status": "BLOCKED",
+      "next_action": "Backfill multi-year 5m/15m for BTC/ETH/SOL/XRP.",
+      "blocker": "Historical 5m/15m archive missing; direct Binance DNS fails; connector only bounded."
+    },
+    {
+      "id": "RQ-ARCH-03",
+      "priority": 1,
+      "status": "BLOCKED",
+      "next_action": "Reconcile 4h canonical archive after missing provenance resolved.",
+      "blocker": "Canonical index unresolved; no new 4h candle closed."
+    },
+    {
+      "id": "RQ-ENV-01",
+      "priority": 1,
+      "status": "BLOCKED",
+      "next_action": "Provision Node24/npm11, clone repo, install dependencies and run deterministic fixtures.",
+      "blocker": "Node22.16/npm10.9; no local checkout; SDK absent."
+    },
+    {
+      "id": "RQ-CODE-01",
+      "priority": 1,
+      "status": "BLOCKED",
+      "next_action": "Preserve closeTime and reject volume<=0; add boundary/no-lookahead tests.",
+      "blocker": "Previously identified source defects not patched/tested locally."
+    },
+    {
+      "id": "RQ-COST-01",
+      "priority": 2,
+      "status": "BLOCKED",
+      "next_action": "Freeze fee, spread, impact, funding and latency assumptions.",
+      "blocker": "Actual fee tier and historical execution-cost inputs unavailable."
+    },
+    {
+      "id": "RQ-DERIV-01",
+      "priority": 2,
+      "status": "BLOCKED",
+      "next_action": "Backfill funding settlements/OI and reconcile mark-price completeness.",
+      "blocker": "Historical derivatives archive incomplete."
+    },
+    {
+      "id": "RQ-CTX-01",
+      "priority": 2,
+      "status": "BLOCKED",
+      "next_action": "Fit training-only thresholds; measure context frequency/duration/transitions/stability.",
+      "blocker": "99 completed bars per series only; multi-year 5m/15m absent."
+    },
+    {
+      "id": "RQ-EXP-01",
+      "priority": 3,
+      "status": "BLOCKED",
+      "next_action": "Run frozen strategy x context x symbol experiment after prerequisites pass.",
+      "blocker": "Data, runtime, code contract and costs not ready."
+    },
+    {
+      "id": "RQ-MON-01",
+      "priority": 4,
+      "status": "COMPLETED",
+      "last_action": "Refreshed mark/last/24h/OI/book/5m candles at 23:26:30Z; higher timeframe completed candles unchanged from 23:21Z; all tradable symbols NO_TRADE.",
+      "next_action": "Refresh next hourly run; only OOS_VALIDATED rules can be actionable."
+    },
+    {
+      "id": "RQ-WEEKLY-01",
+      "priority": 4,
+      "status": "PLANNED",
+      "next_action": "Weekly review on 2026-11-14; retain taxonomy unless evidence supports change."
+    }
+  ]
+}

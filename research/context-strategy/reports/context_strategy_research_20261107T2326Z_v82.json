@@ -1,0 +1,95 @@
+{
+  "schema_version": "1.0.0",
+  "run_id": "context-strategy-2026-11-08-run31",
+  "version": "v82",
+  "created_at_utc": "2026-11-07T23:26:30Z",
+  "market_data_as_of_utc": "2026-11-07T23:26:30Z",
+  "run_status": "RESEARCH_EXECUTED",
+  "status_detail": "Two reproducible data-quality appends completed: 68 new completed OHLCV rows, both delta files/manifests read back and SHA-256 verified. No strategy backtest or OOS evaluation ran.",
+  "research_progress": {
+    "rolling_rows_checked": 1600,
+    "completed_rows": 1584,
+    "forming_excluded": 16,
+    "new_rows_appended": 68,
+    "readback_verified": true,
+    "raw_branch": "research/raw-ohlcv-archive-20261107T2321Z-run17",
+    "archive_index_advanced": false,
+    "missing_76_row_artifact_unresolved": true,
+    "data_quality_experiments": 2,
+    "strategy_experiments": 0,
+    "oos_evaluations": 0
+  },
+  "context_discovery": {
+    "label": "HTF_BEARISH_LTF_REBOUND",
+    "confidence": "LOW",
+    "taxonomy_refit": false,
+    "training_thresholds_fitted": false,
+    "frequency_duration_transitions": "NOT_COMPUTED",
+    "sample_adequacy": "99 completed bars per symbol/interval; insufficient for robust context discovery."
+  },
+  "strategy_scorecard": {
+    "oos_validated": 0,
+    "oos_promising": 1,
+    "sol_bull_low_donchian20": {
+      "status": "OOS_PROMISING",
+      "trades": 12,
+      "win_rate_pct": 66.7,
+      "target_before_stop_pct": 41.7,
+      "mean_net_R": 0.606,
+      "profit_factor": 2.72,
+      "max_drawdown_R": 1.3,
+      "block_bootstrap_interval_R": [
+        0.086,
+        1.199
+      ],
+      "minimum_oos_trades": 100,
+      "stable_multiwindow": false
+    },
+    "baselines": "INSUFFICIENT_EVIDENCE"
+  },
+  "discoveries": [
+    "1h/4h remain bearish across all symbols; 5m now bullish short-term, with all four closes above EMA20/EMA50.",
+    "15m remains mixed-to-bearish and does not confirm a higher-timeframe reversal.",
+    "Latest 1h taker ratio bucket at 22:00Z: BTC 1.1857; ETH 0.9237; SOL 0.9236; XRP 0.9805.",
+    "18:00-23:00 OI change: BTC -0.171%, ETH -0.464%, SOL -0.394%, XRP -1.591%.",
+    "Long-account share 73.67%-78.48%; account skew alone is not position size/liquidation evidence.",
+    "Indicated and settled funding remain below 0.05% per 8h."
+  ],
+  "decisions": {
+    "SOLUSDT": "NO_TRADE",
+    "ETHUSDT": "NO_TRADE",
+    "XRPUSDT": "NO_TRADE"
+  },
+  "blockers": [
+    "Missing 76-row historical delta; canonical archive index unresolved",
+    "No multi-year 5m/15m archive",
+    "Node24/npm11 and local checkout unavailable",
+    "closeTime/zero-volume validation defects unresolved",
+    "Historical funding/OI and realistic execution costs incomplete",
+    "exchangeInfo serverTime stale ~36h; direct time endpoint unreachable"
+  ],
+  "next_experiments": [
+    "Recover missing artifact and reconcile canonical archive",
+    "Backfill multi-year 5m/15m",
+    "Fix candle parser/validator and run deterministic smoke tests",
+    "Backfill funding/OI and freeze costs",
+    "Then pre-register strategy-context-symbol experiments with untouched OOS"
+  ],
+  "artifacts": {
+    "registry_version": "v81",
+    "queue_version": "v82",
+    "raw_branch": "research/raw-ohlcv-archive-20261107T2321Z-run17",
+    "deltas": [
+      {
+        "path": "research-data/binance-usdm/delta/binance_usdm_delta_20261107T2321Z_5m15m1h_completed.jsonl",
+        "rows": 64,
+        "sha256": "7211bf8d7e72aa07fa2680817cc8d1e7b50ce0bac4e2bd950af0bb75d0ec4f57"
+      },
+      {
+        "path": "research-data/binance-usdm/delta/binance_usdm_delta_20261107T2326Z_5m_completed.jsonl",
+        "rows": 4,
+        "sha256": "7e490948d5844ec799e76ec79dee8a862dee9644d69667f4896eebde1248db30"
+      }
+    ]
+  }
+}

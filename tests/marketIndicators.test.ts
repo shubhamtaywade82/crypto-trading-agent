@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import type { Candle } from '../src/types.js';
-import { adx, atrPercentile, emaSlopePct, vwap, wilderAtr } from '../src/binance/indicators.js';
+import { adx, atrPercentile, emaSlopePct, lastVwap, vwap, wilderAtr } from '../src/binance/indicators.js';
 
 function candle(index: number, open: number, high: number, low: number, close: number, volume = 1): Candle {
   return { openTime: index * 60_000, open, high, low, close, volume };
@@ -46,4 +46,17 @@ test('percentile rank is bounded and monotonic', () => {
   assert.ok(low >= 0 && low <= 100);
   assert.ok(high >= 0 && high <= 100);
   assert.ok(high > low);
+});
+
+test('lastVwap matches the last value of the full vwap series exactly', () => {
+  const candles = Array.from({ length: 300 }, (_, i) => {
+    const close = 100 + Math.sin(i / 7) * 3 + i * 0.01;
+    return candle(i, close - 0.2, close + 0.5, close - 0.6, close, 1 + (i % 13));
+  });
+  for (const length of [1, 2, 50, 96, 300]) {
+    const slice = candles.slice(0, length);
+    const period = Math.min(96, Math.max(2, length));
+    const full = vwap(slice, period).at(-1);
+    assert.equal(lastVwap(slice, period), full !== undefined && Number.isFinite(full) ? full : null);
+  }
 });

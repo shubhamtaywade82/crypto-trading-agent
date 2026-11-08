@@ -1,4 +1,4 @@
-import { adx, atrPercentile, ema, emaSlopePct, rsi, vwap, bollinger, wilderAtr } from '../binance/indicators.js';
+import { adx, atrPercentile, ema, emaSlopePct, rsi, lastVwap, bollinger, wilderAtr } from '../binance/indicators.js';
 import type { Candle } from '../types.js';
 import type { MarketRegime, RegimeSnapshot, TimeframeState, TrendDirection, VolatilityRegime } from './types.js';
 
@@ -35,7 +35,6 @@ export function buildTimeframeState(
   const atrSeries = wilderAtr(candles, 14);
   const adxSeries = adx(candles, 14);
   const rsiSeries = rsi(closes, 14);
-  const vwapSeries = vwap(candles, Math.min(96, Math.max(2, candles.length)));
   const bb = bollinger(closes, 20, 2);
 
   const atr14 = lastFinite(atrSeries);
@@ -51,7 +50,7 @@ export function buildTimeframeState(
     atr14,
     atrPercentile: atr14 === null ? null : atrPercentile(atrSeries, atr14),
     rsi14: lastFinite(rsiSeries),
-    vwap: lastFinite(vwapSeries),
+    vwap: lastVwap(candles, Math.min(96, Math.max(2, candles.length))),
     bollingerMiddle: seriesValue(bb.middle),
     bollingerUpper: seriesValue(bb.upper),
     bollingerLower: seriesValue(bb.lower),

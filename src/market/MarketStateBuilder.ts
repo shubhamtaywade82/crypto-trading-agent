@@ -14,7 +14,7 @@ import type {
   RangePricing,
   Timeframe,
 } from './types.js';
-import { bollinger, rsi, vwap, zscore } from '../binance/indicators.js';
+import { bollinger, lastVwap, rsi, zscore } from '../binance/indicators.js';
 
 const TIMEFRAMES: Timeframe[] = ['15m', '1h', '4h'];
 
@@ -53,7 +53,7 @@ function meanReversion(candles: Candle[]): MeanReversionState {
 
   return {
     mean,
-    vwap: vwap(candles, Math.min(96, Math.max(2, candles.length))).at(-1) ?? null,
+    vwap: lastVwap(candles, Math.min(96, Math.max(2, candles.length))),
     zscore: zscore(closes, period),
     rsi14: rsi(closes, 14).at(-1) ?? null,
     bollingerMiddle: meanValue ?? null,

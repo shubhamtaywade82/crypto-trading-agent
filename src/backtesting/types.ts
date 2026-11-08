@@ -57,6 +57,11 @@ export interface ReplayConfig {
   regime?: Partial<import('../market/RegimeScoring.js').RegimeOptions> | null;
   /** Overrides the manager parameters derived from the environment. */
   pm?: import('../position/PositionManager.js').PmConfig;
+  /**
+   * Closed bars per timeframe the decision phase sees, like live's MARKET_DATA_KLINE_LIMIT. Undefined keeps the full
+   * history, whose per-step indicator rebuild makes a replay quadratic in its length.
+   */
+  historyBars?: number;
 }
 
 /** A closed trade with the replay-only research fields the production TradeRecord cannot carry. */

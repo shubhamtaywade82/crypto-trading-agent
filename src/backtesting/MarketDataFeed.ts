@@ -61,8 +61,8 @@ export class MarketDataFeed {
     return index + 1 < bars.length ? bars[index + 1].open : undefined;
   }
 
-  /** All candles of `timeframe` for `symbol` that had fully closed by `closeTime`. */
-  closedCandles(symbol: string, timeframe: NativeTimeframe, closeTime: number): Candle[] {
+  /** Candles of `timeframe` for `symbol` that had fully closed by `closeTime`; the last `limit` of them when given. */
+  closedCandles(symbol: string, timeframe: NativeTimeframe, closeTime: number, limit = Infinity): Candle[] {
     const bars = this.data[symbol][timeframe] ?? [];
     // Binary search: first bar that is NOT fully closed by closeTime
     let lo = 0;
@@ -72,7 +72,7 @@ export class MarketDataFeed {
       if (bars[mid].openTime + INTERVAL_MS[timeframe] <= closeTime) lo = mid + 1;
       else hi = mid;
     }
-    return bars.slice(0, lo);
+    return bars.slice(Math.max(0, lo - limit), lo);
   }
 
   /** The last 15m close of `symbol` at or before `closeTime`, when one exists. */

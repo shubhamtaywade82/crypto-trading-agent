@@ -61,6 +61,7 @@ export function resolvedReplayConfig(overrides: Partial<ReplayConfig> = {}): Rep
     riskLimits: riskLimitsFromConfig(),
     positionManager,
     regime: config.regime.scored ? config.regime.options : null,
+    historyBars: config.marketDataV2.klineLimit,
     ...(positionManager ? { pm: pmConfigFromEnv() } : {}),
     ...overrides,
     costs: { ...DEFAULT_REPLAY_CONFIG.costs, ...overrides.costs },

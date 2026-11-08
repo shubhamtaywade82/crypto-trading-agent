@@ -1,0 +1,194 @@
+{
+  "schemaVersion": "1.0.0",
+  "runId": "CONTEXT-STRATEGY-20261106T2137Z-V99",
+  "capturedAtUtc": "2026-11-06T21:37:59.973Z",
+  "environment": {
+    "runtime": "managed container + V8 connector orchestration",
+    "cwd": "/",
+    "os": "Debian GNU/Linux 13 (trixie)",
+    "kernel": "6.18.57",
+    "cpuCores": 5,
+    "memory": {
+      "totalGiB": 5.81,
+      "availableGiB": 4.72
+    },
+    "disk": {
+      "filesystem": "overlay",
+      "sizeGiB": 32,
+      "usedGiB": 5.7,
+      "freeGiB": 30
+    },
+    "node": "v22.16.0",
+    "npm": "10.9.2",
+    "gitCheckouts": [
+      "/opt/novnc/.git",
+      "/opt/nvm/.git"
+    ],
+    "projectCheckoutPresent": false,
+    "binanceSdkPackages": {
+      "@nemesis-oss/binance-sdk": "NOT_INSTALLED",
+      "binance": "NOT_INSTALLED"
+    }
+  },
+  "checks": [
+    {
+      "capability": "shell_compute",
+      "status": "PASS",
+      "evidence": "PWD=/; Debian 13; kernel 6.18.57; 5 CPUs; RAM 5.81 GiB total/4.72 GiB available; overlay 32 GiB with 30 GiB free; Node v22.16.0/npm 10.9.2.",
+      "impact": "Enough resources for reconnaissance and bounded data processing; not enough environment compatibility to run the repository project.",
+      "nextAction": "Provision Node >=24 and npm >=11."
+    },
+    {
+      "capability": "repo_code",
+      "status": "DEGRADED",
+      "evidence": "No crypto-trading-agent checkout in filesystem; remote package.json blob 6dc911871b1f0b671c0535a06e6c23c9c0577eea and scripts/backtest.ts blob 284a5ffd4e254265da49c76cb792cfdc3b19e094 fetched through repository connector.",
+      "impact": "Remote source can be inspected and GitHub artifacts written, but repository code cannot be invoked locally.",
+      "nextAction": "Provision compatible clean checkout."
+    },
+    {
+      "capability": "binance_sdk",
+      "status": "BLOCKED",
+      "evidence": "require.resolve failed for @nemesis-oss/binance-sdk and binance; package.json declares versions 3.2.0 and ^2.15.22.",
+      "impact": "No SDK execution occurred.",
+      "nextAction": "Install declared packages after compatible Node/npm and checkout are available."
+    },
+    {
+      "capability": "network_binance",
+      "status": "DEGRADED",
+      "evidence": "At 2026-11-06T21:34:54Z direct probes: /fapi/v1/time HTTP000 DNS failure; /exchangeInfo HTTP000 DNS timeout; /klines HTTP000 DNS failure; /premiumIndex HTTP000 DNS timeout; /openInterest HTTP000 DNS failure; /ticker/24hr HTTP000 DNS timeout. data.binance.vision DNS failure. Binance market-data connector returned fresh payloads, but HTTP status/headers are not exposed.",
+      "impact": "Market snapshot and kline acquisition possible through connector; direct REST status/time verification and Binance Vision backtest archive source unavailable.",
+      "nextAction": "Restore DNS/outbound access; keep connector source and retrieval timestamps explicit."
+    },
+    {
+      "capability": "exchange_metadata",
+      "status": "BLOCKED",
+      "evidence": "Connector exchangeInfo.serverTime=2026-11-06T11:18:40.883Z; fresh premiumIndex mark time=2026-11-06T21:31:23.001Z; drift=36,762.123 seconds (10h12m42s). Returned statuses are TRADING but metadata is stale.",
+      "impact": "Do not use returned exchange filters/status for execution validation.",
+      "nextAction": "Obtain fresh exchangeInfo with server-time drift <=60 seconds."
+    },
+    {
+      "capability": "raw_historical_archive",
+      "status": "DEGRADED",
+      "evidence": "1h pages 1-25 persisted: 37,500 rows/symbol, 150,000 total, 2020-09-14T08:00Z through 2024-12-24T19:00Z. 4h canonical 13,461 rows/symbol (53,844 total) ends 2026-11-05T16:00Z; incremental 4h high-water is 2026-11-06T16:00Z. Multi-year 5m/15m absent; missing 76-row delta unresolved.",
+      "impact": "Historical sample is growing but not complete or fully reconciled.",
+      "nextAction": "Continue 1h page0026; backfill lower timeframes; reassemble canonical 4h."
+    },
+    {
+      "capability": "data_quality_coverage",
+      "status": "DEGRADED",
+      "evidence": "Pages 24 and 25 each 6,000 rows with zero duplicates/gaps/OHLC/nonfinite/volume/alignment failures. Latest incremental delta 68 rows; 12 forming excluded; zero quality failures. Current kline sample: per symbol 4h 999/1000 complete, 1h 49/50, 15m 49/50, 5m 49/50; no gaps/duplicates/invalid OHLCV. 14 original page-symbol SHA mismatches remain, though 21,000/21,000 rows independently matched; one 76-row delta remains inaccessible.",
+      "impact": "New segments are clean; archive-wide provenance/coverage gates remain degraded.",
+      "nextAction": "Resolve missing delta provenance, hash mismatches, and canonical 4h lag."
+    },
+    {
+      "capability": "backtest_harness_smoke",
+      "status": "BLOCKED",
+      "evidence": "Remote scripts/backtest.ts exists but was not invoked. Package requires Node>=24/npm>=11. Local Node22.16/npm10.9; no checkout/dependencies. Script --source archive uses data.binance.vision, not the GitHub research-data archive; supports 15m/1h/4h only; funding option uses fixed rate 0.0001 at 8h. No deterministic repository fixture smoke test ran.",
+      "impact": "No experiment or OOS evaluation can be claimed.",
+      "nextAction": "Provision runtime, checkout, dependencies, archive adapter, and deterministic smoke fixture; then run tests and a frozen experiment."
+    },
+    {
+      "capability": "disk_storage",
+      "status": "PASS",
+      "evidence": "30 GiB free in managed filesystem; GitHub branch write access available.",
+      "impact": "Small archive/report artifacts persisted remotely; no local project checkout.",
+      "nextAction": "Continue atomic-ish file commits and verify readback."
+    },
+    {
+      "capability": "artifact_readback",
+      "status": "PASS",
+      "evidence": "Page24/page25 symbol files, manifests and 1h index; 68-row delta and manifest; 4h archive index; research queue all fetched back and verified against hashes/row counts.",
+      "impact": "New archive state is durable in the named branches.",
+      "nextAction": "Preserve blob SHA and SHA-256 in the next manifest/report."
+    }
+  ],
+  "endpointObservations": {
+    "directShellHttpStatus": "HTTP000 for all six required fapi probes; DNS failures/timeouts",
+    "connectorEndpoints": {
+      "exchangeInfo": {
+        "serverTimeUtc": "2026-11-06T11:18:40.883Z",
+        "symbolsReturned": [
+          "BTCUSDT",
+          "ETHUSDT",
+          "SOLUSDT",
+          "XRPUSDT"
+        ],
+        "reportedStatus": "TRADING",
+        "executionUsable": false
+      },
+      "klines": {
+        "endpoint": "GET /fapi/v1/klines",
+        "symbols": [
+          "BTCUSDT",
+          "ETHUSDT",
+          "SOLUSDT",
+          "XRPUSDT"
+        ],
+        "intervals": [
+          "5m",
+          "15m",
+          "1h",
+          "4h"
+        ],
+        "retrievalUtc": "2026-11-06T21:26:16.422Z",
+        "perSymbolRows": {
+          "4h": 1000,
+          "1h": 50,
+          "15m": 50,
+          "5m": 50
+        },
+        "formingRowsExcludedPerSymbolInterval": 1
+      },
+      "premiumIndex": {
+        "endpoint": "GET /fapi/v1/premiumIndex",
+        "latestObservedUtc": "2026-11-06T21:31:23.001Z",
+        "status": "CONNECTOR_SUCCESS_HTTP_STATUS_UNAVAILABLE"
+      },
+      "openInterest": {
+        "endpoint": "GET /fapi/v1/openInterest",
+        "latestObservedUtc": "2026-11-06T21:31:19.905Z",
+        "status": "CONNECTOR_SUCCESS_HTTP_STATUS_UNAVAILABLE"
+      },
+      "ticker24h": {
+        "endpoint": "GET /fapi/v1/ticker/24hr",
+        "latestObservedUtc": "2026-11-06T21:31:21.338Z",
+        "status": "CONNECTOR_SUCCESS_HTTP_STATUS_UNAVAILABLE"
+      },
+      "fundingHistory": {
+        "endpoint": "GET /fapi/v1/fundingRate",
+        "latestSettledUtc": "2026-11-06T16:00:00.000Z",
+        "status": "CONNECTOR_SUCCESS_HTTP_STATUS_UNAVAILABLE"
+      },
+      "fundingInfo": {
+        "endpoint": "GET /fapi/v1/fundingInfo",
+        "intervalHours": {
+          "BTCUSDT": 8,
+          "ETHUSDT": 8,
+          "SOLUSDT": 8,
+          "XRPUSDT": 8
+        },
+        "status": "CONNECTOR_SUCCESS_HTTP_STATUS_UNAVAILABLE"
+      },
+      "takerFlow": {
+        "endpoint": "GET /futures/data/takerBuySellVol",
+        "latestCompletedBucketUtc": "2026-11-06T20:00:00.000Z",
+        "status": "CONNECTOR_SUCCESS_HTTP_STATUS_UNAVAILABLE"
+      },
+      "globalLongShort": {
+        "endpoint": "GET /futures/data/globalLongShortAccountRatio",
+        "latestSampleUtc": "2026-11-06T21:00:00.000Z",
+        "status": "CONNECTOR_SUCCESS_HTTP_STATUS_UNAVAILABLE"
+      },
+      "depth": {
+        "endpoint": "GET /fapi/v1/depth?limit=20",
+        "observedBatchUtc": "2026-11-06T21:26Z",
+        "status": "CONNECTOR_SUCCESS_HTTP_STATUS_UNAVAILABLE"
+      }
+    }
+  },
+  "classification": "RESEARCH_BLOCKED",
+  "experimentCount": 0,
+  "untouchedOosEvaluationCount": 0,
+  "archiveMaintenanceCompleted": true,
+  "monitoringCompleted": true
+}

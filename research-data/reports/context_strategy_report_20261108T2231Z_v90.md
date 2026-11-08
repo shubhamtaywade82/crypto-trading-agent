@@ -95,6 +95,15 @@ Candle classification timestamp: **2026-11-08 22:27:15 UTC**. Market metrics wer
 
 **Transition warning:** all four 1h candles closed sharply lower, while the latest completed 5m/15m bars rebounded. This is a short-term bounce inside a bearish multi-timeframe structure, not a long trigger. The 4h classification uses the bar that closed at 19:59:59.999Z; the 20:00Z 4h candle remains forming. Feature classification confidence is **medium** because the 4h state is stale relative to the recent 1h impulse. This is not a probability of trade success.
 
+24h range and mark-price details:
+
+| Symbol | Mark price | 24h high / low | 24h quote volume |
+|---|---:|---:|---:|
+| BTC | 74,599.90 | 76,168.80 / 73,333.00 | 5.076B USDT |
+| ETH | 2,134.40 | 2,245.31 / 2,050.32 | 4.574B USDT |
+| SOL | 86.6795 | 89.98 / 84.66 | 1.022B USDT |
+| XRP | 1.1202 | 1.1693 / 1.0882 | 565.7M USDT |
+
 Additional live observations:
 
 | Symbol | OI change (1h) | Taker buy share (12 x 5m) | Global long-account share | Indicated funding | Last settled funding |

@@ -1,0 +1,205 @@
+{
+  "schema_version": "1.0.0",
+  "queue_version": "v83",
+  "run_id": "context-strategy-2026-11-08T1529Z-v83",
+  "updated_at_utc": "2026-11-08T15:29:14.871Z",
+  "storage": "Persisted in GitHub research branch; new snapshots will be readback-verified.",
+  "items": [
+    {
+      "id": "RQ-019",
+      "priority": "P0",
+      "status": "COMPLETED_THIS_RUN",
+      "prerequisites": [
+        "Binance connector market data",
+        "GitHub archive branch"
+      ],
+      "next_action": "On next refresh, append only newly completed candles after verified interval highwaters; 4h next expected close is 16:00 UTC.",
+      "completed": {
+        "rows": 60,
+        "by_interval": {
+          "5m": 44,
+          "15m": 12,
+          "1h": 4,
+          "4h": 0
+        },
+        "delta_path": "research-data/binance-usdm/delta/binance_usdm_delta_20261108T152914Z_5m15m1h_completed.jsonl",
+        "delta_sha256": "4fd69043c99b67f5bd7683979dc3067ed32038ecc9319b5705499a8e5bceedc2",
+        "delta_bytes": 23421,
+        "manifest_path": "research-data/binance-usdm/delta/manifest-20261108T152914Z-5m15m1h.json",
+        "manifest_sha256": "8a3ed52db43a318e955b2627ece4808e80dad0dba79e595ec78c3bb3f3984af9",
+        "readback_verified": true,
+        "indexes_updated_and_readback_verified": [
+          "5m",
+          "15m",
+          "1h"
+        ],
+        "latest_completed_open_utc": {
+          "5m": "2026-11-08T15:20:00Z",
+          "15m": "2026-11-08T15:00:00Z",
+          "1h": "2026-11-08T14:00:00Z",
+          "4h": "2026-11-08T08:00:00Z"
+        }
+      },
+      "blocker": null
+    },
+    {
+      "id": "RQ-002",
+      "priority": "P0",
+      "status": "BLOCKED",
+      "prerequisites": [
+        "Direct outbound DNS or uncached official REST access"
+      ],
+      "blocker": "Direct /fapi/v1/time, /fapi/v1/exchangeInfo and /fapi/v1/premiumIndex shell probes failed DNS (HTTP 000). Connector exchangeInfo.serverTime=2026-11-06T11:18:40.883Z, 52.14 hours stale.",
+      "next_action": "Restore outbound DNS; obtain fresh /fapi/v1/time and /fapi/v1/exchangeInfo; enforce a server-time drift gate before execution validation."
+    },
+    {
+      "id": "RQ-005",
+      "priority": "P0",
+      "status": "BLOCKED",
+      "prerequisites": [
+        "Local repository checkout",
+        "Node >=24",
+        "npm >=11"
+      ],
+      "blocker": "No local repository checkout; Node v22.16.0/npm 10.9.2 below Node>=24/npm>=11; @binance/connector, binance-api-node, @binance/derivatives-trading-usds and @binance/spot not installed.",
+      "next_action": "Provision Node 24/npm 11, clone main at 5e954d29e24697b6c8cc917f5da8b0f4229c2157, install lockfile dependencies and run deterministic harness smoke test."
+    },
+    {
+      "id": "RQ-012",
+      "priority": "P0",
+      "status": "BLOCKED",
+      "prerequisites": [
+        "Compatible local runner"
+      ],
+      "blocker": "No local compatible runner; known source contract omits closeTime and research CLI lacks 5m support.",
+      "next_action": "Preserve closeTime end-to-end, add 5m support, and add completed/forming/no-lookahead fixtures."
+    },
+    {
+      "id": "RQ-013",
+      "priority": "P0",
+      "status": "BLOCKED",
+      "prerequisites": [
+        "Archive validator source and tests"
+      ],
+      "blocker": "Zero-volume rejection in archive validator is still unverified.",
+      "next_action": "Enforce volume > 0 and add zero, negative, NaN and missing-volume fixtures."
+    },
+    {
+      "id": "RQ-025",
+      "priority": "P0",
+      "status": "PARTIALLY_COMPLETED",
+      "prerequisites": [
+        "Raw 4h pages and all page manifests"
+      ],
+      "blocker": "Canonical 4h files end at 2026-11-05T16:00Z while raw incrementals reach 2026-11-08T08:00Z; 13 original page/symbol SHA-256 mismatches remain; raw/canonical count differences remain. Prior 21,000-row sample comparison found no row-level mismatches, but provenance/count reconciliation is incomplete.",
+      "next_action": "Rebuild canonical 4h through 2026-11-08T08:00Z from verified deltas, preserve malformed XRP correction, reconcile per-symbol counts and retain expected/actual hashes."
+    },
+    {
+      "id": "RQ-003",
+      "priority": "P1",
+      "status": "PARTIALLY_COMPLETED",
+      "prerequisites": [
+        "Auditable historical 5m/15m source",
+        "Storage and network"
+      ],
+      "blocker": "Multi-year 5m/15m base archive is absent; this run only added recent increments.",
+      "next_action": "Backfill oldest-first from an auditable source, then validate cross-symbol continuity and coverage."
+    },
+    {
+      "id": "RQ-004",
+      "priority": "P1",
+      "status": "BLOCKED",
+      "prerequisites": [
+        "Fee-tier evidence",
+        "Historical funding settlements",
+        "Historical spread/depth/trades"
+      ],
+      "blocker": "No actual fee-tier evidence, full historical funding settlements, synchronized historical spread/depth or calibrated slippage/impact.",
+      "next_action": "Collect fee tier, full funding settlements and synchronized book/trade samples; fit per-symbol cost curves."
+    },
+    {
+      "id": "RQ-014",
+      "priority": "P1",
+      "status": "BLOCKED",
+      "prerequisites": [
+        "Funding archive or PIT database"
+      ],
+      "blocker": "Only the latest three settled funding records per symbol were retrieved; no full funding archive or PIT database.",
+      "next_action": "Backfill /fapi/v1/fundingRate oldest-first and align settlement cashflows with simulated holding periods."
+    },
+    {
+      "id": "RQ-021",
+      "priority": "P0",
+      "status": "BLOCKED",
+      "prerequisites": [
+        "Compatible runner",
+        "1m archive",
+        "Funding data",
+        "BTC reference-only fix",
+        "Candle contract fix",
+        "Smoke test"
+      ],
+      "blocker": "No compatible local runner or smoke test; 1m archive unavailable; fundingSource=db unavailable; EXP-001 includes BTCUSDT in its tradable symbols array.",
+      "next_action": "Satisfy runtime/data/cost prerequisites, separate BTC referenceSymbols from SOL/ETH/XRP tradable symbols, freeze EXP-001 and run purged chronological evaluation."
+    },
+    {
+      "id": "RQ-007",
+      "priority": "P1",
+      "status": "PARTIALLY_COMPLETED",
+      "prerequisites": [
+        "Aligned multi-year BTC and alt returns"
+      ],
+      "blocker": "No new multi-year aligned lead/lag estimate; prior analysis ends 2026-11-04.",
+      "next_action": "Recompute rolling BTC/alt correlation and lead/lag on reconciled aligned history with training-only windows and uncertainty."
+    },
+    {
+      "id": "RQ-010",
+      "priority": "P1",
+      "status": "PARTIALLY_COMPLETED",
+      "prerequisites": [
+        "Funding semantic regression tests"
+      ],
+      "blocker": "premiumIndex.lastFundingRate and last settled /fapi/v1/fundingRate differ; current premium-index field is not a guaranteed next settlement rate.",
+      "next_action": "Add field-semantic regression tests and maintain separate indicated versus settled funding fields."
+    },
+    {
+      "id": "RQ-011",
+      "priority": "P0",
+      "status": "BLOCKED",
+      "prerequisites": [
+        "PromotionGate and experiment harness"
+      ],
+      "blocker": "PromotionGate and experiment harness have not been demonstrated to enforce >=100 OOS trades per cell, block-bootstrap uncertainty, Holm correction, parameter stability and multi-window >=200 stronger evidence.",
+      "next_action": "Implement and test all predeclared evidence gates before any promotion."
+    },
+    {
+      "id": "RQ-029",
+      "priority": "P0",
+      "status": "BLOCKED",
+      "prerequisites": [
+        "EXP-001 config and runner"
+      ],
+      "blocker": "EXP-001 still lists BTCUSDT in symbols; BTC must be reference-only.",
+      "next_action": "Separate referenceSymbols from tradable symbols and add a regression test preventing BTC trade generation."
+    },
+    {
+      "id": "RQ-028",
+      "priority": "P2",
+      "status": "NOT_DUE",
+      "prerequisites": [
+        "Canonical archive and compatible runner"
+      ],
+      "next_action": "Weekly taxonomy/stability review due 2026-11-11 UTC; retain taxonomy unless training-only re-estimation and stability tests support a change."
+    },
+    {
+      "id": "RQ-030",
+      "priority": "P1",
+      "status": "BLOCKED",
+      "prerequisites": [
+        "Exact prior-run artifact bytes and SHA-256 readback"
+      ],
+      "blocker": "v82 run-manifest records different declared and readback byte counts for snapshot/report while claiming identical SHA-256 values; this is internally inconsistent and must not be accepted as proof of exact readback.",
+      "next_action": "Re-audit v82 snapshot/report exact fetched bytes and recompute hashes; correct the integrity ledger without modifying original evidence artifacts."
+    }
+  ]
+}

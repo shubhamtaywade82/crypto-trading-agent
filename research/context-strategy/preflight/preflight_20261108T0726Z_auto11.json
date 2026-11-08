@@ -1,0 +1,128 @@
+{
+  "schemaVersion": 1,
+  "runId": "CONTEXT-STRATEGY-20261108T0726Z-AUTO11",
+  "checkedAtUtc": "2026-11-08T07:26:27.336Z",
+  "classification": "MONITORING_ONLY",
+  "environment": {
+    "runtime": "managed tool runtime + container shell",
+    "cwd": "/",
+    "os": "Debian GNU/Linux 13 (trixie)",
+    "node": "v22.16.0",
+    "npm": "10.9.2",
+    "python": "3.13.5",
+    "cpuCores": 5,
+    "memoryTotalBytes": 6236844032,
+    "memoryAvailableBytes": 5048389632,
+    "diskFreeGiB": 30,
+    "localRepositoryPresent": false,
+    "remoteRepositoryPresent": true,
+    "binanceSdkInstalled": false
+  },
+  "repository": {
+    "fullName": "shubhamtaywade82/crypto-trading-agent",
+    "defaultBranch": "main",
+    "mainCommit": "fce8afd0cad347d2e9dbb0ecebfbaf43889295e0",
+    "mainCommitDateUtc": "2026-11-06T23:05:26Z",
+    "requiredNode": ">=24",
+    "requiredNpm": ">=11",
+    "backtestScript": "scripts/backtest.ts",
+    "backtestScriptBlobSha": "284a5ffd4e254265da49c76cb792cfdc3b19e094",
+    "conditionalEdgeScript": "scripts/conditional-edge.ts",
+    "conditionalEdgeScriptBlobSha": "29034c61fdd42a5e40272234b221d29cb95fb3ee",
+    "repositoryCliInvoked": false
+  },
+  "network": {
+    "directRest": {
+      "/fapi/v1/time": "HTTP 000; curl DNS resolution failure after 5.0s",
+      "/fapi/v1/exchangeInfo": "HTTP 000; curl DNS resolution failure"
+    },
+    "connector": "Binance connector returned mark/ticker/OI/book/funding/OI-statistics/taker/long-short/klines without tool errors; HTTP status/headers unavailable",
+    "exchangeInfoServerTimeUtc": "2026-11-06T11:18:40.896Z",
+    "freshMarkPriceTimeUtc": "2026-11-08T07:23:00.000Z",
+    "serverTimeDriftSeconds": 158485.104,
+    "contractMetadataExecutionValid": false
+  },
+  "archive": {
+    "branch": "research/raw-ohlcv-archive-20261108T0723Z-run22",
+    "branchCommit": "493b3b006b8d98ea634cc85bf708c629235cd465",
+    "deltaPath": "research-data/binance-usdm/delta/binance_usdm_delta_20261108T0723Z_5m15m1h_completed.jsonl",
+    "deltaSha256": "64507ea9bd25e6a253194fdf0b268eae2818715db3e2bb3c88ee446c76e05b40",
+    "deltaRows": 60,
+    "manifestPath": "research-data/binance-usdm/delta/manifest-20261108T0723Z-5m15m1h.json",
+    "manifestSha256": "7ffed3e1668f6126bf9a7930d082b0eb6ed2cb0b9eeaf88ecfe5ddd393c89ce2",
+    "archiveIndex4hBlobSha": "d6bb0f2b53e8a853cee12143feaa756c574b40e6",
+    "archiveIndex1hBlobSha": "75d7cae0c950c136b163417aa383cac0954c8fc9",
+    "readbackVerified": true,
+    "highwaterUtc": {
+      "5m": "2026-11-08T07:20:00.000Z",
+      "15m": "2026-11-08T07:00:00.000Z",
+      "1h": "2026-11-08T06:00:00.000Z",
+      "4h": "2026-11-08T00:00:00.000Z"
+    }
+  },
+  "checks": [
+    {
+      "capability": "shell/compute",
+      "status": "PASS",
+      "evidence": "cwd=/; Debian13; Node22.16.0; npm10.9.2; Python3.13.5; 5 CPU; 6.09GB RAM; 4.93GB available; 30GiB free.",
+      "impact": "Shell and compute exist; repository runtime floor is not met.",
+      "nextAction": "Provision Node24/npm11."
+    },
+    {
+      "capability": "repo/code",
+      "status": "BLOCKED",
+      "evidence": "No local checkout; remote main commit fce8afd0cad347d2e9dbb0ecebfbaf43889295e0; scripts/backtest.ts exists remotely; package requires Node>=24/npm>=11; no @nemesis-oss/binance-sdk or binance package importable.",
+      "impact": "Repository CLI cannot be invoked; no code-versioned backtest executed.",
+      "nextAction": "Provision compatible runtime and clean checkout; npm ci; run repository tests and backtest smoke test."
+    },
+    {
+      "capability": "network/Binance endpoints",
+      "status": "DEGRADED",
+      "evidence": "Direct /time and /exchangeInfo curl probes HTTP000 due DNS; connector market data fresh; exchangeInfo serverTime is 158485.104s behind mark time.",
+      "impact": "Current snapshot is observable, but contract metadata cannot validate execution.",
+      "nextAction": "Restore uncached DNS/HTTPS; require <=60s server-time drift and fresh exchangeInfo."
+    },
+    {
+      "capability": "raw historical archive",
+      "status": "DEGRADED",
+      "evidence": "1h archive 53,871 rows/symbol; 4h canonical 13,461 rows/symbol plus deltas; new 60-row delta and manifest readback-verified. Multi-year 5m/15m absent.",
+      "impact": "Long 1h/4h research possible; full multi-timeframe historical analysis remains blocked.",
+      "nextAction": "Backfill multi-year 5m/15m oldest-first and keep deltas current."
+    },
+    {
+      "capability": "data quality/coverage",
+      "status": "DEGRADED",
+      "evidence": "Current 1500-row windows: 16 series, 1499 completed +1 forming each; zero gaps/duplicates/off-grid/OHLC/volume/nonfinite/close-time failures. 14 page-symbol SHA provenance discrepancies remain; 21,000 rows replay-reconciled with zero row-level mismatches.",
+      "impact": "Current window clean; historical provenance and lower-timeframe coverage remain incomplete.",
+      "nextAction": "Resolve page SHA provenance and complete 5m/15m backfill."
+    },
+    {
+      "capability": "backtest harness/smoke test",
+      "status": "BLOCKED",
+      "evidence": "Remote script exists but no local checkout and Node/npm below floor; no CLI smoke test or experiment this run. Prior 06:32 run used inline V8 fixture, not repository CLI.",
+      "impact": "No reproducible repository experiment executed this run.",
+      "nextAction": "Run deterministic fixture under Node24 after checkout; then execute a pre-registered experiment."
+    },
+    {
+      "capability": "disk/storage",
+      "status": "PASS",
+      "evidence": "30GiB free local; GitHub branch writes succeeded.",
+      "impact": "Durable remote archive and report storage available.",
+      "nextAction": "Continue atomic writes and verified readback."
+    },
+    {
+      "capability": "artifact readback",
+      "status": "PASS",
+      "evidence": "Delta SHA256 64507ea9... and manifest core SHA256 7ffed3e1... verified; both archive indexes fetched after update.",
+      "impact": "New archive delta and indexes persisted.",
+      "nextAction": "Continue per-run hash/readback verification."
+    },
+    {
+      "capability": "Binance SDK",
+      "status": "BLOCKED",
+      "evidence": "@nemesis-oss/binance-sdk, binance, @binance/connector and binance-api-node all NOT_INSTALLED.",
+      "impact": "No SDK used; data came through Binance connector.",
+      "nextAction": "Install repository-pinned SDK in compatible checkout."
+    }
+  ]
+}

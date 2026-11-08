@@ -32,17 +32,19 @@ Examples of common transitions: BTC UP_LOW->UP_NORMAL (75), ETH SIDEWAYS_LOW->SI
 
 ## 3. Strategy-context scorecard
 
-The accessible main registry is newer and more complete than the v83 archive-branch snapshot. The v83 12-trade SOL/BULL_LOW OOS_PROMISING label is superseded; use the main registry's 55-trade evaluation.
+The main-branch and v83 archive-branch registries contain different strategy definitions. They are merged without conflating them. The v83 4h Donchian20/BULL_LOW candidate remains OOS_PROMISING (12 trades) but is research-only. The main-branch SOL Donchian candidate uses a 15-bar lookback and remains INSUFFICIENT_EVIDENCE (55 OOS trades). Do not treat them as the same strategy.
 
 | Strategy/context | Symbol | OOS trades | Mean net R | PF | OOS CI95 | Status |
 |---|---|---:|---:|---:|---|---|
+| 4h Donchian20 breakout / legacy BULL_LOW | SOL | 12 | +0.6060 | 2.72 | [0.086, 1.199] | OOS_PROMISING |
 | Donchian20 trend breakout / legacy BULL_LOW | SOL | 55 | +0.0431 | 1.082 | [-0.2798, 0.3900] | INSUFFICIENT_EVIDENCE |
+| Context-aligned Donchian20 WF v2 | 36 cells | below 100/cell | -- | -- | CI includes zero | INSUFFICIENT_EVIDENCE |
 | Failed-breakout fade / SIDEWAYS_LOW | SOL | 113 | -0.1480 | 0.787 | [-0.3175, 0.0196] | REJECTED |
 | Trend pullback + BTC confirmation | SOL | 10 | -0.1886 | 0.733 | CI crosses zero | INSUFFICIENT_EVIDENCE |
 | Volatility contraction breakout / BULL_COMPRESS | SOL | 18 | -0.2050 | 0.687 | [-0.7233, 0.2946] | INSUFFICIENT_EVIDENCE |
 | Volatility contraction breakout / BEAR_COMPRESS | SOL | 26 | -0.1153 | 0.814 | [-0.6830, 0.3705] | INSUFFICIENT_EVIDENCE |
 
-No OOS_VALIDATED entry exists. The failed-breakout fade is genuinely REJECTED by negative OOS expectancy, PF below 1, drawdown above the risk gate and negative parameter-neighborhood results. The other candidates do not meet sample and uncertainty gates. No result transfers to ETH or XRP.
+General families remain HYPOTHESIS: trend/pullback continuation, breakout/retest, range mean reversion, volatility expansion, BTC-relative strength and funding/OI filters. No OOS_VALIDATED entry exists. The failed-breakout fade is genuinely REJECTED by negative OOS expectancy, PF below 1, drawdown above the risk gate and negative parameter-neighborhood results. The other candidates do not meet sample and uncertainty gates. No result transfers to ETH or XRP.
 
 Important taxonomy caveat: the Donchian registry detector uses a legacy context key and is not assumed equivalent to the newer CTX-v2 UP_LOW/DOWN_LOW labels. No cross-taxonomy promotion is allowed.
 

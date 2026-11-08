@@ -1,0 +1,131 @@
+{
+  "schema_version": "1.0.0",
+  "registry_version": "v83",
+  "updated_at_utc": "2026-11-08T03:29:10.000Z",
+  "prior_snapshot": "context_strategy_registry_20261108T0202Z_v82.json",
+  "status_transition_count": 0,
+  "oos_validated_entries": 0,
+  "oos_promising_entries": 1,
+  "last_evaluated_utc": "NOT_REEVALUATED_THIS_RUN",
+  "entries": [
+    {
+      "key": "SOLUSDT|4h|BULL_LOW|donchian20-v0.1.0",
+      "symbol": "SOLUSDT",
+      "timeframe": "4h",
+      "context": "BULL_LOW",
+      "strategy_family": "Donchian20 breakout continuation",
+      "version": "0.1.0",
+      "evidence_status": "OOS_PROMISING",
+      "last_evaluated_utc": "2026-11-07T19:35:32Z",
+      "oos": {
+        "trades": 12,
+        "win_rate_pct": 66.7,
+        "target_before_stop_pct": 41.7,
+        "mean_net_R": 0.606,
+        "profit_factor": 2.72,
+        "max_drawdown_R": 1.3,
+        "block_bootstrap_interval_R": [
+          0.086,
+          1.199
+        ]
+      },
+      "gates": {
+        "minimum_oos_trades_per_symbol_context": 100,
+        "passed": false,
+        "multi_window_stability": false
+      },
+      "known_failure_modes": [
+        "sample below minimum",
+        "single context window not stable across multiple walk-forward windows",
+        "cost model and contract-specific fills need further verification"
+      ],
+      "current_applicability": "NOT_APPLICABLE; current SOL 4h context is BEAR, not BULL_LOW",
+      "actionable": false,
+      "source": "context_strategy_registry_20261108T0202Z_v82.json"
+    },
+    {
+      "key": "BTCUSDT|ALL|donchian20-baseline-v0.1.0",
+      "symbol": "BTCUSDT",
+      "context": "ALL",
+      "strategy_family": "Donchian20 baseline",
+      "evidence_status": "INSUFFICIENT_EVIDENCE",
+      "prior_walk_forward_aggregate": {
+        "trades": 200,
+        "win_rate_pct": 36.5,
+        "target_before_stop_pct": 21.5,
+        "mean_net_R": -0.100817
+      }
+    },
+    {
+      "key": "ETHUSDT|ALL|donchian20-baseline-v0.1.0",
+      "symbol": "ETHUSDT",
+      "context": "ALL",
+      "strategy_family": "Donchian20 baseline",
+      "evidence_status": "INSUFFICIENT_EVIDENCE",
+      "prior_walk_forward_aggregate": {
+        "trades": 182,
+        "win_rate_pct": 38.46,
+        "target_before_stop_pct": 28.02,
+        "mean_net_R": 0.047803
+      }
+    },
+    {
+      "key": "SOLUSDT|ALL|donchian20-baseline-v0.1.0",
+      "symbol": "SOLUSDT",
+      "context": "ALL",
+      "strategy_family": "Donchian20 baseline",
+      "evidence_status": "INSUFFICIENT_EVIDENCE",
+      "prior_walk_forward_aggregate": {
+        "trades": 208,
+        "win_rate_pct": 37.02,
+        "target_before_stop_pct": 24.52,
+        "mean_net_R": -0.017655
+      }
+    },
+    {
+      "key": "XRPUSDT|ALL|donchian20-baseline-v0.1.0",
+      "symbol": "XRPUSDT",
+      "context": "ALL",
+      "strategy_family": "Donchian20 baseline",
+      "evidence_status": "INSUFFICIENT_EVIDENCE",
+      "prior_walk_forward_aggregate": {
+        "trades": 188,
+        "win_rate_pct": 37.77,
+        "target_before_stop_pct": 29.79,
+        "mean_net_R": 0.048855
+      }
+    }
+  ],
+  "untested_families": [
+    {
+      "family": "trend_pullback_continuation",
+      "status": "HYPOTHESIS"
+    },
+    {
+      "family": "breakout_retest_volatility_contraction",
+      "status": "HYPOTHESIS"
+    },
+    {
+      "family": "range_mean_reversion_failed_breakout_fade",
+      "status": "HYPOTHESIS"
+    },
+    {
+      "family": "volatility_expansion_momentum",
+      "status": "HYPOTHESIS"
+    },
+    {
+      "family": "btc_led_relative_strength",
+      "status": "HYPOTHESIS"
+    },
+    {
+      "family": "funding_oi_filters",
+      "status": "HYPOTHESIS"
+    }
+  ],
+  "notes": [
+    "No candidate is OOS_VALIDATED.",
+    "SOL BULL_LOW Donchian20 remains research-only; current context is not BULL_LOW.",
+    "No strategy was re-evaluated, promoted or rejected this run.",
+    "Two data-quality experiments completed; no strategy backtest or OOS evaluation."
+  ]
+}

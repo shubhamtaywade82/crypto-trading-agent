@@ -26,7 +26,7 @@ The 16 series returned 104 rows. Twenty rows at or before prior highwaters and 1
 - Manifest: `research-data/binance-usdm/delta/manifest-20261108T2020Z-5m15m1h4h.json`
 - Manifest bytes: **8,872**
 - Manifest SHA-256: `3fe9edecf43d43ced843bcb690d4461e43a9df499ca756a05bd357c17bcb68c0`
-- 5m, 15m, 1h and 4h indexes were updated and fetched back.
+- 5m, 15m, 1h and 4h indexes were updated and fetched back. The queue, registry snapshot, market snapshot, preflight and report were also fetched back and identity-checked.
 
 The new 4h candle is stored as a raw incremental delta. **It was not merged into the canonical 4h dataset.**
 
@@ -129,7 +129,7 @@ There are zero OOS_VALIDATED registry entries. No exact entry/stop/target levels
 | Data quality | PASS | 16 delta series pass; 8 current 1h/4h windows pass | Continue full-archive validation |
 | Backtest / smoke test | BLOCKED | Remote scripts/backtest.ts exists; no local compatible runner; smoke test NOT_RUN | Provision runtime and run deterministic fixture |
 | Disk / storage | PASS | 30G free; GitHub archive writes succeeded | Continue raw/derived separation |
-| Artifact readback | PASS | Delta, manifest and all four indexes fetched back and verified; run artifacts are read back in the final verification step | Preserve blob identities and SHA-256 |
+| Artifact readback | PASS | Delta, manifest and all four indexes fetched back and verified; queue, registry snapshot, market snapshot, preflight and report fetched back and identity-checked | Preserve blob identities and SHA-256 |
 
 ### Costs and unavailable inputs
 

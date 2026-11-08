@@ -152,7 +152,7 @@ Reasons: zero OOS_VALIDATED registry entries; no exact validated setup trigger; 
 | Data quality | DEGRADED | New 72-row delta clean; 4h raw/canonical reconciliation remains incomplete. |
 | Backtest/smoke | BLOCKED | No compatible local harness execution; no fixture smoke test; no experiment/OOS. |
 | Disk/storage | PASS | GitHub push permission and 30 GB free disk. |
-| Artifact readback | PASS for archive | Delta/manifest hashes and 5m/15m/1h index readbacks verified; remaining run artifacts are being verified separately. |
+| Artifact readback | PASS | Delta/manifest hashes, 5m/15m/1h indexes, queue, registry, market snapshot, preflight and report were fetched back and verified. |
 
 Direct REST probes attempted: `/fapi/v1/time`, `/fapi/v1/exchangeInfo`, `/fapi/v1/premiumIndex`, `/fapi/v1/openInterest`, `/fapi/v1/ticker/24hr`, `/fapi/v1/klines`. All returned HTTP 000 due DNS resolution failure or timeout. The Binance connector was used as a degraded monitoring fallback; it did not expose HTTP status/headers. The connector's exchangeInfo serverTime was 2026-11-06 11:18:40.886Z, 209,482.115 seconds behind the 2026-11-08 21:30:03.001Z mark timestamp. Contract statuses were observed as TRADING, but stale metadata is not accepted for execution validation.
 

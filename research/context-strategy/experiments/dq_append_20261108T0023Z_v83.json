@@ -1,0 +1,87 @@
+{
+  "schema_version": "1.0.0",
+  "experiment_id": "DQ-APPEND-20261108T0023Z",
+  "experiment_type": "DATA_QUALITY_INCREMENTAL_APPEND",
+  "status": "COMPLETED",
+  "hypothesis": "Fetching only candles whose closeTime is strictly before the observed exchange timestamp and whose openTime is strictly after the verified prior high-water produces a continuous, aligned append without lookahead.",
+  "specification": {
+    "endpoint": "GET /fapi/v1/klines",
+    "symbols": [
+      "BTCUSDT",
+      "ETHUSDT",
+      "SOLUSDT",
+      "XRPUSDT"
+    ],
+    "intervals": [
+      "5m",
+      "15m",
+      "1h",
+      "4h"
+    ],
+    "as_of_utc": "2026-11-08T00:23:00.000Z",
+    "previous_high_watermark_utc": {
+      "5m": "2026-11-07T23:20:00Z",
+      "15m": "2026-11-07T23:00:00Z",
+      "1h": "2026-11-07T22:00:00Z",
+      "4h": "2026-11-07T16:00:00Z"
+    },
+    "expected_rows": {
+      "5m": 44,
+      "15m": 16,
+      "1h": 4,
+      "4h": 4
+    },
+    "forming_candle_rule": "closeTime < as_of_utc",
+    "checks": [
+      "timestamp alignment",
+      "strict continuity",
+      "duplicate keys",
+      "OHLC invariants",
+      "positive volume",
+      "finite values",
+      "closeTime=openTime+interval-1",
+      "cross-symbol timestamp alignment"
+    ]
+  },
+  "results": {
+    "rows_appended": 68,
+    "rows_by_interval": {
+      "5m": 44,
+      "15m": 16,
+      "1h": 4,
+      "4h": 4
+    },
+    "forming_rows_excluded": 16,
+    "duplicates": 0,
+    "gaps": 0,
+    "off_grid": 0,
+    "ohlc_failures": 0,
+    "non_finite": 0,
+    "non_positive_volume": 0,
+    "close_time_failures": 0,
+    "cross_symbol_alignment": true
+  },
+  "artifact": {
+    "branch": "research/raw-ohlcv-archive-20261108T0023Z-run18",
+    "path": "research-data/binance-usdm/delta/binance_usdm_delta_20261108T0023Z_5m15m1h4h_completed.jsonl",
+    "bytes": 18949,
+    "sha256": "e2b005df65b6761b60b264454ce285fb111b279c210a2665f0b7ffbac784face",
+    "sidecar_matches": true,
+    "readback_verified": true,
+    "readback_rows": 68,
+    "readback_verified_at_utc": "2026-11-08T00:23:45Z",
+    "branch_commit": "39d95f58a7a02ea65ef774a0962dac47f11db971"
+  },
+  "reproducibility": {
+    "request_parameters_recorded": true,
+    "seed": "NOT_APPLICABLE",
+    "local_code_commit": "NOT_AVAILABLE",
+    "execution_method": "inline deterministic validator through connector; repository harness not used",
+    "validator_code_hash": "NOT_AVAILABLE",
+    "limitation": "The append inputs and output are reproducible; the inline validator itself was not committed as executable source."
+  },
+  "strategy_backtest": "NOT_RUN",
+  "oos_evaluation": "NOT_RUN",
+  "cost_model": "NOT_APPLICABLE_TO_DATA_QUALITY_EXPERIMENT",
+  "status_label": "RESEARCH_EXECUTED_NOT_OOS"
+}

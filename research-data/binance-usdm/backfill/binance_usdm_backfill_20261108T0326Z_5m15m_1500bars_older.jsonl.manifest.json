@@ -1,0 +1,72 @@
+{
+  "schema_version": "1.0.0",
+  "created_at_utc": "2026-11-08T03:28:03.070Z",
+  "source": {
+    "venue": "Binance USD-M perpetuals",
+    "connector": "Binance public market-data connector",
+    "endpoint": "GET /fapi/v1/klines",
+    "raw_http_status": "UNAVAILABLE"
+  },
+  "symbols": [
+    "BTCUSDT",
+    "ETHUSDT",
+    "SOLUSDT",
+    "XRPUSDT"
+  ],
+  "intervals": [
+    "5m",
+    "15m"
+  ],
+  "limit_per_symbol_interval": 1500,
+  "rows": 12000,
+  "bytes": 3378840,
+  "requests": {
+    "5m": {
+      "endTime": 1793386799999,
+      "end_time_utc": "2026-10-30T18:59:59.999Z",
+      "expected_next_page_open_utc": "2026-10-30T19:00:00Z"
+    },
+    "15m": {
+      "endTime": 1792486799999,
+      "end_time_utc": "2026-10-20T08:59:59.999Z",
+      "expected_next_page_open_utc": "2026-10-20T09:00:00Z"
+    }
+  },
+  "ranges": {
+    "5m": {
+      "rows_per_symbol": 1500,
+      "first_open_utc": "2026-10-25T14:00:00Z",
+      "last_open_utc": "2026-10-30T18:55:00Z"
+    },
+    "15m": {
+      "rows_per_symbol": 1500,
+      "first_open_utc": "2026-10-04T18:00:00Z",
+      "last_open_utc": "2026-10-20T08:45:00Z"
+    }
+  },
+  "quality": {
+    "duplicates": 0,
+    "missing_intervals": 0,
+    "off_grid": 0,
+    "ohlc_failures": 0,
+    "non_positive_volume": 0,
+    "non_finite": 0,
+    "close_time_failures": 0,
+    "cross_symbol_alignment": true,
+    "adjacent_to_newer_page": true,
+    "forming_bars": 0
+  },
+  "sha256": "135215502e3fa070ea9b22b6dc76c7b93f09d7ea32520600c02526b83f45eb51",
+  "git_blob_sha1": "7d12063f93add171514f54dde7042769ed7ff0ea",
+  "readback": {
+    "full_content_body_available": false,
+    "git_blob_identity_verification": "PENDING"
+  },
+  "canonical_index_advanced": false,
+  "raw_branch": "research/raw-ohlcv-archive-20261108T0320Z-run23",
+  "notes": [
+    "Second contiguous page per symbol/interval; older than the existing Oct 20/Oct 30 page.",
+    "This extends coverage only to Oct 4 on 15m and Oct 25 on 5m; not multi-cycle or multi-year coverage.",
+    "Missing 76-row artifact remains unresolved; do not merge into canonical indexes until provenance reconciliation."
+  ]
+}

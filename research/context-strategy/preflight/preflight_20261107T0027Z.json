@@ -1,0 +1,93 @@
+{
+  "schemaVersion": "1.0.0",
+  "runId": "CONTEXT-STRATEGY-20261107T0027Z-V102",
+  "asOfUtc": "2026-11-07T00:27:20.000Z",
+  "checks": [
+    {
+      "capability": "Shell / compute",
+      "status": "PASS",
+      "evidence": "Debian 13 trixie; cwd=/; Node v22.16.0; npm 10.9.2; Python 3.13.5; 5 CPUs; MemTotal 6,090,668 KiB; MemAvailable 4,950,616 KiB; 30 GiB disk free.",
+      "impact": "Bounded compute available; package runtime floor not met.",
+      "nextAction": "Provision Node >=24 and npm >=11."
+    },
+    {
+      "capability": "Repository / code",
+      "status": "DEGRADED",
+      "evidence": "GitHub branch research/context-strategy-2026-11-07-run13 readable; no local crypto-trading-agent checkout. package.json requires Node >=24/npm >=11. Remote backtest, ablation, conditional-edge and archive loader sources fetched.",
+      "impact": "Source audit possible; harness not invokable locally.",
+      "nextAction": "Clean checkout under supported Node24/npm11."
+    },
+    {
+      "capability": "Binance SDK",
+      "status": "BLOCKED",
+      "evidence": "No @nemesis-oss/binance-sdk, binance or @binance/connector module resolves.",
+      "impact": "SDK not used.",
+      "nextAction": "Install only after compatible checkout and network restoration."
+    },
+    {
+      "capability": "Direct Binance REST",
+      "status": "BLOCKED",
+      "evidence": "Bounded curl probes for /fapi/v1/time, /exchangeInfo, /klines, /premiumIndex, /openInterest and /ticker/24hr all HTTP000; curl exit 6 DNS failure.",
+      "impact": "No direct HTTP status/headers or uncached server-time probe.",
+      "nextAction": "Restore DNS/outbound access and repeat probes."
+    },
+    {
+      "capability": "Binance connector market data",
+      "status": "DEGRADED",
+      "evidence": "Fresh mark/ticker/OI/klines/funding/depth/taker/global-LS payloads returned. Mark/ticker time 00:27:16Z; OI 00:27:00–00:27:06Z. exchangeInfo.serverTime 2026-11-06T11:18:40.878Z, stale 47,319.122s (13h08m39.122s).",
+      "impact": "Current context can be classified; stale contract metadata cannot validate execution.",
+      "nextAction": "Require uncached exchangeInfo/server time within 60 seconds."
+    },
+    {
+      "capability": "Raw historical archive",
+      "status": "DEGRADED",
+      "evidence": "1h pages 1–36: 53,871 rows/symbol, 215,484 total, 2020-09-14T08:00Z through 2026-11-06T22:00Z; 1h delta through23:00Z. 4h canonical 13,461 rows/symbol through Nov5 16:00; delta high-water Nov6 20:00. Multi-year 5m/15m absent.",
+      "impact": "1h multi-cycle coverage complete; multi-timeframe archive incomplete.",
+      "nextAction": "Rebuild canonical 4h and backfill multi-year 5m/15m."
+    },
+    {
+      "capability": "Data quality / coverage",
+      "status": "DEGRADED",
+      "evidence": "60 new rows: 5m40, 15m12, 1h4, 4h4; 20 forming bars excluded; duplicates/gaps/OHLC/non-finite/non-positive-volume/alignment failures all zero; cross-symbol alignment PASS. Missing 76-row artifact and 14 SHA provenance mismatches remain; 21,000/21,000 rows reconcile exactly.",
+      "impact": "New increments clean; historical provenance and lower-timeframe gaps block full readiness.",
+      "nextAction": "Resolve provenance and 5m/15m history."
+    },
+    {
+      "capability": "Backtest harness / smoke test",
+      "status": "BLOCKED",
+      "evidence": "No local checkout; Node/npm below engine floor. Remote archiveKlines loader reads data.binance.vision ZIPs, not committed research-data JSONL. Ablation defaults minHoldoutFilled=10, below >=100 OOS trades/context. No smoke test run.",
+      "impact": "No experiment or OOS evaluation.",
+      "nextAction": "Implement archive JSONL adapter; run deterministic fixture smoke test; enforce >=100 OOS trades and multiple windows."
+    },
+    {
+      "capability": "Disk / storage",
+      "status": "PASS",
+      "evidence": "30 GiB free; GitHub remote branches writable.",
+      "impact": "Remote artifact persistence available.",
+      "nextAction": "Continue atomic GitHub writes and readback."
+    },
+    {
+      "capability": "Artifact readback",
+      "status": "PASS",
+      "evidence": "Five delta files/manifests and 1h/4h indexes read back; large canonical 4h JSONL fetch returned zero content bytes despite blob SHA.",
+      "impact": "Incremental artifacts durable; canonical rewrite blocked.",
+      "nextAction": "Use local Git checkout or streaming file access."
+    }
+  ],
+  "directEndpointProbes": {
+    "time": "HTTP000_DNS_FAILURE",
+    "exchangeInfo": "HTTP000_DNS_FAILURE",
+    "klines": "HTTP000_DNS_FAILURE",
+    "premiumIndex": "HTTP000_DNS_FAILURE",
+    "openInterest": "HTTP000_DNS_FAILURE",
+    "ticker24hr": "HTTP000_DNS_FAILURE"
+  },
+  "exchangeMetadata": {
+    "serverTimeUtc": "2026-11-06T11:18:40.878Z",
+    "retrievedAtUtc": "2026-11-07T00:27:20Z",
+    "stalenessSeconds": 47319.122,
+    "returnedStatus": "TRADING",
+    "executionValidation": "BLOCKED_STALE_METADATA"
+  },
+  "outcome": "RESEARCH_BLOCKED"
+}

@@ -1,0 +1,165 @@
+{
+  "schemaVersion": "1.0.0",
+  "runId": "CONTEXT-STRATEGY-20261106T2339Z-V101",
+  "checkedAtUtc": "2026-11-06T23:39:57.000Z",
+  "classification": "RESEARCH_BLOCKED",
+  "checks": [
+    {
+      "capability": "shell_compute",
+      "status": "PASS",
+      "evidence": {
+        "cwd": "/",
+        "os": "Debian 13.3",
+        "node": "v22.16.0",
+        "npm": "10.9.2",
+        "cpus": 5,
+        "memTotalKiB": 6090668,
+        "memAvailableKiB": 4929092,
+        "diskFreeGiB": 30
+      },
+      "impact": "Compute and storage exist, but runtime is below repository requirements.",
+      "nextAction": "Provision Node>=24/npm>=11."
+    },
+    {
+      "capability": "repository_code",
+      "status": "DEGRADED",
+      "evidence": {
+        "repository": "shubhamtaywade82/crypto-trading-agent",
+        "branch": "research/context-strategy-2026-11-07-run13",
+        "packageVersion": "2.4.1",
+        "requiredNode": ">=24",
+        "requiredNpm": ">=11",
+        "localCheckout": false,
+        "ablationRunnerPresent": true,
+        "conditionalEdgeRunnerPresent": true
+      },
+      "impact": "Remote source inspected; no local invocation possible.",
+      "nextAction": "Create clean checkout after runtime provisioning."
+    },
+    {
+      "capability": "sdk",
+      "status": "BLOCKED",
+      "evidence": {
+        "@nemesis-oss/binance-sdk": "MODULE_NOT_FOUND",
+        "binance": "MODULE_NOT_FOUND"
+      },
+      "impact": "No Binance SDK execution.",
+      "nextAction": "Install dependencies in compatible Node environment."
+    },
+    {
+      "capability": "direct_binance_rest",
+      "status": "BLOCKED",
+      "evidence": {
+        "time": "HTTP000/curl6/DNS",
+        "exchangeInfo": "HTTP000/curl6/DNS",
+        "klines": "HTTP000/curl6/DNS",
+        "premiumIndex": "HTTP000/curl6/DNS",
+        "openInterest": "HTTP000/curl6/DNS",
+        "ticker24h": "HTTP000/curl6/DNS"
+      },
+      "impact": "Direct official REST inaccessible from shell.",
+      "nextAction": "Restore outbound DNS/network."
+    },
+    {
+      "capability": "connector_market_data",
+      "status": "DEGRADED",
+      "evidence": {
+        "freshMarkUtc": "2026-11-06T23:39:22.001Z",
+        "bookUtc": "2026-11-06T23:39:36Z",
+        "exchangeInfoServerTimeUtc": "2026-11-06T11:18:40.899Z",
+        "driftSeconds": 44441.102,
+        "rawHttpStatusHeaders": false
+      },
+      "impact": "Current market data returned, but exchange metadata stale; contract status and filters not validated.",
+      "nextAction": "Obtain uncached /time and /exchangeInfo with <=60s drift."
+    },
+    {
+      "capability": "raw_archive",
+      "status": "DEGRADED",
+      "evidence": {
+        "oneHourPages": 36,
+        "rowsPerSymbol": 53871,
+        "totalRows": 215484,
+        "range": [
+          "2020-09-14T08:00:00Z",
+          "2026-11-06T22:00:00Z"
+        ],
+        "newPagesReadbackVerified": [
+          28,
+          29,
+          30,
+          31,
+          32,
+          33,
+          34,
+          35,
+          36
+        ],
+        "latestDeltaRows": 36,
+        "multiYear5m15m": false,
+        "canonical4hReassemblyRequired": true
+      },
+      "impact": "1h history now spans multiple cycles; full multi-timeframe archive still incomplete.",
+      "nextAction": "Reassemble 4h and backfill 5m/15m."
+    },
+    {
+      "capability": "data_quality",
+      "status": "DEGRADED",
+      "evidence": {
+        "new1hPageDuplicates": 0,
+        "missingIntervals": 0,
+        "ohlcFailures": 0,
+        "nonFinite": 0,
+        "nonPositiveVolume": 0,
+        "closeTimeFailures": 0,
+        "newDeltaDuplicates": 0,
+        "newDeltaGaps": 0,
+        "formingRowsExcluded": true,
+        "unresolved76RowDelta": true,
+        "shaProvenanceMismatchPairs": 14,
+        "rowLevelMismatches": 0
+      },
+      "impact": "New data is clean; historical provenance and lower-timeframe coverage remain unresolved.",
+      "nextAction": "Reconcile missing delta and source provenance."
+    },
+    {
+      "capability": "backtest_harness_smoke_test",
+      "status": "BLOCKED",
+      "evidence": {
+        "localCheckout": false,
+        "compatibleRuntime": false,
+        "scriptPresentRemote": true,
+        "scriptInvoked": false,
+        "fixtureSmokeTest": "NOT_RUN",
+        "fullExperiment": "NOT_RUN",
+        "oos": "NOT_EVALUATED"
+      },
+      "impact": "No valid experiment or OOS result.",
+      "nextAction": "Provision runtime and checkout, wire archive-backed loader, then smoke test."
+    },
+    {
+      "capability": "disk_storage",
+      "status": "PASS",
+      "evidence": {
+        "freeGiB": 30,
+        "githubPersistentWrites": true
+      },
+      "impact": "Remote persistent storage available.",
+      "nextAction": "Continue manifested writes and readback."
+    },
+    {
+      "capability": "artifact_readback",
+      "status": "PASS",
+      "evidence": {
+        "archiveIndexBlobSha": "359cff843f703498e964f8af430dd81f033bddf3",
+        "page36ManifestBlobSha": "95a1afbff7770a19eec3985ae3591502bafe13ee",
+        "deltaManifestBlobSha": "6a0a9a4a181cdcb9cf8c825f8df7b569502de35b",
+        "queueBlobSha": "5c3fa1bd5b9fad695fccb4520643b8b90c7638cc",
+        "registryBlobSha": "cffb6131a12c3cefa3c0135018db95d24482ffd3"
+      },
+      "impact": "Archive, queue and registry identities verified.",
+      "nextAction": "Read back report and preflight after creation."
+    }
+  ],
+  "executionClassification": "RESEARCH_BLOCKED"
+}

@@ -1,0 +1,187 @@
+{
+  "schemaVersion": "1.0.0",
+  "runId": "CONTEXT-STRATEGY-20261107T013911Z-V103",
+  "checkedAtUtc": "2026-11-07T01:39:11.000Z",
+  "executionClassification": "RESEARCH_BLOCKED",
+  "checks": [
+    {
+      "capability": "Shell/compute",
+      "status": "PASS",
+      "evidence": {
+        "os": "Debian GNU/Linux 13 (trixie)",
+        "pwd": "/",
+        "node": "v22.16.0",
+        "npm": "10.9.2",
+        "python": "3.13.5",
+        "cpuCores": 5,
+        "memoryTotal": "5.8 GiB",
+        "memoryAvailable": "4.7 GiB",
+        "diskAvailable": "30 GiB"
+      },
+      "impact": "Compute and persistent connector operations are available; repository engine floor is not met.",
+      "nextAction": "Provision Node>=24/npm>=11 for repository CLI execution."
+    },
+    {
+      "capability": "Repository/code",
+      "status": "DEGRADED",
+      "evidence": {
+        "remoteRepository": "shubhamtaywade82/crypto-trading-agent",
+        "remoteBranch": "research/context-strategy-2026-11-07-run14",
+        "remoteRawBranch": "research/raw-ohlcv-archive-2026-11-07T0127Z",
+        "localCheckoutPresent": false,
+        "packageJsonReadback": true,
+        "conditionalEdgeScript": "scripts/conditional-edge.ts",
+        "ablationScript": "scripts/ablation-study.ts"
+      },
+      "impact": "Remote code is inspectable and writable, but no local repository exists to invoke scripts.",
+      "nextAction": "Checkout the research branch in a Node24/npm11 environment."
+    },
+    {
+      "capability": "Node/npm and Binance SDK",
+      "status": "BLOCKED",
+      "evidence": {
+        "actualNode": "22.16.0",
+        "requiredNode": ">=24",
+        "actualNpm": "10.9.2",
+        "requiredNpm": ">=11",
+        "packages": {
+          "@nemesis-oss/binance-sdk": "NOT_INSTALLED",
+          "binance": "NOT_INSTALLED",
+          "@binance/connector": "NOT_INSTALLED"
+        }
+      },
+      "impact": "No Binance SDK execution and no repository CLI execution.",
+      "nextAction": "Install supported runtime and dependencies; do not claim SDK usage before import succeeds."
+    },
+    {
+      "capability": "Direct Binance REST connectivity",
+      "status": "BLOCKED",
+      "evidence": {
+        "dns": "Could not resolve host fapi.binance.com",
+        "endpoints": {
+          "/fapi/v1/time": "HTTP000",
+          "/fapi/v1/exchangeInfo": "HTTP000",
+          "/fapi/v1/klines": "HTTP000",
+          "/fapi/v1/premiumIndex": "HTTP000",
+          "/fapi/v1/openInterest": "HTTP000",
+          "/fapi/v1/ticker/24hr": "HTTP000"
+        }
+      },
+      "impact": "No direct REST HTTP status/headers or fresh exchange metadata from shell.",
+      "nextAction": "Restore DNS/outbound access or use a verified alternate market-data transport for historical backfill."
+    },
+    {
+      "capability": "Binance connector market data",
+      "status": "DEGRADED",
+      "evidence": {
+        "currentMarkTickerOiFundingDepthPayloads": true,
+        "marketDataTimestampUtc": "2026-11-07T01:38:29Z",
+        "rawHttpStatusHeaders": "NOT_EXPOSED",
+        "exchangeInfoServerTimeUtc": "2026-11-06T11:18:40.878Z",
+        "exchangeInfoAgeSeconds": 51522.122,
+        "metadataReportedStatus": "TRADING",
+        "metadataExecutionUse": "BLOCKED_STALE"
+      },
+      "impact": "Current snapshot can be monitored, but contract status cannot be validated for execution.",
+      "nextAction": "Refresh exchangeInfo through a fresh transport before any execution eligibility check."
+    },
+    {
+      "capability": "Raw historical archive",
+      "status": "DEGRADED",
+      "evidence": {
+        "fourHourCanonicalRowsPerSymbol": 13468,
+        "fourHourTotalRows": 53872,
+        "fourHourEndUtc": "2026-11-06T20:00:00Z",
+        "oneHourLogicalRowsPerSymbol": 53873,
+        "oneHourLogicalRowsTotal": 215492,
+        "fiveMinuteMultiYearArchive": false,
+        "fifteenMinuteMultiYearArchive": false,
+        "missing76RowArtifactCoverage": "UNKNOWN"
+      },
+      "impact": "4h and 1h are usable for descriptive context; multi-year 5m/15m and missing artifact provenance remain unresolved.",
+      "nextAction": "Backfill multi-year 5m/15m and recover the missing 76-row artifact with exact interval/symbol coverage."
+    },
+    {
+      "capability": "Data quality/coverage",
+      "status": "PASS",
+      "evidence": {
+        "incrementalRowsAppended": 80,
+        "canonical4hRowsReassembled": 28,
+        "duplicates": 0,
+        "gaps": 0,
+        "ohlcFailures": 0,
+        "nonPositiveVolume": 0,
+        "nonFinite": 0,
+        "timestampMisalignment": 0,
+        "formingCandlesExcluded": 24,
+        "crossSymbolAlignment": true,
+        "canonical4hSha256Verified": true,
+        "gitBlobSha1Verified": true,
+        "readbackVerified": true
+      },
+      "impact": "New delta batches and 4h canonical series passed the measured checks; overall coverage remains incomplete.",
+      "nextAction": "Keep incremental high-water checks and complete missing timeframes/derivatives."
+    },
+    {
+      "capability": "Backtest harness/smoke test",
+      "status": "BLOCKED",
+      "evidence": {
+        "remoteScriptsExist": true,
+        "archiveLoader": "src/backtesting/archiveKlines.ts",
+        "loaderSource": "Binance Vision ZIP/CSV or SDK",
+        "customJsonlSupport": false,
+        "localHarnessInvocation": false,
+        "deterministicSmokeTest": "NOT_RUN",
+        "strategyExperiment": "NOT_EXECUTED"
+      },
+      "impact": "No valid backtest or OOS evaluation can be claimed.",
+      "nextAction": "Implement JSONL loader, provision Node24/npm11, run tiny deterministic fixture, then execute preregistered experiment."
+    },
+    {
+      "capability": "Disk/storage",
+      "status": "PASS",
+      "evidence": {
+        "diskAvailable": "30 GiB",
+        "GitHubBranchWrites": true
+      },
+      "impact": "Sufficient storage and remote persistent archive branch available.",
+      "nextAction": "Continue atomic/versioned writes and hash/readback verification."
+    },
+    {
+      "capability": "Artifact readback",
+      "status": "PASS",
+      "evidence": {
+        "deltaFiles": 4,
+        "deltaManifests": 4,
+        "canonical4hFiles": 4,
+        "canonical4hManifests": 4,
+        "archiveIndexes": 2,
+        "contextArtifact": true,
+        "registry": true,
+        "queue": true,
+        "report": true,
+        "readbackVerified": true
+      },
+      "impact": "Persisted artifacts are independently retrievable from their reported branches and paths.",
+      "nextAction": "Preserve artifact paths, Git blob IDs and SHA-256 values in the ledger."
+    }
+  ],
+  "endpointEvidence": {
+    "klines": "Binance connector returned current 5m/15m/1h/4h candles; direct shell REST HTTP000.",
+    "markPrice": "Binance connector returned mark price, premiumIndex lastFundingRate and nextFundingTime; direct shell REST HTTP000.",
+    "ticker24h": "Binance connector returned 24h ticker; direct shell REST HTTP000.",
+    "fundingHistory": "Binance connector returned 3 recent settlements per symbol; long history incomplete.",
+    "openInterest": "Binance connector returned current OI and 3 recent hourly OI observations; long history incomplete.",
+    "takerFlow": "Binance connector returned 3 recent hourly taker buy/sell buckets; long history incomplete.",
+    "positioning": "Global long/short account ratio returned; top-trader-specific history unavailable.",
+    "orderBook": "Top-20 depth snapshot returned; historical order-book archive unavailable."
+  },
+  "experimentReadiness": {
+    "specification": "BKR-4H-COMPRESSION-RETEST-BTC-CONFIRM-V1 preregistered as HYPOTHESIS.",
+    "inputs": "4h OHLCV available through 2026-11-06T20:00Z; historical funding/cost inputs incomplete.",
+    "thresholds": "Persisted training-derived thresholds reused for context description; no refit.",
+    "splitAndPurge": "Specified 60/20/20 chronological split, 12-bar purge/embargo and 3 anchored walk-forward windows; not executed.",
+    "status": "BLOCKED"
+  },
+  "statusReason": "Archive maintenance and descriptive context discovery completed, but no valid strategy experiment or untouched OOS could run because the local repository/runtime is unavailable and the existing archive loader does not consume the committed JSONL data."
+}

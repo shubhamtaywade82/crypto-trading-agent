@@ -1,0 +1,151 @@
+{
+  "schemaVersion": "1.0.0",
+  "experimentId": "SOL-LOWVOL-CHANNEL-BREAKOUT-BTC-FILTER-V1-20261106T2247Z",
+  "createdAtUtc": "2026-11-06T22:48:45.602Z",
+  "evidenceStatusBeforeRun": "HYPOTHESIS",
+  "hypothesis": "In SOLUSDT 4h low-volatility trend contexts, a Donchian channel breakout accompanied by abnormal relative volume has positive net expectancy after an all-in 15bp round-trip execution-cost proxy and actual historical funding; a same-direction BTC trend filter may reduce false breakouts.",
+  "universe": {
+    "tradeSymbol": "SOLUSDT",
+    "referenceSymbol": "BTCUSDT",
+    "timeframe": "4h"
+  },
+  "data": {
+    "source": "Persisted Binance USDⓈ-M canonical 4h OHLCV and SOL funding archive",
+    "solPath": "research-data/binance-usdm/4h/canonical/SOLUSDT_4h_20200914T0800Z_20261105T1600Z.jsonl",
+    "solExpectedSha256": "148389f0347fe05307e2a274c579ccc1c495e32eaad2e49cfb19ca211df89156",
+    "btcPath": "research-data/binance-usdm/4h/canonical/BTCUSDT_4h_20200914T0800Z_20261105T1600Z.jsonl",
+    "btcExpectedSha256": "7088aa2b2cc48c3895fd77dfc2ece0ae812062f24a70374ec556273a2d8380d7",
+    "fundingPath": "research-data/binance-usdm/derivatives/funding/SOLUSDT_funding_20200914T0800Z_20261105T1600Z.jsonl",
+    "fundingExpectedSha256": "34bfd47393c7e9756e617a70669d8ee51349f6a3ba2b4931ae719993c6064549",
+    "expectedRowsPerSymbol": 13461,
+    "startUtc": "2020-09-14T08:00:00Z",
+    "endLastCompletedOpenUtc": "2026-11-05T16:00:00Z"
+  },
+  "split": {
+    "method": "chronological 60/20/20 with 12-bar purge/embargo on both sides of each boundary",
+    "n": 13461,
+    "train": {
+      "startIndex": 0,
+      "endIndex": 8063,
+      "startUtc": "2020-09-14T08:00:00Z",
+      "endUtc": "2024-05-20T04:00:00Z"
+    },
+    "purge1": {
+      "startIndex": 8064,
+      "endIndex": 8087
+    },
+    "validation": {
+      "startIndex": 8088,
+      "endIndex": 10756,
+      "startUtc": "2024-05-24T08:00:00Z",
+      "endUtc": "2025-08-12T00:00:00Z"
+    },
+    "purge2": {
+      "startIndex": 10757,
+      "endIndex": 10780
+    },
+    "untouchedTest": {
+      "startIndex": 10781,
+      "endIndex": 13460,
+      "startUtc": "2025-08-16T04:00:00Z",
+      "endUtc": "2026-11-05T16:00:00Z"
+    },
+    "maxHoldingBars": 12
+  },
+  "features": {
+    "ema": {
+      "periods": [
+        50,
+        200
+      ],
+      "method": "recursive EMA, computed causally from first bar"
+    },
+    "atr": {
+      "period": 14,
+      "method": "Wilder ATR"
+    },
+    "trendFlatThreshold": "training q20 of abs(EMA50/EMA200 - 1), fit separately for SOL and BTC",
+    "volatilityThreshold": "training q33 of ATR14/close, fit on SOL",
+    "shockThreshold": "training q99 of abs 4h log return, fit on SOL",
+    "relativeVolume": "current completed-bar volume / median of preceding 20 completed-bar volumes",
+    "relativeVolumeThreshold": "training q70, fit on SOL"
+  },
+  "detector": {
+    "eligibleContexts": [
+      "BULL_LOW",
+      "BEAR_LOW"
+    ],
+    "shock": "exclude if abs 4h log return > training q99",
+    "bullLow": "SOL EMA50 > EMA200, abs spread > training q20 flat threshold, SOL ATR14/close <= training q33",
+    "bearLow": "SOL EMA50 < EMA200, abs spread > training q20 flat threshold, SOL ATR14/close <= training q33",
+    "btcConfirmation": "if enabled, BTC EMA50/EMA200 must be non-flat under BTC training q20 threshold and point in the same direction as SOL"
+  },
+  "rules": {
+    "signal": "completed close breaks the prior N-bar high (long) or low (short), excluding current bar; relative volume >= training q70; signal context BULL_LOW/BEAR_LOW",
+    "entry": "next 4h bar open",
+    "direction": "long in BULL_LOW; short in BEAR_LOW",
+    "stop": "entry +/- ATR14(signal bar) * selected stop multiple",
+    "target": "2.0R",
+    "timeStop": "close at the end of the 12th holding bar",
+    "position": "1 SOL fixed quantity; one position at a time; no pyramiding",
+    "intrabar": "stop-first if stop and target both touched; adverse gap-through stop fills at bar open; target fills at target; time stop fills at close",
+    "ambiguousEntry": "if no next bar exists, skip"
+  },
+  "parameterGrid": {
+    "donchianLookbackBars": [
+      15,
+      20,
+      25
+    ],
+    "stopAtrMultiple": [
+      1.25,
+      1.5,
+      1.75
+    ],
+    "btcConfirmation": [
+      false,
+      true
+    ],
+    "targetR": 2,
+    "maxHoldingBars": 12,
+    "relativeVolumeQuantile": 0.7
+  },
+  "selection": "Select highest validation mean net R among variants with at least 20 validation trades; ties resolved by lower validation max drawdown, then shorter lookback, then BTC confirmation enabled. If no variant reaches 20 validation trades, do not evaluate untouched test.",
+  "costs": {
+    "allInRoundTripProxyBps": 15,
+    "funding": "actual SOLUSDT funding settlements; funding cash flow = direction * rate * settlement markPrice * 1 SOL; if settlement markPrice is blank use entry price and count the fallback",
+    "slippage": "included in 15bp proxy; no separate latency model"
+  },
+  "baselines": {
+    "unconditionalDonchian": "same selected lookback, stop, target and time stop; no low-volatility context, no relative-volume filter, no BTC confirmation",
+    "buyHold": "SOL close-to-close return over untouched test interval"
+  },
+  "uncertainty": {
+    "method": "circular moving-block bootstrap over ordered trade net-R sequence",
+    "replications": 2000,
+    "blockLengthTrades": 5,
+    "seed": 20261107,
+    "multipleTesting": "Holm correction across all 18 validation variants; only one frozen selected variant is evaluated on untouched test"
+  },
+  "evidenceGates": {
+    "minimumProvisionalOosTradesPerSymbolContext": 100,
+    "strongerTradesAcrossMultipleWindows": 200,
+    "positiveNetExpectancy": true,
+    "bootstrapCiLowerAboveZeroForPromising": true,
+    "profitFactorFloor": 1.2,
+    "maxDrawdownRFloor": 10,
+    "stableParameterNeighborhood": true,
+    "multipleWalkForwardWindowsRequiredForOosValidated": 3
+  },
+  "noTrade": [
+    "UNKNOWN/TRANSITION/SHOCK or missing feature state",
+    "not BULL_LOW or BEAR_LOW",
+    "relative volume below training q70",
+    "BTC filter enabled and BTC direction is not aligned",
+    "an existing position is open",
+    "no next bar",
+    "missing/non-finite OHLCV or invalid contract/data state"
+  ],
+  "executionPolicy": "No order placement. Research-only historical simulation.",
+  "preRegistration": "Frozen before data retrieval and backtest execution; validation selects one of 18 variants; untouched test must not be used for tuning."
+}

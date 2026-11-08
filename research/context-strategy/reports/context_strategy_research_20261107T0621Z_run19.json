@@ -1,0 +1,177 @@
+{
+  "schemaVersion": "1.0.0",
+  "runId": "CONTEXT-STRATEGY-20261107T0621Z-RUN19",
+  "createdAtUtc": "2026-11-07T06:23:00.000Z",
+  "executionClassification": "MONITORING_ONLY",
+  "researchExperimentExecuted": false,
+  "oosEvaluated": false,
+  "summary": "Appended and readback-verified 64 completed 5m/15m/1h candles across BTC/ETH/SOL/XRP. Refreshed current market context. No strategy experiment or OOS evaluation was run. The daily research cycle remains blocked by the previously recorded Node24/JSONL-loader/funding-cost prerequisites. No OOS_VALIDATED strategies exist; SOL/ETH/XRP remain NO_TRADE.",
+  "researchProgress": {
+    "archiveDelta": {
+      "branch": "research/raw-ohlcv-archive-20261107T0621Z",
+      "path": "research-data/binance-usdm/delta/binance_usdm_delta_20261107T0621Z_5m15m1h_completed.jsonl",
+      "rows": 64,
+      "bytes": 17819,
+      "sha256": "60efe5e6cb313784242c3d7e896ac9298a522714ac8daffcee79a88ed81192c2",
+      "readbackVerified": true,
+      "manifestPath": "research-data/binance-usdm/delta/manifest-20261107T0621Z-5m15m1h.json"
+    },
+    "addedRowsByInterval": {
+      "5m": 44,
+      "15m": 16,
+      "1h": 4,
+      "4h": 0
+    },
+    "formingRowsExcluded": 12,
+    "latestCompletedOpenUtc": {
+      "5m": "2026-11-07T06:15:00Z",
+      "15m": "2026-11-07T06:00:00Z",
+      "1h": "2026-11-07T05:00:00Z",
+      "4h": "2026-11-07T00:00:00Z"
+    },
+    "archiveCoverage": {
+      "fourHour": "13,468 canonical rows/symbol from 2020-09-14T08:00Z through 2026-11-06T20:00Z plus one verified 4h delta row/symbol at 2026-11-07T00:00Z; canonical not reassembled",
+      "oneHour": "36 pages; 53,871 base rows/symbol and logical history through 2026-11-07T05:00Z (53,878 rows/symbol including verified deltas)",
+      "fiveAndFifteenMinute": "No multi-year archive; rolling sample only (prior queue records 500 bars/symbol/interval)"
+    },
+    "experiments": "None this run. Q111 records today's daily experiment attempt as BLOCKED; no OOS was fabricated.",
+    "remaining": "Multi-year 5m/15m backfill; missing 76-row artifact; 14 hash provenance mismatches; historical funding/OI/taker/positioning; calibrated spread/slippage; supported local Node24/npm11 checkout and JSONL loader."
+  },
+  "contextDiscovery": {
+    "taxonomy": "CTX v2 remains frozen; no thresholds refit in this run.",
+    "currentDescriptiveState": "All four symbols are below 4h EMA50 and EMA200 with EMA50<EMA200. 1h/15m/5m show partial countertrend recovery, varying by symbol.",
+    "contextCountsDurationsTransitions": "NOT_RECOMPUTED_THIS_RUN; weekly stability review due 2026-11-11 UTC.",
+    "unclassifiedDimensions": [
+      "training-derived volatility buckets",
+      "range/breakout/retest/failed-breakout structure",
+      "shock q99",
+      "BTC rolling correlation/lead-lag"
+    ],
+    "sampleAdequacy": "4h history spans about 6.15 years and is suitable for exploratory context analysis; 1h history spans the same long interval but latest full-page readback was page36 only. Multi-year 5m/15m and complete derivatives history remain absent. Current 249-bar windows are monitoring samples, not a sufficient OOS strategy test."
+  },
+  "strategyContextScorecard": {
+    "registryPath": "research/context-strategy/registry.json",
+    "registryBlobSha": "c3f703ba6c00f2a705a621a2d16f60af29596393",
+    "entryCount": 3,
+    "oosValidatedEntries": 0,
+    "entries": [
+      {
+        "id": "SOL-DONCHIAN20-BULL-LOW-V1-20261105T1825Z",
+        "symbol": "SOLUSDT",
+        "context": "EMA50_GT_EMA200_ATR14_Q33_TRAIN_EX_SHOCK_Q99",
+        "strategyVersion": "DONCHIAN_BREAKOUT_BULL_LOW_V1",
+        "status": "INSUFFICIENT_EVIDENCE",
+        "oosTrades": 55,
+        "meanNetR": 0.0431073,
+        "blockBootstrap95CI": [
+          -0.2798208,
+          0.3899637
+        ],
+        "profitFactor": 1.08238,
+        "maxDrawdownR": 7.88787,
+        "limitation": "OOS n<100, CI crosses zero, cumulative quote PnL negative."
+      },
+      {
+        "id": "SOL-FAILED-BREAKOUT-FADE-SIDEWAYS-LOW-V1-20261105T2225Z",
+        "symbol": "SOLUSDT",
+        "context": "SIDEWAYS_LOW",
+        "strategyVersion": "FAILED_BREAKOUT_FADE_V1",
+        "status": "REJECTED",
+        "oosTrades": 113,
+        "meanNetR": -0.1479703,
+        "blockBootstrap95CI": [
+          -0.3175134,
+          0.0196001
+        ],
+        "profitFactor": 0.78705,
+        "maxDrawdownR": 20.79169,
+        "limitation": "Negative net expectancy and poor drawdown; do not retune on same test window."
+      },
+      {
+        "id": "SOL-4H-TREND-PULLBACK-BTC-CONFIRM-V1_1-20261106T0830Z",
+        "symbol": "SOLUSDT",
+        "context": "BEAR_NORMAL with same-direction BTC confirmation",
+        "strategyVersion": "EMA20_PULLBACK_RECROSS_BTC_CONFIRM_V1_1",
+        "status": "INSUFFICIENT_EVIDENCE",
+        "oosTrades": 10,
+        "meanNetR": -0.1886349,
+        "adjustedBlockBootstrap99_17CI": [
+          -0.8603,
+          0.7791
+        ],
+        "profitFactor": 0.73299,
+        "maxDrawdownR": 3.48442,
+        "limitation": "OOS n=10; insufficient sample; funding archive hash/provenance issue."
+      }
+    ],
+    "evidenceInterpretation": "One tested setup is REJECTED; two remain INSUFFICIENT_EVIDENCE. No strategy is OOS_VALIDATED. No ETH/XRP strategy evidence exists."
+  },
+  "keyDiscoveries": [
+    "SOL failed-breakout fade in SIDEWAYS_LOW was rejected on its untouched OOS sample (113 trades; mean net R -0.148; PF 0.787; max DD 20.79R).",
+    "SOL Donchian20 in BULL_LOW has positive point expectancy but uncertainty spans zero and n=55; it is not validated.",
+    "SOL EMA20 pullback/BTC confirmation has only 10 OOS trades and negative point expectancy; insufficient evidence, not a definitive rejection.",
+    "No symbol/context currently has demonstrated OOS_VALIDATED edge. Do not extrapolate SOL results to ETH/XRP."
+  ],
+  "currentSnapshotPath": "research/context-strategy/snapshots/context_snapshot_20261107T0620Z.json",
+  "decisions": {
+    "SOLUSDT": {
+      "decision": "NO_TRADE",
+      "reason": "No symbol-specific OOS_VALIDATED strategy; 4h bearish context with countertrend bounce; stale exchange metadata blocks execution validation."
+    },
+    "ETHUSDT": {
+      "decision": "NO_TRADE",
+      "reason": "No symbol-specific OOS_VALIDATED strategy; 4h bearish context with 1h/15m bounce; stale metadata; top-20 depth snapshot is ask-heavy."
+    },
+    "XRPUSDT": {
+      "decision": "NO_TRADE",
+      "reason": "No symbol-specific OOS_VALIDATED strategy; 4h/1h bearish and 24h underperformance; stale metadata; shock threshold not trained."
+    }
+  },
+  "dataQualityAndRisks": {
+    "selectedHistoricalReadback": {
+      "fourHourCanonicalRowsPerSymbol": 13468,
+      "rangeUtc": [
+        "2020-09-14T08:00:00Z",
+        "2026-11-06T20:00:00Z"
+      ],
+      "allFourSymbolsSha256Verified": true,
+      "quality": {
+        "duplicates": 0,
+        "gaps": 0,
+        "offGrid": 0,
+        "ohlc": 0,
+        "nonPositiveVolume": 0,
+        "nonFinite": 0,
+        "closeTimeFailures": 0
+      },
+      "oneHourPage36RowsPerSymbol": 1371,
+      "oneHourPage36RangeUtc": [
+        "2026-09-10T20:00:00Z",
+        "2026-11-06T22:00:00Z"
+      ],
+      "oneHourPage36AllFourSha256Verified": true
+    },
+    "knownArchiveCaveats": [
+      "4h 00:00Z is a separate verified delta, not yet reassembled into canonical files.",
+      "Multi-year 5m/15m archive absent.",
+      "76-row indexed delta inaccessible.",
+      "14 original page/symbol hash mismatches remain; row-level reconciliation matched all 21,000 rows.",
+      "SOL funding archive: 6,806 rows, declared/actual hash mismatch, 3,501 blank markPrice rows; BTC/ETH/XRP funding and all-symbol historical OI/taker/positioning archives absent."
+    ],
+    "currentDataQuality": "249 completed candles per symbol/interval across 5m/15m/1h/4h; 1 forming candle excluded; zero observed duplicates, gaps, off-grid timestamps, OHLC violations, nonpositive volume or nonfinite values in those windows.",
+    "costs": "Current order-book spread is observed only at one timestamp; slippage, latency, funding carry and maker/taker execution costs are not calibrated for backtests. No new backtest was run.",
+    "unavailable": [
+      "direct raw HTTP status/headers",
+      "uncached server-time endpoint",
+      "historical funding for BTC/ETH/XRP",
+      "historical OI/taker/positioning",
+      "liquidation feed",
+      "historical spread/depth series",
+      "multi-year 5m/15m"
+    ]
+  },
+  "preflightPath": "research/context-strategy/preflight/preflight_20261107T0621Z.json",
+  "queuePath": "research/context-strategy/queue.json",
+  "queueItems": 116,
+  "weeklyReviewDueUtc": "2026-11-11T00:00:00Z"
+}

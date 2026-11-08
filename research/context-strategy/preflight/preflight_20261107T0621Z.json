@@ -1,0 +1,102 @@
+{
+  "schemaVersion": "1.0.0",
+  "runId": "CONTEXT-STRATEGY-20261107T0621Z-RUN19",
+  "checkedAtUtc": "2026-11-07T06:23:00.000Z",
+  "environment": {
+    "os": "Linux x86_64",
+    "cwd": "/",
+    "node": "v22.16.0",
+    "npm": "10.9.2",
+    "python": "3.13.5",
+    "cpuCores": 5,
+    "memoryTotal": "5.8 GiB",
+    "memoryAvailable": "4.7 GiB",
+    "diskFree": "30 GiB",
+    "localRepositoryCheckout": false,
+    "binanceSdkImport": "ERR_MODULE_NOT_FOUND"
+  },
+  "checks": [
+    {
+      "capability": "Shell / compute",
+      "status": "PASS",
+      "evidence": "Linux x86_64; cwd=/; Node v22.16.0; npm 10.9.2; Python 3.13.5; 5 CPU; 5.8 GiB RAM; 30 GiB free disk.",
+      "impact": "Managed runtime can perform bounded data validation and artifact hashing, but repository engine floor is unmet.",
+      "nextAction": "Provision Node>=24/npm>=11 for repository execution."
+    },
+    {
+      "capability": "Repository / code",
+      "status": "BLOCKED",
+      "evidence": "No local crypto-trading-agent checkout. Remote package.json v2.4.1 requires Node>=24/npm>=11. scripts/backtest.ts and scripts/ablation-study.ts exist remotely; archive loader is data.binance.vision ZIP/CSV oriented, not the committed research JSONL.",
+      "impact": "Actual repository harness cannot be invoked in this runtime.",
+      "nextAction": "Checkout repository under supported Node/npm and implement/test a streaming JSONL adapter."
+    },
+    {
+      "capability": "Binance SDK",
+      "status": "BLOCKED",
+      "evidence": "Node import @nemesis-oss/binance-sdk failed ERR_MODULE_NOT_FOUND.",
+      "impact": "No SDK execution; market data came from the Binance public connector.",
+      "nextAction": "Install pinned SDK dependency after a supported checkout exists."
+    },
+    {
+      "capability": "Direct Binance network / REST",
+      "status": "BLOCKED",
+      "evidence": "Bounded curl probes returned HTTP 000: /fapi/v1/time 0.000302s; /exchangeInfo 5.001090s; /klines 0.000183s; /premiumIndex 5.001088s; /openInterest 0.000164s; /ticker/24hr 5.001270s. data.binance.vision DNS lookup failed.",
+      "impact": "No direct HTTP status/body/header validation or uncached server-time check.",
+      "nextAction": "Restore DNS/outbound access and retry all required endpoints with explicit timeouts."
+    },
+    {
+      "capability": "Binance connector market snapshot",
+      "status": "DEGRADED",
+      "evidence": "Current mark/ticker/OI/klines/funding/derivatives/depth payloads returned with timestamps around 2026-11-07T06:20Z; raw HTTP statuses/headers are not exposed.",
+      "impact": "Useful for monitoring and archiving; not sufficient to validate execution contracts or HTTP freshness semantics.",
+      "nextAction": "Retain connector snapshot as monitoring-only until direct endpoint checks pass."
+    },
+    {
+      "capability": "Exchange metadata / contract status",
+      "status": "BLOCKED",
+      "evidence": "Connector exchangeInfo.serverTime=2026-11-06T11:18:40.899Z; age 68,482.805 seconds at 2026-11-07T06:20:03.704Z. Reported TRADING statuses are stale.",
+      "impact": "Do not rely on metadata for contract execution validation.",
+      "nextAction": "Refresh /fapi/v1/time and /fapi/v1/exchangeInfo directly; require <=60s drift."
+    },
+    {
+      "capability": "Raw historical archive",
+      "status": "DEGRADED",
+      "evidence": "4h canonical raw JSONL: 13,468 rows/symbol from 2020-09-14T08:00Z to 2026-11-06T20:00Z, all four SHA-256/readback checks passed; separate 4h 00:00Z delta verified. 1h page 0036: 1,371 rows/symbol from 2026-09-10T20:00Z to 2026-11-06T22:00Z, all four readback/SHA checks passed; 1h deltas extend to 05:00Z. Multi-year 5m/15m absent; 76-row delta inaccessible; 14 manifest hash-provenance mismatches remain.",
+      "impact": "4h/1h history is substantial; lower-timeframe multi-year context and complete derivative conditioning remain unavailable.",
+      "nextAction": "Backfill multi-year 5m/15m, recover the 76-row artifact, and preserve/reconcile manifest hash provenance."
+    },
+    {
+      "capability": "Data quality / coverage",
+      "status": "DEGRADED",
+      "evidence": "Current 249-bar windows per symbol/interval have zero duplicates, gaps, off-grid timestamps, OHLC failures, nonpositive volume or nonfinite values. New 64-row delta passed all checks; 12 forming rows excluded; cross-symbol alignment true.",
+      "impact": "Current snapshot and incremental archive are clean; full archive remains incomplete in 5m/15m and derivative history.",
+      "nextAction": "Continue interval high-water refresh and run full canonical multi-timeframe audit after backfill."
+    },
+    {
+      "capability": "Backtest harness / deterministic smoke",
+      "status": "BLOCKED",
+      "evidence": "Remote entrypoints scripts/backtest.ts and scripts/ablation-study.ts verified present; no local checkout; Node/npm engine floor unmet; JSONL loader absent; deterministic fixture/no-lookahead smoke test NOT_RUN.",
+      "impact": "No experiment, no validation and no OOS evaluation this run.",
+      "nextAction": "Provision supported runtime, add JSONL loader, run fixture twice and verify no-lookahead before full experiment."
+    },
+    {
+      "capability": "Disk / persistent storage",
+      "status": "PASS",
+      "evidence": "30 GiB free locally; GitHub raw archive branch and context branch writes available.",
+      "impact": "Persistent remote artifacts can be committed and verified.",
+      "nextAction": "Continue atomic commits and readback verification."
+    },
+    {
+      "capability": "Artifact readback",
+      "status": "PASS",
+      "evidence": "New 64-row JSONL delta readback SHA-256=60efe5e6cb313784242c3d7e896ac9298a522714ac8daffcee79a88ed81192c2; manifest readback verified. Eight historical 4h/1h blobs fetched and SHA/row/byte/quality checks passed.",
+      "impact": "This run's archive additions and selected historical files are reproducible.",
+      "nextAction": "Preserve manifest/blob hashes in the research ledger."
+    }
+  ],
+  "classification": "MONITORING_ONLY",
+  "researchExperimentExecuted": false,
+  "untouchedOosEvaluated": false,
+  "dailyResearchCycle": "BLOCKED_EARLIER_TODAY_Q111",
+  "nextWeeklyTaxonomyReviewUtc": "2026-11-11T00:00:00Z"
+}

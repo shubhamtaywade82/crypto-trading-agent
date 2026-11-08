@@ -159,3 +159,8 @@ Reasons: zero OOS_VALIDATED registry entries; no exact validated trigger; curren
 8. **P2 - Weekly taxonomy review:** due 2026-11-11; re-estimate training-only thresholds and compare frequency, duration, transition and JSD stability. Do not force a taxonomy change.
 
 **Bottom line:** this run improved the raw archive and refreshed the live context, but it did not create new strategy evidence. The correct classification is **RESEARCH_BLOCKED**, with **NO_TRADE** for SOL, ETH and XRP.
+
+
+## Post-write verification
+
+Final readback completed at 2026-11-08T22:33:36.368Z. All 12 primary artifacts matched their fetched-back content checks; the readback verification file itself was also fetched back and matched. See `research-data/reports/readback-verification-20261108T2234Z-v90.json` (SHA-256 `af205119b5cc225be0c8eaecfc3808cd5dbac87735d5bec574a84787f797081d`).

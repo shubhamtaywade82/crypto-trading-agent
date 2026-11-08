@@ -1,0 +1,54 @@
+{
+  "run_id": "context-strategy-2026-11-08T1529Z-v83",
+  "as_of_utc": "2026-11-08T15:29:14.871Z",
+  "classification": "RESEARCH_BLOCKED",
+  "checks": [
+    {
+      "check": "shell_compute",
+      "status": "PASS",
+      "evidence": "Debian 13.3; cwd=/; Python 3.13.5; Node v22.16.0; npm 10.9.2; 5 CPUs; 4.7 GiB available RAM; 30 GiB free disk."
+    },
+    {
+      "check": "repo_runtime_sdk",
+      "status": "DEGRADED",
+      "evidence": "No crypto-trading-agent checkout in /openai/project; directory is not a Git repository. @binance/connector, binance-api-node, @binance/derivatives-trading-usds and @binance/spot not installed; Python binance/binance_sdk modules absent. Node/npm below repository requirement."
+    },
+    {
+      "check": "network_binance",
+      "status": "DEGRADED",
+      "evidence": "Direct curl to /fapi/v1/time, /fapi/v1/exchangeInfo and /fapi/v1/premiumIndex?symbol=BTCUSDT failed DNS (HTTP 000). Binance connector returned klines/mark/ticker/OI/funding/depth/positioning. exchangeInfo.serverTime=2026-11-06T11:18:40.883Z, 52.14h stale."
+    },
+    {
+      "check": "raw_archive",
+      "status": "DEGRADED",
+      "evidence": "Remote archive branch readable. 1h base 215,484 rows; 4h raw 53,952; canonical 53,844 through 2026-11-05 16:00Z; 5m/15m base absent. Raw 4h deltas through 2026-11-08 08:00Z. 13 page/symbol hash mismatches and raw/canonical count differences remain."
+    },
+    {
+      "check": "rolling_data_quality",
+      "status": "PASS",
+      "evidence": "16 series; 4,000 raw bars; 3,984 completed; 16 forming excluded. Duplicate/gap/off-grid/OHLC/volume/non-finite/non-monotonic counters all zero; cross-symbol alignment passed."
+    },
+    {
+      "check": "backtest_harness_smoke",
+      "status": "BLOCKED",
+      "evidence": "No local checkout, compatible Node runtime or dependencies; no deterministic smoke test executed. No experiment/OOS run."
+    },
+    {
+      "check": "disk_storage",
+      "status": "PASS",
+      "evidence": "30 GiB free in runtime; GitHub branch writes available."
+    },
+    {
+      "check": "artifact_readback",
+      "status": "PASS",
+      "evidence": "60-row delta SHA-256 recomputed with known-vector-tested implementation; delta/manifest/checksum fetched back and matched; 5m/15m/1h indexes updated and fetched back."
+    }
+  ],
+  "directRest": {
+    "serverTime": "HTTP 000 DNS failure",
+    "exchangeInfo": "HTTP 000 DNS failure",
+    "premiumIndex": "HTTP 000 DNS failure"
+  },
+  "connectorExchangeInfoServerTimeUtc": "2026-11-06T11:18:40.883Z",
+  "connectorExchangeInfoAgeHours": 52.14
+}

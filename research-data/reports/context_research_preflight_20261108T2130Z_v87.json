@@ -1,0 +1,104 @@
+{
+  "schema_version": "1.0.0",
+  "run_id": "context-strategy-2026-11-08T2130Z-v87",
+  "as_of_utc": "2026-11-08T21:30:03.001Z",
+  "environment": {
+    "cwd": "/",
+    "os": "Debian GNU/Linux 13 (trixie)",
+    "kernel": "Linux 6.18.57",
+    "node": "v22.16.0",
+    "npm": "10.9.2",
+    "python": "3.13.5",
+    "cpu_cores": 5,
+    "mem_total_kb": 6090668,
+    "mem_available_kb": 4921348,
+    "disk_root": {
+      "size": "32G",
+      "used": "5.4M",
+      "available": "30G",
+      "use_pct": "1%"
+    },
+    "local_repository": "NOT_FOUND",
+    "sdk_packages": {
+      "@binance/connector": "NOT_INSTALLED",
+      "binance-api-node": "NOT_INSTALLED",
+      "@binance/futures-connector": "NOT_INSTALLED",
+      "@nemesis-oss/binance-sdk": "NOT_INSTALLED"
+    }
+  },
+  "repository": {
+    "name": "shubhamtaywade82/crypto-trading-agent",
+    "main_commit": "4c12a96fd0e9855caa25673266db5002472ade4f",
+    "main_commit_time_utc": "2026-11-08T19:39:30Z",
+    "package_engines": {
+      "node": ">=24",
+      "npm": ">=11"
+    },
+    "local_checkout": false,
+    "push_permission": true,
+    "archive_branch": "research/raw-ohlcv-archive-20261108T2126Z-run25"
+  },
+  "checks": [
+    {
+      "capability": "shell/compute",
+      "status": "PASS",
+      "evidence": "Debian 13; Python 3.13.5; Node 22.16.0; npm 10.9.2; 5 CPU; 4.92 GB available RAM; 30 GB free disk.",
+      "impact": "Compute is available but project runtime floor is not met.",
+      "next_action": "Provision Node 24/npm 11."
+    },
+    {
+      "capability": "repo/code",
+      "status": "BLOCKED",
+      "evidence": "Remote main commit 4c12a96 is accessible; no local checkout. package.json requires Node >=24/npm >=11. Binance SDK packages are not installed.",
+      "impact": "Repository harness cannot be invoked locally.",
+      "next_action": "Clone at verified commit and install dependencies in a compatible runtime."
+    },
+    {
+      "capability": "network/Binance endpoints",
+      "status": "DEGRADED",
+      "evidence": "Direct REST probes for /fapi/v1/time, exchangeInfo, premiumIndex, openInterest, ticker/24hr and klines returned HTTP 000 due DNS failure/timeouts at 2026-11-08T21:26:31Z. Binance connector supplied a fresh snapshot without HTTP status/headers. Connector exchangeInfo.serverTime is 209482.115 seconds stale versus mark time.",
+      "impact": "Monitoring is possible with provenance caveat; metadata-dependent execution validation is blocked.",
+      "next_action": "Restore direct DNS; require fresh /time and exchangeInfo with drift <=5 seconds."
+    },
+    {
+      "capability": "raw historical archive",
+      "status": "DEGRADED",
+      "evidence": "Remote 1h and 4h multi-year archives exist. 5m/15m base archives and 1m archive are absent. New delta persisted through 5m 21:20Z, 15m 21:00Z, 1h 20:00Z; 4h highwater remains 16:00Z.",
+      "impact": "Multi-year lower-timeframe and directional barrier research remain blocked.",
+      "next_action": "Backfill multi-year 5m/15m and 1m from auditable bulk sources."
+    },
+    {
+      "capability": "data quality/coverage",
+      "status": "DEGRADED",
+      "evidence": "New 72-row delta passed duplicate, continuity, OHLC, positive-volume, finite-value, timestamp-grid and monotonic checks; 16 forming rows excluded. Canonical 4h provenance mismatch remains.",
+      "impact": "Incremental slice is clean; full archive is not reconciled.",
+      "next_action": "Rebuild canonical 4h as a new version and reconcile 13 provenance mismatches."
+    },
+    {
+      "capability": "backtest harness/smoke test",
+      "status": "BLOCKED",
+      "evidence": "Remote scripts exist, but no compatible local checkout. scripts/backtest.ts hard-codes 15m/1h/4h and fixed 8h x 0.0001 funding; research-run.ts reports fundingModeled=false; directional-experiment.ts requires 1m and funding file/DB. No deterministic smoke test ran.",
+      "impact": "No valid experiment or OOS evaluation can run.",
+      "next_action": "Provision Node 24; repair/verify closeTime and 5m support; add fixture smoke test; restore 1m/funding inputs."
+    },
+    {
+      "capability": "disk/storage",
+      "status": "PASS",
+      "evidence": "30 GB free locally; GitHub push permission confirmed; branch research/raw-ohlcv-archive-20261108T2126Z-run25 created.",
+      "impact": "Persistent remote storage is available.",
+      "next_action": "Continue atomic, readback-verified writes."
+    },
+    {
+      "capability": "artifact readback",
+      "status": "DEGRADED",
+      "evidence": "Delta and manifest exact SHA-256 readback passed; 5m/15m/1h index readbacks passed. Queue, registry snapshot, current market snapshot and this preflight still require final readback.",
+      "impact": "Archive persistence is verified; run artifact bundle is not yet closed.",
+      "next_action": "Read back all run artifacts and write a verification receipt."
+    }
+  ],
+  "classification": "RESEARCH_BLOCKED",
+  "experiment_executed": false,
+  "oos_evaluated": false,
+  "monitoring_completed": true,
+  "exact_blocker": "No local Node >=24 checkout/runtime; direct Binance REST DNS unavailable and connector exchangeInfo is stale; 1m and multi-year 5m/15m archives absent; historical fee/funding/spread/slippage/impact model incomplete; no deterministic smoke test."
+}

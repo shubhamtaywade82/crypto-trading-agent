@@ -10,7 +10,7 @@ As of 2026-11-08 01:45 UTC
 
 This run completed one frozen SOLUSDT 4h experiment and refreshed the hourly market snapshot.
 
-- 84 new completed candles appended in this run: 5m 60 rows and 15m 24 rows.
+- 84 new completed candles appended in this run: 5m 60 rows, 15m 16 rows and 1h 4 rows.
 - The prior 68-row 00:23Z delta was added to the archive index.
 - Raw index now records 81 incremental deltas / 4,004 rows.
 - Latest completed highwaters: 5m 01:30Z; 15m 01:15Z; 1h 00:00Z; 4h 20:00Z.

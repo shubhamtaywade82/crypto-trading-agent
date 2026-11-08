@@ -28,7 +28,8 @@ function swingCandles(count: number): Candle[] {
 
 const BAR_COUNT = 3_200;
 const data: ReplayData = { SOLUSDT: { '15m': swingCandles(BAR_COUNT) } };
-const replayConfig = resolvedReplayConfig({ positionManager: false, learning: false });
+// historyBars pinned: the default MARKET_DATA_KLINE_LIMIT window is too short for the 4h trend, and the test must not read the env.
+const replayConfig = resolvedReplayConfig({ positionManager: false, learning: false, historyBars: 1_000 });
 const mutated: AlmaMtfParams = { ...DEFAULT_ALMA_MTF_PARAMS, fast: { ...DEFAULT_ALMA_MTF_PARAMS.fast, length: 9 }, atrStopMultiplier: 1.5 };
 
 // Each full replay costs seconds; share the runs the tests compare

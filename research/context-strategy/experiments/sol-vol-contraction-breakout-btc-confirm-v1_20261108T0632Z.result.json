@@ -1,0 +1,327 @@
+{
+  "schemaVersion": 1,
+  "runId": "CONTEXT-STRATEGY-20261108T0632Z-AUTO11",
+  "createdAtUtc": "2026-11-08T06:32:56.001Z",
+  "experimentId": "SOLUSDT_4H_VOL_CONTRACTION_BREAKOUT_BTC_CONFIRM_V1",
+  "evidenceStatus": "INSUFFICIENT_EVIDENCE",
+  "runner": {
+    "name": "managed-functions-v8-inline-harness-v1",
+    "repositoryCliInvoked": false,
+    "codeCommit": null,
+    "codeSha256": null,
+    "sourcePersisted": false
+  },
+  "specification": {
+    "hypothesis": "SOL 4h Donchian breakout after training-defined ATR compression and volume expansion, with BTC trend confirmation, improves net expectancy over a trend-aligned Donchian baseline.",
+    "symbol": "SOLUSDT",
+    "referenceSymbol": "BTCUSDT",
+    "interval": "4h",
+    "detector": {
+      "trend": "SOL close>EMA50>EMA200 long; SOL close<EMA50<EMA200 short",
+      "compression": "Wilder ATR14/close <= training q33",
+      "volume": "current base volume / median prior 20 bars >= training q70",
+      "btcConfirmation": "BTC close>EMA50>EMA200 long; inverse short",
+      "breakout": "completed close breaks prior Donchian L-bar extreme; current bar excluded"
+    },
+    "entry": "next 4h open",
+    "exits": {
+      "stop": "1.5 x signal ATR14",
+      "target": "2.5R selected on validation",
+      "timeStop": "12 bars",
+      "intrabar": "stop-first; adverse gap through stop fills at open; target fills at target; time exit at close",
+      "overlap": "one position at a time"
+    },
+    "sizing": "1 SOL fixed quantity; 1R equals signal ATR stop distance",
+    "costs": {
+      "baseRoundTripNotionalBps": 15,
+      "sensitivityBps": [
+        10,
+        15,
+        20,
+        30
+      ],
+      "fundingIncluded": false
+    },
+    "grid": [
+      {
+        "lookback": 20,
+        "stopATR": 1.5,
+        "targetR": 2,
+        "holdBars": 8
+      },
+      {
+        "lookback": 10,
+        "stopATR": 1.5,
+        "targetR": 2,
+        "holdBars": 8
+      },
+      {
+        "lookback": 20,
+        "stopATR": 2,
+        "targetR": 2,
+        "holdBars": 8
+      },
+      {
+        "lookback": 20,
+        "stopATR": 1.5,
+        "targetR": 2.5,
+        "holdBars": 12
+      }
+    ],
+    "split": {
+      "train": 0.6,
+      "validation": 0.2,
+      "untouchedTest": 0.2,
+      "embargoBars": 12
+    },
+    "bootstrap": {
+      "method": "UTC 7-day entry-week cluster bootstrap",
+      "iterations": 2000,
+      "seed": 20261108
+    },
+    "gates": {
+      "minOOSTradesPerSymbolContext": 100,
+      "netExpectancyPositive": true,
+      "ciLowerAboveZero": true,
+      "holmAdjustedPBelow0_05": true,
+      "stableNeighborhood": true,
+      "allMaterialCostsIncluded": true
+    }
+  },
+  "specificationSha256": "5e64c735a276f60da017bfa3ec18797c913a25b60b45304d5d8e41cdcdea408c",
+  "input": {
+    "rawArchiveBranch": "research/raw-ohlcv-archive-20261108T050302Z-run20",
+    "endpoint": "GET /fapi/v1/klines",
+    "symbols": [
+      "SOLUSDT",
+      "BTCUSDT"
+    ],
+    "startUtc": "2020-09-14T08:00:00.000Z",
+    "lastCompletedOpenUtc": "2026-11-04T12:00:00.000Z",
+    "rowsPerSymbol": 13454,
+    "totalRows": 26908,
+    "filesVerified": 18,
+    "githubBlobShaVerified": true,
+    "manifestShaMismatches": [
+      {
+        "symbol": "BTCUSDT",
+        "page": 7,
+        "actual": "21892b6d5b9929519d26848675cb4ff99cca3133611138d66253bb05c4cd5417",
+        "manifest": "c5fa59f257010af46c3bbfa9485bd74a969065f68803d0dfae2272a5c21e91ce"
+      },
+      {
+        "symbol": "BTCUSDT",
+        "page": 8,
+        "actual": "f35b6db94343ba575830a6776c062f091f6985d308168adff775cbd2d18405b8",
+        "manifest": "64d3a14337fa220aea46cb4d13e82c33db7b5a41c4475b302ad012589f02dca2"
+      },
+      {
+        "symbol": "SOLUSDT",
+        "page": 7,
+        "actual": "31c8142549938ccff277cf03a9f787170e501c9cd8acdbabf9513fd1bf8f1a01",
+        "manifest": "fc104b7b23eaad4b5f71d48d0ca83a3207054105d4fe14b6cf232763e441bb1a"
+      },
+      {
+        "symbol": "SOLUSDT",
+        "page": 8,
+        "actual": "81179ab8b1725177160eb08ad6758e33c769f7da05e2f33cbd40b0d9b8dfd71f",
+        "manifest": "22fd87a089782178d5657ed1a03bd71da1ee84b3ae195abb86688aa177c25e82"
+      }
+    ]
+  },
+  "dataQuality": {
+    "aligned": true,
+    "rowsPerSymbol": 13454,
+    "firstOpenUtc": "2020-09-14T08:00:00.000Z",
+    "lastOpenUtc": "2026-11-04T12:00:00.000Z",
+    "duplicates": 0,
+    "missingOrIrregularGaps": 0,
+    "ohlcFailures": 0,
+    "nonPositiveVolume": 0,
+    "nonFinite": 0,
+    "closeTimeFailures": 0,
+    "offGrid": 0,
+    "nonMonotonic": 0,
+    "trainBars": 8072,
+    "validationBars": 2667,
+    "testBars": 2679,
+    "trainPeriod": [
+      "2020-10-21T00:00:00.000Z",
+      "2024-05-21T12:00:00.000Z"
+    ],
+    "validationPeriod": [
+      "2024-05-23T16:00:00.000Z",
+      "2025-08-11T00:00:00.000Z"
+    ],
+    "untouchedTestPeriod": [
+      "2025-08-15T04:00:00.000Z",
+      "2026-11-04T12:00:00.000Z"
+    ],
+    "trainingAtr14CloseQ33": 0.02981852428255043,
+    "trainingVolumeRatioQ70": 1.3063984405875968
+  },
+  "smokeTest": {
+    "stopAndTargetBothTouched": "STOP_FIRST",
+    "adverseGapStopFill": 85,
+    "repeatable": true,
+    "futureMutationSignalInvariant": true,
+    "passed": true
+  },
+  "validationGrid": [
+    {
+      "lookback": 20,
+      "stopATR": 1.5,
+      "targetR": 2,
+      "holdBars": 8,
+      "trades": 37,
+      "meanNetR": 0.1302304124,
+      "winRatePct": 51.35,
+      "profitFactor": 1.2907
+    },
+    {
+      "lookback": 10,
+      "stopATR": 1.5,
+      "targetR": 2,
+      "holdBars": 8,
+      "trades": 48,
+      "meanNetR": 0.074083,
+      "winRatePct": 45.83,
+      "profitFactor": 1.1558
+    },
+    {
+      "lookback": 20,
+      "stopATR": 2,
+      "targetR": 2,
+      "holdBars": 8,
+      "trades": 37,
+      "meanNetR": 0.101387,
+      "winRatePct": 51.35,
+      "profitFactor": 1.2581
+    },
+    {
+      "lookback": 20,
+      "stopATR": 1.5,
+      "targetR": 2.5,
+      "holdBars": 12,
+      "trades": 35,
+      "meanNetR": 0.195864,
+      "winRatePct": 45.71,
+      "profitFactor": 1.3631
+    }
+  ],
+  "selectedParameters": {
+    "lookback": 20,
+    "stopATR": 1.5,
+    "targetR": 2.5,
+    "holdBars": 12
+  },
+  "oos": {
+    "overall": {
+      "trades": 44,
+      "winRatePct": 34.0909,
+      "targetBeforeStopPct": 15.9091,
+      "meanNetR": -0.152,
+      "meanGrossR": -0.10018,
+      "profitFactor": 0.7601,
+      "maxDrawdownR": 12.4973,
+      "averageWinR": 1.4129,
+      "averageLossR": -0.9614,
+      "totalQuotePnlPerSol": -23.7985,
+      "exposureBars": 312,
+      "exposurePct": 11.6461,
+      "turnoverQuote": 9873.673
+    },
+    "BULL_COMPRESS": {
+      "eligibleBars": 320,
+      "triggerBars": 18,
+      "trades": 18,
+      "winRatePct": 33.3333,
+      "targetBeforeStopPct": 11.1111,
+      "meanNetR": -0.20496,
+      "profitFactor": 0.6872,
+      "maxDrawdownR": 7.4269,
+      "totalQuotePnlPerSol": -23.2675,
+      "bootstrap95CI": [
+        -0.7233,
+        0.2946
+      ],
+      "targetWilson95Pct": [
+        3.1019,
+        32.8002
+      ],
+      "holmAdjustedP": 1
+    },
+    "BEAR_COMPRESS": {
+      "eligibleBars": 407,
+      "triggerBars": 26,
+      "trades": 26,
+      "winRatePct": 34.6154,
+      "targetBeforeStopPct": 19.2308,
+      "meanNetR": -0.11534,
+      "profitFactor": 0.8136,
+      "maxDrawdownR": 7.8106,
+      "totalQuotePnlPerSol": -0.531,
+      "bootstrap95CI": [
+        -0.683,
+        0.3705
+      ],
+      "targetWilson95Pct": [
+        8.5069,
+        37.8766
+      ],
+      "holmAdjustedP": 1
+    }
+  },
+  "matchedBaseline": {
+    "description": "SOL EMA50/EMA200 trend-aligned Donchian20 without compression, volume or BTC filters",
+    "parameters": {
+      "lookback": 20,
+      "stopATR": 1.5,
+      "targetR": 2.5,
+      "holdBars": 12
+    },
+    "trades": 69,
+    "winRatePct": 33.3333,
+    "targetBeforeStopPct": 15.942,
+    "meanNetR": -0.09919,
+    "profitFactor": 0.8347,
+    "maxDrawdownR": 17.2976,
+    "totalQuotePnlPerSol": -42.2196,
+    "exposurePct": 19.0743,
+    "turnoverQuote": 16539.299
+  },
+  "buyHoldPriceReturnPct": -50.8889,
+  "costSensitivity": [
+    {
+      "roundTripBps": 10,
+      "meanNetR": -0.13473,
+      "profitFactor": 0.7835
+    },
+    {
+      "roundTripBps": 15,
+      "meanNetR": -0.152,
+      "profitFactor": 0.7601
+    },
+    {
+      "roundTripBps": 20,
+      "meanNetR": -0.16927,
+      "profitFactor": 0.7376
+    },
+    {
+      "roundTripBps": 30,
+      "meanNetR": -0.20382,
+      "profitFactor": 0.6954
+    }
+  ],
+  "contextDuration": {
+    "bullCompressionRuns": 170,
+    "bullCompressionMedianBars": 4,
+    "bearCompressionRuns": 183,
+    "bearCompressionMedianBars": 4
+  },
+  "evidenceStatusByContext": {
+    "BULL_COMPRESS": "INSUFFICIENT_EVIDENCE",
+    "BEAR_COMPRESS": "INSUFFICIENT_EVIDENCE"
+  },
+  "reason": "Negative point estimates, per-context OOS n<100, CIs cross zero, Holm p=1; historical funding and calibrated costs unavailable."
+}

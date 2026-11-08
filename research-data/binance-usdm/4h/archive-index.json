@@ -2238,10 +2238,10 @@
   ],
   "incremental_delta_rows_total": 5016,
   "next_actions": [
-    "Canonical 4h archive remains through 2026-11-05T16:00Z; rebuild canonical through 2026-11-08T04:00Z from verified deltas.",
-    "1h pages 1-36 cover 2020-09-14T08:00Z through 2026-11-06T22:00Z; incremental high-water is 2026-11-08T08:00Z.",
-    "Backfill multi-year 5m/15m history from an auditable bulk source; recent deltas do not imply lower-timeframe completeness.",
-    "Recover the missing 76-row delta or formally retire it with unknown coverage; reconcile 13 manifest SHA mismatches and the 4h raw-versus-canonical row-count discrepancy.",
+    "Rebuild canonical 4h through 2026-11-08T04:00Z from the verified incremental deltas; retain existing canonical files as immutable inputs until readback checks pass.",
+    "Reconcile raw-vs-canonical counts for BTC/ETH/XRP (+38 each) and SOL (-6), including page-level row identity and manifest provenance.",
+    "Backfill multi-year 5m/15m history oldest-first from an auditable bulk source; recent deltas do not imply lower-timeframe completeness.",
+    "Continue 1h incremental append after 2026-11-08T08:00Z; next completed open is 09:00Z.",
     "Backfill historical funding for BTC/ETH/XRP and OI/taker/positioning for all symbols; current snapshots are not historical series."
   ],
   "last_incremental_refresh_utc": "2026-11-08T09:37:32.103Z",
@@ -2292,7 +2292,7 @@
       "supersedes_line": 16
     }
   ],
-  "updated_at_utc": "2026-11-08T09:37:32.103Z",
+  "updated_at_utc": "2026-11-08T09:41:30Z",
   "canonical_4h": {
     "status": "PASS",
     "start_utc": "2020-09-14T08:00:00.000Z",
@@ -2427,7 +2427,7 @@
   ],
   "last_derivatives_refresh_utc": "2026-11-05T22:33:02Z",
   "unresolved_missing_delta_files": [],
-  "status": "DEGRADED_HASH_PROVENANCE_MISMATCHES_AND_LOWER_TIMEFRAME_HISTORY_INCOMPLETE",
+  "status": "DEGRADED_RAW_CANONICAL_ROWCOUNT_DISCREPANCY_AND_LOWER_TIMEFRAME_HISTORY_INCOMPLETE",
   "latest_incremental_delta_files": [
     "research-data/binance-usdm/delta/binance_usdm_delta_20261108T0723Z_5m15m1h_completed.jsonl",
     "research-data/binance-usdm/delta/binance_usdm_delta_20261108T063256Z_5m15m1h_completed.jsonl",
@@ -2749,5 +2749,16 @@
     "1h": "2026-11-08T09:00:00.000Z",
     "4h": "2026-11-08T08:00:00.000Z"
   },
-  "incremental_highwater_utc": "2026-11-08T09:30:00.000Z"
+  "incremental_highwater_utc": "2026-11-08T09:30:00.000Z",
+  "statusReason": "The 76-row delta is restored and readback/hash verified; all four canonical 4h SHA-256 values and manifests pass the recorded audit. Remaining issues are raw-vs-canonical row-count differences, canonical 4h not yet rebuilt through the latest incremental high-water, and missing multi-year 5m/15m history. Page-level provenance should be re-audited rather than carrying forward an unverified mismatch count.",
+  "resolvedIssues": [
+    "Restored original 76-row delta at research-data/binance-usdm/delta/binance_usdm_delta_2026-11-05T0524Z.jsonl; SHA-256 and readback verified.",
+    "Canonical 4h hashes and manifests for BTCUSDT, ETHUSDT, SOLUSDT, XRPUSDT independently verified; gaps=0 and duplicates=0 in each canonical series."
+  ],
+  "remainingIssues": [
+    "Raw-vs-canonical row-count differences: BTC/ETH/XRP raw 13,499 vs canonical 13,461 (+38 each); SOL raw 13,455 vs canonical 13,461 (-6).",
+    "Canonical 4h files end at 2026-11-05T16:00Z; rebuild through 2026-11-08T04:00Z from verified deltas.",
+    "Multi-year 5m/15m history remains unavailable in the archive; recent incremental deltas are not sufficient coverage.",
+    "Re-audit page-level manifest provenance and explain the raw/canonical count differences before promoting the archive to fully reconciled."
+  ]
 }

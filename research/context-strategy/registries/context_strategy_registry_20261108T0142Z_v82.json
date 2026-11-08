@@ -1,0 +1,361 @@
+{
+  "schema_version": "1.0.0",
+  "registry_version": "v82",
+  "updated_at_utc": "2026-11-08T01:43:42.927Z",
+  "prior_snapshot": "context_strategy_registry_20261107T2323Z_v81.json",
+  "status_transition_count": 0,
+  "oos_validated_entries": 0,
+  "oos_promising_entries": 1,
+  "last_evaluated_utc": "2026-11-08T01:43:42.927Z",
+  "entries": [
+    {
+      "key": "SOLUSDT|4h|BULL_LOW|donchian20-v0.1.0",
+      "symbol": "SOLUSDT",
+      "timeframe": "4h",
+      "context": "BULL_LOW",
+      "strategy_family": "Donchian20 breakout continuation",
+      "version": "0.1.0",
+      "evidence_status": "OOS_PROMISING",
+      "last_evaluated_utc": "2026-11-07T19:35:32Z",
+      "oos": {
+        "trades": 12,
+        "win_rate_pct": 66.7,
+        "target_before_stop_pct": 41.7,
+        "mean_net_R": 0.606,
+        "profit_factor": 2.72,
+        "max_drawdown_R": 1.3,
+        "block_bootstrap_interval_R": [
+          0.086,
+          1.199
+        ]
+      },
+      "gates": {
+        "minimum_oos_trades_per_symbol_context": 100,
+        "passed": false,
+        "multi_window_stability": false
+      },
+      "known_failure_modes": [
+        "sample below minimum",
+        "single context window not stable across multiple walk-forward windows",
+        "cost model and contract-specific fills need further verification"
+      ],
+      "current_applicability": "NOT_APPLICABLE; current SOL remains bearish on 1h/4h and current context is not BULL_LOW.",
+      "actionable": false
+    },
+    {
+      "key": "BTCUSDT|ALL|donchian20-baseline-v0.1.0",
+      "symbol": "BTCUSDT",
+      "context": "ALL",
+      "strategy_family": "Donchian20 baseline",
+      "evidence_status": "INSUFFICIENT_EVIDENCE",
+      "prior_walk_forward_aggregate": {
+        "trades": 200,
+        "win_rate_pct": 36.5,
+        "target_before_stop_pct": 21.5,
+        "mean_net_R": -0.100817
+      },
+      "note": "Not context-conditioned and not a validated trade rule."
+    },
+    {
+      "key": "ETHUSDT|ALL|donchian20-baseline-v0.1.0",
+      "symbol": "ETHUSDT",
+      "context": "ALL",
+      "strategy_family": "Donchian20 baseline",
+      "evidence_status": "INSUFFICIENT_EVIDENCE",
+      "prior_walk_forward_aggregate": {
+        "trades": 182,
+        "win_rate_pct": 38.46,
+        "target_before_stop_pct": 28.02,
+        "mean_net_R": 0.047803
+      }
+    },
+    {
+      "key": "SOLUSDT|ALL|donchian20-baseline-v0.1.0",
+      "symbol": "SOLUSDT",
+      "context": "ALL",
+      "strategy_family": "Donchian20 baseline",
+      "evidence_status": "INSUFFICIENT_EVIDENCE",
+      "prior_walk_forward_aggregate": {
+        "trades": 208,
+        "win_rate_pct": 37.02,
+        "target_before_stop_pct": 24.52,
+        "mean_net_R": -0.017655
+      }
+    },
+    {
+      "key": "XRPUSDT|ALL|donchian20-baseline-v0.1.0",
+      "symbol": "XRPUSDT",
+      "context": "ALL",
+      "strategy_family": "Donchian20 baseline",
+      "evidence_status": "INSUFFICIENT_EVIDENCE",
+      "prior_walk_forward_aggregate": {
+        "trades": 188,
+        "win_rate_pct": 37.77,
+        "target_before_stop_pct": 29.79,
+        "mean_net_R": 0.048855
+      }
+    },
+    {
+      "strategy_family": "Donchian20 breakout continuation with EMA50 trend filter",
+      "version": "1.0.0",
+      "timeframe": "4h",
+      "last_evaluated_utc": "2026-11-08T01:43:42.927Z",
+      "experiment_id": "EXP-SOL-4H-DONCHIAN20-EMA50-20261108",
+      "detector_definition": {
+        "donchian_lookback": 20,
+        "ema_period": 50,
+        "ema_slope_lookback": 10,
+        "atr_period": 14,
+        "bull": "close>EMA50 and EMA50>EMA50[-10]",
+        "bear": "close<EMA50 and EMA50<EMA50[-10]",
+        "signal": "completed close beyond prior 20-bar high/low; next 4h open entry"
+      },
+      "trading_rules": {
+        "entry": "next 4h open",
+        "stop_atr": 1.5,
+        "target_R": 2,
+        "max_hold_bars": 6,
+        "one_position_at_a_time": true,
+        "intrabar_both_hit": "stop first",
+        "risk_pct": 1,
+        "max_leverage": 3
+      },
+      "data_period": {
+        "start_utc": "2020-09-14T08:00:00.000Z",
+        "end_utc": "2026-11-05T19:59:59.999Z",
+        "oos_start_utc": "2025-11-01T00:00:00.000Z",
+        "oos_end_utc": "2026-11-05T19:59:59.999Z",
+        "symbol": "SOLUSDT"
+      },
+      "costs": {
+        "taker_fee_per_side_bps": 5,
+        "half_spread_per_side_bps": 2,
+        "slippage_per_side_bps": 2,
+        "round_trip_assumption_bps": 18,
+        "historical_funding": "actual SOLUSDT funding settlements; OOS missing-mark fallback events 0"
+      },
+      "actionable": false,
+      "key": "SOLUSDT|4h|ALL|donchian20-ema50-v1.0.0",
+      "context": "ALL",
+      "evidence_status": "REJECTED",
+      "oos": {
+        "trades": 103,
+        "win_rate_pct": 40.7767,
+        "target_before_stop_pct": 13.5922,
+        "mean_net_R": -0.09583,
+        "profit_factor": 0.79129,
+        "net_pnl_usdt": -992.3931,
+        "net_return_pct": -9.9239,
+        "max_drawdown_pct": 18.9833,
+        "fees_usdt": 333.566,
+        "execution_costs_usdt": 266.853,
+        "funding_cashflow_usdt": -34.706,
+        "block_bootstrap_by_context": {
+          "BULL": [
+            -0.51548,
+            0.32296
+          ],
+          "BEAR": [
+            -0.36234,
+            0.22735
+          ]
+        }
+      },
+      "gates": {
+        "minimum_trades_per_context": 100,
+        "maximum_drawdown_pct": 15,
+        "minimum_profit_factor": 1.2,
+        "passed": false,
+        "failed": [
+          "negative net expectancy",
+          "profit factor below 1.2",
+          "maximum drawdown 18.98% exceeds 15%",
+          "only one of four OOS windows positive in each tested context",
+          "per-context samples below 100 and adjusted intervals cross zero"
+        ]
+      },
+      "known_failure_modes": [
+        "OOS decay from positive validation expectancy to negative OOS expectancy",
+        "low target-before-stop rate (14/103)",
+        "fees and execution costs are material relative to gross edge",
+        "single-symbol test; no transfer to ETH/XRP"
+      ]
+    },
+    {
+      "strategy_family": "Donchian20 breakout continuation with EMA50 trend filter",
+      "version": "1.0.0",
+      "timeframe": "4h",
+      "last_evaluated_utc": "2026-11-08T01:43:42.927Z",
+      "experiment_id": "EXP-SOL-4H-DONCHIAN20-EMA50-20261108",
+      "detector_definition": {
+        "donchian_lookback": 20,
+        "ema_period": 50,
+        "ema_slope_lookback": 10,
+        "atr_period": 14,
+        "bull": "close>EMA50 and EMA50>EMA50[-10]",
+        "bear": "close<EMA50 and EMA50<EMA50[-10]",
+        "signal": "completed close beyond prior 20-bar high/low; next 4h open entry"
+      },
+      "trading_rules": {
+        "entry": "next 4h open",
+        "stop_atr": 1.5,
+        "target_R": 2,
+        "max_hold_bars": 6,
+        "one_position_at_a_time": true,
+        "intrabar_both_hit": "stop first",
+        "risk_pct": 1,
+        "max_leverage": 3
+      },
+      "data_period": {
+        "start_utc": "2020-09-14T08:00:00.000Z",
+        "end_utc": "2026-11-05T19:59:59.999Z",
+        "oos_start_utc": "2025-11-01T00:00:00.000Z",
+        "oos_end_utc": "2026-11-05T19:59:59.999Z",
+        "symbol": "SOLUSDT"
+      },
+      "costs": {
+        "taker_fee_per_side_bps": 5,
+        "half_spread_per_side_bps": 2,
+        "slippage_per_side_bps": 2,
+        "round_trip_assumption_bps": 18,
+        "historical_funding": "actual SOLUSDT funding settlements; OOS missing-mark fallback events 0"
+      },
+      "actionable": false,
+      "key": "SOLUSDT|4h|BULL|donchian20-ema50-v1.0.0",
+      "context": "BULL",
+      "evidence_status": "INSUFFICIENT_EVIDENCE",
+      "oos": {
+        "trades": 46,
+        "eligible_context_bars": 774,
+        "win_rate_pct": 41.3043,
+        "target_before_stop_pct": 15.2174,
+        "mean_net_R": -0.12714,
+        "profit_factor": 0.73108,
+        "net_pnl_usdt": -600.7517,
+        "block_bootstrap_interval_R_97_5": [
+          -0.51548,
+          0.32296
+        ],
+        "positive_oos_windows": 1
+      },
+      "gates": {
+        "minimum_trades": 100,
+        "passed": false,
+        "reason": "46 trades; adjusted block-bootstrap interval crosses zero."
+      },
+      "known_failure_modes": [
+        "negative OOS expectancy",
+        "target hit rate low",
+        "only one positive OOS subwindow"
+      ]
+    },
+    {
+      "strategy_family": "Donchian20 breakout continuation with EMA50 trend filter",
+      "version": "1.0.0",
+      "timeframe": "4h",
+      "last_evaluated_utc": "2026-11-08T01:43:42.927Z",
+      "experiment_id": "EXP-SOL-4H-DONCHIAN20-EMA50-20261108",
+      "detector_definition": {
+        "donchian_lookback": 20,
+        "ema_period": 50,
+        "ema_slope_lookback": 10,
+        "atr_period": 14,
+        "bull": "close>EMA50 and EMA50>EMA50[-10]",
+        "bear": "close<EMA50 and EMA50<EMA50[-10]",
+        "signal": "completed close beyond prior 20-bar high/low; next 4h open entry"
+      },
+      "trading_rules": {
+        "entry": "next 4h open",
+        "stop_atr": 1.5,
+        "target_R": 2,
+        "max_hold_bars": 6,
+        "one_position_at_a_time": true,
+        "intrabar_both_hit": "stop first",
+        "risk_pct": 1,
+        "max_leverage": 3
+      },
+      "data_period": {
+        "start_utc": "2020-09-14T08:00:00.000Z",
+        "end_utc": "2026-11-05T19:59:59.999Z",
+        "oos_start_utc": "2025-11-01T00:00:00.000Z",
+        "oos_end_utc": "2026-11-05T19:59:59.999Z",
+        "symbol": "SOLUSDT"
+      },
+      "costs": {
+        "taker_fee_per_side_bps": 5,
+        "half_spread_per_side_bps": 2,
+        "slippage_per_side_bps": 2,
+        "round_trip_assumption_bps": 18,
+        "historical_funding": "actual SOLUSDT funding settlements; OOS missing-mark fallback events 0"
+      },
+      "actionable": false,
+      "key": "SOLUSDT|4h|BEAR|donchian20-ema50-v1.0.0",
+      "context": "BEAR",
+      "evidence_status": "INSUFFICIENT_EVIDENCE",
+      "oos": {
+        "trades": 57,
+        "eligible_context_bars": 1129,
+        "win_rate_pct": 40.3509,
+        "target_before_stop_pct": 12.2807,
+        "mean_net_R": -0.07056,
+        "profit_factor": 0.84464,
+        "net_pnl_usdt": -391.6415,
+        "block_bootstrap_interval_R_97_5": [
+          -0.36234,
+          0.22735
+        ],
+        "positive_oos_windows": 1
+      },
+      "gates": {
+        "minimum_trades": 100,
+        "passed": false,
+        "reason": "57 trades; adjusted block-bootstrap interval crosses zero."
+      },
+      "known_failure_modes": [
+        "negative OOS expectancy",
+        "target hit rate low",
+        "only one positive OOS subwindow"
+      ]
+    }
+  ],
+  "untested_families": [
+    {
+      "family": "trend_pullback_continuation",
+      "status": "HYPOTHESIS"
+    },
+    {
+      "family": "breakout_retest_volatility_contraction",
+      "status": "HYPOTHESIS"
+    },
+    {
+      "family": "range_mean_reversion_failed_breakout_fade",
+      "status": "HYPOTHESIS"
+    },
+    {
+      "family": "volatility_expansion_momentum",
+      "status": "HYPOTHESIS"
+    },
+    {
+      "family": "btc_led_relative_strength",
+      "status": "HYPOTHESIS"
+    },
+    {
+      "family": "funding_oi_filters",
+      "status": "HYPOTHESIS"
+    }
+  ],
+  "notes": [
+    "No candidate is OOS_VALIDATED.",
+    "No strategy was re-evaluated or status-promoted/rejected this run.",
+    "SOL BULL_LOW Donchian20 remains OOS_PROMISING and research-only.",
+    "This run executed a data-quality append experiment, not a strategy backtest.",
+    "Current context classification is descriptive and low confidence.",
+    "Daily research experiment executed: EXP-SOL-4H-DONCHIAN20-EMA50-20261108; frozen 20-bar Donchian breakout with EMA50 trend context, ATR stop/target and actual SOL funding.",
+    "Overall candidate REJECTED by predeclared OOS risk/net-expectancy gates: 103 trades, mean -0.0958R, PF 0.7913, net -9.92%, max DD 18.98% > 15%.",
+    "BULL and BEAR context entries remain INSUFFICIENT_EVIDENCE: 46 and 57 trades respectively; both adjusted block-bootstrap intervals cross zero.",
+    "No OOS_VALIDATED entries. Existing SOL BULL_LOW v0.1.0 OOS_PROMISING entry is unchanged and remains research-only.",
+    "Current 4h context is bearish for BTC/ETH/SOL/XRP; no symbol-specific OOS_VALIDATED trigger exists."
+  ],
+  "rejected_entries": 1,
+  "insufficient_evidence_entries": 2
+}

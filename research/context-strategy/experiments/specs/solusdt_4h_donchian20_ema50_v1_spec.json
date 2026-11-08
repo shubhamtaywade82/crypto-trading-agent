@@ -1,0 +1,121 @@
+{
+  "schema_version": "1.0.0",
+  "experiment_id": "EXP-SOL-4H-DONCHIAN20-EMA50-20261108",
+  "created_at_utc": "2026-11-08T01:37:25.215Z",
+  "symbol": "SOLUSDT",
+  "timeframe": "4h",
+  "hypothesis": "A 20-bar Donchian close breakout aligned with a deterministic EMA50 trend state may have positive net expectancy after conservative execution costs and actual historical funding; test separately in BULL and BEAR contexts.",
+  "data": {
+    "source_endpoint": "GET /fapi/v1/klines",
+    "canonical_path": "research-data/binance-usdm/4h/canonical/SOLUSDT_4h_20200914T0800Z_20261105T1600Z.jsonl",
+    "canonical_rows": 13461,
+    "first_open_utc": "2020-09-14T08:00:00.000Z",
+    "last_open_utc": "2026-11-05T16:00:00.000Z",
+    "canonical_sha256": "148389f0347fe05307e2a274c579ccc1c495e32eaad2e49cfb19ca211df89156",
+    "funding_path": "research-data/binance-usdm/derivatives/funding/SOLUSDT/funding_history_20200914_20261108.jsonl",
+    "funding_rows": 6813,
+    "funding_sha256": "dbf67b0e2b02dd3b6449219817f6ec9980a76da981c3f3943415f42101e4ac6a"
+  },
+  "splits": {
+    "train": {
+      "start_utc": "2020-09-14T08:00:00.000Z",
+      "end_utc": "2024-09-30T23:59:59.999Z"
+    },
+    "validation": {
+      "start_utc": "2024-10-01T00:00:00.000Z",
+      "end_utc": "2025-10-31T23:59:59.999Z"
+    },
+    "untouched_test": {
+      "start_utc": "2025-11-01T00:00:00.000Z",
+      "end_utc": "2026-11-05T19:59:59.999Z"
+    }
+  },
+  "rules": {
+    "signal": "At completed 4h close t, close > max(high[t-20..t-1]) for long or close < min(low[t-20..t-1]) for short.",
+    "context": "BULL when close[t] > EMA50[t] and EMA50[t] > EMA50[t-10]; BEAR when close[t] < EMA50[t] and EMA50[t] < EMA50[t-10]; otherwise TRANSITION.",
+    "entry": "Next 4h bar open.",
+    "stop": "1.5 x Wilder ATR(14) from adjusted entry fill.",
+    "target": "2.0R.",
+    "time_stop_bars": 6,
+    "intrabar_collision": "If stop and target are both touched in one 4h bar, assume stop first.",
+    "position_policy": "One position at a time per symbol; ignore signals while a position is open; skip entries too close to split end to complete horizon.",
+    "sizing": "1% of segment equity risk per trade; maximum 3x notional leverage; initial segment equity 10,000 USDT."
+  },
+  "costs": {
+    "taker_fee_per_side_bps": 5,
+    "half_spread_per_side_bps": 2,
+    "slippage_per_side_bps": 2,
+    "round_trip_cost_assumption_bps": 18,
+    "history_spread": "Unavailable; 2 bps per side is a conservative proxy.",
+    "fee_tier": "Account-specific tier unavailable; 5 bps taker per side assumed."
+  },
+  "funding": {
+    "actual_historical_funding_rates": true,
+    "rows": 6813,
+    "mark_price_missing_rows": 3501,
+    "fallback": "Use last completed 4h close strictly before fundingTime when markPrice is blank.",
+    "cashflow": "-direction * quantity * fundingMarkPrice * fundingRate",
+    "event_timing": "Apply funding events from entryTime through the open time of the exit bar, inclusive; conservative for unknown intrabar exit time."
+  },
+  "validation": {
+    "parameter_neighborhoods_validation_only": [
+      18,
+      20,
+      22
+    ],
+    "primary_lookback_frozen": 20,
+    "oos_parameter_tuning": false,
+    "test_windows": [
+      [
+        "2025-11-01T00:00:00.000Z",
+        "2026-01-31T23:59:59.999Z"
+      ],
+      [
+        "2026-02-01T00:00:00.000Z",
+        "2026-04-30T23:59:59.999Z"
+      ],
+      [
+        "2026-05-01T00:00:00.000Z",
+        "2026-07-31T23:59:59.999Z"
+      ],
+      [
+        "2026-08-01T00:00:00.000Z",
+        "2026-11-05T19:59:59.999Z"
+      ]
+    ],
+    "block_bootstrap": {
+      "replicates": 2000,
+      "block_length_trades": 5,
+      "seed": 20261108,
+      "bonferroni_contexts": 2,
+      "adjusted_two_sided_alpha": 0.025
+    },
+    "evidence_gates": {
+      "insufficient_if_oos_trades_below": 100,
+      "stronger_sample_per_context": 200,
+      "minimum_positive_oos_windows": 3,
+      "minimum_profit_factor": 1.2,
+      "maximum_drawdown_pct": 15,
+      "adjusted_bootstrap_ci_lower_bound_must_exceed_zero": true,
+      "all_validation_neighborhoods_same_positive_sign": true
+    }
+  },
+  "baselines": [
+    "Donchian breakout without EMA trend filter",
+    "SOL spot buy-and-hold price-return benchmark"
+  ],
+  "no_trade": [
+    "TRANSITION context",
+    "no Donchian breakout",
+    "insufficient ATR/lookback",
+    "position already open",
+    "insufficient bars to complete horizon",
+    "invalid/missing data"
+  ],
+  "limitations": [
+    "Single-symbol experiment; no cross-symbol transfer.",
+    "Historical lot-step/tick-size rounding not applied because current exchangeInfo is stale.",
+    "No explicit network latency model; entry is next 4h open.",
+    "Current exchangeInfo metadata is stale and cannot validate current contract status."
+  ]
+}

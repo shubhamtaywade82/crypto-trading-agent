@@ -1,0 +1,254 @@
+{
+  "schema_version": "1.0.0",
+  "registry_version": "v82",
+  "run_id": "context-strategy-2026-11-08T1433Z-v82",
+  "updated_at_utc": "2026-11-08T14:33:10.000Z",
+  "source_of_truth": "This is a compact snapshot; prior full registry v81 is referenced, not rewritten. No strategy evidence was added or changed.",
+  "prior_registry": "context_strategy_registry_2026-11-08_1901IST_v81.json",
+  "repository": {
+    "name": "shubhamtaywade82/crypto-trading-agent",
+    "main_commit": "5e954d29e24697b6c8cc917f5da8b0f4229c2157",
+    "archive_branch": "research/raw-ohlcv-archive-20261108T1026Z",
+    "archive_branch_head_before_run_artifacts": "07e15cb0f8c8244e455df86cac61b52914aa0e04"
+  },
+  "taxonomy": {
+    "version": "v56-frozen",
+    "timeframe": "4h",
+    "features": [
+      "(EMA20-EMA50)/Wilder ATR14",
+      "Wilder ATR14/close"
+    ],
+    "thresholds": {
+      "BTCUSDT": {
+        "trend_abs_q67_atr": 1.1009832213,
+        "vol_atr_pct_q33": 0.01439413373,
+        "vol_atr_pct_q67": 0.02077846133
+      },
+      "ETHUSDT": {
+        "trend_abs_q67_atr": 1.1489925243,
+        "vol_atr_pct_q33": 0.01794510071,
+        "vol_atr_pct_q67": 0.02631890743
+      },
+      "SOLUSDT": {
+        "trend_abs_q67_atr": 1.1365828811,
+        "vol_atr_pct_q33": 0.02771950063,
+        "vol_atr_pct_q67": 0.04061636453
+      },
+      "XRPUSDT": {
+        "trend_abs_q67_atr": 0.9442444141,
+        "vol_atr_pct_q33": 0.01963342221,
+        "vol_atr_pct_q67": 0.02915069348
+      }
+    },
+    "fit_policy": "Per-symbol training-only thresholds; no refit this run.",
+    "sample_adequacy": "Adequate for descriptive 4h context frequencies/durations; insufficient for strategy-edge and multi-timeframe generalization."
+  },
+  "evidence_policy": {
+    "provisional_min_oos_trades_per_symbol_context": 100,
+    "stronger_evidence_target": 200,
+    "requires_positive_net_expectancy_after_costs": true,
+    "requires_serial_dependence_aware_uncertainty": true,
+    "requires_multiple_testing_control": true,
+    "requires_parameter_and_window_stability": true
+  },
+  "status_counts": {
+    "OOS_VALIDATED": 0,
+    "OOS_PROMISING": 1,
+    "INSUFFICIENT_EVIDENCE": 1,
+    "REJECTED": 0,
+    "HYPOTHESIS": 6
+  },
+  "entries": [
+    {
+      "id": "DONCHIAN20-SOL-BULL_LOW",
+      "symbol": "SOLUSDT",
+      "context": "BULL_LOW",
+      "strategy": "4h Donchian20 breakout",
+      "evidence_status": "OOS_PROMISING",
+      "oos": {
+        "trades": 12,
+        "win_rate": 0.667,
+        "target_before_stop": 0.417,
+        "mean_net_R": 0.606,
+        "profit_factor": 2.72,
+        "max_drawdown_R": 1.3,
+        "block_bootstrap_CI95_mean_net_R": [
+          0.086,
+          1.199
+        ]
+      },
+      "limitations": [
+        "Only 12 OOS trades; below 100 per-cell minimum.",
+        "No sufficient multi-window stability evidence.",
+        "Not OOS_VALIDATED."
+      ],
+      "current_applicability": "NOT_APPLICABLE_CURRENT_SOL_CONTEXT_IS_BEAR_LOW"
+    },
+    {
+      "id": "DONCHIAN20-CONTEXT-WF-V2",
+      "symbols": [
+        "BTCUSDT",
+        "ETHUSDT",
+        "SOLUSDT",
+        "XRPUSDT"
+      ],
+      "context_cells": 36,
+      "strategy": "Context-aligned Donchian20 walk-forward",
+      "evidence_status": "INSUFFICIENT_EVIDENCE",
+      "oos_summary": {
+        "all_cells_below_100_trades": true,
+        "block_bootstrap_CI_includes_zero": true,
+        "holm_adjusted_p": 1
+      },
+      "limitations": [
+        "No cell meets the predeclared sample gate.",
+        "No cell meets uncertainty and multiplicity gates."
+      ]
+    },
+    {
+      "id": "TREND-PULLBACK",
+      "symbols": [
+        "SOLUSDT",
+        "ETHUSDT",
+        "XRPUSDT"
+      ],
+      "evidence_status": "HYPOTHESIS"
+    },
+    {
+      "id": "BREAKOUT-RETEST",
+      "symbols": [
+        "SOLUSDT",
+        "ETHUSDT",
+        "XRPUSDT"
+      ],
+      "evidence_status": "HYPOTHESIS"
+    },
+    {
+      "id": "RANGE-MEAN-REVERSION-FAILED-BREAKOUT",
+      "symbols": [
+        "SOLUSDT",
+        "ETHUSDT",
+        "XRPUSDT"
+      ],
+      "evidence_status": "HYPOTHESIS"
+    },
+    {
+      "id": "VOLATILITY-EXPANSION-MOMENTUM",
+      "symbols": [
+        "SOLUSDT",
+        "ETHUSDT",
+        "XRPUSDT"
+      ],
+      "evidence_status": "HYPOTHESIS"
+    },
+    {
+      "id": "BTC-RELATIVE-STRENGTH-CONFIRMATION",
+      "symbols": [
+        "SOLUSDT",
+        "ETHUSDT",
+        "XRPUSDT"
+      ],
+      "evidence_status": "HYPOTHESIS"
+    },
+    {
+      "id": "FUNDING-OI-FILTERS",
+      "symbols": [
+        "SOLUSDT",
+        "ETHUSDT",
+        "XRPUSDT"
+      ],
+      "evidence_status": "HYPOTHESIS"
+    }
+  ],
+  "aggregate_donchian20_oos_not_conditional_proof": {
+    "BTCUSDT": {
+      "trades": 200,
+      "win_rate": 0.365,
+      "mean_net_R": -0.1008
+    },
+    "ETHUSDT": {
+      "trades": 182,
+      "win_rate": 0.3846,
+      "mean_net_R": 0.0478
+    },
+    "SOLUSDT": {
+      "trades": 208,
+      "win_rate": 0.3702,
+      "mean_net_R": -0.0177
+    },
+    "XRPUSDT": {
+      "trades": 188,
+      "win_rate": 0.3777,
+      "mean_net_R": 0.0489
+    }
+  },
+  "current_context_snapshot": {
+    "BTCUSDT": {
+      "role": "reference_only",
+      "context4h": "BEAR_LOW",
+      "trendStrengthAtr": -1.3746011102,
+      "atr14Pct4h": 0.00909706763,
+      "close4h": 75944.3,
+      "ema20_4h": 76385.8171,
+      "ema50_4h": 77335.4884,
+      "trend1h": "MIXED",
+      "close1h": 75895.9,
+      "ema20_1h": 75866.4924,
+      "ema50_1h": 76062.5474,
+      "last4hOpenUtc": "2026-11-08T08:00:00Z",
+      "last1hOpenUtc": "2026-11-08T13:00:00Z",
+      "donchian20_4h": "NONE"
+    },
+    "ETHUSDT": {
+      "role": "tradable",
+      "context4h": "TRANSITION_LOW",
+      "trendStrengthAtr": -0.832260315,
+      "atr14Pct4h": 0.01196536556,
+      "close4h": 2239.5,
+      "ema20_4h": 2256.1598,
+      "ema50_4h": 2278.4614,
+      "trend1h": "BEAR_ALIGNED",
+      "close1h": 2235.37,
+      "ema20_1h": 2236.9658,
+      "ema50_1h": 2244.9847,
+      "last4hOpenUtc": "2026-11-08T08:00:00Z",
+      "last1hOpenUtc": "2026-11-08T13:00:00Z",
+      "donchian20_4h": "NONE"
+    },
+    "SOLUSDT": {
+      "role": "tradable",
+      "context4h": "BEAR_LOW",
+      "trendStrengthAtr": -1.6463461173,
+      "atr14Pct4h": 0.01541650741,
+      "close4h": 89.66,
+      "ema20_4h": 90.5701,
+      "ema50_4h": 92.8458,
+      "trend1h": "BEAR_ALIGNED",
+      "close1h": 89.19,
+      "ema20_1h": 89.3821,
+      "ema50_1h": 89.8857,
+      "last4hOpenUtc": "2026-11-08T08:00:00Z",
+      "last1hOpenUtc": "2026-11-08T13:00:00Z",
+      "donchian20_4h": "NONE"
+    },
+    "XRPUSDT": {
+      "role": "tradable",
+      "context4h": "BEAR_LOW",
+      "trendStrengthAtr": -1.7952994159,
+      "atr14Pct4h": 0.01717078089,
+      "close4h": 1.1657,
+      "ema20_4h": 1.1927446,
+      "ema50_4h": 1.2286793,
+      "trend1h": "BEAR_ALIGNED",
+      "close1h": 1.1592,
+      "ema20_1h": 1.1629872,
+      "ema50_1h": 1.1760213,
+      "last4hOpenUtc": "2026-11-08T08:00:00Z",
+      "last1hOpenUtc": "2026-11-08T13:00:00Z",
+      "donchian20_4h": "NONE"
+    }
+  },
+  "status_transitions": [],
+  "run_result": "RESEARCH_BLOCKED",
+  "no_experiment_reason": "No local checkout or compatible Node runtime; direct Binance REST DNS unavailable; historical lower-timeframe archive, funding cashflows and execution-cost calibration incomplete; no deterministic harness smoke test."
+}

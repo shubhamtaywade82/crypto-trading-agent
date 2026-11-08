@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "runId": "context-strategy-2026-11-07T1629Z-v81",
-  "updatedAtUtc": "2026-11-07T17:22:01.714Z",
+  "runId": "context-strategy-2026-11-07T1826Z-v83",
+  "updatedAtUtc": "2026-11-07T18:26:39.352Z",
   "items": [
     {
       "id": "Q1_ARCHIVE_MULTIYEAR",
@@ -13,7 +13,7 @@
         "Checksum/readback"
       ],
       "nextAction": "Backfill multi-year 5m/15m; merge incremental 4h through 2026-11-07T12:00Z into canonical; recover the exact missing 76-row delta; re-audit 13 page/symbol hash provenance mismatches.",
-      "blocker": "1h base 53,871 rows/symbol through 2026-11-06T22:00Z; incremental high-water now 16:00Z Nov7. 4h canonical 13,461 rows/symbol through Nov5 16:00Z; incremental high-water 12:00Z Nov7 not merged. Multi-year 5m/15m absent; 76-row artifact unresolved; 13 original page/symbol hash discrepancies remain."
+      "blocker": "Incremental archive advanced to 5m 18:20Z, 15m 18:00Z and 1h 17:00Z. 1h base remains 53,871 rows/symbol through 2026-11-06T22:00Z; 4h canonical remains 13,461 rows/symbol through 2026-11-05T16:00Z with incremental 4h high-water 12:00Z not merged. Multi-year 5m/15m absent; 76-row artifact unresolved; 13 provenance mismatches remain."
     },
     {
       "id": "Q2_VERIFY_EXCHANGE_TIME_METADATA",
@@ -23,7 +23,7 @@
         "Direct bounded HTTP or uncached official endpoint"
       ],
       "nextAction": "Restore DNS/HTTPS or obtain uncached official /fapi/v1/time and /fapi/v1/exchangeInfo; require <=60s drift and verify all four contracts are TRADING before execution validation.",
-      "blocker": "Direct /fapi/v1/time probe failed DNS (curl exit 6). Connector exchangeInfo serverTime 2026-11-06T11:18:40.883Z versus fresh mark event 2026-11-07T17:19:59Z; stale 108,200.831s (30.06h). Connector raw HTTP status/headers are not exposed."
+      "blocker": "Direct /fapi/v1/time probe failed DNS (curl exit 6). Connector exchangeInfo serverTime 2026-11-06T11:18:40.885Z versus run time 2026-11-07T18:26:39.352Z; stale 111,968.601s (31.10h). Connector raw HTTP status/headers are not exposed. Metadata's TRADING statuses are not accepted for execution."
     },
     {
       "id": "Q3_RUN_REPOSITORY_BACKTEST",
@@ -36,8 +36,8 @@
         "Dependencies",
         "Deterministic fixture"
       ],
-      "nextAction": "Provision Node>=24/npm>=11 local checkout; carry closeTime through Candle; change volume validation to reject <=0; add 5m support; run deterministic fixture twice and verify no-lookahead.",
-      "blocker": "No local checkout; Node22.16/npm10.9.2 below floor; SDK packages absent. Remote scripts/backtest.ts supports 15m/1h/4h only. src/types.ts Candle omits closeTime; API fetch path drops it. src/backtesting/archiveKlines.ts rejects volume<0 but accepts zero. Smoke test NOT_RUN."
+      "nextAction": "Provision Node>=24/npm>=11 local checkout; add closeTime to Candle; filter forming bars before feature generation; reject volume<=0; add 5m support and bounded fetch timeouts; run deterministic fixture twice and verify no-lookahead.",
+      "blocker": "No local checkout; Node22.16/npm10.9.2 below floor; SDK packages absent. scripts/backtest.ts supports 15m/1h/4h only, drops closeTime and does not explicitly exclude forming rows; src/types.ts Candle omits closeTime; archiveKlines validator accepts volume=0; fetchKlines has no explicit timeout. Smoke test NOT_RUN."
     },
     {
       "id": "Q4_CALIBRATE_EXECUTION_COSTS",
@@ -50,7 +50,7 @@
         "Latency model"
       ],
       "nextAction": "Acquire actual account fee tier plus timestamp-aligned historical funding, trades, spread/depth and latency; calibrate maker/taker fills, slippage and impact.",
-      "blocker": "No account fee tier or historical spread/slippage/impact/latency series. Current snapshots cannot calibrate execution costs; inherited 15bp round-trip proxy is unvalidated."
+      "blocker": "No account fee tier or historical spread/slippage/impact/latency series. Current best-bid/ask and 1h taker snapshots cannot calibrate execution costs; inherited 15bp round-trip proxy remains unvalidated."
     },
     {
       "id": "Q5_APPEND_COMPLETED_BARS",
@@ -62,26 +62,38 @@
         "Writable archive",
         "Readback"
       ],
-      "nextAction": "Continue after 5m 17:15Z, 15m 17:00Z, 1h 16:00Z and 4h 12:00Z only after each next closeTime passes.",
+      "nextAction": "Continue after 5m 18:20Z, 15m 18:00Z, 1h 17:00Z and 4h 12:00Z only after each next closeTime passes; next eligible opens are 5m 18:25Z, 15m 18:15Z, 1h 18:00Z and 4h 16:00Z.",
       "blocker": null,
       "result": {
-        "rowsFetched": 360,
-        "rowsAppended": 64,
-        "formingRowsExcluded": 8,
-        "rowsExcludedBeforeHighwater": 288,
+        "rowsFetched": 564,
+        "rowsAppended": 72,
+        "formingRowsExcluded": 20,
+        "rowsExcludedBeforeHighwater": 472,
         "rowsByInterval": {
-          "5m": 44,
+          "5m": 52,
           "15m": 16,
           "1h": 4,
           "4h": 0
         },
         "qualityFailures": 0,
-        "deltaPath": "research-data/binance-usdm/delta/binance_usdm_delta_20261107T1722_5m15m1h_completed.jsonl",
-        "deltaSha256": "cd966858dfbb3a8da20fdde45f5bb0393dd99f83e84b8008c1075e02aa6b48b4",
-        "manifestPath": "research-data/binance-usdm/delta/manifest-20261107T1722-5m15m1h.json",
-        "manifestSha256": "60f7ec29574e18dcabaeec79e4ae2c44af99faeccedeabeb17279d14b97a4500",
+        "deltaPaths": [
+          "research-data/binance-usdm/delta/binance_usdm_delta_20261107T1823Z_5m15m1h_completed.jsonl",
+          "research-data/binance-usdm/delta/binance_usdm_delta_20261107T1825Z_5m_completed.jsonl"
+        ],
+        "deltaSha256": [
+          "908c28435fc1175fcb83050045b7d966522a81ce84400300a839e0733479b0c0",
+          "9e9d15f0e3e0ea56cd7e9df7f644b662bd5aa2e05569b96643e9265ca15644df"
+        ],
+        "manifestPaths": [
+          "research-data/binance-usdm/delta/manifest-20261107T1823Z-5m15m1h.json",
+          "research-data/binance-usdm/delta/manifest-20261107T1825Z-5m.json"
+        ],
+        "manifestSha256": [
+          "f60a60c99ddf83cb48944f704a2403081bae53a1a0eb33667f4b5306e51fcd8e",
+          "2b116c8e27c9881d4e0bccc8d88dfd05a0823ac71c737eaaeba1745ec00a9ff2"
+        ],
         "readbackVerified": true,
-        "rawBranch": "research/raw-ohlcv-archive-20261107T1625Z-run12"
+        "rawBranch": "research/raw-ohlcv-archive-20261107T1823Z-run13"
       }
     },
     {
@@ -93,7 +105,7 @@
         "Longer OI/taker/positioning"
       ],
       "nextAction": "Backfill full fundingRate history and longer OI/taker/global-long-short series; align to completed candles.",
-      "blocker": "Current PremiumIndex indication, settled funding history, 8h FundingInfo, current OI, completed 1h taker share and last completed 1h global long/short snapshots retrieved. Historical derivatives archive remains incomplete; point snapshots do not establish crowding."
+      "blocker": "Current PremiumIndex.lastFundingRate, latest settled funding history at 16:00Z, 8h FundingInfo, current OI, completed 1h taker flow and global long/short snapshots retrieved. Historical derivatives archive remains incomplete; premiumIndex and settled fields differ for BTC/ETH/SOL and a separate predicted rate is unavailable."
     },
     {
       "id": "Q7_CONTEXT_TAXONOMY_STABILITY",
@@ -104,7 +116,7 @@
         "Training-only thresholds"
       ],
       "nextAction": "Fit compact thresholds on training only; measure context frequency, duration, transition probabilities and stability over the full aligned archive.",
-      "blocker": "Current 120-row windows (119 completed per series) are descriptive only. No training-only threshold refit or weekly stability review; multi-year 5m/15m absent and canonical 4h merge incomplete."
+      "blocker": "Current 120-row windows (119 completed per series) are descriptive only. 15/16 cells are bearish by EMA alignment; no training-only threshold refit or context frequency/duration/transition/stability analysis. Multi-year 5m/15m absent and canonical 4h merge incomplete."
     },
     {
       "id": "Q8_DAILY_CONTEXT_EXPERIMENT",
@@ -116,8 +128,8 @@
         "Frozen experiment specification",
         "Untouched test"
       ],
-      "nextAction": "After archive, fresh metadata, local harness, smoke test and cost prerequisites pass, preregister one strategy x context x symbol with chronological train/validation/untouched OOS, purging/embargo, realistic costs, block bootstrap and Holm correction.",
-      "blocker": "No compatible local harness or smoke test; multi-year 5m/15m absent; costs incomplete; fresh exchange metadata unavailable; 76-row delta unresolved; 13 hash discrepancies remain."
+      "nextAction": "After archive, fresh metadata, local harness, smoke test, corrected conditional-edge gates and cost prerequisites pass, preregister one strategy x context x symbol with chronological train/validation/untouched OOS, purging/embargo, realistic costs, block bootstrap and Holm correction.",
+      "blocker": "No compatible local runner or smoke test; multi-year 5m/15m absent; costs incomplete; fresh exchange metadata unavailable; 76-row delta unresolved; 13 hash mismatches; conditional-edge CLI defaults to minN=30/90% CI and does not require Holm-significant walk-forward selection."
     },
     {
       "id": "Q9_RECONCILE_MISSING_76_DELTA",
@@ -139,8 +151,8 @@
         "Compatible runner",
         "Purging/multiple-testing tests"
       ],
-      "nextAction": "Raise conditional-edge evidence gates to >=100 OOS trades per symbol/context and add serial-dependence/multiple-testing tests once a compatible local runner is available.",
-      "blocker": "Remote conditional-edge defaults remain below required evidence gates; no local runner to patch or test."
+      "nextAction": "Patch conditional-edge to require >=100 OOS trades per symbol/context, 95% CI, Holm-significant training selection, explicit purging/embargo and block-bootstrap sensitivity; add tests that fail closed when any gate is missing.",
+      "blocker": "Remote conditional-edge CLI defaults minN=30 and confidence=0.90; walk-forward does not pass requireSignificant=true and therefore selects on raw CI lower bound; no per-symbol/context OOS sample gate. No local runner to patch or test."
     },
     {
       "id": "Q11_RECONCILE_PAGE_SHA256",
@@ -160,18 +172,29 @@
     "status": "BLOCKED",
     "experimentExecuted": false,
     "oosEvaluated": false,
+    "lastAttemptRunId": "context-strategy-2026-11-07T1826Z-v83",
     "blockers": [
       "No local checkout and Node/npm below package floor",
       "Fresh exchange time/contract metadata unavailable",
-      "Multi-year 5m/15m absent",
+      "Multi-year 5m/15m absent and 4h canonical merge incomplete",
       "Execution-cost model incomplete",
+      "No deterministic smoke test",
+      "Conditional-edge CLI defaults to minN=30/90% CI and does not require Holm-significant walk-forward selection",
       "76-row delta unresolved and 13 hash mismatches remain"
     ],
-    "nextAction": "Complete archive/metadata remediation, provision Node24/npm11 local checkout, repair validation and calibrate costs; then freeze one conditional experiment."
+    "nextAction": "Complete archive/metadata/runtime/harness/cost remediation and OOS-gate fixes; then freeze one conditional experiment."
   },
   "weeklyReview": {
     "status": "NOT_DUE",
     "nextReviewDueUtc": "2026-11-11T00:00:00Z",
-    "taxonomyRevision": "NONE"
+    "taxonomyRevision": "NONE",
+    "lastCheckedAtUtc": "2026-11-07T18:26:39.352Z",
+    "note": "No taxonomy change this run; no training-only refit or weekly stability review performed because aligned multi-year archive and executable harness remain blocked."
+  },
+  "artifacts": {
+    "snapshot": "research/context-strategy/snapshots/current_market_snapshot_2026-11-07_1826Z_v83.json",
+    "preflight": "research/context-strategy/preflight/context_research_preflight_2026-11-07_1826Z_v83.json",
+    "report": "research/context-strategy/reports/context_strategy_report_2026-11-07_1826Z_v83.md",
+    "harnessAudit": "research/context-strategy/audits/backtest_harness_audit_2026-11-07_1826Z_v83.md"
   }
 }

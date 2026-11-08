@@ -1,0 +1,117 @@
+{
+  "schemaVersion": 1,
+  "runId": "context-strategy-2026-11-07T1826Z-v83",
+  "asOfUtc": "2026-11-07T18:26:39.352Z",
+  "status": "RESEARCH_BLOCKED",
+  "environment": {
+    "cwd": "/",
+    "os": "Debian GNU/Linux 13.3 x86_64",
+    "kernel": "Linux 6.18.57",
+    "node": "v22.16.0",
+    "npm": "10.9.2",
+    "python": "3.13.5",
+    "cpuCount": 5,
+    "memTotalKb": 6090668,
+    "memAvailableKb": 4930624,
+    "diskFreeGiB": 30,
+    "localRepositoryFound": false
+  },
+  "repository": {
+    "fullName": "shubhamtaywade82/crypto-trading-agent",
+    "baseBranch": "research/context-strategy-2026-11-07-run26",
+    "baseCommit": "13e2961e23f6d0a7ff9251b50b3e66716e93d705",
+    "localCheckout": "NOT_FOUND",
+    "packageEngines": {
+      "node": ">=24",
+      "npm": ">=11"
+    }
+  },
+  "checks": [
+    {
+      "capability": "shell_compute",
+      "status": "PASS",
+      "evidence": "cwd=/; Debian 13.3 x86_64; Node 22.16.0; npm 10.9.2; Python 3.13.5; 5 CPUs; 6,090,668 kB RAM total; 4,936,624 kB available; 30 GiB free.",
+      "impact": "Compute is present but not at repository runtime floor.",
+      "nextAction": "Provision Node>=24 and npm>=11."
+    },
+    {
+      "capability": "repo_code",
+      "status": "DEGRADED",
+      "evidence": "No crypto-trading-agent checkout under /workspace, /workspaces, /mnt/data or /root. GitHub source inspected at base commit 13e2961e23f6d0a7ff9251b50b3e66716e93d705.",
+      "impact": "Remote source review possible; no local scripts/tests can run.",
+      "nextAction": "Provision a local checkout at the verified commit."
+    },
+    {
+      "capability": "binance_sdk",
+      "status": "BLOCKED",
+      "evidence": "Node module resolution: @nemesis-oss/binance-sdk, binance, @binance/connector and binance-api-node all NOT_INSTALLED.",
+      "impact": "No SDK execution; market data retrieved through Binance connector only.",
+      "nextAction": "Install repository-pinned SDK after Node/npm and checkout are provisioned."
+    },
+    {
+      "capability": "network_binance",
+      "status": "DEGRADED",
+      "evidence": "Direct curl https://fapi.binance.com/fapi/v1/time failed DNS resolution (curl exit 6). Binance connector returned klines, mark, OI, ticker, book, funding history/info, taker volume and long/short ratios; raw HTTP status/headers unavailable.",
+      "impact": "Live snapshot available, but endpoint status/freshness cannot be verified via raw HTTP.",
+      "nextAction": "Restore direct DNS/HTTPS and probe /fapi/v1/time plus required endpoints with bounded timeouts."
+    },
+    {
+      "capability": "exchange_metadata",
+      "status": "BLOCKED",
+      "evidence": "Connector exchangeInfo serverTime=2026-11-06T11:18:40.885Z; 111,968.601 seconds stale versus run time. Metadata reports BTC/ETH/SOL/XRP as TRADING PERPETUAL, but stale.",
+      "impact": "Contract status cannot be accepted for execution validation.",
+      "nextAction": "Obtain uncached /fapi/v1/exchangeInfo and server time; require <=60s drift."
+    },
+    {
+      "capability": "raw_historical_archive",
+      "status": "PASS",
+      "evidence": "Remote raw branch research/raw-ohlcv-archive-20261107T1823Z-run13; 68-row delta SHA-256 908c28435fc1175fcb83050045b7d966522a81ce84400300a839e0733479b0c0 and 4-row delta SHA-256 9e9d15f0e3e0ea56cd7e9df7f644b662bd5aa2e05569b96643e9265ca15644df; both manifests read back and verified.",
+      "impact": "Incremental 5m/15m/1h archive advanced by 72 rows; no 4h close yet.",
+      "nextAction": "Continue incremental appends and merge 4h into canonical archive."
+    },
+    {
+      "capability": "data_quality_coverage",
+      "status": "DEGRADED",
+      "evidence": "16 symbol/timeframe series x120 rows; 119 completed and 1 forming per series; 1,904 completed/16 forming. Recent duplicate/gap/off-grid/OHLC/volume/non-finite/close-time failures all zero. Multi-year 5m/15m absent; canonical 4h ends 2026-11-05T16:00Z.",
+      "impact": "Recent windows are clean but historical sample is not sufficient for robust context discovery.",
+      "nextAction": "Backfill multi-year 5m/15m, merge 4h and reconcile missing/provenance artifacts."
+    },
+    {
+      "capability": "backtest_harness_smoke_test",
+      "status": "BLOCKED",
+      "evidence": "Remote scripts/backtest.ts exists but CLI supports only 15m/1h/4h, drops closeTime, does not explicitly exclude forming candles and has no request timeout. Candle type omits closeTime. archiveKlines.validateCandles accepts volume=0. conditional-edge.ts analyzes decision journals, defaults minN=30 and 90% CI, and its CLI walk-forward does not require Holm significance. Smoke test NOT_RUN.",
+      "impact": "No deterministic replay or valid OOS experiment can be claimed.",
+      "nextAction": "Fix candle contract/forming-bar/volume checks, add 5m and timeouts; repair conditional-edge evidence gates; run deterministic fixture twice."
+    },
+    {
+      "capability": "disk_storage",
+      "status": "PASS",
+      "evidence": "30 GiB free in current container; GitHub raw and research branches accepted artifact writes.",
+      "impact": "Remote persistence is available; local filesystem is ephemeral and has no repo checkout.",
+      "nextAction": "Continue remote writes with SHA-256/readback."
+    },
+    {
+      "capability": "artifact_readback",
+      "status": "PASS",
+      "evidence": "Both raw deltas and both manifests fetched back; delta SHA-256 matched exactly. Research artifacts will be verified after writing.",
+      "impact": "Raw archive append is durable and verified.",
+      "nextAction": "Verify registry, queue, snapshot, preflight, report and run manifest after writes."
+    }
+  ],
+  "experimentReadiness": {
+    "status": "BLOCKED",
+    "experimentExecuted": false,
+    "oosEvaluated": false,
+    "reason": "No local checkout, Node/npm below package floor, SDK absent, direct Binance DNS failure, exchangeInfo stale 111,968.601s, multi-year 5m/15m absent, 4h canonical merge incomplete, execution costs uncalibrated, no deterministic smoke test, and conditional-edge CLI defaults/gates do not satisfy the required OOS evidence contract."
+  },
+  "classification": "RESEARCH_BLOCKED",
+  "nextExecutableRemediation": [
+    "Provision Node>=24/npm>=11 and clone crypto-trading-agent at commit 13e2961e23f6d0a7ff9251b50b3e66716e93d705.",
+    "Restore direct DNS/HTTPS and obtain fresh server time/exchange metadata.",
+    "Fix Candle.closeTime, exclude forming candles, reject volume<=0, add 5m CLI support and request timeouts.",
+    "Repair conditional-edge CLI: 95% CI, minN>=100 per symbol/context, Holm-significant selection, explicit embargo/purging and OOS gates.",
+    "Backfill multi-year 5m/15m; merge 4h; recover 76-row delta and reconcile 13 hash provenance mismatches.",
+    "Calibrate account fee tier, funding cashflows, spread, slippage, impact and latency.",
+    "Run deterministic smoke fixture twice; only then preregister and execute one conditional experiment."
+  ]
+}

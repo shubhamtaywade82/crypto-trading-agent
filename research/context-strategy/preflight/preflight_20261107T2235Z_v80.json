@@ -1,0 +1,216 @@
+{
+  "schema_version": "1.0.0",
+  "run_id": "context-strategy-2026-11-08-run30",
+  "created_at_utc": "2026-11-07T22:35:03Z",
+  "as_of_utc": "2026-11-07T22:27:01.001Z",
+  "status": "RESEARCH_EXECUTED",
+  "checks": [
+    {
+      "capability": "shell_compute",
+      "status": "PASS",
+      "evidence": {
+        "cwd": "/",
+        "os": "Linux 6.18.57 x86_64",
+        "python": "3.13.5",
+        "node": "v22.16.0",
+        "npm": "10.9.2",
+        "cpu_count": 5,
+        "memory_total_kb": 6090668,
+        "memory_available_kb": 4933644,
+        "disk_free_human": "30G",
+        "local_repo_checkout": false
+      },
+      "impact": "Compute and disk are adequate for bounded data work; the runtime is below the repository engine floor.",
+      "next_action": "Provision Node >=24 and npm >=11 before invoking repository scripts."
+    },
+    {
+      "capability": "repository_code",
+      "status": "DEGRADED",
+      "evidence": {
+        "remote_repository": "shubhamtaywade82/crypto-trading-agent",
+        "base_branch": "research/context-strategy-2026-11-08-run29",
+        "local_checkout": false,
+        "package_engines": {
+          "node": ">=24",
+          "npm": ">=11"
+        },
+        "declared_binance_sdk": "@nemesis-oss/binance-sdk 3.2.0",
+        "sdk_installed": false,
+        "remote_scripts": [
+          "scripts/backtest.ts",
+          "scripts/conditional-edge.ts",
+          "research/alma/scripts/sweep-eval.ts"
+        ]
+      },
+      "impact": "Remote source inspection and GitHub persistence work; local code execution does not.",
+      "next_action": "Provision compatible runner and clone the research branch."
+    },
+    {
+      "capability": "binance_sdk",
+      "status": "BLOCKED",
+      "evidence": {
+        "node_resolution": {
+          "binance": "NOT_INSTALLED",
+          "@binance/connector": "NOT_INSTALLED",
+          "binance-api-node": "NOT_INSTALLED"
+        },
+        "declared_package": "@nemesis-oss/binance-sdk@3.2.0",
+        "runtime": "Node22/npm10 below engines"
+      },
+      "impact": "No Binance SDK execution; data was retrieved through the Binance public market-data connector.",
+      "next_action": "Install lockfile dependencies only in a Node24/npm11 checkout."
+    },
+    {
+      "capability": "network_binance_endpoints",
+      "status": "DEGRADED",
+      "evidence": {
+        "direct_dns_https": "URLError: Temporary failure in name resolution",
+        "http_status": "HTTP status/headers unavailable from connector",
+        "connector_calls": "fresh mark, ticker, klines, funding, OI, OI history, taker, long-short and book quote responses",
+        "server_time_endpoint": "/fapi/v1/time NOT_AVAILABLE"
+      },
+      "impact": "Market monitoring and incremental append work through connector; direct endpoint status and server-time drift cannot be verified.",
+      "next_action": "Restore direct DNS/HTTPS or retain connector provenance with explicit endpoint-status limitation."
+    },
+    {
+      "capability": "exchange_metadata_freshness",
+      "status": "BLOCKED",
+      "evidence": {
+        "endpoint": "/fapi/v1/exchangeInfo",
+        "server_time_utc": "2026-11-06T11:18:40.896Z",
+        "fresh_mark_time_utc": "2026-11-07T22:27:01.001Z",
+        "age_seconds": 126500.105,
+        "returned_status_values": "TRADING but stale"
+      },
+      "impact": "Do not use returned contract status, tick size, lot size or filters for execution validation.",
+      "next_action": "Obtain uncached /fapi/v1/time and /fapi/v1/exchangeInfo with <=60s drift."
+    },
+    {
+      "capability": "raw_historical_archive",
+      "status": "DEGRADED",
+      "evidence": {
+        "one_hour_pages_per_symbol": 36,
+        "one_hour_rows_per_symbol": 53871,
+        "one_hour_rows_total": 215484,
+        "one_hour_base_range_utc": [
+          "2020-09-14T08:00:00Z",
+          "2026-11-06T22:00:00Z"
+        ],
+        "four_hour_pages_per_symbol": 9,
+        "four_hour_canonical_rows_per_symbol": 13461,
+        "four_hour_canonical_rows_total": 53844,
+        "four_hour_canonical_range_utc": [
+          "2020-09-14T08:00:00Z",
+          "2026-11-05T16:00:00Z"
+        ],
+        "multi_year_5m_15m": "MISSING",
+        "missing_delta": {
+          "path": "research-data/binance-usdm/delta/binance_usdm_delta_2026-11-05T0524Z.jsonl",
+          "expected_rows": 76,
+          "expected_sha256": "f5d9e50602f4ef4046fc4d39da053e45d3619ad147aa398a6bd1e281a7f3b93d",
+          "search": "404 in seven candidate branches; commit history query empty"
+        },
+        "latest_raw_branch": "research/raw-ohlcv-archive-20261107T2227Z-run16",
+        "archive_indexes_updated": false
+      },
+      "impact": "Long 1h/4h coverage exists, but 5m/15m history and delta provenance are insufficient for robust context research.",
+      "next_action": "Recover missing original delta; reconcile indexes; backfill multi-year 5m/15m; merge verified 4h deltas."
+    },
+    {
+      "capability": "data_quality_coverage",
+      "status": "PASS",
+      "evidence": {
+        "rolling_series": 16,
+        "raw_rows": 2400,
+        "completed_rows": 2384,
+        "forming_rows_excluded": 16,
+        "completed_per_series": {
+          "5m": 119,
+          "15m": 119,
+          "1h": 239,
+          "4h": 119
+        },
+        "duplicates": 0,
+        "missing_intervals": 0,
+        "off_grid": 0,
+        "non_monotonic": 0,
+        "ohlc_failures": 0,
+        "non_positive_volume": 0,
+        "non_finite": 0,
+        "cross_symbol_alignment": true,
+        "new_append_rows": 68,
+        "new_append_quality": {
+          "duplicates": 0,
+          "missing_intervals": 0,
+          "off_grid": 0,
+          "ohlc_failures": 0,
+          "non_finite": 0,
+          "non_positive_volume": 0,
+          "close_time_failures": 0,
+          "cross_symbol_alignment": true
+        }
+      },
+      "impact": "Current rolling bars and the newly appended delta are structurally clean; this does not repair historical archive gaps.",
+      "next_action": "Continue append-only refresh and run archive-wide reconciliation after provenance recovery."
+    },
+    {
+      "capability": "backtest_harness_smoke_test",
+      "status": "BLOCKED",
+      "evidence": {
+        "remote_harnesses_exist": true,
+        "local_checkout": false,
+        "smoke_test": "NOT_RUN",
+        "code_findings": [
+          "scripts/backtest.ts API mapping drops closeTime",
+          "src/backtesting/archiveKlines.ts CSV parser keeps only six fields and drops closeTime",
+          "src/backtesting/archiveKlines.ts accepts volume == 0",
+          "research/alma/src/data-quality.ts accepts volume == 0"
+        ],
+        "conditional_edge_input": "decision journal with outcomes; no validated decision journal supplied"
+      },
+      "impact": "No strategy backtest or untouched OOS evaluation is valid in this run.",
+      "next_action": "Fix closeTime/volume validation contract, add deterministic no-lookahead fixtures, then run repository tests under Node24."
+    },
+    {
+      "capability": "disk_storage",
+      "status": "PASS",
+      "evidence": {
+        "disk_free_human": "30G",
+        "github_storage": "new raw and context branches accepted writes"
+      },
+      "impact": "Durable remote storage is available.",
+      "next_action": "Continue atomic append-only artifacts with manifests and checksums."
+    },
+    {
+      "capability": "artifact_readback",
+      "status": "PASS",
+      "evidence": {
+        "raw_files_verified": 4,
+        "raw_rows_verified": 68,
+        "manifest_verified": true,
+        "manifest_sidecar_verified": true,
+        "manifest_sha256": "efcac25da14c969aac7309e0e168112eb978bd275ff9dba444fc538c19cde1fb",
+        "raw_branch_head_commit": "db0fdc88e239285fb4b26751ef67911763e4788e",
+        "context_branch": "research/context-strategy-2026-11-08-run30",
+        "primary_json_files_verified": 8,
+        "checksum_sidecars_verified": 8,
+        "context_branch_head_before_final_metadata_update": "fc8d4316ed3b1f2fada5387f4ff97cc003076127"
+      },
+      "impact": "The new 68-row delta and manifest are persisted and readback verified.",
+      "next_action": "All eight v80 JSON artifacts and all eight SHA-256 sidecars were read back and verified."
+    },
+    {
+      "capability": "strategy_oos_readiness",
+      "status": "BLOCKED",
+      "evidence": {
+        "oos_validated_registry_entries": 0,
+        "strategy_experiment": "NOT_RUN",
+        "reason": "Historical 5m/15m archive, missing delta provenance, compatible runtime, strict data contract and verified cost/derivatives history are unavailable."
+      },
+      "impact": "All tradable symbols remain NO_TRADE.",
+      "next_action": "Clear RQ-ARCH-01/02/03, RQ-ENV-01, RQ-CODE-01, RQ-COST-01 and RQ-DERIV-01 before a pre-registered experiment."
+    }
+  ],
+  "code_version": "No local code commit executed; remote sources inspected on base branch only.",
+  "endpoint_status_note": "The Binance connector does not expose HTTP status codes or response headers. Direct REST requests failed at DNS resolution. Do not infer HTTP 200 from connector success."
+}

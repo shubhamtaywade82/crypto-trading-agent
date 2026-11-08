@@ -9,7 +9,12 @@
     "commit": "0595de35adc419fa78a1780bbfa9f0e13256bf0d",
     "path": "research/context-strategy/registry.json",
     "sourceUpdatedAtUtc": "2026-11-08T07:26:27.336Z",
-    "resolution": "Main registry supersedes stale v83 snapshot; its 55-trade SOL Donchian evaluation replaces the older 12-trade OOS_PROMISING label."
+    "resolution": "Merge distinct strategy definitions from main and v83. Preserve the 4h Donchian20/BULL_LOW 12-trade OOS_PROMISING candidate separately from the main-branch 15-bar Donchian candidate (55 OOS trades, INSUFFICIENT_EVIDENCE). No strategy equivalence or cross-taxonomy transfer is assumed.",
+    "additionalRegistry": {
+      "branch": "research/raw-ohlcv-archive-20261108T1026Z",
+      "path": "research-data/registry/context_strategy_registry_20261108T1529Z_v83.json",
+      "updatedAtUtc": "2026-11-08T15:29:14.871Z"
+    }
   },
   "taxonomy": {
     "id": "CTX-4H-EMA50xEMA200-ATRQ-v2-FULL-ARCHIVE",
@@ -662,6 +667,106 @@
         "to": "INSUFFICIENT_EVIDENCE",
         "reason": "Negative point estimate, n below per-context floor and uncertainty interval crosses zero; no promotion."
       }
+    },
+    {
+      "id": "DONCHIAN20-SOL-BULL_LOW",
+      "symbol": "SOLUSDT",
+      "context": "BULL_LOW",
+      "strategy": "4h Donchian20 breakout",
+      "evidence_status": "OOS_PROMISING",
+      "oos": {
+        "trades": 12,
+        "win_rate": 0.667,
+        "target_before_stop": 0.417,
+        "mean_net_R": 0.606,
+        "profit_factor": 2.72,
+        "max_drawdown_R": 1.3,
+        "block_bootstrap_CI95_mean_net_R": [
+          0.086,
+          1.199
+        ]
+      },
+      "limitations": [
+        "Only 12 OOS trades; below 100 per-cell minimum.",
+        "No sufficient multi-window stability evidence.",
+        "Not OOS_VALIDATED."
+      ],
+      "current_applicability": "NOT_APPLICABLE_CURRENT_SOL_CONTEXT_IS_BEAR_LOW"
+    },
+    {
+      "id": "DONCHIAN20-CONTEXT-WF-V2",
+      "symbols": [
+        "BTCUSDT",
+        "ETHUSDT",
+        "SOLUSDT",
+        "XRPUSDT"
+      ],
+      "context_cells": 36,
+      "strategy": "Context-aligned Donchian20 walk-forward",
+      "evidence_status": "INSUFFICIENT_EVIDENCE",
+      "oos_summary": {
+        "all_cells_below_100_trades": true,
+        "block_bootstrap_CI_includes_zero": true,
+        "holm_adjusted_p": 1
+      },
+      "limitations": [
+        "No cell meets the predeclared sample gate.",
+        "No cell meets uncertainty and multiplicity gates."
+      ]
+    },
+    {
+      "id": "TREND-PULLBACK",
+      "symbols": [
+        "SOLUSDT",
+        "ETHUSDT",
+        "XRPUSDT"
+      ],
+      "evidence_status": "HYPOTHESIS"
+    },
+    {
+      "id": "BREAKOUT-RETEST",
+      "symbols": [
+        "SOLUSDT",
+        "ETHUSDT",
+        "XRPUSDT"
+      ],
+      "evidence_status": "HYPOTHESIS"
+    },
+    {
+      "id": "RANGE-MEAN-REVERSION-FAILED-BREAKOUT",
+      "symbols": [
+        "SOLUSDT",
+        "ETHUSDT",
+        "XRPUSDT"
+      ],
+      "evidence_status": "HYPOTHESIS"
+    },
+    {
+      "id": "VOLATILITY-EXPANSION-MOMENTUM",
+      "symbols": [
+        "SOLUSDT",
+        "ETHUSDT",
+        "XRPUSDT"
+      ],
+      "evidence_status": "HYPOTHESIS"
+    },
+    {
+      "id": "BTC-RELATIVE-STRENGTH-CONFIRMATION",
+      "symbols": [
+        "SOLUSDT",
+        "ETHUSDT",
+        "XRPUSDT"
+      ],
+      "evidence_status": "HYPOTHESIS"
+    },
+    {
+      "id": "FUNDING-OI-FILTERS",
+      "symbols": [
+        "SOLUSDT",
+        "ETHUSDT",
+        "XRPUSDT"
+      ],
+      "evidence_status": "HYPOTHESIS"
     }
   ],
   "current_context_snapshot": {
@@ -738,9 +843,11 @@
     "classificationNote": "Deterministic feature labels under frozen training thresholds; not calibrated future-win probabilities."
   },
   "status_counts": {
-    "INSUFFICIENT_EVIDENCE": 4,
+    "OOS_VALIDATED": 0,
+    "OOS_PROMISING": 1,
+    "INSUFFICIENT_EVIDENCE": 5,
     "REJECTED": 1,
-    "oos_validated": 0
+    "HYPOTHESIS": 6
   },
   "run_result": {
     "classification": "RESEARCH_BLOCKED",
@@ -748,5 +855,15 @@
     "oosEvaluated": false,
     "archiveAppendRows": 68,
     "archiveReadbackVerified": true
+  },
+  "registry_reconciliation": {
+    "mainEntries": 5,
+    "v83AdditionalEntries": 8,
+    "mergedEntries": 13,
+    "distinctDonchianDefinitions": [
+      "v83 4h Donchian20 BULL_LOW (12 OOS trades, OOS_PROMISING)",
+      "main 15-bar Donchian BULL_LOW (55 OOS trades, INSUFFICIENT_EVIDENCE)"
+    ],
+    "taxonomyEquivalence": "NOT_ESTABLISHED"
   }
 }

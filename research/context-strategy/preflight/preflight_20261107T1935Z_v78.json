@@ -1,0 +1,149 @@
+{
+  "schema_version": "1.0.0",
+  "as_of_utc": "2026-11-07T19:35:32.000Z",
+  "overall_status": "RESEARCH_EXECUTED_DATA_QUALITY_ONLY",
+  "checks": [
+    {
+      "capability": "shell_compute",
+      "status": "PASS",
+      "evidence": {
+        "cwd": "/home/oai",
+        "os": "Linux 6.18.57 x86_64",
+        "python": "3.13.5",
+        "node": "v22.16.0",
+        "npm": "10.9.2",
+        "cpu_count": 5,
+        "memory_total_kb": 6090668,
+        "memory_available_kb": 4919992,
+        "disk_total_bytes": 33770192896,
+        "disk_free_bytes": 32029913088
+      },
+      "impact": "CPU, memory and disk are sufficient for bounded work; Node runtime is below repository engine floor.",
+      "next_action": "Provision Node >=24 and npm >=11 before invoking repository scripts."
+    },
+    {
+      "capability": "repository_code",
+      "status": "DEGRADED",
+      "evidence": {
+        "remote_repo": "shubhamtaywade82/crypto-trading-agent",
+        "local_checkout": false,
+        "package_engine_node": ">=24.0.0",
+        "package_engine_npm": ">=11.0.0",
+        "binance_sdk_packages": {
+          "at_binance_connector": "NOT_INSTALLED",
+          "binance_api_node": "NOT_INSTALLED"
+        },
+        "source_inspection": "GitHub connector read package.json, scripts/backtest.ts, src/backtesting/archiveKlines.ts and research/alma/src/data-quality.ts"
+      },
+      "impact": "Remote source audit possible; no local repository code can be executed.",
+      "next_action": "Clone the repo in a compatible runner and install locked dependencies."
+    },
+    {
+      "capability": "network_binance",
+      "status": "DEGRADED",
+      "evidence": {
+        "direct_endpoints_http_status": "HTTP 000",
+        "curl_exit_code": 6,
+        "failed_dns": "fapi.binance.com",
+        "probed": [
+          "/fapi/v1/time",
+          "/fapi/v1/exchangeInfo",
+          "/fapi/v1/klines",
+          "/fapi/v1/premiumIndex",
+          "/fapi/v1/openInterest",
+          "/fapi/v1/ticker/24hr"
+        ],
+        "connector_market_data": "fresh responses received; connector does not expose raw HTTP status/headers",
+        "exchange_info_server_time_utc": "2026-11-06T11:18:40.883Z",
+        "exchange_info_age_minutes": 1936.85
+      },
+      "impact": "Current snapshot can be built from connector data; direct endpoint status and fresh contract metadata cannot be confirmed.",
+      "next_action": "Restore direct DNS/network and re-probe server time and exchangeInfo."
+    },
+    {
+      "capability": "raw_historical_archive",
+      "status": "DEGRADED",
+      "evidence": {
+        "one_hour_base_rows_per_symbol": 53871,
+        "one_hour_base_range_utc": [
+          "2020-09-14T08:00:00.000Z",
+          "2026-11-06T22:00:00.000Z"
+        ],
+        "four_hour_canonical_rows_per_symbol": 13461,
+        "four_hour_canonical_range_utc": [
+          "2020-09-14T08:00:00.000Z",
+          "2026-11-05T16:00:00.000Z"
+        ],
+        "five_minute_fifteen_minute_multiyear": "MISSING",
+        "new_completed_rows_persisted": 84,
+        "archive_index_updated": false
+      },
+      "impact": "Longer 1h history exists, but lower-timeframe history and archive-chain integrity are insufficient for robust context research.",
+      "next_action": "Reconcile delta chain, merge 4h, backfill 5m/15m."
+    },
+    {
+      "capability": "data_quality_coverage",
+      "status": "PASS",
+      "evidence": {
+        "raw_rows": 3200,
+        "completed_rows": 3184,
+        "forming_rows_excluded": 16,
+        "series_count": 16,
+        "duplicates": 0,
+        "missing_intervals": 0,
+        "off_grid": 0,
+        "ohlc_failures": 0,
+        "non_finite": 0,
+        "non_positive_volume": 0,
+        "cross_symbol_timestamp_alignment": true
+      },
+      "impact": "Current rolling sample is clean but too short for multi-cycle inference.",
+      "next_action": "Continue append and run full archive checks after backfill."
+    },
+    {
+      "capability": "backtest_harness_smoke_test",
+      "status": "BLOCKED",
+      "evidence": {
+        "script_exists": true,
+        "local_checkout": false,
+        "node_version": "v22.16.0",
+        "required_node": ">=24.0.0",
+        "smoke_test": "NOT_RUN",
+        "forming_bar_issue": "closeTime discarded in API and CSV paths",
+        "zero_volume_issue": "validators accept volume == 0"
+      },
+      "impact": "No reproducible strategy experiment or OOS evaluation can be claimed.",
+      "next_action": "Fix data contract, provision runtime, run deterministic fixture and no-lookahead tests."
+    },
+    {
+      "capability": "disk_storage",
+      "status": "PASS",
+      "evidence": {
+        "local_free_bytes": 32029913088,
+        "github_raw_branch": "research/raw-ohlcv-archive-20261107T193000Z-run14",
+        "raw_delta_files_readback_verified": true
+      },
+      "impact": "Durable GitHub storage is available for raw deltas and manifests.",
+      "next_action": "Continue atomic append and verify each write."
+    },
+    {
+      "capability": "artifact_readback",
+      "status": "PASS",
+      "evidence": {
+        "raw_delta_files": 5,
+        "raw_delta_manifests": 2,
+        "sha256_sidecars_verified": true,
+        "readback_verified": true
+      },
+      "impact": "84 new raw rows are persisted and read back; archive index remains unreconciled.",
+      "next_action": "Persist report/queue/registry snapshots and verify their hashes."
+    }
+  ],
+  "status_flags": {
+    "research_executed": true,
+    "data_quality_experiment_completed": true,
+    "strategy_experiment_completed": false,
+    "oos_evaluated": false,
+    "monitoring_only": false
+  }
+}

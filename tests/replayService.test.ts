@@ -88,6 +88,13 @@ test('feed: higher timeframes only expose bars closed by the step', () => {
   assert.equal(feed.closedCandles('BTCUSDT', '1h', feed.stepTime(4)).length, 1);
 });
 
+test('feed: a history limit keeps only the most recent closed bars', () => {
+  const feed = new MarketDataFeed({ BTCUSDT: { '15m': vShapeCandles(10, 5) } });
+  const visible = feed.closedCandles('BTCUSDT', '15m', feed.stepTime(6), 3);
+  assert.deepEqual(visible.map((c) => c.openTime), [4, 5, 6].map((i) => i * FIFTEEN_MIN));
+  assert.equal(feed.closedCandles('BTCUSDT', '15m', feed.stepTime(1), 3).length, 2);
+});
+
 test('simulator: entries pay friction and exits receive it', () => {
   const costs = { takerFeeBps: 4, spreadBps: 2, slippageBps: 3 };
   const sim = new ExecutionSimulator(costs);

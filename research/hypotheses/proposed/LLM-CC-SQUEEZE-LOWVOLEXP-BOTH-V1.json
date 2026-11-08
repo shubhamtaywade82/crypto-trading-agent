@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 1,
+  "id": "LLM-CC-SQUEEZE-LOWVOLEXP-BOTH-V1",
+  "version": 1,
+  "status": "DRAFT",
+  "hypothesis": "Volatility squeeze (Bollinger inside Keltner) expansion breakout; both directions, in low-vol expansion regime, 2R/1ATR, breakeven, multi-TF. Tests range resolution.",
+  "family": "SQUEEZE_EXPANSION",
+  "symbols": [
+    "BTCUSDT",
+    "ETHUSDT",
+    "SOLUSDT",
+    "XRPUSDT"
+  ],
+  "timeframes": [
+    "4h",
+    "1h",
+    "15m"
+  ],
+  "timeframeRule": "each timeframe tested independently",
+  "context": {
+    "id": "LOW_VOL_EXPANSION",
+    "taxonomyVersion": "ctx-v1"
+  },
+  "campaign": "CRYPTO-CONFLUENCE-2026Q4",
+  "params": {
+    "trigger": "SQUEEZE_EXPANSION",
+    "regimeFilter": "LOW_VOL_EXPANSION",
+    "direction": "BOTH",
+    "lookback": 20,
+    "targetR": 2,
+    "stopAtr": 1,
+    "rrRatio": 2,
+    "useBreakeven": true,
+    "maxHoldingBars": 16
+  },
+  "window": {
+    "days": 1095,
+    "endDaysAgo": 0,
+    "endIso": "2026-11-01T00:00:00.000Z",
+    "split": {
+      "trainPct": 60,
+      "validationPct": 20,
+      "testPct": 20
+    }
+  },
+  "costs": {
+    "roundTripBps": 15
+  },
+  "evidence": {
+    "minOosTrades": 100,
+    "alpha": 0.01
+  }
+}

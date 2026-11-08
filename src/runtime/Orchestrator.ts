@@ -11,6 +11,9 @@ import { MeanReversionAgent } from '../agents/MeanReversionAgent.js';
 import { CrowdingAgent } from '../agents/CrowdingAgent.js';
 import { AlmaMtfChampionAgent } from '../agents/AlmaMtfChampionAgent.js';
 import { TrendEnsembleAgent } from '../agents/TrendEnsembleAgent.js';
+import { EmaCrossSwingAgent } from '../agents/EmaCrossSwingAgent.js';
+import { SqueezeBreakoutAgent } from '../agents/SqueezeBreakoutAgent.js';
+import { DonchianBreakoutAgent } from '../agents/DonchianBreakoutAgent.js';
 import { RiskAgent } from '../agents/RiskAgent.js';
 import { ExecutorAgent } from '../agents/ExecutorAgent.js';
 import { OllamaAdvisor } from '../ollama/advisor.js';
@@ -91,8 +94,21 @@ export class Orchestrator extends EventEmitter {
   private crowding = new CrowdingAgent(this.binance);
   private almaChampion = new AlmaMtfChampionAgent(this.binance);
   private trendEnsemble = new TrendEnsembleAgent(this.binance);
+  private emaCrossSwing = new EmaCrossSwingAgent(this.binance);
+  private squeezeBreakout = new SqueezeBreakoutAgent(this.binance);
+  private donchianBreakout = new DonchianBreakoutAgent(this.binance, {
+    timeframe: '4h',
+    period: 30,
+    volMultiplier: 1.4,
+    stopAtrMult: 1.0,
+    targetPct: 5.0,
+    symbols: ['BTCUSDT', 'ETHUSDT', 'SOLUSDT', 'XRPUSDT'],
+  });
   private agents: BaseAgent[] = [
     this.almaChampion,
+    this.emaCrossSwing,
+    this.squeezeBreakout,
+    this.donchianBreakout,
     // Research port awaiting forward evidence: paper only, like the adaptive SuperTrend
     ...(config.mode === 'paper' ? [this.trendEnsemble] : []),
     new FundingArbAgent(this.binance),

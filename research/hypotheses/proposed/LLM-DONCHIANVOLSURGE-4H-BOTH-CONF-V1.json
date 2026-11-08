@@ -1,0 +1,51 @@
+{
+  "schemaVersion": 1,
+  "id": "LLM-DONCHIANVOLSURGE-4H-BOTH-CONF-V1",
+  "version": 1,
+  "status": "DRAFT",
+  "hypothesis": "4h Donchian 20-bar breakout confirmed by 1.4x volume surge captures range resolution across majors; both directions. Uses fixed 5% target, 1 ATR stop, 24-bar horizon. Targets higher-convection breaks without breakeven friction.",
+  "family": "DONCHIAN_BREAK",
+  "symbols": [
+    "BTCUSDT",
+    "ETHUSDT",
+    "SOLUSDT",
+    "XRPUSDT"
+  ],
+  "timeframes": [
+    "4h"
+  ],
+  "timeframeRule": "each timeframe tested independently",
+  "context": {
+    "id": "VOLUME_SURGE",
+    "taxonomyVersion": "ctx-v1"
+  },
+  "campaign": "CRYPTO-CONFLUENCE-2026Q4",
+  "params": {
+    "trigger": "DONCHIAN_BREAK",
+    "regimeFilter": "VOLUME_SURGE",
+    "direction": "BOTH",
+    "lookback": 20,
+    "targetPct": 5,
+    "targetR": 2,
+    "stopAtr": 1,
+    "useBreakeven": false,
+    "maxHoldingBars": 24
+  },
+  "window": {
+    "days": 1095,
+    "endDaysAgo": 0,
+    "endIso": "2026-11-01T00:00:00.000Z",
+    "split": {
+      "trainPct": 60,
+      "validationPct": 20,
+      "testPct": 20
+    }
+  },
+  "costs": {
+    "roundTripBps": 15
+  },
+  "evidence": {
+    "minOosTrades": 100,
+    "alpha": 0.01
+  }
+}

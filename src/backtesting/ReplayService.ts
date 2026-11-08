@@ -374,11 +374,11 @@ export class ReplayService {
     const marks: Record<string, number> = {};
     const funding: Record<string, number> = {};
     const inputs = feed.universe.map((symbol) => {
-      const closed15m = feed.closedCandles(symbol, '15m', closeTime);
+      const closed15m = feed.closedCandles(symbol, '15m', closeTime, cfg.historyBars);
       candles[symbol] = closed15m;
       const candlesByTimeframe: Partial<Record<NativeTimeframe, Candle[]>> = {};
       for (const timeframe of NATIVE_TIMEFRAMES) {
-        const series = feed.closedCandles(symbol, timeframe, closeTime);
+        const series = feed.closedCandles(symbol, timeframe, closeTime, cfg.historyBars);
         if (series.length > 0) candlesByTimeframe[timeframe] = series;
       }
       const mark = closed15m.length > 0 ? closed15m[closed15m.length - 1].close : 0;

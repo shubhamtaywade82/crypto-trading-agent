@@ -222,21 +222,29 @@ export function emaSlopePct(values: number[], period = 20, lookback = 5): number
 }
 
 /** Rolling volume-weighted average price using typical price and candle volume. */
+function windowVwap(candles: Candle[], end: number, period: number): number {
+  let pv = 0;
+  let volume = 0;
+  for (let j = end - period + 1; j <= end; j++) {
+    const candle = candles[j];
+    const typical = (candle.high + candle.low + candle.close) / 3;
+    pv += typical * candle.volume;
+    volume += candle.volume;
+  }
+  return volume > 0 ? pv / volume : candles[end].close;
+}
+
 export function vwap(candles: Candle[], period = 96): number[] {
   const result = new Array<number>(candles.length).fill(NaN);
   if (candles.length === 0 || period <= 0) return result;
 
-  for (let i = period - 1; i < candles.length; i++) {
-    let pv = 0;
-    let volume = 0;
-    for (let j = i - period + 1; j <= i; j++) {
-      const candle = candles[j];
-      const typical = (candle.high + candle.low + candle.close) / 3;
-      pv += typical * candle.volume;
-      volume += candle.volume;
-    }
-    result[i] = volume > 0 ? pv / volume : candles[i].close;
-  }
-
+  for (let i = period - 1; i < candles.length; i++) result[i] = windowVwap(candles, i, period);
   return result;
+}
+
+/** The last value of `vwap(candles, period)` when finite, else null; computes one window instead of all. */
+export function lastVwap(candles: Candle[], period = 96): number | null {
+  if (period <= 0 || candles.length < period) return null;
+  const value = windowVwap(candles, candles.length - 1, period);
+  return Number.isFinite(value) ? value : null;
 }

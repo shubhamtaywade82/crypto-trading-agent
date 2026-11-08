@@ -1,0 +1,71 @@
+{
+  "schema_version": "1.0.0",
+  "experiment_id": "DQ-ARCHIVE-OLDER-PAGE-20261108T0326Z-V85",
+  "created_at_utc": "2026-11-08T03:28:03.070Z",
+  "type": "historical_data_backfill_and_integrity_validation",
+  "pre_registered": false,
+  "hypothesis": "The next older 1500-bar page per symbol/interval can be added contiguously without overlap, missing bars, or malformed OHLCV.",
+  "scope": "DATA_QUALITY_ONLY; not a strategy experiment",
+  "source": {
+    "provider": "Binance USD-M connector",
+    "endpoint": "GET /fapi/v1/klines",
+    "raw_http_status": "UNAVAILABLE"
+  },
+  "parameters": {
+    "symbols": [
+      "BTCUSDT",
+      "ETHUSDT",
+      "SOLUSDT",
+      "XRPUSDT"
+    ],
+    "intervals": [
+      "5m",
+      "15m"
+    ],
+    "limit": 1500,
+    "end_time_utc": {
+      "5m": "2026-10-30T18:59:59.999Z",
+      "15m": "2026-10-20T08:59:59.999Z"
+    }
+  },
+  "result": {
+    "rows": 12000,
+    "rows_per_symbol_interval": 1500,
+    "bytes": 3378840,
+    "sha256": "135215502e3fa070ea9b22b6dc76c7b93f09d7ea32520600c02526b83f45eb51",
+    "git_blob_sha1": "7d12063f93add171514f54dde7042769ed7ff0ea",
+    "ranges": {
+      "5m": [
+        "2026-10-25T14:00:00Z",
+        "2026-10-30T18:55:00Z"
+      ],
+      "15m": [
+        "2026-10-04T18:00:00Z",
+        "2026-10-20T08:45:00Z"
+      ]
+    },
+    "validation": {
+      "duplicates": 0,
+      "gaps": 0,
+      "off_grid": 0,
+      "ohlc_failures": 0,
+      "non_positive_volume": 0,
+      "non_finite": 0,
+      "close_time_failures": 0,
+      "cross_symbol_alignment": true,
+      "adjacent_to_newer_page": true
+    },
+    "persistence": {
+      "branch": "research/raw-ohlcv-archive-20261108T0320Z-run23",
+      "path": "research-data/binance-usdm/backfill/binance_usdm_backfill_20261108T0326Z_5m15m_1500bars_older.jsonl",
+      "blob_identity_verified": true,
+      "full_content_body_readback": false
+    }
+  },
+  "evidence_status": "DATA_QUALITY_EXPERIMENT_COMPLETED",
+  "limitations": [
+    "Recent sample only; no multi-year 5m/15m coverage.",
+    "Canonical index not advanced because the 76-row artifact remains unresolved.",
+    "No strategy backtest or OOS evaluation."
+  ]
+}

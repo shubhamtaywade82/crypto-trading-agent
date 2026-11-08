@@ -1,0 +1,181 @@
+{
+  "schema_version": "1.0.0",
+  "run_id": "context-strategy-2026-11-08-run35",
+  "version": "v85",
+  "created_at_utc": "2026-11-08T03:29:10.000Z",
+  "market_data_as_of_utc": "2026-11-08T03:28:42.503Z",
+  "run_status": "RESEARCH_EXECUTED",
+  "status_detail": "Two reproducible data-quality experiments completed: 12,000-row older 5m/15m backfill and 88-row completed-bar append. No strategy backtest or untouched OOS evaluation ran.",
+  "research_progress": {
+    "data_quality_experiments": 2,
+    "backfill_rows": 12000,
+    "incremental_completed_rows": 88,
+    "new_rows_total": 12088,
+    "strategy_experiments": 0,
+    "oos_evaluations": 0,
+    "highwatermarks_utc": {
+      "5m": "2026-11-08T03:15:00Z",
+      "15m": "2026-11-08T03:00:00Z",
+      "1h": "2026-11-08T02:00:00Z",
+      "4h": "2026-11-07T20:00:00Z"
+    },
+    "archive": {
+      "1h_canonical_rows_per_symbol": 53871,
+      "1h_canonical_last_open_utc": "2026-11-06T22:00:00Z",
+      "1h_append_only_latest_utc": "2026-11-08T02:00:00Z",
+      "4h_canonical_rows_per_symbol": 13461,
+      "4h_canonical_last_open_utc": "2026-11-05T16:00:00Z",
+      "4h_append_only_latest_utc": "2026-11-07T20:00:00Z",
+      "5m_backfill_contiguous_range": [
+        "2026-10-25T14:00:00Z",
+        "2026-11-04T23:55:00Z"
+      ],
+      "15m_backfill_contiguous_range": [
+        "2026-10-04T18:00:00Z",
+        "2026-11-04T23:45:00Z"
+      ],
+      "missing_76_row_artifact": "UNRESOLVED",
+      "canonical_index_advanced": false
+    },
+    "remaining": "Multi-year 5m/15m coverage, missing-delta provenance recovery, canonical reconciliation, derivatives archive verification, compatible runtime/harness and cost calibration."
+  },
+  "context_discovery": {
+    "label": "HTF_BEARISH_LTF_BOUNCE_MIXED",
+    "classification_confidence": "MODERATE for descriptive EMA/return features only; not calibrated",
+    "method": "Close relative to EMA20 and 10-bar EMA20 slope; EMA50 and ATR14 are supporting descriptors. All signals use completed candles.",
+    "sample": {
+      "bars_per_symbol_interval": 119,
+      "intervals": [
+        "5m",
+        "15m",
+        "1h",
+        "4h"
+      ],
+      "symbols": 4,
+      "forming_excluded_per_symbol_interval": 1
+    },
+    "summary": {
+      "BTCUSDT": {
+        "five_minute": "BULL",
+        "fifteen_minute": "MIXED",
+        "one_hour": "BEAR",
+        "four_hour": "BEAR",
+        "return20_1h_pct": -0.3331,
+        "return20_4h_pct": -5.5289
+      },
+      "ETHUSDT": {
+        "five_minute": "BULL",
+        "fifteen_minute": "MIXED",
+        "one_hour": "BEAR",
+        "four_hour": "BEAR",
+        "return20_1h_pct": -0.448,
+        "return20_4h_pct": -7.6956
+      },
+      "SOLUSDT": {
+        "five_minute": "MIXED",
+        "fifteen_minute": "MIXED",
+        "one_hour": "BEAR",
+        "four_hour": "BEAR",
+        "return20_1h_pct": -1.264,
+        "return20_4h_pct": -7.1569
+      },
+      "XRPUSDT": {
+        "five_minute": "MIXED",
+        "fifteen_minute": "MIXED",
+        "one_hour": "BEAR",
+        "four_hour": "BEAR",
+        "return20_1h_pct": -0.8815,
+        "return20_4h_pct": -11.6092
+      }
+    },
+    "frequency_duration_transitions": "NOT_COMPUTED",
+    "threshold_refit": "NOT_PERFORMED",
+    "structure": "UNKNOWN",
+    "shock": "UNKNOWN",
+    "btc_lead_lag": "NOT_RECOMPUTED",
+    "trade_win_probability": "NOT_ESTIMATED"
+  },
+  "strategy_scorecard": {
+    "registry_version": "v83",
+    "oos_validated": 0,
+    "oos_promising": 1,
+    "insufficient_evidence_baselines": 4,
+    "carried_forward": {
+      "key": "SOLUSDT|4h|BULL_LOW|donchian20-v0.1.0",
+      "status": "OOS_PROMISING",
+      "trades": 12,
+      "win_rate_pct": 66.7,
+      "target_before_stop_pct": 41.7,
+      "mean_net_R": 0.606,
+      "profit_factor": 2.72,
+      "max_drawdown_R": 1.3,
+      "block_bootstrap_interval_R": [
+        0.086,
+        1.199
+      ],
+      "minimum_oos_trades": 100,
+      "multi_window_stability": false,
+      "actionable": false,
+      "not_rerun": true
+    },
+    "untested_families": [
+      {
+        "family": "trend_pullback_continuation",
+        "status": "HYPOTHESIS"
+      },
+      {
+        "family": "breakout_retest_volatility_contraction",
+        "status": "HYPOTHESIS"
+      },
+      {
+        "family": "range_mean_reversion_failed_breakout_fade",
+        "status": "HYPOTHESIS"
+      },
+      {
+        "family": "volatility_expansion_momentum",
+        "status": "HYPOTHESIS"
+      },
+      {
+        "family": "btc_led_relative_strength",
+        "status": "HYPOTHESIS"
+      },
+      {
+        "family": "funding_oi_filters",
+        "status": "HYPOTHESIS"
+      }
+    ]
+  },
+  "key_discoveries": [
+    "All four symbols are BEAR on 1h and 4h; BTC/ETH are BULL on 5m and all four are MIXED on 15m. This is a short-term bounce inside a bearish higher-timeframe context, not a confirmed reversal.",
+    "20-bar 4h returns: BTC -5.53%, ETH -7.70%, SOL -7.16%, XRP -11.61%; XRP is weakest on this descriptive window.",
+    "1h OI changes: BTC +0.067%, ETH +0.339%, SOL +0.590%, XRP -0.059%. OI and account ratios do not prove liquidations or crowding.",
+    "Global long-account shares are 73.43%-78.40%; account-level ratios are descriptive, not a standalone contrarian signal.",
+    "All premiumIndex latest funding fields and last settled funding rates are below the 0.05% absolute alert threshold; observed funding interval is 8h.",
+    "No strategy-context edge has cleared OOS_VALIDATED. The sole OOS_PROMISING SOL BULL_LOW candidate is not in the current SOL BEAR context."
+  ],
+  "current_snapshot_reference": "research/context-strategy/snapshots/current_market_snapshot_20261108T0328Z_v85.json",
+  "decisions": {
+    "SOLUSDT": "NO_TRADE",
+    "ETHUSDT": "NO_TRADE",
+    "XRPUSDT": "NO_TRADE"
+  },
+  "decision_reasons": [
+    "Registry contains zero OOS_VALIDATED entries.",
+    "Only OOS_PROMISING entry is SOL 4h BULL_LOW with 12 trades and no multi-window stability; current SOL 4h is BEAR.",
+    "No exact validated trigger or frozen positive net-cost edge exists.",
+    "Fresh exchange metadata is blocked by 40.17h stale serverTime.",
+    "Cost/fill assumptions are not calibrated."
+  ],
+  "data_quality_audit_reference": "research/context-strategy/audits/data_quality_audit_20261108T0329Z_v85.json",
+  "experiment_references": [
+    "research/context-strategy/experiments/archive_backfill_20261108T0326Z_v85.json",
+    "research/context-strategy/experiments/dq_append_20261108T0323Z_v85.json"
+  ],
+  "queue_reference": "research/context-strategy/queues/research_queue_20261108T0329Z_v85.json",
+  "preflight_reference": "research/context-strategy/preflight/preflight_20261108T0329Z_v85.json",
+  "result_classification": {
+    "RESEARCH_EXECUTED": true,
+    "OOS_EVALUATED": false,
+    "MONITORING_ONLY": false
+  }
+}

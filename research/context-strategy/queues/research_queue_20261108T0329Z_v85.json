@@ -1,0 +1,94 @@
+{
+  "schema_version": "1.0.0",
+  "queue_version": "v85",
+  "updated_at_utc": "2026-11-08T03:29:10.000Z",
+  "last_run_id": "context-strategy-2026-11-08-run35",
+  "registry_version": "v83",
+  "items": [
+    {
+      "id": "RQ-DQ-01",
+      "priority": 1,
+      "status": "COMPLETED",
+      "last_action": "Validated and persisted 12,000 older 5m/15m bars plus 88 incremental completed bars (5m/15m/1h). Both data-quality experiments passed structural checks and raw artifacts were read back by SHA/blob identity.",
+      "next_action": "Continue next hourly append from highwater marks; do not merge into canonical index until provenance gaps are resolved."
+    },
+    {
+      "id": "RQ-ARCH-01",
+      "priority": 1,
+      "status": "BLOCKED",
+      "blocker": "Missing exact artifact research-data/binance-usdm/delta/binance_usdm_delta_2026-11-05T0524Z.jsonl; expected 76 rows and SHA-256 f5d9e50602f4ef4046fc4d39da053e45d3619ad147aa398a6bd1e281a7f3b93d.",
+      "next_action": "Continue exact-path/hash/branch-history recovery. If absent after complete history search, formally retire as irrecoverable and preserve unknown coverage."
+    },
+    {
+      "id": "RQ-ARCH-02",
+      "priority": 1,
+      "status": "IN_PROGRESS",
+      "last_action": "Added older 1500-bar page per symbol for 5m and 15m. 5m now covers 2026-10-25T14:00Z–2026-11-04T23:55Z; 15m covers 2026-10-04T18:00Z–2026-11-04T23:45Z. Added live deltas through 5m 03:15Z, 15m 03:00Z, 1h 02:00Z.",
+      "next_action": "Fetch next older 1500-bar pages with 5m endTime=2026-10-25T13:59:59.999Z and 15m endTime=2026-10-04T17:59:59.999Z; keep pages separate and validate continuity. Continue toward 2020-09-14."
+    },
+    {
+      "id": "RQ-ARCH-03",
+      "priority": 1,
+      "status": "BLOCKED",
+      "blocker": "Missing 76-row artifact and append-only 1h/4h/5m/15m delta chain not fully reconciled.",
+      "next_action": "After provenance recovery, deduplicate and reconcile verified pages/deltas into canonical 5m/15m/1h/4h indexes; read back all outputs and hashes."
+    },
+    {
+      "id": "RQ-ENV-01",
+      "priority": 1,
+      "status": "BLOCKED",
+      "blocker": "Node v22.16.0/npm10.9.2 below package floor Node>=24/npm>=11; no local checkout and no node_modules; Binance SDK package absent.",
+      "next_action": "Provision Node24/npm11 and a clean local checkout; install lockfile dependencies and verify @nemesis-oss/binance-sdk import."
+    },
+    {
+      "id": "RQ-CODE-01",
+      "priority": 1,
+      "status": "BLOCKED",
+      "blocker": "No compatible local runtime/checkout. Remote conditional-edge CLI defaults minN=30 and 90% CI; backtest supports only 15m/1h/4h and optional funding uses constant 0.0001. No purged/embargoed multi-symbol harness smoke test.",
+      "next_action": "Build or adjust archive-backed multi-symbol 5m/15m/1h/4h harness with historical funding/OI joins, purging/embargo, realistic costs, >=100 OOS trades per symbol/context and block-bootstrap intervals; then run deterministic fixture twice."
+    },
+    {
+      "id": "RQ-COST-01",
+      "priority": 2,
+      "status": "BLOCKED",
+      "blocker": "Account fee tier, empirical spread/slippage, market impact, latency and fill assumptions unavailable.",
+      "next_action": "Freeze fee tier from account/execution records and calibrate slippage/market impact from actual fills and depth."
+    },
+    {
+      "id": "RQ-DERIV-01",
+      "priority": 2,
+      "status": "IN_PROGRESS",
+      "blocker": "Historical funding/OI coverage incomplete; SOL funding archive has SHA mismatch and 3,501 blank markPrice rows; no verified all-symbol historical OI archive.",
+      "last_action": "Refreshed current premiumIndex funding, settled funding, fundingInfo interval, OI history, global long-short account ratio, taker flow and top-5 order book.",
+      "next_action": "Backfill settled funding and OI histories for BTC/ETH/SOL/XRP, validate timestamps and hashes, and resolve SOL archive serialization mismatch."
+    },
+    {
+      "id": "RQ-CTX-01",
+      "priority": 2,
+      "status": "BLOCKED",
+      "blocker": "5m/15m multi-year sample absent; current context labels are descriptive and training thresholds/frequency/duration/transitions are not computed.",
+      "next_action": "Complete multi-year archive and alignment; fit thresholds on training only and measure context frequency, duration, transition matrix and stability."
+    },
+    {
+      "id": "RQ-EXP-01",
+      "priority": 3,
+      "status": "BLOCKED",
+      "blocker": "Archive provenance, Node24/local harness, deterministic smoke test and realistic cost model incomplete.",
+      "next_action": "After blockers clear, pre-register trend-pullback continuation as the first strategy-family experiment; freeze entry/stop/target/time-stop/sizing/costs and chronological train/validation/untouched-test boundaries before running."
+    },
+    {
+      "id": "RQ-MON-01",
+      "priority": 4,
+      "status": "COMPLETED",
+      "last_action": "Refreshed BTC reference and ETH/SOL/XRP market data at 2026-11-08T03:28:42Z; 1h/4h bearish and 5m/15m bounce/mixed; all tradable symbols NO_TRADE.",
+      "next_action": "Refresh hourly; only OOS_VALIDATED entries may be actionable."
+    },
+    {
+      "id": "RQ-WEEKLY-01",
+      "priority": 4,
+      "status": "PLANNED",
+      "next_action": "Perform weekly taxonomy stability review on 2026-11-14; retain taxonomy unless train-only evidence supports a change.",
+      "blocker": "Not due; multi-year 5m/15m sample remains incomplete."
+    }
+  ]
+}

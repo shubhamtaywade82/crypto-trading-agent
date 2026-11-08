@@ -60,7 +60,7 @@ The full-archive context artifact remains the reference; no thresholds were refi
 
 Previously recorded frequent transitions include BTC UP_LOW→UP_NORMAL (75), ETH SIDEWAYS_LOW→SIDEWAYS_NORMAL (77), SOL DOWN_HIGH→DOWN_NORMAL (79), and XRP SIDEWAYS_NORMAL→SIDEWAYS_LOW (74).
 
-These are descriptive context frequencies and durations, not probabilities of a profitable trade. The 4h context artifact has approximately 13,468 rows and 13,269 classified bars per symbol. The weekly taxonomy/stability review is due 11 November UTC; no review was forced early.
+These are descriptive context frequencies and durations, not probabilities of a profitable trade. The 4h context artifact has approximately 13,468 rows per symbol, with 13,269 classified bars per symbol. The weekly taxonomy/stability review is due 11 November UTC; no review was forced early.
 
 ## 3. Strategy-context scorecard
 

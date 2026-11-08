@@ -1,0 +1,141 @@
+{
+  "schema_version": "1.0.0",
+  "audit_id": "data-quality-audit-20261108T0023Z-v83",
+  "created_at_utc": "2026-11-08T00:23:00.000Z",
+  "local_environment": {
+    "cwd": "/",
+    "os": "Linux 6.18.57",
+    "python": "3.13.5",
+    "node": "v22.16.0",
+    "npm": "10.9.2",
+    "cpu_count": 5,
+    "memory_total_gib": 5.8,
+    "memory_available_gib": 4.7,
+    "disk_free_gib": 30,
+    "repo_checkout": false,
+    "python_binance_import": false,
+    "python_binance_sdk_import": false
+  },
+  "direct_network": {
+    "fapi_dns": "FAILED",
+    "api_dns": "FAILED",
+    "github_dns": "FAILED",
+    "direct_fapi_time": "UNAVAILABLE",
+    "http_status": "000 or no connection"
+  },
+  "connector": {
+    "binance_market_data": "SUCCEEDED for requested endpoints",
+    "github_repo": "SUCCEEDED",
+    "http_status_headers": "NOT_EXPOSED"
+  },
+  "exchange_info": {
+    "server_time_utc": "2026-11-06T11:18:40.883Z",
+    "market_timestamp_utc": "2026-11-08T00:23:00.000Z",
+    "staleness_hours": 37.07198,
+    "status": "BLOCKED_STALE"
+  },
+  "rolling_klines": {
+    "symbols": [
+      "BTCUSDT",
+      "ETHUSDT",
+      "SOLUSDT",
+      "XRPUSDT"
+    ],
+    "intervals": [
+      "5m",
+      "15m",
+      "1h",
+      "4h"
+    ],
+    "limit": 200,
+    "rows_per_series": 200,
+    "completed_per_series": 199,
+    "forming_excluded_per_series": 1,
+    "series_count": 16,
+    "first_open_utc_by_interval": {
+      "5m": "2026-11-07T07:45:00Z",
+      "15m": "2026-11-05T22:30:00Z",
+      "1h": "2026-10-30T17:00:00Z",
+      "4h": "2026-10-05T20:00:00Z"
+    },
+    "latest_completed_open_utc_by_interval": {
+      "5m": "2026-11-08T00:15:00Z",
+      "15m": "2026-11-08T00:00:00Z",
+      "1h": "2026-11-07T23:00:00Z",
+      "4h": "2026-11-07T20:00:00Z"
+    },
+    "quality": {
+      "duplicates": 0,
+      "missing_intervals": 0,
+      "off_grid": 0,
+      "ohlc_failures": 0,
+      "non_finite": 0,
+      "non_positive_volume": 0,
+      "close_time_failures": 0,
+      "cross_symbol_alignment": true
+    }
+  },
+  "archive_inspection": {
+    "raw_branch": "research/raw-ohlcv-archive-20261108T0023Z-run18",
+    "one_hour_index": {
+      "path": "research-data/binance-usdm/1h/archive-index.json",
+      "rows_per_symbol": 53871,
+      "rows_total": 215484,
+      "first_open_utc": "2020-09-14T08:00:00Z",
+      "last_completed_open_utc": "2026-11-06T22:00:00Z",
+      "pages": 36,
+      "index_sha": "bb90dadd1cebdf34f43e914b531af9de5e94996f",
+      "note": "Index and latest page manifest inspected; all 36 pages not fully re-read in this run."
+    },
+    "four_hour_canonical": {
+      "rows_per_symbol": 13461,
+      "rows_total": 53844,
+      "first_open_utc": "2020-09-14T08:00:00Z",
+      "canonical_last_open_utc": "2026-11-05T16:00:00Z",
+      "latest_delta_open_utc": "2026-11-07T20:00:00Z",
+      "index_sha": "215a005e9c09ca6572e98e2b781cc66c0f948737",
+      "note": "Canonical manifests report zero structural defects and exact GitHub blob readback; 13 page/symbol hash provenance discrepancies remain documented."
+    },
+    "lower_timeframes": {
+      "canonical_5m": false,
+      "canonical_15m": false,
+      "incremental_deltas_only": true,
+      "coverage_reconciled": false
+    },
+    "missing_delta": {
+      "path": "research-data/binance-usdm/delta/binance_usdm_delta_2026-11-05T0524Z.jsonl",
+      "expected_rows": 76,
+      "expected_sha256": "f5d9e50602f4ef4046fc4d39da053e45d3619ad147aa398a6bd1e281a7f3b93d",
+      "checked_branches": [
+        "research/raw-ohlcv-archive-20261108T0023Z-run18",
+        "research/raw-ohlcv-archive-2026-11-05T0530Z",
+        "research/raw-ohlcv-archive-202611070831Z"
+      ],
+      "github_search_by_sha": "NO_MATCH",
+      "status": "NOT_FOUND"
+    },
+    "derivatives": {
+      "funding_archive_symbols": [
+        "SOLUSDT"
+      ],
+      "open_interest_history": "incomplete"
+    }
+  },
+  "appended_delta": {
+    "path": "research-data/binance-usdm/delta/binance_usdm_delta_20261108T0023Z_5m15m1h4h_completed.jsonl",
+    "branch": "research/raw-ohlcv-archive-20261108T0023Z-run18",
+    "rows": 68,
+    "bytes": 18949,
+    "sha256": "e2b005df65b6761b60b264454ce285fb111b279c210a2665f0b7ffbac784face",
+    "readback_verified": true,
+    "readback_at_utc": "2026-11-08T00:23:45Z"
+  },
+  "readiness": {
+    "context_discovery": "BLOCKED_FOR_TRAINING_THRESHOLD_FIT",
+    "strategy_backtest": "BLOCKED",
+    "smoke_test": "NOT_RUN",
+    "untouched_oos": "NOT_RUN",
+    "durable_storage": "GitHub branch write and readback verified",
+    "canonical_index": "NOT_ADVANCED"
+  }
+}

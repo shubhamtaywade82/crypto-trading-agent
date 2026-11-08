@@ -83,9 +83,9 @@
     {
       "capability": "artifact readback",
       "status": "PASS",
-      "evidence": "Delta (26,499 bytes/68 lines), manifest (8,872 bytes), and 5m/15m/1h/4h indexes fetched back; delta and manifest SHA-256 matched; index contents matched exactly.",
+      "evidence": "Delta and manifest SHA-256/bytes/row count matched on readback; all four interval indexes fetched back exactly; queue, registry snapshot, market snapshot, preflight and report were fetched back and semantic identities checked.",
       "impact": "Archive append is persisted and verified; run documentation readback follows.",
-      "nextAction": "Fetch back queue, registry snapshot, market snapshot, preflight, report and run manifest; record blob identities."
+      "nextAction": "Continue fetch-back and hash verification for every new run artifact."
     }
   ],
   "directRestProbes": {
@@ -141,7 +141,7 @@
       "1h",
       "4h"
     ],
-    "runArtifactsReadback": "PENDING_FINAL_READBACK"
+    "runArtifactsReadback": "VERIFIED"
   },
   "nextAction": "Resolve RQ-002/RQ-005/RQ-025/RQ-003/RQ-004/RQ-037 before any experiment."
 }

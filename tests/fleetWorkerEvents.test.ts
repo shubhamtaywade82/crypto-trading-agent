@@ -4,9 +4,9 @@ import type { AddressInfo } from 'node:net';
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { test } from 'node:test';
-import { SymbolTraderWorker } from '../src/minicpm/SymbolTraderWorker.js';
-import type { MiniCpmService } from '../src/minicpm/MiniCpmService.js';
-import type { FleetTradeEvent } from '../src/minicpm/FleetTelegram.js';
+import { SymbolTraderWorker } from '../src/fleet/SymbolTraderWorker.js';
+import type { FleetLlmService } from '../src/fleet/FleetLlmService.js';
+import type { FleetTradeEvent } from '../src/fleet/FleetTelegram.js';
 import type { Candle } from '../src/types.js';
 
 /**
@@ -16,7 +16,7 @@ import type { Candle } from '../src/types.js';
  * broken sink must never break trading.
  */
 
-const STATE_PATH = path.resolve('data/minicpm-state.json');
+const STATE_PATH = path.resolve('data/fleet-state.json');
 
 interface CapturedOrder {
   side: string;
@@ -44,7 +44,7 @@ function startFakeExchange(): Promise<FakeExchange> {
       res.setHeader('Content-Type', 'application/json');
       if (req.method === 'GET' && pathname === '/api/account') {
         res.end(JSON.stringify({
-          account_id: 'crypto-minicpm-test', currency: 'USD', margin: 10000,
+          account_id: 'crypto-fleet-test', currency: 'USD', margin: 10000,
           available_balance: 10000, locked_margin: 0, equity: 10000,
           unrealized_pnl: 0, realized_pnl: 0, positions_count: positions.length,
         }));
@@ -103,7 +103,7 @@ function startFakeExchange(): Promise<FakeExchange> {
   });
 }
 
-// The state store writes data/minicpm-state.json at cwd; snapshot and restore it around each
+// The state store writes data/fleet-state.json at cwd; snapshot and restore it around each
 // test so worker persistence never leaks between tests (or into the repo).
 function snapshotState(): { existed: boolean; content?: string } {
   return existsSync(STATE_PATH) ? { existed: true, content: readFileSync(STATE_PATH, 'utf8') } : { existed: false };
@@ -146,7 +146,7 @@ const RECOMMENDATION = {
   reason: 'reclaimed support',
 };
 
-const llmStub = { analyze: async () => RECOMMENDATION } as unknown as MiniCpmService;
+const llmStub = { analyze: async () => RECOMMENDATION } as unknown as FleetLlmService;
 
 const waitFor = async (predicate: () => boolean, timeoutMs = 5_000): Promise<void> => {
   const deadline = Date.now() + timeoutMs;
@@ -165,7 +165,7 @@ test('a worker emits ENTRY, BREAK_EVEN and EXIT trade events across a full posit
     const worker = new SymbolTraderWorker(
       {
         symbol: 'TESTUSDT',
-        accountId: 'crypto-minicpm-test',
+        accountId: 'crypto-fleet-test',
         paperExchangeUrl: exchange.url,
         apiKey: 'test-key',
         marginPerPosition: 1000,
@@ -249,7 +249,7 @@ test('shadow mode never emits trade events (no order, no notification)', async (
     const worker = new SymbolTraderWorker(
       {
         symbol: 'TESTUSDT',
-        accountId: 'crypto-minicpm-test',
+        accountId: 'crypto-fleet-test',
         paperExchangeUrl: exchange.url,
         apiKey: 'test-key',
         marginPerPosition: 1000,
@@ -278,7 +278,7 @@ test('a throwing notification sink never breaks trading', async () => {
     const worker = new SymbolTraderWorker(
       {
         symbol: 'TESTUSDT',
-        accountId: 'crypto-minicpm-test',
+        accountId: 'crypto-fleet-test',
         paperExchangeUrl: exchange.url,
         apiKey: 'test-key',
         marginPerPosition: 1000,

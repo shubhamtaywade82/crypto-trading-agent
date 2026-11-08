@@ -214,7 +214,7 @@ export class ResearchAgent {
 
   constructor(
     private readonly client: AdvisorClient | null,
-    private readonly model: string = 'qwen2.5:7b',
+    private readonly model: string = 'beam',
     private readonly maxRepairRetries: number = DEFAULT_MAX_REPAIR_RETRIES,
     private readonly bus: ResearchEventBus | null = null,
     private readonly memory: ExperimentMemory | null = null,

@@ -7,7 +7,7 @@ import { clampSelection, MIN_COLS, MIN_ROWS, renderCockpit, renderCockpitSection
 import { renderMtfScreen } from './mtfPanels.js';
 import { renderLiquidityScreen } from './liquidityPanels.js';
 import { renderFleetScreen } from './fleetPanels.js';
-import { FleetSupervisor, type FleetState } from '../minicpm/FleetSupervisor.js';
+import { FleetSupervisor, type FleetState } from '../fleet/FleetSupervisor.js';
 import { FIELD_SPANS_MS } from '../microstructure/MicrostructureEngine.js';
 import { formatLocalTime, type CurrencyMode } from './format.js';
 import { getSymbolRules, roundPrice } from '../binance/symbolRules.js';

@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { test } from 'node:test';
-import { resolveFleetPaperExchange } from '../src/minicpm/fleetPaperExchange.js';
+import { resolveFleetPaperExchange } from '../src/fleet/fleetPaperExchange.js';
 
 test('the fleet refuses to start without an operator token, including blank values', () => {
   for (const env of [{}, { PAPER_EXCHANGE_API_KEY: '' }, { PAPER_EXCHANGE_API_KEY: '   ' }]) {

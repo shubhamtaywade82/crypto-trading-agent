@@ -1,20 +1,18 @@
 import { USDMClient, WebsocketClient } from 'binance';
 import { MarketDataService, DEFAULT_MARKET_DATA_OPTIONS } from '../src/market/MarketDataService.js';
 import { MarketStateBuilder } from '../src/market/MarketStateBuilder.js';
-import { MiniCpmService } from '../src/minicpm/MiniCpmService.js';
-import { SymbolTraderWorker } from '../src/minicpm/SymbolTraderWorker.js';
-import { renderDashboard } from '../src/minicpm/MiniCpmDashboard.js';
-import { resolveFleetPaperExchange, type FleetPaperExchange } from '../src/minicpm/fleetPaperExchange.js';
+import { FleetLlmService } from '../src/fleet/FleetLlmService.js';
+import { SymbolTraderWorker } from '../src/fleet/SymbolTraderWorker.js';
+import { renderDashboard } from '../src/fleet/FleetDashboard.js';
+import { resolveFleetPaperExchange, type FleetPaperExchange } from '../src/fleet/fleetPaperExchange.js';
 import {
-  DEFAULT_FLEET_MODEL_ID,
-  DEFAULT_LLM_HOST,
   DEFAULT_LLM_TIMEOUT_MS,
   lookupModelByTag,
   parseModelRoute,
   resolveFleetModelAssignment,
   type FleetModelAssignment,
-} from '../src/minicpm/FleetModels.js';
-import { fleetTelegramEnabled, sendFleetEvent } from '../src/minicpm/FleetTelegram.js';
+} from '../src/fleet/FleetModels.js';
+import { fleetTelegramEnabled, sendFleetEvent } from '../src/fleet/FleetTelegram.js';
 import { config } from '../src/config.js';
 
 const SYMBOLS = ['ETHUSDT', 'SOLUSDT', 'XRPUSDT'];
@@ -32,16 +30,16 @@ async function main() {
   try {
     paperExchange = resolveFleetPaperExchange(process.env);
   } catch (err) {
-    console.error(`[MiniCPM fleet] ${(err as Error).message}`);
+    console.error(`[fleet] ${(err as Error).message}`);
     process.exit(1);
   }
 
   // Model selection: fleet default (--model / FLEET_MODEL) plus per-symbol overrides
   // (--route 'ETH=qwen3.5:2b,SOL=lfm2.5-2.6b' / FLEET_MODEL_ROUTE). Registry ids and raw
   // Ollama tags are both accepted. A route naming an untraded symbol fails at boot.
-  const modelSpec = argValue('--model') ?? process.env.FLEET_MODEL ?? DEFAULT_FLEET_MODEL_ID;
+  const modelSpec = argValue('--model') ?? process.env.FLEET_MODEL ?? config.ollama.model;
   const routeSpec = argValue('--route') ?? process.env.FLEET_MODEL_ROUTE;
-  const llmHost = argValue('--host') ?? process.env.FLEET_LLM_HOST ?? DEFAULT_LLM_HOST;
+  const llmHost = argValue('--host') ?? process.env.FLEET_LLM_HOST ?? config.ollama.host;
   const timeoutMs = Number.parseInt(argValue('--timeout-ms') ?? process.env.FLEET_LLM_TIMEOUT_MS ?? '', 10) || DEFAULT_LLM_TIMEOUT_MS;
 
   let assignment: FleetModelAssignment;
@@ -52,16 +50,16 @@ async function main() {
       ...(routeSpec ? { route: parseModelRoute(routeSpec) } : {}),
     });
   } catch (err) {
-    console.error(`[MiniCPM fleet] model selection refused: ${(err as Error).message}`);
+    console.error(`[fleet] model selection refused: ${(err as Error).message}`);
     process.exit(1);
   }
 
-  console.log('Initializing Real-Time Multi-Model Trader Fleet (default: MiniCPM5-2B control)...');
+  console.log('Initializing Real-Time Multi-Model Trader Fleet (Ollama Cloud, default: beam)...');
   console.log(`  LLM host: ${llmHost} · timeout: ${timeoutMs}ms`);
   for (const symbol of SYMBOLS) {
     const tag = assignment.bySymbol[symbol];
     const meta = lookupModelByTag(tag);
-    const metaNote = meta ? ` (${meta.label}, ${meta.sizeGb}GB, ${meta.role})` : '';
+    const metaNote = meta ? ` (${meta.label}, ${meta.role})` : '';
     console.log(`  ${symbol}: ${tag}${metaNote}`);
   }
   // Tags outside the curated shortlist are allowed (custom models), but a typo that happens to
@@ -72,7 +70,7 @@ async function main() {
     }
   }
 
-  const entriesEnabled = process.env.MINICPM_ENTRIES === 'on' || process.argv.includes('--enable-entries');
+  const entriesEnabled = process.env.FLEET_ENTRIES !== 'off' || process.argv.includes('--enable-entries');
   console.log(`  Entries: ${entriesEnabled ? 'ARMED (risk-gated)' : 'OFF (shadow analysis, R1)'}`);
   // [FLEET] Telegram cards per worker buy/sell/exit — same bot config as the main agent, tagged
   // and routed around its alert pipeline. FLEET_TELEGRAM=off is the opt-out.
@@ -92,11 +90,11 @@ async function main() {
   for (const symbol of SYMBOLS) {
     const symKey = symbol.replace('USDT', '').toLowerCase();
     const modelTag = assignment.bySymbol[symbol];
-    const llm = new MiniCpmService({ host: llmHost, model: modelTag, timeoutMs });
+    const llm = new FleetLlmService({ host: llmHost, model: modelTag, timeoutMs, apiKeys: config.ollama.apiKeys });
     const worker = new SymbolTraderWorker(
       {
         symbol,
-        accountId: `crypto-minicpm-${symKey}`,
+        accountId: `crypto-fleet-${symKey}`,
         paperExchangeUrl: paperExchange.url,
         apiKey: paperExchange.apiKey,
         marginPerPosition: 1000,

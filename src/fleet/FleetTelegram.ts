@@ -1,7 +1,7 @@
 import { escapeHtml, sendTelegram, type TelegramDeps } from '../ops/telegram.js';
 
 /**
- * FleetTelegram: per-worker trade notifications for the MiniCPM fleet.
+ * FleetTelegram: per-worker trade notifications for the LLM fleet.
  *
  * The fleet DOES send Telegram notifications for its own trade events — every entry fill
  * (buy/sell), every exit fill (stop-loss / take-profit / break-even) and the break-even lock

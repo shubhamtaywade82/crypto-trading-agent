@@ -18,9 +18,9 @@ export interface StateStore {
   updatedAt: number;
 }
 
-const FILE_PATH = path.resolve('data/minicpm-state.json');
+const FILE_PATH = path.resolve('data/fleet-state.json');
 
-export function loadMiniCpmState(): StateStore {
+export function loadFleetState(): StateStore {
   try {
     if (existsSync(FILE_PATH)) {
       const content = readFileSync(FILE_PATH, 'utf-8');
@@ -31,8 +31,8 @@ export function loadMiniCpmState(): StateStore {
   return { positions: {}, updatedAt: Date.now() };
 }
 
-export function saveMiniCpmPosition(state: PersistedSymbolState): void {
-  const current = loadMiniCpmState();
+export function saveFleetPosition(state: PersistedSymbolState): void {
+  const current = loadFleetState();
   current.positions[state.symbol] = state;
   current.updatedAt = Date.now();
   try {
@@ -40,8 +40,8 @@ export function saveMiniCpmPosition(state: PersistedSymbolState): void {
   } catch {}
 }
 
-export function removeMiniCpmPosition(symbol: string): void {
-  const current = loadMiniCpmState();
+export function removeFleetPosition(symbol: string): void {
+  const current = loadFleetState();
   if (current.positions[symbol]) {
     delete current.positions[symbol];
     current.updatedAt = Date.now();

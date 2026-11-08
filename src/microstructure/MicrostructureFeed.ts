@@ -17,7 +17,7 @@ export const MicroEnvSchema = z.object({
   MICRO_MAX_SLIP_BPS: z.coerce.number().positive().default(10),
   MICRO_SAMPLE_MS: z.coerce.number().int().min(250).max(10_000).default(1_000),
   /** Write one reading per symbol per sample to MICRO_RECORD_DIR, for validating the features offline. */
-  MICRO_RECORD: onOff('off'),
+  MICRO_RECORD: onOff('on'),
   MICRO_RECORD_DIR: z.string().trim().default('data/microstructure'),
   /** Execution-friction gate on futures entries: on refuses BLOCK verdicts, shadow only logs them. Fails closed. */
   MICRO_ENTRY_GATE: z.enum(['off', 'shadow', 'on']).default('on'),

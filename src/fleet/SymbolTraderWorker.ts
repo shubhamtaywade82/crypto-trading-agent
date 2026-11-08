@@ -1,10 +1,10 @@
 import { PaperExchangeClient, type PaperExchangePosition, type PaperExchangeAccountSnapshot } from '../binance/paperExchangeClient.js';
 import { wilderAtr } from '../binance/indicators.js';
-import { MiniCpmService } from './MiniCpmService.js';
-import type { LlmTradeRecommendation, PromptInput } from './MiniCpmPrompt.js';
+import { FleetLlmService } from './FleetLlmService.js';
+import type { LlmTradeRecommendation, PromptInput } from './FleetPrompt.js';
 import type { Candle } from '../types.js';
 import type { MarketState } from '../market/types.js';
-import { loadMiniCpmState, saveMiniCpmPosition, removeMiniCpmPosition } from './MiniCpmStateStore.js';
+import { loadFleetState, saveFleetPosition, removeFleetPosition } from './FleetStateStore.js';
 import type { FleetTradeEvent } from './FleetTelegram.js';
 
 export interface SymbolWorkerConfig {
@@ -50,7 +50,7 @@ export interface EvaluationParams {
 
 export class SymbolTraderWorker {
   private readonly client: PaperExchangeClient;
-  private readonly llm: MiniCpmService;
+  private readonly llm: FleetLlmService;
   private status: WorkerStatus;
   private currentSl: number | null = null;
   private currentTp: number | null = null;
@@ -58,7 +58,7 @@ export class SymbolTraderWorker {
 
   constructor(
     private readonly config: SymbolWorkerConfig,
-    llm: MiniCpmService,
+    llm: FleetLlmService,
   ) {
     this.llm = llm;
     this.client = new PaperExchangeClient(config.paperExchangeUrl, config.accountId, {
@@ -80,7 +80,7 @@ export class SymbolTraderWorker {
       modelTag: config.modelTag,
     };
 
-    const saved = loadMiniCpmState().positions[config.symbol];
+    const saved = loadFleetState().positions[config.symbol];
     if (saved) {
       this.currentSl = saved.stopLoss;
       this.currentTp = saved.takeProfit;
@@ -124,7 +124,7 @@ export class SymbolTraderWorker {
         this.currentSl = null;
         this.currentTp = null;
         this.breakEvenMoved = false;
-        removeMiniCpmPosition(this.config.symbol);
+        removeFleetPosition(this.config.symbol);
       }
 
       this.updateStatusLevels(pos ? pos.currentPrice : null);
@@ -224,7 +224,7 @@ export class SymbolTraderWorker {
     const isLong = this.status.activePosition?.side === 'long';
     this.currentSl = isLong ? Number((markPrice * 0.985).toFixed(4)) : Number((markPrice * 1.015).toFixed(4));
     this.currentTp = isLong ? Number((markPrice * 1.01).toFixed(4)) : Number((markPrice * 0.99).toFixed(4));
-    saveMiniCpmPosition({
+    saveFleetPosition({
       symbol: this.config.symbol,
       entryPrice: this.status.activePosition?.averagePrice ?? markPrice,
       stopLoss: this.currentSl,
@@ -252,7 +252,7 @@ export class SymbolTraderWorker {
         leverage: this.config.leverage,
         marginType: 'isolated',
         executionPrice: markPrice,
-        clientOrderId: `minicpm-${this.config.symbol}-${Date.now()}`,
+        clientOrderId: `fleet-${this.config.symbol}-${Date.now()}`,
       });
 
       if (order.status === 'FILLED' || Number(order.orderId) > 0) {
@@ -278,7 +278,7 @@ export class SymbolTraderWorker {
         };
         this.status.state = 'IN_POSITION';
         this.updateStatusLevels(markPrice);
-        saveMiniCpmPosition({
+        saveFleetPosition({
           symbol: this.config.symbol,
           entryPrice: markPrice,
           stopLoss: rec.stopLoss,
@@ -353,7 +353,7 @@ export class SymbolTraderWorker {
     this.breakEvenMoved = true;
     this.status.breakEvenMoved = true;
     this.status.lastDecision = `Moved SL to Break-Even ($${pos.averagePrice.toFixed(2)}) after +${(gainPct * 10).toFixed(1)}% profit move`;
-    saveMiniCpmPosition({
+    saveFleetPosition({
       symbol: this.config.symbol,
       entryPrice: pos.averagePrice,
       stopLoss: this.currentSl,
@@ -397,7 +397,7 @@ export class SymbolTraderWorker {
         marginType: 'isolated',
         reduceOnly: true,
         executionPrice: currentPrice,
-        clientOrderId: `minicpm-close-${this.config.symbol}-${Date.now()}`,
+        clientOrderId: `fleet-close-${this.config.symbol}-${Date.now()}`,
       });
       this.emitTradeEvent({
         kind: 'EXIT',
@@ -422,7 +422,7 @@ export class SymbolTraderWorker {
       this.status.activePosition = null;
       this.status.state = 'IDLE';
       this.updateStatusLevels(null);
-      removeMiniCpmPosition(this.config.symbol);
+      removeFleetPosition(this.config.symbol);
       await this.syncAccount();
     } catch (err) {
       console.error(`[Worker ${this.config.symbol}] exit error:`, (err as Error).message);

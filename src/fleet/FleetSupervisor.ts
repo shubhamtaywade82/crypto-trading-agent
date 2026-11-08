@@ -2,12 +2,10 @@ import { EventEmitter } from 'node:events';
 import { USDMClient, WebsocketClient } from 'binance';
 import { MarketDataService, DEFAULT_MARKET_DATA_OPTIONS } from '../market/MarketDataService.js';
 import { MarketStateBuilder } from '../market/MarketStateBuilder.js';
-import { MiniCpmService } from './MiniCpmService.js';
+import { FleetLlmService } from './FleetLlmService.js';
 import { SymbolTraderWorker, type WorkerStatus } from './SymbolTraderWorker.js';
 import { resolveFleetPaperExchange } from './fleetPaperExchange.js';
 import {
-  DEFAULT_FLEET_MODEL_ID,
-  DEFAULT_LLM_HOST,
   DEFAULT_LLM_TIMEOUT_MS,
   lookupModelByTag,
   parseModelRoute,
@@ -17,10 +15,10 @@ import { fleetTelegramEnabled, sendFleetEvent } from './FleetTelegram.js';
 import { config } from '../config.js';
 
 /**
- * FleetSupervisor: the MiniCPM multi-model trader fleet embedded in the main `npm run dev` runtime.
+ * FleetSupervisor: the multi-model LLM trader fleet embedded in the main `npm run dev` runtime.
  *
  * The standalone runner (`npm run fleet`) and this supervisor share the SAME worker code path
- * (SymbolTraderWorker + MiniCpmService + FleetModels), so embedded and standalone behavior are
+ * (SymbolTraderWorker + FleetLlmService + FleetModels), so embedded and standalone behavior are
  * identical by construction. The supervisor:
  *
  *   - runs its own Binance market-data snapshot loop and trade WebSocket (self-contained: hosting
@@ -35,7 +33,7 @@ import { config } from '../config.js';
  *     agent's alerting is unaffected. FLEET_TELEGRAM=off is the opt-out.
  *
  * Entries follow the same rule as the standalone fleet: OFF (shadow, R1) unless the operator
- * explicitly exports MINICPM_ENTRIES=on.
+ * explicitly exports FLEET_ENTRIES=on.
  */
 
 export const FLEET_SYMBOLS = ['ETHUSDT', 'SOLUSDT', 'XRPUSDT'] as const;
@@ -128,9 +126,9 @@ export class FleetSupervisor extends EventEmitter {
     }
 
     const argv = this.options.argv ?? process.argv;
-    const modelSpec = this.options.model ?? argValue(argv, '--model') ?? this.env.FLEET_MODEL ?? DEFAULT_FLEET_MODEL_ID;
+    const modelSpec = this.options.model ?? argValue(argv, '--model') ?? this.env.FLEET_MODEL ?? config.ollama.model;
     const routeSpec = this.options.route ?? argValue(argv, '--route') ?? this.env.FLEET_MODEL_ROUTE;
-    const llmHost = this.options.host ?? argValue(argv, '--host') ?? this.env.FLEET_LLM_HOST ?? DEFAULT_LLM_HOST;
+    const llmHost = this.options.host ?? argValue(argv, '--host') ?? this.env.FLEET_LLM_HOST ?? config.ollama.host;
     const timeoutMs =
       Number.parseInt(argValue(argv, '--timeout-ms') ?? this.env.FLEET_LLM_TIMEOUT_MS ?? '', 10) || DEFAULT_LLM_TIMEOUT_MS;
 
@@ -142,7 +140,7 @@ export class FleetSupervisor extends EventEmitter {
       });
       return {
         config: {
-          entriesEnabled: this.env.MINICPM_ENTRIES === 'on' || argv.includes('--enable-entries'),
+          entriesEnabled: this.env.FLEET_ENTRIES !== 'off' || argv.includes('--enable-entries'),
           llmHost,
           timeoutMs,
           assignment: assignment.bySymbol,
@@ -164,7 +162,7 @@ export class FleetSupervisor extends EventEmitter {
       enabled,
       ...(disabledReason ? { disabledReason } : {}),
       entriesEnabled: fleetConfig?.entriesEnabled ?? false,
-      llmHost: fleetConfig?.llmHost ?? DEFAULT_LLM_HOST,
+      llmHost: fleetConfig?.llmHost ?? config.ollama.host,
       startedAt: this.startedAt || Date.now(),
       assignment: fleetConfig?.assignment ?? {},
       bySymbol,
@@ -208,11 +206,11 @@ export class FleetSupervisor extends EventEmitter {
     for (const symbol of FLEET_SYMBOLS) {
       const symKey = symbol.replace('USDT', '').toLowerCase();
       const modelTag = fleetConfig.assignment[symbol];
-      const llm = new MiniCpmService({ host: fleetConfig.llmHost, model: modelTag, timeoutMs: fleetConfig.timeoutMs });
+      const llm = new FleetLlmService({ host: fleetConfig.llmHost, model: modelTag, timeoutMs: fleetConfig.timeoutMs, apiKeys: config.ollama.apiKeys });
       const worker = new SymbolTraderWorker(
         {
           symbol,
-          accountId: `crypto-minicpm-${symKey}`,
+          accountId: `crypto-fleet-${symKey}`,
           paperExchangeUrl: fleetConfig.paperExchange.url,
           apiKey: fleetConfig.paperExchange.apiKey,
           marginPerPosition: 1000,
@@ -325,7 +323,7 @@ export class FleetSupervisor extends EventEmitter {
       enabled: false,
       disabledReason: resolved.disabledReason ?? 'not started',
       entriesEnabled: resolved.config?.entriesEnabled ?? false,
-      llmHost: resolved.config?.llmHost ?? DEFAULT_LLM_HOST,
+      llmHost: resolved.config?.llmHost ?? config.ollama.host,
       startedAt: 0,
       assignment: resolved.config?.assignment ?? {},
       bySymbol: {},

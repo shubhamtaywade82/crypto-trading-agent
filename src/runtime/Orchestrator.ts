@@ -58,6 +58,7 @@ import { PositionDriver } from '../position/PositionDriver.js';
 import type { LiveBook } from '../binance/liveBook.js';
 import { featuresFromState } from '../position/features.js';
 import { PositionManagerStore } from '../position/PositionManagerStore.js';
+import { TrailingShadow } from '../trailing/shadow.js';
 import { pmConfigFromEnv } from '../position/pmConfig.js';
 import { getSymbolRules } from '../binance/symbolRules.js';
 import { optionsConfigFromEnv, type OptionsConfig } from '../options/config.js';
@@ -190,6 +191,10 @@ export class Orchestrator extends EventEmitter {
     ? this.binance.createLiveBook(config.positionManager.live, (message, level) => this.log('SYSTEM', message, level))
     : null;
   /** Tick-driven position manager (partials, breakeven, chandelier/structure trail): paper, remote paper, and live when LIVE_POSITION_MANAGER is shadow or on. */
+  /** Trailing policy engine in shadow: logs the stop moves it would make, sends nothing (TRAILING_ENGINE). */
+  private trailingShadow: TrailingShadow | null = config.trailingEngine === 'shadow'
+    ? new TrailingShadow({ getKlines: (symbol, interval, limit) => this.binance.getKlines(symbol, interval, limit), log: (message) => this.log('SYSTEM', message, 'info') })
+    : null;
   private positionDriver: PositionDriver | null = config.positionManager.enabled && (config.mode === 'paper' || this.liveBook !== null)
     ? new PositionDriver({
       venue: this.liveBook ? this.liveBook.venue() : this.binance,
@@ -429,7 +434,9 @@ export class Orchestrator extends EventEmitter {
     for (const g of this.recorder.process(this.binance.getTrades())) this.logGrade(g);
     const signals = await this.collectSignals(ctx);
     await this.processSignals(signals, ctx);
-    this.trailStops(await this.binance.getPositions(), ctx);
+    const openPositions = await this.binance.getPositions();
+    this.trailStops(openPositions, ctx);
+    this.trailingShadow?.observe(openPositions).catch((err: unknown) => this.logFailure('Trailing shadow failed', err));
     await this.consultAdvisor(signals, ctx.positions ?? []);
     await this.emitState(ctx);
   }

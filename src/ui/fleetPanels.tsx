@@ -1,7 +1,7 @@
 import chalk from 'chalk';
 import stringWidth from 'string-width';
-import type { FleetState } from '../minicpm/FleetSupervisor.js';
-import { shortModelTag } from '../minicpm/FleetModels.js';
+import type { FleetState } from '../fleet/FleetSupervisor.js';
+import { shortModelTag } from '../fleet/FleetModels.js';
 import { padLine, rule } from './format.js';
 
 /**

@@ -5,7 +5,7 @@ import {
   formatFleetEventHtml,
   sendFleetEvent,
   type FleetTradeEvent,
-} from '../src/minicpm/FleetTelegram.js';
+} from '../src/fleet/FleetTelegram.js';
 
 interface CapturedCall {
   url: string;

@@ -12,8 +12,9 @@ export const EnvSchema = z.object({
   BINANCE_API_SECRET: z.string().default(''),
   // Testnet REST and user-data stream. Only scripts/binance-testnet-verify.ts may run with it: the cockpit's market feed is production
   BINANCE_TESTNET: z.enum(['off', 'on']).default('off'),
-  OLLAMA_HOST: z.string().default('http://127.0.0.1:11434'),
-  OLLAMA_MODEL: z.string().default('gemma4:31b'),
+  // Ollama Cloud free tier (2026-11): beam, gemma4:31b, gpt-oss:120b/20b, nemotron-3-*. beam is free and preferred.
+  OLLAMA_HOST: z.string().default('https://ollama.com'),
+  OLLAMA_MODEL: z.string().default('beam'),
   OLLAMA_TECHNICAL_MODEL: z.string().optional(),
   OLLAMA_LIQUIDITY_MODEL: z.string().optional(),
   OLLAMA_DERIVATIVES_MODEL: z.string().optional(),
@@ -28,6 +29,7 @@ export const EnvSchema = z.object({
    * off: not constructed. shadow: evaluate every risk-approved entry and audit it, refuse nothing.
    * on: a BLOCK verdict refuses the candidate, fail-closed on timeouts and malformed responses.
    * Refused with MODE=live (see superRefine) until out-of-sample evidence exists — same bar as the council.
+   * Off by default: tev1 is a local fine-tune behind /v1/systemone, which Ollama Cloud does not serve.
    */
   TEV1_GATE: z.enum(['off', 'shadow', 'on']).default('off'),
   /** Host serving Ollama /v1/systemone. Defaults to OLLAMA_HOST, but can be set separately (e.g. local daemon when OLLAMA_HOST is cloud). */
@@ -77,13 +79,15 @@ export const EnvSchema = z.object({
   SIZE_VOL_SCALING: z.enum(['off', 'on']).default('on'),
   SIZE_SCORE_SCALING: z.enum(['off', 'on']).default('on'),
 
-  /** Off by default: on 90-day real-kline replays of BTC/ETH/SOL in two windows no manager variant beat the fixed stop/target (see README). */
-  POSITION_MANAGER: z.enum(['off', 'on']).default('off'),
+  /** On by default by operator choice (2026-11-08). In 90-day real-kline replays of BTC/ETH/SOL no manager variant beat the fixed stop/target (see README); set off to return to fixed stop/target. */
+  POSITION_MANAGER: z.enum(['off', 'on']).default('on'),
   /**
-   * Position manager on live Binance. off = exchange-side stops only (default). shadow = compute and log what it would
-   * do against an in-memory overlay, send nothing. on = send real reduce-only and stop-replacement orders. Needs POSITION_MANAGER=on.
+   * Position manager on live Binance. off = exchange-side stops only. shadow = compute and log what it would
+   * do against an in-memory overlay, send nothing. on (default) = send real reduce-only and stop-replacement orders. Needs POSITION_MANAGER=on.
    */
-  LIVE_POSITION_MANAGER: z.enum(['off', 'shadow', 'on']).default('off'),
+  LIVE_POSITION_MANAGER: z.enum(['off', 'shadow', 'on']).default('on'),
+  /** Trailing policy engine (src/trailing). shadow (default) logs the stop moves and exits it would make, sends nothing. */
+  TRAILING_ENGINE: z.enum(['off', 'shadow']).default('shadow'),
   PM_TP1_R: z.coerce.number().positive().default(1),
   PM_TP1_FRACTION: z.coerce.number().gt(0).lt(1).default(0.35),
   PM_TP2_R: z.coerce.number().positive().default(2),
@@ -265,6 +269,7 @@ export const config = {
     volatilityScaling: env.SIZE_VOL_SCALING === 'on',
     scoreScaling: env.SIZE_SCORE_SCALING === 'on',
   },
+  trailingEngine: env.TRAILING_ENGINE,
   positionManager: {
     enabled: env.POSITION_MANAGER === 'on',
     live: env.LIVE_POSITION_MANAGER,

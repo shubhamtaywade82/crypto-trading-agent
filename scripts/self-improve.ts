@@ -228,7 +228,7 @@ async function main(): Promise<void> {
       listModels: async () => [],
       generateText: (req) => advisor.generateText(req),
     };
-    const requestedModel = arg('model', process.env.RESEARCH_MODEL ?? 'openbmb/minicpm5-2b:latest');
+    const requestedModel = arg('model', process.env.RESEARCH_MODEL ?? 'beam');
     const routerConfig = {
       smallModel: requestedModel,
       largeModel: requestedModel,

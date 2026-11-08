@@ -167,13 +167,13 @@ test('ModelRouter is deterministic — same diagnostics produce the same choice'
 
 test('ModelRouter with custom model names uses them in the choice', () => {
   const config: ModelRouterConfig = {
-    smallModel: 'minicpm5:2b',
+    smallModel: 'beam',
     largeModel: 'llama3:8b',
     threshold: DEFAULT_ESCALATION_THRESHOLD,
   };
   const router = new ModelRouter(config);
   const localChoice = router.decide(coldStart);
-  assert.equal(localChoice.model, 'minicpm5:2b');
+  assert.equal(localChoice.model, 'beam');
   // Build a complex diagnostics to test the large model.
   const d: ResearchDiagnostics = {
     ...coldStart,

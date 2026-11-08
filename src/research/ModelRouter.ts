@@ -1,12 +1,12 @@
 /**
  * Model router for the research plane — adapted from agent-tui's `supervisor/router/` pattern.
  *
- * The agent-tui version classifies intent (CODE_REVIEW, TOOL_EXECUTION, etc.) and routes to a MiniCPM5
+ * The agent-tui version classifies intent (CODE_REVIEW, TOOL_EXECUTION, etc.) and routes to a small
  * sub-agent model, escalating to a fallback model for complex tasks. The research-plane version does the
  * same thing but for hypothesis generation: simple diagnostics (few cells, no prior experiments, clear
- * negative-expectancy pattern) route to a small local model (e.g. qwen2.5:3b); complex diagnostics
- * (many cells, prior experiments to reason about, conflicting signals) escalate to a larger model
- * (e.g. qwen2.5:7b).
+ * negative-expectancy pattern) route to the default cloud model (beam); complex diagnostics
+ * (many cells, prior experiments to reason about, conflicting signals) escalate to a larger cloud model
+ * (gpt-oss:120b). Both are on the Ollama Cloud free tier.
  *
  * Why this matters:
  *   - The ResearchAgent runs the LLM on every loop iteration. If every iteration uses the 7B model,
@@ -45,17 +45,17 @@ export const DEFAULT_ESCALATION_THRESHOLD = 0.5;
 
 /** Configuration for the model router. */
 export interface ModelRouterConfig {
-  /** The small model — used for simple diagnostics. Default: 'qwen2.5:3b'. */
+  /** The small model — used for simple diagnostics. Default: 'beam'. */
   smallModel: string;
-  /** The large model — used for complex diagnostics. Default: 'qwen2.5:7b'. */
+  /** The large model — used for complex diagnostics. Default: 'gpt-oss:120b'. */
   largeModel: string;
   /** The escalation threshold (0..1). Scores at or above this escalate. Default: 0.5. */
   threshold: number;
 }
 
 export const DEFAULT_MODEL_ROUTER_CONFIG: ModelRouterConfig = {
-  smallModel: 'qwen2.5:3b',
-  largeModel: 'qwen2.5:7b',
+  smallModel: 'beam',
+  largeModel: 'gpt-oss:120b',
   threshold: DEFAULT_ESCALATION_THRESHOLD,
 };
 

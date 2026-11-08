@@ -1,6 +1,6 @@
-# MiniCPM-2B Autonomous 24/7 Multi-Symbol Trading Fleet
+# LLM Autonomous 24/7 Multi-Symbol Trading Fleet
 
-A real-time, autonomous trading agent running on Binance USD-M Futures market data and powered by a local `openbmb/minicpm5-2b:latest` (Ollama) model (the **control model** — see [Model Selection](#6-model-selection--ab-routing)), connected to isolated accounts on `paper_exchange`.
+A real-time, autonomous trading agent running on Binance USD-M Futures market data and powered by an Ollama Cloud free-tier model, `beam` by default (the **control model** — see [Model Selection](#6-model-selection--ab-routing)), connected to isolated accounts on `paper_exchange`.
 
 ---
 
@@ -27,7 +27,7 @@ A real-time, autonomous trading agent running on Binance USD-M Futures market da
                 └────────────────────────────┼────────────────────────────┘
                                              ▼
                       ┌──────────────────────────────────────────────┐
-                      │    Local LLM (default: minicpm5-2b control)  │
+                      │    Cloud LLM (default: beam control)         │
                       │   - Swappable per symbol (FleetModels.ts)    │
                       │   - Dynamic SL / TP / Entry Decision         │
                       │   - Min 5% Return on Capital Target          │
@@ -91,19 +91,17 @@ Each symbol runs in an independent, isolated ledger on `paper_exchange`:
 
 | Symbol | Paper Account ID | Starting Margin | Leverage | Margin Type |
 | :--- | :--- | :--- | :--- | :--- |
-| **ETHUSDT** | `crypto-minicpm-eth` | $1,000.00 | 10x | Isolated |
-| **SOLUSDT** | `crypto-minicpm-sol` | $1,000.00 | 10x | Isolated |
-| **XRPUSDT** | `crypto-minicpm-xrp` | $1,000.00 | 10x | Isolated |
+| **ETHUSDT** | `crypto-fleet-eth` | $1,000.00 | 10x | Isolated |
+| **SOLUSDT** | `crypto-fleet-sol` | $1,000.00 | 10x | Isolated |
+| **XRPUSDT** | `crypto-fleet-xrp` | $1,000.00 | 10x | Isolated |
 
 ---
 
 ## 5. Running the 24/7 Live Fleet
 
 ### Prerequisites
-1. Ensure Ollama is running with `openbmb/minicpm5-2b:latest` (or the model you selected):
-   ```bash
-   ollama run openbmb/minicpm5-2b:latest
-   ```
+1. Set `OLLAMA_HOST=https://ollama.com` and up to five Ollama Cloud keys as `OLLAMA_API_KEY_1` … `OLLAMA_API_KEY_5`.
+   The fleet rotates across every key per call and fails over to the next key on an error or rate limit.
 2. Ensure the local paper exchange backend is up:
    ```bash
    cd /home/nemesis/projects/apps/paper_exchange && docker compose up -d
@@ -112,7 +110,7 @@ Each symbol runs in an independent, isolated ledger on `paper_exchange`:
 ### Launch Command
 From the `crypto-trading-agent` project directory:
 ```bash
-npm run fleet            # alias for: npx tsx scripts/run-minicpm-fleet.ts
+npm run fleet            # alias for: npx tsx scripts/run-fleet.ts
 ```
 
 Equivalently: `npm run fleet:shadow` (same command — the fleet ships in shadow mode; entries stay off).
@@ -121,7 +119,7 @@ Entry execution is opt-in and deliberately not an npm alias. To arm entries the 
 set the environment variable explicitly on the command line, so the decision is visible in
 shell history and process listings:
 ```bash
-MINICPM_ENTRIES=on npx tsx scripts/run-minicpm-fleet.ts
+FLEET_ENTRIES=on npx tsx scripts/run-fleet.ts
 ```
 
 For long production runs spanning weeks with memory capping:
@@ -142,8 +140,8 @@ The runner displays a continuous live terminal cockpit updated up to 4 times per
 ## 5b. Embedded in `npm run dev` (the FLEET view)
 
 The fleet also runs **inside the main dev cockpit** — `npm run dev` hosts a `FleetSupervisor`
-(`src/minicpm/FleetSupervisor.ts`) that shares the exact worker code path with the standalone
-runner (`SymbolTraderWorker` + `MiniCpmService` + `FleetModels`), so embedded and standalone
+(`src/fleet/FleetSupervisor.ts`) that shares the exact worker code path with the standalone
+runner (`SymbolTraderWorker` + `FleetLlmService` + `FleetModels`), so embedded and standalone
 behavior are identical by construction. Press **Tab** or **m** to cycle views:
 `cockpit → MTF → liquidity → FLEET`.
 
@@ -156,7 +154,7 @@ Properties of the embedded fleet:
   and the FLEET view shows the parked explanation and the enable instructions.
 * **Sends its own `[FLEET]` Telegram trade notifications**: every worker's entry fill (buy/sell),
   exit fill (stop-loss / take-profit / break-even) and break-even lock posts a `[FLEET] SYMBOL
-  BUY/SELL` card (`src/minicpm/FleetTelegram.ts`) to the same Telegram bot/chat config the
+  BUY/SELL` card (`src/fleet/FleetTelegram.ts`) to the same Telegram bot/chat config the
   operator already uses (`TELEGRAM_TRADING_BOT_TOKEN` or `TELEGRAM_BOT_TOKEN`, plus
   `TELEGRAM_CHAT_ID`) — nothing new to configure. The card carries the symbol, the order side,
   the entry/exit price, SL/TP, the realized PnL on exits, the model tag that produced the
@@ -169,7 +167,7 @@ Properties of the embedded fleet:
   Opt out with `FLEET_TELEGRAM=off`. Shadow-mode decisions (no order) never notify; only
   actual fills and protection moves do. The same notifications run in the standalone fleet.
 * **Same entry rule as standalone**: entries stay OFF (shadow, R1) unless the operator exports
-  `MINICPM_ENTRIES=on` on the command line.
+  `FLEET_ENTRIES=on` on the command line.
 * Same model selection as the standalone runner (`--model`, `--route`, `FLEET_MODEL`,
   `FLEET_MODEL_ROUTE`, `--host`, `--timeout-ms` flags/env all work on `npm run dev` too).
 
@@ -177,59 +175,48 @@ Properties of the embedded fleet:
 npm run dev                                        # fleet embeds in shadow mode when the token exists
 FLEET_IN_DEV=off npm run dev                       # main agent only, no embedded fleet
 FLEET_MODEL_ROUTE='ETH=qwen3.5:2b' npm run dev     # embedded A/B routing, same rules as standalone
-MINICPM_ENTRIES=on npm run dev                     # ARM entries in the embedded fleet (explicit, visible)
+FLEET_ENTRIES=on npm run dev                     # ARM entries in the embedded fleet (explicit, visible)
 ```
 
 ---
 
 ## 6. Model Selection & A/B Routing
 
-The fleet's decision LLM is **not hard-coded**. `MiniCpmService` is model-agnostic — the
+The fleet's decision LLM is **not hard-coded**. `FleetLlmService` is model-agnostic — the
 prompt and the JSON validation contract are identical for every model — and the runner
 accepts a fleet-wide default plus per-symbol overrides:
 
 ```bash
-# Fleet-wide model (registry id or raw Ollama tag); default is the MiniCPM5-2B control
-npm run fleet -- --model qwen3.5-2b
-FLEET_MODEL=qwen3.5:2b npm run fleet
+# Fleet-wide model (registry id or raw Ollama tag); default is OLLAMA_MODEL (beam)
+npm run fleet -- --model gpt-oss-20b
+FLEET_MODEL=gpt-oss:20b npm run fleet
 
 # Per-symbol A/B routing under identical market conditions
-npm run fleet -- --route 'ETH=qwen3.5:2b,SOL=lfm2.5-2.6b,XRP=minicpm5-2b'
-FLEET_MODEL_ROUTE='ETH=qwen3.5-2b,SOL=lfm2.5-2.6b' npm run fleet
+npm run fleet -- --route 'ETH=gpt-oss:20b,SOL=gemma4-31b,XRP=beam'
+FLEET_MODEL_ROUTE='ETH=gpt-oss-20b,SOL=gemma4-31b' npm run fleet
 
-# LLM host and per-request timeout (raise for thinking models on modest GPUs)
-npm run fleet -- --host http://127.0.0.1:11434 --timeout-ms 60000
+# LLM host and per-request timeout (raise for the larger reasoning models)
+npm run fleet -- --host https://ollama.com --timeout-ms 60000
 ```
 
-Env vars: `FLEET_MODEL`, `FLEET_MODEL_ROUTE`, `FLEET_LLM_HOST`, `FLEET_LLM_TIMEOUT_MS`.
+Env vars: `FLEET_MODEL`, `FLEET_MODEL_ROUTE`, `FLEET_LLM_HOST`, `FLEET_LLM_TIMEOUT_MS`. Unset, the fleet uses the
+main `OLLAMA_HOST` and `OLLAMA_MODEL`, and every `OLLAMA_API_KEY_n`.
 Flags win over env vars. A route naming a symbol the fleet does not trade fails at boot —
 a typo can never silently strand a worker on the control model. Every opened position is
-persisted with `openedByModel` in `data/minicpm-state.json` so model comparison ledgers
+persisted with `openedByModel` in `data/fleet-state.json` so model comparison ledgers
 attribute outcomes correctly even when the assignment changes mid-flight.
 
-### Curated shortlist (src/minicpm/FleetModels.ts)
+### Registry: Ollama Cloud free tier (src/fleet/FleetModels.ts)
 
-| id | Ollama tag | Size | Marketed strengths | Suggested role here |
-|---|---|---|---|---|
-| `minicpm5-2b` *(default)* | `openbmb/minicpm5-2b:latest` | ~2.0 GB | lightweight coding, local trading analysis | **control** |
-| `qwen3.5-2b` | `qwen3.5:2b` | 2.7–3.1 GB | thinking, tool use, instruction following | trading-analysis (first A/B candidate) |
-| `qwen3-4b` | `qwen3:4b` | 2.5 GB | thinking, function calling, agent workflows | reasoning |
-| `lfm2.5-2.6b` | `LiquidAI/lfm2.5-2.6b` | 1.7 GB | native tool calling, agentic RL | tool-execution |
-| `granite4.2-3b` | `granite4.2:3b` | 2.2 GB | native tools, structured JSON | structured output |
-| `nemotron3-nano-4b` | `nemotron-3-nano:4b` | 2.8–2.9 GB | thinking, tools, unified modes | reasoning |
-| `qwen3-1.7b` | `qwen3:1.7b` | 1.4 GB | tool selection | lightweight routing |
-| `lfm2.5-1.2b` | `LiquidAI/lfm2.5-1.2b-instruct` | 0.73 GB | tool selection, tiny footprint | lightweight routing |
-
-```bash
-ollama pull openbmb/minicpm5-2b:latest   # control (already installed)
-ollama pull qwen3.5:2b                    # first challenger
-ollama pull LiquidAI/lfm2.5-2.6b          # agentic candidate
-ollama pull granite4.2:3b                 # structured-JSON candidate
-ollama pull qwen3:4b
-ollama pull qwen3:1.7b
-ollama pull LiquidAI/lfm2.5-1.2b-instruct
-ollama pull nemotron-3-nano:4b
-```
+| id | Ollama tag | Marketed strengths | Suggested role here |
+|---|---|---|---|
+| `beam` *(default)* | `beam` | thinking, instruction following | **control** |
+| `gemma4-31b` | `gemma4:31b` | structured output, instruction following | structured |
+| `gpt-oss-120b` | `gpt-oss:120b` | reasoning, tool use | reasoning (slowest) |
+| `gpt-oss-20b` | `gpt-oss:20b` | reasoning, tool use | trading-analysis |
+| `nemotron-3-nano-30b` | `nemotron-3-nano:30b` | thinking, tools | trading-analysis |
+| `nemotron-3-super` | `nemotron-3-super` | thinking, tools | reasoning |
+| `nemotron-3-ultra` | `nemotron-3-ultra` | thinking, tools | reasoning |
 
 ### What the shortlist is NOT
 
@@ -242,7 +229,7 @@ self-improve`, docs/RESEARCH_SYSTEM.md): positive OOS mean, bootstrap LCB > 0, D
 the actual per-trade Sharpe, and a sample large enough for the claimed edge.
 
 Recommended evaluation protocol (identical conditions per candidate):
-1. Keep `minicpm5-2b` as the control on one symbol; route the challenger to another
+1. Keep `beam` as the control on one symbol; route the challenger to another
    symbol on the same feed, same prompt, same risk rules.
 2. Run shadow mode (entries off) first; compare decision quality before comparing PnL.
 3. Raise `--timeout-ms` for thinking models; record latency alongside decisions.

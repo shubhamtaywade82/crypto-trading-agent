@@ -145,7 +145,7 @@ function renderHeaderBox(ctx: DashboardContext, totals: DashboardTotals, boxWidt
 
   console.log(chalk.bold.cyan('╔' + '═'.repeat(boxWidth) + '╗'));
   const row1Left =
-    chalk.bold.white(' ⬡ MINICPM-2B COCKPIT v2.0 ') +
+    chalk.bold.white(' ⬡ LLM FLEET COCKPIT ') +
     chalk.gray('│ Uptime: ') + chalk.yellow(timeStr) +
     chalk.gray(' │ Active: ') + chalk.bold.white(`${totals.activeCount}/3 Symbols`);
   const row1Right =
@@ -190,7 +190,7 @@ function renderWorkerRow(w: WorkerStatus, boxWidth: number): void {
     const cellPnl = padCell(chalk.gray('$0.00 (0.0%)'), wPnl, 'center');
     const trajText = w.stopLoss && w.takeProfit
       ? chalk.cyan(`[SET] SL: ${fmtPrice(w.stopLoss)} ➔ TP: ${fmtPrice(w.takeProfit)}`)
-      : chalk.italic.gray('Scanning market with MiniCPM...');
+      : chalk.italic.gray('Scanning market with LLM...');
     const cellTraj = padCell(trajText, wTraj, 'center');
     console.log(chalk.bold.cyan('║') + cellAsset + chalk.gray('│') + cellSide + chalk.gray('│') + cellPrice + chalk.gray('│') + cellPnl + chalk.gray('│') + cellTraj + chalk.bold.cyan('║'));
     return;

@@ -2,9 +2,11 @@ import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
 import path from 'node:path';
 import { test } from 'node:test';
-import { FleetSupervisor } from '../src/minicpm/FleetSupervisor.js';
+import { FleetSupervisor } from '../src/fleet/FleetSupervisor.js';
+import { resolveModelTag } from '../src/fleet/FleetModels.js';
+import { config } from '../src/config.js';
 
-const TOKEN_ENV = { PAPER_EXCHANGE_API_KEY: 'test-token', MINICPM_ENTRIES: 'off' } as const;
+const TOKEN_ENV = { PAPER_EXCHANGE_API_KEY: 'test-token', FLEET_ENTRIES: 'off' } as const;
 
 function expectStateEvents(supervisor: FleetSupervisor, count = 1): Promise<InstanceType<typeof FleetSupervisor> extends never ? never : any[]> {
   return new Promise((resolve) => {
@@ -37,7 +39,7 @@ test('FLEET_IN_DEV=off parks the fleet even when the token exists', async () => 
 });
 
 test('a bad model route parks the fleet with the refusal reason (boot fail-closed)', async () => {
-  const supervisor = new FleetSupervisor({ env: TOKEN_ENV, model: 'qwen3.5-2b', route: 'DOGE=qwen3:4b' });
+  const supervisor = new FleetSupervisor({ env: TOKEN_ENV, model: 'gpt-oss-20b', route: 'DOGE=gemma4:31b' });
   const states = expectStateEvents(supervisor, 1);
   await supervisor.start();
   const [state] = await states;
@@ -46,33 +48,30 @@ test('a bad model route parks the fleet with the refusal reason (boot fail-close
   supervisor.stop();
 });
 
-test('with the token the supervisor resolves the control-model assignment for every symbol', () => {
+test('with the token the supervisor assigns the main OLLAMA_MODEL to every symbol', () => {
   const supervisor = new FleetSupervisor({ env: TOKEN_ENV });
   const state = supervisor.state;
+  const expected = resolveModelTag(config.ollama.model);
   assert.equal(state.enabled, false, 'not started yet — but config is resolved');
-  assert.deepEqual(state.assignment, {
-    ETHUSDT: 'openbmb/minicpm5-2b:latest',
-    SOLUSDT: 'openbmb/minicpm5-2b:latest',
-    XRPUSDT: 'openbmb/minicpm5-2b:latest',
-  });
-  assert.equal(state.entriesEnabled, false, 'entries stay OFF without MINICPM_ENTRIES=on');
+  assert.deepEqual(state.assignment, { ETHUSDT: expected, SOLUSDT: expected, XRPUSDT: expected });
+  assert.equal(state.entriesEnabled, false, 'entries stay OFF without FLEET_ENTRIES=on');
 });
 
 test('a per-symbol route overrides only the named symbols in the resolved config', () => {
-  const supervisor = new FleetSupervisor({ env: TOKEN_ENV, model: 'qwen3.5-2b', route: 'ETH=lfm2.5-2.6b' });
+  const supervisor = new FleetSupervisor({ env: TOKEN_ENV, model: 'gpt-oss-20b', route: 'ETH=gemma4-31b' });
   const state = supervisor.state;
-  assert.equal(state.assignment['ETHUSDT'], 'LiquidAI/lfm2.5-2.6b');
-  assert.equal(state.assignment['SOLUSDT'], 'qwen3.5:2b');
-  assert.equal(state.assignment['XRPUSDT'], 'qwen3.5:2b');
+  assert.equal(state.assignment['ETHUSDT'], 'gemma4:31b');
+  assert.equal(state.assignment['SOLUSDT'], 'gpt-oss:20b');
+  assert.equal(state.assignment['XRPUSDT'], 'gpt-oss:20b');
 });
 
-test('MINICPM_ENTRIES=on arms entries in the resolved config (same rule as the standalone fleet)', () => {
-  const supervisor = new FleetSupervisor({ env: { ...TOKEN_ENV, MINICPM_ENTRIES: 'on' } });
+test('FLEET_ENTRIES=on arms entries in the resolved config (same rule as the standalone fleet)', () => {
+  const supervisor = new FleetSupervisor({ env: { ...TOKEN_ENV, FLEET_ENTRIES: 'on' } });
   assert.equal(supervisor.state.entriesEnabled, true);
 });
 
 test('the embedded fleet never touches the main agent alert pipeline (only the low-level Telegram sender)', () => {
-  const dir = path.resolve('src/minicpm');
+  const dir = path.resolve('src/fleet');
   const offenders: string[] = [];
   for (const file of readdirSync(dir)) {
     if (!file.endsWith('.ts') && !file.endsWith('.tsx')) continue;
@@ -84,7 +83,7 @@ test('the embedded fleet never touches the main agent alert pipeline (only the l
       offenders.push(file);
     }
   }
-  assert.deepEqual(offenders, [], 'src/minicpm must not import the main agent alert pipeline (alerts/cards/hooks/sendAlert)');
+  assert.deepEqual(offenders, [], 'src/fleet must not import the main agent alert pipeline (alerts/cards/hooks/sendAlert)');
 
   // The single deliberate import point: FleetTelegram imports the low-level sendTelegram only.
   const fleetTelegram = readFileSync(path.join(dir, 'FleetTelegram.ts'), 'utf8');
@@ -115,7 +114,7 @@ test('the fleet screen renders a parked explanation and never throws on partial 
       assignment: { ETHUSDT: 'qwen3.5:2b' },
       bySymbol: {
         ETHUSDT: {
-          symbol: 'ETHUSDT', accountId: 'crypto-minicpm-eth', state: 'IN_POSITION',
+          symbol: 'ETHUSDT', accountId: 'crypto-fleet-eth', state: 'IN_POSITION',
           activePosition: { unrealizedPnl: 12.5, side: 'long', currentPrice: 2400.1 } as never,
           account: null, stopLoss: 2350, takeProfit: 2460, slDistancePct: -2, tpDistancePct: 2.5,
           breakEvenMoved: false, lastDecision: 'ENTER_LONG @ 2400 | SL: 2350 | TP: 2460 (reclaimed support) [R1: entries off]',

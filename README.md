@@ -7,19 +7,19 @@ built on Ink. Routes orders to either a local in-memory paper engine, a remote
 
 ---
 
-## ⚡ MiniCPM-2B Autonomous 24/7 Trading Fleet
+## ⚡ LLM Autonomous 24/7 Trading Fleet
 
-A dedicated, real-time autonomous trading system powered by local **`openbmb/minicpm5-2b:latest`** (Ollama) and Binance WebSocket feeds.
+A dedicated, real-time autonomous trading system powered by Ollama Cloud free-tier models (**`beam`** by default, rotating across `OLLAMA_API_KEY_1`…`_5`) and Binance WebSocket feeds.
 
-* **Full Guide & Documentation**: [docs/MINICPM_TRADING_FLEET.md](docs/MINICPM_TRADING_FLEET.md)
+* **Full Guide & Documentation**: [docs/LLM_TRADING_FLEET.md](docs/LLM_TRADING_FLEET.md)
 * **Macro Anchor**: `BTCUSDT` is used strictly as a market context anchor (trend, momentum, 24h delta) to guide trades on `ETHUSDT`, `SOLUSDT`, and `XRPUSDT`.
 * **Capital & Sizing**: **$1,000.00 account** with **$980.00 margin** per position at **10x isolated leverage** ($9,800 notional). The remaining $20.00 (2%) is held in cash to prevent order rejection from exchange taker fees.
 * **Profit Target**: Mandatory minimum **$\ge 5\%$ return on capital** ($\ge 0.5\%$ price distance from entry) and minimum $R/R \ge 1.5$.
 * **Exits**: Evaluated and triggered **instantly on real-time sub-second WebSocket ticks**.
-* **Entries paused.** `scripts/run-minicpm-fleet.ts` sets `entriesEnabled: false`: this order path sizes by fixed margin and uses the LLM's stop distance unbounded, so it bypasses RiskEngine. Open positions are still managed. See the spec, section 2 (R1).
+* **Entries on by default** (paper_exchange only; `FLEET_ENTRIES=off` to pause). This order path sizes by fixed margin and uses the LLM's stop distance unbounded, so it bypasses RiskEngine. See the spec, section 2 (R1).
 * **Launch Command**:
   ```bash
-  npx tsx scripts/run-minicpm-fleet.ts
+  npx tsx scripts/run-fleet.ts
   ```
 
 ---
@@ -316,7 +316,7 @@ websocket silent > `SAFETY_TICK_STALE_MS` → NO_ENTRY (HALT if the REST mark is
 by a volume z-score or a spread blow-out, left only after `SHOCK_RECOVERY_BARS` calm bars. The gate never closes anything:
 a protected position keeps its stop and its manager through a bad feed. Replay has no tick feed, so the gate does not apply there.
 
-**Status: off by default (`POSITION_MANAGER=off`), because replay does not support turning it on.** 90-day replays of the
+**Status: on by default since 2026-11-08 by operator choice, although replay does not support it. Set `POSITION_MANAGER=off` for the fixed stop/target that won the replays.** 90-day replays of the
 whole fleet on real Binance klines (BTC, ETH, SOL; the last 90 days and the 90 before them; `scripts/pm-sweep.ts`, data from
 `--source archive`), pooled, net of fees and slippage:
 
@@ -425,7 +425,7 @@ was fixed.
 | `MODE` | `paper` | `paper` or `live` |
 | `BINANCE_API_KEY` / `BINANCE_API_SECRET` | (empty) | Required for `MODE=live` (market data always, and today's only order execution path) |
 | `COINDCX_API_KEY` / `COINDCX_API_SECRET` / `COINDCX_PAPER_MODE` / `COINDCX_QUOTE_PREFERENCE` / `COINDCX_MAX_ORDER_NOTIONAL` / `COINDCX_MAX_ORDER_QUANTITY` / `COINDCX_INITIAL_BALANCE` | see `.env.example` | The key and secret are refused when `MODE=live` (see "Modes" and issue #31). No other code path reads them |
-| `OLLAMA_HOST` | `http://127.0.0.1:11434` | Ollama daemon URL (`https://ollama.com` for cloud). The advisor, council, research and MiniCpm fleet layers all call Ollama through [`@nemesis-oss/ollama-sdk`](https://github.com/shubhamtaywade82/ollama-sdk); JSON mode (`format: "json"`) is requested only from local hosts because the SDK refuses `format` requests against cloud endpoints, so elsewhere the prompts demand JSON and replies are parsed tolerantly (code fences / prose around the object) |
+| `OLLAMA_HOST` | `http://127.0.0.1:11434` | Ollama daemon URL (`https://ollama.com` for cloud). The advisor, council, research and LLM fleet layers all call Ollama through [`@nemesis-oss/ollama-sdk`](https://github.com/shubhamtaywade82/ollama-sdk); JSON mode (`format: "json"`) is requested only from local hosts because the SDK refuses `format` requests against cloud endpoints, so elsewhere the prompts demand JSON and replies are parsed tolerantly (code fences / prose around the object) |
 | `OLLAMA_MODEL` | `gemma4:31b` | Model used for veto/advise/ask |
 | `MIN_LEVERAGE` | `5` | Floor for the dynamic-leverage calculation; at least 1 and no greater than `MAX_LEVERAGE`. Leverage is lowered from the requested value until the isolated liquidation price clears the stop, and an entry is refused if even this floor does not |
 | `MAX_LEVERAGE` | `10` | Ceiling for the dynamic-leverage calculation |

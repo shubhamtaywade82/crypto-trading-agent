@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { test } from 'node:test';
 import stringWidth from 'string-width';
-import { LiquidityEventTracker, type BucketSample } from '../src/microstructure/LiquidityEvents.js';
+import { LiquidityEventTracker, LiquidationTracker, type BucketSample } from '../src/microstructure/LiquidityEvents.js';
 import { LocalOrderBook, type DepthDiff } from '../src/microstructure/LocalOrderBook.js';
 import { DEFAULT_MICRO_OPTIONS, MicrostructureEngine, niceBucket, slippageBps } from '../src/microstructure/MicrostructureEngine.js';
 import { MicrostructureFeed, microConfigFromEnv, type MicroSource, type StreamHandle } from '../src/microstructure/MicrostructureFeed.js';
@@ -389,4 +389,44 @@ test('below truecolor the whole field uses the density ramp, never a downsampled
   } finally {
     chalk.level = saved;
   }
+});
+
+test('LiquidationTracker tracks forced orders and signals exhaustion on flushes', () => {
+  const tracker = new LiquidationTracker();
+  const t0 = 1_000_000;
+
+  // Add long liquidation (sell order)
+  tracker.onLiquidation({ time: t0, symbol: 'ETHUSDT', side: 'SELL', price: 2000, qty: 15, notional: 30000 });
+  let r = tracker.reading(t0 + 5000, 2000);
+  assert.equal(r.longNotional1m, 30000);
+  assert.equal(r.exhaustion, 'LONG_EXHAUSTION');
+
+  // Pruning after 5 minutes
+  r = tracker.reading(t0 + 350_000, 2000);
+  assert.equal(r.longNotional1m, 0);
+  assert.equal(r.longNotional5m, 0);
+  assert.equal(r.exhaustion, 'NONE');
+});
+
+test('liquidity screen renders actionable setup alignment, liquidations, and predictive footer', () => {
+  const handle = renderedEngineHandle();
+  const state: any = {
+    htfStructure: { trend: 'BULLISH' },
+    ltfStructure: { trend: 'BULLISH' },
+    timeframes: { '15m': { lastClose: 100 }, '1h': { lastClose: 100 }, '4h': { lastClose: 100, ema50: 95 } },
+  };
+  const lines = renderLiquidityScreen({
+    feed: handle,
+    symbols: ['SOLUSDT'],
+    selectedSymbol: 'SOLUSDT',
+    showLadder: false,
+    spanMs: 120_000,
+    marketStates: { SOLUSDT: state },
+    time: '12:00:00',
+    totalWidth: 160,
+    totalHeight: 53,
+  });
+  const text = lines.map(strip).join('\n');
+  assert.match(text, /ALIGNMENT/);
+  assert.match(text, /Microstructure gates execution friction & confirms HTF setup absorption before entry/);
 });

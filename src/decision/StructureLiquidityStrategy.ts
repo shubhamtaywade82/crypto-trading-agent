@@ -1,5 +1,6 @@
 import type { Signal, Side } from '../types.js';
 import type { LiquidityPool, LiquiditySweep, MarketState, PriceZone, ZoneRecord } from '../market/types.js';
+import type { MicrostructureReading } from '../microstructure/MicrostructureEngine.js';
 
 const LTF_BAR_MS = 15 * 60_000;
 
@@ -10,6 +11,7 @@ export interface StructureLiquidityOptions {
   minStopAtr: number;
   maxStopAtr: number;
   minimumRewardRisk: number;
+  requireMicroConfirmation?: boolean;
 }
 
 export const DEFAULT_STRUCTURE_LIQUIDITY_OPTIONS: StructureLiquidityOptions = {
@@ -243,6 +245,41 @@ function targetAndRewardRisk(
   return null;
 }
 
+export interface MicroConfirmation {
+  confirmed: boolean;
+  reason: string;
+  confidenceBonus: number;
+}
+
+export function confirmMicrostructure(side: Side, r?: MicrostructureReading | null): MicroConfirmation {
+  if (!r || r.book.status !== 'LIVE') return { confirmed: true, reason: 'no live feed', confidenceBonus: 0 };
+  const long = side === 'LONG';
+  const oppPhase = long ? 'INITIATIVE_SELLING' : 'INITIATIVE_BUYING';
+  const confPhase = long ? 'SELL_ABSORBED' : 'BUY_ABSORBED';
+  const initPhase = long ? 'INITIATIVE_BUYING' : 'INITIATIVE_SELLING';
+  if (r.phase === oppPhase && r.bias.bias === (long ? 'SHORT' : 'LONG')) {
+    return { confirmed: false, reason: `opposing initiative flow (${r.phase})`, confidenceBonus: 0 };
+  }
+  const wallAbsorb = r.events.some((e) => e.kind === 'ABSORPTION' && e.side === (long ? 'bid' : 'ask'));
+  if (r.phase === confPhase || wallAbsorb) {
+    return { confirmed: true, reason: `absorption confirmed (${r.phase})`, confidenceBonus: 0.10 };
+  }
+  if (long && r.liquidations?.exhaustion === 'LONG_EXHAUSTION') {
+    return { confirmed: true, reason: 'long liquidation flush exhaustion bounce', confidenceBonus: 0.08 };
+  }
+  if (!long && r.liquidations?.exhaustion === 'SHORT_EXHAUSTION') {
+    return { confirmed: true, reason: 'short squeeze exhaustion reversal', confidenceBonus: 0.08 };
+  }
+  if (r.phase === initPhase || r.bias.bias === (long ? 'LONG' : 'SHORT')) {
+    return { confirmed: true, reason: `initiative aligned (${r.phase})`, confidenceBonus: 0.06 };
+  }
+  const delta = r.flow.delta30s ?? 0;
+  if ((long && delta < -0.35) || (!long && delta > 0.35)) {
+    return { confirmed: false, reason: `opposing 30s delta (${delta > 0 ? '+' : ''}${delta.toFixed(2)})`, confidenceBonus: 0 };
+  }
+  return { confirmed: true, reason: 'micro neutral', confidenceBonus: 0 };
+}
+
 /**
  * Deterministic SMC-style trend setup:
  * HTF directional regime -> LTF liquidity sweep -> LTF BOS/CHOCH confirmation -> opposing liquidity target.
@@ -267,6 +304,7 @@ function targetAndRewardRisk(
 export function buildStructureLiquiditySignal(
   state: MarketState,
   options: StructureLiquidityOptions = DEFAULT_STRUCTURE_LIQUIDITY_OPTIONS,
+  microReading?: MicrostructureReading | null,
 ): Signal | null {
   if (!Number.isFinite(state.mark) || state.mark <= 0) return null;
 
@@ -314,11 +352,15 @@ export function buildStructureLiquiditySignal(
   );
   if (!target) return null;
 
+  const micro = confirmMicrostructure(trendSide, microReading);
+  if (options.requireMicroConfirmation && !micro.confirmed) return null;
+
   const long = trendSide === 'LONG';
   const id = `struct-liq-${state.symbol}-${breakEvent.time}`;
   const location = long ? state.pricing.discount : state.pricing.premium;
-  const confidence = Math.min(0.95, 0.70 + (sweep.time === breakEvent.time ? 0.05 : 0) + (location ? 0.05 : 0));
+  const confidence = Math.min(0.98, 0.70 + (sweep.time === breakEvent.time ? 0.05 : 0) + (location ? 0.05 : 0) + micro.confidenceBonus);
   const anchorNote = anchor?.source === 'ledger' ? `; ${anchor.lifecycle} zone anchor` : '';
+  const microNote = micro.confidenceBonus > 0 ? `; micro: ${micro.reason}` : (micro.confirmed ? '' : `; micro unconfirmed: ${micro.reason}`);
 
   return {
     id,
@@ -332,6 +374,6 @@ export function buildStructureLiquiditySignal(
     takeProfit: target.target.price,
     reason:
       `HTF ${trendSide} regime + LTF ${breakEvent.type}; ${sweep.direction} sweep at ${sweep.level.toFixed(4)}; ` +
-      `target liquidity ${target.target.price.toFixed(4)}; RR ${target.rewardRisk.toFixed(2)}; stop ${riskAtr.toFixed(2)} ATR${anchorNote}`,
+      `target liquidity ${target.target.price.toFixed(4)}; RR ${target.rewardRisk.toFixed(2)}; stop ${riskAtr.toFixed(2)} ATR${anchorNote}${microNote}`,
   };
 }

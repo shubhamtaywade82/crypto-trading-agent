@@ -24,6 +24,7 @@ export interface MarketContext {
   /** Venue leverage brackets per symbol. Entries are refused for a symbol whose brackets are not loaded. */
   maintenance?: Record<string, readonly MaintenanceTier[]>;
   performance?: { circuit: CircuitState; snapshot: PerformanceSnapshot };
+  microstructure?: Record<string, import('../microstructure/MicrostructureEngine.js').MicrostructureReading>;
 }
 
 export const DEFAULT_COOLDOWN_MS = 15 * 60_000;

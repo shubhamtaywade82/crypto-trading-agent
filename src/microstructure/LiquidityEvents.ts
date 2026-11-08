@@ -149,3 +149,71 @@ export class LiquidityEventTracker {
     return { t, kind, side: wall.side, price: wall.price, peakQty: wall.peakQty, executedQty: wall.executed, lifetimeMs: t - wall.firstSeen, ...extra };
   }
 }
+
+export interface LiquidationOrder {
+  time: number;
+  symbol: string;
+  side: 'BUY' | 'SELL';
+  price: number;
+  qty: number;
+  notional: number;
+}
+
+export interface LiquidationReading {
+  longNotional1m: number;
+  shortNotional1m: number;
+  longNotional5m: number;
+  shortNotional5m: number;
+  exhaustion: 'NONE' | 'LONG_EXHAUSTION' | 'SHORT_EXHAUSTION';
+  recentCount: number;
+}
+
+export class LiquidationTracker {
+  private readonly orders: LiquidationOrder[] = [];
+  private readonly windowMs = 300_000;
+
+  onLiquidation(order: LiquidationOrder): void {
+    this.orders.push(order);
+    this.prune(order.time);
+  }
+
+  reading(now: number, mid: number | null): LiquidationReading {
+    this.prune(now);
+    const m1 = now - 60_000;
+    let long1m = 0;
+    let short1m = 0;
+    let long5m = 0;
+    let short5m = 0;
+
+    for (const o of this.orders) {
+      if (o.side === 'SELL') {
+        long5m += o.notional;
+        if (o.time >= m1) long1m += o.notional;
+      } else {
+        short5m += o.notional;
+        if (o.time >= m1) short1m += o.notional;
+      }
+    }
+
+    let exhaustion: 'NONE' | 'LONG_EXHAUSTION' | 'SHORT_EXHAUSTION' = 'NONE';
+    if (long1m >= 20_000 && mid !== null) {
+      exhaustion = 'LONG_EXHAUSTION';
+    } else if (short1m >= 20_000 && mid !== null) {
+      exhaustion = 'SHORT_EXHAUSTION';
+    }
+
+    return { longNotional1m: long1m, shortNotional1m: short1m, longNotional5m: long5m, shortNotional5m: short5m, exhaustion, recentCount: this.orders.length };
+  }
+
+  reset(): void {
+    this.orders.length = 0;
+  }
+
+  private prune(now: number): void {
+    const cutoff = now - this.windowMs;
+    while (this.orders.length > 0 && this.orders[0].time < cutoff) {
+      this.orders.shift();
+    }
+  }
+}
+

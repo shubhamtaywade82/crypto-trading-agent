@@ -809,7 +809,14 @@ export class Orchestrator extends EventEmitter {
     const safety = this.safetyVerdicts(market);
     // No performance snapshot while the journal is stale: the risk gate then refuses entries instead of sizing on old data
     const performance = this.binance.journalReady() ? this.ops.build(this.binance.getTrades(), account) : undefined;
-    return { ...market, spot: this.livePrices, equity: account.equity, positions, marketState, safety, maintenance: this.binance.maintenanceTiers(), performance };
+    const microstructure = this.microFeed
+      ? Object.fromEntries(
+          config.symbols
+            .map((s) => [s, this.microFeed!.engine(s)?.reading(Date.now())])
+            .filter((entry): entry is [string, import('../microstructure/MicrostructureEngine.js').MicrostructureReading] => entry[1] !== undefined),
+        )
+      : undefined;
+    return { ...market, spot: this.livePrices, equity: account.equity, positions, marketState, safety, maintenance: this.binance.maintenanceTiers(), performance, microstructure };
   }
 
   /**

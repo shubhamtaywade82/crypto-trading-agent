@@ -434,3 +434,36 @@ test('falls back to the legacy zone list only when the state carries no zone led
   assert.ok(Math.abs(signal.stopLoss! - 96.65) < 1e-9);
   assert.doesNotMatch(signal.reason, /zone anchor/);
 });
+
+test('confirms setup and boosts confidence on absorption, gates when opposing initiative flow active', () => {
+  const state = baseState();
+  const mockReading = (phase: any, bias: any, delta = 0, exhaustion: any = 'NONE'): any => ({
+    book: { status: 'LIVE' },
+    phase,
+    bias: { bias },
+    flow: { delta30s: delta },
+    events: [],
+    liquidations: { exhaustion },
+  });
+
+  // Confirmed on SELL_ABSORBED
+  const confirmedSignal = buildStructureLiquiditySignal(state, undefined, mockReading('SELL_ABSORBED', 'NEUTRAL'));
+  assert.ok(confirmedSignal);
+  assert.ok(confirmedSignal.confidence > 0.75);
+  assert.match(confirmedSignal.reason, /micro: absorption confirmed/);
+
+  // Confirmed on liquidation flush exhaustion bounce
+  const liqSignal = buildStructureLiquiditySignal(state, undefined, mockReading('BALANCED', 'NEUTRAL', 0, 'LONG_EXHAUSTION'));
+  assert.ok(liqSignal);
+  assert.match(liqSignal.reason, /micro: long liquidation flush exhaustion bounce/);
+
+  // Gated when requireMicroConfirmation is true and flow is opposing INITIATIVE_SELLING
+  const opposingReading = mockReading('INITIATIVE_SELLING', 'SHORT', -0.5);
+  const gatedSignal = buildStructureLiquiditySignal(state, { ...DEFAULT_STRUCTURE_LIQUIDITY_OPTIONS, requireMicroConfirmation: true }, opposingReading);
+  assert.equal(gatedSignal, null);
+
+  // When requireMicroConfirmation is false (default), signal still fires but notes unconfirmed micro state
+  const allowedSignal = buildStructureLiquiditySignal(state, undefined, opposingReading);
+  assert.ok(allowedSignal);
+  assert.match(allowedSignal.reason, /micro unconfirmed: opposing initiative flow/);
+});

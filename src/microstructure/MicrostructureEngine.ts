@@ -1,4 +1,4 @@
-import { DEFAULT_EVENT_OPTIONS, LiquidityEventTracker, type EventOptions, type LiquidityEvent } from './LiquidityEvents.js';
+import { DEFAULT_EVENT_OPTIONS, LiquidityEventTracker, type EventOptions, type LiquidityEvent, type LiquidationOrder, type LiquidationReading, LiquidationTracker } from './LiquidityEvents.js';
 import { LocalOrderBook, type DepthDiff, type DepthSnapshot } from './LocalOrderBook.js';
 import { DEFAULT_BIAS_OPTIONS, MicroBias, type BiasOptions, type BiasState } from './MicroBias.js';
 import { OfiTracker } from './Ofi.js';
@@ -93,6 +93,7 @@ export interface MicrostructureReading {
   evidenceReasons: string[];
   /** Persisted micro bias with confirmation and hysteresis. Not a probability; not wired to orders. */
   bias: BiasState;
+  liquidations?: LiquidationReading;
 }
 
 /** Friction for one specific order: its side and notional walked through the live book. */
@@ -250,6 +251,7 @@ export class MicrostructureEngine {
   private readonly flow: TradeFlow;
   private readonly ofi: OfiTracker;
   private readonly events: LiquidityEventTracker;
+  private readonly liquidations = new LiquidationTracker();
   private readonly biasMachine: MicroBias;
   private bias: BiasState;
   /** Finished columns per tier, oldest first. */
@@ -290,11 +292,16 @@ export class MicrostructureEngine {
     this.flow.add(trade);
   }
 
+  onLiquidation(order: LiquidationOrder): void {
+    this.liquidations.onLiquidation(order);
+  }
+
   /** The book is unusable (gap, reconnect): drop it, every wall measured on it, and the OFI chain. */
   invalidate(reason: string): void {
     this.book.reset(reason);
     this.events.reset();
     this.ofi.reset();
+    this.liquidations.reset();
     this.resyncNote = reason;
   }
 
@@ -375,6 +382,7 @@ export class MicrostructureEngine {
       evidence,
       evidenceReasons: reasons,
       bias: live ? this.bias : { ...this.bias, bias: 'NEUTRAL', candidate: null, reasons: [`book ${book.status.toLowerCase()}`] },
+      liquidations: this.liquidations.reading(now, mid),
     };
   }
 

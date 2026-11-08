@@ -206,6 +206,29 @@ export class MicrostructureFeed {
           if (state === 'live') void this.resync(symbol, 'stream reconnected');
         });
         trades.on('message', (p) => this.engines.get(symbol)?.onTrade({ time: Number(p.T), price: Number(p.p), qty: Number(p.q), buyerIsMaker: p.m === true }));
+        try {
+          const force = await this.deps.source.subscribe(`${s}@forceOrder`);
+          this.handles.push(force);
+          force.on('message', (p) => {
+            const o = p?.o;
+            if (o) {
+              const price = Number(o.ap || o.p || 0);
+              const qty = Number(o.q || o.l || 0);
+              if (price > 0 && qty > 0) {
+                this.engines.get(symbol)?.onLiquidation({
+                  time: Number(o.T || p.E || this.now()),
+                  symbol,
+                  side: o.S === 'BUY' ? 'BUY' : 'SELL',
+                  price,
+                  qty,
+                  notional: price * qty,
+                });
+              }
+            }
+          });
+        } catch {
+          // Optional liquidation stream: mock/unsupported sources continue without error
+        }
         void this.resync(symbol, 'initial sync');
       }
       this.state = 'live';

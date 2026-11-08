@@ -43,7 +43,8 @@ export class StructureLiquidityAgent extends BaseAgent {
       if (!state) continue;
       if (this.lastHandledTime.get(symbol) === state.generatedAt) continue;
 
-      const signal = buildStructureLiquiditySignal(state, this.options);
+      const micro = ctx.microstructure?.[symbol];
+      const signal = buildStructureLiquiditySignal(state, this.options, micro);
       if (signal) {
         this.lastHandledTime.set(symbol, state.generatedAt);
         signals.push(signal);

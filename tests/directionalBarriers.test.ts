@@ -1,9 +1,12 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { labelBarriers, roundTripCostPct, type BarrierSetup, type CostModel } from '../src/market/directional/barriers.js';
+import {
+  assertFundingCoverage, feeSlippageRoundTripPct, fundingCostPct, fundingSettlementsFromRows, labelBarriers,
+  type BarrierSetup, type CostModel, type FundingSettlement,
+} from '../src/market/directional/barriers.js';
 import { flowSeries, randomWalk, SYMBOL, type Px } from './rejectionFixtures.js';
 
-const COSTS: CostModel = { feeBpsPerSide: 4, slippageBpsPerSide: 2, fundingBpsPerHour: 0 };
+const COSTS: CostModel = { feeBpsPerSide: 4, slippageBpsPerSide: 2, funding: { kind: 'CONSTANT_FALLBACK', fundingBpsPerHour: 0 } };
 const SPEC = { targetsPct: [1], horizonsHours: [1] };
 const at100: Px = { o: 100, h: 100, l: 100, c: 100 };
 const flat: Px = { o: 100, h: 100.5, l: 99.5, c: 100 };
@@ -15,10 +18,61 @@ const approx = (a: number | null, b: number, eps = 1e-9): void => {
   assert.ok(Math.abs(a - b) < eps, `got ${a}, want ${b}`);
 };
 
-test('round-trip cost: fees and slippage on both legs, funding signed by side', () => {
-  approx(roundTripCostPct(COSTS, 'LONG', 2), 0.12);
-  approx(roundTripCostPct({ ...COSTS, fundingBpsPerHour: 0.5 }, 'LONG', 2), 0.13);
-  approx(roundTripCostPct({ ...COSTS, fundingBpsPerHour: 0.5 }, 'SHORT', 2), 0.11, 1e-12);
+test('round-trip fee and slippage are charged on both legs; funding is priced separately', () => {
+  approx(feeSlippageRoundTripPct(COSTS), 0.12);
+});
+
+test('a settlement charges rate × mark / entry for a LONG and credits it to a SHORT', () => {
+  const s: FundingSettlement[] = [{ time: 1_000, rate: 0.0001, markPrice: 100 }];
+  approx(fundingCostPct('LONG', 0, 2_000, 100, { kind: 'SETTLEMENTS', settlements: s }), 0.01);
+  approx(fundingCostPct('SHORT', 0, 2_000, 100, { kind: 'SETTLEMENTS', settlements: s }), -0.01);
+  // Mark above entry scales the notional: 0.0001 × 110 / 100 = 0.011%.
+  approx(fundingCostPct('LONG', 0, 2_000, 100, { kind: 'SETTLEMENTS', settlements: [{ ...s[0]!, markPrice: 110 }] }), 0.011);
+});
+
+test('only settlements a position is open through are charged: entry < time <= exit', () => {
+  const s: FundingSettlement[] = [
+    { time: 100, rate: 0.0001, markPrice: 100 }, // at or before entry: not charged
+    { time: 500, rate: 0.0001, markPrice: 100 }, // inside
+    { time: 900, rate: 0.0001, markPrice: 100 }, // exactly at exit: charged
+    { time: 1_100, rate: 0.0001, markPrice: 100 }, // after exit: not charged
+  ];
+  approx(fundingCostPct('LONG', 100, 900, 100, { kind: 'SETTLEMENTS', settlements: s }), 0.02);
+});
+
+test('the settlement model changes the net return of a labelled trade, and the label names its funding model', () => {
+  const bars = flowSeries('5m', [at100, { o: 100, h: 101.2, l: 99.5, c: 101 }]);
+  const entryTime = bars[0]!.openTime + 300_000;
+  const withFunding: CostModel = {
+    ...COSTS,
+    funding: { kind: 'SETTLEMENTS', settlements: [{ time: entryTime + 300_000, rate: 0.0001, markPrice: 100 }] },
+  };
+  const [label] = labelBarriers(bars, [longSetup(0, 98)], SPEC, withFunding);
+  assert.equal(label?.outcome, 'TARGET');
+  approx(label?.fundingPct ?? null, 0.01);
+  approx(label?.netReturnPct ?? null, 0.87);
+  assert.equal(label?.fundingModel, 'SETTLEMENTS');
+  const [fallback] = labelBarriers(bars, [longSetup(0, 98)], SPEC, COSTS);
+  assert.equal(fallback?.fundingModel, 'CONSTANT_FALLBACK');
+});
+
+test('funding coverage fails closed: a gap longer than one interval, or a missing edge, is refused', () => {
+  const h = 3_600_000;
+  const gapped: FundingSettlement[] = [{ time: 0, rate: 0, markPrice: 1 }, { time: 20 * h, rate: 0, markPrice: 1 }];
+  assert.throws(() => assertFundingCoverage(gapped, 0, 20 * h), /FUNDING_COVERAGE: .* gap/);
+  const shortEnd: FundingSettlement[] = [{ time: 0, rate: 0, markPrice: 1 }];
+  assert.throws(() => assertFundingCoverage(shortEnd, 0, 20 * h), /FUNDING_COVERAGE: no settlement near the end/);
+  const covered: FundingSettlement[] = [0, 8, 16, 24].map((hh) => ({ time: hh * h, rate: 0, markPrice: 1 }));
+  assert.doesNotThrow(() => assertFundingCoverage(covered, 0, 24 * h));
+});
+
+test('settlements must be strictly ascending and plausible', () => {
+  assert.throws(() => labelBarriers(flowSeries('5m', [at100, flat]), [longSetup(0, 98)], SPEC, {
+    ...COSTS, funding: { kind: 'SETTLEMENTS', settlements: [{ time: 2, rate: 0, markPrice: 1 }, { time: 1, rate: 0, markPrice: 1 }] },
+  }), /strictly ascending/);
+  assert.throws(() => labelBarriers(flowSeries('5m', [at100, flat]), [longSetup(0, 98)], SPEC, {
+    ...COSTS, funding: { kind: 'SETTLEMENTS', settlements: [{ time: 1, rate: 0.5, markPrice: 1 }] },
+  }), /plausible fraction/);
 });
 
 test('a target touched on the first bar after entry is TARGET; net return is target minus the holding cost', () => {
@@ -117,4 +171,19 @@ test('invalid setups and horizons throw instead of labelling silently', () => {
   assert.throws(() => labelBarriers(bars, [longSetup(0, 101)], SPEC, COSTS), /not beyond entry/);
   assert.throws(() => labelBarriers(bars, [longSetup(0, 98)], { targetsPct: [1], horizonsHours: [0.07] }, COSTS), /whole number of 5m bars/);
   assert.throws(() => labelBarriers(bars, [longSetup(0, 98)], SPEC, { ...COSTS, feeBpsPerSide: -1 }), /feeBpsPerSide/);
+});
+
+test('funding rows from perp_funding_history convert to ordered settlements; conflicting duplicates are refused', () => {
+  const rows = [
+    { funding_time: '1700000800000', funding_rate: '0.0001', mark_price: '100.5' },
+    { funding_time: 1700000000000, funding_rate: 0.00005, mark_price: 100 },
+    { funding_time: 1700000800000, funding_rate: '0.0001', mark_price: '100.5' },
+  ];
+  const s = fundingSettlementsFromRows(rows);
+  assert.deepEqual(s.map((x) => x.time), [1700000000000, 1700000800000]);
+  assert.equal(s[1]?.markPrice, 100.5);
+  assert.throws(() => fundingSettlementsFromRows([
+    { funding_time: 1, funding_rate: 0.0001, mark_price: 100 },
+    { funding_time: 1, funding_rate: 0.0002, mark_price: 100 },
+  ]), /conflicting funding rows/);
 });

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { aggregateMinutes, flowBarFromKline, ingestMinutes, validateOhlcv } from '../src/market/rejection/bars.js';
+import { aggregateMinutes, flowBarFromKline, ingestMinutes, minuteCoverageByDay, validateOhlcv } from '../src/market/rejection/bars.js';
 import { TIMEFRAME_MS, type FlowBar } from '../src/market/rejection/types.js';
 import { SYMBOL, alignedStart, kline, minuteKlines, FLAT } from './rejectionFixtures.js';
 
@@ -141,4 +141,15 @@ test('flowBarFromKline converts a recorded native 5m kline and rejects an invali
     volume: '10', quoteVolume: '10', trades: 1, takerBuyBase: '11',
   });
   assert.deepEqual(bad, { ok: false, reason: 'TAKER_BUY_EXCEEDS_VOLUME' });
+});
+
+test('minuteCoverageByDay reports present minutes, coverage and gap starts per UTC day', () => {
+  const start = alignedStart('1m');
+  const day0 = Math.floor(start / (24 * 60 * 60 * 1000)) * (24 * 60 * 60 * 1000);
+  const minutes = ingestMinutes(SYMBOL, [0, 1, 2, 5, 6].map((i) => kline(day0 + i * M1, FLAT))).bars;
+  const [cov] = minuteCoverageByDay(minutes);
+  assert.equal(cov?.present, 5);
+  assert.equal(cov?.expected, 1440);
+  assert.equal(cov?.gaps, 1);
+  assert.ok(Math.abs((cov?.coverage ?? 0) - 5 / 1440) < 1e-12);
 });

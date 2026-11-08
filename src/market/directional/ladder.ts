@@ -1,5 +1,5 @@
 import type { Side } from '../../types.js';
-import { roundTripCostPct, type CostModel } from './barriers.js';
+import { feeSlippageRoundTripPct, type CostModel } from './barriers.js';
 
 /**
  * Scale-out plan: prices and fractions only. It does not place or move orders. The trailing engine
@@ -8,8 +8,9 @@ import { roundTripCostPct, type CostModel } from './barriers.js';
  *
  * - Each rung books `fraction` of the original position at `targetPct` from entry.
  * - The runner is what remains after all rungs. It has no fixed target and is handed to a trailing policy.
- * - After the first rung, the stop moves to entry plus a buffer that covers round-trip costs. The stop never moves
- *   against the position.
+ * - After the first rung, the stop moves to entry plus a buffer covering round-trip fees and slippage. Funding is
+ *   excluded from the buffer, since it depends on the hold and is priced by the replay, not by geometry.
+ *   The stop never moves against the position.
  */
 
 export interface LadderRung {
@@ -24,7 +25,7 @@ export interface ScaleOutPlan {
   stopPrice: number;
   rungs: LadderRung[];
   runnerFraction: number;
-  /** Stop after the first rung fills: entry plus round-trip cost, in the side's direction. */
+  /** Stop after the first rung fills: entry plus round-trip fees and slippage, in the side's direction. */
   stopAfterFirstRung: number;
   runnerPolicy: 'DELEGATE_TO_TRAILING_ENGINE';
 }
@@ -34,9 +35,7 @@ export interface ScaleOutInput {
   entry: number;
   stopPrice: number;
   rungs: readonly { targetPct: number; fraction: number }[];
-  costs: CostModel;
-  /** Hours assumed for the post-first-rung break-even buffer. Required so the cost buffer is explicit. */
-  breakEvenHoldHours: number;
+  costs: Pick<CostModel, 'feeBpsPerSide' | 'slippageBpsPerSide'>;
 }
 
 export function planScaleOut(input: ScaleOutInput): ScaleOutPlan {
@@ -60,7 +59,7 @@ export function planScaleOut(input: ScaleOutInput): ScaleOutPlan {
   }
   if (!(booked < 1)) throw new Error(`rung fractions sum to ${booked}; a runner must remain`);
 
-  const buffer = roundTripCostPct(input.costs, side, input.breakEvenHoldHours) / 100;
+  const buffer = feeSlippageRoundTripPct(input.costs) / 100;
   return {
     side,
     entry,

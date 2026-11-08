@@ -58,6 +58,9 @@ export function synthLabels(o: SynthOptions): BarrierLabel[] {
         mfePct: win ? targetPct : 0.5,
         maePct: win ? 0.5 : stopPct,
         grossReturnPct: win ? targetPct : -stopPct,
+        feeSlippagePct: cost,
+        fundingPct: 0,
+        fundingModel: 'CONSTANT_FALLBACK',
         netReturnPct: win ? targetPct - cost : -stopPct - cost,
       });
       idx += 1;

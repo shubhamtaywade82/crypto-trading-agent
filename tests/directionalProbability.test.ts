@@ -2,7 +2,8 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { holm } from '../src/research/Bootstrap.js';
 import {
-  DEFAULT_ADMISSION_POLICY, baselineComparison, buildTargetTable, labelStats, splitChronological, wilsonInterval, type AdmissionPolicy,
+  DEFAULT_ADMISSION_POLICY, HOLDOUT_CRITERION_V1, baselineComparison, buildTargetTable, evaluateHoldout, labelStats,
+  splitChronological, wilsonInterval, type AdmissionPolicy,
 } from '../src/market/directional/probability.js';
 import { synthLabels } from './directionalFixtures.js';
 
@@ -126,4 +127,34 @@ test('the baseline comparison is descriptive: it reports the tagged hit-rate dif
   assert.equal(cmp.baseline.n, 200);
   // Baseline hit rate 140/200 = 0.70; tagged 90/100 = 0.90.
   assert.ok(Math.abs((cmp.hitRateDifference ?? 0) - 0.2) < 1e-9, `difference ${cmp.hitRateDifference}`);
+});
+
+test('the holdout criterion is versioned, and its values are the ones the table stamps on every result', () => {
+  assert.equal(HOLDOUT_CRITERION_V1.id, 'HOLDOUT_V1');
+  const table = buildTargetTable(synthLabels({ days: 40, perDay: 10, winRate: 0.75 }), 0.3, POLICY);
+  assert.equal(table.criterionId, POLICY.holdout.id);
+});
+
+test('a hit-rate interval is day-clustered: the Wilson diagnostic is reported separately and is not the primary interval', () => {
+  const stats = labelStats(synthLabels({ days: 40, perDay: 10, winRate: 0.75 }), POLICY);
+  assert.ok(stats.hitInterval && stats.hitWilson);
+  assert.ok(stats.hitInterval.low <= stats.hitRate! && stats.hitRate! <= stats.hitInterval.high);
+  assert.deepEqual(stats.fundingModels, ['CONSTANT_FALLBACK']);
+});
+
+test('evaluateHoldout: a matching holdout is accepted; sample, days, calibration and net each reject on their own', () => {
+  const train = labelStats(synthLabels({ days: 40, perDay: 10, winRate: 0.75 }), POLICY);
+  const same = labelStats(synthLabels({ days: 12, perDay: 10, winRate: 0.75, startDay: 40 }), POLICY);
+  assert.equal(evaluateHoldout(train, same, HOLDOUT_CRITERION_V1).accepted, true);
+
+  const tiny = labelStats(synthLabels({ days: 2, perDay: 10, winRate: 0.75, startDay: 40 }), POLICY);
+  assert.ok(evaluateHoldout(train, tiny, HOLDOUT_CRITERION_V1).reasons.some((r) => r.startsWith('HOLDOUT_SAMPLE')));
+
+  const off = labelStats(synthLabels({ days: 12, perDay: 10, winRate: 0.9, startDay: 40 }), POLICY);
+  assert.ok(evaluateHoldout(train, off, HOLDOUT_CRITERION_V1).reasons.some((r) => r.startsWith('CALIBRATION_GAP')));
+
+  const losing = labelStats(synthLabels({ days: 12, perDay: 10, winRate: 0.1, startDay: 40 }), POLICY);
+  const verdict = evaluateHoldout(train, losing, HOLDOUT_CRITERION_V1);
+  assert.equal(verdict.accepted, false);
+  assert.equal(evaluateHoldout(train, null, HOLDOUT_CRITERION_V1).reasons[0], 'NO_HOLDOUT_LABELS');
 });

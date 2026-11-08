@@ -40,19 +40,46 @@ export function wilsonInterval(hits: number, n: number, confidence: number): Wil
   return { p, low: Math.max(0, centre - half), high: Math.min(1, centre + half) };
 }
 
+/**
+ * Pre-registered holdout criterion. A cell is calibrated only if its training estimate survives the holdout. The
+ * values are fixed in code and stamped on every table by `id`. Changing any value creates a new id, so results can
+ * never be re-scored under a criterion chosen after seeing them.
+ */
+export interface HoldoutCriterion {
+  id: string;
+  minSample: number;
+  minDays: number;
+  /** |holdout hit rate − training hit rate| must not exceed this. */
+  maxCalibrationGap: number;
+  /** The training hit rate must lie inside the holdout's day-clustered interval. */
+  requireTrainInsideHoldoutInterval: boolean;
+  /** Holdout mean net return after costs must be positive. */
+  requirePositiveHoldoutNet: boolean;
+}
+
+export const HOLDOUT_CRITERION_V1: HoldoutCriterion = {
+  id: 'HOLDOUT_V1',
+  minSample: 100,
+  minDays: 10,
+  maxCalibrationGap: 0.05,
+  requireTrainInsideHoldoutInterval: true,
+  requirePositiveHoldoutNet: true,
+};
+
 export interface AdmissionPolicy {
   /** Resolved setups required in the training split. The calibration decision contract uses 200. */
   minSample: number;
   /** Distinct UTC decision days required. The calibration decision contract uses 20. */
   minDays: number;
   /**
-   * Two-sided level for the bootstrap interval. 0.9 gives a 5th-percentile lower bound, which is a one-sided 95% bound.
+   * Two-sided level for every bootstrap interval. 0.9 gives a 5th-percentile lower bound, which is a one-sided 95% bound.
    */
   confidence: number;
   /** Holm family-wise level for the expectancy test. */
   alpha: number;
   bootstrapIterations: number;
   bootstrapSeed: number;
+  holdout: HoldoutCriterion;
 }
 
 export const DEFAULT_ADMISSION_POLICY: AdmissionPolicy = {
@@ -62,6 +89,7 @@ export const DEFAULT_ADMISSION_POLICY: AdmissionPolicy = {
   alpha: 0.05,
   bootstrapIterations: 2000,
   bootstrapSeed: 1,
+  holdout: HOLDOUT_CRITERION_V1,
 };
 
 export interface LabelStats {
@@ -71,10 +99,14 @@ export interface LabelStats {
   stops: number;
   timeouts: number;
   hitRate: number | null;
+  /** Day-clustered bootstrap interval for the hit rate. This is the interval to report. */
   hitInterval: { low: number; high: number } | null;
+  /** Wilson interval that assumes independent outcomes. Diagnostic only: trades cluster in time. */
+  hitWilson: { low: number; high: number } | null;
   netMeanPct: number | null;
   /** Cluster-bootstrap summary of net return (percent). Its ciLow is the lower bound used for admission. */
   netSummary: BootstrapSummary | null;
+  fundingModels: string[];
 }
 
 export function labelStats(labels: readonly BarrierLabel[], policy: Pick<AdmissionPolicy, 'confidence' | 'bootstrapIterations' | 'bootstrapSeed'>): LabelStats {
@@ -84,10 +116,9 @@ export function labelStats(labels: readonly BarrierLabel[], policy: Pick<Admissi
   const timeouts = resolved.filter((l) => l.outcome === 'TIMEOUT').length;
   const n = resolved.length;
   const wilson = wilsonInterval(hits, n, policy.confidence);
-  const netSummary = bootstrapMean(
-    resolved.map((l) => ({ value: l.netReturnPct as number, cluster: l.day })),
-    { iterations: policy.bootstrapIterations, seed: policy.bootstrapSeed, confidence: policy.confidence },
-  );
+  const bootstrap = { iterations: policy.bootstrapIterations, seed: policy.bootstrapSeed, confidence: policy.confidence };
+  const netSummary = bootstrapMean(resolved.map((l) => ({ value: l.netReturnPct as number, cluster: l.day })), bootstrap);
+  const hitSummary = bootstrapMean(resolved.map((l) => ({ value: l.outcome === 'TARGET' ? 1 : 0, cluster: l.day })), bootstrap);
   return {
     n,
     days: new Set(resolved.map((l) => l.day)).size,
@@ -95,9 +126,11 @@ export function labelStats(labels: readonly BarrierLabel[], policy: Pick<Admissi
     stops,
     timeouts,
     hitRate: wilson?.p ?? null,
-    hitInterval: wilson ? { low: wilson.low, high: wilson.high } : null,
+    hitInterval: hitSummary ? { low: hitSummary.ciLow, high: hitSummary.ciHigh } : null,
+    hitWilson: wilson ? { low: wilson.low, high: wilson.high } : null,
     netMeanPct: netSummary?.mean ?? null,
     netSummary,
+    fundingModels: [...new Set(resolved.map((l) => l.fundingModel))].sort(),
   };
 }
 
@@ -157,10 +190,14 @@ export interface CellReport extends CellMeta {
   pValue: number | null;
   holmRejected: boolean;
   admitted: boolean;
+  /** Passed the pre-registered holdout criterion. A probability is published only when this and `admitted` both hold. */
+  holdoutAccepted: boolean;
+  holdoutReasons: string[];
   reasons: string[];
 }
 
 export interface TargetTable {
+  criterionId: string;
   policy: AdmissionPolicy;
   holdoutFraction: number;
   cutoffTime: number;
@@ -197,6 +234,8 @@ export function buildTargetTable(
       pValue: testable && stats.netSummary ? stats.netSummary.pValue : null,
       holmRejected: false,
       admitted: false,
+      holdoutAccepted: false,
+      holdoutReasons: [],
       reasons,
     };
   });
@@ -214,7 +253,14 @@ export function buildTargetTable(
     cell.admitted = cell.holmRejected && lower > 0;
   });
 
+  for (const cell of cells) {
+    const verdict = evaluateHoldout(cell.train, cell.holdout, policy.holdout);
+    cell.holdoutAccepted = verdict.accepted;
+    cell.holdoutReasons = verdict.reasons;
+  }
+
   return {
+    criterionId: policy.holdout.id,
     policy,
     holdoutFraction,
     cutoffTime,
@@ -222,6 +268,38 @@ export function buildTargetTable(
     familySize: testableIdx.length,
     cells,
   };
+}
+
+/**
+ * Tests a training estimate against the holdout under the pre-registered criterion. Calibration is what is checked:
+ * the realised holdout hit rate must sit close to the training estimate and inside its day-clustered interval.
+ * Positive holdout net return is required as well.
+ */
+export function evaluateHoldout(
+  train: LabelStats,
+  holdout: LabelStats | null,
+  c: HoldoutCriterion,
+): { accepted: boolean; reasons: string[] } {
+  if (!holdout) return { accepted: false, reasons: ['NO_HOLDOUT_LABELS'] };
+  const reasons: string[] = [];
+  if (holdout.n < c.minSample) reasons.push(`HOLDOUT_SAMPLE ${holdout.n}<${c.minSample}`);
+  if (holdout.days < c.minDays) reasons.push(`HOLDOUT_DAYS ${holdout.days}<${c.minDays}`);
+  const trainHit = train.hitRate;
+  const holdoutHit = holdout.hitRate;
+  const interval = holdout.hitInterval;
+  if (trainHit === null || holdoutHit === null || interval === null) {
+    reasons.push('HIT_RATE_UNDEFINED');
+  } else {
+    const gap = holdoutHit - trainHit;
+    if (Math.abs(gap) > c.maxCalibrationGap) reasons.push(`CALIBRATION_GAP ${gap.toFixed(3)} exceeds ${c.maxCalibrationGap}`);
+    if (c.requireTrainInsideHoldoutInterval && (trainHit < interval.low || trainHit > interval.high)) {
+      reasons.push(`TRAIN_ESTIMATE_OUTSIDE_HOLDOUT_INTERVAL [${interval.low.toFixed(3)}, ${interval.high.toFixed(3)}]`);
+    }
+  }
+  if (c.requirePositiveHoldoutNet && !(holdout.netMeanPct !== null && holdout.netMeanPct > 0)) {
+    reasons.push('HOLDOUT_NET_NOT_POSITIVE');
+  }
+  return { accepted: reasons.length === 0, reasons };
 }
 
 /** Descriptive comparison of a context-tagged cell with the untagged baseline over all labels. In-sample: not a validation. */

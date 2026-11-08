@@ -4,33 +4,63 @@ import type { CellReport, TargetTable } from './probability.js';
 import type { RoomResult } from './room.js';
 
 /**
- * Directional potential: the decision is NO_TRADE unless every gate passes. A probability is reported only when it
- * comes from an admitted cell whose holdout confirms it. Nothing is derived from a zone score.
+ * Directional potential, in three distinct outputs:
+ * - moveProbability: chance of reaching a target before the stop, from training and checked on the holdout.
+ * - capacity: how far price can travel. Known room to an opposing zone, or a validated capacity model.
+ * - tradeExpectancy: mean net return after costs and funding, from the same labels.
  *
- * Gates, in order:
+ * NO_TRADE unless every gate passes, in this order:
  * 1. The stop is beyond entry and no wider than `maxStopPct`.
- * 2. The expansion context is an entry context.
+ * 2. The context is an entry context.
  * 3. An admitted cell exists for this symbol, side and context.
- * 4. The holdout confirms the cell: at least `minHoldoutSample` resolved outcomes and a positive mean net return.
- * 5. Known room covers the target. With no opposing zone known, the target is allowed and a warning is recorded.
+ * 4. The cell passes the pre-registered holdout criterion. Otherwise no probability is published.
+ * 5. Capacity is known. Unknown room is never treated as unlimited: without an opposing zone or a validated capacity
+ *    model, every target is blocked.
+ * 6. Capacity covers at least one calibrated target.
  */
 
 export type DirectionalDecision = 'LONG' | 'SHORT' | 'NO_TRADE';
 
-export interface TargetProbability {
-  targetPct: number;
-  horizonHours: number;
-  /** Target reached before the stop within the horizon. Timeouts count as misses. */
-  hitBeforeStopProbability: number;
-  /** Wilson interval at the table's confidence level. */
-  confidenceInterval: [number, number];
+export interface MoveProbability {
+  /** Training estimate. Published only for cells that pass the holdout criterion. */
+  hitBeforeStop: number;
+  trainHitRate: number;
+  /** Day-clustered bootstrap interval, training split. */
+  trainHitInterval: [number, number];
   sampleSize: number;
   days: number;
-  /** Mean net return (after costs) of the cell's training labels, percent of entry. */
-  expectedNetReturnPct: number;
-  /** Lower bound of the bootstrap interval on that mean. Admission requires it to be positive. */
-  expectedNetReturnCiLowPct: number;
-  holdout: { n: number; hitRate: number | null; netMeanPct: number | null };
+  holdoutHitRate: number | null;
+  holdoutHitInterval: [number, number] | null;
+  holdoutSampleSize: number;
+  /** Holdout hit rate minus training hit rate. */
+  calibrationGap: number | null;
+  criterionId: string;
+}
+
+export interface TradeExpectancy {
+  /** Mean net return after fees, slippage and funding, percent of entry. Training split. */
+  netReturnPct: number;
+  netReturnCiLowPct: number;
+  holdoutNetReturnPct: number | null;
+  /** Funding models behind these labels. Mixing a fallback with settlements must be visible. */
+  fundingModels: string[];
+}
+
+export interface TargetCandidate {
+  key: string;
+  targetPct: number;
+  horizonHours: number;
+  moveProbability: MoveProbability;
+  tradeExpectancy: TradeExpectancy;
+}
+
+export interface MoveCapacity {
+  /** Distance to the nearest live opposing zone, percent of entry. Null when none is known. */
+  availableRoomPct: number | null;
+  /** Capacity used for gating: validated model when supplied, otherwise the opposing-zone room. */
+  capacityPct: number | null;
+  source: 'OPPOSING_ZONE' | 'VALIDATED_MODEL' | 'UNVERIFIED';
+  reachableTargetsPct: number[];
 }
 
 export interface DirectionalPotential {
@@ -38,12 +68,12 @@ export interface DirectionalPotential {
   direction: DirectionalDecision;
   context: ExpansionContext;
   contextPath: ExpansionContext[];
-  probabilities: TargetProbability[];
   entry?: number;
   stopLoss?: number;
   invalidationReason?: string;
-  availableRoomPct: number | null;
-  /** Largest reachable target among the reported probabilities. */
+  capacity: MoveCapacity;
+  candidates: TargetCandidate[];
+  /** Largest reachable calibrated target. */
   expectedMovePct?: number;
   evidence: string[];
   warnings: string[];
@@ -61,21 +91,38 @@ export interface PotentialInput {
   table: TargetTable;
   /** Widest acceptable stop, percent of entry. Required: it is a risk parameter, not a default. */
   maxStopPct: number;
-  /** Resolved holdout outcomes required before the holdout can confirm a cell. */
-  minHoldoutSample: number;
+  /**
+   * Capacity from a validated range or volatility model, in percent of entry. Null or absent means none. Callers must
+   * not supply a value without a validation record. This module does not produce one.
+   */
+  validatedCapacityPct?: number | null;
 }
 
 export function assessDirectionalPotential(input: PotentialInput): DirectionalPotential {
   const { symbol, side, entry, stopPrice, context, contextPath, room, table } = input;
   if (!(Number.isFinite(input.maxStopPct) && input.maxStopPct > 0)) throw new Error('maxStopPct must be positive');
+
+  const validated = input.validatedCapacityPct ?? null;
+  const capacityPct = validated ?? room.roomPct;
+  const capacitySource: MoveCapacity['source'] = validated !== null ? 'VALIDATED_MODEL' : room.roomPct !== null ? 'OPPOSING_ZONE' : 'UNVERIFIED';
   const evidence: string[] = [];
   const warnings: string[] = [];
-  const base = { symbol, context, contextPath, availableRoomPct: room.roomPct, evidence, warnings };
-  const noTrade = (reason: string): DirectionalPotential => ({
-    ...base,
+  const capacity = (reachable: number[]): MoveCapacity => ({
+    availableRoomPct: room.roomPct,
+    capacityPct,
+    source: capacitySource,
+    reachableTargetsPct: reachable,
+  });
+  const noTrade = (reason: string, reachable: number[] = []): DirectionalPotential => ({
+    symbol,
     direction: 'NO_TRADE',
-    probabilities: [],
+    context,
+    contextPath,
     invalidationReason: reason,
+    capacity: capacity(reachable),
+    candidates: [],
+    evidence,
+    warnings,
   });
 
   const sign = side === 'LONG' ? 1 : -1;
@@ -90,60 +137,74 @@ export function assessDirectionalPotential(input: PotentialInput): DirectionalPo
   const admitted = table.cells.filter((c) => c.admitted && c.symbol === symbol && c.side === side && c.tag === context);
   if (admitted.length === 0) return noTrade('NO_ADMITTED_PROBABILITY_FOR_CONTEXT');
 
-  const confirmed = admitted.filter((c) => c.holdout !== null
-    && c.holdout.n >= input.minHoldoutSample
-    && c.holdout.netMeanPct !== null
-    && c.holdout.netMeanPct > 0);
+  const calibrated = admitted.filter((c) => c.holdoutAccepted);
   for (const c of admitted) {
-    if (!confirmed.includes(c)) warnings.push(`HOLDOUT_NOT_CONFIRMED ${c.key}`);
+    if (!c.holdoutAccepted) warnings.push(`HOLDOUT_REJECTED ${c.key}: ${c.holdoutReasons.join('; ')}`);
   }
-  if (confirmed.length === 0) return noTrade('HOLDOUT_DID_NOT_CONFIRM');
+  if (calibrated.length === 0) return noTrade('HOLDOUT_CALIBRATION_FAILED');
 
-  const reachable: CellReport[] = [];
-  for (const c of confirmed) {
-    if (room.roomPct === null) {
-      reachable.push(c);
-      warnings.push('NO_OPPOSING_ZONE_KNOWN: room is not bounded by known structure');
-    } else if (room.roomPct >= c.targetPct) {
-      reachable.push(c);
-    } else {
-      warnings.push(`ROOM_BELOW_TARGET ${c.targetPct}% > ${room.roomPct.toFixed(3)}%`);
-    }
+  if (capacityPct === null) {
+    return noTrade('ROOM_UNVERIFIED: no opposing zone and no validated capacity model');
   }
-  if (reachable.length === 0) return noTrade('ROOM_BELOW_ALL_ADMITTED_TARGETS');
+  evidence.push(`capacity ${capacityPct.toFixed(3)}% (${capacitySource})`);
+
+  const reachable = calibrated.filter((c) => c.targetPct <= capacityPct);
+  for (const c of calibrated) {
+    if (c.targetPct > capacityPct) warnings.push(`CAPACITY_BELOW_TARGET ${c.targetPct}% > ${capacityPct.toFixed(3)}%`);
+  }
+  if (reachable.length === 0) return noTrade('CAPACITY_BELOW_ALL_CALIBRATED_TARGETS', []);
 
   reachable.sort((a, b) => a.targetPct - b.targetPct || a.horizonHours - b.horizonHours);
-  const probabilities: TargetProbability[] = reachable.map((c) => {
-    const train = c.train;
-    const interval = train.hitInterval;
-    return {
-      targetPct: c.targetPct,
-      horizonHours: c.horizonHours,
-      hitBeforeStopProbability: train.hitRate ?? 0,
-      confidenceInterval: [interval?.low ?? 0, interval?.high ?? 1],
-      sampleSize: train.n,
-      days: train.days,
-      expectedNetReturnPct: train.netMeanPct ?? 0,
-      expectedNetReturnCiLowPct: train.netSummary?.ciLow ?? Number.NEGATIVE_INFINITY,
-      holdout: {
-        n: c.holdout?.n ?? 0,
-        hitRate: c.holdout?.hitRate ?? null,
-        netMeanPct: c.holdout?.netMeanPct ?? null,
-      },
-    };
-  });
-
-  for (const p of probabilities) {
-    evidence.push(`${p.targetPct}% in ${p.horizonHours}h: p=${p.hitBeforeStopProbability.toFixed(3)} `
-      + `CI[${p.confidenceInterval[0].toFixed(3)}, ${p.confidenceInterval[1].toFixed(3)}] n=${p.sampleSize} days=${p.days}`);
+  const candidates: TargetCandidate[] = reachable.flatMap((c) => toCandidate(c, table.criterionId));
+  for (const cand of candidates) {
+    const mp = cand.moveProbability;
+    evidence.push(`${cand.targetPct}% in ${cand.horizonHours}h: p=${mp.hitBeforeStop.toFixed(3)} `
+      + `train CI[${mp.trainHitInterval[0].toFixed(3)}, ${mp.trainHitInterval[1].toFixed(3)}] n=${mp.sampleSize}; `
+      + `holdout p=${mp.holdoutHitRate?.toFixed(3) ?? 'n/a'} gap=${mp.calibrationGap?.toFixed(3) ?? 'n/a'}`);
   }
 
   return {
-    ...base,
+    symbol,
     direction: side,
+    context,
+    contextPath,
     entry,
     stopLoss: stopPrice,
-    probabilities,
+    capacity: capacity(reachable.map((c) => c.targetPct)),
+    candidates,
     expectedMovePct: Math.max(...reachable.map((c) => c.targetPct)),
+    evidence,
+    warnings,
   };
+}
+
+function toCandidate(c: CellReport, criterionId: string): TargetCandidate[] {
+  const h = c.holdout;
+  if (!h) return [];
+  const t = c.train;
+  const trainInterval = t.hitInterval ?? { low: 0, high: 1 };
+  const holdoutInterval = h.hitInterval;
+  return [{
+    key: c.key,
+    targetPct: c.targetPct,
+    horizonHours: c.horizonHours,
+    moveProbability: {
+      hitBeforeStop: t.hitRate ?? 0,
+      trainHitRate: t.hitRate ?? 0,
+      trainHitInterval: [trainInterval.low, trainInterval.high],
+      sampleSize: t.n,
+      days: t.days,
+      holdoutHitRate: h.hitRate,
+      holdoutHitInterval: holdoutInterval ? [holdoutInterval.low, holdoutInterval.high] : null,
+      holdoutSampleSize: h.n,
+      calibrationGap: h.hitRate !== null && t.hitRate !== null ? h.hitRate - t.hitRate : null,
+      criterionId,
+    },
+    tradeExpectancy: {
+      netReturnPct: t.netMeanPct ?? 0,
+      netReturnCiLowPct: t.netSummary?.ciLow ?? Number.NEGATIVE_INFINITY,
+      holdoutNetReturnPct: h.netMeanPct,
+      fundingModels: t.fundingModels,
+    },
+  }];
 }

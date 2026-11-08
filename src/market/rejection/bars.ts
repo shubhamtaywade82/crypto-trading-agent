@@ -1,3 +1,4 @@
+import { utcDay } from '../../research/Bootstrap.js';
 import { TIMEFRAME_MS, type FlowBar, type MinuteInput, type OhlcvInput, type RejectionTimeframe } from './types.js';
 
 export const MINUTE_MS = TIMEFRAME_MS['1m'];
@@ -206,4 +207,40 @@ export function flowBarFromKline(
   const check = validateOhlcv(input, timeframe);
   if (!check.ok) return { ok: false, reason: check.reason };
   return { ok: true, bar: toFlowBar(input, timeframe, TIMEFRAME_MS[timeframe] / MINUTE_MS) };
+}
+
+export interface DayCoverage {
+  /** UTC day, YYYY-MM-DD. */
+  day: string;
+  present: number;
+  /** Minutes in the day: 1440. */
+  expected: number;
+  coverage: number;
+  /** Gaps that begin on this day, each a run of one or more missing minutes. */
+  gaps: number;
+}
+
+/**
+ * Per-day completeness of a 1m series, for the "complete, validated, replayable" criterion. A day with coverage below
+ * 1 should not be used for an experiment without an explicit decision.
+ */
+export function minuteCoverageByDay(minutes: readonly FlowBar[]): DayCoverage[] {
+  const byDay = new Map<string, { present: number; gaps: number }>();
+  let prev: FlowBar | undefined;
+  for (const m of minutes) {
+    if (m.timeframe !== '1m') throw new Error(`minuteCoverageByDay expects 1m bars, got ${m.timeframe}`);
+    const day = utcDay(m.openTime);
+    const entry = byDay.get(day) ?? { present: 0, gaps: 0 };
+    entry.present += 1;
+    if (prev && m.openTime - prev.openTime > MINUTE_MS) entry.gaps += 1;
+    byDay.set(day, entry);
+    prev = m;
+  }
+  return [...byDay.entries()].sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)).map(([day, v]) => ({
+    day,
+    present: v.present,
+    expected: 1440,
+    coverage: v.present / 1440,
+    gaps: v.gaps,
+  }));
 }

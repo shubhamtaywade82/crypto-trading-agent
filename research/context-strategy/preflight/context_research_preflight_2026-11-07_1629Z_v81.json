@@ -1,0 +1,204 @@
+{
+  "schemaVersion": 1,
+  "runId": "context-strategy-2026-11-07T1629Z-v81",
+  "asOfUtc": "2026-11-07T16:29:30.509Z",
+  "classification": "RESEARCH_BLOCKED",
+  "checks": [
+    {
+      "capability": "Shell/compute",
+      "status": "PASS",
+      "evidence": {
+        "cwd": "/",
+        "os": "Linux 6.18.57 x86_64",
+        "node": "v22.16.0",
+        "npm": "10.9.2",
+        "python": "3.13.5",
+        "cpuCores": 5,
+        "memoryTotalKb": 6090668,
+        "memoryAvailableKb": 4940644,
+        "diskFree": "30G"
+      },
+      "nextAction": "Provision Node>=24/npm>=11."
+    },
+    {
+      "capability": "Repository/code",
+      "status": "DEGRADED",
+      "evidence": {
+        "localCheckout": "ABSENT",
+        "remoteGitHubRead": "PASS",
+        "packageEngines": {
+          "node": ">=24",
+          "npm": ">=11"
+        },
+        "sdkPackages": {
+          "@nemesis-oss/binance-sdk": "NOT_INSTALLED",
+          "binance": "NOT_INSTALLED",
+          "@binance/connector": "NOT_INSTALLED"
+        }
+      },
+      "nextAction": "Clone repo and install under supported runtime."
+    },
+    {
+      "capability": "Network/Binance endpoints",
+      "status": "DEGRADED",
+      "evidence": {
+        "directTimeProbe": "HTTP000 DNS failure",
+        "directExchangeInfoProbe": "HTTP000 DNS failure",
+        "connectorMarketData": "PASS",
+        "freshMarkTimeUtc": "2026-11-07T16:28:37Z",
+        "exchangeInfoServerTimeUtc": "2026-11-06T11:18:40.886Z",
+        "exchangeInfoAgeSeconds": 104996.114,
+        "rawHttpStatusFromConnector": "NOT_EXPOSED"
+      },
+      "nextAction": "Restore direct DNS/HTTPS and require <=60s server-time drift."
+    },
+    {
+      "capability": "Raw historical archive",
+      "status": "DEGRADED",
+      "evidence": {
+        "rawBranch": "research/raw-ohlcv-archive-20261107T1625Z-run12",
+        "oneHourBaseRowsPerSymbol": 53871,
+        "oneHourIncrementalHighwaterUtc": "2026-11-07T15:00:00Z",
+        "fourHourCanonicalRowsPerSymbol": 13461,
+        "fourHourCanonicalEndUtc": "2026-11-05T16:00:00Z",
+        "fourHourIncrementalHighwaterUtc": "2026-11-07T12:00:00Z",
+        "incrementalRowsTotal": 3852,
+        "newDeltaRows": 72,
+        "multiYear5m15m": "ABSENT",
+        "missingDeltaRows": 76
+      },
+      "nextAction": "Backfill 5m/15m and recover the exact 76-row artifact."
+    },
+    {
+      "capability": "Data quality/coverage",
+      "status": "DEGRADED",
+      "evidence": {
+        "series": 16,
+        "rowsPerSeries": 120,
+        "rawRows": 1920,
+        "completedRows": 1904,
+        "formingRows": 16,
+        "duplicates": 0,
+        "missingIntervals": 0,
+        "offGrid": 0,
+        "nonMonotonic": 0,
+        "ohlcFailures": 0,
+        "nonPositiveVolume": 0,
+        "nonFinite": 0,
+        "closeTimeFailures": 0,
+        "crossSymbolAlignment": true,
+        "newDeltaRows": 72,
+        "newDeltaQualityFailures": 0,
+        "remainingManifestHashMismatches": 13
+      },
+      "nextAction": "Audit 13 hash flags and backfill lower intervals."
+    },
+    {
+      "capability": "Backtest harness/smoke test",
+      "status": "BLOCKED",
+      "evidence": {
+        "remoteEntrypoint": "scripts/backtest.ts exists",
+        "localCheckout": "ABSENT",
+        "runtimeFloor": "Node>=24/npm>=11",
+        "actualRuntime": "Node22.16/npm10.9",
+        "timeframesImplemented": [
+          "15m",
+          "1h",
+          "4h"
+        ],
+        "fiveMinuteSupport": false,
+        "mainCandleHasCloseTime": false,
+        "apiFetchPreservesCloseTime": false,
+        "zeroVolumeRejected": false,
+        "smokeTest": "NOT_RUN"
+      },
+      "nextAction": "Provision checkout/runtime, fix validation and 5m support, run fixture twice."
+    },
+    {
+      "capability": "Disk/storage",
+      "status": "PASS",
+      "evidence": {
+        "localDiskFree": "30G",
+        "remoteGitHubWrites": "PASS",
+        "rawArchiveBranch": "research/raw-ohlcv-archive-20261107T1625Z-run12"
+      },
+      "nextAction": "Continue atomic archive updates."
+    },
+    {
+      "capability": "Artifact readback",
+      "status": "PASS",
+      "evidence": {
+        "deltaRows": 72,
+        "deltaBytes": 20129,
+        "deltaSha256": "27a360d93bd4f235bc43f8a9802b1dfaf25ec430faa7123703e663f02a215f58",
+        "manifestSha256": "d99957069c78ee1908762ef0c99df115ce4d92f544e7b5d5c212586f5dfbb465",
+        "oneHourIndexReadback": true,
+        "fourHourIndexReadback": true
+      },
+      "nextAction": "Persist registry, queue, snapshot and report."
+    }
+  ],
+  "endpoints": [
+    {
+      "endpoint": "GET /fapi/v1/time",
+      "status": "BLOCKED",
+      "evidence": "Direct curl HTTP000; DNS resolution failure."
+    },
+    {
+      "endpoint": "GET /fapi/v1/exchangeInfo",
+      "status": "BLOCKED",
+      "evidence": "Direct curl HTTP000; connector serverTime 29.17h stale."
+    },
+    {
+      "endpoint": "GET /fapi/v1/klines",
+      "status": "DEGRADED",
+      "evidence": "120 bars per symbol/timeframe via connector; raw HTTP status unavailable; forming rows excluded."
+    },
+    {
+      "endpoint": "GET /fapi/v1/premiumIndex",
+      "status": "DEGRADED",
+      "evidence": "Fresh mark/index/indicated funding/next funding via connector."
+    },
+    {
+      "endpoint": "GET /fapi/v1/ticker/24hr",
+      "status": "DEGRADED",
+      "evidence": "Fresh 24h ticker snapshots via connector."
+    },
+    {
+      "endpoint": "GET /fapi/v1/openInterest",
+      "status": "DEGRADED",
+      "evidence": "Current OI snapshots; no historical OI series."
+    },
+    {
+      "endpoint": "GET /fapi/v1/fundingRate",
+      "status": "DEGRADED",
+      "evidence": "Five recent settled funding observations per symbol; latest at 16:00Z."
+    },
+    {
+      "endpoint": "GET /fapi/v1/fundingInfo",
+      "status": "DEGRADED",
+      "evidence": "8h interval observed for target symbols; updateTime null."
+    },
+    {
+      "endpoint": "GET /fapi/v1/depth",
+      "status": "DEGRADED",
+      "evidence": "Top-20 books and event timestamps; spread snapshots only."
+    },
+    {
+      "endpoint": "GET /futures/data/takerlongshortRatio",
+      "status": "DEGRADED",
+      "evidence": "Completed 5m taker-buy share and 1h global account long/short ratios."
+    }
+  ],
+  "nextExperiment": {
+    "status": "BLOCKED",
+    "prerequisites": [
+      "Multi-year 5m/15m backfill and canonical 4h merge",
+      "Recover missing 76-row delta and reconcile 13 hash discrepancies",
+      "Fresh /time and /exchangeInfo; verify contract status",
+      "Local Node>=24/npm>=11 checkout and deterministic smoke test",
+      "Historical fee/funding/spread/slippage/impact/latency calibration"
+    ],
+    "nextAction": "Do not run a strategy experiment until prerequisites pass; then preregister one symbol x context x strategy family with frozen chronological train/validation/untouched OOS."
+  }
+}

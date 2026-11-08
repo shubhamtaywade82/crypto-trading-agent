@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAtUtc": "2026-11-08T09:40:45Z",
+  "updatedAtUtc": "2026-11-08T09:42:00Z",
   "items": [
     {
       "id": "Q1_ARCHIVE_MULTIYEAR",
@@ -11,8 +11,8 @@
         "Compatible bulk-data downloader or official Binance Vision access",
         "Persistent writable store"
       ],
-      "nextAction": "Backfill multi-year 5m/15m oldest-first; rebuild canonical 4h through 2026-11-08T04:00Z from verified deltas; reconcile 13 manifest SHA provenance mismatches and the 4h raw-versus-canonical row-count discrepancy.",
-      "blocker": "1h canonical: 53,871 rows/symbol through 2026-11-06T22:00Z; incremental high-water 2026-11-08T08:00Z. 4h canonical: 13,461 rows/symbol through 2026-11-05T16:00Z; incremental high-water 2026-11-08T04:00Z. Multi-year 5m/15m remain absent. The 4h raw-vs-canonical counts remain BTC/ETH/XRP 13,499 vs 13,461 (+38 each), SOL 13,455 vs 13,461 (-6). Fourteen page-symbol pairs were replayed and 21,000 rows matched exactly, but 13 original manifest SHA provenance mismatches remain.",
+      "nextAction": "Rebuild canonical 4h through 2026-11-08T04:00Z from verified incremental deltas; reconcile raw-vs-canonical row counts; then backfill multi-year 5m/15m oldest-first.",
+      "blocker": "The 76-row delta is restored and readback/hash verified; all four canonical 4h SHA-256 values and manifests pass the recorded audit. Remaining: raw-vs-canonical counts differ (BTC/ETH/XRP raw 13,499 vs canonical 13,461; SOL raw 13,455 vs canonical 13,461), canonical 4h ends 2026-11-05T16:00Z, 1h page archive ends 2026-11-06T22:00Z, and multi-year 5m/15m are absent. Page-level provenance/count reconciliation remains open.",
       "result": {
         "canonical4hRowsPerSymbol": 13461,
         "canonical1hRowsPerSymbol": 53871,
@@ -68,7 +68,20 @@
           "ETHUSDT": 38,
           "SOLUSDT": 38,
           "XRPUSDT": 38
-        }
+        },
+        "missing76RowDeltaResolved": true,
+        "canonical4hHashAuditVerified": true,
+        "canonical4hManifestConsistencyVerified": true,
+        "rawRowsBySymbol": {
+          "BTCUSDT": 13499,
+          "ETHUSDT": 13499,
+          "SOLUSDT": 13455,
+          "XRPUSDT": 13499
+        },
+        "canonical4hEndUtc": "2026-11-05T16:00:00Z",
+        "oneHourRowsPerSymbol": 53871,
+        "oneHourCanonicalEndUtc": "2026-11-06T22:00:00Z",
+        "pageProvenanceAudit": "PENDING_EXPLICIT_RECONCILIATION"
       }
     },
     {

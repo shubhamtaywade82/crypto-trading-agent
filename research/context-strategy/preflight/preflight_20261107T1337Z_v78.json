@@ -1,0 +1,109 @@
+{
+  "runId": "context-strategy-2026-11-07T1337Z-v78",
+  "asOfUtc": "2026-11-07T13:37:49.000Z",
+  "overallStatus": "RESEARCH_BLOCKED",
+  "environment": {
+    "cwd": "/",
+    "os": "Debian GNU/Linux 13",
+    "kernel": "6.18.57",
+    "python": "3.13.5",
+    "node": "v22.16.0",
+    "npm": "10.9.2",
+    "pnpm": "NOT_INSTALLED",
+    "docker": "NOT_INSTALLED",
+    "cpu": 5,
+    "ramTotalKb": 6090668,
+    "ramAvailableKb": 4921680,
+    "diskFreeGiB": 30,
+    "localRepositoryCheckout": false,
+    "binanceSdkInstalled": false
+  },
+  "checks": [
+    {
+      "capability": "shell_compute",
+      "status": "PASS",
+      "evidence": "cwd=/; Debian 13; Python3.13.5; Node22.16.0; npm10.9.2; 5 CPU; 6.09GB RAM total; 30GB free disk.",
+      "impact": "Compute works, runtime below project floor.",
+      "nextAction": "Use Node24+/npm11+ runner."
+    },
+    {
+      "capability": "repo_code",
+      "status": "DEGRADED",
+      "evidence": "Remote GitHub repository accessible; no local checkout. package.json requires Node>=24 and npm>=11.",
+      "impact": "Remote source audit only; no harness invocation.",
+      "nextAction": "Provision compatible checkout/CI."
+    },
+    {
+      "capability": "network_binance",
+      "status": "DEGRADED",
+      "evidence": "Direct DNS/HTTPS failed (HTTP000); connector market data succeeded; exchangeInfo serverTime is 26h19m stale.",
+      "impact": "Snapshot possible; contract validation blocked.",
+      "nextAction": "Restore direct DNS or uncached official endpoints; require <=60s drift."
+    },
+    {
+      "capability": "raw_archive",
+      "status": "DEGRADED",
+      "evidence": "Remote 1h/4h archives; no multi-year 5m/15m; missing 76-row delta.",
+      "impact": "Historical multi-timeframe sample incomplete.",
+      "nextAction": "Backfill lower intervals and reconcile 4h."
+    },
+    {
+      "capability": "data_quality_coverage",
+      "status": "DEGRADED",
+      "evidence": "16 rolling windows x200; 3,184 completed,16 forming; zero duplicate/gap/off-grid/OHLC/volume/non-finite failures; historical provenance issues remain.",
+      "impact": "Current snapshot quality passes; historical research still blocked.",
+      "nextAction": "Complete long-history backfill and provenance audit."
+    },
+    {
+      "capability": "backtest_harness_smoke",
+      "status": "BLOCKED",
+      "evidence": "scripts/backtest.ts exists remotely; no local checkout; runtime below floor; smoke test NOT_RUN. Candle type/mapping omit closeTime; validators allow volume==0.",
+      "impact": "No experiment/OOS claim.",
+      "nextAction": "Fix closeTime and volume<=0; run deterministic no-lookahead fixture."
+    },
+    {
+      "capability": "disk_storage",
+      "status": "PASS",
+      "evidence": "30GB free; GitHub raw and context branches accepted writes.",
+      "impact": "Remote durable storage available.",
+      "nextAction": "Continue atomic commits/readback."
+    },
+    {
+      "capability": "artifact_readback",
+      "status": "PASS",
+      "evidence": "Raw deltas/manifests/sidecars and 1h/4h archive indexes read back; context artifacts are read back in this run.",
+      "impact": "Persistence is verifiable.",
+      "nextAction": "Keep receipt hashes and readback records with each run."
+    }
+  ],
+  "directHttp": {
+    "time": "HTTP000_DNS_TIMEOUT",
+    "exchangeInfo": "HTTP000_DNS_FAILURE",
+    "klines": "NOT_PROBED_DIRECT",
+    "premiumIndex": "NOT_PROBED_DIRECT",
+    "openInterest": "NOT_PROBED_DIRECT",
+    "ticker24hr": "NOT_PROBED_DIRECT",
+    "note": "Direct DNS resolution failure was confirmed on the /time and /exchangeInfo probes. The other raw HTTP endpoints were not separately probed; connector calls returned data but did not expose raw HTTP status/headers."
+  },
+  "connector": {
+    "time": "NOT_CHECKED",
+    "exchangeInfo": "STALE",
+    "klines": "PASS",
+    "premiumIndex": "PASS",
+    "openInterest": "PASS",
+    "ticker24hr": "PASS",
+    "fundingRate": "LATEST_3_SETTLED",
+    "fundingInfo": "8H",
+    "depth": "TOP20_SNAPSHOT",
+    "openInterestHist": "10X5M",
+    "takerBuySellVolume": "PASS",
+    "globalLongShortAccountRatio": "PASS"
+  },
+  "backtest": {
+    "remoteEntrypoint": "scripts/backtest.ts",
+    "exists": true,
+    "invoked": false,
+    "smokeTest": "NOT_RUN",
+    "oos": "NOT_EVALUATED"
+  }
+}

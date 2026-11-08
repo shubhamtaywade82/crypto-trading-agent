@@ -1,0 +1,92 @@
+{
+  "schemaVersion": 1,
+  "runId": "context-strategy-2026-11-07T1337Z-v78",
+  "asOfUtc": "2026-11-07T13:37:49.000Z",
+  "classification": "RESEARCH_BLOCKED",
+  "experimentExecuted": false,
+  "oosEvaluated": false,
+  "sdkUsed": false,
+  "rawArchiveBranch": "research/raw-ohlcv-archive-2026-11-05T0530Z",
+  "contextResearchBranch": "research/context-strategy-2026-11-07-run23",
+  "rawArchiveAppend": {
+    "rows": 80,
+    "cumulativeIncrementalRows": 3656,
+    "highwaterUtc": {
+      "5m": "2026-11-07T13:30:00Z",
+      "15m": "2026-11-07T13:15:00Z",
+      "1h": "2026-11-07T12:00:00Z",
+      "4h": "2026-11-07T08:00:00Z"
+    },
+    "deltas": [
+      {
+        "path": "research-data/binance-usdm/delta/binance_usdm_delta_20261107T1329Z_5m15m1h_completed.jsonl",
+        "rows": 68,
+        "sha256": "c043a4d251c8cfd972dd2a562b273eb799d6db84d268a8e8232a62f79746a752",
+        "manifestSha256": "9603df6b8642529b00b1894d79b9ea3f99f71c2f3b83541575b0e82530e873df"
+      },
+      {
+        "path": "research-data/binance-usdm/delta/binance_usdm_delta_20261107T1335Z_5m15m_completed.jsonl",
+        "rows": 8,
+        "sha256": "c7b378ddf4361a906c3ba532ae0b69ef239f6209b1d3ba0453ca53335502831a",
+        "manifestSha256": "872ddf449aba9ef509249250c941a228a08a290d42ef9fe1018be8f959af381e"
+      },
+      {
+        "path": "research-data/binance-usdm/delta/binance_usdm_delta_20261107T1337Z_5m_completed.jsonl",
+        "rows": 4,
+        "sha256": "a25d8ae272bb8ef590e4ebee500ea46ac691092db3d54d8a32fad842cbead1ba",
+        "manifestSha256": "19c67262b4ac860526b1be9542e2437e99cadce2826e5df05e03ed3c5cf32c82"
+      }
+    ],
+    "readbackVerified": true
+  },
+  "archiveIndexReadback": {
+    "oneHourIndexBlobSha": "e83d26f44cee4d4653ccf03544b2cb34413bc9e4",
+    "fourHourIndexBlobSha": "cf90c00088154dd5cad0dfefd2c9d69595f136c1",
+    "fourHourMissing76DeltaStillUnresolved": true
+  },
+  "contextArtifacts": {
+    "research/context-strategy/queue.json": {
+      "sha256": "ed5ba15b887b2ffa5e40df05ab3d78be6133a52ff65e543e81a29fd27522e715",
+      "commit": "ee9edb5dc8cbc1594976c152106e67985a99a563"
+    },
+    "research/context-strategy/registry.json": {
+      "sha256": "dc63d2c6d308830de52e147ad68dfd202009db6ed84ce759f098b50ebb887665",
+      "commit": "f44bd7027bc0b128cf319a4f7bbe758b9fd37fcc"
+    },
+    "research/context-strategy/snapshots/current_market_snapshot_20261107T1337Z_v78.json": {
+      "sha256": "bdc6f56f0ca5eea046cffa749dfafbd2bf7aeec6a2976bc6ad4598d4a244309a",
+      "commit": "24fe706727a7ec1bf1c97f6397469be4646beb8c"
+    },
+    "research/context-strategy/preflight/preflight_20261107T1337Z_v78.json": {
+      "sha256": "ca376154f34f0fc92400e9352c29ca12aeec04f012d2d380786c0ed22a98a5f7",
+      "commit": "33f371b5d2b437f8175b0ab84d4d70506473bd1e"
+    },
+    "research/context-strategy/audits/data_quality_audit_20261107T1337Z_v78.json": {
+      "sha256": "56edecef5e6cce258d21efefe11ae6d63ab89abc8cdfdb66fc60dfee8f177bd2",
+      "commit": "4c3afe99c8a6bd4ca458266b9c94409736da2a37"
+    },
+    "research/context-strategy/reports/context_strategy_research_20261107T1337Z_v78.md": {
+      "sha256": "7bb21ffb8d167dc2814f5fe8c8092bc31f5d3735cff652ff1e30429a9df7ce37",
+      "commit": "c632864d1e5722f93e9f5be669ded48d9edeef0a"
+    },
+    "research/context-strategy/reports/context_strategy_research_20261107T1337Z_v78.json": {
+      "sha256": "afd6ef8e15d09457ca221e59d0571b3f08bf73fe0bdc03ac8095316114bec984",
+      "commit": "51e6cf5ef429192938ff31e84cbf5c97e5f606ef"
+    }
+  },
+  "contextArtifactReadbackVerified": true,
+  "oosValidatedRegistryEntries": 0,
+  "noTrade": {
+    "SOLUSDT": true,
+    "ETHUSDT": true,
+    "XRPUSDT": true
+  },
+  "blockers": [
+    "Direct Binance DNS/HTTPS failure and stale exchangeInfo metadata",
+    "No local repository checkout; Node/npm below project floor",
+    "Backtest smoke test not run; closeTime omitted in remote backtest path; zero volume accepted",
+    "Multi-year 5m/15m absent; 4h canonical merge and missing 76-row delta unresolved",
+    "Historical execution-cost model incomplete"
+  ],
+  "nextAction": "Provision Node24+/npm11+ checkout, restore fresh exchange metadata, fix closeTime/volume validation, complete historical archive and costs, then run deterministic smoke test and pre-registered experiment."
+}

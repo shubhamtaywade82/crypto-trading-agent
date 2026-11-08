@@ -1,0 +1,143 @@
+{
+  "schema_version": "1.0.0",
+  "queue_version": "v84",
+  "updated_at_utc": "2026-11-08T01:44:44.700Z",
+  "last_run_id": "context-strategy-2026-11-08-run33",
+  "registry_version": "v82",
+  "items": [
+    {
+      "id": "RQ-DQ-01",
+      "priority": 1,
+      "status": "COMPLETED",
+      "last_action": "Appended 84 additional completed candles in this run: 5m=52 and 15m=16 in the 01:27Z delta, then 5m=8 and 15m=4 in the 01:38Z delta. Re-indexed the prior 68-row 00:23Z delta plus both new deltas. Raw archive index now records 81 incremental deltas / 4,004 rows and highwaters 5m 01:30Z, 15m 01:15Z, 1h 00:00Z, 4h 20:00Z. All files and index readback verified.",
+      "next_action": "Continue from 5m=01:30Z, 15m=01:15Z, 1h=00:00Z, 4h=20:00Z; append only newly completed bars.",
+      "raw_branch": "research/raw-ohlcv-archive-20261108T0127Z-run19",
+      "raw_sha256": "e2b005df65b6761b60b264454ce285fb111b279c210a2665f0b7ffbac784face"
+    },
+    {
+      "id": "RQ-ARCH-01",
+      "priority": 1,
+      "status": "IRRECOVERABLE",
+      "next_action": "Keep the 76-row interval excluded. Do not synthesize. Reopen only if an original trusted artifact or verifiable official backfill is supplied.",
+      "blocker": "No recoverable object in accessible GitHub history; expected 76 rows and SHA f5d9e50602f4ef4046fc4d39da053e45d3619ad147aa398a6bd1e281a7f3b93d.",
+      "last_action": "Checked exact missing path on all 21 accessible raw archive branches; 0 found. Path-specific Git commit history returned 0 commits on run18, run11 and main. Recovery audit persisted.",
+      "recovery_audit": "research-data/binance-usdm/audits/missing_delta_recovery_20261108T0143Z.json",
+      "checked_raw_branches": 21,
+      "path_specific_commit_history_results": 0
+    },
+    {
+      "id": "RQ-ARCH-02",
+      "priority": 1,
+      "status": "READY",
+      "next_action": "Begin paginated 5m then 15m historical backfill for BTC/ETH/SOL/XRP from each contract's valid start date. Persist immutable pages and manifests in bounded batches; validate continuity and cross-symbol alignment.",
+      "blocker": "Large history volume and no local checkout; connector pagination and GitHub storage are available, so this is queued work rather than a hard network blocker.",
+      "last_action": "Binance USDⓈ-M market-data connector successfully returned bounded klines; direct shell DNS remains unavailable. 5m/15m canonical multi-year archive still absent."
+    },
+    {
+      "id": "RQ-ARCH-03",
+      "priority": 1,
+      "status": "IN_PROGRESS",
+      "next_action": "Reconcile page provenance and merge only contiguous, independently verified deltas into canonical 1h/4h files. Preserve the unresolved 76-row gap as an explicit exclusion.",
+      "blocker": "Canonical page/hash provenance still contains known mismatches; index is append-aware but consolidated files remain behind.",
+      "last_action": "Updated raw archive index to include three 2026-11-08 deltas (68, 72, 12 rows), latest highwaters and the verified SOL funding archive. Canonical 1h/4h consolidated files were not rewritten; 76-row gap remains excluded."
+    },
+    {
+      "id": "RQ-ENV-01",
+      "priority": 1,
+      "status": "BLOCKED",
+      "next_action": "Provision Node24/npm11 and a local checkout, install project dependencies, verify the actual Binance SDK package and run repository fixtures.",
+      "blocker": "Required runtime floor and local repository checkout absent.",
+      "last_action": "Shell preflight: Linux 6.18.57, Node22.16.0/npm10.9.2, Python3.13.5, 5 CPUs, ~4.82 GiB available RAM, ~30 GiB disk free. No local repo checkout; @binance/connector, @binance/futures-connector, binance-api-node and node-binance-api imports unavailable."
+    },
+    {
+      "id": "RQ-CODE-01",
+      "priority": 1,
+      "status": "BLOCKED",
+      "next_action": "Integrate the harness into the repository's own test runner after a local checkout is provisioned; audit closeTime, volume<=0, lookahead and boundary handling.",
+      "blocker": "Repository source and package scripts are not present in the local shell runtime.",
+      "last_action": "A standalone deterministic JavaScript harness was created, persisted and executed in managed Code Mode V8; repeatability and future-data perturbation tests passed. Repository parser/tests were not invoked."
+    },
+    {
+      "id": "RQ-COST-01",
+      "priority": 2,
+      "status": "IN_PROGRESS",
+      "next_action": "Obtain account fee tier and calibrate symbol/timeframe spread and market-impact assumptions; rerun sensitivity under higher/lower costs.",
+      "blocker": "Historical spread/impact and account-specific fee tier unavailable.",
+      "last_action": "SOL experiment used 5 bps taker fee per side, 2 bps half-spread proxy and 2 bps slippage per side (18 bps round trip), plus actual historical SOL funding. Account fee tier and historical spread/market impact remain unavailable."
+    },
+    {
+      "id": "RQ-DERIV-01",
+      "priority": 2,
+      "status": "IN_PROGRESS",
+      "next_action": "Backfill funding settlements for BTCUSDT, ETHUSDT and XRPUSDT; then build bounded OI history and persist manifests.",
+      "blocker": "Only SOL funding history archived; historical OI coverage incomplete.",
+      "last_action": "Archived and readback-verified 6,813 SOLUSDT funding records from 2020-09-14 through 2026-11-08 00:00Z. 3,501 historical markPrice fields are blank; the SOL OOS trade window had zero fallback funding events. Historical funding for BTC/ETH/XRP and full OI history remain absent."
+    },
+    {
+      "id": "RQ-CTX-01",
+      "priority": 2,
+      "status": "IN_PROGRESS",
+      "next_action": "Compute aligned BTC/ETH/SOL/XRP 4h context frequencies, transitions, correlation and relative strength using train-only definitions; later extend to 1h/15m/5m.",
+      "blocker": "5m/15m multi-year history is absent; full multi-symbol 4h feature audit not yet rerun.",
+      "last_action": "Computed a fixed EMA50 trend context on SOL 4h OOS: BULL 774 bars, BEAR 1,129, TRANSITION 316; average runs 13.34/15.05/2.41 bars. This is one-symbol, one-timeframe descriptive context, not a fitted multi-symbol taxonomy."
+    },
+    {
+      "id": "RQ-EXP-01",
+      "priority": 3,
+      "status": "COMPLETED",
+      "next_action": "Do not promote or trade this family. Preserve result and use it as a negative control; prioritize archive and cross-symbol context work.",
+      "blocker": "Archive provenance, 5m/15m coverage, runtime, harness and cost assumptions incomplete.",
+      "last_action": "Executed frozen SOLUSDT 4h Donchian20 + EMA50 experiment with 6-year canonical 4h data and actual historical funding. Smoke test deterministic/no-lookahead passed. Untouched OOS 2025-11-01 to 2026-11-05: 103 trades, mean -0.0958R, PF 0.7913, net -9.92%, max DD 18.98%. Overall REJECTED by predeclared risk/net gates; BULL/BEAR context entries remain INSUFFICIENT_EVIDENCE (46/57 trades, adjusted CIs cross zero).",
+      "experiment_result": "research/context-strategy/experiments/results/solusdt_4h_donchian20_ema50_20261108T0140Z.json",
+      "evidence_status": "REJECTED"
+    },
+    {
+      "id": "RQ-MON-01",
+      "priority": 4,
+      "status": "COMPLETED",
+      "last_action": "Refreshed 200 completed bars per symbol/interval (5m/15m/1h/4h), mark/last, 24h, OI, funding, book, taker flow and global account ratio. 4h and 1h contexts bearish across BTC/ETH/SOL/XRP; lower-timeframe state mixed. All SOL/ETH/XRP NO_TRADE.",
+      "next_action": "Refresh next hourly run; only OOS_VALIDATED registry entries may be actionable."
+    },
+    {
+      "id": "RQ-WEEKLY-01",
+      "priority": 4,
+      "status": "PLANNED",
+      "next_action": "Weekly context taxonomy stability review on 2026-11-14; retain taxonomy unless train-only evidence supports revision.",
+      "blocker": "Not due; current sample does not justify refitting thresholds."
+    },
+    {
+      "id": "RQ-CTX-02",
+      "priority": 2,
+      "status": "READY",
+      "prerequisites": [
+        "4h canonical files for BTC/ETH/SOL/XRP",
+        "verified SOL 4h archive and funding manifest"
+      ],
+      "next_action": "Fetch and validate the other three 4h canonical files; compute aligned BTC-led trend/volatility/relative-strength contexts and cross-symbol transition matrix using fixed train-only definitions.",
+      "blocker": "No blocker for bounded 4h work; direct shell network is unavailable but GitHub connector is working."
+    },
+    {
+      "id": "RQ-DERIV-02",
+      "priority": 2,
+      "status": "READY",
+      "prerequisites": [
+        "Binance funding-history connector",
+        "raw archive branch and index"
+      ],
+      "next_action": "Backfill and persist funding histories for BTCUSDT, ETHUSDT and XRPUSDT, retaining exact fundingTime and markPrice-missing flags.",
+      "blocker": "Not yet executed."
+    },
+    {
+      "id": "RQ-EXP-02",
+      "priority": 3,
+      "status": "BLOCKED",
+      "prerequisites": [
+        "RQ-DERIV-02",
+        "RQ-CTX-02",
+        "same frozen harness and cost model"
+      ],
+      "next_action": "Only after data and context readiness, test ETH 4h Donchian20/EMA50 as a separate symbol-specific experiment; do not transfer SOL results.",
+      "blocker": "ETH funding archive and aligned cross-symbol context evidence not yet available."
+    }
+  ]
+}

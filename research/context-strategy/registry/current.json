@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0.0",
-  "version": "v99",
-  "as_of_utc": "2026-11-09T21:30:11.120Z",
+  "version": "v101",
+  "as_of_utc": "2026-11-09T22:31:35.000Z",
   "run_id": "context-strategy-20261109T213011Z-v99",
   "research_status": "RESEARCH_EXECUTED_DATA_QUALITY_ONLY",
   "strategy_research_status": "RESEARCH_BLOCKED",
@@ -94,19 +94,39 @@
   ],
   "status_policy": "Only OOS_VALIDATED entries may drive trade selection. OOS_PROMISING remains research-only.",
   "this_run": {
-    "as_of_utc": "2026-11-09T21:30:11.120Z",
+    "as_of_utc": "2026-11-09T22:31:35.000Z",
+    "run_id": "context-strategy-2026-11-09T223135Z-v101",
     "data_quality_experiments": [
       "EXP-DQ-2026-11-09-2123Z-014",
       "EXP-DQ-2026-11-09-2124Z-015",
-      "EXP-DQ-2026-11-09-2126Z-016"
+      "EXP-DQ-2026-11-09-2126Z-016",
+      "EXP-DQ-2026-11-09-221852Z-017",
+      "EXP-DQ-2026-11-09-223135Z-018"
     ],
-    "rows_appended": 40,
-    "rows_fetched": 56,
-    "forming_rows_excluded": 16,
+    "rows_appended": 76,
+    "rows_fetched": 100,
+    "forming_rows_excluded": 24,
+    "quality_failures": 0,
     "strategy_experiment_executed": false,
     "oos_evaluated": false,
+    "oos_validated_count": 0,
     "entries_unchanged": true,
     "context_taxonomy_unchanged": true,
-    "reason": "Incremental archive quality only. Strategy backtest blocked by missing local checkout/Node24, direct fapi DNS failure/stale metadata, absent 5m/15m base history, unresolved 4h reconciliation, and incomplete historical costs/funding."
-  }
+    "research_status": "RESEARCH_EXECUTED_DATA_QUALITY_ONLY",
+    "strategy_research_status": "RESEARCH_BLOCKED",
+    "reason": "Two incremental archive data-quality experiments completed and were read back. No strategy experiment/backtest/OOS could run: no local checkout, Node 22.16/npm 10.9 below Node>=24/npm>=11, direct Binance REST DNS unavailable, exchangeInfo serverTime stale by 16h20m, market quote timestamps up to 142s ahead of shell clock, 5m/15m base history absent, 4h provenance discrepancies unresolved, and historical funding/cost inputs incomplete.",
+    "artifact_refs": {
+      "archive_manifest": "research-data/binance-usdm/manifests/archive_manifest_20261109T223135Z_v101.json",
+      "market_snapshot": "research/context-strategy/snapshots/2026-11-09T2231Z_v101.json",
+      "preflight": "research/context-strategy/preflight/preflight_20261109T2231Z_v101.json",
+      "experiments": [
+        "research/context-strategy/experiments/EXP-DQ-2026-11-09-221852Z-017.json",
+        "research/context-strategy/experiments/EXP-DQ-2026-11-09-223135Z-018.json"
+      ]
+    }
+  },
+  "updated_at_utc": "2026-11-09T22:31:35.000Z",
+  "last_archive_manifest_path": "research-data/binance-usdm/manifests/archive_manifest_20261109T223135Z_v101.json",
+  "last_market_snapshot_path": "research/context-strategy/snapshots/2026-11-09T2231Z_v101.json",
+  "last_preflight_path": "research/context-strategy/preflight/preflight_20261109T2231Z_v101.json"
 }

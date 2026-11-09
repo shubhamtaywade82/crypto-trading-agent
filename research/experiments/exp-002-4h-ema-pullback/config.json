@@ -1,0 +1,86 @@
+{
+  "experiment": "EXP-002",
+  "timeframe": "4h",
+  "emaFast": 20,
+  "emaSlow": 50,
+  "atrPeriod": 14,
+  "warmupBars": 500,
+  "trainFraction": 0.7,
+  "validationFraction": 0.15,
+  "embargoBars": 6,
+  "stopAtr": 1.5,
+  "targetR": 2,
+  "maxHoldBars": 6,
+  "equity": 1000,
+  "riskPct": 0.01,
+  "riskUsd": 10,
+  "costBpsRoundTrip": 15,
+  "costSensitivityBps": [
+    12,
+    15,
+    25
+  ],
+  "validationStopAtrNeighborhood": [
+    1.25,
+    1.5,
+    1.75
+  ],
+  "minimumOosTrades": 100,
+  "bootstrapReplicates": 2000,
+  "bootstrapBlockTrades": 5,
+  "bootstrapSeed": 20261109,
+  "entry_rule": "At completed 4h bar i: strong BULL/BEAR context from training q67(abs((EMA20-EMA50)/ATR14)); ATR14/close <= training q67; bar touches EMA20 and closes back on trend side of EMA20 and EMA50. Enter at next bar open.",
+  "exit_rule": "1.5 ATR14 stop; 2R target; max 6 bars/24h; if stop and target both touched in one OHLC bar, stop first; stop gap fills at open, target gap fills at target.",
+  "costs": {
+    "round_trip_proxy_bps": 15,
+    "sensitivity_bps": [
+      12,
+      15,
+      25
+    ],
+    "funding": "actual Binance fundingRate/markPrice settlements for OOS test only",
+    "spread": "historical spread/impact unavailable; included only as a proxy inside 15 bps"
+  },
+  "sizing": {
+    "reference_equity_usdt": 1000,
+    "risk_pct": 1,
+    "risk_usdt": 10
+  },
+  "split": {
+    "train": 0.7,
+    "validation": 0.15,
+    "untouched_test": 0.15,
+    "purge_embargo_bars": 6
+  },
+  "input_paths": {
+    "BTCUSDT": {
+      "path": "research-data/binance-usdm/4h/canonical/BTCUSDT_4h_20200914T0800Z_20261105T1600Z.jsonl",
+      "git_blob_sha1": "a465025b2276a0e9cfbf805ba64be4da6ed08868",
+      "sha256": "7088aa2b2cc48c3895fd77dfc2ece0ae812062f24a70374ec556273a2d8380d7",
+      "rows": 13461
+    },
+    "ETHUSDT": {
+      "path": "research-data/binance-usdm/4h/canonical/ETHUSDT_4h_20200914T0800Z_20261105T1600Z.jsonl",
+      "git_blob_sha1": "26034cbb638d45295504f8e1a52862adca63eea6",
+      "sha256": "0e1ba53fb3c4c42e89440f2aaabfc7eead44ac84bc67a083c86df96a2f12dce2",
+      "rows": 13461
+    },
+    "SOLUSDT": {
+      "path": "research-data/binance-usdm/4h/canonical/SOLUSDT_4h_20200914T0800Z_20261105T1600Z.jsonl",
+      "git_blob_sha1": "77af5caa7d5e76c8efc3fd8571c55a20376ac97f",
+      "sha256": "148389f0347fe05307e2a274c579ccc1c495e32eaad2e49cfb19ca211df89156",
+      "rows": 13461
+    },
+    "XRPUSDT": {
+      "path": "research-data/binance-usdm/4h/canonical/XRPUSDT_4h_20200914T0800Z_20261105T1600Z.jsonl",
+      "git_blob_sha1": "242e2c96a05feb175e869edbdea23ee85a136f69",
+      "sha256": "b1a96c24f0e91aff7368facc428dffa22360093ce74dfe186d259b66d19f8023",
+      "rows": 13461
+    }
+  },
+  "funding_paths": {
+    "SOLUSDT": "research/experiments/exp-002-4h-ema-pullback/funding/SOLUSDT.json",
+    "ETHUSDT": "research/experiments/exp-002-4h-ema-pullback/funding/ETHUSDT.json",
+    "XRPUSDT": "research/experiments/exp-002-4h-ema-pullback/funding/XRPUSDT.json"
+  }
+}

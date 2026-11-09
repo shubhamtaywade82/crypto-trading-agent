@@ -1,0 +1,172 @@
+{
+  "runId": "CONTEXT-STRATEGY-20261109T0734Z-AUTO11",
+  "asOfUtc": "2026-11-09T07:34:01.571Z",
+  "environment": {
+    "cwd": "/",
+    "os": "Linux 6.18.57 x86_64",
+    "node": "v22.16.0",
+    "npm": "10.9.2",
+    "python": "3.13.5",
+    "git": "2.47.3",
+    "cpuCores": 5,
+    "memoryTotalGiB": 5.8,
+    "memoryAvailableGiB": 4.7,
+    "diskFreeGiB": 30,
+    "localRepositoryPresent": false,
+    "binanceSdkInstalled": false,
+    "sdkUsed": false
+  },
+  "endpointChecks": {
+    "GET /fapi/v1/time": {
+      "status": "BLOCKED",
+      "evidence": "No connector action; direct curl DNS failed (HTTP 000); web open inaccessible."
+    },
+    "GET /fapi/v1/exchangeInfo": {
+      "status": "DEGRADED",
+      "serverTimeUtc": "2026-11-09T06:13:33.344Z",
+      "staleVsPremiumIndexSeconds": 4597.656,
+      "httpStatus": "NOT_EXPOSED"
+    },
+    "GET /fapi/v1/klines": {
+      "status": "PASS_VIA_BINANCE_CONNECTOR",
+      "symbols": [
+        "BTCUSDT",
+        "ETHUSDT",
+        "SOLUSDT",
+        "XRPUSDT"
+      ],
+      "intervals": [
+        "5m",
+        "15m",
+        "1h",
+        "4h"
+      ],
+      "recentWindowRowsPerSeries": {
+        "received": 80,
+        "completed": 79,
+        "formingExcluded": 1
+      },
+      "httpStatus": "NOT_EXPOSED"
+    },
+    "GET /fapi/v1/premiumIndex": {
+      "status": "PASS_VIA_BINANCE_CONNECTOR",
+      "symbols": [
+        "BTCUSDT",
+        "ETHUSDT",
+        "SOLUSDT",
+        "XRPUSDT"
+      ],
+      "timeUtc": "2026-11-09T07:30:11.000Z",
+      "httpStatus": "NOT_EXPOSED"
+    },
+    "GET /fapi/v1/openInterest": {
+      "status": "PASS_VIA_BINANCE_CONNECTOR",
+      "symbols": [
+        "BTCUSDT",
+        "ETHUSDT",
+        "SOLUSDT",
+        "XRPUSDT"
+      ],
+      "timeUtc": "2026-11-09T07:30:12.515Z–2026-11-09T07:30:14.830Z",
+      "httpStatus": "NOT_EXPOSED"
+    },
+    "GET /fapi/v1/ticker/24hr": {
+      "status": "PASS_VIA_BINANCE_CONNECTOR",
+      "symbols": [
+        "BTCUSDT",
+        "ETHUSDT",
+        "SOLUSDT",
+        "XRPUSDT"
+      ],
+      "closeTimeUtc": "2026-11-09T07:30:08.148Z–2026-11-09T07:30:08.568Z",
+      "httpStatus": "NOT_EXPOSED"
+    },
+    "GET /fapi/v1/fundingRate": {
+      "status": "PASS_LATEST_SETTLEMENT_ONLY",
+      "latestSettlementUtc": "2026-11-09T00:00:00.000Z",
+      "intervalHours": 8,
+      "historicalArchive": "INCOMPLETE"
+    },
+    "GET /futures/data/openInterestHist": {
+      "status": "PASS_LATEST_TWO_HOURLY_POINTS",
+      "latestTimestampUtc": "2026-11-09T07:00:00.000Z"
+    },
+    "GET /futures/data/takerlongshortRatio": {
+      "status": "PASS_LATEST_COMPLETED_HOUR",
+      "latestTimestampUtc": "2026-11-09T06:00:00.000Z"
+    },
+    "GET /futures/data/globalLongShortAccountRatio": {
+      "status": "PASS_LATEST_COMPLETED_HOUR",
+      "latestTimestampUtc": "2026-11-09T07:00:00.000Z"
+    },
+    "GET /fapi/v1/depth": {
+      "status": "PASS_SNAPSHOT",
+      "symbols": [
+        "BTCUSDT",
+        "ETHUSDT",
+        "SOLUSDT",
+        "XRPUSDT"
+      ],
+      "bookTimeUtc": "2026-11-09T07:30:14.830Z"
+    }
+  },
+  "capabilities": [
+    {
+      "check": "Shell/compute",
+      "status": "PASS_WITH_VERSION_LIMITATION",
+      "evidence": "Linux x86_64; Python 3.13.5; 5 CPU; 5.8 GiB RAM; 30 GiB free; Node 22.16.0/npm 10.9.2."
+    },
+    {
+      "check": "Repository/code",
+      "status": "DEGRADED",
+      "evidence": "No local checkout; remote main inspected at 4c12a96fd0e9855caa25673266db5002472ade4f."
+    },
+    {
+      "check": "Network/Binance",
+      "status": "DEGRADED",
+      "evidence": "Binance connector returns current market data; direct fapi DNS fails, curl HTTP 000; exchangeInfo serverTime is 76m37.656s stale."
+    },
+    {
+      "check": "Raw historical archive",
+      "status": "DEGRADED",
+      "evidence": "1h base exists; 5m/15m base absent; 4h canonical window ends 2026-11-04T12:00Z and 13 page/symbol SHA provenance mismatches remain."
+    },
+    {
+      "check": "Data quality/coverage",
+      "status": "PASS_INCREMENTAL_ONLY",
+      "evidence": "76 new completed rows persisted; 0 duplicate/gap/off-grid/non-monotonic/OHLC/non-positive-volume/non-finite/closeTime failures; 12 forming rows excluded."
+    },
+    {
+      "check": "Backtest harness/smoke test",
+      "status": "BLOCKED",
+      "evidence": "No local repo; Node22/npm10 below project floor; no SDK; no deterministic fixture smoke test or strategy replay executed."
+    },
+    {
+      "check": "Disk/storage",
+      "status": "PASS",
+      "evidence": "30 GiB free; GitHub research branch writable."
+    },
+    {
+      "check": "Artifact readback",
+      "status": "PASS",
+      "evidence": "Delta, manifest and 5m/15m/1h indexes fetched back; SHA-256 and Git blob identities recorded."
+    }
+  ],
+  "remoteCodeAudit": {
+    "mainCommit": "4c12a96fd0e9855caa25673266db5002472ade4f",
+    "findings": [
+      "src/types.ts Candle omits closeTime; src/backtesting/klineLoader.ts drops Binance kline row[6] and taker fields.",
+      "src/backtesting/candleIntegrity.ts accepts volume >= 0; zero-volume candles pass.",
+      "scripts/backtest.ts loads 15m/1h/4h only; 5m is excluded from its TIMEFRAMES.",
+      "ReplayService syntheticDerivatives returns null OI/positioning/taker fields; derivative-conditioned replay is not supported by that adapter.",
+      "research/directional/exp-001.json includes BTCUSDT in the tradable symbols array; BTC reference-only contract is not enforced."
+    ]
+  },
+  "nextActions": [
+    "Restore direct Binance DNS/HTTPS and fresh exchangeInfo; require <=5s server-time drift.",
+    "Provision Node24/npm11 and a local checkout; run deterministic candle-integrity/no-lookahead smoke fixtures twice.",
+    "Fix closeTime propagation, strict positive volume, 5m backtest support and BTC reference-only tests.",
+    "Reconcile 4h raw/canonical row counts and 13 SHA provenance mismatches; backfill multi-year 5m/15m.",
+    "Backfill historical funding and calibrate spread/impact/slippage/latency before strategy OOS."
+  ]
+}

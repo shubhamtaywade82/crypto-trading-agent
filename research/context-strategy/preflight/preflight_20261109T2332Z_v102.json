@@ -1,0 +1,113 @@
+{
+  "run_id": "context-strategy-2026-11-09T2332Z-v102",
+  "as_of_utc": "2026-11-09T23:32:30Z",
+  "shell_compute": {
+    "status": "PASS",
+    "os": "Linux x86_64 container",
+    "python": "3.13.5",
+    "node": "22.16.0",
+    "npm": "10.9.2",
+    "cpu_count": 5,
+    "available_memory_gb": 4.7,
+    "disk_free_gb": 30,
+    "cwd": "/",
+    "local_repo": false
+  },
+  "repo_code": {
+    "status": "DEGRADED_REMOTE_ONLY",
+    "main_commit": "669ba233538eb1463c0e7e0a435016a643e7adb5",
+    "package_version": "2.4.1",
+    "engine_requirements": {
+      "node": ">=24",
+      "npm": ">=11"
+    },
+    "local_checkout": false,
+    "source_findings": [
+      "archiveKlines.ts discards kline closeTime cell 6",
+      "Candle type lacks closeTime",
+      "volume<0 check permits volume=0",
+      "EXP-001 includes BTCUSDT in tradable symbols"
+    ]
+  },
+  "binance_sdk": {
+    "status": "UNAVAILABLE",
+    "checked_packages": [
+      "@binance/connector",
+      "binance-connector",
+      "binance-futures-connector",
+      "binance-api-node"
+    ],
+    "installed": false
+  },
+  "network": {
+    "direct_fapi_dns": "BLOCKED_HTTP000",
+    "direct_github_api_dns": "BLOCKED",
+    "github_connector": "PASS",
+    "binance_connector": "PASS_WITH_DEGRADED_EXCHANGE_METADATA"
+  },
+  "market_endpoints": {
+    "/fapi/v1/time": "BLOCKED direct DNS",
+    "/fapi/v1/exchangeInfo": "DEGRADED stale serverTime; target symbols listed TRADING but not execution-valid",
+    "/fapi/v1/klines": "PASS via connector for 4 symbols x 4 intervals",
+    "/fapi/v1/premiumIndex": "PASS via connector",
+    "/fapi/v1/openInterest": "PASS via connector",
+    "/fapi/v1/ticker/24hr": "PASS via connector",
+    "/fapi/v1/fundingRate": "PASS via connector",
+    "/fapi/v1/fundingInfo": "PASS via connector; 8h intervals confirmed",
+    "/futures/data/openInterestHist": "PASS via connector",
+    "/futures/data/takerlongshortRatio": "DEGRADED uneven timestamps",
+    "/fapi/v1/depth": "PASS via connector; no response timestamp"
+  },
+  "clock": {
+    "exchange_info_server_time_utc": "2026-11-09T06:13:33.347Z",
+    "shell_clock_utc": "2026-11-09T23:32:30Z",
+    "lag_seconds": 62336.653,
+    "market_endpoint_time_utc": "2026-11-09T23:31:06-23:31:10Z",
+    "market_data_age_seconds": 80
+  },
+  "archive": {
+    "status": "DEGRADED",
+    "base_5m": "ABSENT",
+    "base_15m": "ABSENT",
+    "base_1h_rows_previous": 215484,
+    "base_4h_rows": {
+      "raw": 53960,
+      "aligned": 53816,
+      "canonical": 53844
+    },
+    "unresolved_4h_sha_discrepancies": 13,
+    "new_delta_rows": 68,
+    "delta_files_readback": true,
+    "canonical_indexes_updated": false
+  },
+  "data_quality": {
+    "status": "PASS_FOR_CURRENT_WINDOWS_AND_DELTAS",
+    "series": 16,
+    "rows_fetched": 1600,
+    "completed": 1584,
+    "forming_excluded": 16,
+    "duplicates": 0,
+    "gaps": 0,
+    "off_grid": 0,
+    "non_monotonic": 0,
+    "ohlc_violations": 0,
+    "non_positive_volume": 0,
+    "non_finite": 0,
+    "close_time_mismatches": 0,
+    "cross_symbol_alignment": true
+  },
+  "backtest": {
+    "status": "BLOCKED",
+    "harness_invoked": false,
+    "fixture_smoke_test": "NOT_RUN",
+    "strategy_experiment": false,
+    "oos_evaluated": false
+  },
+  "storage": {
+    "status": "PASS_REMOTE_GITHUB",
+    "disk_free_gb": 30,
+    "delta_files_persisted": true,
+    "readback_verified": true
+  },
+  "outcome": "RESEARCH_EXECUTED_DATA_QUALITY_ONLY; RESEARCH_BLOCKED_FOR_STRATEGY_DISCOVERY; OOS_EVALUATED=false; OOS_VALIDATED=0"
+}

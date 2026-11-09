@@ -1,0 +1,101 @@
+{
+  "runId": "CONTEXT-STRATEGY-20261109T1029Z-AUTO11",
+  "asOfUtc": "2026-11-09T10:29:24.644Z",
+  "environment": {
+    "runtime": "managed tool runtime plus container shell",
+    "cwd": "/",
+    "os": "Linux x86_64",
+    "node": "v22.16.0",
+    "npm": "10.9.2",
+    "pnpm": "NOT_INSTALLED",
+    "yarn": "NOT_INSTALLED",
+    "python": "3.13.5",
+    "git": "2.47.3",
+    "cpuCores": 5,
+    "memoryTotalGiB": 5.8,
+    "memoryAvailableGiB": 4.7,
+    "diskFreeGiB": 30,
+    "localRepositoryPresent": false,
+    "binanceSdkPackages": {
+      "binance": "NOT_INSTALLED",
+      "@binance/connector": "NOT_INSTALLED",
+      "binance-api-node": "NOT_INSTALLED",
+      "@nemesis-oss/binance-sdk": "NOT_INSTALLED"
+    },
+    "projectEngineRequirement": {
+      "node": ">=24",
+      "npm": ">=11"
+    },
+    "sdkUsed": false
+  },
+  "checks": [
+    {
+      "capability": "shell/compute",
+      "status": "PASS",
+      "evidence": "cwd=/; Linux x86_64; Node 22.16.0/npm 10.9.2; Python 3.13.5; 5 CPUs; 5.8 GiB RAM (4.7 GiB available); 30 GiB free disk.",
+      "impact": "Python/managed-JS analysis and small artifact operations worked; repository runner engine floor not met.",
+      "nextAction": "Provision Node 24/npm 11 for repository tests."
+    },
+    {
+      "capability": "repo/code",
+      "status": "DEGRADED",
+      "evidence": "No local crypto-trading-agent checkout or node_modules. Remote main inspected at 0a09efd1957361c375bacb3756ff97dbb868d3bc; package requires Node>=24/npm>=11.",
+      "impact": "No local harness invocation or smoke test.",
+      "nextAction": "Clone latest main under a compatible runtime and address verified candle/role defects."
+    },
+    {
+      "capability": "network/Binance endpoints",
+      "status": "DEGRADED",
+      "evidence": "Direct DNS/HTTPS to fapi.binance.com failed for /time, /exchangeInfo, /klines, /premiumIndex, /openInterest and /ticker/24hr. Connector returned market data but no HTTP status/headers. Connector exchangeInfo serverTime=2026-11-09T06:13:33.349Z, 15,351.295s behind retrieval; premium/mark snapshot time=10:27:01Z.",
+      "impact": "Fresh market snapshot is descriptive; current contract status cannot be validated for execution.",
+      "nextAction": "Restore direct DNS/HTTPS or obtain uncached official /fapi/v1/time and /exchangeInfo with <=5s drift."
+    },
+    {
+      "capability": "raw historical archive",
+      "status": "DEGRADED",
+      "evidence": "Remote archive branch readable/writable; 1h base=215,484 rows (53,871/symbol) from 2020-09-14 08:00Z to 2026-11-06 22:00Z; 4h canonical=53,844 rows (13,461/symbol) through 2026-11-05 16:00Z; 5m/15m base ABSENT; 1m ABSENT. Local raw archive not mounted.",
+      "impact": "No complete aligned multi-timeframe historical dataset.",
+      "nextAction": "Backfill 5m/15m/1m and reconcile 4h raw/canonical row counts and provenance."
+    },
+    {
+      "capability": "data quality/coverage",
+      "status": "PASS_INCREMENTAL_ONLY",
+      "evidence": "16 current series (4 symbols x 4 intervals): 120 rows received, 119 complete and 1 forming excluded each; zero duplicate/gap/off-grid/OHLC/non-positive-volume/non-finite failures. New 5m delta: 12 fetched, 8 complete, 4 forming excluded; all checks passed.",
+      "impact": "Recent slices are structurally valid; historical completeness is not established.",
+      "nextAction": "Continue incremental validation and run full archive audit after reconciliation."
+    },
+    {
+      "capability": "backtest harness/smoke test",
+      "status": "BLOCKED",
+      "evidence": "Remote harness exists but no local compatible Node/npm runner; smoke test NOT_RUN. Remote main still omits Candle.closeTime, drops Binance row[6], permits volume=0, excludes 5m from TIMEFRAMES, and EXP-001 includes BTCUSDT as tradable.",
+      "impact": "No strategy experiment or OOS evaluation.",
+      "nextAction": "Fix code/fixtures and run deterministic no-lookahead smoke test twice under Node24/npm11."
+    },
+    {
+      "capability": "disk/storage",
+      "status": "PASS",
+      "evidence": "30 GiB free; GitHub archive branch push permission observed; delta, manifest and index writes succeeded.",
+      "impact": "Incremental archive and queue updates persisted remotely.",
+      "nextAction": "Continue atomic writes and verified readback."
+    },
+    {
+      "capability": "artifact readback",
+      "status": "PASS",
+      "evidence": "Delta and manifest content fetched back exactly; 5m and cross-timeframe 4h indexes fetched back exactly; queue.json and timestamped queue snapshot fetched back exactly.",
+      "impact": "Current incremental data and queue are durably recorded.",
+      "nextAction": "Read back all remaining run artifacts after creation."
+    }
+  ],
+  "directRest": {
+    "status": "UNAVAILABLE_DNS",
+    "httpStatus": null,
+    "serverTime": "UNAVAILABLE",
+    "exchangeInfo": "UNAVAILABLE_DIRECT; connector snapshot stale",
+    "premiumIndex": "UNAVAILABLE_DIRECT; connector PASS",
+    "openInterest": "UNAVAILABLE_DIRECT; connector PASS",
+    "ticker24hr": "UNAVAILABLE_DIRECT; connector PASS",
+    "klines": "UNAVAILABLE_DIRECT; connector PASS"
+  },
+  "runClassification": "RESEARCH_EXECUTED",
+  "researchScope": "Incremental archive integrity only; no strategy experiment and no OOS."
+}

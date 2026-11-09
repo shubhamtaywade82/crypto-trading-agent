@@ -1,0 +1,72 @@
+{
+  "id": "EXP-DQ-2026-11-09-102803Z-003",
+  "type": "INCREMENTAL_ARCHIVE_INTEGRITY",
+  "status": "COMPLETED",
+  "hypothesis": "The completed 5m bars immediately after the prior 10:10Z high-water are gap-free, aligned and schema-valid for BTCUSDT, ETHUSDT, SOLUSDT and XRPUSDT.",
+  "specificationVersion": "1.0.0",
+  "runId": "CONTEXT-STRATEGY-20261109T1029Z-AUTO11",
+  "asOfUtc": "2026-11-09T10:29:24.644Z",
+  "dataWindowUtc": {
+    "interval": "5m",
+    "firstOpen": "2026-11-09T10:15:00.000Z",
+    "lastOpen": "2026-11-09T10:20:00.000Z",
+    "lastClose": "2026-11-09T10:24:59.999Z"
+  },
+  "symbols": [
+    "BTCUSDT",
+    "ETHUSDT",
+    "SOLUSDT",
+    "XRPUSDT"
+  ],
+  "source": {
+    "endpoint": "GET /fapi/v1/klines",
+    "access": "Binance USDⓈ-M connector",
+    "sdkUsed": false,
+    "httpStatusExposed": false
+  },
+  "rowsFetched": 12,
+  "completedRows": 8,
+  "formingRowsExcluded": 4,
+  "rowsAppended": 8,
+  "rowCountsBySymbol": {
+    "BTCUSDT": 2,
+    "ETHUSDT": 2,
+    "SOLUSDT": 2,
+    "XRPUSDT": 2
+  },
+  "checks": {
+    "duplicates": 0,
+    "missingIntervals": 0,
+    "offGrid": 0,
+    "nonMonotonic": 0,
+    "ohlcViolations": 0,
+    "nonPositiveVolume": 0,
+    "nonFinite": 0,
+    "closeTimeFailures": 0,
+    "crossSymbolAlignment": "PASS"
+  },
+  "priorHighwaterUtc": "2026-11-09T10:10:00.000Z",
+  "nextStartUtc": "2026-11-09T10:25:00.000Z",
+  "archive": {
+    "repository": "shubhamtaywade82/crypto-trading-agent",
+    "branch": "research/raw-ohlcv-archive-20261108T1026Z",
+    "branchHeadCommit": "aafd0871b5457931ae67b6b57f8e6cca534c21f0",
+    "deltaPath": "research-data/binance-usdm/delta/binance_usdm_delta_20261109T102803Z_5m_completed.jsonl",
+    "deltaSha256": "1e9c6d9ab593c45d771c998b849977b8d59fedd15e05f4847c7d36786ad1e5fc",
+    "deltaGitBlobSha1": "8abd70639b4a28a16ee906f80e25d173ddac0f7f",
+    "manifestPath": "research-data/binance-usdm/delta/manifest-20261109T102803Z-5m.json",
+    "manifestSha256": "125f29374b3c0d0c3cfa1fdf9d732b84df82e4422a8823a347d4e013baee6d8c",
+    "manifestGitBlobSha1": "c79eea30719c9fc1af8ae21d0998bf909318755e",
+    "deltaCommit": "e0816dbf3bedd089decdc37c42f22a5cc51725eb",
+    "manifestCommit": "af6fba05745f5d62cad0ad7a9d7bf26d40904219",
+    "fiveMinuteIndexCommit": "33e2a6c2a4d56f61a47b2f719f8b491f4e60f737",
+    "crossTimeframeIndexCommit": "aafd0871b5457931ae67b6b57f8e6cca534c21f0",
+    "readbackVerified": true
+  },
+  "limitations": [
+    "Incremental-slice data-quality experiment only; not a strategy backtest.",
+    "No untouched OOS evaluation.",
+    "Does not certify full historical archive completeness.",
+    "Only 5m received new rows; 15m/1h/4h had no new completed candles at retrieval time."
+  ]
+}

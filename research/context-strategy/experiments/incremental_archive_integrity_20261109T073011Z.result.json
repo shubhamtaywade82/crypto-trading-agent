@@ -1,0 +1,84 @@
+{
+  "id": "EXP-DQ-2026-11-09-073011Z-001",
+  "type": "INCREMENTAL_ARCHIVE_INTEGRITY",
+  "status": "COMPLETED",
+  "hypothesis": "Newly completed Binance USDⓈ-M candles after prior archive high-water marks can be appended without duplicate, missing, off-grid, non-monotonic, OHLC, volume, non-finite or close-time violations across BTC/ETH/SOL/XRP.",
+  "dataWindowUtc": {
+    "5m": {
+      "from": "2026-11-09T06:25:00.000Z",
+      "to": "2026-11-09T07:25:00.000Z",
+      "rows": 52
+    },
+    "15m": {
+      "from": "2026-11-09T06:15:00.000Z",
+      "to": "2026-11-09T07:15:00.000Z",
+      "rows": 20
+    },
+    "1h": {
+      "from": "2026-11-09T06:00:00.000Z",
+      "to": "2026-11-09T06:00:00.000Z",
+      "rows": 4
+    },
+    "4h": {
+      "from": null,
+      "to": null,
+      "rows": 0,
+      "reason": "04:00 UTC candle remained forming at snapshot time."
+    }
+  },
+  "inputSymbols": [
+    "BTCUSDT",
+    "ETHUSDT",
+    "SOLUSDT",
+    "XRPUSDT"
+  ],
+  "rowsFetched": 88,
+  "completedRows": 76,
+  "formingRowsExcluded": 12,
+  "rowsByInterval": {
+    "5m": 52,
+    "15m": 20,
+    "1h": 4,
+    "4h": 0
+  },
+  "rowsBySymbol": {
+    "BTCUSDT": 19,
+    "ETHUSDT": 19,
+    "SOLUSDT": 19,
+    "XRPUSDT": 19
+  },
+  "checks": {
+    "duplicates": 0,
+    "missingIntervals": 0,
+    "offGrid": 0,
+    "nonMonotonic": 0,
+    "ohlcViolations": 0,
+    "nonPositiveVolume": 0,
+    "nonFinite": 0,
+    "closeTimeFailures": 0,
+    "crossSymbolAlignment": "PASS"
+  },
+  "archive": {
+    "branch": "research/raw-ohlcv-archive-20261108T1026Z",
+    "deltaPath": "research-data/binance-usdm/delta/binance_usdm_delta_20261109T073011Z_5m15m1h_completed.jsonl",
+    "deltaSha256": "a0eb044f9b261153ee6f077da9b57d3598f94fdce0356648c144c1574ea4fb59",
+    "manifestPath": "research-data/binance-usdm/delta/manifest-20261109T073011Z-5m15m1h.json",
+    "manifestSha256": "46a57b73625b2df3b966c23982d1316efe536c412f57d25c9dba083e1795dedd",
+    "deltaBlobSha1": "c26ee73b2d08cc046433640f2e9fbe2835882056",
+    "manifestBlobSha1": "aa4b0f06b6334e54e1baf87fd6f274d4efe0f86c",
+    "deltaCommit": "4031f04b8fa2ca5f0f32e3fb23297621b99657da",
+    "manifestCommit": "204ebb3759e3db932c71483971e1c99880336c2d",
+    "indexCommits": {
+      "5m": "62896fa141e9dca905d653c9b501265ff96e1573",
+      "15m": "71f2bdff0078897a056d73b029dfa9133267dd1f",
+      "1h": "654111c2c6cd6274a6953df1e89f7941165a4d56"
+    },
+    "readbackVerified": true
+  },
+  "limitations": [
+    "This is an incremental archive/data-quality experiment, not a trading strategy experiment.",
+    "The 80-bar current snapshot is not adequate for strategy OOS claims.",
+    "No backtest harness or deterministic strategy smoke test ran.",
+    "4h archive was not extended because the current 04:00 UTC 4h candle had not closed."
+  ]
+}

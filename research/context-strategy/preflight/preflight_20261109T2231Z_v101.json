@@ -1,0 +1,149 @@
+{
+  "run_id": "context-strategy-2026-11-09T223135Z-v101",
+  "as_of_utc": "2026-11-09T22:31:35.000Z",
+  "environment": {
+    "shell_compute": {
+      "status": "PASS",
+      "evidence": {
+        "checked_at_utc": "2026-11-09T22:33:49Z",
+        "os": "Debian 13",
+        "python": "3.13.5",
+        "node": "v22.16.0",
+        "npm": "10.9.2",
+        "cpu_count": 5,
+        "mem_available_kb": 4943228,
+        "disk_free_gb": 30,
+        "repo_checkout": "absent"
+      }
+    },
+    "repo_code": {
+      "status": "DEGRADED",
+      "remote_main_commit": "669ba233538eb1463c0e7e0a435016a643e7adb5",
+      "package_engine_requirement": "node>=24; npm>=11",
+      "local_checkout": false,
+      "verified_source_findings": [
+        "src/backtesting/candleIntegrity.ts accepts volume>=0; requirement is volume>0",
+        "src/backtesting/klineLoader.ts maps row[0..5] and discards row[6] closeTime",
+        "Candle type lacks closeTime",
+        "research/directional/exp-001.json includes BTCUSDT in tradable symbols"
+      ]
+    },
+    "binance_sdk": {
+      "status": "UNAVAILABLE",
+      "reason": "No installed Binance SDK package; Node runtime below package engine floor."
+    }
+  },
+  "market_connectivity": {
+    "status": "DEGRADED",
+    "connector": "Binance USDⓈ-M connector wrappers",
+    "direct_rest": {
+      "status": "BLOCKED",
+      "evidence": "DNS resolution failure; HTTP 000"
+    },
+    "exchange_info": {
+      "status": "BLOCKED_FOR_EXECUTION",
+      "server_time_utc": "2026-11-09T06:13:33.345Z",
+      "lag_seconds": 58681.655
+    },
+    "market_timestamp_skew_seconds": {
+      "ticker": 2,
+      "mark": 8,
+      "open_interest": 77,
+      "book_ticker": 81
+    },
+    "contract_status": "NOT_VERIFIED_FOR_EXECUTION"
+  },
+  "endpoints": {
+    "/fapi/v1/time": "BLOCKED direct REST DNS; no fresh server time",
+    "/fapi/v1/exchangeInfo": "DEGRADED stale serverTime",
+    "/fapi/v1/klines": "PASS via connector for 5m/15m/1h/4h current windows and appended completed deltas",
+    "/fapi/v1/premiumIndex": "PASS via connector; indicated funding and next funding time",
+    "/fapi/v1/openInterest": "PASS via connector; current snapshot only",
+    "/fapi/v1/ticker/24hr": "PASS via connector",
+    "/fapi/v1/ticker/bookTicker": "PASS via connector; best bid/ask only",
+    "/fapi/v1/fundingRate": "PASS via connector; three recent settlement rows only",
+    "/futures/data/takerlongshortRatio": "DEGRADED; latest rows uneven across symbols",
+    "/futures/data/globalLongShortAccountRatio": "PASS via connector; 1h snapshot"
+  },
+  "historical_archive": {
+    "status": "DEGRADED",
+    "storage": "GitHub research branch; no local raw archive checkout",
+    "coverage": {
+      "5m": "base archive absent; incremental deltas only",
+      "15m": "base archive absent; incremental deltas only",
+      "1h": "215484 rows; September 2020 onward",
+      "4h": "53960 raw / 53816 aligned / 53844 canonical; 13 unresolved manifest SHA provenance discrepancies; canonical stale through 2026-11-05T16:00Z"
+    },
+    "highwaters_utc": {
+      "5m": "2026-11-09T22:25:00Z",
+      "15m": "2026-11-09T22:15:00Z",
+      "1h": "2026-11-09T21:00:00Z",
+      "4h": "2026-11-09T16:00:00Z"
+    }
+  },
+  "data_quality": {
+    "status": "PASS_FOR_INCREMENTAL_DELTAS",
+    "runs": [
+      {
+        "id": "EXP-DQ-2026-11-09-221852Z-017",
+        "rows_fetched": 76,
+        "rows_appended": 60,
+        "forming_excluded": 16,
+        "failures": 0
+      },
+      {
+        "id": "EXP-DQ-2026-11-09-223135Z-018",
+        "rows_fetched": 24,
+        "rows_appended": 16,
+        "forming_excluded": 8,
+        "failures": 0
+      }
+    ],
+    "totals": {
+      "rows_fetched": 100,
+      "rows_appended": 76,
+      "forming_excluded": 24,
+      "quality_failures": 0
+    },
+    "current_windows": {
+      "series": 16,
+      "rows_fetched": 2400,
+      "completed": 2384,
+      "forming_excluded": 16,
+      "full_continuity": "NOT_FULLY_CHECKED"
+    }
+  },
+  "backtest": {
+    "status": "BLOCKED",
+    "repo_checkout": false,
+    "node_engine_mismatch": true,
+    "known_fixture_smoke_test": "NOT_RUN",
+    "harness_invoked": false,
+    "experiment": "No strategy experiment; no backtest; no OOS evaluation"
+  },
+  "storage": {
+    "status": "PASS",
+    "disk_free_gb": 30,
+    "github_branch": "research/raw-ohlcv-archive-20261108T1026Z",
+    "github_writes": true,
+    "artifact_readback": true
+  },
+  "artifact_readback": {
+    "status": "PASS",
+    "artifacts": [
+      "5m/15m/1h delta JSONL and manifests for 22:18Z",
+      "5m/15m delta JSONL and manifests for 22:31Z",
+      "5m/15m/1h archive indexes",
+      "global archive manifest v101"
+    ],
+    "sha256_known_vector": "PASS",
+    "readback_exact_bytes": true
+  },
+  "outcome": {
+    "research_executed": "DATA_QUALITY_ONLY",
+    "research_blocked": "STRATEGY_DISCOVERY",
+    "oos_evaluated": false,
+    "oos_validated_count": 0,
+    "monitoring_only": false
+  }
+}

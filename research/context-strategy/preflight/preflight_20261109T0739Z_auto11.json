@@ -1,0 +1,84 @@
+{
+  "runId": "CONTEXT-STRATEGY-20261109T0739Z-AUTO11",
+  "asOfUtc": "2026-11-09T07:39:12.238Z",
+  "environment": {
+    "cwd": "/",
+    "os": "Linux 6.18.57 x86_64",
+    "node": "v22.16.0",
+    "npm": "10.9.2",
+    "python": "3.13.5",
+    "git": "2.47.3",
+    "cpuCores": 5,
+    "memoryTotalGiB": 5.8,
+    "memoryAvailableGiB": 4.7,
+    "diskFreeGiB": 30,
+    "localRepositoryPresent": false,
+    "binanceSdkInstalled": false,
+    "sdkUsed": false,
+    "projectEngines": {
+      "node": ">=24",
+      "npm": ">=11"
+    }
+  },
+  "checks": [
+    {
+      "capability": "shell/compute",
+      "status": "PASS_WITH_VERSION_LIMITATION",
+      "evidence": "Python3.13.5; Node22.16.0/npm10.9.2; 5 CPU; 5.8GiB RAM; 30GiB free."
+    },
+    {
+      "capability": "repo/code",
+      "status": "DEGRADED",
+      "evidence": "No local checkout; remote main 4c12a96fd0e9855caa25673266db5002472ade4f inspected."
+    },
+    {
+      "capability": "network/Binance",
+      "status": "DEGRADED",
+      "evidence": "Connector endpoints returned market data; direct fapi DNS failed, curl HTTP000; exchangeInfo serverTime 06:13:33.344Z is 5,120.656s stale."
+    },
+    {
+      "capability": "raw historical archive",
+      "status": "DEGRADED",
+      "evidence": "80 completed rows persisted; 5m/15m base absent; 4h canonical ends 2026-11-04T12:00Z and 13 SHA provenance mismatches remain."
+    },
+    {
+      "capability": "data quality/coverage",
+      "status": "PASS_INCREMENTAL_ONLY",
+      "evidence": "80 completed rows, 16 forming excluded; zero duplicates/gaps/off-grid/OHLC/non-positive-volume/non-finite/closeTime failures."
+    },
+    {
+      "capability": "backtest harness/smoke test",
+      "status": "BLOCKED",
+      "evidence": "Node/npm below project engines, no local repo or SDK, no deterministic smoke test or OOS run."
+    },
+    {
+      "capability": "disk/storage",
+      "status": "PASS",
+      "evidence": "30GiB free; GitHub research branch writable."
+    },
+    {
+      "capability": "artifact readback",
+      "status": "PASS",
+      "evidence": "Two deltas/manifests and 5m/15m/1h indexes fetched back and hash-verified."
+    }
+  ],
+  "directRest": {
+    "dns": "FAILED",
+    "curlHttpStatus": 0,
+    "timeEndpoint": "UNAVAILABLE",
+    "exchangeInfoServerTimeUtc": "2026-11-09T06:13:33.344Z",
+    "premiumIndexTimeUtc": "2026-11-09T07:38:54.000Z",
+    "stalenessSeconds": 5120.656,
+    "httpStatusesFromConnector": "NOT_EXPOSED"
+  },
+  "remoteCodeAudit": {
+    "commit": "4c12a96fd0e9855caa25673266db5002472ade4f",
+    "findings": [
+      "Candle.closeTime omitted/dropped.",
+      "Zero-volume candles accepted by candleIntegrity.",
+      "Backtest CLI excludes 5m.",
+      "Replay synthetic derivatives are null.",
+      "EXP-001 includes BTCUSDT as tradable."
+    ]
+  }
+}

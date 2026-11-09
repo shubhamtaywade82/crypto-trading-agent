@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAtUtc": "2026-11-09T07:34:01.571Z",
+  "updatedAtUtc": "2026-11-09T07:39:12.238Z",
   "items": [
     {
       "id": "Q1_ARCHIVE_MULTIYEAR",
@@ -24,7 +24,7 @@
         "latestDeltaSha256": "a0eb044f9b261153ee6f077da9b57d3598f94fdce0356648c144c1574ea4fb59",
         "latestDeltaReadbackVerified": true,
         "effectiveHighwaterUtc": {
-          "5m": "2026-11-09T07:25:00.000Z",
+          "5m": "2026-11-09T07:30:00.000Z",
           "15m": "2026-11-09T07:15:00.000Z",
           "1h": "2026-11-09T06:00:00.000Z",
           "4h": "2026-11-09T00:00:00.000Z"
@@ -36,14 +36,14 @@
           "1h": "2026-11-09T07:00:00.000Z",
           "4h": "2026-11-09T04:00:00.000Z"
         },
-        "rowsAppendedThisRun": 76,
+        "rowsAppendedThisRun": 80,
         "rowsAppendedByInterval": {
-          "5m": 52,
+          "5m": 56,
           "15m": 20,
           "1h": 4,
           "4h": 0
         },
-        "formingRowsExcluded": 12,
+        "formingRowsExcluded": 16,
         "duplicateRows": 0,
         "missingBarsInAppendedRanges": 0,
         "ohlcViolations": 0,
@@ -52,12 +52,8 @@
         "readbackVerified": true,
         "archiveIndexRowsTotal": 5016,
         "latestDeltaPaths": [
-          "research-data/binance-usdm/delta/binance_usdm_delta_20261108T092915Z_5m15m_completed.jsonl",
-          "research-data/binance-usdm/delta/binance_usdm_delta_20261108T092950Z_1h4h_completed.jsonl",
-          "research-data/binance-usdm/delta/binance_usdm_delta_20261108T093407Z_5m_completed.jsonl",
-          "research-data/binance-usdm/delta/binance_usdm_delta_20261108T093732Z_5m15m_completed.jsonl",
-          "research-data/binance-usdm/delta/binance_usdm_delta_20261108T1123Z_5m15m1h4h_completed.jsonl",
-          "research-data/binance-usdm/delta/binance_usdm_delta_20261108T1128Z_5m_completed.jsonl"
+          "research-data/binance-usdm/delta/binance_usdm_delta_20261109T073011Z_5m15m1h_completed.jsonl",
+          "research-data/binance-usdm/delta/binance_usdm_delta_20261109T073855Z_5m_completed.jsonl"
         ],
         "latestDeltaSha256ByPath": {
           "research-data/binance-usdm/delta/binance_usdm_delta_20261108T092915Z_5m15m_completed.jsonl": "234b4a961b04d14c6d712213590fad58cb628a4ba55f44b20c166173092ddc2b",
@@ -101,7 +97,12 @@
           "5m": "62896fa141e9dca905d653c9b501265ff96e1573",
           "15m": "71f2bdff0078897a056d73b029dfa9133267dd1f",
           "1h": "654111c2c6cd6274a6953df1e89f7941165a4d56"
-        }
+        },
+        "latestDeltaSha256s": [
+          "a0eb044f9b261153ee6f077da9b57d3598f94fdce0356648c144c1574ea4fb59",
+          "a6713bb11ea0e8c794e31fe41b93ee7845778c545ef2d1b0daf63dfc58415098"
+        ],
+        "archiveIndexHeadCommit": "c85980ca8e36f6ba35970c3f7dabc105ce7753ca"
       }
     },
     {
@@ -111,8 +112,8 @@
       "prerequisites": [
         "Direct bounded HTTP or uncached official endpoint"
       ],
-      "nextAction": "Restore direct DNS/HTTPS or obtain an uncached official server-time endpoint; require <=5s server-time drift and exchangeInfo freshness before relying on contract status.",
-      "blocker": "Direct DNS resolution for fapi.binance.com fails (curl HTTP 000). Latest connector exchangeInfo serverTime=2026-11-09T06:13:33.344Z versus PremiumIndex time=2026-11-09T07:30:11.000Z, stale by 4,597.656 seconds. /fapi/v1/time cannot be reached through this runtime; connector does not expose HTTP status/headers.",
+      "nextAction": "Restore direct DNS/HTTPS or obtain an uncached official server-time endpoint; require <=5s drift and fresh exchangeInfo before execution validation.",
+      "blocker": "Direct DNS resolution for fapi.binance.com fails (curl HTTP 000). Latest connector exchangeInfo serverTime=2026-11-09T06:13:33.344Z versus PremiumIndex time=2026-11-09T07:38:54.000Z, stale by 5,120.656 seconds. /fapi/v1/time cannot be reached; connector does not expose HTTP status/headers.",
       "result": {
         "directEndpoints": {
           "serverTime": "DNS_FAILED_HTTP_000",
@@ -974,90 +975,136 @@
         "rows": 76,
         "formingRowsExcluded": 12
       }
+    },
+    {
+      "id": "Q_INCREMENTAL_ARCHIVE_REFRESH_20261109T073855Z",
+      "priority": 1,
+      "status": "COMPLETED_THIS_RUN",
+      "prerequisites": [
+        "Fresh completed 5m klines",
+        "Verified prior highwater",
+        "Writable raw archive branch"
+      ],
+      "nextAction": "Next append only after 5m 07:30Z; next open 07:35Z only after closeTime 07:39:59.999Z passes. Other highwaters remain 15m 07:15Z, 1h 06:00Z, 4h 00:00Z.",
+      "blocker": null,
+      "result": {
+        "rowsAppended": 4,
+        "rowsFetched": 8,
+        "formingRowsExcluded": 4,
+        "deltaPath": "research-data/binance-usdm/delta/binance_usdm_delta_20261109T073855Z_5m_completed.jsonl",
+        "deltaSha256": "a6713bb11ea0e8c794e31fe41b93ee7845778c545ef2d1b0daf63dfc58415098",
+        "manifestPath": "research-data/binance-usdm/delta/manifest-20261109T073855Z-5m.json",
+        "manifestSha256": "235445f3e4d96313d3b68b06a6834c78b904f19059973f9e1818e8851c695240",
+        "indexCommit": "c85980ca8e36f6ba35970c3f7dabc105ce7753ca",
+        "readbackVerified": true
+      }
+    },
+    {
+      "id": "Q_INCREMENTAL_ARCHIVE_DQ_20261109T073855Z",
+      "priority": 1,
+      "status": "COMPLETED_THIS_RUN",
+      "prerequisites": [
+        "Completed 5m bars after highwater",
+        "Integrity checks"
+      ],
+      "nextAction": "Repeat on next eligible append; this validates the incremental slice only.",
+      "blocker": null,
+      "result": {
+        "rows": 4,
+        "formingRowsExcluded": 4,
+        "duplicates": 0,
+        "missingIntervals": 0,
+        "ohlcViolations": 0,
+        "nonPositiveVolume": 0,
+        "nonFinite": 0
+      }
     }
   ],
   "lastRun": {
-    "runId": "CONTEXT-STRATEGY-20261109T0734Z-AUTO11",
+    "runId": "CONTEXT-STRATEGY-20261109T0739Z-AUTO11",
     "classification": "RESEARCH_EXECUTED_DATA_QUALITY_ONLY",
-    "completedAtUtc": "2026-11-09T07:34:01.571Z",
+    "completedAtUtc": "2026-11-09T07:39:12.238Z",
     "researchExperimentExecuted": true,
     "strategyBacktestExecuted": false,
-    "contextDiscoveryExecuted": false,
     "oosEvaluated": false,
-    "archiveRowsAdded": 76,
-    "rowsFetched": 88,
-    "formingRowsExcluded": 12,
+    "archiveRowsAdded": 80,
+    "rowsFetched": 96,
+    "formingRowsExcluded": 16,
     "rowCountsByInterval": {
-      "5m": 52,
+      "5m": 56,
       "15m": 20,
       "1h": 4,
       "4h": 0
     },
     "archiveBranch": "research/raw-ohlcv-archive-20261108T1026Z",
-    "archiveBranchHeadCommit": "654111c2c6cd6274a6953df1e89f7941165a4d56",
-    "deltaPath": "research-data/binance-usdm/delta/binance_usdm_delta_20261109T073011Z_5m15m1h_completed.jsonl",
-    "deltaSha256": "a0eb044f9b261153ee6f077da9b57d3598f94fdce0356648c144c1574ea4fb59",
-    "manifestPath": "research-data/binance-usdm/delta/manifest-20261109T073011Z-5m15m1h.json",
-    "manifestSha256": "46a57b73625b2df3b966c23982d1316efe536c412f57d25c9dba083e1795dedd",
+    "archiveBranchHeadCommit": "c85980ca8e36f6ba35970c3f7dabc105ce7753ca",
+    "deltaPaths": [
+      "research-data/binance-usdm/delta/binance_usdm_delta_20261109T073011Z_5m15m1h_completed.jsonl",
+      "research-data/binance-usdm/delta/binance_usdm_delta_20261109T073855Z_5m_completed.jsonl"
+    ],
+    "deltaSha256s": [
+      "a0eb044f9b261153ee6f077da9b57d3598f94fdce0356648c144c1574ea4fb59",
+      "a6713bb11ea0e8c794e31fe41b93ee7845778c545ef2d1b0daf63dfc58415098"
+    ],
+    "manifestPaths": [
+      "research-data/binance-usdm/delta/manifest-20261109T073011Z-5m15m1h.json",
+      "research-data/binance-usdm/delta/manifest-20261109T073855Z-5m.json"
+    ],
+    "manifestSha256s": [
+      "46a57b73625b2df3b966c23982d1316efe536c412f57d25c9dba083e1795dedd",
+      "235445f3e4d96313d3b68b06a6834c78b904f19059973f9e1818e8851c695240"
+    ],
     "archivePersistenceVerified": true,
     "archiveIndexesReadbackVerified": true,
     "oosValidatedEntries": 0,
-    "registryEntriesUnchanged": true,
-    "experimentId": "EXP-DQ-2026-11-09-073011Z-001",
-    "experimentPath": "research/context-strategy/experiments/incremental_archive_integrity_20261109T073011Z.result.json",
-    "preflightPath": "research/context-strategy/preflight/preflight_20261109T0734Z_auto11.json",
-    "marketSnapshotPath": "research/context-strategy/snapshots/market_snapshot_20261109T0734Z_auto11.json",
-    "reportPath": "research/context-strategy/reports/2026-11-09T0734Z_auto11.md",
-    "runPath": "research/context-strategy/runs/20261109T0734Z_auto11.json",
-    "registrySnapshotPath": "research/context-strategy/registry/conditional_strategy_registry_20261109T0734Z_v106.json",
-    "queueSnapshotPath": "research/context-strategy/queues/research_queue_20261109T0734Z_v90.json",
-    "metadataValidation": "BLOCKED_STALE_EXCHANGEINFO",
     "decisions": {
       "SOLUSDT": "NO_TRADE",
       "ETHUSDT": "NO_TRADE",
       "XRPUSDT": "NO_TRADE"
-    }
+    },
+    "marketSnapshotTimeUtc": "2026-11-09T07:38:54.000Z"
   },
   "lastRunReport": "research/context-strategy/reports/2026-11-09T0734Z_auto11.md",
-  "lastRunId": "CONTEXT-STRATEGY-20261109T0734Z-AUTO11",
+  "lastRunId": "CONTEXT-STRATEGY-20261109T0739Z-AUTO11",
   "incremental_highwater_marks": {
-    "5m": "2026-11-09T07:25:00.000Z",
+    "5m": "2026-11-09T07:30:00.000Z",
     "15m": "2026-11-09T07:15:00.000Z",
     "1h": "2026-11-09T06:00:00.000Z",
     "4h": "2026-11-09T00:00:00.000Z"
   },
-  "last_incremental_refresh_utc": "2026-11-09T07:34:01.571Z",
+  "last_incremental_refresh_utc": "2026-11-09T07:39:12.238Z",
   "latest_incremental_delta_files": [
+    "research-data/binance-usdm/delta/binance_usdm_delta_20261109T073011Z_5m15m1h_completed.jsonl",
+    "research-data/binance-usdm/delta/binance_usdm_delta_20261109T073855Z_5m_completed.jsonl",
     "research-data/binance-usdm/delta/binance_usdm_delta_20261109T073011Z_5m15m1h_completed.jsonl",
     "research-data/binance-usdm/delta/binance_usdm_delta_20261108T0723Z_5m15m1h_completed.jsonl",
     "research-data/binance-usdm/delta/binance_usdm_delta_20261108T063256Z_5m15m1h_completed.jsonl"
   ],
   "lastRunSummary": {
-    "runId": "CONTEXT-STRATEGY-20261109T0734Z-AUTO11",
+    "runId": "CONTEXT-STRATEGY-20261109T0739Z-AUTO11",
     "classification": "RESEARCH_EXECUTED_DATA_QUALITY_ONLY",
-    "completedAtUtc": "2026-11-09T07:34:01.571Z",
-    "incrementalRowsAdded": 76,
-    "rowsFetched": 88,
-    "formingRowsExcluded": 12,
+    "completedAtUtc": "2026-11-09T07:39:12.238Z",
+    "incrementalRowsAdded": 80,
+    "rowsFetched": 96,
+    "formingRowsExcluded": 16,
     "rowCountsByInterval": {
-      "5m": 52,
+      "5m": 56,
       "15m": 20,
       "1h": 4,
       "4h": 0
     },
     "incrementalHighwaterUtc": {
-      "5m": "2026-11-09T07:25:00.000Z",
+      "5m": "2026-11-09T07:30:00.000Z",
       "15m": "2026-11-09T07:15:00.000Z",
       "1h": "2026-11-09T06:00:00.000Z",
       "4h": "2026-11-09T00:00:00.000Z"
     },
-    "experimentsRun": 1,
+    "experimentsRun": 2,
     "strategyBacktestsRun": 0,
     "oosEvaluations": 0,
     "validatedStrategies": 0,
     "registryEntries": 5,
     "registryEntriesUnchanged": true,
-    "registryCanonicalReconciled": true,
     "currentContexts": {
       "BTCUSDT": "BEARISH_ALIGNMENT_DESCRIPTIVE",
       "ETHUSDT": "BEARISH_ALIGNMENT_DESCRIPTIVE",
@@ -1069,104 +1116,75 @@
       "ETHUSDT": "NO_TRADE",
       "XRPUSDT": "NO_TRADE"
     },
-    "deltaPath": "research-data/binance-usdm/delta/binance_usdm_delta_20261109T073011Z_5m15m1h_completed.jsonl",
-    "deltaSha256": "a0eb044f9b261153ee6f077da9b57d3598f94fdce0356648c144c1574ea4fb59",
-    "manifestPath": "research-data/binance-usdm/delta/manifest-20261109T073011Z-5m15m1h.json",
-    "manifestSha256": "46a57b73625b2df3b966c23982d1316efe536c412f57d25c9dba083e1795dedd",
+    "deltaPaths": [
+      "research-data/binance-usdm/delta/binance_usdm_delta_20261109T073011Z_5m15m1h_completed.jsonl",
+      "research-data/binance-usdm/delta/binance_usdm_delta_20261109T073855Z_5m_completed.jsonl"
+    ],
+    "deltaSha256s": [
+      "a0eb044f9b261153ee6f077da9b57d3598f94fdce0356648c144c1574ea4fb59",
+      "a6713bb11ea0e8c794e31fe41b93ee7845778c545ef2d1b0daf63dfc58415098"
+    ],
+    "manifestPaths": [
+      "research-data/binance-usdm/delta/manifest-20261109T073011Z-5m15m1h.json",
+      "research-data/binance-usdm/delta/manifest-20261109T073855Z-5m.json"
+    ],
+    "manifestSha256s": [
+      "46a57b73625b2df3b966c23982d1316efe536c412f57d25c9dba083e1795dedd",
+      "235445f3e4d96313d3b68b06a6834c78b904f19059973f9e1818e8851c695240"
+    ],
     "archiveBranch": "research/raw-ohlcv-archive-20261108T1026Z",
     "archivePersistenceVerified": true,
-    "metadataValidation": "BLOCKED_STALE_EXCHANGEINFO",
-    "experimentPath": "research/context-strategy/experiments/incremental_archive_integrity_20261109T073011Z.result.json",
-    "preflightPath": "research/context-strategy/preflight/preflight_20261109T0734Z_auto11.json",
-    "reportPath": "research/context-strategy/reports/2026-11-09T0734Z_auto11.md",
-    "runPath": "research/context-strategy/runs/20261109T0734Z_auto11.json",
-    "registrySnapshotPath": "research/context-strategy/registry/conditional_strategy_registry_20261109T0734Z_v106.json"
+    "metadataValidation": "BLOCKED_STALE_EXCHANGEINFO"
   },
   "latestRun": {
-    "runId": "CONTEXT-STRATEGY-20261109T0734Z-AUTO11",
+    "runId": "CONTEXT-STRATEGY-20261109T0739Z-AUTO11",
     "classification": "RESEARCH_EXECUTED_DATA_QUALITY_ONLY",
-    "completedAtUtc": "2026-11-09T07:34:01.571Z",
+    "completedAtUtc": "2026-11-09T07:39:12.238Z",
     "researchExperimentExecuted": true,
     "strategyBacktestExecuted": false,
-    "contextDiscoveryExecuted": false,
     "oosEvaluated": false,
-    "archiveRowsAdded": 76,
-    "rowsFetched": 88,
-    "formingRowsExcluded": 12,
+    "archiveRowsAdded": 80,
+    "rowsFetched": 96,
+    "formingRowsExcluded": 16,
     "rowCountsByInterval": {
-      "5m": 52,
+      "5m": 56,
       "15m": 20,
       "1h": 4,
       "4h": 0
     },
     "archiveBranch": "research/raw-ohlcv-archive-20261108T1026Z",
-    "archiveBranchHeadCommit": "654111c2c6cd6274a6953df1e89f7941165a4d56",
-    "deltaPath": "research-data/binance-usdm/delta/binance_usdm_delta_20261109T073011Z_5m15m1h_completed.jsonl",
-    "deltaSha256": "a0eb044f9b261153ee6f077da9b57d3598f94fdce0356648c144c1574ea4fb59",
-    "manifestPath": "research-data/binance-usdm/delta/manifest-20261109T073011Z-5m15m1h.json",
-    "manifestSha256": "46a57b73625b2df3b966c23982d1316efe536c412f57d25c9dba083e1795dedd",
+    "archiveBranchHeadCommit": "c85980ca8e36f6ba35970c3f7dabc105ce7753ca",
+    "deltaPaths": [
+      "research-data/binance-usdm/delta/binance_usdm_delta_20261109T073011Z_5m15m1h_completed.jsonl",
+      "research-data/binance-usdm/delta/binance_usdm_delta_20261109T073855Z_5m_completed.jsonl"
+    ],
+    "deltaSha256s": [
+      "a0eb044f9b261153ee6f077da9b57d3598f94fdce0356648c144c1574ea4fb59",
+      "a6713bb11ea0e8c794e31fe41b93ee7845778c545ef2d1b0daf63dfc58415098"
+    ],
+    "manifestPaths": [
+      "research-data/binance-usdm/delta/manifest-20261109T073011Z-5m15m1h.json",
+      "research-data/binance-usdm/delta/manifest-20261109T073855Z-5m.json"
+    ],
+    "manifestSha256s": [
+      "46a57b73625b2df3b966c23982d1316efe536c412f57d25c9dba083e1795dedd",
+      "235445f3e4d96313d3b68b06a6834c78b904f19059973f9e1818e8851c695240"
+    ],
     "archivePersistenceVerified": true,
     "archiveIndexesReadbackVerified": true,
     "oosValidatedEntries": 0,
-    "registryEntriesUnchanged": true,
-    "experimentId": "EXP-DQ-2026-11-09-073011Z-001",
-    "experimentPath": "research/context-strategy/experiments/incremental_archive_integrity_20261109T073011Z.result.json",
-    "preflightPath": "research/context-strategy/preflight/preflight_20261109T0734Z_auto11.json",
-    "marketSnapshotPath": "research/context-strategy/snapshots/market_snapshot_20261109T0734Z_auto11.json",
-    "reportPath": "research/context-strategy/reports/2026-11-09T0734Z_auto11.md",
-    "runPath": "research/context-strategy/runs/20261109T0734Z_auto11.json",
-    "registrySnapshotPath": "research/context-strategy/registry/conditional_strategy_registry_20261109T0734Z_v106.json",
-    "queueSnapshotPath": "research/context-strategy/queues/research_queue_20261109T0734Z_v90.json",
-    "metadataValidation": "BLOCKED_STALE_EXCHANGEINFO",
     "decisions": {
       "SOLUSDT": "NO_TRADE",
       "ETHUSDT": "NO_TRADE",
       "XRPUSDT": "NO_TRADE"
     },
-    "completedWork": [
-      "Refreshed Binance USDⓈ-M mark/24h/OI/funding/taker/positioning/order-book and completed OHLCV snapshots.",
-      "Appended 76 completed OHLCV rows and excluded 12 forming rows.",
-      "Updated 5m/15m/1h archive indexes and verified GitHub readback.",
-      "Executed incremental archive-integrity experiment; no strategy backtest or OOS run."
-    ],
-    "experiment": {
-      "executed": true,
-      "status": "COMPLETED_DATA_QUALITY_ONLY",
-      "reason": "76 completed rows passed integrity checks; strategy prerequisites remain blocked."
-    },
-    "preflight": {
-      "shellCompute": "Node22/npm10; Python3.13; 5 CPUs; 5.8GiB RAM; 30GiB free.",
-      "repoCode": "Remote main inspected; no local checkout.",
-      "networkBinance": "Connector data works; direct DNS fails; exchangeInfo stale.",
-      "rawArchive": "New delta persisted; 5m/15m base absent; 4h reconciliation degraded.",
-      "backtest": "BLOCKED; no local compatible runner or smoke test.",
-      "artifactReadback": "PASS; delta/manifest/indexes verified."
-    },
-    "archive": {
-      "branch": "research/raw-ohlcv-archive-20261108T1026Z",
-      "deltaPath": "research-data/binance-usdm/delta/binance_usdm_delta_20261109T073011Z_5m15m1h_completed.jsonl",
-      "manifestPath": "research-data/binance-usdm/delta/manifest-20261109T073011Z-5m15m1h.json",
-      "rowsAppended": 76,
-      "latestCompletedOpenUtc": {
-        "5m": "2026-11-09T07:25:00.000Z",
-        "15m": "2026-11-09T07:15:00.000Z",
-        "1h": "2026-11-09T06:00:00.000Z",
-        "4h": "2026-11-09T00:00:00.000Z"
-      },
-      "readbackVerified": true
-    },
-    "registry": {
-      "entries": 5,
-      "oosValidatedEntries": 0,
-      "changed": false
-    },
-    "currentSnapshotAsOfUtc": "2026-11-09T07:30:11.000Z"
+    "marketSnapshotTimeUtc": "2026-11-09T07:38:54.000Z"
   },
   "dailyCycle": {
     "dateUtc": "2026-11-09",
     "status": "COMPLETED_DATA_QUALITY_ONLY",
-    "reason": "A reproducible incremental archive-integrity experiment completed and 76 rows were persisted. No strategy experiment/OOS ran because fresh exchange metadata, compatible local runner, historical lower-timeframe archive, calibrated costs/funding and candle-contract fixes remain blockers.",
-    "nextAction": "Continue archive-quality/reconciliation work first; run a strategy experiment only after Q1/Q2/Q3/Q4/Q12/RQ-029 prerequisites are resolved."
+    "reason": "Two reproducible incremental archive-integrity batches persisted 80 completed rows. No strategy experiment/OOS ran because fresh exchange metadata, compatible local runner, multi-year 5m/15m history, 4h reconciliation, historical funding/cost calibration and candle-contract fixes remain blockers.",
+    "nextAction": "Continue P0 archive/runtime remediation; run a frozen tradable-only strategy x context x symbol experiment only after all validation prerequisites pass."
   },
   "weeklyReview": {
     "nextDueUtc": "2026-11-11T00:00:00Z",

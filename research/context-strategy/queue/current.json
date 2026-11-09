@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0.0",
-  "run_id": "context-strategy-2026-11-09T182316Z-v96",
-  "as_of_utc": "2026-11-09T18:23:16.866Z",
+  "run_id": "context-strategy-2026-11-09T2052Z-v98",
+  "as_of_utc": "2026-11-09T20:52:20.491Z",
   "overall_status": "RESEARCH_EXECUTED_DATA_QUALITY_ONLY",
   "strategy_research_status": "RESEARCH_BLOCKED",
   "priority_order": [
@@ -26,10 +26,11 @@
     "experiment_ids": [
       "EXP-DQ-2026-11-09-172212Z-010",
       "EXP-DQ-2026-11-09-172654Z-011",
-      "EXP-DQ-2026-11-09-182316Z-012"
+      "EXP-DQ-2026-11-09-182316Z-012",
+      "EXP-DQ-2026-11-09-2052Z-013"
     ],
-    "last_executed_utc": "2026-11-09T18:23:16.866Z",
-    "blocker": "No local checkout; Node 22.16/npm 10.9 below package floor; direct fapi DNS failure; exchangeInfo connector serverTime stale by 43,595s; 5m/15m base history absent; cost/funding archive incomplete; source defects remain."
+    "last_executed_utc": "2026-11-09T20:52:20.491Z",
+    "blocker": "Strategy experiment remains blocked: no local checkout; Node 22.16/npm 10.9.2 below package floor; direct fapi DNS/HTTPS unavailable; exchangeInfo serverTime stale by 14h34m47s; multi-year 5m/15m base absent; 4h provenance mismatches; calibrated fees/spread/slippage/funding incomplete; current source defects unresolved."
   },
   "weekly_review": {
     "status": "NOT_DUE",
@@ -37,31 +38,33 @@
     "next_action": "Refit thresholds on training only; measure occupancy, duration, transitions and stability; retain v56 if supported."
   },
   "archive_highwaters": {
-    "5m": "2026-11-09T18:15:00.000Z",
-    "15m": "2026-11-09T18:00:00.000Z",
-    "1h": "2026-11-09T17:00:00.000Z",
-    "4h": "2026-11-09T12:00:00Z"
+    "5m": "2026-11-09T20:45:00.000Z",
+    "15m": "2026-11-09T20:30:00.000Z",
+    "1h": "2026-11-09T19:00:00.000Z",
+    "4h": "2026-11-09T16:00:00.000Z"
   },
   "latest_data_quality_experiment": {
-    "id": "EXP-DQ-2026-11-09-182316Z-012",
+    "id": "EXP-DQ-2026-11-09-2052Z-013",
     "status": "COMPLETED_PASS",
-    "rows_appended": 64,
+    "rows_appended": 12,
+    "rows_fetched": 20,
     "rows_by_interval": {
-      "5m": 44,
-      "15m": 16,
-      "1h": 4
+      "5m": 8,
+      "15m": 4
     },
     "rows_by_symbol": {
-      "BTCUSDT": 16,
-      "ETHUSDT": 16,
-      "SOLUSDT": 16,
-      "XRPUSDT": 16
+      "BTCUSDT": 3,
+      "ETHUSDT": 3,
+      "SOLUSDT": 3,
+      "XRPUSDT": 3
     },
-    "forming_rows_excluded": 12,
+    "forming_rows_excluded": 8,
     "quality_failures": 0,
-    "delta_sha256": "42c83ebd4e180e50c2daec2c31173a01d1bc21ffb4ff77db41b7147110917685",
-    "manifest_sha256": "4eaaeafb7036e126c880784f3115e34e51d5d031d1ce30951e642612d0074296",
-    "readback_verified": true
+    "delta_sha256": "526bc3525b5bbc546b6f2e1e0f712fd5c1a731f10684c3a060f28c3b3b310ac3",
+    "manifest_sha256": "61e259fdbffc136176ef394c27cc06eb57eb2b20eba82d09ee4878dcea8ed504",
+    "readback_verified": true,
+    "validator": "verify_archive_delta.py",
+    "validator_exit_status": 0
   },
   "items": [
     {
@@ -72,7 +75,7 @@
       "prerequisites": [
         "Direct DNS/HTTPS or uncached official endpoint route"
       ],
-      "blocker": "Direct fapi DNS resolution failed. Connector exchangeInfo serverTime=2026-11-09T06:13:33.342Z while market data was 18:20:07Z (43,595s drift).",
+      "blocker": "Direct fapi endpoints returned HTTP 000/DNS failure. Connector exchangeInfo serverTime=2026-11-09T06:13:33.349Z at 20:48:20.357Z retrieval: 14h34m47.008s stale.",
       "next_action": "Restore direct DNS/HTTPS or an uncached official time+exchangeInfo route; require <=5s drift before execution validation."
     },
     {
@@ -86,8 +89,8 @@
         "npm >=11",
         "Pinned dependencies"
       ],
-      "blocker": "Local repo absent; Node v22.16.0/npm 10.9.2; @nemesis-oss/binance-sdk import failed ERR_MODULE_NOT_FOUND. Remote package 2.4.1 requires Node>=24/npm>=11.",
-      "next_action": "Provision Node24/npm11, clone exact main commit 669ba233, install lockfile dependencies and run deterministic fixture twice."
+      "blocker": "No local checkout; Node v22.16.0/npm 10.9.2; current main package.json requires Node>=24/npm>=11.",
+      "next_action": "Provision Node24/npm11, clone exact main commit 669ba233538eb1463c0e7e0a435016a643e7adb5, install lockfile dependencies and run deterministic fixture twice."
     },
     {
       "id": "RQ-012",
@@ -98,8 +101,8 @@
         "Compatible checkout",
         "Candle fixture tests"
       ],
-      "blocker": "Prior main-branch audit identified dropped closeTime row[6], volume=0 accepted, 5m omitted and BTC default/tradable leakage.",
-      "next_action": "Propagate closeTime; reject volume<=0; add 5m; enforce BTC reference-only; add forming/gap/duplicate/off-grid/OHLC/no-lookahead fixtures."
+      "blocker": "Verified current main 669ba233: src/types.ts Candle omits closeTime; klineLoader.ts maps only row[0..5]; candleIntegrity.ts accepts volume>=0; 5m native research path absent.",
+      "next_action": "Add closeTime and row[6] mapping; reject volume<=0; add 5m; add fixture tests for forming/gaps/duplicates/off-grid/OHLC/no-lookahead."
     },
     {
       "id": "RQ-029",
@@ -109,8 +112,8 @@
       "prerequisites": [
         "Current EXP-001 config and runner source inspected"
       ],
-      "blocker": "Prior main-branch audit found BTCUSDT still included in tradable symbols.",
-      "next_action": "Split tradableSymbols=[SOLUSDT,ETHUSDT,XRPUSDT] and referenceSymbols=[BTCUSDT]; add tests preventing BTC trade labels/outcomes/orders."
+      "blocker": "Current research/directional/exp-001.json still includes BTCUSDT in symbols.",
+      "next_action": "Split tradableSymbols=[SOLUSDT,ETHUSDT,XRPUSDT] and referenceSymbols=[BTCUSDT]; prevent BTC trade labels/outcomes/orders with tests."
     },
     {
       "id": "RQ-003",
@@ -228,7 +231,7 @@
         "Persistent GitHub branch write/readback"
       ],
       "blocker": null,
-      "next_action": "Continue append-only highwater refresh; 4h 16:00Z bar was still forming at this retrieval."
+      "next_action": "Continue append-only refresh; next expected 5m open 20:50Z, 15m open 20:45Z; 1h/4h 20:00Z candles remain forming."
     },
     {
       "id": "RQ-030",
@@ -241,7 +244,21 @@
         "Persistent GitHub branch"
       ],
       "blocker": null,
-      "next_action": "Do not infer strategy edge from integrity-only experiment; continue resolving strategy prerequisites."
+      "next_action": "Keep this as data-integrity evidence only; do not infer strategy edge or OOS status."
     }
-  ]
+  ],
+  "last_market_snapshot": {
+    "retrieved_at_utc": "2026-11-09T20:49:02.136Z",
+    "latest_5m_bar_utc": "2026-11-09T20:45:00Z",
+    "latest_15m_bar_utc": "2026-11-09T20:30:00Z",
+    "latest_1h_bar_utc": "2026-11-09T19:00:00Z",
+    "latest_4h_bar_utc": "2026-11-09T16:00:00Z",
+    "context": "BEARISH_HIGHER_TIMEFRAME_WITH_SHORT_TERM_REBOUND_TRANSITION",
+    "oos_validated_strategies": 0,
+    "decisions": {
+      "SOLUSDT": "NO_TRADE",
+      "ETHUSDT": "NO_TRADE",
+      "XRPUSDT": "NO_TRADE"
+    }
+  }
 }

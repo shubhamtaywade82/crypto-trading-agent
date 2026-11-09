@@ -34,7 +34,7 @@
     }
   },
   "market_connectivity": {
-    "status": "DEGRADED",
+    "status": "DEGRADED_CLOCK_SKEW",
     "connector": "Binance USDⓈ-M connector wrappers",
     "direct_rest": {
       "status": "BLOCKED",
@@ -43,15 +43,23 @@
     "exchange_info": {
       "status": "BLOCKED_FOR_EXECUTION",
       "server_time_utc": "2026-11-09T06:13:33.345Z",
-      "lag_seconds": 58681.655
+      "lag_seconds": 58681.655,
+      "lag_seconds_vs_shell_clock": 58815.655
     },
     "market_timestamp_skew_seconds": {
       "ticker": 2,
       "mark": 8,
       "open_interest": 77,
-      "book_ticker": 81
+      "book_ticker": 81,
+      "latest_quote_probe_vs_shell_clock": 142
     },
-    "contract_status": "NOT_VERIFIED_FOR_EXECUTION"
+    "contract_status": "NOT_VERIFIED_FOR_EXECUTION",
+    "late_quote_probe": {
+      "close_time_utc": "2026-11-09T22:36:11Z",
+      "shell_clock_utc": "2026-11-09T22:33:49Z",
+      "ahead_seconds": 142,
+      "status": "NOT_USED_FOR_SIGNAL"
+    }
   },
   "endpoints": {
     "/fapi/v1/time": "BLOCKED direct REST DNS; no fresh server time",
@@ -144,6 +152,7 @@
     "research_blocked": "STRATEGY_DISCOVERY",
     "oos_evaluated": false,
     "oos_validated_count": 0,
-    "monitoring_only": false
+    "monitoring_only": false,
+    "clock_integrity_warning": "Latest quote probe is 142 seconds ahead of shell clock; exchangeInfo.serverTime is 16h20m15.655s behind shell clock. No execution validation or trade selection."
   }
 }

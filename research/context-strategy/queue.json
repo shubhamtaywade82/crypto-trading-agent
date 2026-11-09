@@ -159,8 +159,8 @@
         "Dependencies",
         "Deterministic fixture"
       ],
-      "nextAction": "Provision Node24/npm11; clone main at 67e1507452f03592d6afd527e03df267bcef787e; install dependencies; preserve closeTime end-to-end, reject volume<=0, add 5m to backtest timeframes, keep BTC reference-only, then run deterministic integrity/no-lookahead fixture twice.",
-      "blocker": "Local runtime: Node v22.16.0/npm 10.9.2; repository package.json on main requires Node>=24/npm>=11. No local checkout, node_modules or importable @nemesis-oss/binance-sdk (ERR_MODULE_NOT_FOUND). Remote main latest commit 67e1507452f03592d6afd527e03df267bcef787e is readable via GitHub, but no local harness or deterministic smoke test ran.",
+      "nextAction": "Provision Node24/npm11; clone exact main commit 67e1507452f03592d6afd527e03df267bcef787e; add closeTime end-to-end; reject volume<=0; include 5m; make BTC reference-only in CLI and EXP-001; implement historical derivative replay inputs; add deterministic integrity/no-lookahead fixtures and run twice.",
+      "blocker": "Local runtime is Node v22.16.0/npm 10.9.2 versus package.json engines Node>=24/npm>=11; no local checkout/node_modules; @nemesis-oss/binance-sdk import returns ERR_MODULE_NOT_FOUND. Remote main 67e1507452f03592d6afd527e03df267bcef787e is readable, but source audit confirms Candle omits closeTime, klineLoader drops row[6], candleIntegrity accepts volume=0, backtest TIMEFRAMES excludes 5m and defaults to BTCUSDT, ReplayService.syntheticDerivatives returns null OI/positioning/taker fields, and research/directional/exp-001.json includes BTCUSDT as tradable. No deterministic smoke test ran.",
       "result": {
         "environment": {
           "cwd": "/",

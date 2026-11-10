@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAtUtc": "2026-11-10T13:32:58.000Z",
+  "updatedAtUtc": "2026-11-10T18:32:18.003Z",
   "evidencePolicy": {
     "minimumProvisionalOosTradesPerSymbolContext": 100,
     "strongerEvidenceTrades": 200,
@@ -725,35 +725,45 @@
     "summary": "Repository log reported no validated edge. MOMENTUM net expectancy -0.164R (n=131) and STRUCTURE-TREND -0.070R (n=64) in documented tests; this run did not re-run or alter those variants."
   },
   "lastMonitoringRun": {
-    "asOfUtc": "2026-11-10T13:32:58.000Z",
-    "snapshotPath": "research-data/binance-usdm/current_market_snapshot_20261110T1332Z_auto11.json",
-    "classificationMethod": "EMA20/EMA50 + 20-bar return; ATR14 local percentile; local shock flag",
+    "asOfUtc": "2026-11-10T18:32:18.003Z",
+    "snapshotPath": "research-data/binance-usdm/current_market_snapshot_20261110T1832Z_auto15.json",
+    "classificationMethod": "EMA20/EMA50 + 5/20-bar returns + ATR14 local 100-bar percentile + volume ratio; completed candles only",
     "thresholdFit": "NOT_TRAIN_FITTED",
     "oosValidatedEntries": 0,
     "decision": "NO_TRADE_ALL_TRADABLE_SYMBOLS",
     "transitionWarnings": [
-      "SOLUSDT 4h local shock flag",
-      "XRPUSDT 4h local shock flag",
-      "ETHUSDT 5m mixed transition"
+      "5m MIXED rebound while 15m/1h/4h remain BEARISH across all four symbols.",
+      "15m/1h/4h ATR local ranks elevated; local sample only.",
+      "ExchangeInfo serverTime stale by 63,076.108 seconds; contract status not execution-validated."
     ],
-    "metadataWarning": "exchangeInfo serverTime stale by 45,116.109s; contract status unverified."
+    "metadataWarning": "Direct /fapi/v1/time and /fapi/v1/exchangeInfo probes DNS-failed; connector metadata stale."
   },
-  "lastRunId": "context-strategy-20261110T1332Z-auto11",
+  "lastRunId": "context-strategy-20261110T1822Z-auto15",
   "lastRun": {
-    "asOfUtc": "2026-11-10T13:32:58.000Z",
+    "asOfUtc": "2026-11-10T18:32:18.003Z",
     "status": "RESEARCH_EXECUTED",
     "scope": "DATA_QUALITY_ONLY",
     "strategyExperiment": "RESEARCH_BLOCKED",
-    "oosEvaluated": false
+    "oosEvaluated": false,
+    "rowsAppended": 64,
+    "reportPath": "research/context-strategy/reports/2026-11-10T1832Z_auto15.md",
+    "snapshotPath": "research-data/binance-usdm/current_market_snapshot_20261110T1832Z_auto15.json",
+    "preflightPath": "research/context-strategy/preflight/preflight_20261110T1832Z_auto15.json",
+    "dataQualityArtifactPath": "research/context-strategy/experiments/incremental_archive_append_20261110T1822Z_auto15.result.json"
   },
   "latestRun": {
-    "asOfUtc": "2026-11-10T13:32:58.000Z",
+    "asOfUtc": "2026-11-10T18:32:18.003Z",
     "status": "RESEARCH_EXECUTED",
     "scope": "DATA_QUALITY_ONLY",
     "strategyExperiment": "RESEARCH_BLOCKED",
-    "oosEvaluated": false
+    "oosEvaluated": false,
+    "rowsAppended": 64,
+    "reportPath": "research/context-strategy/reports/2026-11-10T1832Z_auto15.md",
+    "snapshotPath": "research-data/binance-usdm/current_market_snapshot_20261110T1832Z_auto15.json",
+    "preflightPath": "research/context-strategy/preflight/preflight_20261110T1832Z_auto15.json",
+    "dataQualityArtifactPath": "research/context-strategy/experiments/incremental_archive_append_20261110T1822Z_auto15.result.json"
   },
-  "latestMonitoringSnapshot": "research-data/binance-usdm/current_market_snapshot_20261110T1332Z_auto11.json",
+  "latestMonitoringSnapshot": "research-data/binance-usdm/current_market_snapshot_20261110T1832Z_auto15.json",
   "strategyScorecard": {
     "asOfUtc": "2026-11-05T09:43:57.448Z",
     "carriedForwardFrom": "v79",
@@ -880,15 +890,28 @@
   },
   "version": 109,
   "latestDataQualityExperiment": {
-    "path": "research/context-strategy/experiments/incremental_archive_append_20261110T1332Z_auto11.result.json",
+    "path": "research/context-strategy/experiments/incremental_archive_append_20261110T1822Z_auto15.result.json",
     "status": "RESEARCH_EXECUTED_DATA_QUALITY_ONLY",
-    "rowsAppended": 48,
-    "updatedAtUtc": "2026-11-10T13:32:58.000Z",
-    "deltaPath": "research-data/binance-usdm/delta/binance_usdm_delta_20261110T1332Z_5m15m1h_completed.jsonl"
+    "experimentId": "EXP-DQ-2026-11-10-1822Z-AUTO15",
+    "rowsAppended": 64,
+    "updatedAtUtc": "2026-11-10T18:32:18.003Z",
+    "deltaPaths": [
+      "research-data/binance-usdm/delta/binance_usdm_delta_20261110T1822Z_5m15m1h_completed.jsonl",
+      "research-data/binance-usdm/delta/binance_usdm_delta_20261110T1827Z_5m_completed.jsonl",
+      "research-data/binance-usdm/delta/binance_usdm_delta_20261110T1830Z_5m15m_completed.jsonl"
+    ],
+    "deltaSha256s": [
+      "4db0760d7bba947f798658e62a71e75f5bcd3152d0305ad2499c64a7eb263473",
+      "0376b3ac4b87901ed42e32ecd64185807420286a96b66749ac8ecd49c61ebb0c",
+      "86c8a67b0b00c3a0ee2e4a2b28697eed5f18eac91dcbab4c72ea159f363eed90"
+    ],
+    "archiveManifestPath": "research-data/binance-usdm/manifests/archive_manifest_20261110T1830Z_auto15.json",
+    "archiveManifestSha256": "d020176c5201053811a7e757587b4749d6477d1858c096996686004cb379812f",
+    "readbackVerified": true
   },
   "registryVersion": 109,
-  "evidenceNote": "No OOS_VALIDATED strategy exists. No strategy experiment or OOS evaluation ran in this cycle; the only completed experiment was incremental archive integrity. The inherited SOL BULL_LOW Donchian20 OOS_PROMISING entry remains unverified (n=12, missing original provenance).",
-  "lastRunReport": "research/context-strategy/reports/2026-11-10T1332Z_auto11.md",
+  "evidenceNote": "No OOS_VALIDATED strategy exists. This run completed incremental archive data-quality work only; no strategy backtest or OOS evaluation ran. The inherited SOL BULL_LOW Donchian20 OOS_PROMISING record remains unverified (n=12; original provenance missing) and is not actionable.",
+  "lastRunReport": "research/context-strategy/reports/2026-11-10T1832Z_auto15.md",
   "allRegistryStatusCounts": {
     "OOS_VALIDATED": 0,
     "OOS_PROMISING": 1,

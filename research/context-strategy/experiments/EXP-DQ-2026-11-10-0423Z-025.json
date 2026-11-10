@@ -1,0 +1,121 @@
+{
+  "schema_version": "1.0.0",
+  "experiment_id": "EXP-DQ-2026-11-10-0423Z-025",
+  "run_id": "context-strategy-2026-11-10T0423Z-v107",
+  "as_of_utc": "2026-11-10T04:23:25.463Z",
+  "type": "INCREMENTAL_ARCHIVE_APPEND_AND_INTEGRITY_AUDIT",
+  "status": "COMPLETED_PASS_INCREMENTAL_ARCHIVE_APPEND_AND_READBACK_ONLY",
+  "source": "Binance USDⓈ-M connected market-data operations corresponding to GET /fapi/v1/klines; Binance SDK not used; direct public REST DNS unavailable.",
+  "symbols": [
+    "BTCUSDT",
+    "ETHUSDT",
+    "SOLUSDT",
+    "XRPUSDT"
+  ],
+  "intervals": [
+    "5m",
+    "15m",
+    "1h",
+    "4h"
+  ],
+  "requested_window": "Latest 160 klines per symbol/interval; completed rows only; forming candle excluded by closeTime < runtime timestamp.",
+  "observed_at_utc": "2026-11-10T04:23:25.463Z",
+  "series_audited": 16,
+  "rows_fetched": 2560,
+  "completed_rows": 2544,
+  "forming_rows_excluded": 16,
+  "delta_rows_appended": 68,
+  "delta_rows_by_interval": {
+    "5m": 44,
+    "15m": 16,
+    "1h": 4,
+    "4h": 4
+  },
+  "delta_rows_by_symbol": {
+    "BTCUSDT": 17,
+    "ETHUSDT": 17,
+    "SOLUSDT": 17,
+    "XRPUSDT": 17
+  },
+  "quality": {
+    "duplicates": 0,
+    "missing_intervals": 0,
+    "off_grid": 0,
+    "non_monotonic": 0,
+    "ohlc_violations": 0,
+    "non_positive_volume": 0,
+    "non_finite": 0,
+    "close_time_failures": 0,
+    "delta_missing_intervals": 0
+  },
+  "delta_artifacts": [
+    {
+      "path": "research-data/binance-usdm/deltas/20261110T0422Z/klines_5m.jsonl",
+      "interval": "5m",
+      "rows": 44,
+      "bytes": 17738,
+      "sha256": "36681937a669992412c6ea63075d1d747c9cbb4c9aed3278a7639b0a3ceaf67c",
+      "git_blob_sha": "39fea14d2ada30ae0566d8e5892c6fb4aa5e69c3",
+      "readback_exact": true,
+      "first_open_utc": "2026-11-10T03:25:00.000Z",
+      "last_open_utc": "2026-11-10T04:15:00.000Z"
+    },
+    {
+      "path": "research-data/binance-usdm/deltas/20261110T0422Z/klines_15m.jsonl",
+      "interval": "15m",
+      "rows": 16,
+      "bytes": 6506,
+      "sha256": "bc67b094e4a2c7829066e31a5a2ee68ee083368ae82ef815d95f4aa424b39998",
+      "git_blob_sha": "8d5aac3b5dff4a43d44ebf5dfeeb825d711fa728",
+      "readback_exact": true,
+      "first_open_utc": "2026-11-10T03:15:00.000Z",
+      "last_open_utc": "2026-11-10T04:00:00.000Z"
+    },
+    {
+      "path": "research-data/binance-usdm/deltas/20261110T0422Z/klines_1h.jsonl",
+      "interval": "1h",
+      "rows": 4,
+      "bytes": 1633,
+      "sha256": "c19dac73d1cd8c81467b9482834306859e77f771e22e8900007fd248f693ddbc",
+      "git_blob_sha": "7408fc85ec002cc44b571c561536e74f5d666c89",
+      "readback_exact": true,
+      "first_open_utc": "2026-11-10T03:00:00.000Z",
+      "last_open_utc": "2026-11-10T03:00:00.000Z"
+    },
+    {
+      "path": "research-data/binance-usdm/deltas/20261110T0422Z/klines_4h.jsonl",
+      "interval": "4h",
+      "rows": 4,
+      "bytes": 1639,
+      "sha256": "a9ac13c54bf3a23be1b9dff9c59ef8967c91105613223418d5f45f7248b67e37",
+      "git_blob_sha": "d6724f55d3217b8943b94e063b46bcdc84a9d648",
+      "readback_exact": true,
+      "first_open_utc": "2026-11-10T00:00:00.000Z",
+      "last_open_utc": "2026-11-10T00:00:00.000Z"
+    }
+  ],
+  "highwater_before": {
+    "5m": "2026-11-10T03:20:00.000Z",
+    "15m": "2026-11-10T03:00:00.000Z",
+    "1h": "2026-11-10T02:00:00.000Z",
+    "4h": "2026-11-09T20:00:00.000Z"
+  },
+  "highwater_after": {
+    "5m": "2026-11-10T04:15:00.000Z",
+    "15m": "2026-11-10T04:00:00.000Z",
+    "1h": "2026-11-10T03:00:00.000Z",
+    "4h": "2026-11-10T00:00:00.000Z"
+  },
+  "canonical_indexes_updated": false,
+  "full_archive_reconciled": false,
+  "strategy_backtest_executed": false,
+  "oos_evaluated": false,
+  "evidence_interpretation": "Integrity evidence applies only to the fetched 159 completed bars per symbol/interval and 68 appended rows. It is not evidence of a trading edge and does not validate full archive coverage.",
+  "blockers": [
+    "Direct /fapi/v1/time DNS failure; exchangeInfo.serverTime lag 12,128.437s.",
+    "No local checkout; Node/npm below project engine floor; SDK dependencies not importable.",
+    "5m/15m base history remains partial; 4h raw/aligned/canonical row counts and 13 prior SHA provenance discrepancies remain unresolved.",
+    "Historical funding cashflows and calibrated fee/spread/slippage/impact/latency remain incomplete."
+  ],
+  "next_action": "Restore direct Binance time/metadata connectivity, provision Node >=24/npm >=11 and a local checkout, repair candle schema/positive-volume/BTC-role/embargo defects, then complete archive reconciliation before a frozen strategy experiment."
+}

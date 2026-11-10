@@ -1,0 +1,204 @@
+{
+  "schemaVersion": 1,
+  "runId": "context-strategy-20261110T1822Z-auto15",
+  "asOfUtc": "2026-11-10T18:32:18.003Z",
+  "classification": "RESEARCH_EXECUTED",
+  "researchScope": "DATA_QUALITY_ONLY",
+  "strategyExperimentStatus": "RESEARCH_BLOCKED",
+  "oosEvaluated": false,
+  "repository": {
+    "name": "shubhamtaywade82/crypto-trading-agent",
+    "mainCommit": "7edeac8eb1fcf0e581a714bb7f0990531f3b40ee",
+    "archiveBranch": "research/raw-ohlcv-archive-20261108T1026Z",
+    "archiveHead": "227cece2794e12b5cfddc675333a05ad87b3ed68",
+    "localCheckout": false,
+    "packageEngines": {
+      "node": ">=24",
+      "npm": ">=11"
+    }
+  },
+  "checks": [
+    {
+      "capability": "shell_compute",
+      "status": "DEGRADED",
+      "evidence": {
+        "cwd": "/",
+        "os": "Linux 6.18.57 x86_64",
+        "node": "v22.16.0",
+        "npm": "10.9.2",
+        "cpu": 5,
+        "memoryTotal": "5.8GiB",
+        "memoryAvailable": "4.7GiB",
+        "diskAvailable": "30GiB / 32GiB"
+      },
+      "impact": "Runtime below project engine requirements; no local harness execution.",
+      "nextAction": "Provision persistent Node>=24/npm>=11 workspace."
+    },
+    {
+      "capability": "repository_code",
+      "status": "DEGRADED",
+      "evidence": {
+        "remoteMainCommit": "7edeac8eb1fcf0e581a714bb7f0990531f3b40ee",
+        "localCheckout": false,
+        "packageEngines": {
+          "node": ">=24",
+          "npm": ">=11"
+        },
+        "binanceSdkImport": "MODULE_NOT_FOUND",
+        "remoteExperimentConfigs": [
+          "EXP-001",
+          "EXP-002"
+        ],
+        "EXP003": "NOT_FOUND"
+      },
+      "impact": "Remote code inspectable but not executable here.",
+      "nextAction": "Clone repository, install dependencies and verify SDK import."
+    },
+    {
+      "capability": "binance_network",
+      "status": "DEGRADED",
+      "evidence": {
+        "connector": "mark, ticker, OI, funding, klines, OI history, taker, global accounts, basis and depth calls succeeded",
+        "directRest": {
+          "/fapi/v1/time": "HTTP 000; curl exit 6 DNS",
+          "/fapi/v1/exchangeInfo": "HTTP 000; curl exit 28 5s DNS timeout",
+          "/fapi/v1/klines": "HTTP 000; curl exit 6 DNS",
+          "/fapi/v1/premiumIndex": "HTTP 000; curl exit 28 5s DNS timeout",
+          "/fapi/v1/openInterest": "HTTP 000; curl exit 6 DNS",
+          "/fapi/v1/ticker/24hr": "HTTP 000; curl exit 28 5s DNS timeout"
+        },
+        "exchangeInfoServerTimeUtc": "2026-11-10T01:01:01.895Z",
+        "marketEndpointTimeUtc": "2026-11-10T18:32:18.003Z",
+        "exchangeInfoAgeSeconds": 62776.108
+      },
+      "impact": "Connector is usable for monitoring; direct REST and fresh contract metadata blocked.",
+      "nextAction": "Restore fapi.binance.com DNS/HTTPS; require /time and exchangeInfo drift <=5s."
+    },
+    {
+      "capability": "raw_historical_archive",
+      "status": "DEGRADED",
+      "evidence": {
+        "branch": "research/raw-ohlcv-archive-20261108T1026Z",
+        "head": "227cece2794e12b5cfddc675333a05ad87b3ed68",
+        "manifestPath": "research-data/binance-usdm/manifests/archive_manifest_20261110T1830Z_auto15.json",
+        "manifestSha256": "d020176c5201053811a7e757587b4749d6477d1858c096996686004cb379812f",
+        "rowsAppendedThisRun": 64,
+        "rowsByInterval": {
+          "5m": 44,
+          "15m": 16,
+          "1h": 4
+        },
+        "highwaters": {
+          "5m": "2026-11-10T18:25:00.000Z",
+          "15m": "2026-11-10T18:15:00.000Z",
+          "1h": "2026-11-10T17:00:00.000Z",
+          "4h": "2026-11-10T12:00:00.000Z"
+        },
+        "baseRows": {
+          "5m": 0,
+          "15m": 0,
+          "1h": 215484,
+          "4hCanonical": 53844
+        },
+        "incrementalRows": {
+          "5m": 1436,
+          "15m": 484,
+          "1h": 120
+        }
+      },
+      "impact": "Incremental archive is current; multi-year 5m/15m base absent and 4h provenance remains degraded.",
+      "nextAction": "Backfill 5m/15m from checksum-verified official archives and reconcile 4h provenance."
+    },
+    {
+      "capability": "data_quality_coverage",
+      "status": "DEGRADED",
+      "evidence": {
+        "recentSeries": 16,
+        "rowsReturned": 1600,
+        "completed": 1584,
+        "formingExcluded": 16,
+        "qualityFailures": 0,
+        "appendRows": 64,
+        "appendQualityFailures": 0,
+        "fourHourRows": {
+          "raw": 53960,
+          "aligned": 53816,
+          "canonical": 53844
+        },
+        "fourHourManifestShaMismatches": 13
+      },
+      "impact": "Recent windows and deltas are clean; historical intraday coverage is inadequate.",
+      "nextAction": "Backfill lower timeframes and reconcile 4h source hashes before taxonomy refit."
+    },
+    {
+      "capability": "backtest_harness_smoke_test",
+      "status": "BLOCKED",
+      "evidence": {
+        "remoteScriptExists": true,
+        "localInvocation": false,
+        "fixtureSmokeTest": "NOT_RUN",
+        "strategyExperiment": false,
+        "oosRun": false,
+        "SDKImport": "MODULE_NOT_FOUND",
+        "PIT_DATABASE_URL": "UNAVAILABLE"
+      },
+      "impact": "No strategy experiment or OOS evaluation can run in this runtime.",
+      "nextAction": "Provision compatible checkout/runtime and PIT funding source; run deterministic fixture twice before frozen EXP-001."
+    },
+    {
+      "capability": "disk_storage",
+      "status": "PASS",
+      "evidence": {
+        "localDiskAvailable": "30GiB / 32GiB",
+        "remoteGitHubStorage": "WRITABLE",
+        "archiveBranch": "research/raw-ohlcv-archive-20261108T1026Z",
+        "archiveHead": "227cece2794e12b5cfddc675333a05ad87b3ed68"
+      },
+      "impact": "Remote GitHub storage is durable; local container is ephemeral.",
+      "nextAction": "Continue atomic remote commits and readback verification."
+    },
+    {
+      "capability": "artifact_readback",
+      "status": "PASS",
+      "evidence": {
+        "deltaFiles": 3,
+        "deltaRows": 64,
+        "deltaManifests": 3,
+        "indexesUpdated": [
+          "5m",
+          "15m",
+          "1h"
+        ],
+        "archiveManifest": "research-data/binance-usdm/manifests/archive_manifest_20261110T1830Z_auto15.json",
+        "allSha256AndGitBlobReadbacks": true,
+        "mainSnapshot": {
+          "path": "research-data/binance-usdm/current_market_snapshot_20261110T1832Z_auto15.json",
+          "sha256": "6f4b8f6caf816b0074c8c74f879fb368cd6f0b51f4bd62831b26feab5bb488e1",
+          "blobSha1": "a9731250f602b6eee67e356d9a09e0c55345603f",
+          "bytes": 14535,
+          "readbackVerified": true
+        }
+      },
+      "impact": "Archive and current snapshot artifacts verified after commit.",
+      "nextAction": "Publish preflight, report, queue and run manifest; verify each readback."
+    }
+  ],
+  "experiment": {
+    "executed": true,
+    "type": "INCREMENTAL_ARCHIVE_DATA_QUALITY_AUDIT",
+    "strategyExperiment": false,
+    "oos": false,
+    "artifactPath": "research/context-strategy/experiments/incremental_archive_append_20261110T1822Z_auto15.result.json",
+    "artifactSha256": "56b57670f58a887b1a38c7ca0b41f12ed2f7fe045ab3aa88167313b3e91a2743",
+    "rowsAppended": 64,
+    "blockers": [
+      "5m/15m base history absent",
+      "4h raw/aligned/canonical provenance mismatch",
+      "Node22/npm10 below required versions",
+      "local repository and SDK unavailable",
+      "direct Binance REST DNS failure",
+      "PIT funding DB unavailable"
+    ],
+    "nextExecutableAction": "Resolve archive and runtime blockers; run deterministic fixture twice; then execute frozen EXP-001."
+  }
+}

@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0.0",
   "run_id": "context-strategy-20261110T232114Z-auto21",
-  "as_of_utc": "2026-11-10T23:23:00.000Z",
+  "as_of_utc": "2026-11-10T23:36:00.000Z",
   "environment": {
     "runtime": "managed container + JavaScript tool runtime",
     "os": "Linux 6.18.57 x86_64",
@@ -57,23 +57,23 @@
     {
       "capability": "raw historical archive",
       "status": "DEGRADED",
-      "evidence": "20 new rows persisted; 5m incremental total 1,668 and 15m 560 with no multi-year base; 1h base 215,484 from 2020-09-14; 4h raw/aligned/canonical rows 53,960/53,816/53,844 and 13 SHA mismatches.",
+      "evidence": "20-row 5m/15m append verified; 1h archive 144 JSONL pages/29,823,100 bytes/215,484 rows (53,871 per symbol), 2020-09-14 08:00Z to 2026-11-10 22:00Z; 4h raw 36 pages/7,635,373 bytes/53,960 rows; 4h canonical 53,844 rows/7,620,585 bytes; 14/14 row-level replay pairs exact, but 13 original SHA provenance mismatches and conflicting count notes remain. No 5m/15m base.",
       "impact": "Incremental data valid but coverage/provenance blocks strategy research.",
-      "next_action": "Backfill 5m/15m and reconcile 4h raw/canonical row keys and SHA provenance."
+      "next_action": "Preserve 4h canonical; reconcile index count notes and SHA provenance; backfill multi-year 5m/15m."
     },
     {
       "capability": "data quality/coverage",
       "status": "DEGRADED",
-      "evidence": "This append: 8 series/20 rows; zero duplicates, gaps, off-grid, non-monotonic, OHLC, volume or non-finite failures; 8 forming bars excluded; timestamps aligned across symbols.",
+      "evidence": "20-row incremental append passes all checks. Context experiment reconstructed 13,454 aligned 4h base rows per symbol (53,816 total) with zero duplicates/gaps/OHLC/volume/non-finite failures; cross-symbol alignment exact. 5m/15m base remains absent; 4h raw/canonical index metadata remains partially unresolved.",
       "impact": "Append passes QA; overall historical sample remains insufficient.",
-      "next_action": "Continue append-only ingestion; do not infer intraday edges from sparse incremental-only history."
+      "next_action": "Use 4h for descriptive context research; do not claim intraday strategy coverage until 5m/15m backfill."
     },
     {
       "capability": "backtest harness/smoke test",
       "status": "BLOCKED",
-      "evidence": "Remote scripts/backtest.ts and research harness exist, but local checkout absent, Node/npm below project floor and SDK absent; deterministic fixture not run.",
+      "evidence": "Remote strategy harness exists, but local checkout absent, Node22.16/npm10.9 below project floor and SDK absent; deterministic strategy fixture not run. Context taxonomy script ran separately in the JavaScript tool runtime.",
       "impact": "No strategy experiment or OOS evaluation completed.",
-      "next_action": "Provision Node24/npm11 checkout, install SDK/dependencies, run fixture twice, then frozen EXP-001."
+      "next_action": "Provision Node24/npm11 checkout and SDK; run strategy harness fixture twice, then frozen strategy experiment."
     },
     {
       "capability": "disk/storage",
@@ -88,6 +88,13 @@
       "evidence": "Delta, delta manifest, 5m/15m indexes, archive manifest and current market snapshot fetched after write; SHA-256 recomputed from exact delta/manifest readback; blob SHA values recorded.",
       "impact": "Archive and snapshot persistence verified.",
       "next_action": "Record main run manifest and update queue/registry."
+    },
+    {
+      "capability": "context discovery experiment",
+      "status": "PASS",
+      "evidence": "EXP-CTX-4H-001 completed in JavaScript tool runtime from fetched-back persisted script (SHA-256 88e86901955072b864ef46bcf9eb54fca3fe05f45a99d738d80ad53759d50007); 4 symbols × 13,454 4h bars; thresholds fitted on train only; result SHA-256 c23fa5731d49501f11aa5588e856487df2ba6375d7cf56d6b3dc0cb2b047fa61; readback verified.",
+      "impact": "A real context-taxonomy stability experiment completed; it is not a strategy backtest or trade OOS.",
+      "next_action": "Retain taxonomy as descriptive only; high-vol/shock states fail predeclared test-frequency gate."
     }
   ],
   "endpoints": {
@@ -170,7 +177,8 @@
       "time_utc": "2026-11-10T23:22:48Z"
     }
   },
-  "run_classification": "RESEARCH_EXECUTED_DATA_QUALITY_ONLY",
+  "run_classification": "RESEARCH_EXECUTED_CONTEXT_DISCOVERY_AND_DATA_QUALITY",
   "strategy_experiment_status": "RESEARCH_BLOCKED",
-  "oos_evaluated": false
+  "oos_evaluated": false,
+  "context_experiment_status": "COMPLETED_CONTEXT_DISCOVERY_NOT_STRATEGY_OOS"
 }

@@ -54,27 +54,26 @@
     "4h": "2026-11-09T20:00:00Z"
   },
   "latest_data_quality_experiment": {
-    "id": "EXP-DQ-2026-11-10-0226Z-023",
+    "id": "EXP-DQ-2026-11-10-0328Z-024",
     "status": "COMPLETED_PASS_INCREMENTAL_ARCHIVE_APPEND_AND_READBACK_ONLY",
-    "rows_appended": 60,
+    "rows_appended": 68,
     "rows_by_interval": {
-      "5m": 44,
-      "15m": 12,
+      "5m": 48,
+      "15m": 16,
       "1h": 4,
       "4h": 0
     },
     "rows_by_symbol": {
-      "BTCUSDT": 15,
-      "ETHUSDT": 15,
-      "SOLUSDT": 15,
-      "XRPUSDT": 15
+      "BTCUSDT": 17,
+      "ETHUSDT": 17,
+      "SOLUSDT": 17,
+      "XRPUSDT": 17
     },
     "quality_failures": 0,
     "readback_verified": true,
     "canonical_indexes_updated": false,
-    "manifest_path": "research-data/binance-usdm/manifests/archive_manifest_20261110T0227Z_v105.json",
-    "manifest_blob_sha": "41ad8dd1174a92982bf26364479a6515b16dda9d",
-    "experiment_path": "research/context-strategy/experiments/EXP-DQ-2026-11-10-0226Z-023.json"
+    "manifest_path": "research-data/binance-usdm/manifests/archive_manifest_20261110T0328Z_v106.json",
+    "experiment_path": "research/context-strategy/experiments/EXP-DQ-2026-11-10-0328Z-024.json"
   },
   "items": [
     {
@@ -85,7 +84,7 @@
       "prerequisites": [
         "Direct DNS/HTTPS or uncached official endpoint route"
       ],
-      "blocker": "PremiumIndex time proxy fresh at 02:26:57Z (~1.9s from shell), but direct /fapi/v1/time DNS fails and exchangeInfo.serverTime remains stale by ~5155s.",
+      "blocker": "Connected premiumIndex time proxy is fresh at 03:28:21Z, but direct /fapi/v1/time DNS fails and exchangeInfo.serverTime is stale by 8,839.105s.",
       "next_action": "Restore direct official server-time route and refresh exchangeInfo; require fresh metadata before execution validation."
     },
     {
@@ -99,8 +98,8 @@
         "npm >=11",
         "Pinned dependencies"
       ],
-      "blocker": "No local checkout; Node22.16.0/npm10.9.2 while package requires Node>=24/npm>=11; SDK import unavailable.",
-      "next_action": "Provision Node24/npm11, clone main 669ba233538eb1463c0e7e0a435016a643e7adb5, install dependencies and run archiveKlines fixture twice."
+      "blocker": "No local checkout; runtime Node22.16.0/npm10.9.2 while package.json requires Node>=24/npm>=11; SDK packages not importable.",
+      "next_action": "Provision Node24/npm11, clone repository, install pinned dependencies and run archiveKlines fixture twice."
     },
     {
       "id": "RQ-012",
@@ -134,8 +133,8 @@
         "Auditable bulk source",
         "Persistent storage and SHA-256 readback"
       ],
-      "blocker": "5m/15m partial backfills cover 20.8d/62.5d, not multiple cycles; 1h/4h base data not locally read; 4h retains 13 SHA discrepancies.",
-      "next_action": "Continue 5m backfill earlier than 2026-10-20T04:20Z and 15m earlier than 2026-09-08T11:30Z; reconcile 4h hashes."
+      "blocker": "5m/15m backfill remains 20.8d/62.5d; 1h base not locally read back; 4h retains 13 SHA discrepancies.",
+      "next_action": "Continue backward 5m/15m backfill and reconcile 4h page-manifest hashes; verify 1h/4h raw archive files."
     },
     {
       "id": "RQ-004",
@@ -177,8 +176,8 @@
         "deterministic smoke test",
         "frozen spec and untouched test segment"
       ],
-      "blocker": "No valid strategy test: short partial 5m/15m history, unresolved 4h provenance, uncalibrated costs, no local compatible runner.",
-      "next_action": "Finish multi-cycle archive and cost prerequisites, then pre-register one strategy×context×symbol experiment."
+      "blocker": "No valid strategy test: insufficient multi-cycle 5m/15m history, unresolved 4h provenance, uncalibrated execution/funding costs, source defects and no compatible local runner.",
+      "next_action": "Resolve RQ-002/003/004/005/012/014/029, run deterministic smoke test, then pre-register one strategy×context×symbol experiment."
     },
     {
       "id": "RQ-007",
@@ -241,21 +240,15 @@
         "Persistent GitHub branch write/readback"
       ],
       "blocker": null,
-      "next_action": "Continue append-only refresh from highwaters 5m 02:20Z, 15m 02:00Z, 1h 01:00Z, 4h 20:00Z.",
-      "last_completed_utc": "2026-11-10T02:29:15.623Z",
+      "next_action": "Continue append-only refresh from highwaters 5m 03:20Z, 15m 03:00Z, 1h 02:00Z, 4h 20:00Z.",
+      "last_completed_utc": "2026-11-10T03:28:31.047Z",
       "evidence": {
-        "rows_appended": 60,
+        "rows_appended": 68,
         "rows_by_interval": {
-          "5m": 44,
-          "15m": 12,
+          "5m": 48,
+          "15m": 16,
           "1h": 4,
           "4h": 0
-        },
-        "rows_by_symbol": {
-          "BTCUSDT": 15,
-          "ETHUSDT": 15,
-          "SOLUSDT": 15,
-          "XRPUSDT": 15
         },
         "quality_failures": 0,
         "readback_verified": true
@@ -273,12 +266,12 @@
       ],
       "blocker": null,
       "next_action": "Data-quality evidence only; do not infer strategy edge or OOS status from archive append checks.",
-      "last_completed_utc": "2026-11-10T02:29:15.623Z",
+      "last_completed_utc": "2026-11-10T03:28:31.047Z",
       "evidence": {
         "experiment_ids": [
-          "EXP-DQ-2026-11-10-0226Z-023"
+          "EXP-DQ-2026-11-10-0328Z-024"
         ],
-        "rows_appended": 60,
+        "rows_appended": 68,
         "readback_verified": true,
         "canonical_indexes_updated": false
       }
@@ -304,40 +297,39 @@
         "Resolve per-interval index paths",
         "Readback-verified deltas and manifest"
       ],
-      "blocker": "Append-only deltas persisted, but canonical indexes not rebuilt; 4h provenance and source schema defects remain.",
-      "next_action": "Repair candle schema and reconcile manifest hashes, then rebuild canonical indexes with readback."
+      "blocker": "Append-only deltas persisted but canonical indexes were not rebuilt; 4h provenance and source schema defects remain.",
+      "next_action": "Repair candle schema and reconcile hashes, then rebuild canonical indexes with readback."
     }
   ],
   "last_market_snapshot": {
-    "path": "research/context-strategy/snapshots/2026-11-10T0227Z_v105.json",
-    "as_of_utc": "2026-11-10T02:26:57.000Z",
+    "path": "research/context-strategy/snapshots/2026-11-10T0328Z_v106.json",
+    "as_of_utc": "2026-11-10T03:28:21Z",
     "latest_completed_candles_utc": {
-      "5m": "2026-11-10T02:20:00Z",
-      "15m": "2026-11-10T02:00:00Z",
-      "1h": "2026-11-10T01:00:00Z",
-      "4h": "2026-11-09T20:00:00Z"
+      "5m": "2026-11-10T03:20:00.000Z",
+      "15m": "2026-11-10T03:00:00.000Z",
+      "1h": "2026-11-10T02:00:00.000Z",
+      "4h": "2026-11-09T20:00:00.000Z"
     },
     "context_summary": {
-      "BTCUSDT": "5m/4h bearish, 15m bullish, 1h transition",
-      "ETHUSDT": "5m/1h/4h bearish, 15m transition",
-      "SOLUSDT": "bearish across 5m/15m/1h/4h",
-      "XRPUSDT": "5m/1h transition, 15m bullish, 4h bearish"
+      "BTCUSDT": "5m:BEARISH, 15m:TRANSITION, 1h:BEARISH, 4h:BEARISH",
+      "ETHUSDT": "5m:BEARISH, 15m:BEARISH, 1h:BEARISH, 4h:BEARISH",
+      "SOLUSDT": "5m:BEARISH, 15m:BEARISH, 1h:BEARISH, 4h:BEARISH",
+      "XRPUSDT": "5m:TRANSITION, 15m:BEARISH, 1h:BEARISH, 4h:BEARISH"
     },
     "oos_validated_entries": 0
   },
   "registry_snapshot": {
-    "version": "v101",
-    "path": "research/context-strategy/registry/registry_20261109T2231Z_v101.json",
-    "blob_sha": "f33949160159e5bae97489bcd7d72d3eeb663539",
-    "readback_verified": true
+    "version": "v106",
+    "path": "research/context-strategy/registry/registry_20261110T0328Z_v106.json",
+    "oos_validated_count": 0
   },
-  "version": "v101",
-  "updated_at_utc": "2026-11-10T00:27:19Z",
+  "version": "v106",
+  "updated_at_utc": "2026-11-10T03:28:31.047Z",
   "archive_highwaters_utc": {
-    "5m": "2026-11-09T22:25:00.000Z",
-    "15m": "2026-11-09T22:15:00.000Z",
-    "1h": "2026-11-09T21:00:00.000Z",
-    "4h": "2026-11-09T16:00:00.000Z"
+    "5m": "2026-11-10T03:20:00.000Z",
+    "15m": "2026-11-10T03:00:00.000Z",
+    "1h": "2026-11-10T02:00:00.000Z",
+    "4h": "2026-11-09T20:00:00.000Z"
   },
   "last_archive_manifest": {
     "path": "research-data/binance-usdm/manifests/archive_manifest_20261109T223135Z_v101.json",
@@ -408,23 +400,26 @@
   "last_archive_manifest_path": "research-data/binance-usdm/manifests/archive_manifest_20261110T0027Z_v103.json",
   "last_market_snapshot_path": "research/context-strategy/snapshots/2026-11-10T0027Z_v103.json",
   "last_run_summary": {
-    "run_id": "context-strategy-2026-11-10T0135Z-v104",
-    "as_of_utc": "2026-11-10T01:35:21Z",
-    "experiment_id": "EXP-DQ-2026-11-10-0130Z-022",
-    "backfill_rows": 48000,
-    "incremental_rows": 76,
-    "total_persisted_rows": 48076,
+    "run_id": "context-strategy-2026-11-10T0328Z-v106",
+    "as_of_utc": "2026-11-10T03:28:31.047Z",
+    "experiment_id": "EXP-DQ-2026-11-10-0328Z-024",
+    "incremental_rows": 68,
+    "rows_by_interval": {
+      "5m": 48,
+      "15m": 16,
+      "1h": 4,
+      "4h": 0
+    },
     "strategy_backtest_executed": false,
     "oos_evaluated": false,
-    "registry_version": "v104",
-    "next_action": "Continue backward 5m/15m chunked backfill and fix runner/schema/cost blockers; do not run strategy until sample and execution gates pass.",
+    "registry_version": "v106",
+    "next_action": "Continue 5m/15m multi-cycle backfill, reconcile 4h provenance and fix runner/schema/cost blockers; no strategy backtest until gates pass.",
     "artifact_refs": {
-      "manifest": "research-data/binance-usdm/manifests/archive_manifest_20261110T0135Z_v104.json",
-      "registry": "research/context-strategy/registry/registry_20261110T0135Z_v104.json",
-      "experiment": "research/context-strategy/experiments/EXP-DQ-2026-11-10-0130Z-022.json",
-      "snapshot": "research/context-strategy/snapshots/2026-11-10T0135Z_v104.json",
-      "preflight": "research/context-strategy/preflight/preflight_20261110T0135Z_v104.json",
-      "report": "research/context-strategy/reports/2026-11-10T0135Z_v104.md"
+      "manifest": "research-data/binance-usdm/manifests/archive_manifest_20261110T0328Z_v106.json",
+      "registry": "research/context-strategy/registry/registry_20261110T0328Z_v106.json",
+      "snapshot": "research/context-strategy/snapshots/2026-11-10T0328Z_v106.json",
+      "preflight": "research/context-strategy/preflight/preflight_20261110T0328Z_v106.json",
+      "report": "research/context-strategy/reports/2026-11-10T0328Z_v106.md"
     }
   },
   "latest_registry_path": "research/context-strategy/registry/registry_20261110T0227Z_v105.json",
@@ -432,5 +427,12 @@
   "latest_experiment_path": "research/context-strategy/experiments/EXP-DQ-2026-11-10-0226Z-023.json",
   "latest_manifest_blob_sha": "2c7e3d4bce8b796c9a18632c8b1e41cc25bf13b2",
   "latest_manifest_sha256": "75abf2975fbf9f85fe4017e59cfc92826e7de463ad999e3b2a8679817ece1605",
-  "manifest_readback_verified": true
+  "manifest_readback_verified": true,
+  "artifact_manifest_path": "research/context-strategy/manifests/artifact_manifest_20261110T0328Z_v106.json",
+  "artifact_manifest": {
+    "path": "research/context-strategy/manifests/artifact_manifest_20261110T0328Z_v106.json",
+    "sha256": "cc3c2b68cf95ae5bddb98cec336475eb9a8f99521555f671011c74b93c5326bc",
+    "git_blob_sha": "2108c122ce2b176e98b4258f6759ee46565f3416",
+    "readback_verified": true
+  }
 }

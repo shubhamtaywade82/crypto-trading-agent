@@ -1,0 +1,94 @@
+{
+  "schemaVersion": "1.0.0",
+  "asOfUtc": "2026-11-10T13:32:58.000Z",
+  "environment": {
+    "cwd": "/",
+    "os": "Debian GNU/Linux 13 (trixie)",
+    "kernel": "6.18.57",
+    "node": "v22.16.0",
+    "npm": "10.9.2",
+    "python": "3.13.5",
+    "cpuCount": 5,
+    "memoryTotalMb": 5947,
+    "memoryAvailableMb": 4813,
+    "diskFreeGb": 30,
+    "localRepositoryPresent": false,
+    "binanceSdkPackages": {
+      "@binance/connector": "NOT_INSTALLED",
+      "binance-connector": "NOT_INSTALLED",
+      "@binance/futures-connector": "NOT_INSTALLED"
+    }
+  },
+  "checks": [
+    {
+      "capability": "shell/compute",
+      "status": "DEGRADED",
+      "evidence": "cwd=/; Debian13; Node22.16.0/npm10.9.2; Python3.13.5; 5 CPUs; 5,947MB RAM; 30GB free.",
+      "impact": "Compute works, but Node runtime is below project engine floor.",
+      "nextAction": "Provision Node>=24 and npm>=11."
+    },
+    {
+      "capability": "repo/code",
+      "status": "BLOCKED",
+      "evidence": "Remote repo exists, default branch main, 36,344KB; package.json engines Node>=24/npm>=11 and scripts include backtest/research:conditional. Local checkout absent; SDK packages not installed.",
+      "impact": "Repository harness cannot be invoked in this runtime.",
+      "nextAction": "Checkout the repository in a compatible runtime and install dependencies."
+    },
+    {
+      "capability": "network/Binance endpoints",
+      "status": "DEGRADED",
+      "evidence": "Direct curl probes to /fapi/v1/time, /exchangeInfo, /klines, /premiumIndex, /openInterest and /ticker/24hr all HTTP000; DNS resolution failed or timed out. Binance connector calls succeeded but exposed no HTTP status.",
+      "impact": "Connector-only market monitoring; direct REST status and uncached server time unavailable.",
+      "nextAction": "Restore DNS/HTTPS or use an auditable official bulk data source."
+    },
+    {
+      "capability": "exchange time/metadata",
+      "status": "BLOCKED",
+      "evidence": "Connector exchangeInfo.serverTime=2026-11-10T01:01:01.891Z; market mark time=2026-11-10T13:32:58.000Z; drift=45,116.109s.",
+      "impact": "Contract TRADING status cannot be trusted; execution validation prohibited.",
+      "nextAction": "Fetch uncached /time and /exchangeInfo with <=5s drift."
+    },
+    {
+      "capability": "raw historical archive",
+      "status": "DEGRADED",
+      "evidence": "Remote raw branch accessible. 1h base 215,484 rows from 2020-09-14 to 2026-11-06 22:00Z plus 100 incremental. 5m/15m base absent (1,196/404 incremental). 4h raw/aligned/canonical=53,960/53,816/53,844; 13 provenance mismatches.",
+      "impact": "1h history exists; 5m/15m insufficient; 4h cannot be trusted as a canonical merged sample.",
+      "nextAction": "Backfill 5m/15m base and reconcile 4h page-level row/provenance differences."
+    },
+    {
+      "capability": "data quality/coverage",
+      "status": "DEGRADED",
+      "evidence": "Rolling 16 series x120=1,920 rows; 1,904 completed,16 forming excluded; 0 duplicates/gaps/off-grid/nonmonotonic/OHLC failures/nonpositive volume/nonfinite; symbols aligned. New append 48 rows.",
+      "impact": "Incremental windows pass; full historical archive does not.",
+      "nextAction": "Continue completed-bar append and validate full archives after reconciliation."
+    },
+    {
+      "capability": "backtest harness/smoke test",
+      "status": "BLOCKED",
+      "evidence": "Remote scripts exist; local repository absent; Node22/npm10 below Node24/npm11; deterministic fixture smoke test NOT_RUN.",
+      "impact": "No strategy experiment or OOS run is valid this cycle.",
+      "nextAction": "Provision compatible runtime, checkout, install, and run deterministic no-lookahead fixture twice."
+    },
+    {
+      "capability": "disk/storage",
+      "status": "PASS",
+      "evidence": "30GB free locally; GitHub remote branch write permission true.",
+      "impact": "Remote artifact persistence available.",
+      "nextAction": "Continue atomic/versioned GitHub writes with readback."
+    },
+    {
+      "capability": "artifact readback",
+      "status": "PASS",
+      "evidence": "New 48-row delta, delta manifest, 5m/15m/1h indexes and archive manifest read back; sample 1h and 4h base pages read back and SHA-256 matched.",
+      "impact": "Data-quality append is persisted and verified.",
+      "nextAction": "Keep readback verification mandatory."
+    }
+  ],
+  "runClassification": {
+    "overall": "RESEARCH_EXECUTED",
+    "scope": "DATA_QUALITY_ONLY",
+    "strategyExperiment": "RESEARCH_BLOCKED",
+    "oosEvaluated": false,
+    "monitoringOnly": false
+  }
+}

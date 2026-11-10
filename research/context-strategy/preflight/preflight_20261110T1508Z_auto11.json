@@ -1,0 +1,86 @@
+{
+  "schemaVersion": "1.0.0",
+  "runId": "context-strategy-20261110T1508Z-auto11",
+  "asOfUtc": "2026-11-10T15:08:43.031Z",
+  "environment": {
+    "shell": "AVAILABLE",
+    "cwd": "/",
+    "os": "Linux 6.18.57 x86_64",
+    "node": "v22.16.0",
+    "npm": "10.9.2",
+    "python": "3.13.5",
+    "cpuCores": 5,
+    "memTotalKiB": 6090668,
+    "memAvailableKiB": 4938480,
+    "disk": {
+      "filesystem": "overlay",
+      "size": "32G",
+      "used": "5.3M",
+      "available": "30G",
+      "usedPct": "1%"
+    },
+    "localRepository": "ABSENT",
+    "binanceSdk": "NOT_INSTALLED"
+  },
+  "checks": [
+    {
+      "capability": "shell/compute",
+      "status": "DEGRADED",
+      "evidence": "Node v22.16.0/npm10.9.2; Python3.13.5; 5 CPU; 4.94 GiB available RAM; 30 GiB free disk.",
+      "impact": "Node/npm below project floor Node>=24/npm>=11.",
+      "nextAction": "Provision compatible runtime and local checkout."
+    },
+    {
+      "capability": "repo/code",
+      "status": "DEGRADED",
+      "evidence": "GitHub main c1d4f7fe84cc1baf34abc6bbe084898a1765e1aa; latest CI run 42838183631 success; local checkout absent.",
+      "impact": "Remote inspection possible; local tests/backtest impossible.",
+      "nextAction": "Clone main into persistent workspace."
+    },
+    {
+      "capability": "network/Binance endpoints",
+      "status": "DEGRADED",
+      "evidence": "Direct /fapi/v1/time HTTP 000 DNS failure exit 6; data.binance.vision CHECKSUM HEAD DNS/timeout; connector market data returned. exchangeInfo serverTime age 50,719.658s.",
+      "impact": "Cannot validate exchange-time drift or fresh contract metadata for execution.",
+      "nextAction": "Restore direct DNS/HTTPS or obtain uncached authoritative time/metadata; require <=5s drift."
+    },
+    {
+      "capability": "raw historical archive",
+      "status": "PASS",
+      "evidence": "36 completed bars in four deltas; manifests and affected indexes read back; SHA-256/Git blob SHA-1 matched.",
+      "impact": "Highwaters 5m15:00Z, 15m14:45Z, 1h14:00Z, 4h08:00Z.",
+      "nextAction": "Continue closed-bar append; backfill missing base history."
+    },
+    {
+      "capability": "data quality/coverage",
+      "status": "DEGRADED",
+      "evidence": "Latest 16 rolling series: 149 completed + one forming excluded; zero duplicates/gaps/OHLC/volume failures. 5m/15m base absent; 4h raw/aligned/canonical 53,960/53,816/53,844 and 13 SHA mismatches.",
+      "impact": "Recent windows clean; insufficient for robust historical strategy discovery.",
+      "nextAction": "Backfill monthly/daily official Binance archive with CHECKSUM verification; reconcile 4h provenance."
+    },
+    {
+      "capability": "backtest harness/smoke test",
+      "status": "BLOCKED",
+      "evidence": "No local repo/package.json/node_modules; Binance SDK not installed; Node/npm below floor; deterministic smoke test NOT_RUN.",
+      "impact": "No strategy experiment or OOS run.",
+      "nextAction": "Node>=24/npm>=11, clone, install, verify SDK, run deterministic fixture twice."
+    },
+    {
+      "capability": "disk/storage",
+      "status": "PASS",
+      "evidence": "30 GiB free; GitHub archive branch writable and readback verified.",
+      "impact": "GitHub is durable store; local overlay is not.",
+      "nextAction": "Keep versioned GitHub persistence."
+    },
+    {
+      "capability": "artifact readback",
+      "status": "PASS",
+      "evidence": "Four deltas, four delta manifests, four archive manifests and affected indexes read back and hashes matched.",
+      "impact": "Raw append persisted. Main report/snapshot will be published in this commit.",
+      "nextAction": "Read back main run artifacts after publication."
+    }
+  ],
+  "runClassification": "MONITORING_ONLY",
+  "strategyExperiment": "RESEARCH_BLOCKED",
+  "oosEvaluated": false
+}

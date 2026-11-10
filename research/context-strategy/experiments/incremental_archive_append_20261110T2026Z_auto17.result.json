@@ -1,0 +1,96 @@
+{
+  "schemaVersion": "1.0.0",
+  "experimentId": "EXP-DQ-2026-11-10-2026Z-AUTO17",
+  "runId": "context-strategy-20261110T2026Z-auto17",
+  "kind": "INCREMENTAL_ARCHIVE_DATA_QUALITY",
+  "status": "COMPLETED",
+  "strategyExperimentStatus": "RESEARCH_BLOCKED",
+  "oosEvaluationStatus": "NOT_RUN",
+  "hypothesis": "Only append completed, unique, on-grid candles strictly after each interval highwater; reject forming bars; require exact interval continuity, valid OHLC, positive volume, finite values and cross-symbol alignment.",
+  "source": {
+    "endpoint": "GET /fapi/v1/klines",
+    "provider": "Binance USD-M public connector",
+    "symbols": [
+      "BTCUSDT",
+      "ETHUSDT",
+      "SOLUSDT",
+      "XRPUSDT"
+    ],
+    "intervals": [
+      "5m",
+      "15m",
+      "1h",
+      "4h"
+    ]
+  },
+  "windowUtc": {
+    "5m": [
+      "2026-11-10T19:40:00.000Z",
+      "2026-11-10T20:20:00.000Z"
+    ],
+    "15m": [
+      "2026-11-10T19:30:00.000Z",
+      "2026-11-10T20:00:00.000Z"
+    ],
+    "1h": [
+      "2026-11-10T19:00:00.000Z",
+      "2026-11-10T19:00:00.000Z"
+    ],
+    "4h": [
+      "2026-11-10T16:00:00.000Z",
+      "2026-11-10T16:00:00.000Z"
+    ]
+  },
+  "counts": {
+    "rowsFetched": 72,
+    "completedRows": 56,
+    "formingExcluded": 16,
+    "rowsAppended": 56,
+    "byInterval": {
+      "5m": 36,
+      "15m": 12,
+      "1h": 4,
+      "4h": 4
+    },
+    "bySymbol": {
+      "BTCUSDT": 14,
+      "ETHUSDT": 14,
+      "SOLUSDT": 14,
+      "XRPUSDT": 14
+    }
+  },
+  "quality": {
+    "series": 16,
+    "duplicates": 0,
+    "missingIntervals": 0,
+    "offGrid": 0,
+    "nonMonotonic": 0,
+    "ohlcInvariantFailures": 0,
+    "nonPositiveVolume": 0,
+    "nonFinite": 0,
+    "crossSymbolAlignment": true,
+    "formingRowsAppended": 0
+  },
+  "costs": "Not applicable to data-quality experiment.",
+  "split": "Not applicable; no strategy labels or backtest.",
+  "reproducibility": {
+    "runTimestampUtc": "2026-11-10T20:26:44.702Z",
+    "codeCommit": "NOT_APPLICABLE; no local harness executed",
+    "randomSeed": null,
+    "rawDeltaPaths": [
+      "research-data/binance-usdm/delta/binance_usdm_delta_20261110T2026Z_5m_completed.jsonl",
+      "research-data/binance-usdm/delta/binance_usdm_delta_20261110T2026Z_15m_completed.jsonl",
+      "research-data/binance-usdm/delta/binance_usdm_delta_20261110T2026Z_1h_completed.jsonl",
+      "research-data/binance-usdm/delta/binance_usdm_delta_20261110T2026Z_4h_completed.jsonl"
+    ],
+    "archiveManifestPath": "research-data/binance-usdm/manifests/archive_manifest_20261110T2026Z_auto17.json",
+    "readbackVerified": true
+  },
+  "limitations": [
+    "Does not establish strategy performance or edge.",
+    "5m/15m multi-year base history remains absent.",
+    "4h canonical index/manifest end-date conflict and 13 provenance SHA mismatches remain unresolved.",
+    "No strategy backtest, OOS or registry promotion."
+  ],
+  "result": "All 56 appended completed rows passed the declared incremental integrity checks; all raw deltas, delta manifests, indexes and archive manifest were read back."
+}

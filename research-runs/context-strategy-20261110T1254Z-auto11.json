@@ -1,0 +1,75 @@
+{
+  "schema_version": "1.0.0",
+  "run_id": "context-strategy-20261110T1254Z-auto11",
+  "as_of_utc": "2026-11-10T12:54:30.000Z",
+  "status": "RESEARCH_EXECUTED",
+  "classification": "RESEARCH_EXECUTED_DATA_QUALITY_APPEND_ONLY",
+  "strategy_experiment": "BLOCKED",
+  "oos_evaluation": "NOT_RUN",
+  "code_commit": "57f7d657e5b06a9ad0063512086f8b023e0a8c5d",
+  "data": {
+    "archive_branch": "research/raw-ohlcv-archive-20261108T1026Z",
+    "rows_fetched": 28,
+    "completed_rows_appended": 20,
+    "forming_rows_excluded": 8,
+    "rows_by_interval": {
+      "5m": 16,
+      "15m": 4
+    },
+    "latest_highwaters": {
+      "5m": "2026-11-10T12:45:00Z",
+      "15m": "2026-11-10T12:30:00Z",
+      "1h": "2026-11-10T11:00:00Z",
+      "4h": "2026-11-10T08:00:00Z"
+    }
+  },
+  "evidence": {
+    "oos_validated_entries": 0,
+    "insufficient_evidence_entries": 4,
+    "rejected_entries": 1,
+    "eth_xrp_strategy_tests": 0
+  },
+  "decisions": {
+    "SOLUSDT": "NO_TRADE",
+    "ETHUSDT": "NO_TRADE",
+    "XRPUSDT": "NO_TRADE"
+  },
+  "artifacts": {
+    "deltaPath": "research-data/binance-usdm/delta/binance_usdm_delta_20261110T1250Z_5m15m_completed.jsonl",
+    "deltaManifestPath": "research-data/binance-usdm/delta/manifest-20261110T1250Z-5m15m.json",
+    "archiveManifestPath": "research-data/binance-usdm/manifests/archive_manifest_20261110T1250Z_auto11.json",
+    "snapshotPath": "research-data/binance-usdm/current_market_snapshot_20261110T1254Z_auto11.json",
+    "preflightPath": "research/context-strategy/preflight/preflight_20261110T1254Z_auto11.json",
+    "auditPath": "research/context-strategy/audits/data_quality_audit_20261110T1254Z_auto11.json",
+    "experimentPath": "research/context-strategy/experiments/incremental_archive_append_20261110T1250Z_auto11.result.json",
+    "reportPath": "research/context-strategy/reports/2026-11-10T1254Z_auto11.md",
+    "queueSnapshotPath": "research-data/binance-usdm/research-queue-v108.json",
+    "registrySnapshotPath": "research-data/binance-usdm/conditional-strategy-registry-snapshot-v108.json"
+  },
+  "preflight_summary": {
+    "shell_compute": "DEGRADED",
+    "repo_code": "BLOCKED",
+    "network": "DEGRADED",
+    "metadata": "BLOCKED",
+    "raw_archive": "DEGRADED",
+    "data_quality": "DEGRADED",
+    "backtest_harness": "BLOCKED",
+    "disk_storage": "PASS",
+    "artifact_readback": "PASS"
+  },
+  "limitations": [
+    "Direct Binance REST DNS failure",
+    "Stale exchangeInfo; contract status unverified",
+    "Node/npm below repository floor and no local checkout",
+    "5m/15m base history absent",
+    "4h archive reconciliation unresolved",
+    "Historical derivatives and calibrated execution-cost archives incomplete"
+  ],
+  "next_actions": [
+    "Complete Q1 archive remediation",
+    "Restore fresh /fapi/v1/time and /fapi/v1/exchangeInfo",
+    "Provision Node24/npm11 checkout and run deterministic smoke test",
+    "Backfill historical derivatives and costs",
+    "Run preregistered conditional strategy experiment with untouched OOS"
+  ]
+}

@@ -1,0 +1,47 @@
+{
+  "schemaVersion": 1,
+  "runId": "context-strategy-20261110T1254Z-auto11",
+  "asOfUtc": "2026-11-10T12:54:30.000Z",
+  "type": "INCREMENTAL_ARCHIVE_INTEGRITY",
+  "status": "RESEARCH_EXECUTED_DATA_QUALITY_ONLY",
+  "hypothesis": "Append only completed 5m/15m klines after verified highwaters; exclude forming bars; preserve continuity and reproducible hashes.",
+  "specification": {
+    "symbols": [
+      "BTCUSDT",
+      "ETHUSDT",
+      "SOLUSDT",
+      "XRPUSDT"
+    ],
+    "intervals": [
+      "5m",
+      "15m"
+    ],
+    "priorHighwaters": {
+      "5m": "2026-11-10T12:25:00Z",
+      "15m": "2026-11-10T12:15:00Z"
+    },
+    "completedCutoffUtc": "2026-11-10T12:54:30.000Z"
+  },
+  "results": {
+    "rowsFetched": 28,
+    "completedRows": 20,
+    "formingRowsExcluded": 8,
+    "rowsAppended": 20,
+    "rowsByInterval": {
+      "5m": 16,
+      "15m": 4
+    },
+    "qualityFailures": 0
+  },
+  "artifacts": {
+    "deltaPath": "research-data/binance-usdm/delta/binance_usdm_delta_20261110T1250Z_5m15m_completed.jsonl",
+    "deltaSha256": "8a9231c9f9b340c2624b1f721f50a12cc738a08c576fdedc5d2914621423d4c4",
+    "deltaManifestPath": "research-data/binance-usdm/delta/manifest-20261110T1250Z-5m15m.json",
+    "deltaManifestSha256": "f6251e112c15b72c692ef2dd8e34d8f08e7f7af3dddc7dffab14c65d408b4555",
+    "archiveManifestPath": "research-data/binance-usdm/manifests/archive_manifest_20261110T1250Z_auto11.json",
+    "readbackVerified": true
+  },
+  "interpretation": "Incremental slice integrity passed; full archive completeness and strategy edge are not established.",
+  "strategyBacktest": "NOT_RUN",
+  "untouchedOos": "NOT_RUN"
+}

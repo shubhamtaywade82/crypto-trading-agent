@@ -1,0 +1,119 @@
+{
+  "schemaVersion": "1.0.0",
+  "experimentId": "EXP-DQ-2026-11-10-2122Z-AUTO18",
+  "runId": "context-strategy-20261110T2122Z-auto18",
+  "kind": "INCREMENTAL_ARCHIVE_DATA_QUALITY",
+  "status": "COMPLETED",
+  "strategyExperimentStatus": "RESEARCH_BLOCKED",
+  "oosEvaluationStatus": "NOT_RUN",
+  "hypothesis": "Append only completed, unique, on-grid bars strictly after each interval highwater; exclude forming bars; require interval continuity, OHLC invariants, positive volume, finite values and cross-symbol alignment.",
+  "source": {
+    "endpoint": "GET /fapi/v1/klines",
+    "provider": "Binance USD-M public market-data connector",
+    "symbols": [
+      "BTCUSDT",
+      "ETHUSDT",
+      "SOLUSDT",
+      "XRPUSDT"
+    ],
+    "intervals": [
+      "5m",
+      "15m",
+      "1h",
+      "4h"
+    ]
+  },
+  "windowUtc": {
+    "5m": [
+      "2026-11-10T20:25:00.000Z",
+      "2026-11-10T21:15:00.000Z"
+    ],
+    "15m": [
+      "2026-11-10T20:15:00.000Z",
+      "2026-11-10T21:00:00.000Z"
+    ],
+    "1h": [
+      "2026-11-10T20:00:00.000Z",
+      "2026-11-10T20:00:00.000Z"
+    ],
+    "4h": null
+  },
+  "counts": {
+    "rowsFetched": 240,
+    "completedRows": 64,
+    "formingExcluded": 12,
+    "preHighwaterExcluded": 164,
+    "rowsAppended": 64,
+    "byInterval": {
+      "5m": 44,
+      "15m": 16,
+      "1h": 4,
+      "4h": 0
+    },
+    "bySymbol": {
+      "BTCUSDT": 16,
+      "ETHUSDT": 16,
+      "SOLUSDT": 16,
+      "XRPUSDT": 16
+    }
+  },
+  "quality": {
+    "series": 12,
+    "duplicates": 0,
+    "missingIntervals": 0,
+    "offGrid": 0,
+    "nonMonotonic": 0,
+    "ohlcInvariantFailures": 0,
+    "nonPositiveVolume": 0,
+    "nonFinite": 0,
+    "crossSymbolAlignment": true,
+    "formingRowsAppended": 0
+  },
+  "archive": {
+    "branch": "research/raw-ohlcv-archive-20261108T1026Z",
+    "finalCommit": "ef535d58b1075c69449a782328fb7dcfb33a80df",
+    "manifestPath": "research-data/binance-usdm/manifests/archive_manifest_20261110T2122Z_auto18.json",
+    "manifestBlobSha1": "d49d405f48aec9c61974f282e68ea724abfe655d",
+    "readbackVerified": true,
+    "deltaFiles": [
+      {
+        "interval": "5m",
+        "path": "research-data/binance-usdm/delta/binance_usdm_delta_20261110T2122Z_5m_completed.jsonl",
+        "rows": 44,
+        "sha256": "9442d2e94aa2eece68688e95ff23774f04c8bd56e36068ca84a93455e11f00dc",
+        "gitBlobSha1": "8cc7b4d160707df28de078fea03bcb287c2c84ad",
+        "manifestPath": "research-data/binance-usdm/delta/manifest-20261110T2122Z-5m.json",
+        "manifestSha256": "395a3721763d4da4a76a4110e25c825d60bf289a341987db3619696ef7cdc95d"
+      },
+      {
+        "interval": "15m",
+        "path": "research-data/binance-usdm/delta/binance_usdm_delta_20261110T2122Z_15m_completed.jsonl",
+        "rows": 16,
+        "sha256": "f1057a1c1a0f6d27e77d5f0d37baa95eee3687a8ddf2378c33d4a2bc1cb68ae1",
+        "gitBlobSha1": "8192073ac26b1f264e83ee978fa3a780a9ad8038",
+        "manifestPath": "research-data/binance-usdm/delta/manifest-20261110T2122Z-15m.json",
+        "manifestSha256": "a2503c73b1c1f0224a3e4c2f146c567eeb61fdd164b9f8c22c8f96751b40df08"
+      },
+      {
+        "interval": "1h",
+        "path": "research-data/binance-usdm/delta/binance_usdm_delta_20261110T2122Z_1h_completed.jsonl",
+        "rows": 4,
+        "sha256": "8e763dd271d8940c7364ebff05fa841f249ae912a9046b2cedd0a695002bf65a",
+        "gitBlobSha1": "eaa65ad08535618c54d062f4689b5c2a3b7f461a",
+        "manifestPath": "research-data/binance-usdm/delta/manifest-20261110T2122Z-1h.json",
+        "manifestSha256": "602e5764b2606fb69698ebca58b0ecaa6a6968bb969d6aac0583f98245dfa84b"
+      }
+    ]
+  },
+  "costs": "Not applicable to archive data-quality experiment.",
+  "split": "Not applicable; no strategy labels or backtest.",
+  "limitations": [
+    "No strategy backtest or OOS evaluation ran.",
+    "5m/15m multi-year base history remains absent.",
+    "4h canonical end-date conflict and 13 manifest SHA provenance mismatches remain unresolved.",
+    "Local checkout absent; Node22.16/npm10.9 below required Node24/npm11; SDK import unavailable.",
+    "Direct fapi.binance.com DNS timed out; connector HTTP status codes not exposed.",
+    "Historical funding/OI/taker archives and calibrated execution costs remain incomplete."
+  ],
+  "result": "All 64 appended completed bars passed the declared integrity checks; delta files, delta manifests, archive indexes and new archive manifest were read back."
+}

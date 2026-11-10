@@ -1,0 +1,137 @@
+{
+  "schemaVersion": "1.0.0",
+  "runId": "context-strategy-20261110T2122Z-auto18",
+  "asOfUtc": "2026-11-10T21:28:43.000Z",
+  "environment": "Managed Linux container plus GitHub and Binance USD-M connectors",
+  "checks": [
+    {
+      "capability": "shell/compute",
+      "status": "PASS",
+      "evidence": {
+        "cwd": "/",
+        "os": "Linux 6.18.57 x86_64",
+        "node": "v22.16.0",
+        "npm": "10.9.2",
+        "python": "3.13.5",
+        "cpu": 5,
+        "memoryTotalGiB": 5.81,
+        "memoryAvailableGiB": 4.71,
+        "diskFreeGiB": 30
+      },
+      "impact": "Enough for bounded data QA; Node/npm below project floor.",
+      "nextAction": "Provision persistent Node>=24/npm>=11 workspace."
+    },
+    {
+      "capability": "repo/code",
+      "status": "DEGRADED",
+      "evidence": {
+        "repository": "shubhamtaywade82/crypto-trading-agent",
+        "mainCommit": "c6b9e75437d1761c7a43b8004f734271544a05bf",
+        "localCheckout": "ABSENT",
+        "binanceSdkImport": "MISSING"
+      },
+      "impact": "Remote source/artifacts readable, but project CLI and locked SDK cannot be executed locally.",
+      "nextAction": "Restore local checkout and install lockfile dependencies under supported runtime."
+    },
+    {
+      "capability": "network/Binance endpoints",
+      "status": "DEGRADED",
+      "evidence": {
+        "directRestTime": "HTTP 000; DNS resolution timeout after 5s",
+        "directRestExchangeInfo": "HTTP 000; DNS resolution timeout after 5s",
+        "connectorMarketData": "SUCCESS; mark/ticker/OI/klines/funding/depth returned",
+        "exchangeInfoServerTimeUtc": "2026-11-10T01:01:01.892Z",
+        "marketDataTimeUtc": "2026-11-10T21:28:13.000Z",
+        "metadataStalenessSeconds": 73631.108,
+        "connectorHttpStatus": "NOT_EXPOSED"
+      },
+      "impact": "Fresh market data is available through connector, but stale contract metadata blocks execution validation.",
+      "nextAction": "Restore direct Binance DNS or obtain a fresh exchangeInfo/serverTime response."
+    },
+    {
+      "capability": "raw historical archive",
+      "status": "DEGRADED",
+      "evidence": {
+        "archiveBranch": "research/raw-ohlcv-archive-20261108T1026Z",
+        "archiveManifestPath": "research-data/binance-usdm/manifests/archive_manifest_20261110T2122Z_auto18.json",
+        "archiveManifestBlobSha1": "d49d405f48aec9c61974f282e68ea724abfe655d",
+        "readbackVerified": true,
+        "5mBaseRows": 0,
+        "5mIncrementalRows": 1572,
+        "15mBaseRows": 0,
+        "15mIncrementalRows": 528,
+        "1hBaseRows": 215484,
+        "1hRowsPerSymbolBase": 53871,
+        "4hRawRows": 53960,
+        "4hAlignedRows": 53816,
+        "4hCanonicalRows": 53844,
+        "4hCanonicalEndConflict": true,
+        "4hManifestShaMismatches": 13
+      },
+      "impact": "1h/4h multi-year history exists; 5m/15m are incremental-only; 4h canonical provenance unresolved.",
+      "nextAction": "Backfill 5m/15m and reconcile 4h canonical/index/manifest provenance."
+    },
+    {
+      "capability": "data quality/coverage",
+      "status": "PASS",
+      "evidence": {
+        "recentSeries": 16,
+        "rowsReturned": 2800,
+        "completedRows": 2784,
+        "formingExcluded": 16,
+        "duplicates": 0,
+        "missingIntervals": 0,
+        "offGrid": 0,
+        "ohlcFailures": 0,
+        "nonPositiveVolume": 0,
+        "nonFinite": 0,
+        "crossSymbolAligned": true,
+        "appendRows": 64,
+        "appendFailures": 0
+      },
+      "impact": "Recent samples and this incremental append pass structural checks; historical completeness remains limited.",
+      "nextAction": "Continue incremental append; run full archive audit after base backfill."
+    },
+    {
+      "capability": "backtest harness/smoke test",
+      "status": "BLOCKED",
+      "evidence": {
+        "localRepo": "ABSENT",
+        "node": "22.16.0",
+        "npm": "10.9.2",
+        "requiredNode": ">=24",
+        "requiredNpm": ">=11",
+        "sdkImport": "MISSING",
+        "fixtureSmokeTest": "NOT_RUN"
+      },
+      "impact": "No strategy experiment or OOS evaluation can be claimed.",
+      "nextAction": "Provision supported runtime, restore checkout/dependencies and run deterministic no-lookahead fixture twice."
+    },
+    {
+      "capability": "disk/storage",
+      "status": "PASS",
+      "evidence": {
+        "diskFreeGiB": 30,
+        "archiveStorage": "GitHub branch writable"
+      },
+      "impact": "Remote durable archive append succeeded; local filesystem has no repo checkout.",
+      "nextAction": "Continue using verified GitHub archive until local workspace is restored."
+    },
+    {
+      "capability": "artifact readback",
+      "status": "PASS",
+      "evidence": {
+        "deltaFilesReadback": true,
+        "deltaManifestsReadback": true,
+        "archiveIndexesReadback": true,
+        "archiveManifestReadback": true,
+        "archiveBranchHead": "ef535d58b1075c69449a782328fb7dcfb33a80df"
+      },
+      "impact": "Raw archive writes are verified; main-run artifacts will be read back after creation.",
+      "nextAction": "Verify each main-branch report/snapshot/queue/registry artifact after write."
+    }
+  ],
+  "classification": "RESEARCH_EXECUTED_DATA_QUALITY_ONLY",
+  "strategyExperimentStatus": "RESEARCH_BLOCKED",
+  "oosEvaluationStatus": "NOT_RUN"
+}

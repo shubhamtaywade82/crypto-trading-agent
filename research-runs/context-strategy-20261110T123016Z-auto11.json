@@ -1,0 +1,107 @@
+{
+  "schema_version": "1.0.0",
+  "run_id": "context-strategy-20261110T123016Z-auto11",
+  "as_of_utc": "2026-11-10T12:33:36.266Z",
+  "classification": "RESEARCH_EXECUTED_DATA_QUALITY_APPEND_ONLY",
+  "status": "RESEARCH_EXECUTED",
+  "strategy_experiment": "BLOCKED",
+  "oos_evaluation": "NOT_RUN",
+  "repository": {
+    "full_name": "shubhamtaywade82/crypto-trading-agent",
+    "main_commit": "b3a29c233537617c390a706f64a1027e2303dae3",
+    "archive_branch": "research/raw-ohlcv-archive-20261108T1026Z"
+  },
+  "environment": {
+    "os": "Debian 13",
+    "kernel": "6.18.57",
+    "node": "v22.16.0",
+    "npm": "10.9.2",
+    "python": "3.13.5",
+    "cpu": 5,
+    "ram_total_gib": 5.8,
+    "ram_available_gib": 4.7,
+    "disk_free_gib": 30,
+    "local_checkout": false,
+    "binance_sdk_installed": false
+  },
+  "preflight": {
+    "path": "research/context-strategy/preflight/preflight_20261110T123016Z_auto11.json",
+    "sha256": "e7e41b1e5bb6c44ae11465c1c5dd237bf5104fd22cc7994c284d1504362c7bcd"
+  },
+  "data": {
+    "rows_fetched": 4000,
+    "completed_rows": 3984,
+    "forming_rows_excluded": 16,
+    "pre_highwater_rows_excluded": 3912,
+    "rows_appended": 72,
+    "rows_by_interval": {
+      "5m": 48,
+      "15m": 16,
+      "1h": 4,
+      "4h": 4
+    },
+    "quality_failures": 0,
+    "latest_highwaters_utc": {
+      "5m": "2026-11-10T12:25:00Z",
+      "15m": "2026-11-10T12:15:00Z",
+      "1h": "2026-11-10T11:00:00Z",
+      "4h": "2026-11-10T08:00:00Z"
+    }
+  },
+  "market": {
+    "snapshot_ref": "research-data/binance-usdm/current_market_snapshot_20261110T123016Z.json",
+    "snapshot_sha256": "8f91ff199abfa520fcb89ae29c7ab49a7e64ce5c61420bc4a5e6f9d00ff03ac1",
+    "snapshot_blob_sha1": "ec6b9aa464fc4819d150fe090fe35e1f820abaf1",
+    "context": "Bearish 15m/1h/4h across BTC/ETH/SOL/XRP; weak 5m countertrend bounce",
+    "decisions": {
+      "SOLUSDT": "NO_TRADE",
+      "ETHUSDT": "NO_TRADE",
+      "XRPUSDT": "NO_TRADE",
+      "BTCUSDT": "REFERENCE_ONLY"
+    }
+  },
+  "archive": {
+    "delta_path": "research-data/binance-usdm/delta/binance_usdm_delta_20261110T123016Z_all_intervals_completed.jsonl",
+    "delta_sha256": "e174b0070e756930c129558debfc149d26817215853dd38fac13b262c97ac964",
+    "delta_manifest_path": "research-data/binance-usdm/delta/manifest-20261110T123016Z-all-intervals.json",
+    "delta_manifest_sha256": "af7fa83015c9531415eeb4c0943762be07ebe14a9e1a9e8cd8622dd1d36305dc",
+    "archive_manifest_path": "research-data/binance-usdm/manifests/archive_manifest_20261110T123016Z_auto11.json",
+    "archive_manifest_sha256": "8fb5569332e306f383e68df8702e23f456cf7a4945e76b5958cc85b3384f3a08",
+    "readback_verified": true
+  },
+  "research": {
+    "taxonomy": "v56 carried forward, not recomputed",
+    "registry_version": "v104",
+    "registry_counts": {
+      "oos_validated": 0,
+      "oos_promising": 1,
+      "insufficient_evidence_cells": 36,
+      "rejected": 0,
+      "hypothesis_families": 7
+    },
+    "prior_oos_promising": "SOLUSDT BULL_LOW Donchian20: 12 OOS trades; 66.7% win; 41.7% target-before-stop; +0.606R; PF 2.72; max DD 1.3R; block-bootstrap 95% CI [+0.086,+1.199]R; below promotion gate.",
+    "new_strategy_experiment": "NOT_RUN"
+  },
+  "artifacts": {
+    "report": {
+      "path": "research/context-strategy/reports/2026-11-10T123016Z_auto11.md",
+      "sha256": "747d3a8fddcb6eea0028c0b3e9ec7e0feee1873ae8918debdab2d7d220a6aa00"
+    },
+    "receipt": {
+      "path": "research/context-strategy/runs/research_run_receipt_20261110T123016Z_v104.json",
+      "sha256": "d70874bfac5d63b33f72c0f50f43b8064524f3d5ef6a0b418669125b5603bde5"
+    },
+    "artifact_manifest": {
+      "path": "research/context-strategy/manifests/artifact_manifest_20261110T123016Z_auto11.json",
+      "sha256": "c7ab6049a5669c1378645708a217175bd775d6168a6d2950864e284ab72a48ed"
+    }
+  },
+  "next_actions": [
+    "Provision Node24/npm11 and clone repository",
+    "Backfill 5m/15m base history",
+    "Reconcile 4h provenance",
+    "Complete funding and execution-cost inputs",
+    "Run deterministic fixture smoke test",
+    "Run frozen conditional experiment with walk-forward/OOS"
+  ]
+}

@@ -1,0 +1,76 @@
+{
+  "schema_version": "1.0.0",
+  "experiment_id": "DQ-2026-11-10T1134Z-APPEND",
+  "run_id": "context-strategy-2026-11-10T1134Z-auto11",
+  "type": "DATA_QUALITY_ARCHIVE_APPEND",
+  "status": "COMPLETED_DATA_QUALITY_APPEND_NOT_STRATEGY_EXPERIMENT",
+  "as_of_utc": "2026-11-10T11:34:28.000Z",
+  "hypothesis": "New completed Binance USD-M 5m/15m bars can be appended without duplicate, gap, timestamp, OHLC, volume or readback-integrity violations.",
+  "specification": {
+    "endpoint": "GET /fapi/v1/klines",
+    "symbols": [
+      "BTCUSDT",
+      "ETHUSDT",
+      "SOLUSDT",
+      "XRPUSDT"
+    ],
+    "intervals": [
+      "5m",
+      "15m"
+    ],
+    "rows_requested_per_symbol_interval": 12,
+    "previous_highwater_open_utc": {
+      "5m": "2026-11-10T10:55:00Z",
+      "15m": "2026-11-10T10:45:00Z"
+    },
+    "latest_completed_open_utc": {
+      "5m": "2026-11-10T11:25:00Z",
+      "15m": "2026-11-10T11:15:00Z"
+    },
+    "completed_rule": "closeTime < exchange mark-price time"
+  },
+  "results": {
+    "rows_fetched": 96,
+    "rows_appended": 32,
+    "rows_by_interval": {
+      "5m": 24,
+      "15m": 8
+    },
+    "rows_by_symbol": {
+      "BTCUSDT": 8,
+      "ETHUSDT": 8,
+      "SOLUSDT": 8,
+      "XRPUSDT": 8
+    },
+    "forming_rows_excluded": 8,
+    "pre_highwater_rows_excluded": 56,
+    "quality_failures": 0,
+    "checks": {
+      "duplicates": 0,
+      "missing_intervals": 0,
+      "off_grid": 0,
+      "close_time_failures": 0,
+      "ohlc_failures": 0,
+      "non_positive_volume": 0,
+      "non_finite": 0,
+      "non_monotonic": 0
+    }
+  },
+  "artifacts": {
+    "delta_path": "research-data/binance-usdm/delta/binance_usdm_delta_20261110T1134Z_5m15m_completed.jsonl",
+    "delta_sha256": "111f19bb552737eb1cfb6919d3c8b15e3e896ae51ed0c00bfdbaa04fae5be3dd",
+    "delta_git_blob_sha": "070c2850b9af7afa58dd66605ce6668ecf63fedd",
+    "delta_manifest_path": "research-data/binance-usdm/delta/manifest-20261110T1134Z-5m15m.json",
+    "delta_manifest_sha256": "126f2ec0b50018cab33ce1f21139decd3997ea9cff0345177712254cfe395bdf",
+    "archive_manifest_path": "research-data/binance-usdm/manifests/archive_manifest_20261110T1134Z_auto11.json"
+  },
+  "persistence": {
+    "delta_readback_verified": true,
+    "delta_manifest_readback_verified": true,
+    "indexes_readback_verified": true,
+    "archive_manifest_readback_verified": true,
+    "branch": "research/raw-ohlcv-archive-20261108T1026Z"
+  },
+  "research_outcome": "No strategy experiment or OOS evaluation was run. This is archive maintenance only; multi-year 5m/15m base backfill remains blocked.",
+  "next_action": "Backfill multi-year 5m/15m history from contract onboarding on an egress-enabled runner or verified Binance Vision source; then run a full continuity and multi-symbol alignment audit."
+}

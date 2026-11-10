@@ -1,0 +1,66 @@
+{
+  "schema_version": "1.0.0",
+  "experiment_id": "DQ-2026-11-10T1102Z-APPEND",
+  "kind": "incremental_archive_integrity",
+  "status": "COMPLETED_PASS",
+  "hypothesis": "Only fully completed, aligned, valid OHLCV rows beyond the prior highwater are appended; forming and pre-highwater rows are excluded.",
+  "data": {
+    "symbols": [
+      "BTCUSDT",
+      "ETHUSDT",
+      "SOLUSDT",
+      "XRPUSDT"
+    ],
+    "intervals": [
+      "5m",
+      "15m"
+    ],
+    "rows_fetched": 48,
+    "completed_appended": 24,
+    "forming_excluded": 8,
+    "pre_highwater_excluded": 16,
+    "rows_by_interval": {
+      "5m": 16,
+      "15m": 8
+    },
+    "rows_by_symbol": {
+      "BTCUSDT": 6,
+      "ETHUSDT": 6,
+      "SOLUSDT": 6,
+      "XRPUSDT": 6
+    },
+    "previous_highwater_utc": {
+      "5m": "2026-11-10T10:35:00Z",
+      "15m": "2026-11-10T10:15:00Z"
+    },
+    "new_highwater_utc": {
+      "5m": "2026-11-10T10:55:00Z",
+      "15m": "2026-11-10T10:45:00Z"
+    }
+  },
+  "checks": {
+    "duplicates": 0,
+    "missing_intervals": 0,
+    "off_grid": 0,
+    "close_time_failures": 0,
+    "ohlc_failures": 0,
+    "non_finite": 0,
+    "non_positive_volume": 0,
+    "cross_symbol_alignment": true
+  },
+  "artifact": {
+    "delta_path": "research-data/binance-usdm/delta/binance_usdm_delta_20261110T1102_5m15m_completed.jsonl",
+    "delta_sha256": "9c87aedd59984ee12b249cb358d307f9a2fe6b612490f4d24b1fce7bb100aa87",
+    "delta_manifest_path": "research-data/binance-usdm/delta/manifest-20261110T1102-5m15m.json",
+    "delta_manifest_sha256": "1b3977f24b99b407a70ee3130d2605299616010b6bf48855ab1b99ad5f810ead",
+    "snapshot_path": "research-data/binance-usdm/current_market_snapshot_20261110T1102Z.json",
+    "snapshot_sha256": "533315bf7df60f1d0b8cbfdf8a44e1d2afd6dcc17ac31ffcf6c54105fb98a69a",
+    "readback_verified": true
+  },
+  "limitations": [
+    "This is an archive-integrity run, not a strategy/backtest experiment.",
+    "No multi-year 5m/15m base history exists.",
+    "No untouched OOS evaluation was run."
+  ],
+  "evaluated_at_utc": "2026-11-10T11:02:18Z"
+}

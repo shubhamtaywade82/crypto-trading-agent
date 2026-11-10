@@ -1,0 +1,96 @@
+{
+  "schemaVersion": "1.0.0",
+  "runId": "context-strategy-20261110T1632Z-auto13",
+  "asOfUtc": "2026-11-10T16:32:54.279Z",
+  "classification": "MONITORING_ONLY",
+  "researchStatus": "RESEARCH_BLOCKED",
+  "oosEvaluated": false,
+  "environment": {
+    "os": "Linux x86_64",
+    "kernel": "6.18.57",
+    "cwd": "/",
+    "node": "v22.16.0",
+    "npm": "10.9.2",
+    "python": "3.13.5",
+    "git": "2.47.3",
+    "cpuCount": 5,
+    "memoryGiB": 5.8,
+    "diskAvailableGiB": 30,
+    "docker": "UNAVAILABLE",
+    "localRepository": "ABSENT",
+    "binanceSdk": "NOT_INSTALLED_OR_IMPORTABLE"
+  },
+  "checks": [
+    {
+      "capability": "shell/compute",
+      "status": "DEGRADED",
+      "evidence": "Node 22.16.0/npm 10.9.2; package requires Node >=24/npm >=11; 5 CPUs, 5.8 GiB RAM, 30 GiB free; Docker absent.",
+      "impact": "Cannot execute project harness.",
+      "nextAction": "Provision Node24/npm11 and compatible persistent runner."
+    },
+    {
+      "capability": "repo/code",
+      "status": "DEGRADED",
+      "evidence": "GitHub main head 0f143f3bc9ede1d614a69c2a442d304e21e0c82c; directional:experiment script exists; local checkout absent.",
+      "impact": "Remote inspection only.",
+      "nextAction": "Clone repository into compatible workspace."
+    },
+    {
+      "capability": "network/Binance endpoints",
+      "status": "DEGRADED",
+      "evidence": "Public connector returned market data; direct curl to fapi.binance.com and data.binance.vision failed DNS (HTTP 000, exit 6); exchangeInfo serverTime 01:01:01.898Z, stale by 55,576.102s.",
+      "impact": "Monitoring works; REST time validation and bulk archive download unavailable.",
+      "nextAction": "Restore approved DNS/HTTPS; require fresh serverTime."
+    },
+    {
+      "capability": "raw historical archive",
+      "status": "PASS",
+      "evidence": "64 completed bars persisted to GitHub; delta SHA-256 ca89ae338db55b330bff57d1172cc7aac1a45b146e5261c307e6e2a185c3dd96; manifest readback verified.",
+      "impact": "5m/15m/4h incremental archive advanced.",
+      "nextAction": "Continue from new archive manifest."
+    },
+    {
+      "capability": "data quality/coverage",
+      "status": "DEGRADED",
+      "evidence": "Rolling sample 960 rows/16 series: 944 completed,16 forming excluded, zero quality failures. 5m/15m base absent; 1h highwater aliases conflict; 4h canonical ends 2026-11-05T16:00Z.",
+      "impact": "Recent monitoring valid; historical experiments not ready.",
+      "nextAction": "Backfill 5m/15m and reconcile 1h/4h."
+    },
+    {
+      "capability": "backtest harness/smoke test",
+      "status": "BLOCKED",
+      "evidence": "Remote directional:experiment script exists; no local checkout; runtime below package floor; SDK not importable; fixture smoke test not run.",
+      "impact": "No experiment/OOS.",
+      "nextAction": "Provision Node24/npm11, install, run deterministic fixture twice and test no-lookahead."
+    },
+    {
+      "capability": "disk/storage",
+      "status": "PASS",
+      "evidence": "30 GiB free local overlay; GitHub write access and remote persistence verified; local overlay ephemeral.",
+      "impact": "Remote persistence only.",
+      "nextAction": "Use GitHub archive until persistent compute is provisioned."
+    },
+    {
+      "capability": "artifact readback",
+      "status": "PASS",
+      "evidence": "Delta, delta manifest, archive manifest, snapshot and preflight read back.",
+      "impact": "Artifact integrity verified.",
+      "nextAction": "Verify report, run manifest and queue after publication."
+    }
+  ],
+  "endpoints": {
+    "connector": "SUCCESS responses; raw HTTP status not exposed",
+    "directRest": {
+      "serverTime": "HTTP 000 / curl exit 6",
+      "exchangeInfo": "HTTP 000 / curl exit 6",
+      "dataVision": "DNS failure"
+    },
+    "sdk": "NOT_USED"
+  },
+  "experiment": {
+    "executed": false,
+    "smokeTest": false,
+    "oos": false,
+    "blocker": "No compatible local checkout/runtime; direct Binance/Data Vision DNS unavailable; 5m/15m base history absent; 1h highwater aliases conflict; 4h canonical reconciliation incomplete."
+  }
+}

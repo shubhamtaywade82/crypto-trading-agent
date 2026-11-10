@@ -515,7 +515,8 @@ export class BinanceService {
   }
 
   /** Live position manager: builds the exchange adapter and the book that reconciles positions with their recorded entries. */
-  createLiveBook(mode: LiveManagerMode, log: (message: string, level: 'info' | 'warn' | 'error') => void): LiveBook {
+  createLiveBook(mode: LiveManagerMode, log: (message: string, level: 'info' | 'warn' | 'error') => void): LiveBook | null {
+    if (this.broker || config.alertOnly || !config.binance.apiKey || !config.binance.apiSecret) return null;
     this.liveBook = new LiveBook(this.livePort(), new LiveStateStore(), { mode, log });
     return this.liveBook;
   }

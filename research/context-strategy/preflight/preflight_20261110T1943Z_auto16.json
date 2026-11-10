@@ -115,18 +115,20 @@
     },
     {
       "capability": "artifact readback",
-      "status": "DEGRADED",
+      "status": "PASS",
       "evidence": {
         "deltaFiles": 4,
         "deltaSha256Verified": 4,
         "deltaManifestsReadbackVerified": 4,
         "indexFilesReadbackVerified": 4,
         "archiveManifestReadbackVerified": true,
-        "mainExperimentAndSnapshotWritten": true,
-        "mainArtifactReadbackPending": true
+        "mainExperimentReadbackVerified": true,
+        "mainSnapshotReadbackVerified": true,
+        "preflightReadbackVerified": true,
+        "reportReadbackVerified": true
       },
-      "impact": "Archive data/index/manifest artifacts are verified; current main report/snapshot/preflight/run manifest still require readback after commit.",
-      "nextAction": "Reopen and hash all main artifacts before finalizing."
+      "impact": "All raw deltas, delta manifests, interval indexes, archive manifest, DQ result, market snapshot, preflight and report were reopened and SHA-256 verified.",
+      "nextAction": "Repeat readback verification for the final run manifest and queue after their commits."
     }
   ],
   "endpointOutcomes": [

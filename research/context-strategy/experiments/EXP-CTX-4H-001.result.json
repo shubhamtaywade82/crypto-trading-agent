@@ -2775,5 +2775,97 @@
     "Uses 4h base pages through 2026-11-04T12:00Z; seven later incremental rows per symbol excluded.",
     "Funding, OI, taker flow, order book and BTC lead/lag features are not part of this experiment.",
     "Thresholds are pooled and fitted on training only; no parameter search or multiple-testing correction was needed."
-  ]
+  ],
+  "archiveIntegrity": {
+    "oneHour": {
+      "indexPath": "research-data/binance-usdm/1h/archive-index.json",
+      "indexBlobSha1": "df74fa39e7cf2de7d04515d4b327ca0682c41c16",
+      "pageFiles": 144,
+      "bytes": 29823100,
+      "rows": 215484,
+      "rowsPerSymbol": 53871,
+      "firstOpenUtc": "2020-09-14T08:00:00.000Z",
+      "lastCompletedOpenUtc": "2026-11-10T22:00:00.000Z",
+      "quality": {
+        "duplicates": 0,
+        "missingIntervals": 0,
+        "ohlcFailures": 0,
+        "nonPositiveVolume": 0,
+        "nonFinite": 0,
+        "misaligned": 0,
+        "crossSymbolAlignment": true
+      }
+    },
+    "fourHourRaw": {
+      "indexPath": "research-data/binance-usdm/4h/archive-index.json",
+      "indexBlobSha1": "f51e49b7fe0447a650d7a009daf392a53803eba2",
+      "pageFiles": 36,
+      "bytes": 7635373,
+      "rows": 53960,
+      "rowsBySymbol": {
+        "BTCUSDT": 13501,
+        "ETHUSDT": 13501,
+        "SOLUSDT": 13457,
+        "XRPUSDT": 13501
+      },
+      "rawHighwaterUtc": "2026-11-10T16:00:00.000Z"
+    },
+    "fourHourAlignedBase": {
+      "rows": 53816,
+      "rowsPerSymbol": 13454,
+      "firstOpenUtc": "2020-09-14T08:00:00.000Z",
+      "lastOpenUtc": "2026-11-04T12:00:00.000Z",
+      "quality": "All four reconstructed base series had zero duplicates, gaps, off-grid timestamps, non-monotonic rows, OHLC failures, non-positive volume and non-finite values."
+    },
+    "fourHourCanonical": {
+      "rows": 53844,
+      "rowsPerSymbol": 13461,
+      "firstOpenUtc": "2020-09-14T08:00:00.000Z",
+      "lastOpenUtc": "2026-11-05T16:00:00.000Z",
+      "bytes": 7620585,
+      "perSymbol": {
+        "BTCUSDT": {
+          "manifestPath": "research-data/binance-usdm/4h/canonical/BTCUSDT_4h_20200914T0800Z_20261105T1600Z.manifest.json",
+          "bytes": 1971801,
+          "canonicalJsonlSha256": "7088aa2b2cc48c3895fd77dfc2ece0ae812062f24a70374ec556273a2d8380d7",
+          "canonicalRowsSha256": "f14ce6a0fc2938840d7cb69059a8b3f02748ed544c0b65694c0cb2aea32f45b1",
+          "manifestBlobSha1": "fe99fcb9ff1fc5742c6ea2cc3d133dcb6ae34d88"
+        },
+        "ETHUSDT": {
+          "manifestPath": "research-data/binance-usdm/4h/canonical/ETHUSDT_4h_20200914T0800Z_20261105T1600Z.manifest.json",
+          "bytes": 1933503,
+          "canonicalJsonlSha256": "0e1ba53fb3c4c42e89440f2aaabfc7eead44ac84bc67a083c86df96a2f12dce2",
+          "canonicalRowsSha256": "606dc793a8658bf2a74e5784efaa4a599f44c8ad3000d0a92b0b14c6d44f1fa1",
+          "manifestBlobSha1": "d4633f3eb16a20b1854fc713ca229de3636c080d"
+        },
+        "SOLUSDT": {
+          "manifestPath": "research-data/binance-usdm/4h/canonical/SOLUSDT_4h_20200914T0800Z_20261105T1600Z.manifest.json",
+          "bytes": 1851212,
+          "canonicalJsonlSha256": "148389f0347fe05307e2a274c579ccc1c495e32eaad2e49cfb19ca211df89156",
+          "canonicalRowsSha256": "e72bb0e341d54d972c27f3db24dafffe3cce8ae4b5184df1c073891d986a65f6",
+          "manifestBlobSha1": "c92573efeab31102a9bb55b120819931c9c3b33d"
+        },
+        "XRPUSDT": {
+          "manifestPath": "research-data/binance-usdm/4h/canonical/XRPUSDT_4h_20200914T0800Z_20261105T1600Z.manifest.json",
+          "bytes": 1864069,
+          "canonicalJsonlSha256": "b1a96c24f0e91aff7368facc428dffa22360093ce74dfe186d259b66d19f8023",
+          "canonicalRowsSha256": "40b9420ca1862a8a2b4ecd3ee0bb6b5fc81f3cc3e8126143ae74cf19f65c62c5",
+          "manifestBlobSha1": "56162e2d1e2d96b78c8ca847985faa7090b5638e"
+        }
+      },
+      "allCanonicalManifestsReportQualityPass": true
+    },
+    "rowLevelReconciliation": {
+      "path": "research-data/binance-usdm/4h/alternate-source-row-reconciliation_2026-11-05T1229Z.json",
+      "pairsTested": 14,
+      "rowsCompared": 21000,
+      "exactPairs": 14,
+      "exactRows": 21000,
+      "rowLevelMismatches": 0,
+      "expectedHashesRewritten": false,
+      "conclusion": "The 13 original expected-vs-observed SHA mismatches are provenance/canonicalization issues; the 14 re-fetched page-symbol pairs matched row-for-row."
+    },
+    "remainingIssue": "4h archive index still contains inconsistent raw/canonical count notes (integrity raw rows 13,501/13,501/13,457/13,501 versus remainingIssues 13,499/13,499/13,455/13,499) and canonical data ends 2026-11-05 while raw highwater is 2026-11-10. Preserve hashes; reconcile index metadata and incremental merge before rebuilding canonical.",
+    "fiveAndFifteenMinuteBase": "Absent; only incremental deltas exist."
+  }
 }

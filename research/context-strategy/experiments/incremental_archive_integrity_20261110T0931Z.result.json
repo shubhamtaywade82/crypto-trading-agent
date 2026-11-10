@@ -1,0 +1,78 @@
+{
+  "schemaVersion": 1,
+  "experimentId": "EXP-DQ-2026-11-10-0929Z-001",
+  "runId": "CONTEXT-STRATEGY-20261110T0931Z-AUTO11",
+  "createdAtUtc": "2026-11-10T09:31:01.311Z",
+  "type": "incremental_archive_integrity",
+  "hypothesis": "Completed Binance USD-M bars after the persisted high-water marks can be appended without forming bars, duplicates, interval gaps, timestamp misalignment, invalid OHLC, non-positive volume or non-finite values.",
+  "specification": {
+    "symbols": [
+      "BTCUSDT",
+      "ETHUSDT",
+      "SOLUSDT",
+      "XRPUSDT"
+    ],
+    "intervals": [
+      "5m",
+      "15m",
+      "1h"
+    ],
+    "startUtcByInterval": {
+      "5m": "2026-11-10T08:30:00Z",
+      "15m": "2026-11-10T08:30:00Z",
+      "1h": "2026-11-10T08:00:00Z"
+    },
+    "formingRule": "include only closeTime < retrieval timestamp",
+    "checks": [
+      "duplicate openTime",
+      "interval continuity",
+      "timestamp grid",
+      "OHLC invariants",
+      "volume > 0",
+      "finite numeric fields",
+      "closeTime consistency",
+      "cross-symbol row alignment"
+    ]
+  },
+  "inputs": {
+    "source": "Binance connector wrapping USD-M public market endpoints; direct REST unavailable",
+    "archiveBranch": "research/raw-ohlcv-archive-20261108T1026Z",
+    "priorHighwaters": {
+      "5m": "2026-11-10T08:25:00Z",
+      "15m": "2026-11-10T08:15:00Z",
+      "1h": "2026-11-10T07:00:00Z",
+      "4h": "2026-11-10T04:00:00Z"
+    }
+  },
+  "results": {
+    "rowsFetched": 72,
+    "completedRowsAppended": 60,
+    "formingRowsExcluded": 12,
+    "rowsByInterval": {
+      "5m": 44,
+      "15m": 12,
+      "1h": 4
+    },
+    "rowsBySymbol": {
+      "BTCUSDT": 15,
+      "ETHUSDT": 15,
+      "SOLUSDT": 15,
+      "XRPUSDT": 15
+    },
+    "qualityFailures": 0,
+    "readbackVerified": true,
+    "sha256Verified": true,
+    "indexReadbackVerified": true
+  },
+  "artifacts": [
+    "research-data/binance-usdm/delta/binance_usdm_delta_20261110T0926Z_5m15m_completed.jsonl",
+    "research-data/binance-usdm/delta/manifest-20261110T0926Z-5m15m.json",
+    "research-data/binance-usdm/delta/binance_usdm_delta_20261110T0929Z_1h_completed.jsonl",
+    "research-data/binance-usdm/delta/manifest-20261110T0929Z-1h.json"
+  ],
+  "status": "RESEARCH_EXECUTED_DATA_QUALITY_ONLY",
+  "strategyBacktestExecuted": false,
+  "oosEvaluated": false,
+  "blocker": "Strategy backtest remains blocked by direct REST DNS failure, stale exchangeInfo, Node/npm below project floor, no local checkout, incomplete 5m/15m base history, unresolved 4h raw/canonical reconciliation and incomplete historical derivatives/cost archives.",
+  "nextAction": "Restore fresh Binance time/metadata and compatible local runtime; finish archive reconciliation; then execute a frozen tradable-only strategy-context experiment with purged chronological OOS."
+}

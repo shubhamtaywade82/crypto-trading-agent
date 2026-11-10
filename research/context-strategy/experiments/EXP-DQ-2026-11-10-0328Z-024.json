@@ -1,0 +1,119 @@
+{
+  "schema_version": "1.0.0",
+  "id": "EXP-DQ-2026-11-10-0328Z-024",
+  "run_id": "context-strategy-2026-11-10T0328Z-v106",
+  "as_of_utc": "2026-11-10T03:28:31.047Z",
+  "type": "INCREMENTAL_ARCHIVE_INTEGRITY",
+  "status": "COMPLETED_PASS_INCREMENTAL_ARCHIVE_APPEND_AND_READBACK_ONLY",
+  "hypothesis": "New completed Binance USDⓈ-M candles can be appended without duplicates, missing bars, timestamp misalignment, OHLC violations or forming-candle contamination.",
+  "source_endpoint": "GET /fapi/v1/klines via connected Binance market-data operation",
+  "symbols": [
+    "BTCUSDT",
+    "ETHUSDT",
+    "SOLUSDT",
+    "XRPUSDT"
+  ],
+  "intervals": [
+    "5m",
+    "15m",
+    "1h",
+    "4h"
+  ],
+  "previous_highwater_utc": {
+    "5m": "2026-11-10T02:20:00Z",
+    "15m": "2026-11-10T02:00:00Z",
+    "1h": "2026-11-10T01:00:00Z",
+    "4h": "2026-11-09T20:00:00Z"
+  },
+  "latest_completed_highwater_utc": {
+    "5m": "2026-11-10T03:20:00.000Z",
+    "15m": "2026-11-10T03:00:00.000Z",
+    "1h": "2026-11-10T02:00:00.000Z",
+    "4h": "2026-11-09T20:00:00.000Z"
+  },
+  "rows_appended": 68,
+  "rows_by_interval": {
+    "5m": 48,
+    "15m": 16,
+    "1h": 4,
+    "4h": 0
+  },
+  "rows_by_symbol_interval": {
+    "BTCUSDT": {
+      "5m": 12,
+      "15m": 4,
+      "1h": 1,
+      "4h": 0
+    },
+    "ETHUSDT": {
+      "5m": 12,
+      "15m": 4,
+      "1h": 1,
+      "4h": 0
+    },
+    "SOLUSDT": {
+      "5m": 12,
+      "15m": 4,
+      "1h": 1,
+      "4h": 0
+    },
+    "XRPUSDT": {
+      "5m": 12,
+      "15m": 4,
+      "1h": 1,
+      "4h": 0
+    }
+  },
+  "forming_candles_excluded": 16,
+  "data_quality": {
+    "sampled_series": 16,
+    "rows_fetched": 2400,
+    "completed_rows": 2384,
+    "forming_rows": 16,
+    "duplicates": 0,
+    "missing_intervals": 0,
+    "off_grid": 0,
+    "non_monotonic": 0,
+    "ohlc_violations": 0,
+    "non_positive_volume": 0,
+    "non_finite": 0,
+    "close_time_failures": 0,
+    "cross_symbol_alignment": true
+  },
+  "artifacts": [
+    {
+      "path": "research-data/binance-usdm/deltas/20261110T0327Z/klines_5m.jsonl",
+      "rows": 48,
+      "sha256": "569556b869e9df26acd67139f2db212f0c5d9627fc530d84e5787a468c7e5c07",
+      "git_blob_sha": "7b04556f00493d30755af172af918621c5dda51a",
+      "readback_verified": true
+    },
+    {
+      "path": "research-data/binance-usdm/deltas/20261110T0328Z/klines_15m.jsonl",
+      "rows": 16,
+      "sha256": "3f631480abea8883cc721b2148ffbe5ba559afd651835df5ce8ea8362ce7a7b9",
+      "git_blob_sha": "14bf7b530a52579b408484cf73d12f0d863f4718",
+      "readback_verified": true
+    },
+    {
+      "path": "research-data/binance-usdm/deltas/20261110T0328Z/klines_1h.jsonl",
+      "rows": 4,
+      "sha256": "cd9775c9b29eb3f92febd600f5c163928d6ab2d68a2f56b1d8fc4d90c415adc8",
+      "git_blob_sha": "6c46bcd31ead52121189ac038e450355c20d721c",
+      "readback_verified": true
+    }
+  ],
+  "strategy_backtest_executed": false,
+  "oos_evaluated": false,
+  "conclusion": "Archive append and integrity passed for sampled current windows and new deltas only. This is not a trading-strategy experiment and does not establish a conditional edge.",
+  "limitations": [
+    "5m/15m base history remains partial (20.8d/62.5d), not multi-cycle.",
+    "1h base history is reported from 2020 but not mounted/read back locally in this runtime.",
+    "4h raw/aligned/canonical counts remain 53,960/53,816/53,844 with 13 unresolved page-manifest SHA provenance discrepancies; canonical archive lags raw highwater.",
+    "Direct GET /fapi/v1/time fails DNS; exchangeInfo.serverTime is stale by 8,839.105 seconds against the premiumIndex time proxy. Contract execution validation remains blocked.",
+    "No local checkout; runtime Node 22.16.0/npm 10.9.2 is below package engine Node >=24/npm >=11; Binance SDK packages are not importable.",
+    "Historical funding cashflows and calibrated account fees/spread/slippage/impact/latency remain incomplete.",
+    "Source defects recorded in queue remain unresolved: closeTime preservation, positive-volume validator and BTC reference-only configuration.",
+    "Canonical indexes were not rebuilt; only append-only raw deltas were written."
+  ]
+}

@@ -1,0 +1,173 @@
+{
+  "schemaVersion": "1.0.0",
+  "runId": "context-strategy-20261110T152928Z-auto12",
+  "asOfUtc": "2026-11-10T15:37:06.787Z",
+  "environment": {
+    "shell": "AVAILABLE",
+    "cwd": "/",
+    "os": "Linux 6.18.57 x86_64",
+    "node": "v22.16.0",
+    "npm": "10.9.2",
+    "python": "3.13.5",
+    "git": "2.47.3",
+    "cpuCores": 5,
+    "memTotalGiB": 5.8,
+    "memAvailableGiB": 4.7,
+    "disk": {
+      "filesystem": "overlay",
+      "sizeGiB": 32,
+      "usedMiB": 5.3,
+      "availableGiB": 30,
+      "usedPct": 1
+    },
+    "localRepository": "ABSENT",
+    "binanceSdk": "NOT_INSTALLED"
+  },
+  "repository": {
+    "name": "shubhamtaywade82/crypto-trading-agent",
+    "defaultBranch": "main",
+    "headCommit": "42b78ee8cad808fa116b186599d5bdb373a1290e",
+    "packageEngines": {
+      "node": ">=24",
+      "npm": ">=11"
+    },
+    "latestCi": {
+      "runId": 42842563934,
+      "workflow": "CI",
+      "status": "completed",
+      "conclusion": "success",
+      "updatedAtUtc": "2026-11-10T15:17:19Z"
+    }
+  },
+  "checks": [
+    {
+      "capability": "shell/compute",
+      "status": "DEGRADED",
+      "evidence": "Rechecked at 2026-11-10T15:35:25Z: Linux 6.18.57 x86_64; cwd=/; Node v22.16.0; npm 10.9.2; Python 3.13.5; git 2.47.3; 5 CPU; 5.8 GiB RAM with 4.7 GiB available; 30 GiB free.",
+      "impact": "Node/npm below project floor; current container is ephemeral.",
+      "nextAction": "Provision Node>=24/npm>=11 in a persistent workspace."
+    },
+    {
+      "capability": "repo/code",
+      "status": "DEGRADED",
+      "evidence": "GitHub main 42b78ee8cad808fa116b186599d5bdb373a1290e; package scripts directional:experiment/backtest exist; CI run 42842563934 succeeded; local checkout absent.",
+      "impact": "Remote code and persistent GitHub artifacts available; local build/test/backtest unavailable.",
+      "nextAction": "Clone main into persistent workspace and install dependencies."
+    },
+    {
+      "capability": "network/Binance endpoints",
+      "status": "DEGRADED",
+      "evidence": "Binance connector returned market endpoints. Direct curl to /fapi/v1/time, /fapi/v1/exchangeInfo and data.binance.vision failed DNS (HTTP 000, curl exit 6). Connector exchangeInfo serverTime 01:01:01.895Z was 14.484h stale vs market time ~15:30Z.",
+      "impact": "Monitoring possible; fresh server-time/contract validation and bulk archive download blocked.",
+      "nextAction": "Restore direct DNS/HTTPS; retrieve uncached server time and exchange metadata; require <=5s drift."
+    },
+    {
+      "capability": "raw historical archive",
+      "status": "PASS",
+      "evidence": "32 completed rows appended in three deltas (24 5m, 8 15m); all three delta files/manifests, updated 5m/15m indexes and final archive manifest read back. Final highwaters 5m 15:30Z, 15m 15:15Z.",
+      "impact": "Incremental archive current through completed bars; 5m/15m base history still absent.",
+      "nextAction": "Continue incremental append and backfill multi-year base history."
+    },
+    {
+      "capability": "data quality/coverage",
+      "status": "DEGRADED",
+      "evidence": "16 rolling symbol/interval series x50 rows=800; 784 completed, 16 forming excluded; 0 duplicates/gaps/OHLC/volume/nonfinite failures. 5m/15m base absent; 1h index/manifest highwater mismatch; 4h raw/aligned/canonical 53,960/53,816/53,844 and 13 SHA provenance mismatches.",
+      "impact": "Recent slices clean but insufficient for context discovery; historical archive reconciliation remains open.",
+      "nextAction": "Backfill 5m/15m and reconcile 1h/4h archive indexes/manifests."
+    },
+    {
+      "capability": "backtest harness/smoke test",
+      "status": "BLOCKED",
+      "evidence": "Remote entrypoints exist; local checkout absent; Node/npm below project floor; @nemesis-oss/binance-sdk not installed/importable; deterministic fixture smoke test NOT_RUN.",
+      "impact": "No valid experiment or untouched OOS.",
+      "nextAction": "Provision Node24/npm11, clone/install, verify SDK, run fixture twice."
+    },
+    {
+      "capability": "disk/storage",
+      "status": "PASS",
+      "evidence": "30 GiB free on overlay; GitHub raw archive and main branches accepted writes.",
+      "impact": "GitHub is persistent storage; local overlay is not.",
+      "nextAction": "Continue GitHub versioned artifacts and readback."
+    },
+    {
+      "capability": "artifact readback",
+      "status": "PASS",
+      "evidence": "All 32 appended rows are in three readback-verified delta files; manifests and indexes read back; final archive manifest, report, snapshot and this preflight are read back after write.",
+      "impact": "Persistent archive/report artifacts verified.",
+      "nextAction": "Read back final run manifest and queue after publication."
+    }
+  ],
+  "endpoints": {
+    "directRest": {
+      "/fapi/v1/time": "DNS_FAILED_HTTP_000_CURL_EXIT_6",
+      "/fapi/v1/exchangeInfo": "DNS_FAILED_HTTP_000_CURL_EXIT_6",
+      "data.binance.vision": "DNS_FAILED_HTTP_000_CURL_EXIT_6"
+    },
+    "connector": {
+      "/fapi/v1/klines": "RETURNED_50_PER_SYMBOL_INTERVAL_PLUS_32_INCREMENTAL_ROWS",
+      "/fapi/v1/ticker/24hr": "RETURNED",
+      "/fapi/v1/premiumIndex": "RETURNED",
+      "/fapi/v1/openInterest": "RETURNED",
+      "/fapi/v1/fundingRate": "RETURNED_LIMIT_3_PER_SYMBOL",
+      "/futures/data/openInterestHist": "RETURNED_6_HOURLY_POINTS_PER_SYMBOL",
+      "/futures/data/takerlongshortRatio": "RETURNED_6_HOURLY_POINTS_PER_SYMBOL",
+      "/futures/data/globalLongShortAccountRatio": "RETURNED_6_HOURLY_POINTS_PER_SYMBOL",
+      "/fapi/v1/depth": "RETURNED_20_LEVELS_NO_SERVER_TIMESTAMP"
+    }
+  },
+  "historicalArchiveReadback": [
+    {
+      "path": "research-data/binance-usdm/1h/BTCUSDT/page-0001.jsonl",
+      "rows": 1500,
+      "bytes": 211718,
+      "sha256": "9a11769e0c1e473dc0293286fa468bdeba6b9d8a4b1ade224d14dd0e3f002921",
+      "gitBlobSha1": "79af4d04b95870fc1535ab13e60aeee517d2d6b3",
+      "verified": true
+    },
+    {
+      "path": "research-data/binance-usdm/4h/BTCUSDT/page-0009.jsonl",
+      "rows": 1500,
+      "bytes": 218811,
+      "sha256": "ea41621bcfb6aa0db12d15636939478d9c7874bcac8fa6e1b408e1b7",
+      "gitBlobSha1": "f9f8a63220c20c95c2a812b30357bff26f1f89d6",
+      "verified": true
+    },
+    {
+      "path": "research-data/binance-usdm/4h/ETHUSDT/page-0009.jsonl",
+      "rows": 1500,
+      "bytes": 211226,
+      "sha256": "07c423ee220ed4cdf58d3a5431952e94b8ac4359808eedcb9dab188e243b51fb",
+      "gitBlobSha1": "bba1490cf7443f156ea276a05ce00474209e49e4",
+      "verified": true
+    },
+    {
+      "path": "research-data/binance-usdm/4h/SOLUSDT/page-0009.jsonl",
+      "rows": 1456,
+      "bytes": 184555,
+      "sha256": "212f6881361004029b7d46d2f75b7af132ba6d1cf9cfdb5b77b2a0488ee877aa",
+      "gitBlobSha1": "839e87ecf0245f233903a96850cbaea2dc73dce9",
+      "verified": true
+    },
+    {
+      "path": "research-data/binance-usdm/4h/XRPUSDT/page-0009.jsonl",
+      "rows": 1500,
+      "bytes": 207329,
+      "sha256": "493bab3ad769d36bb3251ef8bd87e083bad91abb74c0f0c55ace7f9811b80992",
+      "gitBlobSha1": "41f0c2f1056b9e309385106869751f8791c432ac",
+      "verified": true
+    }
+  ],
+  "artifacts": {
+    "marketSnapshotPath": "research-data/binance-usdm/current_market_snapshot_20261110T1529Z_auto12.json",
+    "marketSnapshotBlobSha1": "71b4026b030ddeb973040ac30c1e69c0c1d9defb",
+    "reportPath": "research/context-strategy/reports/2026-11-10T1529Z_auto12.md",
+    "reportBlobSha1": "e962e2833f07ff5cf044e8ab297fb7d76340a1fb",
+    "archiveManifestPath": "research-data/binance-usdm/manifests/archive_manifest_20261110T1537Z_auto12.json",
+    "archiveManifestBlobSha1": "5f2479d84353ee18da3f07c3e58c6f7cded1ec94",
+    "fiveMinuteIndexBlobSha1": "33a9eee8316f59d58a0b661e6abfd6c4b88a49f8",
+    "fifteenMinuteIndexBlobSha1": "9bebfe574a927b6b22f0f1f01f2f4257c319caf4"
+  },
+  "runClassification": "MONITORING_ONLY",
+  "strategyExperiment": "RESEARCH_BLOCKED",
+  "oosEvaluated": false
+}

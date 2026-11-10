@@ -1,0 +1,315 @@
+{
+  "schemaVersion": "1.0.0",
+  "runId": "context-strategy-20261110T2026Z-auto17",
+  "asOfUtc": "2026-11-10T20:26:12.900Z",
+  "featureSampleAsOfUtc": "2026-11-10T20:25:21.196Z",
+  "source": {
+    "provider": "Binance USD-M public data connector",
+    "marketEndpoints": [
+      "GET /fapi/v1/markPrice",
+      "GET /fapi/v1/ticker/24hr",
+      "GET /fapi/v1/openInterest",
+      "GET /fapi/v1/fundingRate",
+      "GET /futures/data/openInterestHist",
+      "GET /futures/data/takerlongshortRatio",
+      "GET /futures/data/globalLongShortAccountRatio",
+      "GET /fapi/v1/depth",
+      "GET /fapi/v1/klines"
+    ],
+    "symbols": [
+      "BTCUSDT",
+      "ETHUSDT",
+      "SOLUSDT",
+      "XRPUSDT"
+    ],
+    "intervals": [
+      "5m",
+      "15m",
+      "1h",
+      "4h"
+    ]
+  },
+  "exchangeMetadata": {
+    "serverTimeUtc": "2026-11-10T01:01:01.891Z",
+    "observedAtUtc": "2026-11-10T20:26:12.900Z",
+    "stalenessSeconds": 69911.009,
+    "observedStatuses": {
+      "BTCUSDT": "TRADING",
+      "ETHUSDT": "TRADING",
+      "SOLUSDT": "TRADING",
+      "XRPUSDT": "TRADING"
+    },
+    "executionValidation": "BLOCKED_STALE_METADATA"
+  },
+  "funding": {
+    "intervalHours": 8,
+    "lastSettlementUtc": "2026-11-10T16:00:00.000Z",
+    "nextFundingUtc": "2026-11-11T00:00:00.000Z",
+    "thresholdAbsPct": 0.05,
+    "allObservedBelowThreshold": true
+  },
+  "symbols": {
+    "BTCUSDT": {
+      "lastPrice": 73666.5,
+      "markPrice": 73666.5,
+      "indexPrice": 73701.42434783,
+      "markIndexPremiumPct": -0.0473863,
+      "change24hPct": -1.503,
+      "high24h": 75411,
+      "low24h": 72691,
+      "quoteVolume24h": 12434618597.14,
+      "openInterest": 100231.02,
+      "openInterestChange18to20hPct": -0.6462773,
+      "indicatedFundingPct": 0.007144,
+      "settledFundingPct": 0.005925,
+      "takerBuySellRatio19h": 0.9544,
+      "globalLongAccountPct19h": 75.68,
+      "depth": {
+        "eventTimeUtc": "2026-11-10T20:26:11.810Z",
+        "spreadBps": 0.0135753,
+        "imbalanceTop20": -0.787968
+      }
+    },
+    "ETHUSDT": {
+      "lastPrice": 2051.64,
+      "markPrice": 2051.80037209,
+      "indexPrice": 2052.99953488,
+      "markIndexPremiumPct": -0.0584103,
+      "change24hPct": -3.595,
+      "high24h": 2136.44,
+      "low24h": 2003.57,
+      "quoteVolume24h": 9500081064.46,
+      "openInterest": 2272556.29,
+      "openInterestChange18to20hPct": -0.2205412,
+      "indicatedFundingPct": -0.004133,
+      "settledFundingPct": -0.002117,
+      "takerBuySellRatio19h": 1.1172,
+      "globalLongAccountPct19h": 78.2,
+      "depth": {
+        "eventTimeUtc": "2026-11-10T20:26:11.844Z",
+        "spreadBps": 0.0487302,
+        "imbalanceTop20": -0.37319
+      }
+    },
+    "SOLUSDT": {
+      "lastPrice": 83.39,
+      "markPrice": 83.40496092,
+      "indexPrice": 83.44113909,
+      "markIndexPremiumPct": -0.0433577,
+      "change24hPct": -3.951,
+      "high24h": 86.99,
+      "low24h": 81.25,
+      "quoteVolume24h": 1705495915.3682,
+      "openInterest": 9721847.21,
+      "openInterestChange18to20hPct": -0.4502467,
+      "indicatedFundingPct": -0.003978,
+      "settledFundingPct": -0.000171,
+      "takerBuySellRatio19h": 0.9422,
+      "globalLongAccountPct19h": 78.32,
+      "depth": {
+        "eventTimeUtc": "2026-11-10T20:26:12.509Z",
+        "spreadBps": 1.1989689,
+        "imbalanceTop20": -0.14256
+      }
+    },
+    "XRPUSDT": {
+      "lastPrice": 1.0633,
+      "markPrice": 1.0632663,
+      "indexPrice": 1.06373199,
+      "markIndexPremiumPct": -0.0437789,
+      "change24hPct": -2.691,
+      "high24h": 1.107,
+      "low24h": 1.0301,
+      "quoteVolume24h": 953520294.3728,
+      "openInterest": 311715435.2,
+      "openInterestChange18to20hPct": 0.3318344,
+      "indicatedFundingPct": 0.009494,
+      "settledFundingPct": 0.004348,
+      "takerBuySellRatio19h": 0.7284,
+      "globalLongAccountPct19h": 74.09,
+      "depth": {
+        "eventTimeUtc": "2026-11-10T20:26:12.745Z",
+        "spreadBps": 0.9405126,
+        "imbalanceTop20": 0.034282
+      }
+    }
+  },
+  "context": {
+    "featureMethod": "EMA20/50/200 and Wilder-style ATR14; returns over 5 and 20 completed bars; local ATR14 percentile over retrieved sample; volume divided by preceding 20-bar median. Descriptive only; thresholds not fit on training data.",
+    "symbols": {
+      "BTCUSDT": {
+        "trendByInterval": {
+          "5m": "MIXED",
+          "15m": "MIXED",
+          "1h": "BEARISH",
+          "4h": "BEARISH"
+        },
+        "return5BarsPct": {
+          "5m": 0.267,
+          "15m": 0.0858,
+          "1h": -1.2576,
+          "4h": -2.5081
+        },
+        "return20BarsPct": {
+          "5m": 0.156,
+          "15m": -1.2429,
+          "1h": -2.5081,
+          "4h": -3.3017
+        },
+        "atr14LocalPercentile": {
+          "5m": 11.63,
+          "15m": 69.77,
+          "1h": 89.41,
+          "4h": 86.02
+        },
+        "volumeVsPrior20Median": {
+          "5m": 4.6,
+          "15m": 0.22,
+          "1h": 0.71,
+          "4h": 2.67
+        }
+      },
+      "ETHUSDT": {
+        "trendByInterval": {
+          "5m": "BULLISH",
+          "15m": "MIXED",
+          "1h": "BEARISH",
+          "4h": "BEARISH"
+        },
+        "return5BarsPct": {
+          "5m": 0.3621,
+          "15m": 0.2927,
+          "1h": -1.8405,
+          "4h": -4.2329
+        },
+        "return20BarsPct": {
+          "5m": 0.3788,
+          "15m": -1.2867,
+          "1h": -4.2329,
+          "4h": -8.9355
+        },
+        "atr14LocalPercentile": {
+          "5m": 13.95,
+          "15m": 62.79,
+          "1h": 92.8,
+          "4h": 91.1
+        },
+        "volumeVsPrior20Median": {
+          "5m": 2.21,
+          "15m": 0.37,
+          "1h": 0.64,
+          "4h": 2.81
+        }
+      },
+      "SOLUSDT": {
+        "trendByInterval": {
+          "5m": "BULLISH",
+          "15m": "MIXED",
+          "1h": "BEARISH",
+          "4h": "BEARISH"
+        },
+        "return5BarsPct": {
+          "5m": 0.6031,
+          "15m": 0.2894,
+          "1h": -1.6724,
+          "4h": -4.3719
+        },
+        "return20BarsPct": {
+          "5m": 0.4093,
+          "15m": -1.5856,
+          "1h": -4.3719,
+          "4h": -7.8172
+        },
+        "atr14LocalPercentile": {
+          "5m": 10.47,
+          "15m": 68.6,
+          "1h": 89.83,
+          "4h": 73.73
+        },
+        "volumeVsPrior20Median": {
+          "5m": 2.39,
+          "15m": 0.48,
+          "1h": 0.9,
+          "4h": 2.39
+        }
+      },
+      "XRPUSDT": {
+        "trendByInterval": {
+          "5m": "MIXED",
+          "15m": "MIXED",
+          "1h": "BEARISH",
+          "4h": "BEARISH"
+        },
+        "return5BarsPct": {
+          "5m": -0.244,
+          "15m": -0.6906,
+          "1h": 0.0282,
+          "4h": -3.0044
+        },
+        "return20BarsPct": {
+          "5m": -0.7193,
+          "15m": 0.2921,
+          "1h": -3.0044,
+          "4h": -9.1343
+        },
+        "atr14LocalPercentile": {
+          "5m": 5.81,
+          "15m": 68.6,
+          "1h": 94.92,
+          "4h": 92.37
+        },
+        "volumeVsPrior20Median": {
+          "5m": 1.02,
+          "15m": 0.38,
+          "1h": 0.97,
+          "4h": 2.17
+        }
+      }
+    },
+    "latestCompletedOpenUtcByInterval": {
+      "5m": "2026-11-10T20:20:00.000Z",
+      "15m": "2026-11-10T20:00:00.000Z",
+      "1h": "2026-11-10T19:00:00.000Z",
+      "4h": "2026-11-10T16:00:00.000Z"
+    },
+    "classificationConfidence": "NOT_CALIBRATED; heuristic descriptive states only",
+    "transitionWarning": "Short-term 5m/15m rebound or mixed state is occurring below bearish 1h/4h EMA structure; not a confirmed multi-timeframe reversal."
+  },
+  "dataQuality": {
+    "recentSamples": {
+      "series": 16,
+      "rowsReturned": 2800,
+      "completedRows": 2784,
+      "formingRowsExcluded": 16,
+      "duplicates": 0,
+      "missingIntervals": 0,
+      "offGrid": 0,
+      "nonMonotonic": 0,
+      "ohlcFailures": 0,
+      "nonPositiveVolume": 0,
+      "nonFinite": 0,
+      "crossSymbolAligned": true,
+      "continuityVerifiedByCadence": true
+    },
+    "archiveAppend": {
+      "rowsFetched": 72,
+      "completedRows": 56,
+      "formingExcluded": 16,
+      "rowsAppended": 56,
+      "duplicates": 0,
+      "missingIntervals": 0,
+      "offGrid": 0,
+      "nonMonotonic": 0,
+      "ohlcFailures": 0,
+      "nonPositiveVolume": 0,
+      "nonFinite": 0,
+      "crossSymbolAligned": true
+    }
+  },
+  "decisions": {
+    "SOLUSDT": "NO_TRADE",
+    "ETHUSDT": "NO_TRADE",
+    "XRPUSDT": "NO_TRADE",
+    "reason": "Conditional strategy registry has zero OOS_VALIDATED entries; no validated setup trigger can be selected."
+  }
+}

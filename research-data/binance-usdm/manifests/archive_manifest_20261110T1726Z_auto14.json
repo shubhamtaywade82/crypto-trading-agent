@@ -1,0 +1,165 @@
+{
+  "schema_version": "1.0.0",
+  "run_id": "context-strategy-20261110T1726Z-auto14",
+  "as_of_utc": "2026-11-10T17:28:00.000Z",
+  "repository": "shubhamtaywade82/crypto-trading-agent",
+  "branch": "research/raw-ohlcv-archive-20261108T1026Z",
+  "source": {
+    "endpoint": "GET /fapi/v1/klines",
+    "access": "Binance USD-M public market-data connector; direct REST DNS unavailable",
+    "symbols": [
+      "BTCUSDT",
+      "ETHUSDT",
+      "SOLUSDT",
+      "XRPUSDT"
+    ],
+    "intervals": [
+      "5m",
+      "15m",
+      "1h",
+      "4h"
+    ]
+  },
+  "highwaters": {
+    "5m": "2026-11-10T17:20:00.000Z",
+    "15m": "2026-11-10T17:00:00.000Z",
+    "1h": "2026-11-10T16:00:00.000Z",
+    "4h": "2026-11-10T12:00:00.000Z"
+  },
+  "append_this_run": {
+    "rows_fetched": 64,
+    "completed_rows": 56,
+    "forming_rows_excluded": 8,
+    "pre_highwater_rows_excluded": 36,
+    "rows_appended": 20,
+    "rows_by_interval": {
+      "5m": 16,
+      "15m": 4
+    },
+    "rows_by_symbol": {
+      "BTCUSDT": 5,
+      "ETHUSDT": 5,
+      "SOLUSDT": 5,
+      "XRPUSDT": 5
+    },
+    "rows_by_symbol_interval": {
+      "BTCUSDT": {
+        "5m": 4,
+        "15m": 1
+      },
+      "ETHUSDT": {
+        "5m": 4,
+        "15m": 1
+      },
+      "SOLUSDT": {
+        "5m": 4,
+        "15m": 1
+      },
+      "XRPUSDT": {
+        "5m": 4,
+        "15m": 1
+      }
+    },
+    "batches": [
+      {
+        "delta_path": "research-data/binance-usdm/delta/binance_usdm_delta_20261110T1726Z_5m15m_completed.jsonl",
+        "delta_sha256": "523a1708f7e0b44d7bfd0deeccd3feb8c6f573b92455b1b7639ff63ac4a27a5c",
+        "delta_blob_sha1": "f90ae82fb3e3c3f945cc7712ca3e27fd8ada24be",
+        "manifest_path": "research-data/binance-usdm/delta/manifest-20261110T1726Z-5m15m.json",
+        "manifest_sha256": "83635d82103c936900980c55f3a990c9264d192c6133f837f69a382a5fba5857",
+        "manifest_blob_sha1": "11ba6818ad05619288183b2c902427ad3a622a48",
+        "rows": 20,
+        "readback_verified": true
+      }
+    ],
+    "readback_verified": true,
+    "quality_failures": 0
+  },
+  "base_coverage": {
+    "5m": {
+      "status": "ABSENT",
+      "base_rows_total": 0,
+      "incremental_rows_total": 1384,
+      "highwater": "2026-11-10T17:20:00.000Z"
+    },
+    "15m": {
+      "status": "ABSENT",
+      "base_rows_total": 0,
+      "incremental_rows_total": 464,
+      "highwater": "2026-11-10T17:00:00.000Z"
+    },
+    "1h": {
+      "status": "HISTORICAL_PAGES_PLUS_INCREMENTALS",
+      "rows_total_base": 215484,
+      "rows_per_symbol": 53871,
+      "coverage_start": "2020-09-14T08:00:00Z",
+      "last_previous_manifest_highwater": "2026-11-10T14:00:00Z",
+      "note": "The 1h index and previous archive manifest were read back and both agreed at 2026-11-10T14:00:00Z; the 15:00Z candle was appended in this run.",
+      "highwater": "2026-11-10T16:00:00.000Z"
+    },
+    "4h": {
+      "status": "DEGRADED_PROVENANCE",
+      "raw_rows_total": 53960,
+      "aligned_rows_total": 53816,
+      "canonical_rows_total": 53844,
+      "raw_highwater": "2026-11-10T12:00:00.000Z",
+      "canonical_end": "2026-11-05T16:00:00Z",
+      "manifest_sha_provenance_mismatches": 13,
+      "row_level_reconciliation": "Prior artifact compared 14 page/symbol pairs and 21,000 rows exactly with zero row-level mismatches.",
+      "note": "4h raw incremental archive advanced to 12:00Z; canonical 4h series remains separately bounded at 2026-11-05T16:00Z until canonical rebuild.",
+      "highwater": "2026-11-10T12:00:00.000Z"
+    }
+  },
+  "quality": {
+    "series": 8,
+    "rows": 20,
+    "duplicates": 0,
+    "missing_intervals": 0,
+    "off_grid": 0,
+    "non_monotonic": 0,
+    "ohlc_invariant_failures": 0,
+    "non_positive_volume": 0,
+    "non_finite": 0,
+    "cross_symbol_alignment": true,
+    "forming_rows_appended": 0,
+    "scope": "this run's incremental 5m/15m deltas only; does not prove full archive completeness"
+  },
+  "indexes": {
+    "5m": {
+      "path": "research-data/binance-usdm/5m/archive-index.json",
+      "blob_sha1": "c53983b66b371a7476607728959ebb2085412ce8",
+      "readback_verified": true
+    },
+    "15m": {
+      "path": "research-data/binance-usdm/15m/archive-index.json",
+      "blob_sha1": "4c56164895ee761e06d4f987aa96e6d2bba0f836",
+      "readback_verified": true
+    },
+    "1h": {
+      "path": "research-data/binance-usdm/1h/archive-index.json",
+      "blob_sha1": "a243cba8ab1138c440e4f3ca369c15e184ea4f31",
+      "readback_verified": true
+    },
+    "4h": {
+      "path": "research-data/binance-usdm/4h/archive-index.json",
+      "blob_sha1": "0acd7b6cb97189b628c1b77bc8be8860a26c2b0e",
+      "readback_verified": true
+    }
+  },
+  "unresolved": [
+    "5m/15m multi-year base history absent; incremental-only windows are not sufficient for strategy research.",
+    "4h raw/aligned/canonical row-count discrepancy and 13 original manifest SHA provenance mismatches remain; canonical 4h was not rebuilt by this incremental append.",
+    "Direct Binance REST DNS failed for fapi.binance.com; market data was retrieved through the Binance USD-M public connector.",
+    "exchangeInfo.serverTime was stale relative to premiumIndex.time; direct /fapi/v1/time probe unavailable, so metadata freshness remains DEGRADED.",
+    "Local checkout absent; Node 22.16.0/npm 10.9.2 below project Node >=24/npm >=11; Binance SDK not installed/importable.",
+    "Historical derivatives and calibrated execution-cost archives remain incomplete.",
+    "4h raw/aligned/canonical count discrepancy and 13 original manifest SHA provenance mismatches remain; canonical 4h was not rebuilt by this incremental append.",
+    "Direct Binance REST DNS failed for fapi.binance.com; current market data was retrieved through the Binance USD-M public connector.",
+    "exchangeInfo.serverTime was 16h25m behind mark-price endpoint time; direct /fapi/v1/time probe unavailable, so contract metadata freshness is DEGRADED."
+  ],
+  "exchange_time": {
+    "server_time_ms": 1794331680000,
+    "server_time_utc": "2026-11-10T17:28:00.000Z",
+    "source": "USD-M mark price endpoint"
+  }
+}

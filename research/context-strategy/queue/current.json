@@ -1,8 +1,8 @@
 {
   "schema_version": "1.0.0",
-  "run_id": "context-strategy-2026-11-10T0135Z-v104",
-  "as_of_utc": "2026-11-10T01:35:21Z",
-  "overall_status": "RESEARCH_EXECUTED_DATA_QUALITY_AND_BACKFILL_ONLY",
+  "run_id": "context-strategy-2026-11-10T0227Z-v105",
+  "as_of_utc": "2026-11-10T02:29:15.623Z",
+  "overall_status": "RESEARCH_EXECUTED_DATA_QUALITY_APPEND_ONLY",
   "strategy_research_status": "RESEARCH_BLOCKED",
   "priority_order": [
     "RQ-002",
@@ -20,7 +20,7 @@
     "RQ-028"
   ],
   "daily_cycle": {
-    "status": "COMPLETED_ARCHIVE_BACKFILL_STRATEGY_EXPERIMENT_BLOCKED",
+    "status": "COMPLETED_ARCHIVE_APPEND_STRATEGY_EXPERIMENT_BLOCKED",
     "experiment_executed": true,
     "strategy_backtest_executed": false,
     "oos_evaluated": false,
@@ -36,10 +36,11 @@
       "EXP-DQ-2026-11-09-223135Z-018",
       "EXP-DQ-2026-11-09-2330Z-019",
       "EXP-DQ-2026-11-10-0025Z-020",
-      "EXP-DQ-2026-11-10-0130Z-022"
+      "EXP-DQ-2026-11-10-0130Z-022",
+      "EXP-DQ-2026-11-10-0226Z-023"
     ],
-    "last_executed_utc": "2026-11-10T01:35:21Z",
-    "blocker": "5m/15m archives have clean partial 20.8-day/62.5-day windows, still not multiple cycles; 1h/4h base files not mounted/read back and 4h has 13 SHA discrepancies; direct server-time and bulk archive DNS fail; no local checkout/Node24/npm11; costs and full funding cashflows incomplete."
+    "last_executed_utc": "2026-11-10T02:29:15.623Z",
+    "blocker": "Only incremental data-quality work was executable. Strategy test remains blocked by incomplete multi-cycle archive, stale exchangeInfo/direct /time DNS, no compatible local runner, unresolved source defects and uncalibrated costs/funding."
   },
   "weekly_review": {
     "status": "NOT_DUE",
@@ -47,45 +48,45 @@
     "next_action": "Refit thresholds on training only; measure occupancy, duration, transitions and stability; retain v56 if supported."
   },
   "archive_highwaters": {
-    "5m": "2026-11-10T01:25:00Z",
-    "15m": "2026-11-10T01:15:00Z",
-    "1h": "2026-11-10T00:00:00Z",
+    "5m": "2026-11-10T02:20:00Z",
+    "15m": "2026-11-10T02:00:00Z",
+    "1h": "2026-11-10T01:00:00Z",
     "4h": "2026-11-09T20:00:00Z"
   },
   "latest_data_quality_experiment": {
-    "id": "EXP-DQ-2026-11-10-0130Z-022",
-    "status": "COMPLETED_PASS_DATA_QUALITY_AND_BACKFILL_ONLY",
-    "backfill_rows": 48000,
-    "incremental_rows": 76,
-    "total_rows_persisted": 48076,
-    "backfill_rows_by_interval": {
-      "5m": 24000,
-      "15m": 24000
-    },
-    "incremental_rows_by_interval": {
-      "5m": 52,
-      "15m": 20,
+    "id": "EXP-DQ-2026-11-10-0226Z-023",
+    "status": "COMPLETED_PASS_INCREMENTAL_ARCHIVE_APPEND_AND_READBACK_ONLY",
+    "rows_appended": 60,
+    "rows_by_interval": {
+      "5m": 44,
+      "15m": 12,
       "1h": 4,
       "4h": 0
     },
+    "rows_by_symbol": {
+      "BTCUSDT": 15,
+      "ETHUSDT": 15,
+      "SOLUSDT": 15,
+      "XRPUSDT": 15
+    },
     "quality_failures": 0,
     "readback_verified": true,
-    "cross_symbol_alignment": true,
     "canonical_indexes_updated": false,
-    "manifest_path": "research-data/binance-usdm/manifests/archive_manifest_20261110T0135Z_v104.json",
-    "experiment_path": "research/context-strategy/experiments/EXP-DQ-2026-11-10-0130Z-022.json"
+    "manifest_path": "research-data/binance-usdm/manifests/archive_manifest_20261110T0227Z_v105.json",
+    "manifest_blob_sha": "41ad8dd1174a92982bf26364479a6515b16dda9d",
+    "experiment_path": "research/context-strategy/experiments/EXP-DQ-2026-11-10-0226Z-023.json"
   },
   "items": [
     {
       "id": "RQ-002",
       "priority": "P0",
-      "status": "BLOCKED",
+      "status": "PARTIALLY_COMPLETED",
       "title": "Refresh Binance server time and exchange metadata",
       "prerequisites": [
         "Direct DNS/HTTPS or uncached official endpoint route"
       ],
-      "blocker": "Direct /fapi/v1/time and data.binance.vision DNS fail; exchangeInfo.serverTime=2026-11-10T01:01:01.891Z is 34m21s behind local shell time.",
-      "next_action": "Restore direct DNS/HTTPS or verified uncached official time; require <=5s skew and fresh exchangeInfo."
+      "blocker": "PremiumIndex time proxy fresh at 02:26:57Z (~1.9s from shell), but direct /fapi/v1/time DNS fails and exchangeInfo.serverTime remains stale by ~5155s.",
+      "next_action": "Restore direct official server-time route and refresh exchangeInfo; require fresh metadata before execution validation."
     },
     {
       "id": "RQ-005",
@@ -240,25 +241,22 @@
         "Persistent GitHub branch write/readback"
       ],
       "blocker": null,
-      "next_action": "Continue append-only refresh; highwaters 5m 00:20Z, 15m 00:00Z, 1h 23:00Z, 4h 20:00Z.",
-      "last_completed_utc": "2026-11-10T00:27:19Z",
+      "next_action": "Continue append-only refresh from highwaters 5m 02:20Z, 15m 02:00Z, 1h 01:00Z, 4h 20:00Z.",
+      "last_completed_utc": "2026-11-10T02:29:15.623Z",
       "evidence": {
-        "rows_appended": 64,
+        "rows_appended": 60,
         "rows_by_interval": {
           "5m": 44,
           "15m": 12,
           "1h": 4,
-          "4h": 4
+          "4h": 0
         },
         "rows_by_symbol": {
-          "BTCUSDT": 16,
-          "ETHUSDT": 16,
-          "SOLUSDT": 16,
-          "XRPUSDT": 16
+          "BTCUSDT": 15,
+          "ETHUSDT": 15,
+          "SOLUSDT": 15,
+          "XRPUSDT": 15
         },
-        "rows_fetched": 1600,
-        "completed_rows": 1584,
-        "forming_rows_excluded": 16,
         "quality_failures": 0,
         "readback_verified": true
       }
@@ -275,21 +273,22 @@
       ],
       "blocker": null,
       "next_action": "Data-quality evidence only; do not infer strategy edge or OOS status from archive append checks.",
-      "last_completed_utc": "2026-11-10T00:27:19Z",
+      "last_completed_utc": "2026-11-10T02:29:15.623Z",
       "evidence": {
         "experiment_ids": [
-          "EXP-DQ-2026-11-10-0025Z-020"
+          "EXP-DQ-2026-11-10-0226Z-023"
         ],
-        "rows_appended": 64,
-        "readback_verified": true
+        "rows_appended": 60,
+        "readback_verified": true,
+        "canonical_indexes_updated": false
       }
     },
     {
       "id": "RQ-031",
       "status": "PARTIALLY_COMPLETED",
       "title": "Resolve Binance market-data clock skew",
-      "blocker": "Current market endpoint timestamps cluster around 00:25:45-00:25:47Z and shell clock is 00:27:19Z (about 91s lag), but direct /fapi/v1/time DNS remains unavailable and exchangeInfo.serverTime is about 18h12m stale.",
-      "next_action": "Keep execution validation blocked until a trusted fresh /fapi/v1/time route and current exchange metadata are available.",
+      "blocker": "PremiumIndex timestamp proxy is fresh and agrees with shell within ~1.9s; direct /fapi/v1/time remains DNS unavailable and exchangeInfo.serverTime is ~5155s stale.",
+      "next_action": "Obtain uncached official /fapi/v1/time and current exchangeInfo; do not clear execution gate using proxy alone.",
       "prerequisites": [
         "Direct DNS/HTTPS or independently validated time source",
         "Fresh /fapi/v1/time and exchangeInfo",
@@ -305,32 +304,26 @@
         "Resolve per-interval index paths",
         "Readback-verified deltas and manifest"
       ],
-      "blocker": "Backfill/delta files readback-verified but canonical indexes not rebuilt; 4h provenance unresolved.",
-      "next_action": "Fix candle schema, reconcile manifests and rebuild canonical indexes with readback hashes."
+      "blocker": "Append-only deltas persisted, but canonical indexes not rebuilt; 4h provenance and source schema defects remain.",
+      "next_action": "Repair candle schema and reconcile manifest hashes, then rebuild canonical indexes with readback."
     }
   ],
   "last_market_snapshot": {
-    "path": "research/context-strategy/snapshots/2026-11-09T2231Z_v101.json",
-    "as_of_utc": "2026-11-09T22:31:35.000Z",
+    "path": "research/context-strategy/snapshots/2026-11-10T0227Z_v105.json",
+    "as_of_utc": "2026-11-10T02:26:57.000Z",
     "latest_completed_candles_utc": {
-      "5m": "2026-11-09T22:25:00.000Z",
-      "15m": "2026-11-09T22:15:00.000Z",
-      "1h": "2026-11-09T21:00:00.000Z",
-      "4h": "2026-11-09T16:00:00.000Z"
+      "5m": "2026-11-10T02:20:00Z",
+      "15m": "2026-11-10T02:00:00Z",
+      "1h": "2026-11-10T01:00:00Z",
+      "4h": "2026-11-09T20:00:00Z"
     },
     "context_summary": {
-      "BTCUSDT": "5m/15m bullish; 1h mixed; 4h bearish (reference only)",
-      "ETHUSDT": "5m mixed; 15m bullish; 1h/4h bearish",
-      "SOLUSDT": "5m mixed; 15m/1h/4h bearish",
-      "XRPUSDT": "5m/15m mixed; 1h/4h bearish"
+      "BTCUSDT": "5m/4h bearish, 15m bullish, 1h transition",
+      "ETHUSDT": "5m/1h/4h bearish, 15m transition",
+      "SOLUSDT": "bearish across 5m/15m/1h/4h",
+      "XRPUSDT": "5m/1h transition, 15m bullish, 4h bearish"
     },
-    "late_quote_probe": "NOT_USED_FOR_SIGNAL: closeTime 22:36:11Z was 142s ahead of shell clock 22:33:49Z",
-    "decisions": {
-      "SOLUSDT": "NO_TRADE",
-      "ETHUSDT": "NO_TRADE",
-      "XRPUSDT": "NO_TRADE"
-    },
-    "oos_validated_count": 0
+    "oos_validated_entries": 0
   },
   "registry_snapshot": {
     "version": "v101",
@@ -433,5 +426,8 @@
       "preflight": "research/context-strategy/preflight/preflight_20261110T0135Z_v104.json",
       "report": "research/context-strategy/reports/2026-11-10T0135Z_v104.md"
     }
-  }
+  },
+  "latest_registry_path": "research/context-strategy/registry/registry_20261110T0227Z_v105.json",
+  "latest_manifest_path": "research-data/binance-usdm/manifests/archive_manifest_20261110T0227Z_v105.json",
+  "latest_experiment_path": "research/context-strategy/experiments/EXP-DQ-2026-11-10-0226Z-023.json"
 }

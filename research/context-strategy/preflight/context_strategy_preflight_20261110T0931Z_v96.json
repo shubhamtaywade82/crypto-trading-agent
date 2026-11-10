@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "runId": "CONTEXT-STRATEGY-20261110T0931Z-AUTO11",
-  "asOfUtc": "2026-11-10T09:31:01.311Z",
+  "asOfUtc": "2026-11-10T09:39:16.738Z",
   "executionEnvironment": {
     "cwd": "/",
     "os": "Linux 6.18.57 x86_64",
@@ -39,21 +39,21 @@
     {
       "capability": "Network/Binance endpoints",
       "status": "DEGRADED",
-      "evidence": "Direct DNS probes to fapi.binance.com failed for /fapi/v1/time, exchangeInfo, klines, premiumIndex, openInterest and ticker/24hr. Connector calls returned market data but no HTTP status/headers. ExchangeInfo serverTime 01:01:01.897Z is 30300.103s behind market endpoint time 09:26:02Z.",
+      "evidence": "Direct probes to fapi.binance.com failed DNS. Connector market data refreshed at 09:38:16Z but hides HTTP status/headers. ExchangeInfo serverTime 01:01:01.897Z is 31034.103s behind the 09:38:16Z market time.",
       "impact": "Fresh metadata/server time not verified; execution validation blocked.",
       "nextAction": "Restore direct DNS/HTTPS; require server-time drift <=5s and fresh exchangeInfo."
     },
     {
       "capability": "Raw historical archive",
       "status": "DEGRADED",
-      "evidence": "1h base 215484 rows; 4h raw/aligned/canonical 53960/53816/53844; 5m and 15m base history absent. New deltas readback-verified through 5m 09:20Z, 15m 09:00Z, 1h 08:00Z, 4h 04:00Z.",
+      "evidence": "1h base 215484 rows; 4h raw/aligned/canonical 53960/53816/53844; 5m/15m base history absent. New deltas readback-verified through 5m 09:30Z, 15m 09:15Z, 1h 08:00Z, 4h 04:00Z.",
       "impact": "Multi-year multi-timeframe archive remains incomplete.",
       "nextAction": "Backfill 5m/15m from an auditable source and reconcile 4h raw/canonical rows."
     },
     {
       "capability": "Data quality/coverage",
       "status": "DEGRADED",
-      "evidence": "60 completed rows appended; 12 forming excluded; zero incremental duplicate/gap/off-grid/OHLC/volume/non-finite/close-time failures. Full archive audit incomplete.",
+      "evidence": "72 completed rows appended; 20 forming excluded; zero incremental integrity violations. Rolling windows: 499 completed 1h/4h and 119 completed 5m/15m per symbol, one forming candle excluded, zero duplicates/gaps/off-grid/OHLC/volume/non-finite/close-time failures. Full archive audit incomplete.",
       "impact": "Incremental slice clean; full historical coverage not established.",
       "nextAction": "Continue archive-level reconciliation and backfill."
     },
@@ -103,6 +103,26 @@
     {
       "endpoint": "GET /fapi/v1/ticker/24hr",
       "status": "DNS_FAILED_HTTP_000"
+    },
+    {
+      "endpoint": "GET /fapi/v1/fundingRate",
+      "status": "CONNECTOR_DATA_SUCCESS_HTTP_STATUS_UNAVAILABLE"
+    },
+    {
+      "endpoint": "GET /fapi/v1/openInterestHist",
+      "status": "CONNECTOR_DATA_SUCCESS_HTTP_STATUS_UNAVAILABLE"
+    },
+    {
+      "endpoint": "GET /futures/data/takerlongshortRatio",
+      "status": "CONNECTOR_DATA_SUCCESS_HTTP_STATUS_UNAVAILABLE"
+    },
+    {
+      "endpoint": "GET /futures/data/globalLongShortAccountRatio",
+      "status": "CONNECTOR_DATA_SUCCESS_HTTP_STATUS_UNAVAILABLE"
+    },
+    {
+      "endpoint": "GET /fapi/v1/ticker/bookTicker",
+      "status": "CONNECTOR_DATA_SUCCESS_HTTP_STATUS_UNAVAILABLE"
     }
   ],
   "classification": "RESEARCH_EXECUTED",

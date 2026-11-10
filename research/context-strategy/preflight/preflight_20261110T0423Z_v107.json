@@ -1,0 +1,184 @@
+{
+  "schema_version": "1.0.0",
+  "run_id": "context-strategy-2026-11-10T0423Z-v107",
+  "as_of_utc": "2026-11-10T04:23:25.463Z",
+  "environment": "Managed container runtime plus connected GitHub and Binance market-data operations",
+  "checks": [
+    {
+      "capability": "shell/compute",
+      "status": "PASS",
+      "evidence": {
+        "pwd": "/",
+        "os": "Linux x86_64 kernel 6.18.57",
+        "python": "3.13.5",
+        "node": "v22.16.0",
+        "npm": "10.9.2",
+        "cpu": 5,
+        "memAvailableGiB": 4.7,
+        "diskFreeGiB": 30
+      },
+      "impact": "Bounded validation and report generation possible; repository engine requirements unmet.",
+      "next_action": "Provision Node >=24 and npm >=11 for project runner."
+    },
+    {
+      "capability": "repository/code",
+      "status": "BLOCKED",
+      "evidence": {
+        "remoteRepository": "shubhamtaywade82/crypto-trading-agent",
+        "defaultBranch": "main",
+        "remoteMainHead": "669ba233538eb1463c0e7e0a435016a643e7adb5",
+        "localCheckout": false,
+        "localCandidateDirs": [],
+        "researchBranch": "research/raw-ohlcv-archive-20261108T1026Z"
+      },
+      "impact": "No local project test or backtest can run.",
+      "next_action": "Restore direct repository checkout in compatible runner."
+    },
+    {
+      "capability": "Binance SDK",
+      "status": "BLOCKED",
+      "evidence": {
+        "packages": {
+          "@binance/connector": "NOT_IMPORTABLE",
+          "@binance/futures-connector": "NOT_IMPORTABLE",
+          "binance-api-node": "NOT_IMPORTABLE",
+          "ccxt": "NOT_IMPORTABLE"
+        }
+      },
+      "impact": "No SDK execution; connected market-data operations used.",
+      "next_action": "Install pinned SDK only after compatible local checkout."
+    },
+    {
+      "capability": "network/Binance endpoints",
+      "status": "DEGRADED",
+      "evidence": {
+        "directCurlEndpoints": [
+          {
+            "endpoint": "/fapi/v1/time",
+            "httpStatus": 0,
+            "error": "DNS resolution failure"
+          },
+          {
+            "endpoint": "/fapi/v1/exchangeInfo",
+            "httpStatus": 0,
+            "error": "DNS resolution failure"
+          },
+          {
+            "endpoint": "/fapi/v1/klines",
+            "httpStatus": 0,
+            "error": "DNS resolution failure"
+          },
+          {
+            "endpoint": "/fapi/v1/premiumIndex",
+            "httpStatus": 0,
+            "error": "DNS resolution failure"
+          },
+          {
+            "endpoint": "/fapi/v1/openInterest",
+            "httpStatus": 0,
+            "error": "DNS resolution failure"
+          },
+          {
+            "endpoint": "/fapi/v1/ticker/24hr",
+            "httpStatus": 0,
+            "error": "DNS resolution failure"
+          }
+        ],
+        "connectedMarketDataCalls": "succeeded",
+        "exchangeInfoServerTimeUtc": "2026-11-10T01:01:01.897Z",
+        "exchangeInfoLagSeconds": 12128.437,
+        "markPriceTimeUtc": "2026-11-10T04:23:09Z",
+        "markPriceAgeSeconds": 1.334
+      },
+      "impact": "Fresh descriptive data available; contract execution validation blocked by stale metadata and no direct server-time check.",
+      "next_action": "Restore DNS/HTTPS and obtain uncached /fapi/v1/time plus current /fapi/v1/exchangeInfo."
+    },
+    {
+      "capability": "raw historical archive",
+      "status": "DEGRADED",
+      "evidence": {
+        "localAccessiblePath": "/mnt/data/context_strategy_v96/",
+        "localFiles": 3,
+        "localBundleContainsRawBase": false,
+        "remoteBranch": "research/raw-ohlcv-archive-20261108T1026Z",
+        "remoteManifestV106Read": true,
+        "newDeltaFilesReadbackExact": 4,
+        "baseCoverage": {
+          "fiveMinuteDays": 20.8,
+          "fifteenMinuteDays": 62.5,
+          "oneHourStart": "2020-09-14T08:00:00Z (reported; not full local readback)",
+          "fourHourRawAlignedCanonical": [
+            53964,
+            53816,
+            53844
+          ],
+          "unresolvedFourHourShaDiscrepancies": 13
+        }
+      },
+      "impact": "Recent incremental archive is clean, but multi-cycle base archive remains inadequate/reconciliation incomplete.",
+      "next_action": "Backfill multi-year 5m/15m and reconcile 4h page hashes/counts."
+    },
+    {
+      "capability": "data quality/coverage",
+      "status": "PASS",
+      "evidence": {
+        "series": 16,
+        "rowsFetched": 2560,
+        "completedRows": 2544,
+        "formingRowsExcluded": 16,
+        "duplicates": 0,
+        "missingIntervals": 0,
+        "offGrid": 0,
+        "nonMonotonic": 0,
+        "ohlcViolations": 0,
+        "nonPositiveVolume": 0,
+        "nonFinite": 0,
+        "deltaRowsAppended": 68,
+        "deltaMissingIntervals": 0
+      },
+      "impact": "Latest windows and appended deltas pass; full archive quality not implied.",
+      "next_action": "Run full archive validator after backfill and reconciliation."
+    },
+    {
+      "capability": "backtest harness/smoke test",
+      "status": "BLOCKED",
+      "evidence": {
+        "localCheckout": false,
+        "compatibleNode": false,
+        "smokeTest": "NOT_RUN",
+        "strategyBacktest": "NOT_RUN",
+        "untouchedOOS": "NOT_EVALUATED"
+      },
+      "impact": "No strategy evidence generated this run.",
+      "next_action": "Fix Node runtime, source contracts, BTC role and purge/embargo; then run deterministic fixture before full test."
+    },
+    {
+      "capability": "disk/storage",
+      "status": "PASS",
+      "evidence": {
+        "freeGiB": 30,
+        "remoteGitHubBranchWritable": true,
+        "appendOnlyDeltasCreated": 4
+      },
+      "impact": "Persistent GitHub artifact storage available; canonical indexes were not rebuilt.",
+      "next_action": "Continue atomic writes and readback verification."
+    },
+    {
+      "capability": "artifact readback",
+      "status": "PASS",
+      "evidence": {
+        "deltaFiles": 4,
+        "deltaReadbackExact": true,
+        "manifestRegistryExperimentQueueReadbackExact": true
+      },
+      "impact": "New raw deltas and metadata verified after write.",
+      "next_action": "Verify report, snapshot, preflight and artifact manifest after write."
+    }
+  ],
+  "run_classification": "RESEARCH_EXECUTED",
+  "scope": "Incremental archive integrity experiment only; no strategy backtest or OOS evaluation.",
+  "directServerTime": "BLOCKED",
+  "exchangeMetadataFreshness": "BLOCKED",
+  "oosEvaluated": false,
+  "registryPersistence": "GitHub research branch"
+}

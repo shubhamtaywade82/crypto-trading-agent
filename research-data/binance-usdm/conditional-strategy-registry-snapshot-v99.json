@@ -1,0 +1,112 @@
+{
+  "schema_version": "1.0.0",
+  "version": "v99",
+  "as_of_utc": "2026-11-10T10:43:35Z",
+  "parent_registry": "conditional-strategy-registry-snapshot-v98.json",
+  "repository": "shubhamtaywade82/crypto-trading-agent",
+  "branch": "research/raw-ohlcv-archive-20261108T1026Z",
+  "universe": {
+    "tradable": [
+      "SOLUSDT",
+      "ETHUSDT",
+      "XRPUSDT"
+    ],
+    "reference_only": [
+      "BTCUSDT"
+    ]
+  },
+  "evidence_policy": {
+    "provisional_oos_min_trades_per_symbol_context": 100,
+    "stronger_evidence_trades": 200,
+    "require_positive_net_expectancy_after_costs": true,
+    "block_bootstrap": true,
+    "multiple_testing_correction": "Holm",
+    "purge_embargo": true
+  },
+  "counts": {
+    "oos_validated": 0,
+    "oos_promising": 1,
+    "insufficient_evidence_cells": 36,
+    "rejected": 0,
+    "hypothesis_families": 7
+  },
+  "entries": [
+    {
+      "key": "SOLUSDT|BULL_LOW|DONCHIAN20_4H_v1",
+      "symbol": "SOLUSDT",
+      "context": "BULL_LOW",
+      "strategy": "4h Donchian20 breakout",
+      "version": "v1",
+      "status": "OOS_PROMISING",
+      "last_evaluation_utc": "2026-11-05T09:43:57.448Z",
+      "oos_trades": 12,
+      "win_rate_pct": 66.7,
+      "target_before_stop_pct": 41.7,
+      "mean_net_R": 0.606,
+      "profit_factor": 2.72,
+      "max_drawdown_R": 1.3,
+      "block_bootstrap_ci95_mean_R": [
+        0.086,
+        1.199
+      ],
+      "promotion_blocker": "12 OOS trades < 100 per symbol/context; costs and robustness incomplete.",
+      "actionable": false
+    },
+    {
+      "key": "ALL_SYMBOLS|MULTI_CONTEXT|DONCHIAN20_WF_V2",
+      "symbol_scope": [
+        "SOLUSDT",
+        "ETHUSDT",
+        "XRPUSDT"
+      ],
+      "context": "36 strategy-context cells",
+      "strategy": "Context-aligned Donchian20 walk-forward v2",
+      "version": "v2",
+      "status": "INSUFFICIENT_EVIDENCE",
+      "cells": 36,
+      "reason": "All cells below 100 OOS trades; nominal block-bootstrap CI includes zero; Holm-adjusted p=1.0; 15bp round-trip proxy is not a calibrated execution model.",
+      "actionable": false
+    }
+  ],
+  "family_status": {
+    "trend_pullback": "HYPOTHESIS",
+    "breakout_retest": "HYPOTHESIS",
+    "range_mean_reversion": "HYPOTHESIS",
+    "failed_breakout_fade": "HYPOTHESIS",
+    "volatility_expansion": "HYPOTHESIS",
+    "btc_relative_strength": "HYPOTHESIS",
+    "funding_oi_filters": "HYPOTHESIS"
+  },
+  "context_taxonomy": {
+    "source": "v56",
+    "status": "CARRIED_FORWARD_NOT_RECOMPUTED",
+    "definition": {
+      "trend_strength": "(EMA20-EMA50)/Wilder ATR14",
+      "transition": "abs(trend_strength) below training q67 of abs trend strength; otherwise BULL/BEAR by sign",
+      "volatility": "ATR14/close LOW/NORMAL/HIGH using training-only q33/q67",
+      "warmup_bars": 500,
+      "split": "70% train / 15% validation / 15% untouched test"
+    },
+    "sample_adequacy": "ADEQUATE_FOR_DESCRIPTIVE_4H_TAXONOMY; INSUFFICIENT_FOR_STRATEGY_EDGE_OR_MULTI_TF_GENERALIZATION"
+  },
+  "status_change_this_run": "NONE. No strategy experiment or OOS evaluation ran. Evidence labels and metrics are unchanged; current snapshot and incremental archive highwaters refreshed.",
+  "registry_persistence": "Persisted on GitHub research branch; exact readback verified.",
+  "run_id": "context-strategy-2026-11-10T1043Z-auto11",
+  "current_market_snapshot_ref": "research-data/binance-usdm/current_market_snapshot_20261110T104335Z.json",
+  "archive_highwaters_utc": {
+    "5m": "2026-11-10T10:35:00.000Z",
+    "15m": "2026-11-10T10:15:00.000Z",
+    "1h": "2026-11-10T09:00:00.000Z",
+    "4h": "2026-11-10T04:00:00.000Z"
+  },
+  "data_readiness": {
+    "5m": "INCREMENTAL_ONLY_NO_BASE_HISTORY; 1,044 appended rows across four symbols; highwater 2026-11-10T10:35Z.",
+    "15m": "INCREMENTAL_ONLY_NO_BASE_HISTORY; 348 appended rows across four symbols; highwater 2026-11-10T10:15Z.",
+    "1h": "HISTORICAL_PAGES_PLUS_INCREMENTALS; 53,871 base rows per symbol (215,484 total), coverage starts 2020-09-14T08:00Z; highwater 2026-11-10T09:00Z.",
+    "4h": "DEGRADED; raw/aligned/canonical rows 53,960/53,816/53,844; raw highwater 2026-11-10T04:00Z; canonical end 2026-11-05T16:00Z; 13 page-manifest SHA provenance mismatches unresolved."
+  },
+  "parent_registry_blob_sha1": "7a8f96dbc6154e826b4c339cd87eccde703ce265",
+  "current_market_snapshot_blob_sha1": "976eefbc5602889fc20bc2143cab8c0e1722108a",
+  "archive_manifest_ref": "research-data/binance-usdm/manifests/archive_manifest_20261110T1043Z_auto11.json",
+  "archive_manifest_blob_sha1": "6ab56503eeff312624ccf446634872d3167ec358"
+}

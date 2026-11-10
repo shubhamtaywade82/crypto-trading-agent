@@ -1,0 +1,155 @@
+{
+  "schema_version": "1.0.0",
+  "run_id": "context-strategy-20261110T1254Z-auto11",
+  "as_of_utc": "2026-11-10T12:54:30.000Z",
+  "classification": "RESEARCH_EXECUTED_DATA_QUALITY_APPEND_ONLY",
+  "strategy_experiment": "BLOCKED",
+  "oos_evaluation": "NOT_RUN",
+  "environment": {
+    "runtime": "managed container",
+    "cwd": "/",
+    "os": "Debian GNU/Linux 13 (trixie)",
+    "node": "v22.16.0",
+    "npm": "10.9.2",
+    "python": "3.13.5",
+    "cpu_cores": 5,
+    "ram_total_gib": 5.8,
+    "ram_available_gib": 4.7,
+    "disk_free_gib": 30,
+    "local_repo_present": false,
+    "package_json_present": false,
+    "node_modules_present": false,
+    "binance_sdk_packages": {
+      "@nemesis-oss/binance-sdk": "NOT_INSTALLED",
+      "@binance/connector": "NOT_INSTALLED",
+      "binance": "NOT_INSTALLED"
+    }
+  },
+  "remote_repo": {
+    "name": "shubhamtaywade82/crypto-trading-agent",
+    "branch": "main",
+    "head": "57f7d657e5b06a9ad0063512086f8b023e0a8c5d",
+    "package_engines": {
+      "node": ">=24",
+      "npm": ">=11"
+    },
+    "remote_harness_present": true,
+    "harness_path": "research/context-strategy/harnesses/sol_4h_donchian_ema50_v1.js",
+    "runner_path": "research/context-strategy/experiments/sol-4h-trend-pullback-btc-confirm-v1.runner.cjs",
+    "local_harness_invokable": false,
+    "smoke_test": "NOT_RUN"
+  },
+  "network": {
+    "direct_rest_dns": "FAILED",
+    "probes": [
+      {
+        "endpoint": "/fapi/v1/time",
+        "http_status": 0,
+        "error": "DNS resolution failed or timed out"
+      },
+      {
+        "endpoint": "/fapi/v1/exchangeInfo",
+        "http_status": 0,
+        "error": "DNS resolution failed or timed out"
+      },
+      {
+        "endpoint": "/fapi/v1/klines",
+        "http_status": 0,
+        "error": "DNS resolution failed or timed out"
+      },
+      {
+        "endpoint": "/fapi/v1/premiumIndex",
+        "http_status": 0,
+        "error": "DNS resolution failed or timed out"
+      },
+      {
+        "endpoint": "/fapi/v1/openInterest",
+        "http_status": 0,
+        "error": "DNS resolution failed or timed out"
+      },
+      {
+        "endpoint": "/fapi/v1/ticker/24hr",
+        "http_status": 0,
+        "error": "DNS resolution failed or timed out"
+      }
+    ],
+    "connector_public_data": "SUCCEEDED_WITHOUT_HTTP_STATUS",
+    "exchange_info_server_time_utc": "2026-11-10T01:01:01.895Z",
+    "market_snapshot_time_utc": "2026-11-10T12:54:30.000Z",
+    "server_time_drift_seconds": 42808.105,
+    "contract_status": "UNVERIFIED"
+  },
+  "archive": {
+    "branch": "research/raw-ohlcv-archive-20261108T1026Z",
+    "base_5m": "ABSENT",
+    "incremental_5m_rows": 1164,
+    "highwater_5m": "2026-11-10T12:45:00Z",
+    "base_15m": "ABSENT",
+    "incremental_15m_rows": 392,
+    "highwater_15m": "2026-11-10T12:30:00Z",
+    "base_1h_rows": 215484,
+    "base_1h_rows_per_symbol": 53871,
+    "base_1h_start": "2020-09-14T08:00:00Z",
+    "base_1h_end": "2026-11-06T22:00:00Z",
+    "incremental_1h_rows": 96,
+    "highwater_1h": "2026-11-10T11:00:00Z",
+    "raw_4h_rows": 53960,
+    "aligned_4h_rows": 53816,
+    "canonical_4h_rows": 53844,
+    "highwater_4h": "2026-11-10T08:00:00Z",
+    "canonical_4h_end": "2026-11-05T16:00:00Z",
+    "manifest_sha_provenance_mismatches": 13,
+    "incremental_4h_rows": 28,
+    "latest_delta": "research-data/binance-usdm/delta/binance_usdm_delta_20261110T1250Z_5m15m_completed.jsonl",
+    "latest_delta_sha256": "8a9231c9f9b340c2624b1f721f50a12cc738a08c576fdedc5d2914621423d4c4",
+    "latest_delta_manifest": "research-data/binance-usdm/delta/manifest-20261110T1250Z-5m15m.json",
+    "archive_manifest": "research-data/binance-usdm/manifests/archive_manifest_20261110T1250Z_auto11.json"
+  },
+  "data_quality": {
+    "append_series": 8,
+    "append_rows_fetched": 28,
+    "append_completed_rows": 20,
+    "append_forming_rows_excluded": 8,
+    "append_quality_failures": 0,
+    "append_checks": {
+      "duplicates": 0,
+      "missing_intervals": 0,
+      "off_grid": 0,
+      "non_monotonic": 0,
+      "ohlc_invariant_failures": 0,
+      "non_positive_volume": 0,
+      "non_finite": 0,
+      "cross_symbol_alignment": true
+    },
+    "rolling_series": 16,
+    "rolling_rows_fetched": 1920,
+    "rolling_completed_rows": 1904,
+    "rolling_forming_rows_excluded": 16,
+    "rolling_quality_failures": 0
+  },
+  "backtest": {
+    "remote_harness_present": true,
+    "local_harness_invokable": false,
+    "smoke_test": "NOT_RUN",
+    "reason": "No local checkout; Node/npm below repository engine floor."
+  },
+  "storage": {
+    "local_disk_free_gib": 30,
+    "github_archive_branch_writable": true,
+    "archive_delta_readback_verified": true,
+    "delta_manifest_readback_verified": true,
+    "index_readback_verified": true,
+    "archive_manifest_readback_verified": true,
+    "current_snapshot_readback_verified": true
+  },
+  "status": "RESEARCH_EXECUTED",
+  "status_detail": "Reproducible 5m/15m data-quality append only; no strategy experiment and no untouched OOS.",
+  "next_actions": [
+    "Backfill multi-year 5m/15m base history",
+    "Reconcile 4h raw/aligned/canonical rows and 13 provenance mismatches",
+    "Restore direct Binance DNS and fresh /time + /exchangeInfo",
+    "Provision Node24/npm11 checkout and run smoke test",
+    "Backfill historical derivatives and costs",
+    "Run conditional strategy experiments with untouched OOS"
+  ]
+}

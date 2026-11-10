@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0.0",
-  "version": "v96",
-  "as_of_utc": "2026-11-10T08:31:59.629Z",
+  "version": "v97",
+  "as_of_utc": "2026-11-10T10:02:35.002Z",
   "repository": "shubhamtaywade82/crypto-trading-agent",
   "branch": "research/raw-ohlcv-archive-20261108T1026Z",
   "policy": "Prioritize prerequisites and data integrity; do not execute strategy experiments until the harness and required history/cost model are valid.",
@@ -16,9 +16,9 @@
         "npm >=11",
         "local crypto-trading-agent checkout at main commit 669ba233538eb1463c0e7e0a435016a643e7adb5"
       ],
-      "evidence": "Current runtime Debian 13 x86_64; Node v22.16.0; npm 10.9.2; 5 CPU cores; 4.94GB available memory; 30GB free disk; no local repo/package.json/node_modules; Binance SDK packages not installed.",
-      "next_action": "Provision Node 24/npm 11 and clone the exact main commit into the managed workspace.",
-      "blocker": "Runtime floor not met and repository absent locally."
+      "evidence": "Managed runtime verified: Debian 13 x86_64; Node v22.16.0; npm 10.9.2; 5 CPU cores; 4.93GB available RAM; 30GB free disk. No local crypto-trading-agent checkout/package.json/node_modules; Binance SDK packages not installed. Main branch head observed at 02804ef68c683e1940023ec19fc43a9ff2c51aa2; package engine floor is Node >=24/npm >=11.",
+      "next_action": "Provision Node 24/npm 11 and clone crypto-trading-agent at the verified main commit 02804ef68c683e1940023ec19fc43a9ff2c51aa2.",
+      "blocker": "Node/npm engine floor not met and repository is not checked out in the local workspace."
     },
     {
       "id": "Q-002",
@@ -28,9 +28,9 @@
       "prerequisites": [
         "Q-001"
       ],
-      "evidence": "main@669ba233: Candle type has only openTime/OHLCV; klineLoader maps row[0..5] and discards closeTime row[6]; candleIntegrity allows volume=0; scripts/backtest.ts TIMEFRAMES=[15m,1h,4h] and default symbol BTCUSDT.",
-      "next_action": "Add closeTime to Candle; preserve row[6]; reject volume<=0; include 5m; split BTC reference from tradables; add fixture tests for forming bars, duplicates, gaps, OHLC and volume.",
-      "blocker": "Cannot run project tests or apply safe fixes without compatible local checkout."
+      "evidence": "Remote main has scripts/backtest.ts, but it is not executable here. The current script uses 15m/1h/4h and defaults to BTCUSDT; it does not satisfy the requested 5m/15m/1h/4h tradable-universe split. Node engine floor is not met; no local fixture smoke test ran.",
+      "next_action": "After Q-001, inspect current candle loader/integrity code, add closeTime and strict volume/gap checks, add 5m, and separate BTC reference from SOL/ETH/XRP tradables; run fixture tests before research.",
+      "blocker": "No compatible local checkout/runtime; no deterministic fixture smoke test performed."
     },
     {
       "id": "Q-003",
@@ -41,9 +41,9 @@
         "Network-enabled acquisition runner or verified Binance Vision access",
         "Durable storage"
       ],
-      "evidence": "5m and 15m archive indexes still report base_history=ABSENT; only incremental append totals are 940 and 316 rows respectively. Direct fapi.binance.com and data.binance.vision DNS resolution timed out in this run.",
-      "next_action": "Use an egress-enabled runner to backfill public Binance USDⓈ-M klines with paginated date coverage, contract-onboard checks, SHA-256 manifests and gap validation.",
-      "blocker": "No outbound DNS/HTTPS from this runtime."
+      "evidence": "5m and 15m indexes remain INCREMENTAL_ONLY_NO_BASE_HISTORY. Verified cumulative incremental rows are 1,012 (5m) and 340 (15m) across four symbols; highwaters 2026-11-10 09:55Z and 09:45Z. This run appended 16+4 rows at 09:56Z and 4+4 rows at 10:01Z with SHA-256/readback verification. Direct fapi.binance.com DNS resolution fails; connector supports incremental refresh only.",
+      "next_action": "Use an egress-enabled runner to backfill paginated 5m/15m klines from contract onboard dates, then validate coverage, duplicates, gaps, OHLC, volume, and SHA-256 manifests.",
+      "blocker": "No outbound DNS/HTTPS from the local runtime; no multi-year 5m/15m base archive."
     },
     {
       "id": "Q-004",
@@ -53,9 +53,9 @@
       "prerequisites": [
         "Accessible raw pages and manifests"
       ],
-      "evidence": "4h raw rows=53,960; aligned analysis rows=53,816; canonical rows=53,844 (13,461/symbol). Canonical series structurally reports zero gaps/duplicates and verified per-symbol hashes, but raw/canonical counts differ and page-level provenance issues remain. Canonical end=2026-11-05T16:00Z while raw incremental highwater=2026-11-10T04:00Z.",
-      "next_action": "Reconcile row keys and page manifests across all symbols; explain residual row-count/provenance differences before rebuilding canonical files.",
-      "blocker": "Canonical/raw provenance not fully reconciled."
+      "evidence": "4h archive remains DEGRADED: raw rows=53,960; aligned analysis rows=53,816 (13,454/symbol); canonical rows=53,844 (13,461/symbol). Raw 4h highwater=2026-11-10 04:00Z; canonical end=2026-11-05 16:00Z. Cross-interval highwater summary in 4h index was updated to 5m 09:55Z, 15m 09:45Z, 1h 09:00Z, 4h 04:00Z; raw/canonical provenance discrepancy remains.",
+      "next_action": "Reconcile raw page manifests, canonical row keys and per-symbol exclusions; rebuild canonical 4h only after explaining the 116-row raw/canonical and 144-row raw/aligned differences.",
+      "blocker": "Raw/canonical row counts and canonical freshness are still unreconciled."
     },
     {
       "id": "Q-005",
@@ -67,9 +67,9 @@
         "Historical bid/ask or calibrated spread/slippage model",
         "Fee schedule"
       ],
-      "evidence": "Current funding history, OI and taker flow snapshots are available; no durable historical funding/cashflow archive, historical depth/spread series or verified account fee schedule was loaded.",
-      "next_action": "Archive fundingRate history and funding interval metadata; collect or calibrate maker/taker fees, spread, slippage and fill assumptions before any strategy scorecard.",
-      "blocker": "Cost and funding inputs are incomplete for net expectancy."
+      "evidence": "Current funding, OI, taker-volume, global long/short and top-of-book snapshots were retrieved. Funding history returned only the last two settlements per symbol; no durable historical funding/cashflow archive, historical spread/depth series, verified account fee schedule, calibrated slippage or latency/fill model was loaded.",
+      "next_action": "Archive fundingRate history and funding interval metadata; obtain the account fee tier; collect historical bid/ask/depth or calibrate conservative spread/slippage/fill assumptions.",
+      "blocker": "Historical execution-cost and funding cashflow inputs are insufficient for defensible net expectancy."
     },
     {
       "id": "Q-006",
@@ -81,9 +81,9 @@
         "4h provenance reconciliation",
         "Raw archive accessible to analysis runtime"
       ],
-      "evidence": "Prior v56 4h taxonomy was last recomputed 2026-11-05 and carried forward in v95; 70/15/15 split and training-only q33/q67 thresholds. No taxonomy refit this run.",
-      "next_action": "Re-estimate trend/volatility thresholds on training only; measure context occupancy, duration, transition matrix, validation/test drift and stability across symbols.",
-      "blocker": "Required base history and reconciled arrays unavailable in current local runtime."
+      "evidence": "Taxonomy v56 remains carried forward; last recomputed 2026-11-05 using 70/15/15 chronological split and training-only q33/q67 thresholds. No frequency/duration/transition/stability refit ran because 5m/15m base history and 4h provenance remain blocked.",
+      "next_action": "After Q-003/Q-004, re-estimate thresholds on training only and report occupancy, duration, transition matrix, validation/test drift and cross-symbol stability.",
+      "blocker": "Q-003 and Q-004 prevent a reconciled multi-timeframe training sample."
     },
     {
       "id": "Q-007",
@@ -99,9 +99,9 @@
         "Q-006",
         "Deterministic smoke test passes"
       ],
-      "evidence": "0 OOS_VALIDATED entries. Donchian20 conditional matrix has 36 cells with INSUFFICIENT_EVIDENCE; SOL BULL_LOW Donchian20 remains OOS_PROMISING on only 12 OOS trades.",
-      "next_action": "After prerequisites, freeze a pre-registered SOL/ETH/XRP strategy×context experiment with train/validation/untouched-test splits, purge/embargo, calibrated costs, block bootstrap and Holm correction.",
-      "blocker": "No compatible local harness, insufficient 5m/15m history and incomplete costs."
+      "evidence": "0 OOS_VALIDATED entries. SOLUSDT BULL_LOW Donchian20 remains OOS_PROMISING on 12 OOS trades (66.7% win, 41.7% target-before-stop, mean net 0.606R, PF 2.72, max DD 1.3R, block-bootstrap 95% CI [0.086, 1.199]); sample is far below 100 trades and cost/robustness gates are incomplete. The other 36 cells remain INSUFFICIENT_EVIDENCE. No experiment ran this run.",
+      "next_action": "After Q-001 through Q-006, freeze a single strategy×context×symbol experiment with chronological train/validation/untouched-test splits, purge/embargo, calibrated costs, block bootstrap and Holm correction.",
+      "blocker": "Compatible harness/smoke test, 5m/15m base history, 4h reconciliation and realistic costs are all missing."
     },
     {
       "id": "Q-008",
@@ -111,9 +111,54 @@
       "prerequisites": [
         "Q-006"
       ],
-      "evidence": "Last taxonomy review recorded 2026-11-09; no evidence-based reason to change thresholds today.",
-      "next_action": "At next 7-day review, inspect occupancy drift, context stability, multiple-testing burden and rejected/insufficient cells.",
+      "evidence": "Last weekly taxonomy/multiple-testing review recorded 2026-11-09; no evidence-based taxonomy change is justified today.",
+      "next_action": "Next weekly review due 2026-11-16, subject to Q-006 prerequisites.",
       "blocker": "Wait for the weekly review window and reconciled data."
     }
-  ]
+  ],
+  "last_run": {
+    "run_id": "context-strategy-2026-11-10T1002Z-auto11",
+    "status": "RESEARCH_BLOCKED",
+    "monitoring_completed": true,
+    "research_experiment": {
+      "status": "NOT_RUN",
+      "reason": "Node/npm floor not met; no local checkout/harness; 5m/15m base history absent; 4h provenance and historical execution-cost inputs incomplete."
+    },
+    "archive_updates": [
+      {
+        "intervals": [
+          "5m",
+          "15m"
+        ],
+        "rows": 20,
+        "delta_path": "research-data/binance-usdm/delta/binance_usdm_delta_20261110T0956Z_5m15m_completed.jsonl",
+        "delta_sha256": "eb14e7e50fd873eff6a6393097f1f487b159338bc1463470ce484f616977c103",
+        "manifest_path": "research-data/binance-usdm/delta/manifest-20261110T0956Z-5m15m.json",
+        "manifest_sha256": "3e397b535f3ea5e88a5e091520ab39abfd7bbe6c02b228d489c1d57d9ebd29e1",
+        "readback_verified": true
+      },
+      {
+        "intervals": [
+          "5m",
+          "15m",
+          "1h"
+        ],
+        "rows": 12,
+        "delta_path": "research-data/binance-usdm/delta/binance_usdm_delta_20261110T1001Z_5m15m1h_completed.jsonl",
+        "delta_sha256": "15bcb9b33199cd60a4d9121693d791ddc9f97a329d1ab9e088082288fc41cf1d",
+        "manifest_path": "research-data/binance-usdm/delta/manifest-20261110T1001Z-5m15m1h.json",
+        "manifest_sha256": "acdad0f33aae26ea22d82527832e2e63efa9c6c1ca605a7cbc35cafe3b88409c",
+        "readback_verified": true
+      }
+    ],
+    "archive_highwaters_utc": {
+      "5m": "2026-11-10T09:55:00.000Z",
+      "15m": "2026-11-10T09:45:00.000Z",
+      "1h": "2026-11-10T09:00:00.000Z",
+      "4h": "2026-11-10T04:00:00.000Z"
+    },
+    "current_snapshot_ref": "research-data/binance-usdm/current_market_snapshot_20261110T100235Z.json",
+    "registry_ref": "research-data/binance-usdm/conditional-strategy-registry-snapshot-v97.json",
+    "next_executable_action": "Provision Node 24/npm 11 and a local checkout; in parallel, run the 5m/15m multi-year backfill on an egress-enabled runner and reconcile 4h raw/canonical rows."
+  }
 }

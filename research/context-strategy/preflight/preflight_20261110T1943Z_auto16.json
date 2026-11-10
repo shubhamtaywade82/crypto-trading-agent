@@ -1,0 +1,199 @@
+{
+  "schemaVersion": "1.0.0",
+  "runId": "context-strategy-20261110T1942Z-auto16",
+  "asOfUtc": "2026-11-10T19:43:55.001Z",
+  "classification": "RESEARCH_EXECUTED",
+  "checks": [
+    {
+      "capability": "shell/compute",
+      "status": "DEGRADED",
+      "evidence": {
+        "cwd": "/",
+        "os": "Linux 6.18.57 x86_64",
+        "node": "v22.16.0",
+        "npm": "10.9.2",
+        "cpu": 5,
+        "memoryTotal": "5.8 GiB",
+        "memoryAvailable": "4.7 GiB",
+        "diskFree": "30 GiB"
+      },
+      "impact": "Shell and lightweight calculations ran, but project runtime floor is not met.",
+      "nextAction": "Provision Node >=24 and npm >=11."
+    },
+    {
+      "capability": "repository/code",
+      "status": "BLOCKED",
+      "evidence": {
+        "localCheckout": "ABSENT",
+        "expectedPath": "/crypto-trading-agent",
+        "remoteGitHub": "ACCESSIBLE",
+        "sdkImport": "ERR_MODULE_NOT_FOUND for @nemesis-oss/binance-sdk"
+      },
+      "impact": "No repository harness or project scripts could be invoked.",
+      "nextAction": "Clone repository in a compatible workspace and install locked dependencies."
+    },
+    {
+      "capability": "network/Binance endpoints",
+      "status": "DEGRADED",
+      "evidence": {
+        "directRestTime": "HTTP 000; DNS resolution failure for fapi.binance.com",
+        "connectorMarketData": "SUCCESS",
+        "latestMarkTimeUtc": "2026-11-10T19:43:55.001Z",
+        "latestDepthTimeUtc": "2026-11-10T19:43:48.847Z",
+        "exchangeInfoServerTimeUtc": "2026-11-10T01:01:01.895Z",
+        "metadataStaleness": "18h42m53.106s",
+        "httpStatusExposedByConnector": false
+      },
+      "impact": "Current snapshot is available; contract metadata cannot be treated as fresh execution validation.",
+      "nextAction": "Restore direct REST DNS or obtain fresh server time and exchange metadata."
+    },
+    {
+      "capability": "raw historical archive",
+      "status": "DEGRADED",
+      "evidence": {
+        "archiveBranch": "research/raw-ohlcv-archive-20261108T1026Z",
+        "rowsAppendedThisRun": 76,
+        "highwaters": {
+          "5m": "2026-11-10T19:35:00.000Z",
+          "15m": "2026-11-10T19:15:00.000Z",
+          "1h": "2026-11-10T18:00:00.000Z",
+          "4h": "2026-11-10T12:00:00.000Z"
+        },
+        "coverage": {
+          "5m": "0 base + 1,492 incremental rows",
+          "15m": "0 base + 500 incremental rows",
+          "1h": "215,484 base + 124 incremental rows",
+          "4h": "53,960 raw / 53,816 aligned / 53,844 canonical"
+        }
+      },
+      "impact": "Recent slices are persisted; intraday historical base and 4h provenance remain inadequate.",
+      "nextAction": "Backfill multi-year 5m/15m and reconcile the 13 4h manifest SHA mismatches."
+    },
+    {
+      "capability": "data quality/coverage",
+      "status": "DEGRADED",
+      "evidence": {
+        "appendedRows": 76,
+        "completedRows": 76,
+        "formingRowsAppended": 0,
+        "duplicates": 0,
+        "missingIntervals": 0,
+        "offGrid": 0,
+        "nonMonotonic": 0,
+        "ohlcFailures": 0,
+        "nonPositiveVolume": 0,
+        "nonFinite": 0,
+        "crossSymbolAlignment": true,
+        "rollingSamples": "16 symbol/timeframe series; 100 returned and 99 completed per series; zero quality failures"
+      },
+      "impact": "Incremental data passes; historical intraday coverage is not statistically adequate.",
+      "nextAction": "Continue incremental validation while obtaining complete historical base data."
+    },
+    {
+      "capability": "backtest harness/smoke test",
+      "status": "BLOCKED",
+      "evidence": {
+        "localRepo": "ABSENT",
+        "sdkImport": "FAILED",
+        "deterministicFixture": "NOT_RUN",
+        "strategyHarness": "NOT_INVOKED",
+        "PIT_DATABASE_URL": "UNSET"
+      },
+      "impact": "No strategy backtest or OOS evaluation was run.",
+      "nextAction": "Provision compatible checkout, point-in-time funding database and deterministic fixture; run twice before EXP-001."
+    },
+    {
+      "capability": "disk/storage",
+      "status": "PASS",
+      "evidence": {
+        "diskFree": "30 GiB",
+        "githubArchiveBranch": "WRITABLE",
+        "mainBranch": "WRITABLE"
+      },
+      "impact": "Sufficient for incremental artifacts; no local historical bulk backfill was attempted.",
+      "nextAction": "Retain atomic writes and readback verification."
+    },
+    {
+      "capability": "artifact readback",
+      "status": "DEGRADED",
+      "evidence": {
+        "deltaFiles": 4,
+        "deltaSha256Verified": 4,
+        "deltaManifestsReadbackVerified": 4,
+        "indexFilesReadbackVerified": 4,
+        "archiveManifestReadbackVerified": true,
+        "mainExperimentAndSnapshotWritten": true,
+        "mainArtifactReadbackPending": true
+      },
+      "impact": "Archive data/index/manifest artifacts are verified; current main report/snapshot/preflight/run manifest still require readback after commit.",
+      "nextAction": "Reopen and hash all main artifacts before finalizing."
+    }
+  ],
+  "endpointOutcomes": [
+    {
+      "endpoint": "GET /fapi/v1/time",
+      "directRest": "HTTP 000 DNS failure",
+      "connector": "NOT_EXPOSED"
+    },
+    {
+      "endpoint": "GET /fapi/v1/exchangeInfo",
+      "connector": "SUCCESS_BUT_STALE_SERVER_TIME"
+    },
+    {
+      "endpoint": "GET /fapi/v1/klines",
+      "connector": "SUCCESS",
+      "symbols": [
+        "BTCUSDT",
+        "ETHUSDT",
+        "SOLUSDT",
+        "XRPUSDT"
+      ],
+      "intervals": [
+        "5m",
+        "15m",
+        "1h",
+        "4h"
+      ]
+    },
+    {
+      "endpoint": "GET /fapi/v1/markPrice",
+      "connector": "SUCCESS"
+    },
+    {
+      "endpoint": "GET /fapi/v1/openInterest",
+      "connector": "SUCCESS"
+    },
+    {
+      "endpoint": "GET /fapi/v1/ticker/24hr",
+      "connector": "SUCCESS"
+    },
+    {
+      "endpoint": "GET /fapi/v1/fundingRate",
+      "connector": "SUCCESS"
+    },
+    {
+      "endpoint": "GET /futures/data/openInterestHist",
+      "connector": "SUCCESS"
+    },
+    {
+      "endpoint": "GET /futures/data/takerlongshortRatio",
+      "connector": "SUCCESS"
+    },
+    {
+      "endpoint": "GET /futures/data/globalLongShortAccountRatio",
+      "connector": "SUCCESS"
+    },
+    {
+      "endpoint": "GET /futures/data/basis",
+      "connector": "SUCCESS"
+    },
+    {
+      "endpoint": "GET /fapi/v1/depth",
+      "connector": "SUCCESS"
+    }
+  ],
+  "researchStatus": "RESEARCH_EXECUTED_DATA_QUALITY_ONLY",
+  "strategyExperimentStatus": "RESEARCH_BLOCKED",
+  "oosEvaluationStatus": "NOT_RUN",
+  "reason": "A reproducible 76-row incremental archive data-quality experiment completed. Strategy harness prerequisites remain unavailable."
+}

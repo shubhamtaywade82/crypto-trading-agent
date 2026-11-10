@@ -1,0 +1,143 @@
+{
+  "schemaVersion": "1.0.0",
+  "runId": "context-strategy-20261110T2122Z-auto18",
+  "scheduledForLocal": "2026-11-11T02:51:29+05:30",
+  "startedAtUtc": "2026-11-10T21:21:29Z",
+  "completedAtUtc": "2026-11-10T21:28:43.000Z",
+  "asOfUtc": "2026-11-10T21:28:43.000Z",
+  "classification": "RESEARCH_EXECUTED",
+  "researchType": "INCREMENTAL_ARCHIVE_DATA_QUALITY_AND_MARKET_MONITORING",
+  "strategyExperimentStatus": "RESEARCH_BLOCKED",
+  "oosEvaluationStatus": "NOT_RUN",
+  "repository": {
+    "fullName": "shubhamtaywade82/crypto-trading-agent",
+    "mainCommitObservedAtStart": "c6b9e75437d1761c7a43b8004f734271544a05bf",
+    "localCheckout": "ABSENT",
+    "codeExecuted": false
+  },
+  "environment": {
+    "cwd": "/",
+    "os": "Linux 6.18.57 x86_64",
+    "node": "v22.16.0",
+    "npm": "10.9.2",
+    "python": "3.13.5",
+    "cpu": 5,
+    "memoryTotalBytes": 6090668000,
+    "memoryAvailableBytes": 4938312000,
+    "diskFreeGiB": 30,
+    "binanceSdkImport": "MISSING"
+  },
+  "inputs": {
+    "sourceEndpoint": "GET /fapi/v1/klines via Binance USD-M public connector",
+    "archiveBranch": "research/raw-ohlcv-archive-20261108T1026Z",
+    "archiveManifestPath": "research-data/binance-usdm/manifests/archive_manifest_20261110T2122Z_auto18.json",
+    "archiveManifestBlobSha1": "d49d405f48aec9c61974f282e68ea724abfe655d",
+    "symbols": [
+      "BTCUSDT",
+      "ETHUSDT",
+      "SOLUSDT",
+      "XRPUSDT"
+    ],
+    "intervals": [
+      "5m",
+      "15m",
+      "1h",
+      "4h"
+    ]
+  },
+  "outputs": {
+    "snapshot": {
+      "path": "research-data/binance-usdm/current_market_snapshot_20261110T2128Z_auto18.json",
+      "gitBlobSha1": "f7317640652c3aaac6de27d56bc0ab1ad57a571e",
+      "readbackVerified": true
+    },
+    "experiment": {
+      "path": "research/context-strategy/experiments/incremental_archive_append_20261110T2122Z_auto18.result.json",
+      "gitBlobSha1": "fb62bd2bcc72a8306c5bfd869aa0bb02f1ab651f",
+      "readbackVerified": true
+    },
+    "preflight": {
+      "path": "research/context-strategy/preflight/preflight_20261110T2128Z_auto18.json",
+      "gitBlobSha1": "2b02369b42f262ec6c2e8b095163052829863596",
+      "readbackVerified": true
+    },
+    "report": {
+      "path": "research/context-strategy/reports/2026-11-10T2128Z_auto18.md",
+      "gitBlobSha1": "d10600d0e5c9351266dbc1d196dfda850826df0b",
+      "readbackVerified": true
+    },
+    "registry": {
+      "path": "research/context-strategy/registry.json",
+      "gitBlobSha1": "d4048c45e18dcdd4b6483d604857b307ab6c7064",
+      "readbackVerified": true,
+      "updatedThisRun": true
+    },
+    "queue": {
+      "path": "research/context-strategy/queue.json",
+      "readbackPending": true
+    }
+  },
+  "archive": {
+    "branch": "research/raw-ohlcv-archive-20261108T1026Z",
+    "head": "ef535d58b1075c69449a782328fb7dcfb33a80df",
+    "rowsFetched": 240,
+    "completedRows": 64,
+    "formingExcluded": 12,
+    "preHighwaterExcluded": 164,
+    "rowsAppended": 64,
+    "readbackVerified": true,
+    "rowsByInterval": {
+      "5m": 44,
+      "15m": 16,
+      "1h": 4,
+      "4h": 0
+    },
+    "highwaters": {
+      "5m": "2026-11-10T21:15:00.000Z",
+      "15m": "2026-11-10T21:00:00.000Z",
+      "1h": "2026-11-10T20:00:00.000Z",
+      "4h": "2026-11-10T16:00:00.000Z"
+    }
+  },
+  "dataQuality": {
+    "series": 12,
+    "duplicates": 0,
+    "missingIntervals": 0,
+    "offGrid": 0,
+    "nonMonotonic": 0,
+    "ohlcInvariantFailures": 0,
+    "nonPositiveVolume": 0,
+    "nonFinite": 0,
+    "crossSymbolAlignment": true
+  },
+  "marketSnapshot": {
+    "retrievedAtUtc": "2026-11-10T21:28:13.000Z",
+    "rowsReturned": 2800,
+    "completedBars": 2784,
+    "formingExcluded": 16,
+    "registryValidatedEntries": 0,
+    "decisions": {
+      "SOLUSDT": "NO_TRADE",
+      "ETHUSDT": "NO_TRADE",
+      "XRPUSDT": "NO_TRADE"
+    }
+  },
+  "strategy": {
+    "experimentExecuted": false,
+    "oosEvaluated": false,
+    "registryValidatedEntries": 0,
+    "registryEntries": 5,
+    "insufficientEvidence": 4,
+    "rejected": 1,
+    "inheritedOosPromisingUnverified": 1
+  },
+  "limitations": [
+    "No local checkout or supported Node/npm runtime; SDK missing.",
+    "Direct Binance REST DNS timed out; connector HTTP status not exposed.",
+    "exchangeInfo serverTime stale by 73,631.108 seconds; execution validation blocked.",
+    "5m/15m multi-year base absent.",
+    "4h canonical end-date conflict and 13 SHA provenance mismatches remain.",
+    "Historical funding/OI/taker and calibrated execution-cost archives incomplete."
+  ],
+  "nextAction": "Backfill 5m/15m, reconcile 4h provenance, restore Node24/npm11 checkout and SDK, build point-in-time derivatives archive, then run deterministic fixture twice and frozen EXP-001."
+}

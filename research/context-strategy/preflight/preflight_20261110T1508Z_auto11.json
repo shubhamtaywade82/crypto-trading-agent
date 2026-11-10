@@ -75,12 +75,39 @@
     {
       "capability": "artifact readback",
       "status": "PASS",
-      "evidence": "Four deltas, four delta manifests, four archive manifests and affected indexes read back and hashes matched.",
-      "impact": "Raw append persisted. Main report/snapshot will be published in this commit.",
-      "nextAction": "Read back main run artifacts after publication."
+      "evidence": "Four raw deltas, four delta manifests, four archive manifests and affected indexes read back with matching SHA-256/Git blob SHA-1. Main-branch snapshot, preflight, report, run JSON and queue read back with matching Git blob SHA-1 after commit 942777a09ef428382bb2168e71de6b96a7d25935.",
+      "impact": "Both raw archive and main run artifacts are persisted and verified.",
+      "nextAction": "Continue readback verification after every append/publication."
     }
   ],
   "runClassification": "MONITORING_ONLY",
   "strategyExperiment": "RESEARCH_BLOCKED",
-  "oosEvaluated": false
+  "oosEvaluated": false,
+  "mainArtifactReadback": {
+    "verified": true,
+    "verifiedAtUtc": "2026-11-10T15:15:48.740Z",
+    "commitSha": "942777a09ef428382bb2168e71de6b96a7d25935",
+    "files": [
+      {
+        "path": "research-data/binance-usdm/current_market_snapshot_20261110T1508Z_auto11.json",
+        "blobSha1": "a478b33e602aec21d9e76e0a3a0957121d3726f5"
+      },
+      {
+        "path": "research/context-strategy/preflight/preflight_20261110T1508Z_auto11.json",
+        "blobSha1": "6d4a51c2a54c3eb3c88fe869739ecc16ec90d033"
+      },
+      {
+        "path": "research/context-strategy/reports/2026-11-10T1508Z_auto11.md",
+        "blobSha1": "062ba10b4d51e8e76de0a26b3e9877eddafb999a"
+      },
+      {
+        "path": "research-runs/context-strategy-20261110T1508Z-auto11.json",
+        "blobSha1": "27971b0961e8386bde641c96523ab59d764b52a1"
+      },
+      {
+        "path": "research/context-strategy/queue.json",
+        "blobSha1": "bf3e41296a46ea8e7fa336d60251892d5610553c"
+      }
+    ]
+  }
 }

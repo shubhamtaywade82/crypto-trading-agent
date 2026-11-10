@@ -1,0 +1,202 @@
+{
+  "schemaVersion": 1,
+  "runId": "context-strategy-20261110T1730Z-auto14",
+  "asOfUtc": "2026-11-10T17:35:51.001Z",
+  "classification": "MONITORING_ONLY",
+  "researchStatus": "RESEARCH_BLOCKED",
+  "oosEvaluated": false,
+  "repository": "shubhamtaywade82/crypto-trading-agent",
+  "codeCommit": "608082d30b23cfb19484469b4ade6ca2df3f61b5",
+  "archiveBranch": "research/raw-ohlcv-archive-20261108T1026Z",
+  "archiveHead": "c5d645c64561e9a0c848e30d49caab77e79d02ef",
+  "checks": [
+    {
+      "capability": "shell_compute",
+      "status": "DEGRADED",
+      "evidence": {
+        "cwd": "/",
+        "os": "Linux 6.18.57 x86_64",
+        "node": "v22.16.0",
+        "npm": "10.9.2",
+        "cpu": 5,
+        "memoryTotal": "5.8GiB",
+        "memoryAvailable": "4.7GiB",
+        "diskAvailable": "30GiB / 32GiB"
+      },
+      "impact": "Project requires Node >=24 and npm >=11; local compute cannot invoke the repo harness.",
+      "nextAction": "Provision a persistent compatible Node24/npm11 workspace."
+    },
+    {
+      "capability": "repository_code",
+      "status": "DEGRADED",
+      "evidence": {
+        "remoteMainCommit": "608082d30b23cfb19484469b4ade6ca2df3f61b5",
+        "packageEngines": {
+          "node": ">=24",
+          "npm": ">=11"
+        },
+        "localCheckout": false,
+        "packageFilesInRuntime": 2,
+        "directionalExperimentScriptRemote": "EXISTS",
+        "binanceSdkImport": "MODULE_NOT_FOUND",
+        "ciStatuses": []
+      },
+      "impact": "Remote source is inspectable but no local executable project or SDK.",
+      "nextAction": "Clone the repository in a compatible persistent workspace and install dependencies."
+    },
+    {
+      "capability": "binance_network",
+      "status": "DEGRADED",
+      "evidence": {
+        "connector": "USD-M ticker, premiumIndex, OI, funding history, klines, OI history, taker flow, global long-short and depth calls succeeded",
+        "directRest": {
+          "/fapi/v1/time": "HTTP 000; curl exit 6 DNS",
+          "/fapi/v1/exchangeInfo": "HTTP 000; 5s DNS timeout",
+          "/fapi/v1/klines": "HTTP 000; curl exit 6 DNS",
+          "/fapi/v1/premiumIndex": "HTTP 000; 5s DNS timeout",
+          "/fapi/v1/openInterest": "HTTP 000; curl exit 6 DNS",
+          "/fapi/v1/ticker/24hr": "HTTP 000; 5s DNS timeout"
+        },
+        "exchangeInfoServerTimeUtc": "2026-11-10T01:01:01.892Z",
+        "markEndpointTimeUtc": "2026-11-10T17:35:29.000Z",
+        "exchangeInfoAgeSeconds": 59667.108
+      },
+      "impact": "Current connector data is usable for monitoring; direct REST historical backfill and fresh contract metadata are blocked.",
+      "nextAction": "Restore fapi.binance.com DNS/HTTPS or an approved public-data mirror; require fresh /fapi/v1/time and exchangeInfo."
+    },
+    {
+      "capability": "raw_historical_archive",
+      "status": "DEGRADED",
+      "evidence": {
+        "archiveBranch": "research/raw-ohlcv-archive-20261108T1026Z",
+        "archiveHead": "c5d645c64561e9a0c848e30d49caab77e79d02ef",
+        "manifestPath": "research-data/binance-usdm/manifests/archive_manifest_20261110T1736Z_auto14.json",
+        "rowsAppendedThisRun": 32,
+        "rowsByInterval": {
+          "5m": 24,
+          "15m": 8,
+          "1h": 0,
+          "4h": 0
+        },
+        "highwaters": {
+          "5m": "2026-11-10T17:30:00.000Z",
+          "15m": "2026-11-10T17:15:00.000Z",
+          "1h": "2026-11-10T16:00:00.000Z",
+          "4h": "2026-11-10T12:00:00.000Z"
+        },
+        "baseRows": {
+          "5m": 0,
+          "15m": 0,
+          "1h": 215484,
+          "4hCanonical": 53844
+        },
+        "incrementalRows": {
+          "5m": 1392,
+          "15m": 468
+        }
+      },
+      "impact": "Recent data persisted; multi-year 5m/15m base remains absent and 4h canonical/index provenance is degraded.",
+      "nextAction": "Backfill 5m/15m from checksum-verified public archives and reconcile 4h raw/aligned/canonical metadata."
+    },
+    {
+      "capability": "data_quality_coverage",
+      "status": "DEGRADED",
+      "evidence": {
+        "recentSeries": 16,
+        "rowsReturned": 1600,
+        "completed": 1584,
+        "formingExcluded": 16,
+        "duplicates": 0,
+        "missingIntervals": 0,
+        "offGrid": 0,
+        "nonMonotonic": 0,
+        "ohlcInvariantFailures": 0,
+        "nonPositiveVolume": 0,
+        "nonFinite": 0,
+        "fourHourRows": {
+          "raw": 53960,
+          "aligned": 53816,
+          "canonical": 53844
+        },
+        "fourHourManifestShaMismatches": 13
+      },
+      "impact": "Rolling samples and appended deltas are clean, but full intraday historical coverage is inadequate.",
+      "nextAction": "Complete historical archive backfill and provenance reconciliation before context re-estimation."
+    },
+    {
+      "capability": "backtest_harness_smoke_test",
+      "status": "BLOCKED",
+      "evidence": {
+        "remoteScriptExists": true,
+        "localInvocation": false,
+        "fixtureSmokeTest": "NOT_RUN",
+        "experimentRun": false,
+        "oosRun": false,
+        "exp001Config": "EXISTS",
+        "exp002Config": "EXISTS",
+        "exp003Config": "NOT_FOUND",
+        "fundingSource": "db",
+        "PIT_DATABASE_URL": "UNAVAILABLE"
+      },
+      "impact": "No deterministic smoke test, experiment or untouched OOS evaluation can be executed.",
+      "nextAction": "Provision Node24/npm11 and checkout, expose the point-in-time funding source, run fixture twice, then frozen EXP-001."
+    },
+    {
+      "capability": "disk_storage",
+      "status": "PASS",
+      "evidence": {
+        "localDiskAvailable": "30GiB / 32GiB",
+        "remoteGitHubStorage": "WRITABLE",
+        "archiveBranchHead": "c5d645c64561e9a0c848e30d49caab77e79d02ef"
+      },
+      "impact": "Remote GitHub branch is durable; local runtime storage is ephemeral.",
+      "nextAction": "Continue atomic remote commits and readback verification."
+    },
+    {
+      "capability": "artifact_readback",
+      "status": "PASS",
+      "evidence": {
+        "deltas": [
+          {
+            "path": "research-data/binance-usdm/delta/binance_usdm_delta_20261110T1726Z_5m15m_completed.jsonl",
+            "rows": 20,
+            "bytes": 5858,
+            "sha256": "523a1708f7e0b44d7bfd0deeccd3feb8c6f573b92455b1b7639ff63ac4a27a5c"
+          },
+          {
+            "path": "research-data/binance-usdm/delta/binance_usdm_delta_20261110T1731Z_5m15m_boundary.jsonl",
+            "rows": 8,
+            "bytes": 2346,
+            "sha256": "d9511b2124171567c7ef706d84e32a6d97e4aa0fef8abe63ddb543fb8d8aeac5"
+          },
+          {
+            "path": "research-data/binance-usdm/delta/binance_usdm_delta_20261110T1736Z_5m_boundary.jsonl",
+            "rows": 4,
+            "bytes": 1169,
+            "sha256": "725cd986835f21f24e6230c54beab92aa7eafe5888c9c4d0fe4e65c56b39b1c8"
+          }
+        ],
+        "archiveManifest": "research-data/binance-usdm/manifests/archive_manifest_20261110T1736Z_auto14.json",
+        "indexesReadBack": true,
+        "allDeltaSha256AndGitBlobSha1Matched": true
+      },
+      "impact": "All three archive deltas, manifests, affected indexes and final archive manifest were read back and verified.",
+      "nextAction": "Verify main-branch report, snapshot, preflight, run manifest and queue after commit."
+    }
+  ],
+  "experiment": {
+    "executed": false,
+    "oos": false,
+    "blockers": [
+      "No local checkout",
+      "Node22/npm10 below package engines",
+      "Binance SDK import unavailable",
+      "Direct Binance REST DNS failure",
+      "5m/15m multi-year base absent",
+      "EXP-001/002 fundingSource=db but PIT_DATABASE_URL unavailable",
+      "4h canonical/provenance discrepancy",
+      "EXP-003 config absent"
+    ],
+    "nextExecutableAction": "Restore historical source and compatible runtime; provide point-in-time funding DB; run deterministic fixture twice; then frozen EXP-001."
+  }
+}

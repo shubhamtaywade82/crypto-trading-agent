@@ -1,0 +1,114 @@
+{
+  "schema_version": "1.0.0",
+  "experiment_id": "EXP-CTX-4H-001",
+  "title": "Pooled 4h trend-volatility context taxonomy stability",
+  "status": "PRE_REGISTERED_BEFORE_EXECUTION",
+  "hypothesis": "A compact trend x volatility taxonomy with thresholds fitted only on the first 60% of the aligned 4h sample produces non-degenerate contexts and reasonably stable frequency/transition structure on later chronological validation and test segments.",
+  "universe": [
+    "BTCUSDT",
+    "ETHUSDT",
+    "SOLUSDT",
+    "XRPUSDT"
+  ],
+  "timeframe": "4h",
+  "inputs": [
+    {
+      "symbol": "BTCUSDT",
+      "path": "research-data/binance-usdm/4h/canonical/BTCUSDT_4h_20200914T0800Z_20261105T1600Z.jsonl",
+      "rows": 13461,
+      "sha256": "7088aa2b2cc48c3895fd77dfc2ece0ae812062f24a70374ec556273a2d8380d7",
+      "git_blob_sha1": "a465025b2276a0e9cfbf805ba64be4da6ed08868"
+    },
+    {
+      "symbol": "ETHUSDT",
+      "path": "research-data/binance-usdm/4h/canonical/ETHUSDT_4h_20200914T0800Z_20261105T1600Z.jsonl",
+      "rows": 13461,
+      "sha256": "0e1ba53fb3c4c42e89440f2aaabfc7eead44ac84bc67a083c86df96a2f12dce2",
+      "git_blob_sha1": "26034cbb638d45295504f8e1a52862adca63eea6"
+    },
+    {
+      "symbol": "SOLUSDT",
+      "path": "research-data/binance-usdm/4h/canonical/SOLUSDT_4h_20200914T0800Z_20261105T1600Z.jsonl",
+      "rows": 13461,
+      "sha256": "148389f0347fe05307e2a274c579ccc1c495e32eaad2e49cfb19ca211df89156",
+      "git_blob_sha1": "77af5caa7d5e76c8efc3fd8571c55a20376ac97f"
+    },
+    {
+      "symbol": "XRPUSDT",
+      "path": "research-data/binance-usdm/4h/canonical/XRPUSDT_4h_20200914T0800Z_20261105T1600Z.jsonl",
+      "rows": 13461,
+      "sha256": "b1a96c24f0e91aff7368facc428dffa22360093ce74dfe186d259b66d19f8023",
+      "git_blob_sha1": "242e2c96a05feb175e869edbdea23ee85a136f69"
+    }
+  ],
+  "data_window": {
+    "start_utc": "2020-09-14T08:00:00.000Z",
+    "end_last_completed_open_utc": "2026-11-05T16:00:00.000Z",
+    "rows_per_symbol": 13461,
+    "expected_aligned_rows": 13461
+  },
+  "split": {
+    "method": "chronological aligned-index split",
+    "train_fraction": 0.6,
+    "validation_fraction": 0.2,
+    "untouched_test_fraction": 0.2,
+    "train_indices": "[0,8076)",
+    "validation_indices": "[8076,10768)",
+    "test_indices": "[10768,13461)",
+    "feature_warmup_bars": 100,
+    "fit_thresholds_on": "TRAIN_ONLY",
+    "test_access": "single final evaluation after frozen spec"
+  },
+  "features": {
+    "ema_fast": "EMA(close,20)",
+    "ema_slow": "EMA(close,50)",
+    "trend_spread_pct": "100*(EMA20-EMA50)/close",
+    "momentum_20_pct": "100*(close/close[t-20]-1)",
+    "true_range": "max(high-low,abs(high-prev_close),abs(low-prev_close))",
+    "volatility": "100*SMA(true_range,14)/close"
+  },
+  "thresholds": {
+    "pooled_across_all_four_symbols_and_train_rows": true,
+    "trend_sideways_cutoff": "Q33(abs(trend_spread_pct))",
+    "volatility_low_cutoff": "Q33(volatility)",
+    "volatility_high_cutoff": "Q67(volatility)",
+    "shock_cutoff": "Q99(volatility)",
+    "quantile_method": "linear interpolation"
+  },
+  "classifier": {
+    "priority": "SHOCK if volatility > Q99; otherwise classify volatility LOW/NORMAL/HIGH; then trend",
+    "trend": "SIDEWAYS if abs(spread)<Q33; UP if spread>=Q33 and momentum20>0; DOWN if spread<=-Q33 and momentum20<0; TRANSITION otherwise",
+    "context_labels": "UP_LOW, UP_NORMAL, UP_HIGH, DOWN_LOW, DOWN_NORMAL, DOWN_HIGH, SIDEWAYS_LOW, SIDEWAYS_NORMAL, SIDEWAYS_HIGH, TRANSITION_LOW, TRANSITION_NORMAL, TRANSITION_HIGH, SHOCK"
+  },
+  "metrics": [
+    "context frequency per symbol and split",
+    "mean/median contiguous duration in bars and hours",
+    "within-symbol transition counts/probabilities",
+    "train-validation and train-test frequency Pearson correlation",
+    "Jensen-Shannon divergence of context-frequency distributions",
+    "sparse contexts below 1% frequency"
+  ],
+  "predeclared_stability_gates": {
+    "minimum_test_frequency_pct": 1,
+    "minimum_train_test_frequency_pearson": 0.7,
+    "maximum_train_test_js_divergence": 0.15,
+    "interpretation": "Descriptive taxonomy stability only; failure does not imply a trading strategy is rejected."
+  },
+  "exclusions": [
+    "first 100 bars per symbol for feature warmup",
+    "incomplete/forming candles are not present in canonical input"
+  ],
+  "costs": "Not applicable: no trades or execution simulation.",
+  "multiple_testing": "Not applicable: one pre-registered descriptive taxonomy; no strategy parameter search.",
+  "limitations": [
+    "4h canonical data ends 2026-11-05T16:00Z; newer raw 4h deltas are not merged into canonical.",
+    "This is context discovery, not a strategy backtest, not target-probability calibration, and not OOS trade validation.",
+    "No funding/OI/taker features in this experiment."
+  ],
+  "reproducibility": {
+    "deterministic": true,
+    "random_seed": null,
+    "execution_runtime": "JavaScript tool runtime",
+    "script_path": "research/context-strategy/experiments/EXP-CTX-4H-001.js"
+  }
+}

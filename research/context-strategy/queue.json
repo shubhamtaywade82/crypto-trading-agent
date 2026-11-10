@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAtUtc": "2026-11-10T09:39:16.738Z",
+  "updatedAtUtc": "2026-11-10T12:54:30.000Z",
   "items": [
     {
       "id": "Q_INCREMENTAL_ARCHIVE_REFRESH_20261110T0929Z",
@@ -66,8 +66,8 @@
         "Persistent archive",
         "Checksum/readback"
       ],
-      "nextAction": "Continue completed-bar deltas; backfill multi-year 5m/15m/1m from an auditable bulk source; reconcile 4h raw page row keys against canonical JSONL before any merge.",
-      "blocker": "5m/15m base history remains absent. 4h raw/aligned/canonical counts remain 53960/53816/53844; BTC/ETH/XRP raw are +38 rows each versus canonical and SOL is -6. Current incremental highwaters: 5m 09:30Z, 15m 09:15Z, 1h 08:00Z, 4h 04:00Z on 2026-11-10.",
+      "nextAction": "Backfill multi-year 5m/15m/1m from an auditable bulk source; reconcile 4h raw page row keys before merge.",
+      "blocker": "5m/15m base history absent; 4h raw/aligned/canonical counts 53960/53816/53844; BTC/ETH/XRP raw +38 each vs canonical and SOL -6; 13 manifest SHA provenance mismatches. Highwaters 5m 12:45Z, 15m 12:30Z, 1h 11:00Z, 4h 08:00Z.",
       "result": {
         "canonical4hRowsPerSymbol": 13461,
         "canonical1hRowsPerSymbol": 53871,
@@ -197,8 +197,8 @@
       "prerequisites": [
         "Direct bounded HTTP or uncached official endpoint"
       ],
-      "nextAction": "Restore direct DNS/HTTPS or obtain uncached official /fapi/v1/time and /fapi/v1/exchangeInfo. Require <=5 seconds server-time drift and fresh contract metadata before execution validation.",
-      "blocker": "Direct probes to fapi.binance.com failed DNS. Connector exchangeInfo serverTime=2026-11-10T01:01:01.897Z versus market endpoint time=2026-11-10T09:38:16.000Z, drift 31034.103 seconds; connector hides HTTP status/headers.",
+      "nextAction": "Restore direct DNS/HTTPS or obtain uncached official /time and /exchangeInfo; require <=5s drift and fresh TRADING metadata.",
+      "blocker": "Direct fapi.binance.com DNS failed for /time, /exchangeInfo, /klines, /premiumIndex, /openInterest and /ticker/24hr (HTTP 000). exchangeInfo serverTime 01:01:01.895Z vs market 12:54:30Z: 42808.105s stale; contract status unverified.",
       "result": {
         "directEndpoints": "DNS_FAILED_HTTP_000",
         "exchangeInfoServerTimeUtc": "2026-11-10T01:01:01.897Z",
@@ -218,8 +218,8 @@
         "Dependencies",
         "Deterministic fixture"
       ],
-      "nextAction": "Provision Node >=24/npm >=11, checkout main commit 669ba233538eb1463c0e7e0a435016a643e7adb5, install dependencies, fix closeTime propagation/volume validation/5m/BTC-reference-only defects, then run deterministic no-lookahead smoke fixtures twice.",
-      "blocker": "Current Node v22.16.0/npm 10.9.2; no local checkout, package.json or node_modules; Binance SDK import unavailable. Repository scripts are remotely readable but no local smoke test ran.",
+      "nextAction": "Provision Node24/npm11, checkout main 57f7d657e5b06a9ad0063512086f8b023e0a8c5d, install dependencies, run deterministic no-lookahead fixtures twice.",
+      "blocker": "Node 22.16/npm 10.9; no local checkout/package.json/node_modules; Binance SDK packages not installed; remote project requires Node>=24/npm>=11; smoke test not run.",
       "result": {
         "runtime": {
           "node": "v22.16.0",
@@ -241,8 +241,8 @@
       "prerequisites": [
         "Recorder process and persistent storage"
       ],
-      "nextAction": "Backfill complete fundingRate history for all four symbols plus synchronized OI/taker/global-long-short series and historical depth/trade data for cost calibration.",
-      "blocker": "Current funding, OI, completed 1h taker flow, completed global long/short account ratios and best bid/ask snapshots were retrieved. Historical cross-symbol derivatives and execution-cost archives remain incomplete; top-of-book is not depth history.",
+      "nextAction": "Backfill synchronized fundingRate, OI, taker/L-S, trades/depth; obtain fee tier and latency/fill assumptions.",
+      "blocker": "Current funding, 8h interval, OI, 1h OI observations, 5m taker, 5m global L/S and top-of-book retrieved; historical derivatives/depth/trades and calibrated costs remain incomplete.",
       "result": {
         "currentFundingIntervalHoursBySymbol": {
           "BTCUSDT": 8,
@@ -703,8 +703,8 @@
         "Frozen experiment specification",
         "Untouched test"
       ],
-      "nextAction": "After P0 data, metadata, runtime and smoke-test gates pass, freeze a tradable-only strategy x context x symbol specification and run purged chronological train/validation/untouched OOS with calibrated costs, funding, block bootstrap and Holm correction.",
-      "blocker": "Strategy backtest not run: direct REST DNS failed, exchangeInfo stale by 30300.103s, Node/npm below project floor, no local checkout/smoke test, 5m/15m base history absent, 4h reconciliation and historical derivatives/cost archives incomplete."
+      "nextAction": "After Q1-Q4 and smoke test pass, freeze one tradable-only strategy x context x symbol spec and run purged train/validation/untouched OOS.",
+      "blocker": "Strategy experiment blocked by missing local harness, stale metadata, missing 5m/15m base, unresolved 4h archive and incomplete historical costs/derivatives."
     },
     {
       "id": "Q9_RECONCILE_MISSING_76_DELTA",
@@ -1152,44 +1152,62 @@
       "title": "Incremental archive integrity and readback experiment 16:27–16:31Z",
       "blocker": null,
       "nextAction": "Repeat on the next eligible append; this validates only the appended slice and recent API windows, not full historical archive completeness."
+    },
+    {
+      "id": "Q_INCREMENTAL_ARCHIVE_REFRESH_20261110T1250Z",
+      "status": "COMPLETED_THIS_RUN",
+      "priority": 1,
+      "title": "Incremental completed 5m/15m archive refresh",
+      "blocker": null,
+      "nextAction": "Next eligible opens: 5m 12:50Z after 12:54:59.999Z; 15m 12:45Z after 12:59:59.999Z; 1h 12:00Z after 12:59:59.999Z; 4h 12:00Z after 15:59:59.999Z.",
+      "prerequisites": [
+        "Fresh klines",
+        "Verified highwaters",
+        "Writable archive",
+        "Readback"
+      ]
+    },
+    {
+      "id": "Q_INCREMENTAL_ARCHIVE_DQ_20261110T1250Z",
+      "status": "COMPLETED_THIS_RUN",
+      "priority": 1,
+      "title": "5m/15m append integrity and readback",
+      "blocker": null,
+      "nextAction": "Repeat only on newly completed bars; validates incremental slice only.",
+      "prerequisites": [
+        "20 completed bars",
+        "Continuity/OHLC/volume checks",
+        "SHA-256 and readback"
+      ]
     }
   ],
   "lastRun": {
-    "runId": "CONTEXT-STRATEGY-20261110T0931Z-AUTO11",
-    "classification": "RESEARCH_EXECUTED_DATA_QUALITY_ONLY",
-    "completedAtUtc": "2026-11-10T09:39:16.738Z",
+    "runId": "context-strategy-20261110T1254Z-auto11",
+    "completedAtUtc": "2026-11-10T12:54:30.000Z",
+    "status": "RESEARCH_EXECUTED",
+    "classification": "RESEARCH_EXECUTED_DATA_QUALITY_APPEND_ONLY",
     "researchExperimentExecuted": true,
     "strategyBacktestExecuted": false,
     "oosEvaluated": false,
-    "archiveRowsAdded": 72,
-    "rowsFetched": 92,
-    "formingRowsExcluded": 20,
+    "archiveRowsAdded": 20,
+    "rowsFetched": 28,
+    "formingRowsExcluded": 8,
     "rowCountsByInterval": {
-      "5m": 52,
-      "15m": 16,
-      "1h": 4,
-      "4h": 0
+      "5m": 16,
+      "15m": 4
     },
     "archiveBranch": "research/raw-ohlcv-archive-20261108T1026Z",
     "deltaPaths": [
-      "research-data/binance-usdm/delta/binance_usdm_delta_20261110T0926Z_5m15m_completed.jsonl",
-      "research-data/binance-usdm/delta/binance_usdm_delta_20261110T0929Z_1h_completed.jsonl",
-      "research-data/binance-usdm/delta/binance_usdm_delta_20261110T0938Z_5m15m_completed.jsonl"
+      "research-data/binance-usdm/delta/binance_usdm_delta_20261110T1250Z_5m15m_completed.jsonl"
     ],
     "deltaSha256s": [
-      "7ca387eab56fc596ee99dc11b3e5ca061ffc0837bdc04a248349a04d16e67605",
-      "8a7302254fca03219e84df472699b999bfab3a2b6181b8c07d8720b6fc1e4009",
-      "2248c879e73cf0b761910dbdc57687cc573ad7911502f1ab5846ead4024e899e"
+      "8a9231c9f9b340c2624b1f721f50a12cc738a08c576fdedc5d2914621423d4c4"
     ],
     "manifestPaths": [
-      "research-data/binance-usdm/delta/manifest-20261110T0926Z-5m15m.json",
-      "research-data/binance-usdm/delta/manifest-20261110T0929Z-1h.json",
-      "research-data/binance-usdm/delta/manifest-20261110T0938Z-5m15m.json"
+      "research-data/binance-usdm/delta/manifest-20261110T1250Z-5m15m.json"
     ],
     "manifestSha256s": [
-      "ebfcab96f710e7df145c8916f38dad7b9843242d45aab4862bf105a102366b7d",
-      "d4d98a56587be272a70e766c7cf796722ff52de2fdd63e0da974f4c0f42bf220",
-      "eeae7300531f4a75e52b6eed399a0ae9ce4031003cc61cd4e879c301711a6f11"
+      "f6251e112c15b72c692ef2dd8e34d8f08e7f7af3dddc7dffab14c65d408b4555"
     ],
     "archivePersistenceVerified": true,
     "archiveIndexesReadbackVerified": true,
@@ -1199,132 +1217,62 @@
       "ETHUSDT": "NO_TRADE",
       "XRPUSDT": "NO_TRADE"
     },
-    "marketSnapshotTimeUtc": "2026-11-10T09:38:34.658Z",
-    "reportPath": "research/context-strategy/reports/2026-11-10T0931Z_auto11.md",
-    "artifactManifestPath": "research/context-strategy/manifests/artifact_manifest_20261110T0931Z_auto11.json",
-    "snapshotPath": "research/context-strategy/snapshots/current_snapshot_20261110T0931Z_auto11.json",
-    "preflightPath": "research/context-strategy/preflight/context_strategy_preflight_20261110T0931Z_v96.json",
-    "dataQualityAuditPath": "research/context-strategy/audits/data_quality_audit_20261110T0931Z_v96.json",
-    "experimentPath": "research/context-strategy/experiments/incremental_archive_integrity_20261110T0931Z.result.json",
-    "archiveManifestPath": "research-data/binance-usdm/manifests/archive_manifest_20261110T0931Z_v96.json",
+    "marketSnapshotTimeUtc": "2026-11-10T12:54:30.000Z",
+    "reportPath": "research/context-strategy/reports/2026-11-10T1254Z_auto11.md",
+    "artifactManifestPath": "research/context-strategy/manifests/artifact_manifest_20261110T1254Z_auto11.json",
+    "queueSnapshotPath": "research-data/binance-usdm/research-queue-v108.json",
+    "registrySnapshotPath": "research-data/binance-usdm/conditional-strategy-registry-snapshot-v108.json",
+    "snapshotPath": "research-data/binance-usdm/current_market_snapshot_20261110T1254Z_auto11.json",
+    "preflightPath": "research/context-strategy/preflight/preflight_20261110T1254Z_auto11.json",
+    "auditPath": "research/context-strategy/audits/data_quality_audit_20261110T1254Z_auto11.json",
+    "experimentPath": "research/context-strategy/experiments/incremental_archive_append_20261110T1250Z_auto11.result.json",
+    "archiveManifestPath": "research-data/binance-usdm/manifests/archive_manifest_20261110T1250Z_auto11.json",
     "metadataValidation": "BLOCKED_STALE_EXCHANGEINFO"
   },
-  "lastRunReport": "research/context-strategy/reports/2026-11-10T0931Z_auto11.md",
-  "lastRunId": "CONTEXT-STRATEGY-20261110T0931Z-AUTO11",
+  "lastRunReport": "research/context-strategy/reports/2026-11-10T1254Z_auto11.md",
+  "lastRunId": "context-strategy-20261110T1254Z-auto11",
   "incremental_highwater_marks": {
-    "5m": "2026-11-10T09:30:00.000Z",
-    "15m": "2026-11-10T09:15:00.000Z",
-    "1h": "2026-11-10T08:00:00.000Z",
-    "4h": "2026-11-10T04:00:00.000Z"
+    "5m": "2026-11-10T12:45:00Z",
+    "15m": "2026-11-10T12:30:00Z",
+    "1h": "2026-11-10T11:00:00Z",
+    "4h": "2026-11-10T08:00:00Z"
   },
-  "last_incremental_refresh_utc": "2026-11-10T09:39:16.738Z",
+  "last_incremental_refresh_utc": "2026-11-10T12:54:30.000Z",
   "latest_incremental_delta_files": [
     "research-data/binance-usdm/delta/binance_usdm_delta_20261110T0926Z_5m15m_completed.jsonl",
     "research-data/binance-usdm/delta/binance_usdm_delta_20261110T0929Z_1h_completed.jsonl",
-    "research-data/binance-usdm/delta/binance_usdm_delta_20261110T0938Z_5m15m_completed.jsonl"
+    "research-data/binance-usdm/delta/binance_usdm_delta_20261110T0938Z_5m15m_completed.jsonl",
+    "research-data/binance-usdm/delta/binance_usdm_delta_20261110T1250Z_5m15m_completed.jsonl",
+    "research-data/binance-usdm/delta/manifest-20261110T1250Z-5m15m.json"
   ],
-  "lastRunSummary": {
-    "runId": "CONTEXT-STRATEGY-20261110T0931Z-AUTO11",
-    "classification": "RESEARCH_EXECUTED_DATA_QUALITY_ONLY",
-    "completedAtUtc": "2026-11-10T09:39:16.738Z",
-    "incrementalRowsAdded": 72,
-    "rowsFetched": 92,
-    "formingRowsExcluded": 20,
-    "rowCountsByInterval": {
-      "5m": 52,
-      "15m": 16,
-      "1h": 4,
-      "4h": 0
-    },
-    "incrementalHighwaterUtc": {
-      "5m": "2026-11-10T09:30:00.000Z",
-      "15m": "2026-11-10T09:15:00.000Z",
-      "1h": "2026-11-10T08:00:00.000Z",
-      "4h": "2026-11-10T04:00:00.000Z"
-    },
-    "experimentsRun": 1,
-    "strategyBacktestsRun": 0,
-    "oosEvaluations": 0,
-    "validatedStrategies": 0,
-    "registryEntries": 5,
-    "registryEntriesUnchanged": true,
-    "currentContexts": {
-      "BTCUSDT": "BEARISH_ALIGNMENT_ALL_TF",
-      "ETHUSDT": "BEARISH_ALIGNMENT_ALL_TF",
-      "SOLUSDT": "BEARISH_ALIGNMENT_ALL_TF",
-      "XRPUSDT": "BEARISH_ALIGNMENT_ALL_TF"
-    },
-    "decisions": {
-      "SOLUSDT": "NO_TRADE",
-      "ETHUSDT": "NO_TRADE",
-      "XRPUSDT": "NO_TRADE"
-    },
-    "deltaPaths": [
-      "research-data/binance-usdm/delta/binance_usdm_delta_20261110T0926Z_5m15m_completed.jsonl",
-      "research-data/binance-usdm/delta/binance_usdm_delta_20261110T0929Z_1h_completed.jsonl",
-      "research-data/binance-usdm/delta/binance_usdm_delta_20261110T0938Z_5m15m_completed.jsonl"
-    ],
-    "deltaSha256s": [
-      "7ca387eab56fc596ee99dc11b3e5ca061ffc0837bdc04a248349a04d16e67605",
-      "8a7302254fca03219e84df472699b999bfab3a2b6181b8c07d8720b6fc1e4009",
-      "2248c879e73cf0b761910dbdc57687cc573ad7911502f1ab5846ead4024e899e"
-    ],
-    "manifestPaths": [
-      "research-data/binance-usdm/delta/manifest-20261110T0926Z-5m15m.json",
-      "research-data/binance-usdm/delta/manifest-20261110T0929Z-1h.json",
-      "research-data/binance-usdm/delta/manifest-20261110T0938Z-5m15m.json"
-    ],
-    "manifestSha256s": [
-      "ebfcab96f710e7df145c8916f38dad7b9843242d45aab4862bf105a102366b7d",
-      "d4d98a56587be272a70e766c7cf796722ff52de2fdd63e0da974f4c0f42bf220",
-      "eeae7300531f4a75e52b6eed399a0ae9ce4031003cc61cd4e879c301711a6f11"
-    ],
-    "archiveBranch": "research/raw-ohlcv-archive-20261108T1026Z",
-    "archivePersistenceVerified": true,
-    "metadataValidation": "BLOCKED_STALE_EXCHANGEINFO",
-    "blockers": [
-      "Direct Binance REST DNS failure and stale exchangeInfo",
-      "Node22/npm10 below Node24/npm11 project floor; no local checkout or SDK",
-      "5m/15m base history absent; 4h raw/canonical reconciliation open",
-      "Historical derivatives and execution costs incomplete"
-    ]
-  },
+  "lastRunSummary": "20 completed 5m/15m bars appended and readback-verified; no strategy backtest or OOS; all tradables NO_TRADE.",
   "latestRun": {
-    "runId": "CONTEXT-STRATEGY-20261110T0931Z-AUTO11",
-    "classification": "RESEARCH_EXECUTED_DATA_QUALITY_ONLY",
-    "completedAtUtc": "2026-11-10T09:39:16.738Z",
+    "runId": "context-strategy-20261110T1254Z-auto11",
+    "completedAtUtc": "2026-11-10T12:54:30.000Z",
+    "status": "RESEARCH_EXECUTED",
+    "classification": "RESEARCH_EXECUTED_DATA_QUALITY_APPEND_ONLY",
     "researchExperimentExecuted": true,
     "strategyBacktestExecuted": false,
     "oosEvaluated": false,
-    "archiveRowsAdded": 72,
-    "rowsFetched": 92,
-    "formingRowsExcluded": 20,
+    "archiveRowsAdded": 20,
+    "rowsFetched": 28,
+    "formingRowsExcluded": 8,
     "rowCountsByInterval": {
-      "5m": 52,
-      "15m": 16,
-      "1h": 4,
-      "4h": 0
+      "5m": 16,
+      "15m": 4
     },
     "archiveBranch": "research/raw-ohlcv-archive-20261108T1026Z",
     "deltaPaths": [
-      "research-data/binance-usdm/delta/binance_usdm_delta_20261110T0926Z_5m15m_completed.jsonl",
-      "research-data/binance-usdm/delta/binance_usdm_delta_20261110T0929Z_1h_completed.jsonl",
-      "research-data/binance-usdm/delta/binance_usdm_delta_20261110T0938Z_5m15m_completed.jsonl"
+      "research-data/binance-usdm/delta/binance_usdm_delta_20261110T1250Z_5m15m_completed.jsonl"
     ],
     "deltaSha256s": [
-      "7ca387eab56fc596ee99dc11b3e5ca061ffc0837bdc04a248349a04d16e67605",
-      "8a7302254fca03219e84df472699b999bfab3a2b6181b8c07d8720b6fc1e4009",
-      "2248c879e73cf0b761910dbdc57687cc573ad7911502f1ab5846ead4024e899e"
+      "8a9231c9f9b340c2624b1f721f50a12cc738a08c576fdedc5d2914621423d4c4"
     ],
     "manifestPaths": [
-      "research-data/binance-usdm/delta/manifest-20261110T0926Z-5m15m.json",
-      "research-data/binance-usdm/delta/manifest-20261110T0929Z-1h.json",
-      "research-data/binance-usdm/delta/manifest-20261110T0938Z-5m15m.json"
+      "research-data/binance-usdm/delta/manifest-20261110T1250Z-5m15m.json"
     ],
     "manifestSha256s": [
-      "ebfcab96f710e7df145c8916f38dad7b9843242d45aab4862bf105a102366b7d",
-      "d4d98a56587be272a70e766c7cf796722ff52de2fdd63e0da974f4c0f42bf220",
-      "eeae7300531f4a75e52b6eed399a0ae9ce4031003cc61cd4e879c301711a6f11"
+      "f6251e112c15b72c692ef2dd8e34d8f08e7f7af3dddc7dffab14c65d408b4555"
     ],
     "archivePersistenceVerified": true,
     "archiveIndexesReadbackVerified": true,
@@ -1334,28 +1282,30 @@
       "ETHUSDT": "NO_TRADE",
       "XRPUSDT": "NO_TRADE"
     },
-    "marketSnapshotTimeUtc": "2026-11-10T09:38:34.658Z",
-    "reportPath": "research/context-strategy/reports/2026-11-10T0931Z_auto11.md",
-    "artifactManifestPath": "research/context-strategy/manifests/artifact_manifest_20261110T0931Z_auto11.json",
-    "snapshotPath": "research/context-strategy/snapshots/current_snapshot_20261110T0931Z_auto11.json",
-    "preflightPath": "research/context-strategy/preflight/context_strategy_preflight_20261110T0931Z_v96.json",
-    "dataQualityAuditPath": "research/context-strategy/audits/data_quality_audit_20261110T0931Z_v96.json",
-    "experimentPath": "research/context-strategy/experiments/incremental_archive_integrity_20261110T0931Z.result.json",
-    "archiveManifestPath": "research-data/binance-usdm/manifests/archive_manifest_20261110T0931Z_v96.json",
+    "marketSnapshotTimeUtc": "2026-11-10T12:54:30.000Z",
+    "reportPath": "research/context-strategy/reports/2026-11-10T1254Z_auto11.md",
+    "artifactManifestPath": "research/context-strategy/manifests/artifact_manifest_20261110T1254Z_auto11.json",
+    "queueSnapshotPath": "research-data/binance-usdm/research-queue-v108.json",
+    "registrySnapshotPath": "research-data/binance-usdm/conditional-strategy-registry-snapshot-v108.json",
+    "snapshotPath": "research-data/binance-usdm/current_market_snapshot_20261110T1254Z_auto11.json",
+    "preflightPath": "research/context-strategy/preflight/preflight_20261110T1254Z_auto11.json",
+    "auditPath": "research/context-strategy/audits/data_quality_audit_20261110T1254Z_auto11.json",
+    "experimentPath": "research/context-strategy/experiments/incremental_archive_append_20261110T1250Z_auto11.result.json",
+    "archiveManifestPath": "research-data/binance-usdm/manifests/archive_manifest_20261110T1250Z_auto11.json",
     "metadataValidation": "BLOCKED_STALE_EXCHANGEINFO"
   },
   "dailyCycle": {
     "dateUtc": "2026-11-10",
-    "status": "COMPLETED_DATA_QUALITY_ONLY",
-    "reason": "This run appended and readback-verified 72 completed 5m/15m/1h bars with zero incremental integrity violations; rolling 5m/15m/1h/4h windows also passed. No strategy backtest/OOS ran because direct REST DNS and fresh exchange metadata are unavailable, Node/npm are below the project floor, no local checkout/smoke test exists, lower-timeframe base history and 4h reconciliation remain incomplete, and derivatives/cost archives are not complete.",
-    "nextAction": "Continue P0 metadata/runtime/archive remediation; do not start strategy OOS until the frozen harness and cost/data prerequisites pass.",
-    "lastExperimentId": "EXP-DQ-2026-11-10-0929Z-001",
-    "lastRunUtc": "2026-11-10T09:39:16.738Z"
+    "status": "BLOCKED",
+    "reason": "No strategy experiment could run because data, metadata and local harness gates remain blocked.",
+    "nextAction": "Resolve Q1-Q4 and run the deterministic fixture smoke test before the next conditional strategy experiment."
   },
   "weeklyReview": {
     "nextDueUtc": "2026-11-11T00:00:00Z",
     "status": "NOT_DUE",
     "lastDiagnosticArtifact": "research/context-strategy/context-discovery/context_distribution_20261108T022532Z.json",
-    "lastDiagnosticUtc": "2026-11-08T02:32:23.557Z"
+    "lastDiagnosticUtc": "2026-11-08T02:32:23.557Z",
+    "scheduledForUtc": "2026-11-11",
+    "nextAction": "Training-only CTX threshold refit, frequency/duration/transitions, JSD stability and multiple-testing review after archive reconciliation."
   }
 }

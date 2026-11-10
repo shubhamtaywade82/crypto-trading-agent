@@ -1,0 +1,113 @@
+{
+  "schemaVersion": 1,
+  "runId": "CONTEXT-STRATEGY-20261110T0931Z-AUTO11",
+  "asOfUtc": "2026-11-10T09:31:01.311Z",
+  "executionEnvironment": {
+    "cwd": "/",
+    "os": "Linux 6.18.57 x86_64",
+    "python": "3.13.5",
+    "node": "v22.16.0",
+    "npm": "10.9.2",
+    "pnpm": "NOT_INSTALLED",
+    "cpuCores": 5,
+    "memoryTotalGiB": 5.8,
+    "memoryAvailableGiB": 4.7,
+    "diskFreeGiB": 30
+  },
+  "checks": [
+    {
+      "capability": "Shell/compute",
+      "status": "PASS",
+      "evidence": "Linux runtime; Python 3.13.5; Node 22.16.0; 5 CPUs; 4.7 GiB available memory; 30 GiB free disk.",
+      "impact": "Enough for bounded data checks; project Node floor is unmet.",
+      "nextAction": "Keep local research compute bounded until compatible runtime is provisioned."
+    },
+    {
+      "capability": "Repository/code",
+      "status": "DEGRADED",
+      "evidence": "Remote GitHub main is readable at 669ba233538eb1463c0e7e0a435016a643e7adb5; no local checkout, package.json, or node_modules in current runtime.",
+      "impact": "Cannot execute repository scripts locally.",
+      "nextAction": "Provision Node >=24/npm >=11 and checkout exact main commit."
+    },
+    {
+      "capability": "Binance SDK",
+      "status": "BLOCKED",
+      "evidence": "@nemesis-oss/binance-sdk, @binance/connector, binance-api-node, and @binance/futures-connector are not installed/importable.",
+      "impact": "No SDK execution occurred.",
+      "nextAction": "Use SDK only after a compatible local checkout/install; otherwise continue connector-only data retrieval with explicit limitations."
+    },
+    {
+      "capability": "Network/Binance endpoints",
+      "status": "DEGRADED",
+      "evidence": "Direct DNS probes to fapi.binance.com failed for /fapi/v1/time, exchangeInfo, klines, premiumIndex, openInterest and ticker/24hr. Connector calls returned market data but no HTTP status/headers. ExchangeInfo serverTime 01:01:01.897Z is 30300.103s behind market endpoint time 09:26:02Z.",
+      "impact": "Fresh metadata/server time not verified; execution validation blocked.",
+      "nextAction": "Restore direct DNS/HTTPS; require server-time drift <=5s and fresh exchangeInfo."
+    },
+    {
+      "capability": "Raw historical archive",
+      "status": "DEGRADED",
+      "evidence": "1h base 215484 rows; 4h raw/aligned/canonical 53960/53816/53844; 5m and 15m base history absent. New deltas readback-verified through 5m 09:20Z, 15m 09:00Z, 1h 08:00Z, 4h 04:00Z.",
+      "impact": "Multi-year multi-timeframe archive remains incomplete.",
+      "nextAction": "Backfill 5m/15m from an auditable source and reconcile 4h raw/canonical rows."
+    },
+    {
+      "capability": "Data quality/coverage",
+      "status": "DEGRADED",
+      "evidence": "60 completed rows appended; 12 forming excluded; zero incremental duplicate/gap/off-grid/OHLC/volume/non-finite/close-time failures. Full archive audit incomplete.",
+      "impact": "Incremental slice clean; full historical coverage not established.",
+      "nextAction": "Continue archive-level reconciliation and backfill."
+    },
+    {
+      "capability": "Backtest harness/smoke test",
+      "status": "BLOCKED",
+      "evidence": "Remote harness exists but no local checkout; Node22/npm10 below package floor Node24/npm11; deterministic smoke test NOT_RUN. Existing source audit identified closeTime loss, zero-volume acceptance, missing 5m and BTC-tradable defaults.",
+      "impact": "No strategy experiment and no OOS evaluation.",
+      "nextAction": "Fix candle contract, volume>0, 5m inclusion, BTC reference-only, then run deterministic integrity/no-lookahead fixture twice."
+    },
+    {
+      "capability": "Disk/storage",
+      "status": "PASS",
+      "evidence": "30 GiB free; GitHub archive branch accepted delta, manifest and index updates.",
+      "impact": "Durable remote storage is available.",
+      "nextAction": "Continue atomic append and verified readback."
+    },
+    {
+      "capability": "Artifact readback",
+      "status": "PASS",
+      "evidence": "Both new deltas, both manifests, and 5m/15m/1h index updates fetched back; SHA-256 and Git blob identities verified.",
+      "impact": "Archive update persisted and readback verified.",
+      "nextAction": "Keep artifact manifest and queue synchronized."
+    }
+  ],
+  "directEndpointResults": [
+    {
+      "endpoint": "GET /fapi/v1/time",
+      "status": "DNS_FAILED_HTTP_000"
+    },
+    {
+      "endpoint": "GET /fapi/v1/exchangeInfo",
+      "status": "DNS_FAILED_HTTP_000"
+    },
+    {
+      "endpoint": "GET /fapi/v1/klines",
+      "status": "DNS_FAILED_HTTP_000"
+    },
+    {
+      "endpoint": "GET /fapi/v1/premiumIndex",
+      "status": "DNS_FAILED_HTTP_000"
+    },
+    {
+      "endpoint": "GET /fapi/v1/openInterest",
+      "status": "DNS_FAILED_HTTP_000"
+    },
+    {
+      "endpoint": "GET /fapi/v1/ticker/24hr",
+      "status": "DNS_FAILED_HTTP_000"
+    }
+  ],
+  "classification": "RESEARCH_EXECUTED",
+  "scope": "INCREMENTAL_ARCHIVE_DATA_QUALITY_ONLY",
+  "strategyBacktestExecuted": false,
+  "oosEvaluated": false,
+  "oosValidatedEntries": 0
+}

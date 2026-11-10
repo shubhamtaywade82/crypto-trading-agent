@@ -60,7 +60,23 @@
     },
     "report": {
       "path": "research/context-strategy/reports/2026-11-10T2323Z_auto21.md",
-      "blob_sha1": "5c7d14761cf3612ca0824aad2bf3b9e9e7ea50d4"
+      "blob_sha1": "c4375817dfd0472853bf584ddddeca6c1507e4cc"
+    },
+    "registry": {
+      "path": "research/context-strategy/registry.json",
+      "blob_sha1": "c3e13505f65d3a110c24857c007f38e38e5e3be8"
+    },
+    "queue": {
+      "path": "research/context-strategy/queue.json",
+      "blob_sha1": "c18ce82ae0f1cbd65e52cf73e31c7fc85d9ca818"
+    },
+    "registry_snapshot": {
+      "path": "research-data/binance-usdm/conditional-strategy-registry-snapshot-v111.json",
+      "blob_sha1": "c3e13505f65d3a110c24857c007f38e38e5e3be8"
+    },
+    "queue_snapshot": {
+      "path": "research-data/binance-usdm/research-queue-v111.json",
+      "blob_sha1": "c18ce82ae0f1cbd65e52cf73e31c7fc85d9ca818"
     }
   },
   "registry": {
@@ -68,7 +84,18 @@
     "oos_promising": 1,
     "insufficient_evidence": 4,
     "rejected": 1,
-    "status_conflict": "Legacy registryEntries counts SOL Donchian20 BULL-LOW as OOS_PROMISING; detailed entries record the same candidate INSUFFICIENT_EVIDENCE with 55 OOS trades, CI crossing zero and negative quote PnL. No entry is actionable."
+    "legacy_inherited_v75": {
+      "trades": 12,
+      "status": "OOS_PROMISING",
+      "provenanceComplete": false
+    },
+    "later_v1": {
+      "trades": 55,
+      "status": "INSUFFICIENT_EVIDENCE",
+      "ciCrossesZero": true,
+      "quotePnlNegative": true
+    },
+    "interpretation": "Distinct versions; neither is OOS_VALIDATED and evidence is not transferable."
   },
   "blockers": [
     "No local repository checkout",
@@ -82,7 +109,7 @@
   "persistence": {
     "raw_archive": "PERSISTED_AND_READBACK_VERIFIED",
     "main_snapshots": "PERSISTED_AND_READBACK_VERIFIED",
-    "registry_queue_update": "PENDING_IN_THIS_RUN"
+    "registry_queue_update": "PERSISTED_AND_READBACK_VERIFIED"
   },
   "next_actions": [
     "Backfill multi-year 5m/15m",
@@ -91,5 +118,6 @@
     "Align point-in-time derivatives archive",
     "Reconcile Donchian20 registry status conflict",
     "Run weekly taxonomy stability review only after prerequisites clear"
-  ]
+  ],
+  "main_branch_commit_after_snapshots": "635950849aecfda3e2b68b8853486787f2cbc109"
 }

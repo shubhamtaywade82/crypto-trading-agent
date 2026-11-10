@@ -1,0 +1,147 @@
+{
+  "schemaVersion": "1.0.0",
+  "runId": "context-strategy-20261110T1440Z-auto11",
+  "asOfUtc": "2026-11-10T14:39:20.001Z",
+  "status": "RESEARCH_EXECUTED_DATA_QUALITY_ONLY",
+  "experimentType": "INCREMENTAL_ARCHIVE_APPEND_AND_INTEGRITY",
+  "source": {
+    "venue": "Binance USDⓈ-M",
+    "endpoint": "GET /fapi/v1/klines",
+    "symbols": [
+      "BTCUSDT",
+      "ETHUSDT",
+      "SOLUSDT",
+      "XRPUSDT"
+    ],
+    "intervals": [
+      "5m",
+      "15m",
+      "1h"
+    ],
+    "access": "Binance connector; direct REST DNS unavailable"
+  },
+  "priorHighwaterUtc": {
+    "5m": "2026-11-10T13:25:00Z",
+    "15m": "2026-11-10T13:15:00Z",
+    "1h": "2026-11-10T12:00:00Z",
+    "4h": "2026-11-10T08:00:00Z"
+  },
+  "finalHighwaterUtc": {
+    "5m": "2026-11-10T14:30:00Z",
+    "15m": "2026-11-10T14:15:00Z",
+    "1h": "2026-11-10T13:00:00Z",
+    "4h": "2026-11-10T08:00:00Z"
+  },
+  "rowsFetched": 92,
+  "completedRowsAppended": 72,
+  "formingRowsExcluded": 20,
+  "rowsByInterval": {
+    "5m": 52,
+    "15m": 16,
+    "1h": 4,
+    "4h": 0
+  },
+  "rowsBySymbol": {
+    "BTCUSDT": 18,
+    "ETHUSDT": 18,
+    "SOLUSDT": 18,
+    "XRPUSDT": 18
+  },
+  "rowsBySymbolInterval": {
+    "BTCUSDT:5m": 13,
+    "BTCUSDT:15m": 4,
+    "BTCUSDT:1h": 1,
+    "ETHUSDT:5m": 13,
+    "ETHUSDT:15m": 4,
+    "ETHUSDT:1h": 1,
+    "SOLUSDT:5m": 13,
+    "SOLUSDT:15m": 4,
+    "SOLUSDT:1h": 1,
+    "XRPUSDT:5m": 13,
+    "XRPUSDT:15m": 4,
+    "XRPUSDT:1h": 1
+  },
+  "deltas": [
+    {
+      "path": "research-data/binance-usdm/delta/binance_usdm_delta_20261110T1427Z_5m15m1h_completed.jsonl",
+      "sha256": "644964361b3a94fff9f54bd08ba3bb24b9d67116e928411458f5b117f384ded3",
+      "rows": 60,
+      "manifestPath": "research-data/binance-usdm/delta/manifest-20261110T1427Z-5m15m1h.json",
+      "manifestSha256": "ed3db6cd96d22365565113eee07d2e991305f403fe17481155ebaf68f5220be8",
+      "readbackVerified": true
+    },
+    {
+      "path": "research-data/binance-usdm/delta/binance_usdm_delta_20261110T1440Z_5m15m_completed.jsonl",
+      "sha256": "71699a97ed04e8d0a756884d9bf7a7ad012ad3ee44e9989159a910399ec00017",
+      "rows": 12,
+      "manifestPath": "research-data/binance-usdm/delta/manifest-20261110T1440Z-5m15m.json",
+      "manifestSha256": "78aed9eff2cebc6b73328a30df62307348d620d5d78f0cb3c8c2ed99f3de990e",
+      "readbackVerified": true
+    }
+  ],
+  "quality": {
+    "series": 20,
+    "rows": 72,
+    "duplicates": 0,
+    "missingIntervals": 0,
+    "offGrid": 0,
+    "nonMonotonic": 0,
+    "ohlcInvariantFailures": 0,
+    "nonPositiveVolume": 0,
+    "nonFinite": 0,
+    "crossSymbolAlignment": true,
+    "formingRowsAppended": 0
+  },
+  "archive": {
+    "branch": "research/raw-ohlcv-archive-20261108T1026Z",
+    "latestManifestPath": "research-data/binance-usdm/manifests/archive_manifest_20261110T1440Z_auto11.json",
+    "latestManifestSha256": "cce2345f8ecbb8f5e225744e980d23d48e3fb36d600b1c62ae8ad59aaa48920f",
+    "indexReadbackVerified": {
+      "5m": true,
+      "15m": true,
+      "1h": true
+    },
+    "archiveManifestReadbackVerified": true
+  },
+  "coverage": {
+    "5m": {
+      "baseHistory": "ABSENT",
+      "incrementalRows": 1248,
+      "latestCompleted": "2026-11-10T14:30:00Z"
+    },
+    "15m": {
+      "baseHistory": "ABSENT",
+      "incrementalRows": 420,
+      "latestCompleted": "2026-11-10T14:15:00Z"
+    },
+    "1h": {
+      "baseRows": 215484,
+      "rowsPerSymbol": 53871,
+      "coverageStart": "2020-09-14T08:00:00Z",
+      "baseEnd": "2026-11-06T22:00:00Z",
+      "incrementalRows": 104,
+      "latestCompleted": "2026-11-10T13:00:00Z"
+    },
+    "4h": {
+      "rawRows": 53960,
+      "alignedRows": 53816,
+      "canonicalRows": 53844,
+      "rawHighwater": "2026-11-10T08:00:00Z",
+      "canonicalEnd": "2026-11-05T16:00:00Z",
+      "manifestShaProvenanceMismatches": 13
+    }
+  },
+  "strategyExperiment": {
+    "status": "BLOCKED",
+    "reason": "No local checkout or compatible Node/npm runtime; required 5m/15m base history absent; 4h raw/aligned/canonical and hash provenance discrepancies unresolved.",
+    "harnessInvoked": false,
+    "smokeTest": "NOT_RUN",
+    "oosEvaluated": false
+  },
+  "reproducibility": {
+    "seed": null,
+    "trainValidationTest": "NOT_APPLICABLE_DATA_QUALITY_ONLY",
+    "codeExecution": "No repository code/backtest executed; data obtained via Binance connector and committed to GitHub archive branch."
+  },
+  "nextAction": "Backfill 5m/15m base from an auditable official bulk source; reconcile 4h row keys and all 13 manifest hash mismatches; restore Node>=24/npm>=11 local checkout; run deterministic no-lookahead smoke test before strategy experiments."
+}

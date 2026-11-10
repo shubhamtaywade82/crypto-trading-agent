@@ -1,7 +1,116 @@
 {
   "schemaVersion": 1,
-  "updatedAtUtc": "2026-11-10T16:32:54.279Z",
+  "updatedAtUtc": "2026-11-10T17:06:14.000Z",
   "items": [
+    {
+      "id": "Q_WEEKLY_CONTEXT_STABILITY_REVIEW_20261111",
+      "title": "Weekly context taxonomy and stability review",
+      "priority": 2,
+      "status": "QUEUED",
+      "nextAction": "After 5m/15m archive and 4h provenance prerequisites, refit thresholds on training only; report context frequency, duration, transitions, JSD and parameter-neighborhood stability.",
+      "blocker": "Historical 5m/15m base absent; 4h index provenance still degraded."
+    },
+    {
+      "id": "Q_4H_CANONICAL_INDEX_RECONCILIATION",
+      "title": "Reconcile 4h raw/aligned/canonical provenance",
+      "priority": 1,
+      "status": "BLOCKED",
+      "lastCheckedAtUtc": "2026-11-10T17:06:14.000Z",
+      "nextAction": "Reconstruct canonical files from page sources and incremental deltas; verify per-page SHA256 and canonical hash; reconcile archive-index counters and 13 provenance mismatches.",
+      "blocker": "Index reports raw/aligned/canonical totals 53,960/53,816/53,844 and 13 manifest SHA provenance mismatches; canonical 4h highwater is 2026-11-05T16:00Z."
+    },
+    {
+      "id": "Q_BACKTEST_RUNTIME_NODE24",
+      "title": "Provision compatible research runtime and smoke test",
+      "priority": 1,
+      "status": "BLOCKED",
+      "lastCheckedAtUtc": "2026-11-10T17:06:14.000Z",
+      "nextAction": "Provision Node >=24/npm >=11, clone repository, install dependencies, import SDK and run deterministic fixture twice.",
+      "blocker": "Current runtime Node22.16.0/npm10.9.2; local checkout absent; SDK not installed."
+    },
+    {
+      "id": "Q_HISTORICAL_5M15M_BASE_BACKFILL",
+      "title": "Backfill multi-year 5m/15m or 1m source history",
+      "priority": 1,
+      "status": "BLOCKED",
+      "lastCheckedAtUtc": "2026-11-10T17:06:14.000Z",
+      "nextAction": "Restore data.binance.vision or use a checksum-verifiable approved mirror; fetch 1m/5m history for all four symbols.",
+      "blocker": "Direct Binance/Data Vision DNS resolution unavailable; 5m/15m base history is absent."
+    },
+    {
+      "id": "Q_MARKET_MONITORING_20261110T1706Z",
+      "title": "Fresh USD-M snapshot and completed-candle classification",
+      "priority": 3,
+      "status": "COMPLETED_MONITORING_ONLY",
+      "completedAtUtc": "2026-11-10T17:06:14.000Z",
+      "nextAction": "Refresh next run; only OOS_VALIDATED registry entries can be considered for trade selection.",
+      "blocker": null,
+      "result": {
+        "runId": "context-strategy-20261110T1706Z-auto13",
+        "snapshotPath": "research-data/binance-usdm/current_market_snapshot_20261110T1706Z_auto13.json",
+        "preflightPath": "research/context-strategy/preflight/preflight_20261110T1706Z_auto13.json",
+        "rowsReturned": 960,
+        "completedBars": 944,
+        "formingExcluded": 16,
+        "contexts": "4h BEARISH_EXPANSION across BTC/ETH/SOL/XRP; 1h BEARISH_IMPULSE",
+        "registryValidatedEntries": 0,
+        "tradableDecision": "NO_TRADE"
+      }
+    },
+    {
+      "id": "Q_INCREMENTAL_ARCHIVE_DQ_20261110T1706Z",
+      "title": "Verify appended bars, manifests, indexes and archive manifest",
+      "priority": 1,
+      "status": "COMPLETED_THIS_RUN",
+      "completedAtUtc": "2026-11-10T17:06:14.000Z",
+      "nextAction": "Repeat on next boundary append; incremental quality does not prove historical completeness.",
+      "blocker": null,
+      "result": {
+        "runId": "context-strategy-20261110T1706Z-auto13",
+        "rows": 108,
+        "seriesChecks": 28,
+        "duplicates": 0,
+        "missingIntervals": 0,
+        "offGrid": 0,
+        "nonMonotonic": 0,
+        "ohlcInvariantFailures": 0,
+        "nonPositiveVolume": 0,
+        "nonFinite": 0,
+        "formingRowsAppended": 0,
+        "deltaReadbacks": true,
+        "manifestReadbacks": true,
+        "indexReadbacks": true,
+        "archiveManifestReadback": true
+      }
+    },
+    {
+      "id": "Q_INCREMENTAL_ARCHIVE_REFRESH_20261110T1706Z",
+      "title": "Append completed USD-M 5m/15m/1h/4h bars",
+      "priority": 1,
+      "status": "COMPLETED_THIS_RUN",
+      "completedAtUtc": "2026-11-10T17:06:14.000Z",
+      "nextAction": "Continue from highwaters; next eligible opens 5m 17:05Z, 15m 17:00Z, 1h 17:00Z, 4h 16:00Z. Append only after closeTime passes.",
+      "blocker": null,
+      "result": {
+        "runId": "context-strategy-20261110T1706Z-auto13",
+        "rowsFetched": 144,
+        "rowsAppended": 108,
+        "formingExcluded": 28,
+        "rowsByInterval": {
+          "5m": 72,
+          "15m": 24,
+          "1h": 8,
+          "4h": 4
+        },
+        "deltaPaths": [
+          "research-data/binance-usdm/delta/binance_usdm_delta_20261110T1655Z_all_intervals_completed.jsonl",
+          "research-data/binance-usdm/delta/binance_usdm_delta_20261110T1706Z_5m15m1h_completed.jsonl"
+        ],
+        "archiveManifest": "research-data/binance-usdm/manifests/archive_manifest_20261110T1706Z_auto13.json",
+        "archiveBranchHead": "2266b2b7c4b732d474e8a740d206e94cdedd3ebf",
+        "readbackVerified": true
+      }
+    },
     {
       "id": "Q_INCREMENTAL_ARCHIVE_BOUNDARY_20261110T1535Z",
       "title": "Append boundary-completed 5m/15m bars",
@@ -151,11 +260,11 @@
       "title": "Daily conditional strategy experiment",
       "priority": 1,
       "status": "BLOCKED",
-      "lastCheckedAtUtc": "2026-11-10T16:32:54.279Z",
-      "nextAction": "Provision compatible persistent Node24/npm11 workspace; reconcile interval highwaters; restore approved archive access; pass deterministic smoke test; then run frozen experiment.",
-      "blocker": "Node22/npm10 below Node24/npm11; no local checkout or SDK; direct Binance/Data Vision DNS unavailable; 5m/15m base absent; 1h highwater aliases disagree; 4h canonical lag.",
+      "lastCheckedAtUtc": "2026-11-10T17:06:14.000Z",
+      "nextAction": "Provision Node24/npm11 workspace and local checkout; restore 1m/5m archive access and PIT funding data; reconcile 4h index; run deterministic fixture twice; then execute frozen EXP-001.",
+      "blocker": "No local checkout; Node 22.16.0/npm 10.9.2 below required Node >=24/npm >=11; Binance SDK not installed; direct Binance REST DNS fails; 5m/15m multi-year base absent; EXP-001/002 require PIT_DATABASE_URL or per-symbol funding files not available; 4h canonical ends 2026-11-05 and index provenance remains degraded; EXP-003 config absent.",
       "result": {
-        "runId": "context-strategy-20261110T152928Z-auto12",
+        "runId": "context-strategy-20261110T1706Z-auto13",
         "experimentExecuted": false,
         "oosEvaluated": false,
         "classification": "MONITORING_ONLY",
@@ -1585,13 +1694,15 @@
       "priority": 1,
       "status": "BLOCKED",
       "completedAtUtc": null,
-      "lastCheckedAtUtc": "2026-11-10T16:32:54.279Z",
-      "nextAction": "Provision Node24/npm11 and local checkout; reconcile archive; restore approved historical data access; run deterministic fixture twice; then execute pre-registered experiment.",
-      "blocker": "No compatible local checkout/runtime; 5m/15m base absent; 1h highwater conflict; 4h canonical lag; direct Binance/Data Vision DNS unavailable.",
+      "lastCheckedAtUtc": "2026-11-10T17:06:14.000Z",
+      "nextAction": "Provision Node24/npm11 workspace and local checkout; restore 1m/5m archive access and PIT funding data; reconcile 4h index; run deterministic fixture twice; then execute frozen EXP-001.",
+      "blocker": "No local checkout; Node 22.16.0/npm 10.9.2 below required Node >=24/npm >=11; Binance SDK not installed; direct Binance REST DNS fails; 5m/15m multi-year base absent; EXP-001/002 require PIT_DATABASE_URL or per-symbol funding files not available; 4h canonical ends 2026-11-05 and index provenance remains degraded; EXP-003 config absent.",
       "result": {
         "experimentExecuted": false,
         "oosEvaluated": false,
-        "classification": "MONITORING_ONLY"
+        "classification": "MONITORING_ONLY",
+        "runId": "context-strategy-20261110T1706Z-auto13",
+        "researchStatus": "RESEARCH_BLOCKED"
       }
     }
   ],

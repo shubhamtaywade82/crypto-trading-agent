@@ -1,0 +1,128 @@
+{
+  "schemaVersion": "1.0.0",
+  "experimentId": "DATA-QUALITY-APPEND-20261110T1933Z-AUTO16",
+  "runId": "context-strategy-20261110T1933Z-auto16",
+  "status": "RESEARCH_EXECUTED",
+  "experimentType": "INCREMENTAL_ARCHIVE_DATA_QUALITY",
+  "startedAtUtc": "2026-11-10T19:25:38.000Z",
+  "completedAtUtc": "2026-11-10T19:35:24.969Z",
+  "hypothesis": "Appending only completed, aligned Binance USD-M klines after each archive highwater should advance raw data without duplicates, gaps, off-grid timestamps, OHLC violations or forming-candle leakage.",
+  "scope": {
+    "symbols": [
+      "BTCUSDT",
+      "ETHUSDT",
+      "SOLUSDT",
+      "XRPUSDT"
+    ],
+    "intervals": [
+      "5m",
+      "15m",
+      "1h",
+      "4h"
+    ],
+    "windows": {
+      "5m": {
+        "firstOpenUtc": "2026-11-10T18:30:00.000Z",
+        "lastOpenUtc": "2026-11-10T19:25:00.000Z",
+        "rows": 48,
+        "rowsPerSymbol": 12
+      },
+      "15m": {
+        "firstOpenUtc": "2026-11-10T18:30:00.000Z",
+        "lastOpenUtc": "2026-11-10T19:15:00.000Z",
+        "rows": 16,
+        "rowsPerSymbol": 4
+      },
+      "1h": {
+        "firstOpenUtc": "2026-11-10T18:00:00.000Z",
+        "lastOpenUtc": "2026-11-10T18:00:00.000Z",
+        "rows": 4,
+        "rowsPerSymbol": 1
+      },
+      "4h": {
+        "newRows": 0,
+        "latestCompletedOpenUtc": "2026-11-10T12:00:00.000Z",
+        "formingOpenExcludedUtc": "2026-11-10T16:00:00.000Z"
+      }
+    }
+  },
+  "results": {
+    "rowsFetched": 68,
+    "completedRows": 68,
+    "formingRowsExcluded": 0,
+    "preHighwaterRowsExcluded": 0,
+    "rowsAppended": 68,
+    "rowsByInterval": {
+      "5m": 48,
+      "15m": 16,
+      "1h": 4,
+      "4h": 0
+    },
+    "rowsBySymbol": {
+      "BTCUSDT": 17,
+      "ETHUSDT": 17,
+      "SOLUSDT": 17,
+      "XRPUSDT": 17
+    },
+    "quality": {
+      "duplicates": 0,
+      "missingIntervals": 0,
+      "offGrid": 0,
+      "nonMonotonic": 0,
+      "ohlcInvariantFailures": 0,
+      "nonPositiveVolume": 0,
+      "nonFinite": 0,
+      "crossSymbolAlignment": true
+    }
+  },
+  "artifacts": {
+    "archiveManifestPath": "research-data/binance-usdm/manifests/archive_manifest_20261110T1933Z_auto16.json",
+    "archiveManifestBlobSha1": "93be778b67165182116eff41dd8a8cad25506dfd",
+    "deltaBatches": [
+      {
+        "path": "research-data/binance-usdm/delta/binance_usdm_delta_20261110T1927Z_5m15m_completed.jsonl",
+        "rows": 56,
+        "sha256": "6ddfd0fdff050dcca463ffc6e9313cdd3bbdb66fa63050810480ee1f026d082c",
+        "blobSha1": "7ecee16f83f9ee26b07bd900c97970b541ed7013"
+      },
+      {
+        "path": "research-data/binance-usdm/delta/binance_usdm_delta_20261110T1927Z_1h_completed.jsonl",
+        "rows": 4,
+        "sha256": "c9f36deda85facce3e80d510ec6a023400843502176d0afc8d5b928782892b7c",
+        "blobSha1": "b41bec7541726ca71161414dcc0fb8f1c0aeb9eb"
+      },
+      {
+        "path": "research-data/binance-usdm/delta/binance_usdm_delta_20261110T1933Z_5m15m_boundary.jsonl",
+        "rows": 8,
+        "sha256": "b76948d19bab8946169854c14a72580eb49c7b3dc1e8692a6eb0ca2e8c391fcc",
+        "blobSha1": "238bdc2e853f23b416885bbcab9bde33d4ac565d"
+      }
+    ],
+    "indexReadback": {
+      "5m": {
+        "sha256": "2016466b3f1a2ebb3cd078b12afd191609e88d8098a9045fb88f2c8474786b63",
+        "blobSha1": "dbf7fe74fa6891c9a1c17e4fc16f85dd6e326e53"
+      },
+      "15m": {
+        "sha256": "9886eb1ed0f90386e401b404c1a1edd03f7d570ccf7baa00ac07381a9963e86f",
+        "blobSha1": "0b7b7464db999712a376065b6dedffcc87436157"
+      },
+      "1h": {
+        "sha256": "4d911fe39dcc7e612b6946279166e00ff9377ffcea9aeea14835b4b21de19adf",
+        "blobSha1": "83977e3310325ece5e1c3204992c68a6287788f6"
+      },
+      "4h": {
+        "sha256": "1e67f43282890fe0a4bd4629dbc29b5645de22ba2fc8fe32ba739611575f3175",
+        "blobSha1": "0acd7b6cb97189b628c1b77bc8be8860a26c2b0e"
+      }
+    }
+  },
+  "limits": {
+    "strategyBacktestRun": false,
+    "oosEvaluation": false,
+    "reason": "Data-quality/archive experiment only. Local repository absent, Node/npm below project requirements, SDK package not importable, direct Binance REST DNS failed, and PIT_DATABASE_URL is unset.",
+    "scriptSource": "ephemeral managed runtime code; no repository script hash or code commit is claimed",
+    "seed": null
+  },
+  "nextAction": "Restore direct Binance DNS or provide a verified historical archive source, backfill multi-year 5m/15m, reconcile 4h provenance, provision Node >=24/npm >=11 and PIT_DATABASE_URL, then run deterministic harness smoke tests before EXP-001."
+}

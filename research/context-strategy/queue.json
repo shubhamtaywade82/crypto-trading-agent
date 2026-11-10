@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAtUtc": "2026-11-10T19:35:24.969Z",
+  "updatedAtUtc": "2026-11-10T19:43:55.001Z",
   "items": [
     {
       "id": "Q_DAILY_RESEARCH_20261110T1730Z",
@@ -1725,7 +1725,7 @@
       "status": "BLOCKED",
       "nextAction": "Recover the original inherited Donchian20 BULL_LOW experiment artifact and hashes; reconcile queue/registry counts only from accessible source artifacts.",
       "blocker": "Current registry.json contains 5 entries (4 INSUFFICIENT_EVIDENCE, 1 REJECTED, 0 OOS_VALIDATED); queue metadata still mentions one separate inherited OOS_PROMISING candidate whose original artifact/data/code/seed/split/bootstrap provenance is unavailable.",
-      "lastCheckedAtUtc": "2026-11-10T19:35:24.969Z"
+      "lastCheckedAtUtc": "2026-11-10T19:43:55.001Z"
     },
     {
       "id": "Q_INCREMENTAL_ARCHIVE_REFRESH_20261110T1632Z",
@@ -1756,13 +1756,13 @@
       "priority": 1,
       "status": "BLOCKED",
       "completedAtUtc": null,
-      "lastCheckedAtUtc": "2026-11-10T19:35:24.969Z",
-      "nextAction": "Implement a single canonical index reconciler, add fixtures for conflicting aliases, reconcile every alias from manifests, then test idempotency before future index writes.",
+      "lastCheckedAtUtc": "2026-11-10T19:43:55.001Z",
+      "nextAction": "Implement one canonical index reconciler, add fixtures for conflicting aliases, reconcile all aliases from manifests, then test idempotency before future index writes.",
       "blocker": "Legacy highwater aliases remain inconsistent; prior 1h 14:00 vs 13:00 discrepancy and stale 5m/15m/4h aliases still require a canonical writer and tests.",
       "result": {
         "archiveManifest": "research-data/binance-usdm/manifests/archive_manifest_20261110T1632Z_auto13.json"
       },
-      "progressNote": "Canonical highwater fields and incremental metadata were advanced for 5m/15m/1h and readback-verified. Full legacy alias reconciliation and automated tests were not performed."
+      "progressNote": "Canonical highwater fields and incremental metadata were advanced and readback-verified for 5m/15m/1h. Full legacy alias reconciliation and automated tests were not performed."
     },
     {
       "id": "Q_MARKET_MONITORING_20261110T1632Z",
@@ -1901,8 +1901,8 @@
       "title": "Daily conditional strategy experiment",
       "priority": 1,
       "status": "BLOCKED",
-      "lastCheckedAtUtc": "2026-11-10T19:35:24.969Z",
-      "updatedAtUtc": "2026-11-10T19:35:24.969Z",
+      "lastCheckedAtUtc": "2026-11-10T19:43:55.001Z",
+      "updatedAtUtc": "2026-11-10T19:43:55.001Z",
       "prerequisites": [
         "Node>=24/npm>=11 local checkout",
         "5m/15m multi-year base",
@@ -1910,15 +1910,14 @@
         "PIT funding DB",
         "deterministic smoke test"
       ],
-      "blocker": "Incremental archive data-quality experiment completed, but strategy prerequisites remain blocked: local checkout absent, Node/npm below floor, SDK import failed, direct REST DNS failed, 5m/15m base history absent, 4h provenance unresolved, PIT_DATABASE_URL unset and fixture not run.",
-      "nextAction": "Backfill multi-year 5m/15m, reconcile 4h provenance, provision Node>=24/npm>=11 and PIT funding data, run deterministic fixture twice, then execute frozen EXP-001.",
+      "blocker": "Data-quality/archive maintenance completed, but strategy prerequisites remain blocked: no local checkout, Node/npm below floor, SDK import failed, direct REST DNS failed, 5m/15m base history absent, 4h provenance/legacy aliases unresolved, PIT_DATABASE_URL unset and fixture not run.",
+      "nextAction": "Backfill multi-year 5m/15m, reconcile 4h provenance and aliases, provision Node>=24/npm>=11 and PIT funding data, run deterministic fixture twice, then execute frozen EXP-001.",
       "result": {
-        "experimentExecuted": true,
-        "experimentType": "INCREMENTAL_ARCHIVE_DATA_QUALITY",
+        "dataQualityExperimentExecuted": true,
         "strategyExperimentExecuted": false,
         "oosEvaluated": false,
-        "classification": "RESEARCH_EXECUTED",
-        "runId": "context-strategy-20261110T1933Z-auto16"
+        "classification": "RESEARCH_EXECUTED_DATA_QUALITY_ONLY",
+        "runId": "context-strategy-20261110T1942Z-auto16"
       }
     },
     {
@@ -2035,7 +2034,7 @@
       "title": "Daily strategy-context experiment",
       "priority": 1,
       "status": "BLOCKED",
-      "lastCheckedAtUtc": "2026-11-10T19:35:24.969Z",
+      "lastCheckedAtUtc": "2026-11-10T19:43:55.001Z",
       "completedAtUtc": null,
       "prerequisites": [
         "Node>=24/npm>=11 local checkout",
@@ -2044,66 +2043,205 @@
         "PIT funding DB",
         "deterministic no-lookahead fixture"
       ],
-      "blocker": "The completed experiment this run is data-quality-only. No executable strategy harness, adequate intraday historical base or point-in-time funding inputs are available.",
+      "blocker": "Data-quality/archive maintenance completed, but strategy prerequisites remain blocked: no local checkout, Node/npm below floor, SDK import failed, direct REST DNS failed, 5m/15m base history absent, 4h provenance/legacy aliases unresolved, PIT_DATABASE_URL unset and fixture not run.",
+      "nextAction": "Backfill multi-year 5m/15m, reconcile 4h provenance and aliases, provision Node>=24/npm>=11 and PIT funding data, run deterministic fixture twice, then execute frozen EXP-001.",
+      "result": {
+        "dataQualityExperimentExecuted": true,
+        "strategyExperimentExecuted": false,
+        "oosEvaluated": false,
+        "classification": "RESEARCH_EXECUTED_DATA_QUALITY_ONLY",
+        "runId": "context-strategy-20261110T1942Z-auto16"
+      },
+      "updatedAtUtc": "2026-11-10T19:43:55.001Z"
+    },
+    {
+      "id": "Q_INCREMENTAL_ARCHIVE_REFRESH_20261110T1942Z",
+      "title": "Append completed 5m/15m/1h candles and 5m boundary bars",
+      "priority": 1,
+      "status": "COMPLETED_THIS_RUN",
+      "completedAtUtc": "2026-11-10T19:43:55.001Z",
+      "lastCheckedAtUtc": "2026-11-10T19:43:55.001Z",
+      "prerequisites": [
+        "Verified archive highwaters",
+        "Binance USD-M public connector",
+        "Writable archive branch"
+      ],
+      "nextAction": "Continue from final archive manifest; next 5m open 19:40Z, next 15m open 19:30Z, next 1h open 19:00Z after close, 4h 16:00 remains forming until 20:00Z.",
+      "blocker": null,
+      "result": {
+        "rowsAppended": 76,
+        "rowsByInterval": {
+          "5m": 56,
+          "15m": 16,
+          "1h": 4,
+          "4h": 0
+        },
+        "formingRowsExcluded": 0,
+        "deltaPaths": [
+          "research-data/binance-usdm/delta/binance_usdm_delta_20261110T1927Z_5m15m_completed.jsonl",
+          "research-data/binance-usdm/delta/binance_usdm_delta_20261110T1927Z_1h_completed.jsonl",
+          "research-data/binance-usdm/delta/binance_usdm_delta_20261110T1933Z_5m15m_boundary.jsonl",
+          "research-data/binance-usdm/delta/binance_usdm_delta_20261110T1942Z_5m_completed.jsonl"
+        ],
+        "deltaSha256s": [
+          "6ddfd0fdff050dcca463ffc6e9313cdd3bbdb66fa63050810480ee1f026d082c",
+          "c9f36deda85facce3e80d510ec6a023400843502176d0afc8d5b928782892b7c",
+          "b76948d19bab8946169854c14a72580eb49c7b3dc1e8692a6eb0ca2e8c391fcc",
+          "b16ea028016949d2e46823155e2cc673d337c91fdc1adf9c687bb10879042508"
+        ],
+        "manifestPaths": [
+          "research-data/binance-usdm/delta/manifest-20261110T1927Z-5m15m.json",
+          "research-data/binance-usdm/delta/manifest-20261110T1927Z-1h.json",
+          "research-data/binance-usdm/delta/manifest-20261110T1933Z-5m15m-boundary.json",
+          "research-data/binance-usdm/delta/manifest-20261110T1942Z-5m.json"
+        ],
+        "manifestSha256s": [
+          "93a60b4362bc0064882e879e7e6f5de99f50aad9e4dd79306e1d5d433dd72818",
+          "6b867c483a096ba750e2d903894d128f10a056058c3f80be0d9257b1346158fd",
+          "364cf700624a1fc645cda29c72bda7bb5f30d528d9aa09285e3f8765d95aabe7",
+          "a4af8bdb746268121c1f82a4d9a2f302ed54c51284df42235a0c9e51274c49bc"
+        ],
+        "highwaters": {
+          "5m": "2026-11-10T19:35:00Z",
+          "15m": "2026-11-10T19:15:00Z",
+          "1h": "2026-11-10T18:00:00Z",
+          "4h": "2026-11-10T12:00:00Z"
+        },
+        "archiveManifestPath": "research-data/binance-usdm/manifests/archive_manifest_20261110T1942Z_auto16.json",
+        "archiveManifestSha256": "8217861ec575a18ab60624ba8804ad8f26c5c9745fae0fc1438d073a2e326fc9",
+        "readbackVerified": true
+      }
+    },
+    {
+      "id": "Q_INCREMENTAL_ARCHIVE_DQ_20261110T1942Z",
+      "title": "Audit appended candles, delta hashes, indexes and archive manifest",
+      "priority": 1,
+      "status": "COMPLETED_THIS_RUN",
+      "completedAtUtc": "2026-11-10T19:43:55.001Z",
+      "lastCheckedAtUtc": "2026-11-10T19:43:55.001Z",
+      "blocker": null,
+      "nextAction": "Repeat on the next newly completed slice; this validates incremental windows only, not historical base completeness.",
+      "result": {
+        "experimentId": "DATA-QUALITY-APPEND-20261110T1942Z-AUTO16",
+        "artifactPath": "research/context-strategy/experiments/incremental_archive_append_20261110T1942Z_auto16.result.json",
+        "rows": 76,
+        "duplicates": 0,
+        "missingIntervals": 0,
+        "offGrid": 0,
+        "nonMonotonic": 0,
+        "ohlcFailures": 0,
+        "nonPositiveVolume": 0,
+        "nonFinite": 0,
+        "readbackVerified": true,
+        "archiveManifestPath": "research-data/binance-usdm/manifests/archive_manifest_20261110T1942Z_auto16.json"
+      }
+    },
+    {
+      "id": "Q_MARKET_MONITORING_20261110T1943Z",
+      "title": "Refresh USD-M snapshot and classify completed-candle contexts",
+      "priority": 3,
+      "status": "COMPLETED_MONITORING_ONLY",
+      "completedAtUtc": "2026-11-10T19:43:55.001Z",
+      "lastCheckedAtUtc": "2026-11-10T19:43:55.001Z",
+      "blocker": null,
+      "nextAction": "Refresh on next run; only OOS_VALIDATED registry entries may be selected.",
+      "result": {
+        "asOfUtc": "2026-11-10T19:43:55.001Z",
+        "symbols": [
+          "BTCUSDT",
+          "ETHUSDT",
+          "SOLUSDT",
+          "XRPUSDT"
+        ],
+        "sampledSeries": 16,
+        "rowsReturned": 1600,
+        "completed": 1584,
+        "formingExcluded": 16,
+        "qualityFailures": 0,
+        "registryValidatedEntries": 0,
+        "decisions": {
+          "SOLUSDT": "NO_TRADE",
+          "ETHUSDT": "NO_TRADE",
+          "XRPUSDT": "NO_TRADE"
+        },
+        "snapshotPath": "research-data/binance-usdm/current_market_snapshot_20261110T1943Z_auto16.json"
+      }
+    },
+    {
+      "id": "Q_DAILY_RESEARCH_20261110T1942Z",
+      "title": "Daily strategy-context experiment",
+      "priority": 1,
+      "status": "BLOCKED",
+      "lastCheckedAtUtc": "2026-11-10T19:43:55.001Z",
+      "completedAtUtc": null,
+      "prerequisites": [
+        "Node>=24/npm>=11 local checkout",
+        "5m/15m multi-year base history",
+        "4h provenance and alias reconciliation",
+        "PIT funding DB",
+        "deterministic no-lookahead fixture"
+      ],
+      "blocker": "The completed experiment is data-quality-only. No executable strategy harness, adequate intraday historical base or point-in-time funding inputs are available.",
       "nextAction": "Resolve historical archive, runtime and PIT data blockers; run fixture twice; then execute frozen EXP-001 with chronological splits and untouched OOS.",
       "result": {
         "dataQualityExperimentExecuted": true,
         "strategyExperimentExecuted": false,
         "oosEvaluated": false,
         "classification": "RESEARCH_EXECUTED_DATA_QUALITY_ONLY",
-        "runId": "context-strategy-20261110T1933Z-auto16"
+        "runId": "context-strategy-20261110T1942Z-auto16"
       }
     }
   ],
   "lastRun": {
-    "runId": "context-strategy-20261110T1933Z-auto16",
-    "asOfUtc": "2026-11-10T19:35:24.969Z",
+    "runId": "context-strategy-20261110T1942Z-auto16",
+    "asOfUtc": "2026-11-10T19:43:55.001Z",
     "classification": "RESEARCH_EXECUTED",
     "researchStatus": "RESEARCH_EXECUTED_DATA_QUALITY_ONLY",
     "strategyExperimentStatus": "RESEARCH_BLOCKED",
-    "archiveCommit": "b4331565ebd5ed5d0456051d0caa6382aa9de10f",
-    "archiveManifestPath": "research-data/binance-usdm/manifests/archive_manifest_20261110T1933Z_auto16.json",
-    "archiveManifestSha256": "79f87a65524576f8279778f54b1bbfccd0b4ff475f94dba48a54de4197408e5b",
-    "rowsAppended": 68,
+    "archiveCommit": "16f895b2b6f318c1fab88c2340939a446ebd144b",
+    "archiveManifestPath": "research-data/binance-usdm/manifests/archive_manifest_20261110T1942Z_auto16.json",
+    "archiveManifestSha256": "8217861ec575a18ab60624ba8804ad8f26c5c9745fae0fc1438d073a2e326fc9",
+    "rowsAppended": 76,
     "experimentExecuted": true,
     "experimentType": "INCREMENTAL_ARCHIVE_DATA_QUALITY",
     "strategyExperimentExecuted": false,
     "oosEvaluated": false,
-    "reportPath": "research/context-strategy/reports/2026-11-10T1935Z_auto16.md",
-    "snapshotPath": "research-data/binance-usdm/current_market_snapshot_20261110T1935Z_auto16.json",
-    "preflightPath": "research/context-strategy/preflight/preflight_20261110T1935Z_auto16.json",
-    "dataQualityArtifactPath": "research/context-strategy/experiments/incremental_archive_append_20261110T1933Z_auto16.result.json",
-    "runManifestPath": "research-runs/context-strategy-20261110T1933Z-auto16.json",
-    "mainHeadBeforeQueueUpdate": "130aa6e2b8d8a62bfccc2c1e5e68b7136e4b7db0"
+    "reportPath": "research/context-strategy/reports/2026-11-10T1943Z_auto16.md",
+    "snapshotPath": "research-data/binance-usdm/current_market_snapshot_20261110T1943Z_auto16.json",
+    "preflightPath": "research/context-strategy/preflight/preflight_20261110T1943Z_auto16.json",
+    "dataQualityArtifactPath": "research/context-strategy/experiments/incremental_archive_append_20261110T1942Z_auto16.result.json",
+    "runManifestPath": "research-runs/context-strategy-20261110T1942Z-auto16.json",
+    "mainHeadBeforeQueueUpdate": "8bea00b92bdaecf06acc6c4243855b69b5046f34"
   },
   "lastRunReport": "research/context-strategy/reports/2026-11-10T1832Z_auto15.md",
-  "lastRunId": "context-strategy-20261110T1933Z-auto16",
+  "lastRunId": "context-strategy-20261110T1942Z-auto16",
   "incremental_highwater_marks": {
-    "5m": "2026-11-10T19:25:00Z",
+    "5m": "2026-11-10T19:35:00Z",
     "15m": "2026-11-10T19:15:00Z",
     "1h": "2026-11-10T18:00:00Z",
     "4h": "2026-11-10T12:00:00Z"
   },
-  "last_incremental_refresh_utc": "2026-11-10T19:35:24.969Z",
+  "last_incremental_refresh_utc": "2026-11-10T19:43:55.001Z",
   "latest_incremental_delta_files": [
     "research-data/binance-usdm/delta/binance_usdm_delta_20261110T1927Z_5m15m_completed.jsonl",
     "research-data/binance-usdm/delta/binance_usdm_delta_20261110T1927Z_1h_completed.jsonl",
-    "research-data/binance-usdm/delta/binance_usdm_delta_20261110T1933Z_5m15m_boundary.jsonl"
+    "research-data/binance-usdm/delta/binance_usdm_delta_20261110T1933Z_5m15m_boundary.jsonl",
+    "research-data/binance-usdm/delta/binance_usdm_delta_20261110T1942Z_5m_completed.jsonl"
   ],
   "lastRunSummary": {
-    "asOfUtc": "2026-11-10T19:35:24.969Z",
-    "runId": "context-strategy-20261110T1933Z-auto16",
+    "asOfUtc": "2026-11-10T19:43:55.001Z",
+    "runId": "context-strategy-20261110T1942Z-auto16",
     "status": "RESEARCH_EXECUTED",
     "scope": "INCREMENTAL_ARCHIVE_DQ_AND_MARKET_MONITORING",
     "strategyExperiment": "RESEARCH_BLOCKED",
     "oosEvaluated": false,
-    "rowsFetched": 68,
-    "rowsAdded": 68,
+    "rowsFetched": 76,
+    "rowsAdded": 76,
     "formingExcluded": 0,
     "preHighwaterExcluded": 0,
     "qualityFailures": 0,
     "rowsByInterval": {
-      "5m": 48,
+      "5m": 56,
       "15m": 16,
       "1h": 4,
       "4h": 0
@@ -2111,27 +2249,31 @@
     "deltaPaths": [
       "research-data/binance-usdm/delta/binance_usdm_delta_20261110T1927Z_5m15m_completed.jsonl",
       "research-data/binance-usdm/delta/binance_usdm_delta_20261110T1927Z_1h_completed.jsonl",
-      "research-data/binance-usdm/delta/binance_usdm_delta_20261110T1933Z_5m15m_boundary.jsonl"
+      "research-data/binance-usdm/delta/binance_usdm_delta_20261110T1933Z_5m15m_boundary.jsonl",
+      "research-data/binance-usdm/delta/binance_usdm_delta_20261110T1942Z_5m_completed.jsonl"
     ],
     "deltaSha256s": [
       "6ddfd0fdff050dcca463ffc6e9313cdd3bbdb66fa63050810480ee1f026d082c",
       "c9f36deda85facce3e80d510ec6a023400843502176d0afc8d5b928782892b7c",
-      "b76948d19bab8946169854c14a72580eb49c7b3dc1e8692a6eb0ca2e8c391fcc"
+      "b76948d19bab8946169854c14a72580eb49c7b3dc1e8692a6eb0ca2e8c391fcc",
+      "b16ea028016949d2e46823155e2cc673d337c91fdc1adf9c687bb10879042508"
     ],
     "manifestPaths": [
       "research-data/binance-usdm/delta/manifest-20261110T1927Z-5m15m.json",
       "research-data/binance-usdm/delta/manifest-20261110T1927Z-1h.json",
-      "research-data/binance-usdm/delta/manifest-20261110T1933Z-5m15m-boundary.json"
+      "research-data/binance-usdm/delta/manifest-20261110T1933Z-5m15m-boundary.json",
+      "research-data/binance-usdm/delta/manifest-20261110T1942Z-5m.json"
     ],
     "manifestSha256s": [
       "93a60b4362bc0064882e879e7e6f5de99f50aad9e4dd79306e1d5d433dd72818",
       "6b867c483a096ba750e2d903894d128f10a056058c3f80be0d9257b1346158fd",
-      "364cf700624a1fc645cda29c72bda7bb5f30d528d9aa09285e3f8765d95aabe7"
+      "364cf700624a1fc645cda29c72bda7bb5f30d528d9aa09285e3f8765d95aabe7",
+      "a4af8bdb746268121c1f82a4d9a2f302ed54c51284df42235a0c9e51274c49bc"
     ],
-    "archiveManifestPath": "research-data/binance-usdm/manifests/archive_manifest_20261110T1933Z_auto16.json",
-    "archiveManifestSha256": "79f87a65524576f8279778f54b1bbfccd0b4ff475f94dba48a54de4197408e5b",
+    "archiveManifestPath": "research-data/binance-usdm/manifests/archive_manifest_20261110T1942Z_auto16.json",
+    "archiveManifestSha256": "8217861ec575a18ab60624ba8804ad8f26c5c9745fae0fc1438d073a2e326fc9",
     "highwaters": {
-      "5m": "2026-11-10T19:25:00Z",
+      "5m": "2026-11-10T19:35:00Z",
       "15m": "2026-11-10T19:15:00Z",
       "1h": "2026-11-10T18:00:00Z",
       "4h": "2026-11-10T12:00:00Z"
@@ -2139,11 +2281,11 @@
     "readbackVerified": true,
     "indexReadbackVerified": true,
     "archiveBranch": "research/raw-ohlcv-archive-20261108T1026Z",
-    "archiveHead": "b4331565ebd5ed5d0456051d0caa6382aa9de10f",
-    "reportPath": "research/context-strategy/reports/2026-11-10T1935Z_auto16.md",
-    "snapshotPath": "research-data/binance-usdm/current_market_snapshot_20261110T1935Z_auto16.json",
-    "preflightPath": "research/context-strategy/preflight/preflight_20261110T1935Z_auto16.json",
-    "runManifestPath": "research-runs/context-strategy-20261110T1933Z-auto16.json",
+    "archiveHead": "16f895b2b6f318c1fab88c2340939a446ebd144b",
+    "reportPath": "research/context-strategy/reports/2026-11-10T1943Z_auto16.md",
+    "snapshotPath": "research-data/binance-usdm/current_market_snapshot_20261110T1943Z_auto16.json",
+    "preflightPath": "research/context-strategy/preflight/preflight_20261110T1943Z_auto16.json",
+    "runManifestPath": "research-runs/context-strategy-20261110T1942Z-auto16.json",
     "registrySummary": {
       "entryCount": 5,
       "oosValidatedEntries": 0,
@@ -2156,38 +2298,38 @@
     },
     "mainArtifactReadbackVerified": true,
     "mainArtifacts": {
-      "experimentSha256": "eb77a10266a0f0a50bfbcc557772e7afaafc041c50e6bff61fc902a02df3f283",
-      "snapshotSha256": "6918b7b7ac7472dc7f91b3851864255627b662ebee8c234ac7de18f7b9e9f1e0",
-      "preflightSha256": "9b90e50608623079dff241e75427bfe6396314af651ad0bb661ea5acc7616758",
-      "reportSha256": "7f814da7ec65e5445c22ac9a7139e7bd73ff7b5c60b0878ff53df74914e90dc6",
-      "runManifestSha256": "72118632c172df658503aa09e28a0f4b62ba70b7efc340d69f550f8fefcf0625"
+      "experimentSha256": "ac34339aee7c9ddb00023fe5dfa9576616d34b8b1bd742e7ce452509ee3a237d",
+      "snapshotSha256": "822460690dd582e46b545d8c37a108cacc171892722615385550f9029e8dd28e",
+      "preflightSha256": "32f2f08a4b41acbb960ffca360d39d70bf04c169eb906a6608e8696744b08cad",
+      "reportSha256": "bbde13049a242bad36580112c00f4823c717762f4282198da949a1e74e07dd30",
+      "runManifestSha256": "e31cdf2ae1b045bcc65d5a4fe09a0cf215513f82f416190e1cd5470d40ee8cdb"
     }
   },
   "latestRun": {
-    "runId": "context-strategy-20261110T1933Z-auto16",
-    "asOfUtc": "2026-11-10T19:35:24.969Z",
+    "runId": "context-strategy-20261110T1942Z-auto16",
+    "asOfUtc": "2026-11-10T19:43:55.001Z",
     "classification": "RESEARCH_EXECUTED",
     "researchStatus": "RESEARCH_EXECUTED_DATA_QUALITY_ONLY",
     "strategyExperimentStatus": "RESEARCH_BLOCKED",
     "oosEvaluated": false,
-    "rowsAppended": 68,
+    "rowsAppended": 76,
     "highwaters": {
-      "5m": "2026-11-10T19:25:00Z",
+      "5m": "2026-11-10T19:35:00Z",
       "15m": "2026-11-10T19:15:00Z",
       "1h": "2026-11-10T18:00:00Z",
       "4h": "2026-11-10T12:00:00Z"
     },
-    "reportPath": "research/context-strategy/reports/2026-11-10T1935Z_auto16.md",
-    "snapshotPath": "research-data/binance-usdm/current_market_snapshot_20261110T1935Z_auto16.json",
-    "preflightPath": "research/context-strategy/preflight/preflight_20261110T1935Z_auto16.json",
-    "runManifestPath": "research-runs/context-strategy-20261110T1933Z-auto16.json"
+    "reportPath": "research/context-strategy/reports/2026-11-10T1943Z_auto16.md",
+    "snapshotPath": "research-data/binance-usdm/current_market_snapshot_20261110T1943Z_auto16.json",
+    "preflightPath": "research/context-strategy/preflight/preflight_20261110T1943Z_auto16.json",
+    "runManifestPath": "research-runs/context-strategy-20261110T1942Z-auto16.json"
   },
   "dailyCycle": {
     "dateUtc": "2026-11-10",
     "status": "DATA_QUALITY_ONLY_STRATEGY_BLOCKED",
-    "reason": "A reproducible 68-row archive data-quality experiment completed and the live snapshot was refreshed. No strategy experiment ran because the local checkout/runtime, historical 5m/15m base and PIT funding database are unavailable; 4h provenance remains unresolved.",
-    "nextAction": "Backfill 5m/15m, reconcile 4h provenance and legacy index aliases, provision Node>=24/npm>=11 and PIT funding inputs, run deterministic fixture twice, then execute frozen EXP-001.",
-    "lastRunUtc": "2026-11-10T19:35:24.969Z",
+    "reason": "A reproducible 76-row archive data-quality experiment completed and the live snapshot was refreshed. No strategy experiment ran because local checkout/runtime, historical 5m/15m base and PIT funding database are unavailable; 4h provenance and legacy index aliases remain unresolved.",
+    "nextAction": "Backfill 5m/15m, reconcile 4h provenance and legacy aliases, provision Node>=24/npm>=11 and PIT funding inputs, run deterministic fixture twice, then execute frozen EXP-001.",
+    "lastRunUtc": "2026-11-10T19:43:55.001Z",
     "dataQualityExperiment": "COMPLETED_REPRODUCIBLE",
     "strategyExperiment": "BLOCKED"
   },
@@ -2203,7 +2345,7 @@
   },
   "rawArchiveBranch": "research/raw-ohlcv-archive-20261108T1026Z",
   "highwater": {
-    "5m": "2026-11-10T19:25:00Z",
+    "5m": "2026-11-10T19:35:00Z",
     "15m": "2026-11-10T19:15:00Z",
     "1h": "2026-11-10T18:00:00Z",
     "4h": "2026-11-10T12:00:00Z"

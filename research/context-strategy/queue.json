@@ -1,14 +1,75 @@
 {
   "schemaVersion": 1,
-  "updatedAtUtc": "2026-11-10T15:30:04.313Z",
+  "updatedAtUtc": "2026-11-10T15:37:06.787Z",
   "items": [
+    {
+      "id": "Q_INCREMENTAL_ARCHIVE_BOUNDARY_20261110T1535Z",
+      "title": "Append boundary-completed 5m/15m bars",
+      "priority": 1,
+      "status": "COMPLETED_THIS_RUN",
+      "completedAtUtc": "2026-11-10T15:35:45.107Z",
+      "nextAction": "Continue from current highwaters; next eligible 5m 15:35Z after 15:39:59.999Z and 15m 15:30Z after 15:44:59.999Z.",
+      "blocker": null,
+      "result": {
+        "rowsAppended": 8,
+        "rowsByInterval": {
+          "5m": 4,
+          "15m": 4
+        },
+        "deltaPath": "research-data/binance-usdm/delta/binance_usdm_delta_20261110T1535Z_5m15m_boundary.jsonl",
+        "deltaSha256": "d05e4aa782e6e721a6871a95c7a80179f013ce58368d60efc6c478599dd695d0",
+        "readbackVerified": true
+      }
+    },
+    {
+      "id": "Q_INCREMENTAL_ARCHIVE_REFRESH_20261110T1537Z",
+      "title": "Append newly completed 5m boundary bars",
+      "priority": 1,
+      "status": "COMPLETED_THIS_RUN",
+      "completedAtUtc": "2026-11-10T15:37:06.787Z",
+      "nextAction": "Next eligible 5m open 15:35Z after 15:39:59.999Z; 15m 15:30Z after 15:44:59.999Z; 1h 15:00Z and 4h 12:00Z after 15:59:59.999Z. Exclude forming bars.",
+      "blocker": null,
+      "result": {
+        "rowsAppended": 4,
+        "rowsByInterval": {
+          "5m": 4
+        },
+        "deltaPath": "research-data/binance-usdm/delta/binance_usdm_delta_20261110T1537Z_5m_boundary.jsonl",
+        "deltaSha256": "6c6cef359e105a8a69e230267960be2cb29bf42598b0893eba9d0cf24736b214",
+        "manifestPath": "research-data/binance-usdm/delta/manifest-20261110T1537Z-5m-boundary.json",
+        "manifestSha256": "132cbfb35aefe76da07a413a62b0b7b22a7bf5ea3001fa05e9f2c34d6c9264da",
+        "readbackVerified": true
+      }
+    },
+    {
+      "id": "Q_INCREMENTAL_ARCHIVE_DQ_20261110T1537Z",
+      "title": "Verify final incremental archive readback and integrity",
+      "priority": 1,
+      "status": "COMPLETED_THIS_RUN",
+      "completedAtUtc": "2026-11-10T15:37:06.787Z",
+      "nextAction": "Repeat on next completed-bar append; incremental integrity does not prove historical completeness.",
+      "blocker": null,
+      "result": {
+        "rows": 32,
+        "duplicates": 0,
+        "missingIntervals": 0,
+        "offGrid": 0,
+        "nonMonotonic": 0,
+        "ohlcInvariantFailures": 0,
+        "nonPositiveVolume": 0,
+        "nonFinite": 0,
+        "formingRowsAppended": 0,
+        "allDeltaManifestIndexReadbacks": true,
+        "finalArchiveManifest": "research-data/binance-usdm/manifests/archive_manifest_20261110T1537Z_auto12.json"
+      }
+    },
     {
       "id": "Q_INCREMENTAL_ARCHIVE_REFRESH_20261110T152928Z",
       "title": "Incremental completed 5m/15m archive refresh",
       "priority": 1,
       "status": "COMPLETED_THIS_RUN",
       "completedAtUtc": "2026-11-10T15:30:04.313Z",
-      "nextAction": "Next eligible 5m open 15:25Z after 15:29:59.999Z; next 15m open 15:15Z after 15:29:59.999Z. 1h 15:00Z and 4h 12:00Z are still forming; append only after closeTime passes.",
+      "nextAction": "Next eligible 5m open 15:35Z after 15:39:59.999Z; next 15m open 15:30Z after 15:44:59.999Z; 1h 15:00Z and 4h 12:00Z after 15:59:59.999Z. Append only after closeTime passes.",
       "blocker": null,
       "result": {
         "runId": "context-strategy-20261110T152928Z-auto12",
@@ -90,9 +151,9 @@
       "title": "Daily conditional strategy experiment",
       "priority": 1,
       "status": "BLOCKED",
-      "lastCheckedAtUtc": "2026-11-10T15:30:04.313Z",
+      "lastCheckedAtUtc": "2026-11-10T15:37:06.787Z",
       "nextAction": "Unblock Q1-Q4, provision Node24/npm11, pass deterministic smoke test, then run the highest-priority pre-registered strategy-context-symbol experiment.",
-      "blocker": "No local checkout or compatible Node/npm; Binance SDK not installed; direct Binance/Data Vision DNS unavailable; 5m/15m base history absent; 1h/4h provenance unresolved; no deterministic smoke test. No experiment or OOS was fabricated.",
+      "blocker": "No compatible local checkout/runtime; direct Binance and Data Vision DNS unavailable; 5m/15m base history absent; 1h/4h reconciliation unresolved; deterministic smoke test not run. Monitoring and archive maintenance only.",
       "result": {
         "runId": "context-strategy-20261110T152928Z-auto12",
         "experimentExecuted": false,
@@ -320,8 +381,8 @@
         "Persistent archive",
         "Checksum/readback"
       ],
-      "nextAction": "Restore DNS/HTTPS or use a separate external downloader; backfill official Binance USD-M monthly/daily 5m and 15m klines with sibling .CHECKSUM verification; then reconcile the 1h index/manifest highwater and 4h page/count/hash provenance.",
-      "blocker": "5m/15m base history remains absent (1,288/432 incremental rows only). 1h archive index highwater field is 10:00Z while the latest prior archive manifest says 14:00Z. 4h raw/aligned/canonical totals are 53,960/53,816/53,844; the current index records 13 manifest SHA provenance mismatches. Direct data.binance.vision DNS failed (HTTP 000, curl exit 6).",
+      "nextAction": "Restore DNS/HTTPS or use a separate external downloader; backfill official Binance USD-M monthly/daily 5m and 15m klines with sibling .CHECKSUM verification; reconcile the 1h index/manifest highwater and 4h page/count/hash provenance.",
+      "blocker": "5m/15m base history remains absent (1,296/436 incremental rows only). 1h archive index highwater field is 10:00Z while latest prior manifest says 14:00Z. 4h raw/aligned/canonical totals 53,960/53,816/53,844; current index reports 13 manifest SHA provenance mismatches. Direct data.binance.vision DNS failed (HTTP 000, curl exit 6).",
       "result": {
         "canonical4hRowsPerSymbol": 13461,
         "canonical1hRowsPerSymbol": 53871,
@@ -425,15 +486,19 @@
         "latestArchiveManifestSha256": "cce2345f8ecbb8f5e225744e980d23d48e3fb36d600b1c62ae8ad59aaa48920f"
       },
       "latestRun": {
-        "asOfUtc": "2026-11-10T15:30:04.313Z",
-        "rowsAppended": 20,
+        "asOfUtc": "2026-11-10T15:37:06.787Z",
+        "rowsAppended": 32,
         "rowsByInterval": {
-          "5m": 16,
-          "15m": 4
+          "5m": 24,
+          "15m": 8
+        },
+        "highwaters": {
+          "5m": "2026-11-10T15:30:00Z",
+          "15m": "2026-11-10T15:15:00Z"
         },
         "readbackVerified": true
       },
-      "lastCheckedAtUtc": "2026-11-10T15:30:04.313Z"
+      "lastCheckedAtUtc": "2026-11-10T15:37:06.787Z"
     },
     {
       "id": "Q2_VERIFY_EXCHANGE_TIME_METADATA",
@@ -451,7 +516,7 @@
         "driftSeconds": 49098.109,
         "executionStatus": "BLOCKED_STALE_EXCHANGEINFO"
       },
-      "lastCheckedAtUtc": "2026-11-10T15:30:04.313Z"
+      "lastCheckedAtUtc": "2026-11-10T15:37:06.787Z"
     },
     {
       "id": "Q3_RUN_REPOSITORY_BACKTEST",
@@ -484,7 +549,7 @@
         "sdkImportable": false,
         "remoteHarnessPresent": true
       },
-      "lastCheckedAtUtc": "2026-11-10T15:30:04.313Z"
+      "lastCheckedAtUtc": "2026-11-10T15:37:06.787Z"
     },
     {
       "id": "Q4_DERIVATIVES_ARCHIVE",
@@ -620,7 +685,7 @@
         "nextFundingUtc": "2026-11-10T16:00:00.000Z",
         "historicalFundingArchiveCoverage": "SOL only in prior archive; other symbol and all-symbol OI/taker history incomplete"
       },
-      "lastCheckedAtUtc": "2026-11-10T15:30:04.313Z",
+      "lastCheckedAtUtc": "2026-11-10T15:37:06.787Z",
       "latestSnapshotUtc": "2026-11-10T15:30:04.313Z"
     },
     {
@@ -633,7 +698,7 @@
         "pre-registered rule"
       ],
       "nextAction": "Do not retune SOL holdouts. After Q1-Q4 and deterministic smoke test, replicate frozen hypotheses on ETH/XRP using training-only thresholds and >=100 OOS trades per symbol/context.",
-      "blocker": "No new experiment this run: local harness unavailable, historical 5m/15m base absent and execution-cost/derivatives coverage incomplete. Registry remains 4 INSUFFICIENT_EVIDENCE, 1 REJECTED, 0 OOS_VALIDATED.",
+      "blocker": "No experiment this run: compatible local harness unavailable, 5m/15m base history absent, 1h/4h provenance unresolved, and historical execution-cost/derivatives coverage incomplete. Registry remains 4 INSUFFICIENT_EVIDENCE, 1 REJECTED, 0 OOS_VALIDATED.",
       "result": {
         "experimentPath": "research/context-strategy/experiments/sol-vol-contraction-breakout-btc-confirm-v1_20261108T0632Z.result.json",
         "experimentBlobSha": "74adea01478e828b7118fa9b41fbc17aab1bf1d6",
@@ -643,7 +708,7 @@
         "validatedEntries": 0,
         "matchedBaselineMeanNetR": -0.0991863
       },
-      "lastCheckedAtUtc": "2026-11-10T15:30:04.313Z"
+      "lastCheckedAtUtc": "2026-11-10T15:37:06.787Z"
     },
     {
       "id": "Q6_TAXONOMY_STABILITY_REVIEW",
@@ -654,7 +719,7 @@
       ],
       "nextAction": "On/after 2026-11-11 UTC, refit CTX thresholds on training only after archive reconciliation; recompute state frequency/duration/transitions, JSD, parameter stability and multiple-testing burden.",
       "blocker": "Not due this run. Current classification uses short rolling windows only; no threshold refit or transition analysis.",
-      "lastCheckedAtUtc": "2026-11-10T15:30:04.313Z"
+      "lastCheckedAtUtc": "2026-11-10T15:37:06.787Z"
     },
     {
       "id": "Q7_INCREMENTAL_ARCHIVE_REFRESH_20261105T145448Z",
@@ -1648,13 +1713,20 @@
   },
   "latestRun": {
     "runId": "context-strategy-20261110T152928Z-auto12",
-    "asOfUtc": "2026-11-10T15:30:04.313Z",
+    "asOfUtc": "2026-11-10T15:37:06.787Z",
     "classification": "MONITORING_ONLY",
     "researchStatus": "RESEARCH_BLOCKED",
     "oosEvaluated": false,
+    "rowsAppended": 32,
+    "highwaters": {
+      "5m": "2026-11-10T15:30:00Z",
+      "15m": "2026-11-10T15:15:00Z",
+      "1h": "2026-11-10T14:00:00Z",
+      "4h": "2026-11-10T08:00:00Z"
+    },
     "reportPath": "research/context-strategy/reports/2026-11-10T1529Z_auto12.md",
     "snapshotPath": "research-data/binance-usdm/current_market_snapshot_20261110T1529Z_auto12.json",
-    "preflightPath": "research/context-strategy/preflight/preflight_20261110T1529Z_auto12.json",
+    "preflightPath": "research/context-strategy/preflight/preflight_20261110T1537Z_auto12.json",
     "runManifestPath": "research-runs/context-strategy-20261110T1529Z-auto12.json"
   },
   "dailyCycle": {

@@ -1,15 +1,15 @@
 {
   "schema_version": "1.0.0",
-  "version": "v101",
-  "as_of_utc": "2026-11-09T22:31:35.000Z",
-  "run_id": "context-strategy-20261109T213011Z-v99",
+  "version": "v110",
+  "as_of_utc": "2026-11-10T07:32:42.798Z",
+  "run_id": "context-strategy-2026-11-10T0733Z-v110",
   "research_status": "RESEARCH_EXECUTED_DATA_QUALITY_ONLY",
   "strategy_research_status": "RESEARCH_BLOCKED",
   "oos_validated_count": 0,
   "last_strategy_evaluation_utc": "2026-11-05T09:43:57.448Z",
   "context_taxonomy": {
     "version": "v56",
-    "status": "CARRIED_FORWARD_NOT_REFIT_THIS_RUN",
+    "status": "V56_CARRIED_FORWARD; EXPLORATORY_V57_CANDIDATE_NOT_PROMOTED",
     "timeframe": "4h",
     "trend_strength": "(EMA20-EMA50)/Wilder ATR14",
     "transition_threshold": "training-only q67 of absolute trend strength",
@@ -50,7 +50,7 @@
       "SOLUSDT": 120,
       "XRPUSDT": 68
     },
-    "interpretation": "Descriptive 4h states only; ETH/XRP show material drift. Occupancy is not win probability."
+    "interpretation": "v56 carried forward; no threshold refit, occupancy/duration/transition update or stability review this run."
   },
   "entries": [
     {
@@ -94,39 +94,92 @@
   ],
   "status_policy": "Only OOS_VALIDATED entries may drive trade selection. OOS_PROMISING remains research-only.",
   "this_run": {
-    "as_of_utc": "2026-11-09T22:31:35.000Z",
-    "run_id": "context-strategy-2026-11-09T223135Z-v101",
-    "data_quality_experiments": [
-      "EXP-DQ-2026-11-09-2123Z-014",
-      "EXP-DQ-2026-11-09-2124Z-015",
-      "EXP-DQ-2026-11-09-2126Z-016",
-      "EXP-DQ-2026-11-09-221852Z-017",
-      "EXP-DQ-2026-11-09-223135Z-018"
+    "as_of_utc": "2026-11-10T07:32:42.798Z",
+    "experiment_ids": [
+      "EXP-DQ-2026-11-10-0730Z-028"
     ],
-    "rows_appended": 76,
-    "rows_fetched": 100,
-    "forming_rows_excluded": 24,
-    "quality_failures": 0,
-    "strategy_experiment_executed": false,
-    "oos_evaluated": false,
-    "oos_validated_count": 0,
-    "entries_unchanged": true,
-    "context_taxonomy_unchanged": true,
-    "research_status": "RESEARCH_EXECUTED_DATA_QUALITY_ONLY",
-    "strategy_research_status": "RESEARCH_BLOCKED",
-    "reason": "Two incremental archive data-quality experiments completed and were read back. No strategy experiment/backtest/OOS could run: no local checkout, Node 22.16/npm 10.9 below Node>=24/npm>=11, direct Binance REST DNS unavailable, exchangeInfo serverTime stale by 16h20m, market quote timestamps up to 142s ahead of shell clock, 5m/15m base history absent, 4h provenance discrepancies unresolved, and historical funding/cost inputs incomplete.",
-    "artifact_refs": {
-      "archive_manifest": "research-data/binance-usdm/manifests/archive_manifest_20261109T223135Z_v101.json",
-      "market_snapshot": "research/context-strategy/snapshots/2026-11-09T2231Z_v101.json",
-      "preflight": "research/context-strategy/preflight/preflight_20261109T2231Z_v101.json",
-      "experiments": [
-        "research/context-strategy/experiments/EXP-DQ-2026-11-09-221852Z-017.json",
-        "research/context-strategy/experiments/EXP-DQ-2026-11-09-223135Z-018.json"
-      ]
-    }
+    "data_quality_rows_appended": 80,
+    "context_discovery": "Not rerun this hour; EXP-CONTEXT-2026-11-10-0624Z-001 remains INSUFFICIENT_EVIDENCE due high validation/test occupancy drift and an 83-day sample. Production taxonomy v56 retained.",
+    "strategy_backtest_executed": false,
+    "strategy_oos_evaluated": false,
+    "blockers": [
+      "Direct /fapi/v1/time DNS failure; exchangeInfo stale by 23,347.105s.",
+      "No local Node>=24/npm>=11 checkout or deterministic backtest smoke test.",
+      "5m/15m multi-cycle coverage incomplete; 1h base not fully re-read; 4h row-count and 13 SHA provenance discrepancies unresolved.",
+      "BTCUSDT remains in tradable EXP-001/backtest defaults; backtest timeframe list omits 5m.",
+      "candleIntegrity permits zero volume and klineLoader drops closeTime/quote/taker fields.",
+      "conditional-edge CLI minN=30/90% CI; no CLI embargo or Holm gate; decision provenance not separated.",
+      "Fee tier, historical spread/depth, impact, latency and complete funding cashflows are uncalibrated."
+    ]
   },
-  "updated_at_utc": "2026-11-09T22:31:35.000Z",
-  "last_archive_manifest_path": "research-data/binance-usdm/manifests/archive_manifest_20261109T223135Z_v101.json",
-  "last_market_snapshot_path": "research/context-strategy/snapshots/2026-11-09T2231Z_v101.json",
-  "last_preflight_path": "research/context-strategy/preflight/preflight_20261109T2231Z_v101.json"
+  "data_readiness": {
+    "five_minute": {
+      "rows": 24000,
+      "per_symbol": 6000,
+      "range_utc": "2026-10-20T04:20:00Z..2026-11-10T00:15:00Z",
+      "status": "PARTIAL"
+    },
+    "fifteen_minute": {
+      "rows": 24000,
+      "per_symbol": 6000,
+      "range_utc": "2026-09-08T11:30:00Z..2026-11-09T23:15:00Z",
+      "status": "PARTIAL"
+    },
+    "one_hour": {
+      "rows_reported_in_prior_manifest": 215484,
+      "coverage_start_utc": "2020-09-14T08:00:00Z",
+      "status": "BASE_REPORTED_NOT_RE_READ"
+    },
+    "four_hour": {
+      "raw_rows_reported": 53960,
+      "aligned_rows_reported": 53816,
+      "canonical_rows_reported": 53844,
+      "unresolved_sha_discrepancies": 13,
+      "status": "DEGRADED"
+    },
+    "archive_manifest": "research-data/binance-usdm/manifests/archive_manifest_20261110T0733Z_v110.json",
+    "latest_completed_highwater_utc": {
+      "5m": "2026-11-10T07:25:00.000Z",
+      "15m": "2026-11-10T07:15:00.000Z",
+      "1h": "2026-11-10T06:00:00.000Z",
+      "4h": "2026-11-10T00:00:00.000Z"
+    },
+    "base_coverage_status": "DEGRADED",
+    "strategy_experiment_blocker": "Strategy backtest blocked by stale metadata/direct DNS, missing compatible local runner, incomplete aligned history, 4h provenance discrepancies, source defects, BTC role violation and uncalibrated costs/funding.",
+    "latest_incremental_rows": {
+      "5m": 244,
+      "15m": 84,
+      "1h": 20,
+      "4h": 8
+    },
+    "latest_manifest": "research-data/binance-usdm/manifests/archive_manifest_20261110T0624Z_v109.json"
+  },
+  "artifact_refs": {
+    "experiment": "research/context-strategy/experiments/EXP-DQ-2026-11-10-0730Z-028.json",
+    "manifest": "research-data/binance-usdm/manifests/archive_manifest_20261110T0733Z_v110.json",
+    "snapshot": "research/context-strategy/snapshots/2026-11-10T0730Z_v110.json",
+    "preflight": "research/context-strategy/preflight/preflight_20261110T0733Z_v110.json",
+    "registry": "research/context-strategy/registry/registry_20261110T0733Z_v110.json",
+    "report": "research/context-strategy/reports/2026-11-10T0733Z_v110.md",
+    "artifact_manifest": "research/context-strategy/manifests/artifact_manifest_20261110T0733Z_v110.json",
+    "queue": "research/context-strategy/queue/current.json",
+    "context_experiment": "research/context-strategy/experiments/EXP-CONTEXT-2026-11-10-0624Z-001.json",
+    "dq_experiment": "research/context-strategy/experiments/EXP-DQ-2026-11-10-0730Z-028.json"
+  },
+  "latest_snapshot_ref": "research/context-strategy/snapshots/2026-11-10T0730Z_v110.json",
+  "latest_report_ref": "research/context-strategy/reports/2026-11-10T0733Z_v110.md",
+  "latest_preflight_ref": "research/context-strategy/preflight/preflight_20261110T0733Z_v110.json",
+  "latest_artifact_manifest_ref": "research/context-strategy/manifests/artifact_manifest_20261110T0733Z_v110.json",
+  "context_taxonomy_candidate": {
+    "experiment_id": "EXP-CONTEXT-2026-11-10-0624Z-001",
+    "status": "INSUFFICIENT_EVIDENCE",
+    "validation_test_occupancy_tvd": {
+      "BTCUSDT": 0.8658911,
+      "ETHUSDT": 0.5103161,
+      "SOLUSDT": 0.9411765,
+      "XRPUSDT": 0.6000878
+    },
+    "promotion": "Not promoted; 83-day sample and one holdout only."
+  },
+  "latest_data_quality_experiment": "research/context-strategy/experiments/EXP-DQ-2026-11-10-0730Z-028.json"
 }

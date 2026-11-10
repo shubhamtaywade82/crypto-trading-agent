@@ -1,0 +1,85 @@
+{
+  "schema_version": "1.0.0",
+  "run_id": "context-strategy-2026-11-10T0733Z-v110",
+  "as_of_utc": "2026-11-10T07:32:42.798Z",
+  "checks": [
+    {
+      "capability": "shell/compute",
+      "status": "PASS",
+      "evidence": "Linux 6.18.57 x86_64; 5 CPUs; MemTotal 6,090,668 kB; MemAvailable 4,937,132 kB; / disk 32G total, 30G free; Node v22.16.0; npm 10.9.2; Git 2.47.3; cwd=/; repository checkout absent; node_modules absent.",
+      "impact": "Small analysis and remote artifact operations are possible; local repository backtest runner is not.",
+      "next_action": "Provision Node>=24/npm>=11 and a verified local checkout."
+    },
+    {
+      "capability": "repo/code",
+      "status": "DEGRADED",
+      "evidence": "Remote GitHub main source fetched. package.json requires Node>=24/npm>=11. scripts/backtest.ts defaults BTCUSDT and timeframes 15m/1h/4h. EXP-001 includes BTCUSDT among tradable symbols. candleIntegrity.ts permits volume=0; klineLoader.ts projects only openTime/OHLCV and drops closeTime/quote/taker fields. conditional-edge CLI defaults minN=30 and confidence=0.9; walk-forward call supplies no embargo and no Holm requirement.",
+      "impact": "Source audit is possible; harness cannot be invoked here and source-level gates remain unsafe.",
+      "next_action": "Fix the confirmed role, candle-schema and evidence-gate defects; then run tests on compatible Node."
+    },
+    {
+      "capability": "network/Binance endpoints",
+      "status": "DEGRADED",
+      "evidence": "Direct curl to /fapi/v1/time,/exchangeInfo,/klines,/premiumIndex,/openInterest,/ticker/24hr returned DNS failure HTTP000. Connected Binance operations returned current mark/ticker/OI/book/funding/taker/klines at ~2026-11-10T07:30:09.000Z; exchangeInfo.serverTime=2026-11-10T01:01:01.895Z, lag=23347.105s. Connected-operation HTTP status/headers are not exposed.",
+      "impact": "Current data can be described and raw bars appended; execution metadata validation is blocked.",
+      "next_action": "Restore uncached direct DNS/HTTPS and require /time-to-exchangeInfo drift <=5s."
+    },
+    {
+      "capability": "raw historical archive",
+      "status": "DEGRADED",
+      "evidence": "GitHub archive branch readable/writable. 5m base 24,000 rows (~20.8d), 15m 24,000 (~62.5d), 1h 215,484 reported from 2020-09-14 but not fully re-read, 4h raw/aligned/canonical 53,964/53,816/53,844 with 13 unresolved SHA provenance discrepancies. New append 80 rows persisted.",
+      "impact": "Recent append is reproducible; full multi-cycle aligned coverage is not proven.",
+      "next_action": "Backfill multi-year 5m/15m; read back 1h/4h; reconcile 4h provenance and canonical indexes."
+    },
+    {
+      "capability": "data quality/coverage",
+      "status": "PASS",
+      "evidence": "16 recent symbol/interval series x120 rows: 1,904 completed, 16 forming excluded; zero duplicates, missing intervals, off-grid, non-monotonic, OHLC, non-positive-volume, non-finite or closeTime failures. Incremental append 80 completed rows: 56 5m, 20 15m, 4 1h, 0 4h; all quality checks zero.",
+      "impact": "Recent completed-candle snapshot and append-only DQ experiment are usable; sample duration remains inadequate for multi-cycle inference.",
+      "next_action": "Continue append-only collection and complete long-history reconciliation."
+    },
+    {
+      "capability": "backtest harness/smoke test",
+      "status": "BLOCKED",
+      "evidence": "No local checkout/node_modules; Node22.16/npm10.9 below package engines Node>=24/npm>=11. No deterministic repo fixture smoke test executed. Source issues: volume=0 passes; closeTime dropped; 5m omitted; BTC defaults/EXP-001 tradable; conditional-edge minN30/90% CI/no CLI embargo or Holm gate.",
+      "impact": "No strategy backtest or untouched OOS can be trusted or executed in this runtime.",
+      "next_action": "Provision compatible runner; fix source gates; run deterministic fixture twice; freeze experiment before OOS."
+    },
+    {
+      "capability": "disk/storage",
+      "status": "PASS",
+      "evidence": "Local overlay 32G total/~30G free; GitHub archive branch writes available.",
+      "impact": "Remote persistence available; local raw archive not mounted.",
+      "next_action": "Continue atomic Git tree/commit writes and remote readback."
+    },
+    {
+      "capability": "artifact readback",
+      "status": "PASS",
+      "evidence": "New delta files and EXP-DQ-2026-11-10-0730Z-028 fetched back from GitHub; row counts 56/20/4, expected first/last opens, symbol counts and raw schema verified.",
+      "impact": "The 80-row incremental DQ artifact is remotely persisted and verified; final v110 metadata artifacts are committed in this run.",
+      "next_action": "Read back final manifest, queue, registry, snapshot, preflight, report and artifact manifest after commit."
+    },
+    {
+      "capability": "Binance SDK",
+      "status": "BLOCKED",
+      "evidence": "@binance/connector not installed; Node runtime below package engine requirement; no SDK import or execution.",
+      "impact": "All data came from connected Binance operations, not SDK execution.",
+      "next_action": "Do not claim SDK use; install only in compatible project runner if needed."
+    }
+  ],
+  "endpoints": {
+    "/fapi/v1/time": "DIRECT_DNS_FAILURE_HTTP_000",
+    "/fapi/v1/exchangeInfo": "CONNECTED_OPERATION_SUCCESS_BUT_STALE_SERVER_TIME_2026-11-10T01:01:01.895Z",
+    "/fapi/v1/klines": "CONNECTED_OPERATION_SUCCESS; 16 series x120 plus incremental 16 bounded requests; direct REST DNS failure",
+    "/fapi/v1/premiumIndex": "CONNECTED_MARK_PRICE_OPERATION_SUCCESS",
+    "/fapi/v1/ticker/24hr": "CONNECTED_24H_TICKER_OPERATION_SUCCESS",
+    "/fapi/v1/openInterest": "CONNECTED_OPEN_INTEREST_OPERATION_SUCCESS",
+    "/fapi/v1/fundingRate": "CONNECTED_FUNDING_HISTORY_OPERATION_SUCCESS",
+    "/fapi/v1/fundingInfo": "CONNECTED_FUNDING_INTERVAL_INFO_SUCCESS",
+    "/fapi/v1/ticker/bookTicker": "CONNECTED_TOP_OF_BOOK_OPERATION_SUCCESS",
+    "/futures/data/openInterestHist": "CONNECTED_1H_OPEN_INTEREST_STATISTICS_SUCCESS",
+    "/futures/data/takerlongshortRatio": "CONNECTED_15M_TAKER_BUY_SELL_VOLUME_SUCCESS",
+    "/futures/data/globalLongShortAccountRatio": "CONNECTED_1H_GLOBAL_LONG_SHORT_ACCOUNT_RATIO_SUCCESS"
+  },
+  "classification": "RESEARCH_EXECUTED_DATA_QUALITY_ONLY; STRATEGY_BACKTEST_BLOCKED; OOS_NOT_EVALUATED"
+}

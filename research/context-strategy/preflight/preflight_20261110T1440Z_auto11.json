@@ -1,0 +1,151 @@
+{
+  "schemaVersion": "1.0.0",
+  "runId": "context-strategy-20261110T1440Z-auto11",
+  "asOfUtc": "2026-11-10T14:39:20.001Z",
+  "checks": [
+    {
+      "capability": "shell/compute",
+      "status": "DEGRADED",
+      "evidence": {
+        "pwd": "/",
+        "os": "Linux 6.18.57 x86_64",
+        "node": "v22.16.0",
+        "npm": "10.9.2",
+        "python": "3.13.5",
+        "cpuCores": 5,
+        "memTotalKb": 6090668,
+        "memAvailableKb": 4929052,
+        "diskTotal": "32G",
+        "diskFree": "30G"
+      },
+      "impact": "Node/npm below project engines; no project code execution.",
+      "nextAction": "Provision Node>=24/npm>=11."
+    },
+    {
+      "capability": "repo/code",
+      "status": "DEGRADED",
+      "evidence": {
+        "localCheckout": false,
+        "packageJsonLocal": false,
+        "nodeModules": false,
+        "remoteRepository": "shubhamtaywade82/crypto-trading-agent",
+        "remoteMainCommit": "6a68edda656ffa4f692d2bc5dc23ab17385b1b67",
+        "remoteScripts": [
+          "scripts/directional-experiment.ts",
+          "npm run check",
+          "npm run directional:experiment"
+        ],
+        "packageEngines": {
+          "node": ">=24",
+          "npm": ">=11"
+        },
+        "binanceSdkImportable": false
+      },
+      "impact": "Remote source inspectable; local harness not invokable.",
+      "nextAction": "Checkout current main and install compatible dependencies."
+    },
+    {
+      "capability": "network/Binance endpoints",
+      "status": "DEGRADED",
+      "evidence": {
+        "directRest": {
+          "/fapi/v1/time": "HTTP 000 DNS failure",
+          "/fapi/v1/exchangeInfo": "HTTP 000 DNS resolution timeout after 4s",
+          "/fapi/v1/klines": "HTTP 000 DNS failure",
+          "/fapi/v1/premiumIndex": "HTTP 000 DNS resolution timeout after 4s",
+          "/fapi/v1/openInterest": "HTTP 000 DNS failure",
+          "/fapi/v1/ticker/24hr": "HTTP 000 DNS resolution timeout after 4s"
+        },
+        "connector": "mark/ticker/klines/OI/funding/depth/OI stats/taker/global L/S returned",
+        "connectorHttpStatus": "NOT_EXPOSED",
+        "exchangeInfoServerTimeUtc": "2026-11-10T01:01:01.892Z",
+        "marketTimeUtc": "2026-11-10T14:39:20.001Z",
+        "exchangeInfoAgeSeconds": 49098.109
+      },
+      "impact": "Snapshot available through connector, but freshness/contract metadata not execution-validated.",
+      "nextAction": "Restore direct DNS/HTTPS or obtain uncached official /time and /exchangeInfo; require <=5s drift."
+    },
+    {
+      "capability": "raw historical archive",
+      "status": "DEGRADED",
+      "evidence": {
+        "remoteBranch": "research/raw-ohlcv-archive-20261108T1026Z",
+        "oneHourBaseRows": 215484,
+        "oneHourRowsPerSymbol": 53871,
+        "oneHourCoverageStart": "2020-09-14T08:00:00Z",
+        "fiveMinuteBaseRows": 0,
+        "fiveMinuteIncrementalRows": 1248,
+        "fifteenMinuteBaseRows": 0,
+        "fifteenMinuteIncrementalRows": 420,
+        "fourHourRawAlignedCanonical": [
+          53960,
+          53816,
+          53844
+        ],
+        "fourHourManifestShaMismatches": 13,
+        "rowsAppendedThisRun": 72,
+        "deltaAndIndexReadbackVerified": true
+      },
+      "impact": "1h multi-year archive exists; lower timeframes and 4h reconciliation block strategy experiments.",
+      "nextAction": "Backfill 5m/15m; reconcile 4h raw/canonical manifests."
+    },
+    {
+      "capability": "data quality/coverage",
+      "status": "DEGRADED",
+      "evidence": {
+        "currentWindowSeries": 16,
+        "currentRows": 2400,
+        "currentCompleted": 2380,
+        "currentFormingExcluded": 20,
+        "incrementalAppendRows": 72,
+        "incrementalQualityFailures": 0,
+        "currentWindowQualityFailures": 0
+      },
+      "impact": "Recent windows pass checks; long history not fully reconciled.",
+      "nextAction": "Complete lower-TF backfill and full archive row-key/hash audit."
+    },
+    {
+      "capability": "backtest harness/smoke test",
+      "status": "BLOCKED",
+      "evidence": {
+        "remoteHarnessPresent": true,
+        "localRepo": false,
+        "nodeVersion": "v22.16.0",
+        "requiredNode": ">=24",
+        "requiredNpm": ">=11",
+        "smokeTest": "NOT_RUN",
+        "fullExperiment": "NOT_RUN"
+      },
+      "impact": "No strategy experiment or OOS evaluation can be claimed.",
+      "nextAction": "Provision compatible runtime, checkout, install and run deterministic fixture twice."
+    },
+    {
+      "capability": "disk/storage",
+      "status": "PASS",
+      "evidence": {
+        "localDiskFree": "30G",
+        "persistentStorage": "GitHub repository branches accessible",
+        "rawArchiveBranch": "research/raw-ohlcv-archive-20261108T1026Z"
+      },
+      "impact": "Remote GitHub persistence available; local container is ephemeral.",
+      "nextAction": "Continue verified remote artifact commits."
+    },
+    {
+      "capability": "artifact readback",
+      "status": "PASS",
+      "evidence": {
+        "deltasReadbackVerified": 2,
+        "deltaManifestsReadbackVerified": 2,
+        "indexesReadbackVerified": 3,
+        "archiveManifestsReadbackVerified": 2,
+        "currentSnapshotReadbackVerified": true
+      },
+      "impact": "This run's appended data and metadata persisted and were re-read.",
+      "nextAction": "Keep per-artifact SHA-256 and Git blob identities in run manifest."
+    }
+  ],
+  "classification": "RESEARCH_EXECUTED",
+  "scope": "DATA_QUALITY_ONLY",
+  "strategyExperiment": "RESEARCH_BLOCKED",
+  "oosEvaluated": false
+}

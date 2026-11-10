@@ -10,6 +10,8 @@
     "agent-trade": "dist/index.js"
   },
   "scripts": {
+    "predev": "curl -s -f --connect-timeout 2 --max-time 3 \"${PAPER_EXCHANGE_URL:-http://127.0.0.1:3100}/up\" >/dev/null || (echo '[paper_exchange] Service not responding. Spinning up...' && cd \"${PAPER_EXCHANGE_DIR:-$HOME/projects/apps/paper_exchange}\" && docker compose up -d --build && docker compose exec api bin/rails db:migrate && docker compose exec api npm run smoke-test)",
+    "predev:paper": "npm run predev",
     "dev": "tsx src/index.tsx",
     "dev:paper": "MODE=paper tsx src/index.tsx",
     "dev:live": "MODE=live tsx src/index.tsx",

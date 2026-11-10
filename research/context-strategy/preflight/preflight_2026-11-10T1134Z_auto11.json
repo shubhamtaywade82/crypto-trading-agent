@@ -1,0 +1,144 @@
+{
+  "schema_version": "1.0.0",
+  "run_id": "context-strategy-2026-11-10T1134Z-auto11",
+  "as_of_utc": "2026-11-10T11:34:28.000Z",
+  "classification": "RESEARCH_EXECUTED_DATA_QUALITY_APPEND_ONLY",
+  "strategy_experiment": "BLOCKED",
+  "oos_evaluation": "NOT_RUN",
+  "environment": {
+    "runtime": "managed container",
+    "cwd": "/",
+    "os": "Debian GNU/Linux 13 (trixie)",
+    "kernel": "6.18.57",
+    "node": "v22.16.0",
+    "npm": "10.9.2",
+    "python": "3.13.5",
+    "cpu_cores": 5,
+    "ram_total_gib": 5.8,
+    "ram_available_gib": 4.7,
+    "disk_free_gib": 30,
+    "local_repo_present": false,
+    "node_modules_present": false,
+    "binance_sdk_packages": {
+      "@nemesis-oss/binance-sdk": "NOT_INSTALLED",
+      "@binance/connector": "NOT_INSTALLED",
+      "binance": "NOT_INSTALLED"
+    }
+  },
+  "remote_repo": {
+    "name": "shubhamtaywade82/crypto-trading-agent",
+    "branch": "main",
+    "head": "94ab0a511347f3f5a46436b7182e6cbb938e2eed",
+    "package_engines": {
+      "node": ">=24",
+      "npm": ">=11"
+    },
+    "source_audit": {
+      "candle_close_time_missing": "src/types.ts:28-35",
+      "kline_mapping_drops_fields": "src/backtesting/klineLoader.ts:102-105",
+      "zero_volume_accepted": "src/backtesting/candleIntegrity.ts:52-53",
+      "backtest_timeframes_and_default": "scripts/backtest.ts:33,40",
+      "conditional_edge_min_n_confidence_embargo": "scripts/conditional-edge.ts:35-36,61",
+      "btc_tradable_in_exp001": "research/directional/exp-001.json:4"
+    }
+  },
+  "network": {
+    "direct_rest_dns": "FAILED",
+    "probes": [
+      {
+        "endpoint": "/fapi/v1/time",
+        "http_status": 0,
+        "error": "DNS resolution failed"
+      },
+      {
+        "endpoint": "/fapi/v1/exchangeInfo",
+        "http_status": 0,
+        "error": "DNS resolution timed out"
+      },
+      {
+        "endpoint": "/fapi/v1/klines",
+        "http_status": 0,
+        "error": "DNS resolution failed"
+      },
+      {
+        "endpoint": "/fapi/v1/premiumIndex",
+        "http_status": 0,
+        "error": "DNS resolution timed out"
+      },
+      {
+        "endpoint": "/fapi/v1/openInterest",
+        "http_status": 0,
+        "error": "DNS resolution failed"
+      },
+      {
+        "endpoint": "/fapi/v1/ticker/24hr",
+        "http_status": 0,
+        "error": "DNS resolution timed out"
+      }
+    ],
+    "connector_public_data": "SUCCEEDED_WITHOUT_HTTP_STATUS",
+    "exchange_info_server_time_utc": "2026-11-10T01:01:01.898Z",
+    "market_snapshot_time_utc": "2026-11-10T11:34:28Z",
+    "server_time_drift_seconds": 38006.102,
+    "contract_status": "UNVERIFIED"
+  },
+  "archive": {
+    "branch": "research/raw-ohlcv-archive-20261108T1026Z",
+    "base_5m": "ABSENT",
+    "incremental_5m_rows": 1100,
+    "highwater_5m": "2026-11-10T11:25:00Z",
+    "base_15m": "ABSENT",
+    "incremental_15m_rows": 372,
+    "highwater_15m": "2026-11-10T11:15:00Z",
+    "base_1h_rows": 215484,
+    "incremental_1h_rows": 92,
+    "highwater_1h": "2026-11-10T10:00:00Z",
+    "raw_4h_rows": 53960,
+    "aligned_4h_rows": 53816,
+    "canonical_4h_rows": 53844,
+    "highwater_4h": "2026-11-10T04:00:00Z",
+    "canonical_4h_end": "2026-11-05T16:00:00Z",
+    "manifest_sha_provenance_mismatches": 13
+  },
+  "data_quality": {
+    "live_series": 16,
+    "rows_fetched": 1920,
+    "completed_rows": 1904,
+    "forming_rows_excluded": 16,
+    "quality_failures": 0,
+    "append_rows_fetched": 96,
+    "append_rows_appended": 32,
+    "append_forming_excluded": 8,
+    "append_pre_highwater_excluded": 56,
+    "append_quality_failures": 0
+  },
+  "backtest": {
+    "remote_harness_present": true,
+    "local_harness_invokable": false,
+    "smoke_test": "NOT_RUN",
+    "reason": "No local checkout and runtime below package engine floor; no deterministic fixture run."
+  },
+  "storage": {
+    "local_disk_free_gib": 30,
+    "github_branch_writable": true,
+    "artifact_readback_verified": true,
+    "artifacts": [
+      "delta",
+      "delta manifest",
+      "5m index",
+      "15m index",
+      "global archive manifest",
+      "current market snapshot",
+      "data-quality experiment",
+      "research queue v103",
+      "registry v103"
+    ]
+  },
+  "next_actions": [
+    "Provision Node24/npm11 and clone repo",
+    "Backfill 5m/15m base history",
+    "Reconcile 4h provenance",
+    "Complete funding and execution-cost data",
+    "Only then run frozen conditional strategy experiment with walk-forward/OOS"
+  ]
+}

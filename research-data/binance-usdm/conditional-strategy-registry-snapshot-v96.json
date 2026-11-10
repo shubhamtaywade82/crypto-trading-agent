@@ -1,0 +1,94 @@
+{
+  "schema_version": "1.0.0",
+  "version": "v96",
+  "as_of_utc": "2026-11-10T08:31:59.629Z",
+  "parent_registry": "Library: 01_context_strategy_registry_2026-11-09_1723Z_v95.json",
+  "repository": "shubhamtaywade82/crypto-trading-agent",
+  "branch": "research/raw-ohlcv-archive-20261108T1026Z",
+  "universe": {
+    "tradable": [
+      "SOLUSDT",
+      "ETHUSDT",
+      "XRPUSDT"
+    ],
+    "reference_only": [
+      "BTCUSDT"
+    ]
+  },
+  "evidence_policy": {
+    "provisional_oos_min_trades_per_symbol_context": 100,
+    "stronger_evidence_trades": 200,
+    "require_positive_net_expectancy_after_costs": true,
+    "block_bootstrap": true,
+    "multiple_testing_correction": "Holm",
+    "purge_embargo": true
+  },
+  "counts": {
+    "oos_validated": 0,
+    "oos_promising": 1,
+    "insufficient_evidence_cells": 36,
+    "rejected": 0,
+    "hypothesis_families": 7
+  },
+  "entries": [
+    {
+      "key": "SOLUSDT|BULL_LOW|DONCHIAN20_4H_v1",
+      "symbol": "SOLUSDT",
+      "context": "BULL_LOW",
+      "strategy": "4h Donchian20 breakout",
+      "version": "v1",
+      "status": "OOS_PROMISING",
+      "last_evaluation_utc": "2026-11-05T09:43:57.448Z",
+      "oos_trades": 12,
+      "win_rate_pct": 66.7,
+      "target_before_stop_pct": 41.7,
+      "mean_net_R": 0.606,
+      "profit_factor": 2.72,
+      "max_drawdown_R": 1.3,
+      "block_bootstrap_ci95_mean_R": [
+        0.086,
+        1.199
+      ],
+      "promotion_blocker": "12 OOS trades < 100 per symbol/context; costs and robustness incomplete.",
+      "actionable": false
+    },
+    {
+      "key": "ALL_SYMBOLS|MULTI_CONTEXT|DONCHIAN20_WF_V2",
+      "symbol_scope": [
+        "SOLUSDT",
+        "ETHUSDT",
+        "XRPUSDT"
+      ],
+      "context": "36 strategy-context cells",
+      "strategy": "Context-aligned Donchian20 walk-forward v2",
+      "version": "v2",
+      "status": "INSUFFICIENT_EVIDENCE",
+      "cells": 36,
+      "reason": "All cells below 100 OOS trades; nominal block-bootstrap CI includes zero; Holm-adjusted p=1.0; 15bp round-trip proxy is not a calibrated execution model.",
+      "actionable": false
+    }
+  ],
+  "family_status": {
+    "trend_pullback": "HYPOTHESIS",
+    "breakout_retest": "HYPOTHESIS",
+    "range_mean_reversion": "HYPOTHESIS",
+    "failed_breakout_fade": "HYPOTHESIS",
+    "volatility_expansion": "HYPOTHESIS",
+    "btc_relative_strength": "HYPOTHESIS",
+    "funding_oi_filters": "HYPOTHESIS"
+  },
+  "context_taxonomy": {
+    "source": "v56",
+    "status": "CARRIED_FORWARD_NOT_RECOMPUTED",
+    "definition": {
+      "trend_strength": "(EMA20-EMA50)/Wilder ATR14",
+      "transition": "abs(trend_strength) below training q67 of abs trend strength; otherwise BULL/BEAR by sign",
+      "volatility": "ATR14/close LOW/NORMAL/HIGH using training-only q33/q67",
+      "warmup_bars": 500,
+      "split": "70% train / 15% validation / 15% untouched test"
+    },
+    "sample_adequacy": "ADEQUATE_FOR_DESCRIPTIVE_4H_TAXONOMY; INSUFFICIENT_FOR_STRATEGY_EDGE_OR_MULTI_TF_GENERALIZATION"
+  },
+  "status_change_this_run": "NONE; only data archive highwaters advanced. No strategy was promoted, downgraded or rejected.",
+  "registry_persistence": "This v96 snapshot is written to the GitHub research branch; raw delta and all four interval indexes are persisted and readback-verified."
+}

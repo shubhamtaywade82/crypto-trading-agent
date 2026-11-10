@@ -55,9 +55,9 @@
     {
       "capability": "artifact readback",
       "status": "PASS",
-      "evidence": "New delta files and EXP-DQ-2026-11-10-0730Z-028 fetched back from GitHub; row counts 56/20/4, expected first/last opens, symbol counts and raw schema verified.",
+      "evidence": "Post-commit remote readback completed: 13 artifacts fetched; JSON files parsed; delta files verified at 56/20/4 rows with expected first/last opens and four-symbol distribution; report nonempty; blob SHAs matched.",
       "impact": "The 80-row incremental DQ artifact is remotely persisted and verified; final v110 metadata artifacts are committed in this run.",
-      "next_action": "Read back final manifest, queue, registry, snapshot, preflight, report and artifact manifest after commit."
+      "next_action": "Repeat atomic write and remote readback on each subsequent run; canonical base archive readback remains incomplete."
     },
     {
       "capability": "Binance SDK",
@@ -81,5 +81,12 @@
     "/futures/data/takerlongshortRatio": "CONNECTED_15M_TAKER_BUY_SELL_VOLUME_SUCCESS",
     "/futures/data/globalLongShortAccountRatio": "CONNECTED_1H_GLOBAL_LONG_SHORT_ACCOUNT_RATIO_SUCCESS"
   },
-  "classification": "RESEARCH_EXECUTED_DATA_QUALITY_ONLY; STRATEGY_BACKTEST_BLOCKED; OOS_NOT_EVALUATED"
+  "classification": "RESEARCH_EXECUTED_DATA_QUALITY_ONLY; STRATEGY_BACKTEST_BLOCKED; OOS_NOT_EVALUATED",
+  "post_commit_readback": {
+    "commit_sha": "5b09d4fe6a7708ec54c0b66ec30123b6c05efa19",
+    "verified_files": 13,
+    "delta_rows": 80,
+    "delta_quality_failures": 0,
+    "verified_at_utc": "2026-11-10T07:34:00Z"
+  }
 }

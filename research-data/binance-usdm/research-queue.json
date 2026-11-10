@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0.0",
-  "version": "v100",
-  "as_of_utc": "2026-11-10T11:02:18Z",
+  "version": "v101",
+  "as_of_utc": "2026-11-10T11:05:40.656Z",
   "repository": "shubhamtaywade82/crypto-trading-agent",
   "branch": "research/raw-ohlcv-archive-20261108T1026Z",
   "policy": "Prioritize prerequisites and data integrity; do not execute strategy experiments until the harness and required history/cost model are valid.",
@@ -41,8 +41,8 @@
         "Network-enabled acquisition runner or verified Binance Vision access",
         "Durable storage"
       ],
-      "evidence": "5m/15m base history still ABSENT. Incremental totals now 1,060 (5m) and 356 (15m) across four symbols; highwaters 2026-11-10T10:55Z and 10:45Z. This run appended 24 completed rows (5m=16, 15m=8), excluded 8 forming and 16 pre-highwater rows; zero integrity failures. Direct fapi DNS remains unavailable.",
-      "next_action": "Use an egress-enabled runner or verified Binance Vision source to backfill paginated 5m/15m history from contract onboarding dates; validate coverage, continuity, OHLC/volume and SHA-256.",
+      "evidence": "5m/15m base history remains absent; incremental totals are 1,060 (5m) and 356 (15m). 1h base is 215,484 rows plus 92 incremental rows, highwater 10:00Z. This run appended 28 completed rows (5m=16, 15m=8, 1h=4), excluded 12 forming and 32 pre-highwater rows; all append checks passed. Direct fapi DNS/HTTPS remains unavailable; GitHub archive branch is writable.",
+      "next_action": "Backfill multi-year 5m/15m history from an egress-enabled runner or verified Binance Vision source, from contract onboarding; retain paginated raw pages, checksums and completeness audit.",
       "blocker": "No outbound DNS/HTTPS from local runtime and no multi-year 5m/15m base archive."
     },
     {
@@ -53,8 +53,8 @@
       "prerequisites": [
         "Accessible raw pages and manifests"
       ],
-      "evidence": "4h archive counts remain raw 53,960; aligned 53,816 (13,454/symbol); canonical 53,844 (13,461/symbol). Raw highwater 04:00Z; canonical end 2026-11-05 16:00Z. 13 manifest SHA provenance mismatches remain. Current-run raw spot checks: BTC 1h page-0001 1,500 rows, BTC 4h page-0001 1,499, SOL 4h page-0009 1,456; sampled pages had zero duplicates/gaps/OHLC-volume failures.",
-      "next_action": "Reconcile all raw page manifests against canonical openTime keys and per-symbol exclusions; rebuild canonical 4h only after explaining row-count differences.",
+      "evidence": "4h raw/aligned/canonical counts remain 53,960/53,816/53,844, canonical end 2026-11-05T16:00Z; 13 page-manifest SHA provenance mismatches remain unresolved. Latest raw completed highwater 04:00Z; 08:00Z candle still forming at snapshot time.",
+      "next_action": "Reconcile page manifests against canonical openTime keys and recompute SHA-256 from exact readback bytes; rebuild canonical 4h only after explaining all exclusions.",
       "blocker": "Raw/canonical row counts and canonical freshness are still unreconciled."
     },
     {
@@ -67,8 +67,8 @@
         "Historical bid/ask or calibrated spread/slippage model",
         "Fee schedule"
       ],
-      "evidence": "Current premiumIndex/funding, settled funding through 08:00Z, current OI, completed 09:00Z OI/taker/global-LS buckets and top-20 depth refreshed. Historical funding cashflows, account fee tier, historical spread/depth, calibrated slippage/latency/fill model remain unavailable.",
-      "next_action": "Archive full fundingRate history and funding interval metadata; obtain account fee tier; collect historical bid/ask/depth or pre-register conservative execution-cost assumptions.",
+      "evidence": "Current premium-index/funding, settled funding through 08:00Z, current OI, completed 09:00Z OI/taker/global-long-short buckets and top-20 depth were refreshed. Historical funding cashflows, account fee tier, historical spread/depth, calibrated slippage/latency/fill model remain unavailable.",
+      "next_action": "Archive complete fundingRate history and funding interval metadata; obtain fee tier; collect historical bid/ask/depth or pre-register conservative execution-cost assumptions.",
       "blocker": "Historical execution-cost and funding cashflow inputs are insufficient for defensible net expectancy."
     },
     {
@@ -117,47 +117,54 @@
     }
   ],
   "last_run": {
-    "run_id": "context-strategy-2026-11-10T1102Z-auto11",
+    "run_id": "context-strategy-2026-11-10T1105Z-auto11",
     "status": "RESEARCH_EXECUTED",
-    "status_detail": "A reproducible incremental archive-integrity experiment completed and its delta, manifest, indexes, snapshot and artifacts were read back. No strategy experiment or untouched OOS evaluation ran.",
+    "status_detail": "Completed reproducible archive-integrity experiment; appended 28 completed rows and verified delta/manifests/indexes/snapshot/registry/queue readback. No strategy experiment or untouched OOS evaluation ran.",
     "monitoring_completed": true,
     "archive_maintenance_completed": true,
     "research_experiment": {
       "status": "COMPLETED_DATA_QUALITY_ONLY",
-      "experiment_id": "DQ-2026-11-10T1102Z-APPEND",
-      "artifact": "research-data/binance-usdm/experiments/data-quality-append-20261110T1102Z.json",
-      "rows": 24,
+      "experiment_id": "DQ-2026-11-10T1105Z-APPEND",
+      "artifact": "research-data/binance-usdm/experiments/data-quality-append-20261110T1105Z.json",
+      "rows": 28,
       "quality_failures": 0
     },
     "strategy_experiment": {
-      "status": "NOT_RUN",
-      "reason": "Node v22.16.0/npm 10.9.2 below required Node>=24/npm>=11; no local checkout/harness; 5m/15m base history absent; 4h provenance mismatches and realistic execution costs unresolved."
+      "status": "BLOCKED",
+      "reason": "Local Node 22.16.0/npm 10.9.2 below declared Node>=24/npm>=11 floor; no local checkout/harness; 5m/15m base history absent; 4h provenance and cost model incomplete."
     },
     "oos_evaluations": 0,
     "archive_updates": [
       {
         "path": "research-data/binance-usdm/delta/binance_usdm_delta_20261110T1102_5m15m_completed.jsonl",
-        "manifest_path": "research-data/binance-usdm/delta/manifest-20261110T1102-5m15m.json",
         "rows": 24,
         "rows_by_interval": {
           "5m": 16,
           "15m": 8
         },
         "sha256": "9c87aedd59984ee12b249cb358d307f9a2fe6b612490f4d24b1fce7bb100aa87",
-        "manifest_sha256": "1b3977f24b99b407a70ee3130d2605299616010b6bf48855ab1b99ad5f810ead",
+        "readback_verified": true
+      },
+      {
+        "path": "research-data/binance-usdm/delta/binance_usdm_delta_20261110T1105_1h_completed.jsonl",
+        "rows": 4,
+        "rows_by_interval": {
+          "1h": 4
+        },
+        "sha256": "2756dae0422ac8fc058bcd9de8a0610bc64829f26996c270f9a53044d7961c18",
         "readback_verified": true
       }
     ],
     "archive_highwaters_utc": {
       "5m": "2026-11-10T10:55:00Z",
       "15m": "2026-11-10T10:45:00Z",
-      "1h": "2026-11-10T09:00:00Z",
+      "1h": "2026-11-10T10:00:00Z",
       "4h": "2026-11-10T04:00:00Z"
     },
-    "current_snapshot_ref": "research-data/binance-usdm/current_market_snapshot_20261110T1102Z.json",
-    "registry_ref": "research-data/binance-usdm/conditional-strategy-registry-snapshot-v100.json",
-    "archive_manifest_ref": "research-data/binance-usdm/manifests/archive_manifest_20261110T1102Z_auto11.json",
-    "data_quality_experiment_ref": "research-data/binance-usdm/experiments/data-quality-append-20261110T1102Z.json",
-    "next_executable_action": "Provision Node 24/npm 11 and clone the current code baseline; in parallel backfill 5m/15m base history, reconcile 4h provenance, and archive historical funding/cost inputs. Then run deterministic fixture smoke tests before any strategy experiment."
+    "current_snapshot_ref": "research-data/binance-usdm/current_market_snapshot_20261110T1105Z.json",
+    "registry_ref": "research-data/binance-usdm/conditional-strategy-registry-snapshot-v101.json",
+    "archive_manifest_ref": "research-data/binance-usdm/manifests/archive_manifest_20261110T1105Z_auto11.json",
+    "data_quality_experiment_ref": "research-data/binance-usdm/experiments/data-quality-append-20261110T1105Z.json",
+    "next_executable_action": "Provision Node 24/npm 11 and clone the remote code baseline; backfill 5m/15m base history, reconcile 4h provenance, and archive historical funding/cost inputs. Then run deterministic fixture smoke tests before a frozen strategy×context×symbol experiment."
   }
 }

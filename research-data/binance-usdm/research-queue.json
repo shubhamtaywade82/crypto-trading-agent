@@ -1,0 +1,119 @@
+{
+  "schema_version": "1.0.0",
+  "version": "v96",
+  "as_of_utc": "2026-11-10T08:31:59.629Z",
+  "repository": "shubhamtaywade82/crypto-trading-agent",
+  "branch": "research/raw-ohlcv-archive-20261108T1026Z",
+  "policy": "Prioritize prerequisites and data integrity; do not execute strategy experiments until the harness and required history/cost model are valid.",
+  "items": [
+    {
+      "id": "Q-001",
+      "priority": "P0",
+      "title": "Provision compatible local execution environment and checkout",
+      "status": "BLOCKED",
+      "prerequisites": [
+        "Node.js >=24",
+        "npm >=11",
+        "local crypto-trading-agent checkout at main commit 669ba233538eb1463c0e7e0a435016a643e7adb5"
+      ],
+      "evidence": "Current runtime Debian 13 x86_64; Node v22.16.0; npm 10.9.2; 5 CPU cores; 4.94GB available memory; 30GB free disk; no local repo/package.json/node_modules; Binance SDK packages not installed.",
+      "next_action": "Provision Node 24/npm 11 and clone the exact main commit into the managed workspace.",
+      "blocker": "Runtime floor not met and repository absent locally."
+    },
+    {
+      "id": "Q-002",
+      "priority": "P0",
+      "title": "Repair candle integrity and universe contracts",
+      "status": "BLOCKED_PENDING_CHECKOUT",
+      "prerequisites": [
+        "Q-001"
+      ],
+      "evidence": "main@669ba233: Candle type has only openTime/OHLCV; klineLoader maps row[0..5] and discards closeTime row[6]; candleIntegrity allows volume=0; scripts/backtest.ts TIMEFRAMES=[15m,1h,4h] and default symbol BTCUSDT.",
+      "next_action": "Add closeTime to Candle; preserve row[6]; reject volume<=0; include 5m; split BTC reference from tradables; add fixture tests for forming bars, duplicates, gaps, OHLC and volume.",
+      "blocker": "Cannot run project tests or apply safe fixes without compatible local checkout."
+    },
+    {
+      "id": "Q-003",
+      "priority": "P1",
+      "title": "Backfill multi-year 5m and 15m base history",
+      "status": "BLOCKED_NETWORK",
+      "prerequisites": [
+        "Network-enabled acquisition runner or verified Binance Vision access",
+        "Durable storage"
+      ],
+      "evidence": "5m and 15m archive indexes still report base_history=ABSENT; only incremental append totals are 940 and 316 rows respectively. Direct fapi.binance.com and data.binance.vision DNS resolution timed out in this run.",
+      "next_action": "Use an egress-enabled runner to backfill public Binance USDⓈ-M klines with paginated date coverage, contract-onboard checks, SHA-256 manifests and gap validation.",
+      "blocker": "No outbound DNS/HTTPS from this runtime."
+    },
+    {
+      "id": "Q-004",
+      "priority": "P1",
+      "title": "Reconcile 4h raw, aligned and canonical archive provenance",
+      "status": "DEGRADED",
+      "prerequisites": [
+        "Accessible raw pages and manifests"
+      ],
+      "evidence": "4h raw rows=53,960; aligned analysis rows=53,816; canonical rows=53,844 (13,461/symbol). Canonical series structurally reports zero gaps/duplicates and verified per-symbol hashes, but raw/canonical counts differ and page-level provenance issues remain. Canonical end=2026-11-05T16:00Z while raw incremental highwater=2026-11-10T04:00Z.",
+      "next_action": "Reconcile row keys and page manifests across all symbols; explain residual row-count/provenance differences before rebuilding canonical files.",
+      "blocker": "Canonical/raw provenance not fully reconciled."
+    },
+    {
+      "id": "Q-005",
+      "priority": "P1",
+      "title": "Complete historical derivatives and realistic execution-cost data",
+      "status": "BLOCKED_INCOMPLETE_DATA",
+      "prerequisites": [
+        "Funding history archive",
+        "Historical bid/ask or calibrated spread/slippage model",
+        "Fee schedule"
+      ],
+      "evidence": "Current funding history, OI and taker flow snapshots are available; no durable historical funding/cashflow archive, historical depth/spread series or verified account fee schedule was loaded.",
+      "next_action": "Archive fundingRate history and funding interval metadata; collect or calibrate maker/taker fees, spread, slippage and fill assumptions before any strategy scorecard.",
+      "blocker": "Cost and funding inputs are incomplete for net expectancy."
+    },
+    {
+      "id": "Q-006",
+      "priority": "P2",
+      "title": "Recompute context taxonomy stability on reconciled multi-year data",
+      "status": "WAITING_FOR_Q003_Q004",
+      "prerequisites": [
+        "5m/15m base history",
+        "4h provenance reconciliation",
+        "Raw archive accessible to analysis runtime"
+      ],
+      "evidence": "Prior v56 4h taxonomy was last recomputed 2026-11-05 and carried forward in v95; 70/15/15 split and training-only q33/q67 thresholds. No taxonomy refit this run.",
+      "next_action": "Re-estimate trend/volatility thresholds on training only; measure context occupancy, duration, transition matrix, validation/test drift and stability across symbols.",
+      "blocker": "Required base history and reconciled arrays unavailable in current local runtime."
+    },
+    {
+      "id": "Q-007",
+      "priority": "P2",
+      "title": "Run frozen conditional strategy experiment and walk-forward/OOS",
+      "status": "BLOCKED",
+      "prerequisites": [
+        "Q-001",
+        "Q-002",
+        "Q-003",
+        "Q-004",
+        "Q-005",
+        "Q-006",
+        "Deterministic smoke test passes"
+      ],
+      "evidence": "0 OOS_VALIDATED entries. Donchian20 conditional matrix has 36 cells with INSUFFICIENT_EVIDENCE; SOL BULL_LOW Donchian20 remains OOS_PROMISING on only 12 OOS trades.",
+      "next_action": "After prerequisites, freeze a pre-registered SOL/ETH/XRP strategy×context experiment with train/validation/untouched-test splits, purge/embargo, calibrated costs, block bootstrap and Holm correction.",
+      "blocker": "No compatible local harness, insufficient 5m/15m history and incomplete costs."
+    },
+    {
+      "id": "Q-008",
+      "priority": "P2",
+      "title": "Weekly context taxonomy and multiple-testing review",
+      "status": "NOT_DUE",
+      "prerequisites": [
+        "Q-006"
+      ],
+      "evidence": "Last taxonomy review recorded 2026-11-09; no evidence-based reason to change thresholds today.",
+      "next_action": "At next 7-day review, inspect occupancy drift, context stability, multiple-testing burden and rejected/insufficient cells.",
+      "blocker": "Wait for the weekly review window and reconciled data."
+    }
+  ]
+}

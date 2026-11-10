@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0.0",
   "run_id": "context-strategy-20261110T232114Z-auto21",
-  "as_of_utc": "2026-11-10T23:23:00.000Z",
+  "as_of_utc": "2026-11-10T23:28:46.467Z",
   "market_data_as_of_utc": "2026-11-10T23:22:48.631Z",
   "source": {
     "exchange": "Binance USDⓈ-M",
@@ -196,12 +196,12 @@
     }
   },
   "current_context": {
-    "method": "5m/15m EMA20/50/100 proxy plus rolling TR14-SMA; 1h/4h EMA50/200 descriptive proxy carried forward from accessible 250-bar snapshot at 2026-11-10T23:01Z; completed candles only",
+    "method": "All four intervals use the same descriptive EMA20/EMA50/EMA100 proxy (bull if close>EMA50>EMA100; bear if close<EMA50<EMA100; otherwise mixed) plus rolling TR14-SMA percentile within 119 completed bars; thresholds are not training-fitted and confidence is not calibrated.",
     "windows": {
       "5m": "119 completed bars, 2026-11-10T13:20Z to 2026-11-10T23:15Z",
       "15m": "119 completed bars, 2026-11-09T17:30Z to 2026-11-10T23:00Z",
-      "1h": "250-bar snapshot 2026-10-31T13:00Z to 2026-11-10T22:00Z; no new completed 1h bar since prior snapshot",
-      "4h": "249 completed bars 2026-09-30T08:00Z to 2026-11-10T16:00Z; no new completed 4h bar since prior snapshot"
+      "1h": "119 completed bars, 2026-11-06T00:00Z to 2026-11-10T22:00Z",
+      "4h": "119 completed bars, 2026-10-22T00:00Z to 2026-11-10T16:00Z"
     },
     "trend_states": {
       "BTCUSDT": {
@@ -241,48 +241,30 @@
       "SOLUSDT": 35.85,
       "XRPUSDT": 0.94
     },
-    "atr14Percentile1h4hFromPrior250BarSnapshot": {
-      "BTCUSDT": {
-        "1h": 89.74,
-        "4h": 90.6
-      },
-      "ETHUSDT": {
-        "1h": 94.44,
-        "4h": 95.73
-      },
-      "SOLUSDT": {
-        "1h": 91.88,
-        "4h": 91.45
-      },
-      "XRPUSDT": {
-        "1h": 96.15,
-        "4h": 100
-      }
-    },
     "last10BarReturnPct": {
       "BTCUSDT": {
         "5m": 0.0976,
         "15m": -0.0181,
-        "1h": -0.77,
-        "4h": -1.85
+        "1h": -0.931,
+        "4h": -1.8542
       },
       "ETHUSDT": {
         "5m": 0.0288,
         "15m": -0.2212,
-        "1h": -1.81,
-        "4h": -4.48
+        "1h": -2.4126,
+        "4h": -4.4777
       },
       "SOLUSDT": {
         "5m": -0.2284,
         "15m": -0.5408,
-        "1h": -1.61,
-        "4h": -5.19
+        "1h": -2.3908,
+        "4h": -5.1813
       },
       "XRPUSDT": {
         "5m": -0.7444,
         "15m": -0.7463,
-        "1h": -1.69,
-        "4h": -4.08
+        "1h": -1.965,
+        "4h": -4.0699
       }
     },
     "volumeVsPrior20Median5m": {
@@ -297,19 +279,50 @@
       "SOLUSDT": 1.229,
       "XRPUSDT": 1.369
     },
-    "volumeVsPrior20Median4hFromPriorSnapshot": {
-      "BTCUSDT": 2.65,
-      "ETHUSDT": 2.76,
-      "SOLUSDT": 2.3,
-      "XRPUSDT": 1.85
-    },
     "warnings": [
-      "All four symbols remain BEAR on completed 1h/4h EMA50<EMA200 proxy from the latest 250-bar snapshot; no new completed 1h/4h bars since that snapshot.",
-      "5m shows a local BTC rebound and mixed ETH, but 15m remains bearish across all four; SOL/XRP remain bearish on 5m/15m.",
-      "1h/4h volatility percentiles were elevated in the prior 250-bar windows; 4h volume was 1.85x-2.76x prior-20 median.",
-      "5m/15m percentiles are short-window descriptive ranks, not training-derived thresholds; no formal SHOCK label assigned.",
-      "Depth20 imbalance is transient; RPI liquidity is excluded. No liquidation/crowding inference."
-    ]
+      "All four symbols are bearish on completed 15m, 1h and 4h EMA20/50/100 proxy; BTC is the only 5m bullish proxy, ETH 5m is mixed, SOL/XRP 5m remain bearish.",
+      "1h TR14-SMA percentile ranks are 89.6-94.3 within the 119-bar windows; 4h ranks are 78.3-90.6. These are descriptive short-sample ranks, not training-fitted regime thresholds.",
+      "Latest 4h volume is 2.17x-3.05x the prior-20 median while latest 1h volume is 0.47x-0.59x; participation is timeframe-dependent.",
+      "No formal SHOCK label or calibrated classification confidence is assigned.",
+      "Depth20 imbalance is transient; RPI liquidity is excluded. Do not infer liquidations or crowding."
+    ],
+    "rangeTR14SmaPercentile1h": {
+      "BTCUSDT": 91.51,
+      "ETHUSDT": 94.34,
+      "SOLUSDT": 94.34,
+      "XRPUSDT": 89.62
+    },
+    "rangeTR14SmaPercentile4h": {
+      "BTCUSDT": 78.3,
+      "ETHUSDT": 89.62,
+      "SOLUSDT": 78.3,
+      "XRPUSDT": 90.57
+    },
+    "rangeTR14SmaPct1h": {
+      "BTCUSDT": 0.897,
+      "ETHUSDT": 1.4593,
+      "SOLUSDT": 1.5151,
+      "XRPUSDT": 1.5195
+    },
+    "rangeTR14SmaPct4h": {
+      "BTCUSDT": 1.479,
+      "ETHUSDT": 2.3716,
+      "SOLUSDT": 2.4608,
+      "XRPUSDT": 2.7193
+    },
+    "volumeVsPrior20Median1h": {
+      "BTCUSDT": 0.5874,
+      "ETHUSDT": 0.4736,
+      "SOLUSDT": 0.503,
+      "XRPUSDT": 0.4679
+    },
+    "volumeVsPrior20Median4h": {
+      "BTCUSDT": 3.0304,
+      "ETHUSDT": 3.054,
+      "SOLUSDT": 2.4653,
+      "XRPUSDT": 2.1691
+    },
+    "classificationConfidence": "Not calibrated; rule-based descriptive labels only."
   },
   "registry": {
     "oosValidatedEntries": 0,

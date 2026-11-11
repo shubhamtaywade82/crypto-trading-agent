@@ -1,0 +1,94 @@
+{
+  "schemaVersion": "1.0.0",
+  "runId": "context-strategy-20261111T2331Z-auto34",
+  "experimentId": "DQ-USDMS-ARCHIVE-PAGE-0010-0013-AUDIT-20261111T2327Z-AUTO34",
+  "type": "DATA_QUALITY_AND_ARCHIVE_PROVENANCE_AUDIT",
+  "status": "COMPLETED_WITH_ZERO_VOLUME_EXCLUSIONS",
+  "createdAtUtc": "2026-11-11T23:41:04.016Z",
+  "hypothesis": "Existing 5m/15m page-0010 through page-0013 raw files and manifests are exact, contiguous, and valid; page-0015 artifacts are present and independently verifiable.",
+  "method": [
+    "Read exact GitHub file bytes from archive branch",
+    "Recompute SHA-256 and compare Git blob SHA against page manifests and indexes",
+    "Parse JSONL rows and validate row counts, duplicate/open-time uniqueness, interval continuity, grid alignment, monotonicity, OHLC invariants, finite fields, positive volume, and closeTime"
+  ],
+  "audited": {
+    "pages": [
+      "0010",
+      "0011",
+      "0012",
+      "0013",
+      "0015"
+    ],
+    "manifestFiles": 10,
+    "rawFiles": 40,
+    "rawRows": 60000,
+    "verifiedRawFiles": 40,
+    "verifiedManifestFiles": 10
+  },
+  "byInterval": {
+    "5m": {
+      "pages": [
+        "0010",
+        "0011",
+        "0012",
+        "0013"
+      ],
+      "rawFiles": 16,
+      "rows": 24000,
+      "duplicates": 0,
+      "missingIntervals": 0,
+      "offGrid": 0,
+      "nonMonotonic": 0,
+      "ohlcFailures": 0,
+      "nonFinite": 0,
+      "nonPositiveVolume": 0,
+      "closeTimeFailures": 0,
+      "sha256Matches": 16,
+      "blobShaMatches": 16
+    },
+    "15m": {
+      "pages": [
+        "0010",
+        "0011",
+        "0012",
+        "0013"
+      ],
+      "rawFiles": 16,
+      "rows": 24000,
+      "duplicates": 0,
+      "missingIntervals": 0,
+      "offGrid": 0,
+      "nonMonotonic": 0,
+      "ohlcFailures": 0,
+      "nonFinite": 0,
+      "nonPositiveVolume": 3,
+      "zeroVolumeRows": 3,
+      "zeroVolumeLocation": "SOLUSDT/page-0011",
+      "zeroVolumeAction": "Raw rows retained; excluded from analysis.",
+      "closeTimeFailures": 0,
+      "sha256Matches": 16,
+      "blobShaMatches": 16
+    },
+    "page-0015": {
+      "rawFiles": 8,
+      "rows": 12000,
+      "sha256Matches": 8,
+      "blobShaMatches": 8,
+      "qualityFailures": 0
+    }
+  },
+  "pageManifestHashAudit": "All 5m/15m page manifests 0010-0015 match index SHA-256 and Git blob SHA after readback.",
+  "artifacts": {
+    "archiveBranch": "research/raw-ohlcv-archive-20261108T1026Z",
+    "archiveManifestPath": "research-data/binance-usdm/manifests/archive_manifest_20261111T2331Z_auto34.json",
+    "archiveManifestSha256": "dc6a0653c380280cf555d65603e5b627b75ed95a6793ba1f66f2d899d8a92654",
+    "archiveManifestBlobSha": "b41aafb41da124e49c6549cdc882cf0f302864c4"
+  },
+  "conclusion": "Page-0010 through page-0013 provenance audit passed; page-0015 was already present and is independently verified. Three zero-volume 15m SOL rows are preserved raw but excluded from analysis. No strategy or OOS result was produced.",
+  "limitations": [
+    "Page-0014 was verified in the prior accessible run artifact, not re-audited here.",
+    "This audit does not resolve the 1h bridge/8-row discrepancy or 4h raw/aligned/canonical mismatch.",
+    "5m/15m base pages remain short partial windows, not continuous multi-year coverage.",
+    "No strategy backtest was run."
+  ]
+}

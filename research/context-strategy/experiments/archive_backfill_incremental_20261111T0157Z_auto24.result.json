@@ -1,0 +1,154 @@
+{
+  "schemaVersion": "1.0.0",
+  "experimentId": "EXP-ARCHIVE-PAGE2-AND-INCREMENTAL-20261111-AUTO24",
+  "type": "HISTORICAL_ARCHIVE_BACKFILL_AND_DATA_QUALITY",
+  "status": "COMPLETED_DATA_QUALITY_ONLY",
+  "runId": "context-strategy-20261111T015720Z-auto24",
+  "asOfUtc": "2026-11-11T01:57:20.000Z",
+  "hypothesis": "Backfill page 0002 for each symbol on 5m and 15m from exact per-symbol nextStart boundaries, preserve endpoint-order raw arrays, validate row continuity/OHLCV and SHA readback, then append only newly completed recent bars.",
+  "specification": {
+    "endpoint": "GET /fapi/v1/klines",
+    "access": "Binance USD-M public market-data connector",
+    "symbols": [
+      "BTCUSDT",
+      "ETHUSDT",
+      "SOLUSDT",
+      "XRPUSDT"
+    ],
+    "intervals": [
+      "5m",
+      "15m"
+    ],
+    "pageLimit": 1500,
+    "rawFormat": "newline-delimited JSON arrays in endpoint order",
+    "formingCandleRule": "closeTime < observed retrieval timestamp",
+    "zeroVolumeRule": "retain in raw archive; exclude from derived research rows"
+  },
+  "historicalBackfill": {
+    "rowsTotal": 12000,
+    "rowsByInterval": {
+      "5m": 6000,
+      "15m": 6000
+    },
+    "rowsPerSymbolPerInterval": 1500,
+    "zeroVolumeRows": 0,
+    "duplicates": 0,
+    "missingIntervals": 0,
+    "offGrid": 0,
+    "nonMonotonic": 0,
+    "ohlcFailures": 0,
+    "nonFinite": 0,
+    "readbackVerified": true,
+    "coverageBySymbol": {
+      "BTCUSDT": {
+        "5m": {
+          "first": "2020-01-01T00:00:00.000Z",
+          "last": "2020-01-11T09:55:00.000Z",
+          "next": "2020-01-11T10:00:00.000Z"
+        },
+        "15m": {
+          "first": "2020-01-01T00:00:00.000Z",
+          "last": "2020-02-01T05:45:00.000Z",
+          "next": "2020-02-01T06:00:00.000Z"
+        }
+      },
+      "ETHUSDT": {
+        "5m": {
+          "first": "2020-01-01T00:00:00.000Z",
+          "last": "2020-01-11T09:55:00.000Z",
+          "next": "2020-01-11T10:00:00.000Z"
+        },
+        "15m": {
+          "first": "2020-01-01T00:00:00.000Z",
+          "last": "2020-02-01T05:45:00.000Z",
+          "next": "2020-02-01T06:00:00.000Z"
+        }
+      },
+      "SOLUSDT": {
+        "5m": {
+          "first": "2020-09-14T07:00:00.000Z",
+          "last": "2020-09-24T16:55:00.000Z",
+          "next": "2020-09-24T17:00:00.000Z"
+        },
+        "15m": {
+          "first": "2020-09-14T07:00:00.000Z",
+          "last": "2020-10-15T12:45:00.000Z",
+          "next": "2020-10-15T13:00:00.000Z"
+        }
+      },
+      "XRPUSDT": {
+        "5m": {
+          "first": "2020-01-06T08:20:00.000Z",
+          "last": "2020-01-16T18:15:00.000Z",
+          "next": "2020-01-16T18:20:00.000Z"
+        },
+        "15m": {
+          "first": "2020-01-06T08:15:00.000Z",
+          "last": "2020-02-06T14:00:00.000Z",
+          "next": "2020-02-06T14:15:00.000Z"
+        }
+      }
+    }
+  },
+  "incrementalAppend": {
+    "rowsFetched": 24,
+    "completedRows": 20,
+    "formingRowsExcluded": 4,
+    "preHighwaterRowsExcluded": 0,
+    "rowsAppended": 20,
+    "rowsByInterval": {
+      "5m": 16,
+      "15m": 4
+    },
+    "rowsBySymbol": {
+      "BTCUSDT": 5,
+      "ETHUSDT": 5,
+      "SOLUSDT": 5,
+      "XRPUSDT": 5
+    },
+    "duplicates": 0,
+    "missingIntervals": 0,
+    "offGrid": 0,
+    "nonMonotonic": 0,
+    "ohlcFailures": 0,
+    "nonPositiveVolume": 0,
+    "nonFinite": 0,
+    "readbackVerified": true,
+    "deltaPaths": [
+      "research-data/binance-usdm/delta/binance_usdm_delta_20261111T0155Z_5m_completed.jsonl",
+      "research-data/binance-usdm/delta/binance_usdm_delta_20261111T0155Z_15m_completed.jsonl"
+    ]
+  },
+  "highwaters": {
+    "5m": "2026-11-11T01:50:00.000Z",
+    "15m": "2026-11-11T01:30:00.000Z",
+    "1h": "2026-11-11T00:00:00.000Z",
+    "4h": "2026-11-10T16:00:00.000Z"
+  },
+  "result": "Page 0002 and current completed-bar deltas persisted to the archive branch; all eight page files and both recent deltas were read back and verified. This is a data-quality/archive experiment only.",
+  "limitations": [
+    "The page-0002 coverage is still only a short initial historical segment and does not bridge to 2026 incremental deltas.",
+    "4h canonical/raw reconciliation remains blocked.",
+    "No executable local backtest runtime, no deterministic smoke test, and no strategy experiment were available.",
+    "No OOS evaluation was run."
+  ],
+  "nextAction": "Continue page 0003 from the per-symbol nextStartUtc values in the page-0002 manifests; maintain 4h reconciliation and compatible runtime blockers before strategy experiments.",
+  "artifacts": {
+    "archiveBranch": "research/raw-ohlcv-archive-20261108T1026Z",
+    "archiveManifest": "research-data/binance-usdm/manifests/archive_manifest_20261111T0157Z_auto24.json",
+    "pageManifests": [
+      "research-data/binance-usdm/5m/manifest-page-0001.json",
+      "research-data/binance-usdm/5m/manifest-page-0002.json",
+      "research-data/binance-usdm/15m/manifest-page-0001.json",
+      "research-data/binance-usdm/15m/manifest-page-0002.json"
+    ],
+    "deltaPaths": [
+      "research-data/binance-usdm/delta/binance_usdm_delta_20261111T0155Z_5m_completed.jsonl",
+      "research-data/binance-usdm/delta/binance_usdm_delta_20261111T0155Z_15m_completed.jsonl"
+    ],
+    "deltaManifests": [
+      "research-data/binance-usdm/delta/manifest-20261111T0155Z-5m.json",
+      "research-data/binance-usdm/delta/manifest-20261111T0155Z-15m.json"
+    ]
+  }
+}

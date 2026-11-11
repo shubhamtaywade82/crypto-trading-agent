@@ -1,0 +1,191 @@
+{
+  "schemaVersion": 1,
+  "id": "EXP-INTRADAY-BACKFILL-PAGE-0007-AUTO29",
+  "type": "HISTORICAL_DATA_QUALITY_BACKFILL",
+  "status": "COMPLETED_REPRODUCIBLE_STAGED_NOT_INDEXED",
+  "startedAtUtc": "2026-11-11T08:00:50.390Z",
+  "completedAtUtc": "2026-11-11T08:02:40.397Z",
+  "runId": "context-strategy-20261111T080425Z-auto29",
+  "sourceEndpoint": "GET /fapi/v1/klines",
+  "access": "Binance USD-M public market-data connector; no SDK",
+  "specification": {
+    "symbols": [
+      "BTCUSDT",
+      "ETHUSDT",
+      "SOLUSDT",
+      "XRPUSDT"
+    ],
+    "intervals": [
+      "5m",
+      "15m"
+    ],
+    "limitPerSymbolInterval": 1500,
+    "requestStartUtc": {
+      "5m": {
+        "BTCUSDT": "2020-02-01T06:00:00Z",
+        "ETHUSDT": "2020-02-01T06:00:00Z",
+        "SOLUSDT": "2020-10-15T13:00:00Z",
+        "XRPUSDT": "2020-02-06T14:20:00Z"
+      },
+      "15m": {
+        "BTCUSDT": "2020-04-03T18:00:00Z",
+        "ETHUSDT": "2020-04-03T18:00:00Z",
+        "SOLUSDT": "2020-12-17T01:00:00Z",
+        "XRPUSDT": "2020-04-09T02:15:00Z"
+      }
+    },
+    "validation": [
+      "exact row count 1500",
+      "first openTime equals requested start",
+      "strictly increasing timestamps",
+      "no duplicate openTime",
+      "expected interval continuity",
+      "UTC grid alignment",
+      "OHLC invariants",
+      "finite fields",
+      "positive volume audit",
+      "SHA-256 over exact newline-delimited bytes",
+      "GitHub readback equality"
+    ]
+  },
+  "result": {
+    "filesCreated": 8,
+    "rowsFetched": 12000,
+    "rowsPersisted": 12000,
+    "rowsPerSymbolInterval": 1500,
+    "duplicateRows": 0,
+    "missingIntervals": 0,
+    "offGrid": 0,
+    "nonMonotonic": 0,
+    "ohlcFailures": 0,
+    "nonFinite": 0,
+    "nonPositiveVolume": 0,
+    "readbackExactFiles": 8,
+    "readbackExactManifests": 2
+  },
+  "pageManifests": {
+    "5m": {
+      "manifestPath": "research-data/binance-usdm/5m/manifest-page-0007.json",
+      "manifestSha256": "be6c53126498b5428eb74f0a4c7998501433177d4a3ca416f6dc920425529dc3",
+      "manifestBlobSha": "559aa1cdffbc7bfae24f9b2e041a3cfe3dfc787a",
+      "files": [
+        [
+          "BTCUSDT",
+          "research-data/binance-usdm/5m/BTCUSDT/page-0007.jsonl",
+          1500,
+          195137,
+          "3d383c4926f10b2487cc315ab6dfdf7d47fc6f45b5f31baecc18ca5544efd265",
+          "4f347fe2dba48f91c673cfead0a90155ebe0bf86",
+          "2020-02-01T06:00:00Z",
+          "2020-02-06T10:55:00Z"
+        ],
+        [
+          "ETHUSDT",
+          "research-data/binance-usdm/5m/ETHUSDT/page-0007.jsonl",
+          1500,
+          187733,
+          "ab10c94e22e7d4788ec4a8010e65c7cace81b5ee788c21c8f4b8c2bdfa7851cf",
+          "fa2d4e89d2a4074e33c5b5a8d719c91a270955c9",
+          "2020-02-01T06:00:00Z",
+          "2020-02-06T10:55:00Z"
+        ],
+        [
+          "SOLUSDT",
+          "research-data/binance-usdm/5m/SOLUSDT/page-0007.jsonl",
+          1500,
+          172022,
+          "76c8dfbba3a61888cb970dc43d940df20144b42b4c7803c591232a614b530a58",
+          "1304bb29d2385eb46021830e31782f44076b93e5",
+          "2020-10-15T13:00:00Z",
+          "2020-10-20T17:55:00Z"
+        ],
+        [
+          "XRPUSDT",
+          "research-data/binance-usdm/5m/XRPUSDT/page-0007.jsonl",
+          1500,
+          186445,
+          "9e2867e68eec92dd77d465acd01c4ff3f5a4a72b773a77a23f35ea219ff3307f",
+          "e684548cb3f105574db9cda2d04b9d2c4f942d8f",
+          "2020-02-06T14:20:00Z",
+          "2020-02-11T19:15:00Z"
+        ]
+      ]
+    },
+    "15m": {
+      "manifestPath": "research-data/binance-usdm/15m/manifest-page-0007.json",
+      "manifestSha256": "17532393cecbf0a68ade027e68c664973c81b257f59aeb892ea40fd1aaa0dc8d",
+      "manifestBlobSha": "5d42a2ad03cf88b96d1103d173b10b73e7060107",
+      "files": [
+        [
+          "BTCUSDT",
+          "research-data/binance-usdm/15m/BTCUSDT/page-0007.jsonl",
+          1500,
+          201490,
+          "a38a7c538eadfe7fd88a6475b8705df8f035e8978d30b4e87daa1237a2d27bfe",
+          "3b8d5516cced68cb1c529381c01cd60f77f2dd19",
+          "2020-04-03T18:00:00Z",
+          "2020-04-19T08:45:00Z"
+        ],
+        [
+          "ETHUSDT",
+          "research-data/binance-usdm/15m/ETHUSDT/page-0007.jsonl",
+          1500,
+          193981,
+          "e4ad2efa0b54d38c17397be61a18ef6f9396c677a19accddcdcc611714b23312",
+          "0b2ac0794be89fe2ceb4e9f14db0592cf8ac78ca",
+          "2020-04-03T18:00:00Z",
+          "2020-04-19T08:45:00Z"
+        ],
+        [
+          "SOLUSDT",
+          "research-data/binance-usdm/15m/SOLUSDT/page-0007.jsonl",
+          1500,
+          176202,
+          "163b15bc393bc930d5aca2c8147145dce8de39e78e80ec3485a4810a58b78777",
+          "1295ca39fcdb1dce3129c3ca8320cbd63034a6a8",
+          "2020-12-17T01:00:00Z",
+          "2021-01-01T15:45:00Z"
+        ],
+        [
+          "XRPUSDT",
+          "research-data/binance-usdm/15m/XRPUSDT/page-0007.jsonl",
+          1500,
+          188418,
+          "fc81dc3646da6eb1b88d61715e36b8a57a0e592417c2e5b0f40885a8a9283cec",
+          "44fb9ba4f1b606dccc661848b5ac910dbe077fd2",
+          "2020-04-09T02:15:00Z",
+          "2020-04-24T17:00:00Z"
+        ]
+      ]
+    }
+  },
+  "indexIntegration": {
+    "status": "BLOCKED_INDEX_RECONCILIATION",
+    "reason": "5m/15m archive indexes disagree internally: base_history reports 9000 rows/symbol, 36000 total, pages 1-6; page_progress reports 4500 rows/symbol, 18000 total, 3 pages; top-level index reports 6000 rows/symbol, 24000 total, pages 1-3. Page-0007 files/manifests are persisted and readback-verified but intentionally not indexed until these counters and page-key sets are reconciled."
+  },
+  "existingDeltaAudit": {
+    "path": "research-data/binance-usdm/delta/binance_usdm_delta_20261111T074056Z_all_intervals_completed.jsonl",
+    "manifestPath": "research-data/binance-usdm/delta/manifest-20261111T074056Z-all-intervals.json",
+    "rows": 84,
+    "bytes": 15035,
+    "rowsByInterval": {
+      "5m": 56,
+      "15m": 16,
+      "1h": 4,
+      "4h": 8
+    },
+    "sha256": "630d49be319108453d967dbb3a0efe796d520ecc0c48fbd390b360db56b134e2",
+    "blobSha": "08d3659866db55e58b4fe4c2bc3dd27cbb37f409",
+    "readbackIndependentlyVerified": true,
+    "originalManifestQualityPass": false,
+    "originalManifestReadbackVerified": false,
+    "interpretation": "Exact bytes/row count/hash now independently match; original manifest still flags quality_pass=false and readback_verified=false because exchangeInfo metadata was stale at that run. Do not rewrite the original manifest. Eight 4h rows are present in the mixed delta but 4h index remains provenance-blocked."
+  },
+  "strategyExperiment": {
+    "status": "BLOCKED",
+    "reason": "No local checkout; Node22/npm10 below project floor Node24/npm11; no SDK installed; no actual harness smoke test; 5m/15m index inconsistency, 1h bridge and 4h provenance unresolved; PIT derivatives incomplete."
+  },
+  "oosEvaluated": false,
+  "registryChanged": false,
+  "evaluatedAtUtc": "2026-11-11T08:04:25.262Z"
+}

@@ -1,0 +1,97 @@
+{
+  "schemaVersion": "1.0.0",
+  "runId": "context-strategy-20261111T163318Z-auto31",
+  "asOfUtc": "2026-11-11T16:37:32.003Z",
+  "environment": {
+    "runtime": "managed V8 tool runtime plus container shell",
+    "cwd": "/",
+    "os": "Linux 6.18.57 x86_64",
+    "python": "3.13.5",
+    "node": "v22.16.0",
+    "npm": "10.9.2",
+    "cpuCores": 3,
+    "ramTotalKB": 6091004,
+    "ramAvailableKB": 4947456,
+    "swapTotalKB": 0,
+    "diskTotalGB": 32,
+    "diskFreeGB": 30,
+    "localGitRepository": false
+  },
+  "checks": [
+    {
+      "capability": "shell/compute",
+      "status": "PASS",
+      "evidence": "Shell executed; Linux x86_64; Python 3.13.5; 3 CPUs; 6.09 GB RAM total, 4.95 GB available; 30 GB disk free.",
+      "impact": "Bounded data validation and artifact generation were feasible.",
+      "nextAction": "Use a persistent compatible runtime for strategy experiments."
+    },
+    {
+      "capability": "local repo/code",
+      "status": "DEGRADED",
+      "evidence": "cwd=/; git rev-parse reports not a git repository. Remote GitHub source is accessible; package.json blob 22576968ec662fd7d17dda10069489c69c597bcd declares Node >=24/npm >=11 and scripts backtest/research:conditional.",
+      "impact": "Remote code can be inspected but cannot be invoked locally.",
+      "nextAction": "Provision a persistent checkout at a pinned commit."
+    },
+    {
+      "capability": "Node/SDK",
+      "status": "BLOCKED",
+      "evidence": "Observed Node v22.16.0/npm 10.9.2; @binance/connector require.resolve=NOT_INSTALLED; remote package.json depends on @nemesis-oss/binance-sdk and binance.",
+      "impact": "Binance SDK and repository runner were not executed.",
+      "nextAction": "Provision Node 24/npm 11 and install lockfile dependencies; verify SDK import."
+    },
+    {
+      "capability": "direct Binance REST",
+      "status": "BLOCKED",
+      "evidence": "curl https://fapi.binance.com/fapi/v1/time returned curl error 6 Could not resolve host; HTTP 000, 0 bytes. Direct exchangeInfo probe also failed DNS.",
+      "impact": "No direct HTTP status/header evidence and no fresh server-time probe.",
+      "nextAction": "Restore DNS/network and verify /fapi/v1/time and /fapi/v1/exchangeInfo with bounded timeouts."
+    },
+    {
+      "capability": "Binance connector data",
+      "status": "DEGRADED",
+      "evidence": "Public connector calls succeeded for 4 symbols across 5m/15m/1h/4h plus mark, ticker, funding, OI, taker, global long/short and depth. Connector does not expose HTTP status/headers. exchangeInfo.serverTime=2026-11-11T10:18:31.943Z, about 6h16m stale at retrieval.",
+      "impact": "Monitoring data usable with timestamps; contract metadata not valid for execution validation.",
+      "nextAction": "Restore fresh official server time and exchange metadata."
+    },
+    {
+      "capability": "raw historical archive",
+      "status": "DEGRADED",
+      "evidence": "GitHub branch research/raw-ohlcv-archive-20261108T1026Z is writable and readable. 5m/15m base pages 1-8 contain 12,000 rows/symbol but remain discontinuous to 2026 deltas; 1h has a 28h bridge gap and 8-row index discrepancy; 4h raw/aligned/canonical counts 53,960/53,816/53,844 with 13 SHA provenance mismatches.",
+      "impact": "No clean aligned multi-year all-timeframe dataset for strategy research.",
+      "nextAction": "Backfill next 5m/15m pages; reconcile 1h bridge/index and 4h row keys/hashes."
+    },
+    {
+      "capability": "data quality/coverage",
+      "status": "DEGRADED",
+      "evidence": "New 100-row append: duplicates=0, missing=0, off-grid=0, non-monotonic=0, OHLC failures=0, non-positive volume=0, non-finite=0, closeTime failures=0; 16 forming rows excluded; cross-symbol alignment true.",
+      "impact": "Incremental slices pass, but historical completeness/provenance still fails.",
+      "nextAction": "Continue page backfill and archive reconciliation before strategy tests."
+    },
+    {
+      "capability": "backtest harness/smoke test",
+      "status": "BLOCKED",
+      "evidence": "Remote scripts backtest and research:conditional exist; no local checkout, runtime below package floor, SDK absent. Deterministic fixture was not run.",
+      "impact": "No strategy experiment or OOS evaluation executed.",
+      "nextAction": "Provision Node24/npm11 checkout; run deterministic fixture twice and verify no lookahead."
+    },
+    {
+      "capability": "disk/storage",
+      "status": "PASS",
+      "evidence": "Local overlay 32 GB total, 30 GB free; GitHub branch writes succeeded.",
+      "impact": "Persistent remote archive storage available; no local raw archive mounted.",
+      "nextAction": "Continue remote append-only storage with readback."
+    },
+    {
+      "capability": "artifact readback",
+      "status": "PASS",
+      "evidence": "Delta JSONL, delta manifests, 5m/15m/1h indexes and global archive manifest were fetched back and exact-content verified; SHA-256 recorded.",
+      "impact": "This run's data-quality artifacts are reproducible and persisted.",
+      "nextAction": "Retain immutable delta files and manifests; verify next run against these highwaters."
+    }
+  ],
+  "executionStatus": "RESEARCH_EXECUTED",
+  "scope": "DATA_QUALITY_ONLY_AND_MARKET_MONITORING",
+  "strategyExperimentStatus": "RESEARCH_BLOCKED",
+  "oosEvaluated": false,
+  "registryOosValidatedEntries": 0
+}

@@ -1,0 +1,187 @@
+{
+  "schemaVersion": "1.0.0",
+  "experimentId": "DQ-USDMS-HISTORICAL-PAGE-0009-20261111T174018Z-AUTO32",
+  "runId": "context-strategy-20261111T173054Z-auto32",
+  "type": "HISTORICAL_ARCHIVE_BACKFILL_AND_INTEGRITY",
+  "status": "COMPLETED_REPRODUCIBLE_DATA_QUALITY_ONLY",
+  "hypothesis": "Fetching the next 1,500 contiguous klines per symbol for 5m and 15m, validating all row invariants, then verifying persisted bytes and index updates, extends the base archive without introducing gaps or corruptions.",
+  "source": {
+    "endpoint": "GET /fapi/v1/klines",
+    "access": "Binance USD-M public market-data connector; SDK_NOT_USED; HTTP status/headers not exposed.",
+    "repository": "shubhamtaywade82/crypto-trading-agent",
+    "branch": "research/raw-ohlcv-archive-20261108T1026Z"
+  },
+  "specification": {
+    "symbols": [
+      "BTCUSDT",
+      "ETHUSDT",
+      "SOLUSDT",
+      "XRPUSDT"
+    ],
+    "intervals": [
+      "5m",
+      "15m"
+    ],
+    "requestLimit": 1500,
+    "sourceRowsPerSymbolPerInterval": 1500,
+    "page": 9,
+    "storageFormat": "newline-delimited raw Binance kline arrays",
+    "analysisPolicy": "zero-volume bars remain in raw archive but are excluded from analysis; no forward-fill"
+  },
+  "results": {
+    "files": 8,
+    "rowsTotal": 12000,
+    "rowsByInterval": {
+      "5m": 6000,
+      "15m": 6000
+    },
+    "rowsPerSymbolPerInterval": 1500,
+    "zeroVolumeRows": 0,
+    "analysisEligibleRows": 12000,
+    "quality": {
+      "duplicates": 0,
+      "missingIntervals": 0,
+      "offGrid": 0,
+      "nonMonotonic": 0,
+      "ohlcInvariantFailures": 0,
+      "nonFinite": 0,
+      "nonPositiveVolume": 0,
+      "closeTimeFailures": 0
+    },
+    "readbackExactFiles": 8,
+    "readbackExactManifests": 2,
+    "readbackVerifiedIndexes": 2,
+    "baseHistoryAfter": {
+      "5m": {
+        "rowsPerSymbol": 13500,
+        "rowsTotal": 54000,
+        "pages": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "coverageEndUtc": "2020-10-31T03:55:00.000Z"
+      },
+      "15m": {
+        "rowsPerSymbol": 13500,
+        "rowsTotal": 54000,
+        "pages": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "coverageEndUtc": "2021-02-01T21:45:00.000Z"
+      }
+    }
+  },
+  "pages": {
+    "5m": {
+      "BTCUSDT": {
+        "first": "2020-02-11T16:00:00.000Z",
+        "last": "2020-02-16T20:55:00.000Z",
+        "next": "2020-02-16T21:00:00.000Z",
+        "bytes": 200040,
+        "sha256": "3c7cf6fbdc83a863fe78eb6a73c2541a482ba5573a5fcc73caa4aac99290a088",
+        "blobSha": "814be623a4bb6c5ed9a55930b49998ffcbc0c1f1",
+        "provenance": "pre-existing file independently matched current connector source byte-for-byte"
+      },
+      "ETHUSDT": {
+        "first": "2020-02-11T16:00:00.000Z",
+        "last": "2020-02-16T20:55:00.000Z",
+        "next": "2020-02-16T21:00:00.000Z",
+        "bytes": 190901,
+        "sha256": "b13956f4bb6344c4965112f96d1db2be011f2c65fda4ed80d25403a3efbe0751",
+        "blobSha": "c5977d3fecc5793ca9fbb082753ce506745495c8",
+        "provenance": "pre-existing file independently matched current connector source byte-for-byte"
+      },
+      "SOLUSDT": {
+        "first": "2020-10-25T23:00:00.000Z",
+        "last": "2020-10-31T03:55:00.000Z",
+        "next": "2020-10-31T04:00:00.000Z",
+        "bytes": 172660,
+        "sha256": "4e9e2a55b8c6c1285b6c4da5897731b2254ffd028b9cdfd6cd785edd369f7c0e",
+        "blobSha": "95cefa32d19988a3f1cbf18b81063bdd71eb3f58",
+        "provenance": "pre-existing file independently matched current connector source byte-for-byte"
+      },
+      "XRPUSDT": {
+        "first": "2020-02-17T00:20:00.000Z",
+        "last": "2020-02-22T05:15:00.000Z",
+        "next": "2020-02-22T05:20:00.000Z",
+        "bytes": 188414,
+        "sha256": "2a46022051cd2115c9489a2e78d93121dc4d583fbdfb25ac8106070c4d9ad407",
+        "blobSha": "d7b76d58431950ffdeae6cb2a85fd5513ffdbf02",
+        "provenance": "new file created and exact readback verified"
+      }
+    },
+    "15m": {
+      "BTCUSDT": {
+        "first": "2020-05-05T00:00:00.000Z",
+        "last": "2020-05-20T14:45:00.000Z",
+        "next": "2020-05-20T15:00:00.000Z",
+        "bytes": 202996,
+        "sha256": "a18527a41fbbb78de7ea02e5e4e15bb61d43cfe9a5a2f3935162ee1c798fc6d3",
+        "blobSha": "d01196a0706bfb4f05cd2e86c51e4f991b2de3de"
+      },
+      "ETHUSDT": {
+        "first": "2020-05-05T00:00:00.000Z",
+        "last": "2020-05-20T14:45:00.000Z",
+        "next": "2020-05-20T15:00:00.000Z",
+        "bytes": 194326,
+        "sha256": "938a3eca983264340487fb19f16649392ada03b91d86809281e562d895f78c01",
+        "blobSha": "911f11464fee3b8da02f974d7a288433b03e4457"
+      },
+      "SOLUSDT": {
+        "first": "2021-01-17T07:00:00.000Z",
+        "last": "2021-02-01T21:45:00.000Z",
+        "next": "2021-02-01T22:00:00.000Z",
+        "bytes": 178743,
+        "sha256": "b7240f4eef7ba2cc08bb33b0e5b61840a24d9febbd40af1b18c864bf5a45b8e4",
+        "blobSha": "99484a9d01868e966464f386fd232d3770231de7"
+      },
+      "XRPUSDT": {
+        "first": "2020-05-10T08:15:00.000Z",
+        "last": "2020-05-25T23:00:00.000Z",
+        "next": "2020-05-25T23:15:00.000Z",
+        "bytes": 190164,
+        "sha256": "a1bbe54eb12b73dd6ab939b3c2c7f4b3dcf47aa6d0c2cee8a0e10b682545104b",
+        "blobSha": "7d142347d798e699c749f32e73a1be6259ea83da"
+      }
+    }
+  },
+  "artifacts": {
+    "5mManifestPath": "research-data/binance-usdm/5m/manifest-page-0009.json",
+    "5mManifestBlobSha": "aa217cd7866587e7f1eb601b6a2ceea73e2ce6d4",
+    "5mIndexBlobSha": "8831c3490158b7a1caacda16bb28ad9bec83788a",
+    "15mManifestPath": "research-data/binance-usdm/15m/manifest-page-0009.json",
+    "15mManifestBlobSha": "93d157e97a47aaf9ad9ea3dae5fdf3502f141c99",
+    "15mIndexBlobSha": "4964313799e2565546256e869ee9ee219862feea",
+    "archiveManifestPath": "research-data/binance-usdm/manifests/archive_manifest_20261111T174018Z_auto32.json",
+    "archiveManifestBlobSha": "ecbc81824a1273efa11021bf7cbb49bb43dc6d8a",
+    "archiveManifestReadbackOnRawBranch": true
+  },
+  "reproducibility": {
+    "retrievedAtUtc": "2026-11-11T17:39:22.404Z/17:40:18.760Z",
+    "codeCommit": "NOT_EXECUTED_NO_LOCAL_CHECKOUT",
+    "specVersion": "HISTORICAL-PAGE-BACKFILL-V1",
+    "seed": null,
+    "readbackVerified": true
+  },
+  "strategyExperiment": {
+    "status": "BLOCKED",
+    "reason": "The archive is still discontinuous to 2026, the 1h bridge and 4h provenance are unresolved, and no compatible local backtest harness is available."
+  },
+  "oosEvaluated": false,
+  "nextAction": "Backfill page 0010 from per-symbol nextStart values, then reconcile 1h and 4h before running a frozen strategy experiment."
+}

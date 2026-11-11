@@ -1,0 +1,97 @@
+{
+  "schema_version": "1.0.0",
+  "run_id": "context-strategy-20261111T080425Z-auto29",
+  "as_of_utc": "2026-11-11T08:04:25.262Z",
+  "status": "RESEARCH_EXECUTED",
+  "scope": "PAGE_0007_5M_15M_BACKFILL_READBACK_AND_CURRENT_MARKET_MONITORING",
+  "strategy_experiment_status": "RESEARCH_BLOCKED",
+  "oos_evaluated": false,
+  "oos_validated_entry_count": 0,
+  "environment": {
+    "shell": "PASS",
+    "os": "Debian GNU/Linux 13 (trixie)",
+    "cwd": "/",
+    "python": "3.13.5",
+    "node": "v22.16.0",
+    "npm": "10.9.2",
+    "cpu_count": 3,
+    "memory_total": "5.8 GiB",
+    "memory_available": "4.8 GiB",
+    "disk_free": "30 GiB",
+    "local_repository_present": false,
+    "sdk_packages": "NOT_INSTALLED"
+  },
+  "repository": {
+    "name": "shubhamtaywade82/crypto-trading-agent",
+    "main_ref_commit": "7fd87b7e43e519dc855c44a8cd3bbd3c9a60273f",
+    "local_checkout": false,
+    "raw_archive_branch": "research/raw-ohlcv-archive-20261108T1026Z"
+  },
+  "completed_work": {
+    "page7_backfill": {
+      "files": 8,
+      "rows": 12000,
+      "rowsPerSymbolInterval": 1500,
+      "allFileReadbacksVerified": true,
+      "allManifestReadbacksVerified": true,
+      "qualityFailures": 0,
+      "manifestHashes": {
+        "fiveMinute": "be6c53126498b5428eb74f0a4c7998501433177d4a3ca416f6dc920425529dc3",
+        "fifteenMinute": "17532393cecbf0a68ade027e68c664973c81b257f59aeb892ea40fd1aaa0dc8d"
+      }
+    },
+    "priorDeltaReadbackAudit": {
+      "path": "research-data/binance-usdm/delta/binance_usdm_delta_20261111T074056Z_all_intervals_completed.jsonl",
+      "rows": 84,
+      "sha256": "630d49be319108453d967dbb3a0efe796d520ecc0c48fbd390b360db56b134e2",
+      "readbackIndependentlyVerified": true
+    },
+    "currentMarketSnapshot": {
+      "path": "research-data/binance-usdm/current_market_snapshot_20261111T0803Z_auto29.json",
+      "asOfUtc": "2026-11-11T08:03:49.280Z"
+    }
+  },
+  "blockers": {
+    "page7IndexIntegration": "5m/15m base_history/page_progress/top-level row counts conflict; page7 remains staged and unindexed",
+    "incrementalAppend": "blocked until index reconciliation; 4h append prohibited by provenance",
+    "strategyExperiment": "no local checkout; Node/npm below engine floor; no smoke test; archive continuity/provenance and PIT derivatives incomplete",
+    "oos": "NOT_EVALUATED"
+  },
+  "registry": {
+    "path": "research-data/binance-usdm/conditional-strategy-registry-snapshot-v118.json",
+    "version": 110,
+    "asOfUtc": "2026-11-11T04:44:23.817Z",
+    "statusCounts": {
+      "INSUFFICIENT_EVIDENCE": 4,
+      "REJECTED": 1,
+      "OOS_VALIDATED": 0
+    },
+    "changed": false
+  },
+  "artifacts": {
+    "snapshot": {
+      "path": "research-data/binance-usdm/current_market_snapshot_20261111T0803Z_auto29.json",
+      "sha256": "8c0e405c805d2c70995a83fbb538965b43600be52bf8bdcbc12487083467827c",
+      "bytes": 13041
+    },
+    "result": {
+      "path": "research/context-strategy/experiments/intraday_backfill_page_0007_20261111T0801Z_auto29.result.json",
+      "sha256": "fe9ee34e3dca51c1f455b32f93c09938e6f4ad0dcb7e4a0ceea301bddc666087",
+      "bytes": 6985
+    },
+    "preflight": {
+      "path": "research/context-strategy/preflight/preflight_20261111T0804Z_auto29.json",
+      "sha256": "5af3b953da937386ced6b3fa8db758d4b770bbc774e8d022319722da6ca413d9",
+      "bytes": 4414
+    },
+    "report": {
+      "path": "research/context-strategy/reports/2026-11-11T0804Z_auto29.md",
+      "sha256": "67d16430b7d0eb529ef1970ef1b8ce0e4667d9722a670bf526148dea004dd1ce",
+      "bytes": 13565
+    },
+    "preflightPath": "research/context-strategy/preflight/preflight_20261111T0804Z_auto29.json",
+    "reportPath": "research/context-strategy/reports/2026-11-11T0804Z_auto29.md",
+    "queuePath": "research-data/binance-usdm/research-queue-v121.json"
+  },
+  "nextAction": "Reconcile 5m/15m archive index counters and per-symbol openTime key sets before indexing page 0007 or appending new current bars."
+}

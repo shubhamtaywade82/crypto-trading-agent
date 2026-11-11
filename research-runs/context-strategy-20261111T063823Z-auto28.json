@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0.0",
   "run_id": "context-strategy-20261111T063823Z-auto28",
-  "as_of_utc": "2026-11-11T06:38:23.745Z",
+  "as_of_utc": "2026-11-11T06:44:28.231Z",
   "status": "RESEARCH_EXECUTED",
   "scope": "INCREMENTAL_ARCHIVE_REFRESH_DATA_QUALITY_VERIFICATION_AND_CURRENT_MARKET_MONITORING",
   "strategy_experiment_status": "RESEARCH_BLOCKED",
@@ -74,7 +74,7 @@
     },
     "archiveIndexes": {
       "branch": "research/raw-ohlcv-archive-20261108T1026Z",
-      "latestCommit": "c8d4af09e265281c81c52ee9d8b2dbd47906976a",
+      "latestCommit": "427343e857ead03ad1a3a29394f6b64faf9a739d",
       "highwaters": {
         "5m": "2026-11-11T06:25:00.000Z",
         "15m": "2026-11-11T06:15:00.000Z",
@@ -84,7 +84,7 @@
       },
       "indexReadbacksVerified": true,
       "archiveManifestPath": "research-data/binance-usdm/manifests/archive_manifest_20261111T0631Z_auto28.json",
-      "archiveManifestBlobSha1": "6ecc57b88f4d5d2f7ece2203380f6dd203fddea7"
+      "archiveManifestBlobSha1": "dc5c14555735a6cfbf9bca38425c832a9fd14e55"
     },
     "currentMarketSnapshot": {
       "path": "research-data/binance-usdm/current_market_snapshot_20261111T0634Z_auto28.json",
@@ -96,7 +96,22 @@
     },
     "strategyExperiment": {
       "status": "BLOCKED",
-      "reason": "No compatible local Node runtime/checkout, no smoke test, 5m/15m base remains discontinuous, 4h provenance unresolved, PIT derivatives incomplete."
+      "reason": "No compatible local Node runtime/checkout, no smoke test, 5m/15m base remains discontinuous, 1h base/delta bridge has 28 missing hourly opens and an 8-row index discrepancy, 4h provenance unresolved, PIT derivatives incomplete."
+    },
+    "historicalCoverageAudit": {
+      "1h": {
+        "pageProgressRowsTotal": 215484,
+        "pageProgressRowsPerSymbol": 53871,
+        "baseLastCompletedOpenUtc": "2026-11-06T22:00:00.000Z",
+        "nextBaseStartUtc": "2026-11-06T23:00:00.000Z",
+        "incrementalHighwaterUtc": "2026-11-11T05:00:00.000Z",
+        "firstPostBaseDeltaLatestOpenUtc": "2026-11-08T03:00:00.000Z",
+        "missingHourlyOpensPerSymbol": 28,
+        "topLevelIndexRowsTotal": 215492,
+        "topLevelIndexRowsPerSymbol": 53873,
+        "indexCountDiscrepancyRows": 8,
+        "status": "COMBINED_CONTINUITY_DEGRADED"
+      }
     }
   },
   "registry": {
@@ -115,17 +130,19 @@
     "snapshotPath": "research-data/binance-usdm/current_market_snapshot_20261111T0634Z_auto28.json",
     "preflightPath": "research/context-strategy/preflight/preflight_20261111T0638Z_auto28.json",
     "reportPath": "research/context-strategy/reports/2026-11-11T0638Z_auto28.md",
-    "queuePath": "research-data/binance-usdm/research-queue-v119.json",
+    "queuePath": "research-data/binance-usdm/research-queue-v120.json",
     "registryPath": "research-data/binance-usdm/conditional-strategy-registry-snapshot-v118.json",
     "deltaPath": "research-data/binance-usdm/delta/binance_usdm_delta_20261111T0631Z_5m15m1h_completed.jsonl",
     "deltaManifestPath": "research-data/binance-usdm/delta/manifest-20261111T0631Z-5m15m1h.json",
-    "archiveManifestPath": "research-data/binance-usdm/manifests/archive_manifest_20261111T0631Z_auto28.json"
+    "archiveManifestPath": "research-data/binance-usdm/manifests/archive_manifest_20261111T0631Z_auto28.json",
+    "archiveManifestBlobSha1": "dc5c14555735a6cfbf9bca38425c832a9fd14e55"
   },
   "no_claims": [
     "No strategy backtest executed",
     "No untouched OOS executed",
     "No registry promotion or rejection occurred",
     "No local repository checkout or local archive was present",
-    "No Binance SDK was used"
+    "No Binance SDK was used",
+    "The combined 1h base and incremental deltas are not continuous; a 28-hour bridge gap and 8-row index count discrepancy remain."
   ]
 }

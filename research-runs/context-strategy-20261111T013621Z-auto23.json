@@ -1,0 +1,182 @@
+{
+  "schema_version": "1.0.0",
+  "run_id": "context-strategy-20261111T013621Z-auto23",
+  "as_of_utc": "2026-11-11T01:36:21.000Z",
+  "outcome": {
+    "overall": "RESEARCH_EXECUTED",
+    "research_status": "RESEARCH_EXECUTED_DATA_QUALITY_ONLY",
+    "strategy_experiment_status": "RESEARCH_BLOCKED",
+    "oos_evaluated": false,
+    "monitoring_completed": true
+  },
+  "source_code": {
+    "repository": "shubhamtaywade82/crypto-trading-agent",
+    "code_commit": "cbdc69c64f20578f7d62a137277d1486d8a44ede",
+    "main_artifact_commit": "6dabd82b34513a4d0bbbdcef708d5415b600fb95",
+    "remote_scripts": [
+      "scripts/backtest.ts",
+      "scripts/conditional-edge.ts"
+    ],
+    "local_checkout": "ABSENT"
+  },
+  "environment": {
+    "os": "Linux 6.18.57 x86_64",
+    "cwd": "/",
+    "node": "v22.16.0",
+    "npm": "10.9.2",
+    "python": "3.13.5",
+    "cpu_cores": 5,
+    "available_memory": "5.8 GiB",
+    "disk_free": "30 GiB",
+    "sdk": "NOT_INSTALLED",
+    "direct_rest_network": "DNS_FAILURE_HTTP_000"
+  },
+  "experiment": {
+    "id": "EXP-ARCHIVE-PAGE1-AND-INCREMENTAL-20261111-AUTO23",
+    "type": "HISTORICAL_ARCHIVE_BACKFILL_AND_DATA_QUALITY",
+    "status": "COMPLETED_DATA_QUALITY_ONLY",
+    "historical_rows_backfilled": 12000,
+    "incremental_rows_appended": 80,
+    "total_raw_rows_persisted": 12080,
+    "zero_volume_rows_retained_raw_and_excluded": 8,
+    "quality_failures": 0,
+    "backtest_executed": false,
+    "smoke_test": "NOT_RUN",
+    "oos": "NOT_EVALUATED",
+    "artifact_path": "research/context-strategy/experiments/archive_backfill_incremental_20261111T0136Z_auto23.result.json",
+    "artifact_sha256": "9234c0c99215855faaf7626fb7de7ff6504dad42aea0ff2349afafeda16e6ab4",
+    "artifact_blob_sha1": "4dbf6eae4cfd7865a7f854daa933916a19f9aeca"
+  },
+  "backfill": {
+    "raw_branch": "research/raw-ohlcv-archive-20261108T1026Z",
+    "request_endpoint": "GET /fapi/v1/klines",
+    "symbols": [
+      "BTCUSDT",
+      "ETHUSDT",
+      "SOLUSDT",
+      "XRPUSDT"
+    ],
+    "intervals": [
+      "5m",
+      "15m"
+    ],
+    "start_time_utc": "2020-01-01T00:00:00.000Z",
+    "limit": 1500,
+    "rows_by_interval": {
+      "5m": 6000,
+      "15m": 6000
+    },
+    "page_manifests": {
+      "5m": {
+        "path": "research-data/binance-usdm/5m/manifest-page-0001.json",
+        "sha256": "c2b02bffbba39d52e1eebe5d3ec662c29602163778fbde9c623da94514bbe53c"
+      },
+      "15m": {
+        "path": "research-data/binance-usdm/15m/manifest-page-0001.json",
+        "sha256": "b21b51d5b4b259bded1d73992cee3b57a07b98e134a10853a90a01820797f19d"
+      }
+    },
+    "coverage_incomplete": true
+  },
+  "incremental_deltas": [
+    {
+      "path": "research-data/binance-usdm/delta/binance_usdm_delta_20261111T0125Z_5m15m1h_completed.jsonl",
+      "rows": 68,
+      "sha256": "174cb54cd9ce1c82124065093f5ef46f1a48fbfc080506289f83fde61fe8dae3",
+      "manifest_path": "research-data/binance-usdm/delta/manifest-20261111T0125Z-5m15m1h.json",
+      "manifest_sha256": "1a70a6f2cbdd1749e0b2f79ec0f5225a8aaccdd72916b2f0274fd7bd76f4e24c"
+    },
+    {
+      "path": "research-data/binance-usdm/delta/binance_usdm_delta_20261111T0131Z_5m15m_completed.jsonl",
+      "rows": 8,
+      "sha256": "db6253338aae2fd168e85e4ca2ff9fbf21ac2f26fe3c43f8ae06865ecc72fe46",
+      "manifest_path": "research-data/binance-usdm/delta/manifest-20261111T0131Z-5m15m.json",
+      "manifest_sha256": "23923409e84608e298e44f6fade4d8b94a32b178c64c28b0cdf1e80622a03fe5"
+    },
+    {
+      "path": "research-data/binance-usdm/delta/binance_usdm_delta_20261111T0135Z_5m_completed.jsonl",
+      "rows": 4,
+      "sha256": "6bd6f29d0268a82596821edb3796bfb81e1c53da089786ee9a3156174b4e9936",
+      "manifest_path": "research-data/binance-usdm/delta/manifest-20261111T0135Z-5m.json",
+      "manifest_sha256": "c724b7f972237ed714ac8d3c2fe54903ff268bad26868dd27310e3a88bd1f381"
+    }
+  ],
+  "archive": {
+    "latest_manifest_path": "research-data/binance-usdm/manifests/archive_manifest_20261111T0135Z_auto23_latest.json",
+    "sha256": "29fa93b1cc60a5e5597527bfc24340621b1e27cf7050dd874f6fc049185b543e",
+    "blob_sha1": "298cced0292be2c044ca367d1915ce937da2341a",
+    "readback_verified": true,
+    "highwaters": {
+      "5m": "2026-11-11T01:30:00.000Z",
+      "15m": "2026-11-11T01:15:00.000Z",
+      "1h": "2026-11-11T00:00:00.000Z",
+      "4h": "2026-11-10T16:00:00.000Z"
+    },
+    "indexes": {
+      "5m": {
+        "path": "research-data/binance-usdm/5m/archive-index.json",
+        "sha256": "da73379dcdf1d1af2b29e5a15ed76c8bc96a5077190237a320121d4b4f5ba1f2",
+        "blob_sha1": "2c5fb8488aeb26c68ff6f1cd301b14b240514f9a"
+      },
+      "15m": {
+        "path": "research-data/binance-usdm/15m/archive-index.json",
+        "sha256": "def285654a5f4d596650ba9a7f7e08403747ab69b4765253c31737593e397cd6",
+        "blob_sha1": "8d84c0e662b954bfb3663669d7e8994b1ca35f72"
+      },
+      "1h": {
+        "path": "research-data/binance-usdm/1h/archive-index.json",
+        "sha256": "b67af3b1aea8cd72c12de76c65a38b4df154cafb8627d4324904b081faabe9a6",
+        "blob_sha1": "0795bbb2c00f39d373ca32abf8dd32196cc9a395"
+      },
+      "4h": {
+        "path": "research-data/binance-usdm/4h/archive-index.json",
+        "sha256": "728a9616950cab78897fb9b69878126e8aaaaf2e50a81e9b7a74b00a09b8a1cf",
+        "blob_sha1": "f51e49b7fe0447a650d7a009daf392a53803eba2"
+      }
+    }
+  },
+  "market_snapshot": {
+    "path": "research-data/binance-usdm/current_market_snapshot_20261111T0136Z_auto23.json",
+    "sha256": "3b689fffa4af2d5ed4d8479cae47cd63f0e7b6d0561c04434c657155739ddf8a",
+    "blob_sha1": "16d12608755a631c7f99ea1c2081fdf95ce8a55d"
+  },
+  "preflight": {
+    "path": "research/context-strategy/preflight/preflight_20261111T0136Z_auto23.json",
+    "sha256": "c3419478ca9c4329df8dd872dc38eb9626f7373a27b0be39e9b0ace5e4ec72d9",
+    "blob_sha1": "b15841f82c492f251509a62ecdd8c82d90752963"
+  },
+  "registry": {
+    "path": "research-data/binance-usdm/conditional-strategy-registry-snapshot-v113.json",
+    "registry_version": 110,
+    "sha256": "d8281445d5e6aab40629938bc38dc03b39f529974722f6803bd5f089c3c05ed1",
+    "blob_sha1": "49f9caee0079d1537a1cea83a19e886b140c8516",
+    "oos_validated": 0,
+    "oos_promising": 1,
+    "insufficient_evidence": 4,
+    "rejected": 1
+  },
+  "context_diagnostic": {
+    "path": "research/context-strategy/context-discovery/context_distribution_20261108T022532Z.json",
+    "sha256": "NOT_RECOMPUTED_IN_THIS_RUN",
+    "latest_diagnostic_utc": "2026-11-08T02:29:59.853Z",
+    "threshold_refit": false
+  },
+  "report": {
+    "path": "research/context-strategy/reports/2026-11-11T0136Z_auto23.md",
+    "sha256": "323386c1242aae88139f8563030e979d12b3be949bf14bfd4b22e201bc341ac8",
+    "blob_sha1": "7a8dd8f559f6cb5299bce6a8e900eeebb4e71ac4"
+  },
+  "queue_path": "research-data/binance-usdm/research-queue-v113.json",
+  "decisions": {
+    "SOLUSDT": "NO_TRADE",
+    "ETHUSDT": "NO_TRADE",
+    "XRPUSDT": "NO_TRADE"
+  },
+  "limitations": [
+    "5m/15m page 0001 only; multi-year coverage and continuity absent.",
+    "4h raw/aligned/canonical discrepancy and 13 provenance hash mismatches unresolved.",
+    "Node 24/npm 11 local checkout absent; backtest smoke test not run.",
+    "Direct Binance REST DNS failed; exchangeInfo metadata stale.",
+    "Long point-in-time derivatives archive unavailable."
+  ]
+}

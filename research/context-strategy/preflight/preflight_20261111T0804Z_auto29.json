@@ -1,0 +1,139 @@
+{
+  "schemaVersion": 1,
+  "runId": "context-strategy-20261111T080425Z-auto29",
+  "checkedAtUtc": "2026-11-11T08:04:25.262Z",
+  "environment": {
+    "shell": "PASS",
+    "cwd": "/",
+    "os": "Debian GNU/Linux 13 (trixie)",
+    "python": "3.13.5",
+    "node": "v22.16.0",
+    "npm": "10.9.2",
+    "cpuCount": 3,
+    "memoryTotal": "5.8 GiB",
+    "memoryAvailable": "4.8 GiB",
+    "diskTotal": "32 GiB",
+    "diskFree": "30 GiB",
+    "localRepositoryPresent": false,
+    "sdkPackages": {
+      "@nemesis-oss/binance-sdk": "NOT_INSTALLED",
+      "binance": "NOT_INSTALLED",
+      "@binance/connector": "NOT_INSTALLED",
+      "ccxt": "NOT_INSTALLED"
+    }
+  },
+  "repository": {
+    "status": "DEGRADED",
+    "repository": "shubhamtaywade82/crypto-trading-agent",
+    "mainRefCommit": "7fd87b7e43e519dc855c44a8cd3bbd3c9a60273f",
+    "localCheckout": false,
+    "packageEngines": {
+      "node": ">=24",
+      "npm": ">=11"
+    },
+    "remoteCode": {
+      "backtest": "scripts/backtest.ts exists; TIMEFRAMES 15m/1h/4h; 5m omitted",
+      "conditionalEdge": "scripts/conditional-edge.ts exists; default minN=30 and confidence=0.90; no explicit purge/embargo CLI"
+    },
+    "smokeTest": "NOT_RUN",
+    "determinism": "NOT_CHECKED",
+    "noLookaheadFixture": "NOT_CHECKED"
+  },
+  "network": {
+    "status": "DEGRADED",
+    "directRest": {
+      "endpoint": "https://fapi.binance.com/fapi/v1/time",
+      "httpStatus": 0,
+      "error": "curl: (6) Could not resolve host: fapi.binance.com",
+      "dns": "UNRESOLVED"
+    },
+    "connector": "PASS for Binance USD-M market data; HTTP status codes not exposed",
+    "exchangeInfo": {
+      "serverTimeUtc": "2026-11-11T07:52:22.820Z",
+      "retrievedAtUtc": "2026-11-11T08:03:29.093Z",
+      "ageSeconds": 666.273,
+      "status": "STALE_FOR_EXECUTION"
+    }
+  },
+  "rawArchive": {
+    "status": "DEGRADED_REMOTE_PERSISTED",
+    "branch": "research/raw-ohlcv-archive-20261108T1026Z",
+    "localPath": "UNAVAILABLE_NO_LOCAL_CHECKOUT",
+    "page7": {
+      "files": 8,
+      "rows": 12000,
+      "manifests": 2,
+      "allReadbacksVerified": true,
+      "indexed": false
+    },
+    "fiveMinuteIndex": {
+      "baseHistoryRowsPerSymbol": 9000,
+      "pageProgressRowsPerSymbol": 4500,
+      "topLevelRowsPerSymbol": 6000,
+      "status": "INCONSISTENT"
+    },
+    "fifteenMinuteIndex": {
+      "baseHistoryRowsPerSymbol": 9000,
+      "pageProgressRowsPerSymbol": 4500,
+      "topLevelRowsPerSymbol": 6000,
+      "status": "INCONSISTENT"
+    },
+    "oneHour": {
+      "baseRowsPerSymbol": 53871,
+      "baseLastOpenUtc": "2026-11-06T22:00:00Z",
+      "incrementalHighwaterUtc": "2026-11-11T06:00:00Z",
+      "bridgeMissingHoursPerSymbol": 28,
+      "indexCountDiscrepancyRows": 8,
+      "status": "DEGRADED"
+    },
+    "fourHour": {
+      "rawRows": 53960,
+      "alignedRows": 53816,
+      "canonicalRows": 53844,
+      "rawHighwaterUtc": "2026-11-10T16:00:00Z",
+      "canonicalHighwaterUtc": "2026-11-05T16:00:00Z",
+      "originalManifestHashMismatches": 13,
+      "status": "BLOCKED_NO_APPEND"
+    }
+  },
+  "dataQuality": {
+    "status": "DEGRADED",
+    "currentSnapshot": {
+      "series": 16,
+      "completedBarsPerSymbolInterval": {
+        "5m": 149,
+        "15m": 149,
+        "1h": 149,
+        "4h": 249
+      },
+      "formingExcludedPerSeries": 1,
+      "duplicates": 0,
+      "missingIntervals": 0,
+      "offGrid": 0,
+      "nonMonotonic": 0,
+      "ohlcFailures": 0,
+      "nonFinite": 0,
+      "nonPositiveVolume": 0,
+      "crossSymbolAligned": true
+    },
+    "reason": "Monitoring windows pass local candle checks, but historical archive indexes/provenance are inconsistent and the continuous multi-year panel is not ready."
+  },
+  "backtest": {
+    "status": "BLOCKED",
+    "remoteCodeExists": true,
+    "localHarnessInvokable": false,
+    "smokeTest": "NOT_RUN",
+    "strategyExperiment": "NOT_RUN",
+    "oos": "NOT_EVALUATED",
+    "reason": "No local checkout; Node/npm below declared floor; 5m unsupported by current backtest CLI; no deterministic smoke test; archive continuity/provenance and PIT derivatives incomplete."
+  },
+  "storage": {
+    "localDisk": "PASS_30_GIB_FREE",
+    "remoteGitHubBranch": "PASS_WRITABLE",
+    "page7FileReadback": "PASS",
+    "page7ManifestReadback": "PASS",
+    "indexUpdate": "BLOCKED_INDEX_RECONCILIATION"
+  },
+  "finalRunState": "RESEARCH_EXECUTED_DATA_QUALITY_ONLY_STRATEGY_BLOCKED",
+  "oosEvaluated": false
+}

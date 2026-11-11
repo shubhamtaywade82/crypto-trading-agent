@@ -1,8 +1,8 @@
 {
   "schemaVersion": "1.0.0",
   "runId": "context-strategy-20261111T173054Z-auto32",
-  "asOfUtc": "2026-11-11T17:34:53.468Z",
-  "executionStatus": "RESEARCH_EXECUTED_DATA_QUALITY_ONLY",
+  "asOfUtc": "2026-11-11T17:40:18.760Z",
+  "executionStatus": "RESEARCH_EXECUTED",
   "scope": "INCREMENTAL_5M15M_ARCHIVE_APPEND_AND_MARKET_MONITORING",
   "environment": {
     "cwd": "/",
@@ -51,19 +51,40 @@
   },
   "strategyExperiment": {
     "status": "BLOCKED",
-    "reason": "No local checkout or compatible Node24/npm11 runtime; SDK absent; direct Binance REST DNS unavailable; historical 5m/15m bases remain discontinuous, 1h bridge and 4h provenance unresolved, and point-in-time derivatives/cost history incomplete."
+    "reason": "No compatible local Node24/npm11 checkout or SDK; direct Binance REST DNS unavailable; 1h bridge and 4h provenance unresolved; historical point-in-time derivatives and execution-cost history incomplete."
   },
   "oosEvaluated": false,
   "oosValidatedEntryCount": 0,
   "archive": {
+    "repository": "shubhamtaywade82/crypto-trading-agent",
     "branch": "research/raw-ohlcv-archive-20261108T1026Z",
-    "manifestPath": "research-data/binance-usdm/manifests/archive_manifest_20261111T173054Z_auto32.json",
-    "manifestBlobSha1": "29acd9d50a7a4bc302721c7c24287e9e8539c292",
+    "manifestPath": "research-data/binance-usdm/manifests/archive_manifest_20261111T174018Z_auto32.json",
+    "manifestBlobSha1": "ecbc81824a1273efa11021bf7cbb49bb43dc6d8a",
     "highwaters": {
       "5m": "2026-11-11T17:25:00.000Z",
       "15m": "2026-11-11T17:15:00.000Z",
       "1h": "2026-11-11T16:00:00.000Z",
-      "4h": "2026-11-10T16:00:00.000Z"
+      "4hRawPerSymbol": "2026-11-10T16:00:00.000Z",
+      "4hMonitoringIndex": "2026-11-11T08:00:00.000Z",
+      "4hCanonical": "2026-11-05T16:00:00.000Z"
+    },
+    "baseCoverageAfterPage9": {
+      "5m": {
+        "rowsPerSymbol": 13500,
+        "rowsTotal": 54000,
+        "pages": 9
+      },
+      "15m": {
+        "rowsPerSymbol": 13500,
+        "rowsTotal": 54000,
+        "pages": 9
+      }
+    },
+    "archiveIndexBlobSha1": {
+      "5m": "8831c3490158b7a1caacda16bb28ad9bec83788a",
+      "15m": "4964313799e2565546256e869ee9ee219862feea",
+      "1h": "514dd58733d76abd1860c0a08e6d53af48bf6282",
+      "4h": "d489d2fe47ed25d05b584b817eb4929b6b1de86d"
     }
   },
   "artifacts": {
@@ -75,19 +96,78 @@
       "path": "research/context-strategy/preflight/preflight_20261111T1734Z_auto32.json",
       "blobSha1": "3a72bd8ad4decc5f34f4f2a780b34b851945ed3f"
     },
-    "dataQualityExperiment": {
-      "path": "research/context-strategy/experiments/incremental_archive_append_20261111T1734Z_auto32.result.json",
-      "blobSha1": "0af24405edefc8883fe85ff92e331eb18bfc1c15"
+    "incrementalDataQuality": {
+      "path": "research/context-strategy/experiments/incremental_archive_append_20261111T1734Z_auto32.result.json"
+    },
+    "historicalBackfill": {
+      "path": "research/context-strategy/experiments/historical_page_0009_backfill_20261111T1740Z_auto32.result.json",
+      "blobSha1": "42f8f9083367e7cabae90ff6a1652542f8788163"
+    },
+    "report": {
+      "path": "research/context-strategy/reports/2026-11-11T1740Z_auto32.md",
+      "blobSha1": "dc829b810e4f915894fae39fc6f34d5854cbe856"
     },
     "archiveManifest": {
-      "path": "research-data/binance-usdm/manifests/archive_manifest_20261111T173054Z_auto32.json",
-      "blobSha1": "29acd9d50a7a4bc302721c7c24287e9e8539c292"
+      "path": "research-data/binance-usdm/manifests/archive_manifest_20261111T174018Z_auto32.json",
+      "blobSha1": "ecbc81824a1273efa11021bf7cbb49bb43dc6d8a"
+    },
+    "queue": {
+      "path": "research-data/binance-usdm/research-queue-v123.json",
+      "blobSha1": "3e0db0e224c2da758db06d50a29ca8ee10a8f1fb"
+    },
+    "registrySnapshot": {
+      "path": "research-data/binance-usdm/conditional-strategy-registry-snapshot-v123.json",
+      "blobSha1": "324599e30d1a0dde661dfaf7da49412a003b6bf2"
+    },
+    "canonicalRegistry": {
+      "path": "research/context-strategy/registry.json",
+      "blobSha1": "324599e30d1a0dde661dfaf7da49412a003b6bf2"
     }
   },
   "reproducibility": {
     "seed": null,
     "codeCommit": "NOT_EXECUTED_NO_LOCAL_CHECKOUT",
-    "specVersion": "DQ-APPEND-V1",
-    "readbackVerified": true
+    "specVersions": [
+      "DQ-APPEND-V1",
+      "HISTORICAL-PAGE-BACKFILL-V1"
+    ],
+    "readbackVerified": true,
+    "notes": "Remote GitHub artifacts read back; no local source code or backtest execution."
+  },
+  "executionScope": "DATA_QUALITY_ONLY_HISTORICAL_PAGE_0009_BACKFILL_INCREMENTAL_5M15M_APPEND_AND_MARKET_MONITORING",
+  "dataQualityExperiments": [
+    {
+      "id": "DQ-USDMS-INCREMENTAL-APPEND-20261111T173054Z-AUTO32",
+      "status": "COMPLETED_REPRODUCIBLE_DATA_QUALITY_ONLY",
+      "path": "research/context-strategy/experiments/incremental_archive_append_20261111T1734Z_auto32.result.json",
+      "rowsAppended": 24,
+      "formingExcluded": 8,
+      "readbackVerified": true
+    },
+    {
+      "id": "DQ-USDMS-HISTORICAL-PAGE-0009-20261111T174018Z-AUTO32",
+      "status": "COMPLETED_REPRODUCIBLE_DATA_QUALITY_ONLY",
+      "path": "research/context-strategy/experiments/historical_page_0009_backfill_20261111T1740Z_auto32.result.json",
+      "rowsBackfilled": 12000,
+      "files": 8,
+      "readbackVerified": true
+    }
+  ],
+  "monitoring": {
+    "snapshotPath": "research-data/binance-usdm/current_market_snapshot_20261111T1734Z_auto32.json",
+    "snapshotAsOfUtc": "2026-11-11T17:34:40.305Z",
+    "decision": "NO_TRADE_SOL_ETH_XRP",
+    "oosValidatedEntryCount": 0
+  },
+  "weeklyReview": {
+    "status": "BLOCKED",
+    "dueUtc": "2026-11-11",
+    "blockers": [
+      "5m/15m base still incomplete after page 0009",
+      "1h bridge/count discrepancy",
+      "4h raw/aligned/canonical provenance conflict",
+      "Node24/npm11 runtime unavailable"
+    ],
+    "nextAction": "Complete archive reconciliation and compatible harness before recomputing context stability."
   }
 }

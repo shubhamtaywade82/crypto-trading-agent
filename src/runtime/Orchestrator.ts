@@ -126,7 +126,7 @@ export class Orchestrator extends EventEmitter {
   private readonly approved = loadApprovals(config.approvalsPath);
   private readonly requireApproval = config.mode === 'live';
   private readonly unapprovedLoggedAt = new Map<string, number>();
-  private risk = new RiskAgent(this.binance, { killSwitch: this.killSwitch, hwm: this.hwm.forMode(config.mode), rrProfile: loadRrProfile(config.rrProfilePath), requireApproval: this.requireApproval, approvedStrategies: this.approved });
+  private risk = new RiskAgent(this.binance, { killSwitch: this.killSwitch, hwm: this.hwm.forMode(config.mode), rrProfile: loadRrProfile(config.rrProfilePath), requireApproval: this.requireApproval, approvedStrategies: this.approved, contextOnlySymbols: config.contextOnlySymbols });
   private hooks = buildOps({ log: (line) => this.log('SYSTEM', line, 'info'), seedTrades: this.binance.getTrades() });
   private ops = new RiskOps((message) => this.log('SYSTEM', message, 'warn'), { killSwitch: this.killSwitch, onCircuit: (from, to, snapshot) => this.hooks.onCircuit(from, to, snapshot), hwm: this.hwm.forMode(config.mode) });
   private executor = new ExecutorAgent(this.binance);

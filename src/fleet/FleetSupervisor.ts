@@ -140,7 +140,7 @@ export class FleetSupervisor extends EventEmitter {
       });
       return {
         config: {
-          entriesEnabled: this.env.FLEET_ENTRIES !== 'off' || argv.includes('--enable-entries'),
+          entriesEnabled: this.env.FLEET_ENTRIES === 'on' || argv.includes('--enable-entries'),
           llmHost,
           timeoutMs,
           assignment: assignment.bySymbol,

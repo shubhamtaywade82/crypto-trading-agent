@@ -16,7 +16,7 @@ A dedicated, real-time autonomous trading system powered by Ollama Cloud free-ti
 * **Capital & Sizing**: **$1,000.00 account** with **$980.00 margin** per position at **10x isolated leverage** ($9,800 notional). The remaining $20.00 (2%) is held in cash to prevent order rejection from exchange taker fees.
 * **Profit Target**: Mandatory minimum **$\ge 5\%$ return on capital** ($\ge 0.5\%$ price distance from entry) and minimum $R/R \ge 1.5$.
 * **Exits**: Evaluated and triggered **instantly on real-time sub-second WebSocket ticks**.
-* **Entries on by default** (paper_exchange only; `FLEET_ENTRIES=off` to pause). This order path sizes by fixed margin and uses the LLM's stop distance unbounded, so it bypasses RiskEngine. See the spec, section 2 (R1).
+* **Entries off by default** (paper_exchange only; `FLEET_ENTRIES=on` to arm). This order path sizes by fixed margin and uses the LLM's stop distance unbounded, so it bypasses RiskEngine. See the spec, section 2 (R1).
 * **Launch Command**:
   ```bash
   npx tsx scripts/run-fleet.ts

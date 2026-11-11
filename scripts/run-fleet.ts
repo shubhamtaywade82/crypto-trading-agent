@@ -70,7 +70,7 @@ async function main() {
     }
   }
 
-  const entriesEnabled = process.env.FLEET_ENTRIES !== 'off' || process.argv.includes('--enable-entries');
+  const entriesEnabled = process.env.FLEET_ENTRIES === 'on' || process.argv.includes('--enable-entries');
   console.log(`  Entries: ${entriesEnabled ? 'ARMED (risk-gated)' : 'OFF (shadow analysis, R1)'}`);
   // [FLEET] Telegram cards per worker buy/sell/exit — same bot config as the main agent, tagged
   // and routed around its alert pipeline. FLEET_TELEGRAM=off is the opt-out.

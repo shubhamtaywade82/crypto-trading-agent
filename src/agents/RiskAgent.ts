@@ -27,6 +27,8 @@ export interface RiskAgentOptions {
   /** Live gate: when set, OPEN signals from strategies outside `approvedStrategies` are refused. */
   requireApproval?: boolean;
   approvedStrategies?: ReadonlySet<string>;
+  /** Market-context symbols (e.g. BTCUSDT): streamed for analysis, never opened. */
+  contextOnlySymbols?: ReadonlySet<string>;
   /** Defaults to the SIZE_VOL_SCALING / SIZE_SCORE_SCALING config. */
   sizeScaling?: SizeScaling;
 }
@@ -94,6 +96,9 @@ export class RiskAgent extends BaseAgent {
 
   /** `evidenceScore` is the 0-100 score the entry was taken on; it only shrinks the size (see sizeMultipliers). */
   gate(signal: Signal, ctx: MarketContext, opts: GateOptions = {}): RiskDecision {
+    if (signal.type.startsWith('OPEN_') && this.options.contextOnlySymbols?.has(signal.symbol)) {
+      return this.reject(`${signal.symbol} is a context-only symbol and is never traded`);
+    }
     if (this.options.requireApproval && signal.type.startsWith('OPEN_') && !this.options.approvedStrategies?.has(signal.agent)) {
       return this.reject(`strategy ${signal.agent} is not approved for live trading`);
     }

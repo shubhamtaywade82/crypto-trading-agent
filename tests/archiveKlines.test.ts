@@ -58,17 +58,31 @@ function archive(files: Record<string, string>): { fetchImpl: FetchLike; request
 
 test('should use the monthly file for a complete month and daily files for the partial month, in order', async () => {
   const now = T(2026, 10, 5, 12);
+  const september = Array.from({ length: 30 }, (_, i) => row(T(2026, 9, i + 1), 100)).join('');
   const { fetchImpl, requested } = archive({
-    'monthly/klines/BTCUSDT/15m/BTCUSDT-15m-2026-09.zip': csvFor(T(2026, 9, 1)) + row(T(2026, 9, 30), 102),
+    'monthly/klines/BTCUSDT/15m/BTCUSDT-15m-2026-09.zip': HEADER + september,
     'daily/klines/BTCUSDT/15m/BTCUSDT-15m-2026-10-01.zip': csvFor(T(2026, 10, 1)),
     'daily/klines/BTCUSDT/15m/BTCUSDT-15m-2026-10-02.zip': csvFor(T(2026, 10, 2)),
   });
   const { candles, missingDays } = await fetchArchiveKlines('BTCUSDT', '15m', T(2026, 9, 1), T(2026, 10, 3), fetchImpl, now);
   assert.deepEqual(candles.map((c) => c.openTime), [...candles.map((c) => c.openTime)].sort((a, b) => a - b));
-  assert.equal(candles.length, 3 + 2 + 2); // Sep monthly + Oct 1 + Oct 2
+  assert.equal(candles.length, 30 + 2 + 2); // Sep monthly + Oct 1 + Oct 2
   assert.deepEqual(missingDays, []);
   assert.equal(requested.filter((r) => r.startsWith('monthly')).length, 1);
   assert.equal(requested.filter((r) => r.startsWith('daily')).length, 2);
+});
+
+test('should fill a day the monthly file dropped from that day\'s daily file (Binance 2026-10 lacks 10-28)', async () => {
+  const now = T(2026, 11, 5);
+  const october = Array.from({ length: 31 }, (_, i) => i + 1).filter((d) => d !== 28).map((d) => row(T(2026, 10, d), 100)).join('');
+  const { fetchImpl, requested } = archive({
+    'monthly/klines/SOLUSDT/15m/SOLUSDT-15m-2026-10.zip': HEADER + october,
+    'daily/klines/SOLUSDT/15m/SOLUSDT-15m-2026-10-28.zip': csvFor(T(2026, 10, 28)),
+  });
+  const { candles, missingDays } = await fetchArchiveKlines('SOLUSDT', '15m', T(2026, 10, 1), T(2026, 11, 1), fetchImpl, now);
+  assert.equal(candles.length, 30 + 2);
+  assert.deepEqual(missingDays, []);
+  assert.deepEqual(requested.filter((r) => r.startsWith('daily')), ['daily/klines/SOLUSDT/15m/SOLUSDT-15m-2026-10-28.zip']);
 });
 
 test('should clip to the requested window', async () => {

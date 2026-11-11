@@ -11,6 +11,8 @@ async function loadConfig(env: Record<string, string>) {
     COINDCX_API_KEY: '',
     COINDCX_API_SECRET: '',
     ALERT_ONLY: 'off',
+    MIN_LEVERAGE: '2', MAX_LEVERAGE: '3', MAX_EXPOSURE_PCT: '30', RISK_PER_TRADE_PCT: '0.5',
+    MAX_DRAWDOWN_PCT: '8', MAX_DAILY_LOSS_PCT: '2', MAX_LOSS_STREAK: '3',
     ...env,
   });
   try {

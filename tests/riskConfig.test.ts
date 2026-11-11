@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { EnvSchema, riskFromEnv } from '../src/config.js';
+import { EnvSchema, riskFromEnv, liveRiskConfigErrors } from '../src/config.js';
 import { ceilToStep, dec, floorToStep } from '../src/risk/primitives.js';
 import {
   circuitRiskMultiplier, clusterOf, deriveCircuitState, riskLimitsFromConfig, type CircuitState, type RiskLimits,
@@ -133,4 +133,14 @@ test('should reject limits that would halt trading permanently', () => {
   for (const env of [{ MAX_DAILY_LOSS_PCT: '0' }, { MAX_LOSS_STREAK: '0' }, { MAX_CONCURRENT_POSITIONS: '0' }, { MAX_LOSS_STREAK: '2.5' }]) {
     assert.ok(!EnvSchema.safeParse(env).success, JSON.stringify(env));
   }
+});
+
+test('live order flow refuses default risk limits and a disabled drawdown halt; shadow and paper do not', () => {
+  const explicit = { MIN_LEVERAGE: '2', MAX_LEVERAGE: '3', MAX_EXPOSURE_PCT: '30', RISK_PER_TRADE_PCT: '0.5', MAX_DRAWDOWN_PCT: '8', MAX_DAILY_LOSS_PCT: '2', MAX_LOSS_STREAK: '3' };
+  const check = (raw: Record<string, string>) => liveRiskConfigErrors(raw, EnvSchema.parse(raw));
+  assert.equal(check({ MODE: 'live', ALERT_ONLY: 'off' }).length, 7);
+  assert.deepEqual(check({ MODE: 'live', ALERT_ONLY: 'off', ...explicit }), []);
+  assert.match(check({ MODE: 'live', ALERT_ONLY: 'off', ...explicit, MAX_DRAWDOWN_PCT: '0' })[0], /MAX_DRAWDOWN_PCT must be > 0/);
+  assert.deepEqual(check({ MODE: 'live', ALERT_ONLY: 'on' }), []);
+  assert.deepEqual(check({ MODE: 'paper' }), []);
 });

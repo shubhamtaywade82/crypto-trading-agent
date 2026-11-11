@@ -13,6 +13,11 @@ process.env.BINANCE_API_KEY ??= 'test-key';
 process.env.BINANCE_API_SECRET ??= 'test-secret';
 process.env.COINDCX_API_KEY = '';
 process.env.COINDCX_API_SECRET = '';
+// Live refuses schema-default risk limits; pin them to the schema defaults so behaviour under test is unchanged
+Object.assign(process.env, {
+  MIN_LEVERAGE: '5', MAX_LEVERAGE: '10', MAX_EXPOSURE_PCT: '80', RISK_PER_TRADE_PCT: '1',
+  MAX_DRAWDOWN_PCT: '5', MAX_DAILY_LOSS_PCT: '3', MAX_LOSS_STREAK: '4',
+});
 const { BinanceService } = await import('../src/binance/client.js');
 
 interface FakeOrder {

@@ -113,9 +113,16 @@ test('approvals round-trip, and anything missing or malformed approves nothing',
   const dir = mkdtempSync(path.join(tmpdir(), 'approvals-'));
   const file = path.join(dir, 'a.json');
   assert.equal(loadApprovals(file).size, 0);
-  const snapshot = { trades: 1, meanNetR: 1, lcbNetR: 1, firstHalfNetR: 1, secondHalfNetR: 1, forwardTrades: 1, forwardMeanNetR: 1 };
+  const snapshot = { trades: 100, meanNetR: 1, lcbNetR: 1, firstHalfNetR: 1, secondHalfNetR: 1, forwardTrades: 50, forwardMeanNetR: 1 };
   writeApprovals(file, [{ strategy: 'GOOD', approvedAt: 1, evidence: snapshot }]);
   assert.deepEqual([...loadApprovals(file)], ['GOOD']);
+  writeApprovals(file, [
+    { strategy: 'GOOD', approvedAt: 1, evidence: snapshot },
+    { strategy: 'THIN', approvedAt: 1, evidence: { ...snapshot, trades: 99 } },
+    { strategy: 'NEG_LCB', approvedAt: 1, evidence: { ...snapshot, lcbNetR: 0 } },
+    { strategy: 'NO_FORWARD', approvedAt: 1, evidence: { ...snapshot, forwardTrades: 0 } },
+  ]);
+  assert.deepEqual([...loadApprovals(file)], ['GOOD'], 'hand-added entries below policy are dropped on load');
   writeFileSync(file, '{not json');
   assert.equal(loadApprovals(file).size, 0);
   writeFileSync(file, JSON.stringify({ version: 2, approvals: [{ strategy: 'X' }] }));
@@ -153,6 +160,12 @@ test('with no approvals file live refuses every entry but never blocks a close',
   const agent = new RiskAgent({} as BinanceService, { limits, requireApproval: true, approvedStrategies: loadApprovals('/nonexistent/approvals.json') });
   assert.equal(agent.gate(sig('MOMENTUM-γ'), ctx()).approved, false);
   assert.equal(agent.gate(sig('MOMENTUM-γ', 'CLOSE' as Signal['type']), ctx()).reason.includes('not approved'), false);
+});
+
+test('a context-only symbol is refused for entries in every mode but never blocks a close', () => {
+  const agent = new RiskAgent({} as BinanceService, { limits, contextOnlySymbols: new Set(['BTCUSDT']) });
+  assert.match(agent.gate(sig('CROWDING-ι'), ctx()).reason, /context-only/);
+  assert.equal(agent.gate(sig('CROWDING-ι', 'CLOSE' as Signal['type']), ctx()).reason.includes('context-only'), false);
 });
 
 test('paper mode is unaffected by the approval gate', () => {

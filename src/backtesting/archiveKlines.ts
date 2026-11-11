@@ -1,3 +1,5 @@
+import { existsSync, readFileSync } from 'node:fs';
+import path from 'node:path';
 import { inflateRawSync } from 'node:zlib';
 import type { Candle } from '../types.js';
 
@@ -172,6 +174,17 @@ async function fetchZip(url: string, fetchImpl: FetchLike): Promise<Candle[] | n
   return parseKlineCsv(readFirstZipEntry(Buffer.from(await response.arrayBuffer())));
 }
 
+/** Local mirror written by scripts/archive-backfill.ts; same relative paths as the archive. */
+const MIRROR_ROOT = path.resolve('data/cache/vision');
+
+/** Reads the verified local mirror when it has the file, otherwise downloads. */
+export const mirrorFirstFetch: FetchLike = async (url, init) => {
+  const local = path.join(MIRROR_ROOT, url.replace(`${BASE}/`, ''));
+  if (!existsSync(local)) return (fetch as unknown as FetchLike)(url, init);
+  const bytes = readFileSync(local);
+  return { ok: true, status: 200, arrayBuffer: async () => bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer };
+};
+
 export interface ArchiveResult {
   candles: Candle[];
   /** Days the archive had no file for (not yet published, or a gap) inside the requested window. */
@@ -184,8 +197,24 @@ export async function fetchArchiveKlines(
   interval: string,
   fromMs: number,
   toMs: number,
-  fetchImpl: FetchLike = fetch as unknown as FetchLike,
+  fetchImpl: FetchLike = mirrorFirstFetch,
   now: number = Date.now(),
+): Promise<ArchiveResult> {
+  return fetchArchiveDataset('klines', { symbol, interval, fromMs, toMs }, fetchImpl, now);
+}
+
+/** Mark-price candles (same file layout as klines; volume fields are zero). Liquidation is triggered on these. */
+export async function fetchArchiveMarkPriceKlines(symbol: string, interval: string, fromMs: number, toMs: number): Promise<ArchiveResult> {
+  return fetchArchiveDataset('markPriceKlines', { symbol, interval, fromMs, toMs }, mirrorFirstFetch, Date.now());
+}
+
+interface ArchiveRequest { symbol: string; interval: string; fromMs: number; toMs: number }
+
+async function fetchArchiveDataset(
+  dataset: 'klines' | 'markPriceKlines',
+  { symbol, interval, fromMs, toMs }: ArchiveRequest,
+  fetchImpl: FetchLike,
+  now: number,
 ): Promise<ArchiveResult> {
   const lastDay = Math.min(startOfDay(toMs - 1), startOfDay(now) - DAY_MS); // the archive has nothing for today
   const byTime = new Map<number, Candle>();
@@ -207,13 +236,15 @@ export async function fetchArchiveKlines(
     const firstDay = Math.max(startOfDay(fromMs), monthStart);
     const lastDayOfMonth = Math.min(lastDay, nextMonth - DAY_MS);
     const wholeMonth = firstDay === monthStart && lastDayOfMonth === nextMonth - DAY_MS;
-    const monthly = wholeMonth ? await fetchZip(`${BASE}/monthly/klines/${symbol}/${interval}/${symbol}-${interval}-${monthKey(monthStart)}.zip`, fetchImpl) : null;
-    if (monthly) { add(monthly); continue; }
-    for (let day = firstDay; day <= lastDayOfMonth; day += DAY_MS) dailyTasks.push(day);
+    const monthly = wholeMonth ? await fetchZip(`${BASE}/monthly/${dataset}/${symbol}/${interval}/${symbol}-${interval}-${monthKey(monthStart)}.zip`, fetchImpl) : null;
+    if (monthly) add(monthly);
+    // Monthly zips can drop whole days that the daily zips still have (2026-10 lacks 10-28), so fill those day by day
+    const coveredDays = new Set((monthly ?? []).map((candle) => startOfDay(candle.openTime)));
+    for (let day = firstDay; day <= lastDayOfMonth; day += DAY_MS) if (!coveredDays.has(day)) dailyTasks.push(day);
   }
   for (let i = 0; i < dailyTasks.length; i += BATCH) {
     const batch = dailyTasks.slice(i, i + BATCH);
-    const results = await Promise.all(batch.map((day) => fetchZip(`${BASE}/daily/klines/${symbol}/${interval}/${symbol}-${interval}-${dayKey(day)}.zip`, fetchImpl)));
+    const results = await Promise.all(batch.map((day) => fetchZip(`${BASE}/daily/${dataset}/${symbol}/${interval}/${symbol}-${interval}-${dayKey(day)}.zip`, fetchImpl)));
     results.forEach((candles, index) => (candles ? add(candles) : missingDays.push(dayKey(batch[index]!))));
   }
   return { candles: [...byTime.values()].sort((a, b) => a.openTime - b.openTime), missingDays };

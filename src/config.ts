@@ -59,6 +59,8 @@ export const EnvSchema = z.object({
   /** What an account drawdown past MAX_DRAWDOWN_PCT does: flatten and halt (default), or only block new entries. */
   DRAWDOWN_BREACH_ACTION: z.enum(['block', 'flatten']).default('flatten'),
   SYMBOLS: z.string().default('BTCUSDT,ETHUSDT,SOLUSDT,XRPUSDT'),
+  /** Streamed for market context but refused for entries by the risk gate. Set to '' to make them tradable. */
+  CONTEXT_ONLY_SYMBOLS: z.string().default('BTCUSDT'),
   MAX_DAILY_LOSS_PCT: z.coerce.number().positive().default(3),
   MAX_LOSS_STREAK: z.coerce.number().int().positive().default(4),
   MAX_CONCURRENT_POSITIONS: z.coerce.number().int().positive().optional(),
@@ -230,6 +232,19 @@ export function riskFromEnv(env: Env) {
   };
 }
 
+const LIVE_REQUIRED_RISK_KEYS = [
+  'MIN_LEVERAGE', 'MAX_LEVERAGE', 'MAX_EXPOSURE_PCT', 'RISK_PER_TRADE_PCT',
+  'MAX_DRAWDOWN_PCT', 'MAX_DAILY_LOSS_PCT', 'MAX_LOSS_STREAK',
+] as const;
+
+/** Real-money order flow must run on operator-chosen limits, never on schema defaults; 0 drawdown disables the halt. */
+export function liveRiskConfigErrors(raw: NodeJS.ProcessEnv, env: Env): string[] {
+  if (env.MODE !== 'live' || env.ALERT_ONLY === 'on') return [];
+  const errors = LIVE_REQUIRED_RISK_KEYS.filter((key) => !raw[key]?.trim()).map((key) => `${key} must be set explicitly for MODE=live`);
+  if (env.MAX_DRAWDOWN_PCT <= 0) errors.push('MAX_DRAWDOWN_PCT must be > 0 for MODE=live (0 disables the drawdown halt)');
+  return errors;
+}
+
 const env = EnvSchema.parse(process.env);
 
 /**
@@ -351,6 +366,7 @@ export const config = {
     alertHideNoTrade: env.SETUP_ALERT_HIDE_NO_TRADE === 'on',
   },
   symbols: parseSymbols(env.SYMBOLS),
+  contextOnlySymbols: new Set(parseSymbols(env.CONTEXT_ONLY_SYMBOLS).filter(Boolean)),
   paperExchange: env.PAPER_EXCHANGE_URL && env.PAPER_EXCHANGE_ACCOUNT_ID
     ? { url: env.PAPER_EXCHANGE_URL.replace(/\/+$/, ''), accountId: env.PAPER_EXCHANGE_ACCOUNT_ID, apiKey: env.PAPER_EXCHANGE_API_KEY }
     : null,
@@ -370,3 +386,5 @@ export const config = {
 if (config.mode === 'live' && !config.alertOnly && (!config.binance.apiKey || !config.binance.apiSecret)) {
   throw new Error('LIVE mode requires BINANCE_API_KEY and BINANCE_API_SECRET');
 }
+const liveRiskErrors = liveRiskConfigErrors(process.env, env);
+if (liveRiskErrors.length > 0) throw new Error(`Refusing to start: ${liveRiskErrors.join('; ')}`);

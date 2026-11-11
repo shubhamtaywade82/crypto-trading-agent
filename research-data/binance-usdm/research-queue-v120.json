@@ -1,0 +1,201 @@
+{
+  "schema_version": "1.0.0",
+  "version": 120,
+  "updatedAtUtc": "2026-11-11T06:44:28.231Z",
+  "repository": "shubhamtaywade82/crypto-trading-agent",
+  "branch": "main",
+  "supersedes": {
+    "path": "research-data/binance-usdm/research-queue-v119.json",
+    "version": 119,
+    "blobSha": "6feba2f5a4f742536e1cb81b3cd41b7ef6a53ab0"
+  },
+  "registryReference": {
+    "path": "research-data/binance-usdm/conditional-strategy-registry-snapshot-v118.json",
+    "version": 110,
+    "blobSha": "efa64a7001b61fb2ef8c9c8b7baafe5c2fe7757596",
+    "statusCounts": {
+      "INSUFFICIENT_EVIDENCE": 4,
+      "REJECTED": 1,
+      "OOS_VALIDATED": 0
+    }
+  },
+  "latestRun": {
+    "runId": "context-strategy-20261111T063823Z-auto28",
+    "status": "RESEARCH_EXECUTED",
+    "strategyExperimentStatus": "RESEARCH_BLOCKED",
+    "oosEvaluated": false,
+    "reportPath": "research/context-strategy/reports/2026-11-11T0638Z_auto28.md",
+    "snapshotPath": "research-data/binance-usdm/current_market_snapshot_20261111T0634Z_auto28.json",
+    "preflightPath": "research/context-strategy/preflight/preflight_20261111T0638Z_auto28.json",
+    "runManifestPath": "research-runs/context-strategy-20261111T063823Z-auto28.json",
+    "queuePath": "research-data/binance-usdm/research-queue-v120.json"
+  },
+  "items": [
+    {
+      "id": "Q_INCREMENTAL_ARCHIVE_REFRESH_AUTO28",
+      "priority": 1,
+      "status": "COMPLETED_THIS_RUN",
+      "title": "Append completed 5m/15m/1h USD-M bars",
+      "prerequisites": [
+        "Binance USD-M connector data",
+        "Writable raw archive branch"
+      ],
+      "result": {
+        "rowsFetched": 72,
+        "rowsAppended": 60,
+        "formingExcluded": 12,
+        "rowsByInterval": {
+          "5m": 40,
+          "15m": 16,
+          "1h": 4
+        },
+        "deltaPath": "research-data/binance-usdm/delta/binance_usdm_delta_20261111T0631Z_5m15m1h_completed.jsonl",
+        "deltaSha256": "2f6787e3bda9074adc5d06f846c322971bcef09cf7440f88922333a0007f42e0",
+        "readbackVerified": true
+      },
+      "nextAction": "Continue from 5m 06:30Z, 15m 06:30Z and 1h 06:00Z only after each closeTime; 4h remains blocked."
+    },
+    {
+      "id": "Q_INCREMENTAL_ARCHIVE_DQ_AUTO28",
+      "priority": 1,
+      "status": "COMPLETED_THIS_RUN",
+      "title": "Validate delta, manifest, indexes and readback",
+      "prerequisites": [
+        "Completed delta persisted"
+      ],
+      "result": {
+        "duplicates": 0,
+        "missingIntervals": 0,
+        "offGrid": 0,
+        "nonMonotonic": 0,
+        "ohlcFailures": 0,
+        "nonFinite": 0,
+        "nonPositiveVolume": 0,
+        "crossSymbolAlignment": true,
+        "deltaReadbackVerified": true,
+        "manifestReadbackVerified": true,
+        "indexReadbackVerified": true
+      },
+      "nextAction": "Repeat after the next completed-bar append."
+    },
+    {
+      "id": "Q_PAGE_0006_BACKFILL_20261111_AUTO27",
+      "priority": 1,
+      "status": "COMPLETED_AND_INDEPENDENTLY_VERIFIED",
+      "title": "Backfill 5m/15m historical page 0006 across BTC/ETH/SOL/XRP",
+      "completedAtUtc": "2026-11-11T06:12:32.181Z",
+      "verifiedAtUtc": "2026-11-11T06:38:23.745Z",
+      "result": {
+        "files": 8,
+        "rows": 12000,
+        "rowsPerFile": 1500,
+        "hashMatches": 8,
+        "readbackExact": 8,
+        "duplicates": 0,
+        "missingIntervals": 0,
+        "offGrid": 0,
+        "nonMonotonic": 0,
+        "ohlcFailures": 0,
+        "nonFinite": 0,
+        "nonPositiveVolume": 0
+      },
+      "nextAction": "Continue page 0007 from the per-symbol nextStart values."
+    },
+    {
+      "id": "Q_PAGE_0007_BACKFILL",
+      "priority": 1,
+      "status": "READY",
+      "title": "Backfill 5m/15m historical page 0007 across BTC/ETH/SOL/XRP",
+      "prerequisites": [
+        "Page-0006 manifests and SHA readback verified"
+      ],
+      "nextStartUtcBySymbolInterval": {
+        "5m": {
+          "BTCUSDT": "2020-02-01T06:00:00.000Z",
+          "ETHUSDT": "2020-02-01T06:00:00.000Z",
+          "SOLUSDT": "2020-10-15T13:00:00.000Z",
+          "XRPUSDT": "2020-02-06T14:20:00.000Z"
+        },
+        "15m": {
+          "BTCUSDT": "2020-04-03T18:00:00.000Z",
+          "ETHUSDT": "2020-04-03T18:00:00.000Z",
+          "SOLUSDT": "2020-12-17T01:00:00.000Z",
+          "XRPUSDT": "2020-04-09T02:15:00.000Z"
+        }
+      },
+      "nextAction": "Fetch the next 1,500 rows per symbol/interval; preserve raw rows, validate continuity and hashes, then read back."
+    },
+    {
+      "id": "Q_HISTORICAL_5M15M_BASE_BACKFILL",
+      "priority": 1,
+      "status": "PARTIALLY_COMPLETED",
+      "title": "Build continuous multi-year 5m/15m history",
+      "blocker": "Only 9,000 base rows per symbol per interval exist. BTC/ETH/XRP and SOL occupy different early segments; 2026 deltas do not bridge the multi-year gaps.",
+      "nextAction": "Continue page 0007 onward; do not run intraday strategy tests until a continuous aligned sample and split coverage exist."
+    },
+    {
+      "id": "Q_4H_PROVENANCE_RECONCILIATION",
+      "priority": 1,
+      "status": "BLOCKED",
+      "title": "Reconcile 4h raw/aligned/canonical row keys and SHA provenance",
+      "blocker": "Raw 53,960 / aligned 53,816 / canonical 53,844 rows; canonical highwater 2026-11-05T16:00Z vs raw highwater 2026-11-10T16:00Z; 13 original page/symbol SHA mismatches remain although 14/14 alternate-source pairs matched 21,000 rows exactly.",
+      "nextAction": "Reconcile per-symbol openTime key sets, page bytes and expected/observed hashes without rewriting original source hashes; do not append or rebuild 4h."
+    },
+    {
+      "id": "Q_1H_BASE_DELTA_BRIDGE_RECONCILIATION",
+      "priority": 1,
+      "status": "BLOCKED",
+      "title": "Reconcile 1h page-progress base with incremental delta history",
+      "blocker": "Page-progress base: 53,871 rows/symbol through 2026-11-06T22:00Z, nextStart 23:00Z. First post-base delta latest 1h open is 2026-11-08T03:00Z, leaving 28 hourly opens missing per symbol. Top-level index says 53,873 rows/symbol and 215,492 total, 8 rows above page_progress 53,871/215,484.",
+      "nextAction": "Enumerate all per-symbol 1h openTime keys from base pages and incremental deltas; fill the 28-hour bridge, reconcile the 8-row count discrepancy and recompute continuity before using the combined 1h series for experiments."
+    },
+    {
+      "id": "Q_NODE24_BACKTEST_RUNTIME",
+      "priority": 1,
+      "status": "BLOCKED",
+      "title": "Provision compatible local runtime and deterministic backtest smoke test",
+      "blocker": "Current shell Node v22.16.0/npm 10.9.2; repository requires Node >=24/npm >=11; no local checkout; @nemesis-oss/binance-sdk and binance packages are not installed; direct fapi DNS fails.",
+      "nextAction": "Provision persistent Node24/npm11 workspace, clone main at pinned commit, install lockfile dependencies, add 5m support and run deterministic fixture twice with no-lookahead checks."
+    },
+    {
+      "id": "Q_EXCHANGE_METADATA_FRESHNESS",
+      "priority": 1,
+      "status": "BLOCKED",
+      "title": "Restore fresh Binance server time and exchange metadata",
+      "blocker": "Direct GET /fapi/v1/time returns HTTP 000 DNS failure. Connector exchangeInfo serverTime is 445.789 seconds stale at retrieval.",
+      "nextAction": "Restore direct DNS or obtain a fresh uncached time/exchangeInfo response; do not use current metadata for execution validation."
+    },
+    {
+      "id": "Q_PIT_DERIVATIVES_HISTORY",
+      "priority": 2,
+      "status": "BLOCKED",
+      "title": "Build point-in-time funding/OI/taker/positioning history",
+      "blocker": "Current snapshots exist, but timestamp-aligned historical funding settlements, OI, taker flow, basis, positioning and execution-cost history are not durably available.",
+      "nextAction": "Backfill timestamped derivatives observations for all four symbols; preserve missing observations and never forward-fill."
+    },
+    {
+      "id": "Q_DAILY_RESEARCH_20261111",
+      "priority": 1,
+      "status": "PARTIALLY_COMPLETED_STRATEGY_BLOCKED",
+      "title": "Daily conditional strategy experiment",
+      "blocker": "Strategy experiment remains blocked: Node/npm below project floor, no local checkout or smoke test, 5m/15m base discontinuous, 4h provenance degraded, PIT derivatives incomplete, and the 1h page base ends 2026-11-06T22:00Z while the first post-base delta reaches only 2026-11-08T03:00Z, leaving 28 missing hourly opens. The 1h index also has an 8-row top-level vs page_progress count discrepancy.",
+      "nextAction": "Continue page 0007, reconcile the 1h base/delta bridge and 8-row discrepancy, reconcile 4h row keys/hashes, provision Node24/npm11 checkout, restore fresh REST metadata, build PIT derivatives, run the fixture twice, then freeze and execute EXP-001."
+    },
+    {
+      "id": "Q_WEEKLY_CONTEXT_STABILITY_REVIEW",
+      "priority": 2,
+      "status": "BLOCKED",
+      "title": "Weekly context taxonomy and stability review",
+      "blocker": "No continuous multi-year 5m/15m panel, 1h base/delta bridge gap and 8-row index discrepancy, 4h provenance degraded, and no compatible harness.",
+      "nextAction": "After archive/runtime prerequisites, refit thresholds on training only and calculate context frequency, duration, transitions, JSD, stability and multiple-testing burden."
+    },
+    {
+      "id": "Q_REGISTRY_VERSION_LINEAGE_AUDIT",
+      "priority": 2,
+      "status": "BLOCKED",
+      "title": "Audit inherited Donchian20 v75 evidence lineage",
+      "blocker": "Queue metadata references an inherited OOS_PROMISING n=12 candidate absent from current registry; original artifact/data/code/seed/split/bootstrap provenance is unavailable.",
+      "nextAction": "Recover the original artifact and hashes; do not insert or promote based on queue metadata alone."
+    }
+  ]
+}

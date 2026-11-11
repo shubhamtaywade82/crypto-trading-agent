@@ -79,9 +79,9 @@
     {
       "capability": "backtest harness/smoke test",
       "status": "BLOCKED",
-      "evidence": "scripts/backtest.ts and scripts/conditional-edge.ts exist remotely; no local checkout, runtime below engines floor, no fixture execution.",
+      "evidence": "scripts/backtest.ts and scripts/conditional-edge.ts exist remotely; scripts/backtest.ts hardcodes TIMEFRAMES=['15m','1h','4h'] and omits 5m. No local checkout, runtime below package engines, no fixture execution.",
       "impact": "No deterministic smoke test, strategy experiment or OOS run.",
-      "nextAction": "Provision Node24/npm11 checkout; run tiny deterministic fixture twice and verify no-lookahead."
+      "nextAction": "Provision Node24/npm11 checkout; add 5m timeframe support with tests; run tiny deterministic fixture twice and verify no-lookahead before full experiments."
     },
     {
       "capability": "disk/storage",

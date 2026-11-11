@@ -1,0 +1,97 @@
+{
+  "schemaVersion": "1.0.0",
+  "runId": "context-strategy-20261111T173054Z-auto32",
+  "asOfUtc": "2026-11-11T17:34:53.468Z",
+  "environment": {
+    "runtime": "managed V8 tool runtime plus container shell",
+    "cwd": "/",
+    "os": "Linux 6.18.57 x86_64",
+    "python": "3.13.5",
+    "node": "22.16.0",
+    "npm": "10.9.2",
+    "cpuCores": 3,
+    "ramTotalGB": 5.8,
+    "ramAvailableGB": 4.7,
+    "diskTotalGB": 32,
+    "diskFreeGB": 30,
+    "localGitRepository": false,
+    "localRawArchiveMounted": false
+  },
+  "checks": [
+    {
+      "capability": "shell/compute",
+      "status": "PASS",
+      "evidence": "Shell executed at 2026-11-11T17:34:46Z; cwd=/; Linux 6.18.57 x86_64; Python 3.13.5; Node v22.16.0; npm 10.9.2; 3 CPUs; 5.8 GiB RAM total / 4.7 GiB available; overlay 32 GB total / 30 GB free.",
+      "impact": "Bounded data validation and artifact creation were feasible; shell compute was not used for a strategy backtest.",
+      "nextAction": "Keep data operations bounded; provision a persistent compatible research workspace."
+    },
+    {
+      "capability": "repo/code",
+      "status": "DEGRADED",
+      "evidence": "No local Git repository at cwd=/; remote shubhamtaywade82/crypto-trading-agent accessible through GitHub. package.json blob 22576968ec662fd7d17dda10069489c69c597bcd declares engines node >=24 and npm >=11; remote scripts include backtest and research:conditional.",
+      "impact": "Remote source and artifact inspection possible; code cannot be invoked in this runtime.",
+      "nextAction": "Provision a pinned local checkout at a recorded commit."
+    },
+    {
+      "capability": "Node/SDK dependencies",
+      "status": "BLOCKED",
+      "evidence": "Observed Node v22.16.0/npm 10.9.2. require.resolve reports NOT_INSTALLED for @nemesis-oss/binance-sdk, binance and @binance/connector.",
+      "impact": "No Binance SDK or repository runner executed.",
+      "nextAction": "Provision Node 24/npm 11, install lockfile dependencies, then verify SDK import."
+    },
+    {
+      "capability": "direct Binance REST",
+      "status": "BLOCKED",
+      "evidence": "curl GET https://fapi.binance.com/fapi/v1/time returned curl error 6 Could not resolve host; HTTP 000; 0 bytes. Earlier bounded /fapi/v1/exchangeInfo probe also failed DNS.",
+      "impact": "No direct HTTP status/header evidence or fresh direct server-time response.",
+      "nextAction": "Restore DNS/outbound HTTPS and probe /fapi/v1/time and /fapi/v1/exchangeInfo with explicit timeouts."
+    },
+    {
+      "capability": "Binance connector market data",
+      "status": "DEGRADED",
+      "evidence": "Connector calls succeeded for BTCUSDT, ETHUSDT, SOLUSDT and XRPUSDT: klines 5m/15m/1h/4h; premiumIndex; 24h ticker; current OI; funding history; OI history; taker flow; global long/short account ratio; depth; basis. HTTP status/headers are not exposed. exchangeInfo.serverTime=2026-11-11T10:18:31.942Z, stale by 26181.526 seconds at retrieval 17:34:53.468Z.",
+      "impact": "Timestamped market monitoring and research-data acquisition possible; contract metadata is not valid for execution validation.",
+      "nextAction": "Restore direct server-time/metadata access or obtain a fresh uncached exchangeInfo response."
+    },
+    {
+      "capability": "raw historical archive",
+      "status": "DEGRADED",
+      "evidence": "Remote GitHub archive branch research/raw-ohlcv-archive-20261108T1026Z is readable/writable. 5m and 15m each have pages 1-8, 12,000 base rows/symbol, with early segments ending 2020-10-25 (5m maximum) and 2021-01-17 (15m maximum); 2026 deltas do not bridge these gaps. 1h has 53,873 rows/symbol, a 28-hour base/delta bridge gap and an 8-row index discrepancy. 4h raw/aligned/canonical counts are 53,960/53,816/53,844; raw highwater 2026-11-10T16:00Z, canonical highwater 2026-11-05T16:00Z, 13 original manifest SHA mismatches.",
+      "impact": "No continuous aligned multi-year four-timeframe panel; strategy research remains blocked.",
+      "nextAction": "Backfill 5m/15m page 0009; reconcile 1h bridge/index; reconcile 4h row keys and original page hashes before any 4h append/rebuild."
+    },
+    {
+      "capability": "data quality/coverage",
+      "status": "DEGRADED",
+      "evidence": "This run appended 24 completed rows (5m=16, 15m=8; 6 rows/symbol) and excluded 8 forming rows. Readback validator: duplicates=0, missingIntervals=0, offGrid=0, nonMonotonic=0, OHLC failures=0, nonFinite=0, nonPositiveVolume=0, closeTimeFailures=0; cross-symbol alignment and contiguous-from-prior-highwater passed. Current monitoring sampled 16 series, 1,212 rows fetched, 1,196 completed and 16 forming excluded; sampled duplicates, monotonicity, continuity, OHLC and positive-volume checks passed.",
+      "impact": "Incremental data is valid; historical completeness and multi-timeframe alignment remain inadequate.",
+      "nextAction": "Continue page backfill and bridge/provenance reconciliation; do not treat incremental cleanliness as historical completeness."
+    },
+    {
+      "capability": "backtest harness/smoke test",
+      "status": "BLOCKED",
+      "evidence": "Remote npm scripts backtest and research:conditional exist, but no local checkout; Node/npm below required engines; SDK packages absent. Deterministic fixture smoke test and no-lookahead test were not run.",
+      "impact": "No strategy experiment or untouched OOS evaluation can be claimed.",
+      "nextAction": "Provision Node 24/npm 11 checkout, run the deterministic fixture twice, test lookahead invariance, then pre-register EXP-001."
+    },
+    {
+      "capability": "disk/storage",
+      "status": "PASS",
+      "evidence": "Local overlay 32 GB total with 30 GB free; remote GitHub archive branch accepted writes.",
+      "impact": "Remote append-only persistence available; no local historical archive mounted.",
+      "nextAction": "Continue remote append-only persistence and verify each artifact by readback."
+    },
+    {
+      "capability": "artifact readback",
+      "status": "PASS",
+      "evidence": "Delta JSONL, delta manifest, 5m/15m archive indexes, global archive manifest and current market snapshot were fetched back; delta content matched exactly and blob SHA was recorded.",
+      "impact": "This run's data-quality append and current snapshot are durably persisted and identity-checked in GitHub.",
+      "nextAction": "Read back preflight, experiment, report, run manifest, queue and registry artifacts after creation."
+    }
+  ],
+  "executionStatus": "RESEARCH_EXECUTED",
+  "scope": "INCREMENTAL_5M15M_ARCHIVE_APPEND_AND_MARKET_MONITORING",
+  "strategyExperimentStatus": "BLOCKED",
+  "oosEvaluated": false,
+  "registryOosValidatedEntries": 0
+}

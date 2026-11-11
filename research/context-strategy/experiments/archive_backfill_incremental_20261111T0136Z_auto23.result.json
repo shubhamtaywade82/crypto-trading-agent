@@ -1,0 +1,160 @@
+{
+  "schemaVersion": "1.0.0",
+  "experimentId": "EXP-ARCHIVE-PAGE1-AND-INCREMENTAL-20261111-AUTO23",
+  "type": "HISTORICAL_ARCHIVE_BACKFILL_AND_DATA_QUALITY",
+  "status": "COMPLETED_DATA_QUALITY_ONLY",
+  "runId": "context-strategy-20261111T013621Z-auto23",
+  "asOfUtc": "2026-11-11T01:36:21.000Z",
+  "hypothesis": "Seed earliest available 5m/15m raw history per symbol using one bounded 1500-row page, preserve exact endpoint-order raw arrays, validate continuity/OHLCV, and extend the recent completed-bar archive without claiming full coverage.",
+  "specification": {
+    "endpoint": "GET /fapi/v1/klines",
+    "access": "Binance USD-M public market-data connector",
+    "symbols": [
+      "BTCUSDT",
+      "ETHUSDT",
+      "SOLUSDT",
+      "XRPUSDT"
+    ],
+    "intervals": [
+      "5m",
+      "15m"
+    ],
+    "startTimeUtc": "2020-01-01T00:00:00.000Z",
+    "limit": 1500,
+    "rawFormat": "newline-delimited JSON arrays in endpoint order",
+    "analysisExclusionRule": "volume<=0 rows retained in raw archive but excluded from derived features/backtests"
+  },
+  "historicalBackfill": {
+    "pageNumber": 1,
+    "rowsPerSymbol": 1500,
+    "rowsByInterval": {
+      "5m": 6000,
+      "15m": 6000
+    },
+    "rowsTotal": 12000,
+    "zeroVolumeRows": 8,
+    "analysisEligibleRows": 11992,
+    "duplicates": 0,
+    "missingIntervals": 0,
+    "offGrid": 0,
+    "nonMonotonic": 0,
+    "ohlcFailures": 0,
+    "nonFinite": 0,
+    "readbackVerified": true,
+    "manifests": {
+      "5m": "research-data/binance-usdm/5m/manifest-page-0001.json",
+      "15m": "research-data/binance-usdm/15m/manifest-page-0001.json"
+    }
+  },
+  "pageCoverage": {
+    "5m": {
+      "BTCUSDT": {
+        "rows": 1500,
+        "first": "2020-01-01T00:00:00.000Z",
+        "last": "2020-01-06T04:55:00.000Z",
+        "next": "2020-01-06T05:00:00.000Z",
+        "zeroVolume": 0
+      },
+      "ETHUSDT": {
+        "rows": 1500,
+        "first": "2020-01-01T00:00:00.000Z",
+        "last": "2020-01-06T04:55:00.000Z",
+        "next": "2020-01-06T05:00:00.000Z",
+        "zeroVolume": 0
+      },
+      "SOLUSDT": {
+        "rows": 1500,
+        "first": "2020-09-14T07:00:00.000Z",
+        "last": "2020-09-19T11:55:00.000Z",
+        "next": "2020-09-19T12:00:00.000Z",
+        "zeroVolume": 0
+      },
+      "XRPUSDT": {
+        "rows": 1500,
+        "first": "2020-01-06T08:20:00.000Z",
+        "last": "2020-01-11T13:15:00.000Z",
+        "next": "2020-01-11T13:20:00.000Z",
+        "zeroVolume": 7
+      }
+    },
+    "15m": {
+      "BTCUSDT": {
+        "rows": 1500,
+        "first": "2020-01-01T00:00:00.000Z",
+        "last": "2020-01-16T14:45:00.000Z",
+        "next": "2020-01-16T15:00:00.000Z",
+        "zeroVolume": 0
+      },
+      "ETHUSDT": {
+        "rows": 1500,
+        "first": "2020-01-01T00:00:00.000Z",
+        "last": "2020-01-16T14:45:00.000Z",
+        "next": "2020-01-16T15:00:00.000Z",
+        "zeroVolume": 0
+      },
+      "SOLUSDT": {
+        "rows": 1500,
+        "first": "2020-09-14T07:00:00.000Z",
+        "last": "2020-09-29T21:45:00.000Z",
+        "next": "2020-09-29T22:00:00.000Z",
+        "zeroVolume": 0
+      },
+      "XRPUSDT": {
+        "rows": 1500,
+        "first": "2020-01-06T08:15:00.000Z",
+        "last": "2020-01-21T23:00:00.000Z",
+        "next": "2020-01-21T23:15:00.000Z",
+        "zeroVolume": 1
+      }
+    }
+  },
+  "incrementalAppend": {
+    "rowsTotal": 80,
+    "rowsByInterval": {
+      "5m": 56,
+      "15m": 20,
+      "1h": 4
+    },
+    "rowsBySymbol": {
+      "BTCUSDT": 20,
+      "ETHUSDT": 20,
+      "SOLUSDT": 20,
+      "XRPUSDT": 20
+    },
+    "duplicates": 0,
+    "missingIntervals": 0,
+    "offGrid": 0,
+    "nonMonotonic": 0,
+    "ohlcFailures": 0,
+    "nonPositiveVolume": 0,
+    "nonFinite": 0,
+    "formingRowsExcluded": 0,
+    "readbackVerified": true,
+    "deltaPaths": [
+      "research-data/binance-usdm/delta/binance_usdm_delta_20261111T0125Z_5m15m1h_completed.jsonl",
+      "research-data/binance-usdm/delta/binance_usdm_delta_20261111T0131Z_5m15m_completed.jsonl",
+      "research-data/binance-usdm/delta/binance_usdm_delta_20261111T0135Z_5m_completed.jsonl"
+    ]
+  },
+  "highwaters": {
+    "5m": "2026-11-11T01:30:00.000Z",
+    "15m": "2026-11-11T01:15:00.000Z",
+    "1h": "2026-11-11T00:00:00.000Z",
+    "4h": "2026-11-10T16:00:00.000Z"
+  },
+  "limitations": [
+    "Page 0001 is only a short initial segment; it is not multi-year coverage. A large gap remains between page 0001 and the recent incremental deltas beginning 2026-11-09.",
+    "5m/15m base archive remains incomplete; pages 2+ have not been backfilled.",
+    "4h raw/canonical row counts and 13 page/symbol SHA provenance mismatches remain unresolved; canonical 4h ends 2026-11-05T16:00Z while raw highwater is 2026-11-10T16:00Z.",
+    "No strategy backtest, parameter fit, walk-forward or OOS evaluation was run."
+  ],
+  "artifacts": {
+    "rawBranch": "research/raw-ohlcv-archive-20261108T1026Z",
+    "latestArchiveManifest": "research-data/binance-usdm/manifests/archive_manifest_20261111T0135Z_auto23_latest.json",
+    "pageManifests": [
+      "research-data/binance-usdm/5m/manifest-page-0001.json",
+      "research-data/binance-usdm/15m/manifest-page-0001.json"
+    ]
+  },
+  "nextAction": "Backfill page 0002 for each symbol/interval from the recorded per-symbol nextStartUtc; continue until the lower-timeframe pages reach the recent incremental highwater, then reconcile the complete time series before strategy experiments."
+}

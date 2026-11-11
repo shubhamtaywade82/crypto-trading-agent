@@ -1,0 +1,176 @@
+{
+  "schema_version": "1.0.0",
+  "run_id": "context-strategy-20261111T063823Z-auto28",
+  "checked_at_utc": "2026-11-11T06:38:23.745Z",
+  "environment": {
+    "shell": "PASS",
+    "os": "Debian GNU/Linux 13 (trixie)",
+    "cwd": "/",
+    "python": "3.13.5",
+    "node": "v22.16.0",
+    "npm": "10.9.2",
+    "cpu_count": 3,
+    "memory_total": "5.8 GiB",
+    "memory_available": "4.8 GiB",
+    "disk_total": "32 GiB",
+    "disk_used": "5.3 MiB",
+    "disk_free": "30 GiB",
+    "local_repository_present": false,
+    "sdk_packages": {
+      "@nemesis-oss/binance-sdk": "NOT_INSTALLED",
+      "binance": "NOT_INSTALLED",
+      "@binance/connector": "NOT_INSTALLED",
+      "ccxt": "NOT_INSTALLED"
+    }
+  },
+  "repository": {
+    "status": "DEGRADED",
+    "repository": "shubhamtaywade82/crypto-trading-agent",
+    "mainCommit": "b9a3060aa0376e2615a22227109906cfb9088a47",
+    "localCheckout": false,
+    "packageEngines": {
+      "node": ">=24",
+      "npm": ">=11"
+    },
+    "remoteScripts": {
+      "backtest": "scripts/backtest.ts exists; TIMEFRAMES=['15m','1h','4h']; no 5m",
+      "conditionalEdge": "scripts/conditional-edge.ts exists; default minN=30, confidence=0.90; no explicit purge/embargo found in this entrypoint"
+    },
+    "lockfileDependencyPresence": "Declared in package.json but not installed in this runtime"
+  },
+  "network": {
+    "status": "DEGRADED",
+    "directRest": {
+      "endpoint": "https://fapi.binance.com/fapi/v1/time",
+      "httpStatus": 0,
+      "error": "curl: (6) Could not resolve host: fapi.binance.com",
+      "dns": "UNRESOLVED"
+    },
+    "connector": "PASS for live USD-M market data; connector does not expose HTTP status codes",
+    "exchangeInfo": {
+      "retrievedAtUtc": "2026-11-11T06:38:23.745Z",
+      "serverTimeUtc": "2026-11-11T06:30:57.956Z",
+      "ageSeconds": 445.789,
+      "status": "STALE_FOR_EXECUTION"
+    }
+  },
+  "rawHistoricalArchive": {
+    "status": "PASS_REMOTE_PERSISTED",
+    "branch": "research/raw-ohlcv-archive-20261108T1026Z",
+    "latestCommit": "c8d4af09e265281c81c52ee9d8b2dbd47906976a",
+    "localPath": "UNAVAILABLE_NO_LOCAL_CHECKOUT",
+    "baseCoverage": {
+      "5m": {
+        "rowsTotal": 36000,
+        "rowsPerSymbol": 9000,
+        "pages": 6,
+        "firstOpenUtc": "2020-01-01T00:00:00.000Z",
+        "lastOpenUtcBySymbol": {
+          "BTCUSDT": "2020-02-01T05:55:00.000Z",
+          "ETHUSDT": "2020-02-01T05:55:00.000Z",
+          "SOLUSDT": "2020-10-15T12:55:00.000Z",
+          "XRPUSDT": "2020-02-06T14:15:00.000Z"
+        },
+        "zeroVolumeRows": {
+          "XRPUSDT": 9
+        }
+      },
+      "15m": {
+        "rowsTotal": 36000,
+        "rowsPerSymbol": 9000,
+        "pages": 6,
+        "firstOpenUtc": "2020-01-01T00:00:00.000Z",
+        "lastOpenUtcBySymbol": {
+          "BTCUSDT": "2020-04-03T17:45:00.000Z",
+          "ETHUSDT": "2020-04-03T17:45:00.000Z",
+          "SOLUSDT": "2020-12-17T00:45:00.000Z",
+          "XRPUSDT": "2020-04-09T02:00:00.000Z"
+        },
+        "zeroVolumeRows": {
+          "XRPUSDT": 1
+        }
+      },
+      "1h": {
+        "rowsTotal": 215492,
+        "rowsPerSymbol": 53873,
+        "firstOpenUtc": "2020-09-14T08:00:00.000Z",
+        "latestCompletedOpenUtc": "2026-11-11T05:00:00.000Z",
+        "quality": "PASS",
+        "duplicates": 0,
+        "missingIntervals": 0,
+        "ohlcFailures": 0,
+        "nonPositiveVolume": 0,
+        "nonFinite": 0,
+        "misaligned": 0,
+        "crossSymbolAlignment": true
+      },
+      "4h": {
+        "rawRows": 53960,
+        "alignedRows": 53816,
+        "canonicalRows": 53844,
+        "rawHighwaterUtc": "2026-11-10T16:00:00.000Z",
+        "canonicalHighwaterUtc": "2026-11-05T16:00:00.000Z",
+        "originalManifestHashMismatches": 13,
+        "alternateSourcePairsExact": 14,
+        "alternateSourceRowsCompared": 21000,
+        "status": "DEGRADED_NO_APPEND"
+      }
+    }
+  },
+  "dataQuality": {
+    "status": "DEGRADED_OVERALL",
+    "page6": {
+      "files": 8,
+      "rows": 12000,
+      "rowsPerFile": 1500,
+      "readbackExact": 8,
+      "shaMatches": 8,
+      "duplicates": 0,
+      "missingIntervals": 0,
+      "offGrid": 0,
+      "nonMonotonic": 0,
+      "ohlcFailures": 0,
+      "nonFinite": 0,
+      "nonPositiveVolume": 0
+    },
+    "incrementalAppend": {
+      "rowsFetched": 72,
+      "rowsAppended": 60,
+      "formingExcluded": 12,
+      "rowsByInterval": {
+        "5m": 40,
+        "15m": 16,
+        "1h": 4
+      },
+      "duplicates": 0,
+      "missingIntervals": 0,
+      "offGrid": 0,
+      "nonMonotonic": 0,
+      "ohlcFailures": 0,
+      "nonFinite": 0,
+      "nonPositiveVolume": 0,
+      "readbackVerified": true
+    },
+    "reason": "1h and verified page/delta slices pass, but 5m/15m base coverage remains discontinuous and 4h provenance remains degraded."
+  },
+  "backtest": {
+    "status": "BLOCKED",
+    "remoteCodeExists": true,
+    "localHarnessInvokable": false,
+    "smokeTest": "NOT_RUN",
+    "determinism": "NOT_CHECKED",
+    "noLookaheadFixture": "NOT_CHECKED",
+    "strategyExperiment": "NOT_RUN",
+    "oos": "NOT_EVALUATED",
+    "reason": "No local checkout, Node/npm below declared engine floor, SDK missing, no continuous intraday sample, PIT derivatives incomplete."
+  },
+  "storage": {
+    "localDisk": "PASS_30_GIB_FREE",
+    "persistentRemoteStorage": "PASS_GITHUB_BRANCH_WRITABLE",
+    "artifactReadback": "PASS",
+    "localRawArchive": "NOT_PRESENT"
+  },
+  "finalRunState": "RESEARCH_EXECUTED_ARCHIVE_DATA_QUALITY_ONLY",
+  "strategyExperimentState": "RESEARCH_BLOCKED",
+  "oosEvaluated": false
+}

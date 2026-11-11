@@ -1,0 +1,103 @@
+{
+  "schemaVersion": "1.0.0",
+  "runId": "context-strategy-20261111T2227Z-auto33",
+  "experimentId": "INCREMENTAL_ARCHIVE_APPEND_5M_15M_V1",
+  "type": "DATA_QUALITY_INCREMENTAL_APPEND",
+  "status": "RESEARCH_EXECUTED_DATA_QUALITY_ONLY",
+  "createdAtUtc": "2026-11-11T22:27:49.000Z",
+  "specification": {
+    "sourceEndpoint": "GET /fapi/v1/klines",
+    "provider": "Binance USDⓈ-M public market-data connector",
+    "symbols": [
+      "BTCUSDT",
+      "ETHUSDT",
+      "SOLUSDT",
+      "XRPUSDT"
+    ],
+    "intervals": [
+      "5m",
+      "15m"
+    ],
+    "completedBarsOnly": true,
+    "closeTimeMustBeLessThanRetrievalTime": true
+  },
+  "priorHighwaterUtc": {
+    "5m": "2026-11-11T22:00:00.000Z",
+    "15m": "2026-11-11T21:45:00.000Z",
+    "1h": "2026-11-11T21:00:00.000Z",
+    "4h": "2026-11-11T16:00:00.000Z"
+  },
+  "latestCompletedOpenUtc": {
+    "5m": "2026-11-11T22:20:00.000Z",
+    "15m": "2026-11-11T22:00:00.000Z",
+    "1h": "2026-11-11T21:00:00.000Z",
+    "4h": "2026-11-11T16:00:00.000Z"
+  },
+  "nextStartUtc": {
+    "5m": "2026-11-11T22:25:00.000Z",
+    "15m": "2026-11-11T22:15:00.000Z",
+    "1h": "2026-11-11T22:00:00.000Z",
+    "4h": "2026-11-11T20:00:00.000Z"
+  },
+  "results": {
+    "rowsFetched": 36,
+    "rowsAppended": 20,
+    "uncompletedRowsExcluded": 16,
+    "rowsByInterval": {
+      "5m": 16,
+      "15m": 4
+    },
+    "rowsBySymbol": {
+      "BTCUSDT": 5,
+      "ETHUSDT": 5,
+      "SOLUSDT": 5,
+      "XRPUSDT": 5
+    },
+    "rowsBySymbolInterval": {
+      "BTCUSDT:5m": 4,
+      "BTCUSDT:15m": 1,
+      "ETHUSDT:5m": 4,
+      "ETHUSDT:15m": 1,
+      "SOLUSDT:5m": 4,
+      "SOLUSDT:15m": 1,
+      "XRPUSDT:5m": 4,
+      "XRPUSDT:15m": 1
+    },
+    "quality": {
+      "duplicates": 0,
+      "missingIntervals": 0,
+      "offGrid": 0,
+      "nonMonotonic": 0,
+      "ohlcFailures": 0,
+      "nonFinite": 0,
+      "nonPositiveVolume": 0,
+      "closeTimeFailures": 0,
+      "crossSymbolAlignment": true,
+      "contiguousFromPriorHighwater": true
+    }
+  },
+  "delta": {
+    "path": "research-data/binance-usdm/delta/binance_usdm_delta_20261111T2227Z_5m15m_completed.jsonl",
+    "rows": 20,
+    "sha256": "3fb97f155d62c24605f6f3f670de835a4b9ce3992ccce7ab8bf260caf813655a",
+    "blobSha": "ded446c13df7450445582b4b4ec681bae760b977"
+  },
+  "manifest": {
+    "path": "research-data/binance-usdm/delta/manifest-20261111T2227Z-5m15m.json",
+    "rowsFetched": 36,
+    "rowsAppended": 20,
+    "uncompletedRowsExcluded": 16,
+    "sha256": "55f482de28ac666cd52b9c62258cd41db36c3e0f4a84043f64dd1904efd4e05c",
+    "blobSha": "d09d42f3213ab386b4b02c52545163f75791a7a9"
+  },
+  "indexReadback": {
+    "5m": "9be20e57f3ce998533880d7346dba9ac06ca3f59",
+    "15m": "008463cb717c9d8d898cf2d0aca2d302371b90f4"
+  },
+  "reproducibility": {
+    "execution": "Code Mode V8 in-memory validator; no local project script or repository checkout",
+    "codeCommitHash": "UNAVAILABLE_EPHEMERAL_CODE",
+    "seed": "NOT_APPLICABLE_DETERMINISTIC_DATA_RETRIEVAL"
+  },
+  "nextAction": "Next run begins at 5m 22:25Z and 15m 22:15Z after closeTime; 1h 22:00Z and 4h 20:00Z are still forming and must not be appended yet."
+}

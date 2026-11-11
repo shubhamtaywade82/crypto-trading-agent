@@ -1,0 +1,307 @@
+{
+  "schema_version": "1.0.0",
+  "run_id": "context-strategy-20261111T002552Z-auto22",
+  "started_at_utc": "2026-11-11T00:17:22.000Z",
+  "completed_at_utc": "2026-11-11T00:35:01.793Z",
+  "as_of_utc": "2026-11-11T00:27:07.176Z",
+  "status": "RESEARCH_EXECUTED",
+  "research_scope": "INCREMENTAL_ARCHIVE_DATA_QUALITY_AND_HOURLY_MARKET_CONTEXT",
+  "strategy_experiment_status": "RESEARCH_BLOCKED",
+  "oos_evaluated": false,
+  "classification": {
+    "runStatus": "RESEARCH_EXECUTED",
+    "explanation": "A reproducible archive append/data-quality validation completed and artifacts were persisted/read back. No strategy experiment or OOS evaluation ran because required execution/data prerequisites were blocked.",
+    "strategyExperiment": "BLOCKED",
+    "weeklyContextReview": "BLOCKED"
+  },
+  "execution_environment": {
+    "shell_available": true,
+    "working_directory": "/",
+    "os": "Linux",
+    "kernel": "6.18.57",
+    "node": "v22.16.0",
+    "npm": "10.9.2",
+    "cpu_cores": 5,
+    "memory_total": "5.8 GiB",
+    "memory_available": "4.7 GiB",
+    "disk_free": "30 GiB",
+    "repository_local_checkout": "ABSENT",
+    "repository_remote": "shubhamtaywade82/crypto-trading-agent",
+    "main_commit_before_run_manifest": "f6161cbabdde39a65c0ebac10618e6714ea3da98",
+    "package_engines": {
+      "node": ">=24",
+      "npm": ">=11"
+    },
+    "sdk_dependency": "@nemesis-oss/binance-sdk@3.2.0",
+    "sdk_installed": false,
+    "scripts_present": [
+      "scripts/backtest.ts",
+      "scripts/conditional-edge.ts"
+    ],
+    "backtest_invoked": false,
+    "fixture_smoke_test": "NOT_RUN",
+    "tool_execution": "ChatGPT Code Mode JS V8 plus container shell reconnaissance; Binance SDK not used."
+  },
+  "market_data_connectivity": {
+    "direct_official_rest": "DNS resolution failure; HTTP 000",
+    "server_time_endpoint": "/fapi/v1/time UNAVAILABLE",
+    "exchange_info": {
+      "endpoint": "/fapi/v1/exchangeInfo",
+      "serverTimeUtc": "2026-11-10T01:01:01.895Z",
+      "ageSeconds": 84365.281,
+      "status": "STALE"
+    },
+    "public_connector": "Binance USD-M public market-data connector returned current data; raw HTTP status not exposed.",
+    "symbols": [
+      "BTCUSDT",
+      "ETHUSDT",
+      "SOLUSDT",
+      "XRPUSDT"
+    ],
+    "intervals": [
+      "5m",
+      "15m",
+      "1h",
+      "4h"
+    ],
+    "current_snapshot_as_of_utc": "2026-11-11T00:27:07.176Z",
+    "current_kline_rows_per_series": 120,
+    "completed_bars_per_series": 119,
+    "forming_bars_excluded_per_series": 1,
+    "endpoint_outcomes": {
+      "klines": "CONNECTOR_RETURNED_DATA",
+      "premiumIndex": "CONNECTOR_RETURNED_DATA",
+      "ticker24hr": "CONNECTOR_RETURNED_DATA",
+      "openInterest": "CONNECTOR_RETURNED_DATA",
+      "openInterestHist": "CONNECTOR_RETURNED_DATA",
+      "takerlongshortRatio": "CONNECTOR_RETURNED_DATA",
+      "globalLongShortAccountRatio": "CONNECTOR_RETURNED_DATA",
+      "depth": "CONNECTOR_RETURNED_DATA",
+      "fundingRate": "CONNECTOR_RETURNED_DATA",
+      "exchangeInfo": "STALE_METADATA",
+      "serverTime": "UNAVAILABLE"
+    }
+  },
+  "data_quality_experiment": {
+    "experiment_id": "EXP-DQ-2026-11-11-0025Z-AUTO22",
+    "type": "INCREMENTAL_ARCHIVE_DATA_QUALITY",
+    "status": "COMPLETED_REPRODUCIBLE_DATA_QUALITY_ONLY",
+    "hypothesis": "Append only completed bars beyond verified interval highwaters; exclude forming bars; require continuity, unique keys, timestamp alignment, OHLC invariants, positive finite volume and cross-symbol alignment.",
+    "rows_fetched": 980,
+    "completed_rows": 964,
+    "forming_rows_excluded": 16,
+    "pre_highwater_rows_excluded": 892,
+    "rows_appended": 72,
+    "rows_by_interval": {
+      "5m": 52,
+      "15m": 16,
+      "1h": 4,
+      "4h": 0
+    },
+    "rows_by_symbol": {
+      "BTCUSDT": 18,
+      "ETHUSDT": 18,
+      "SOLUSDT": 18,
+      "XRPUSDT": 18
+    },
+    "quality": {
+      "series": 16,
+      "duplicates": 0,
+      "missing_intervals": 0,
+      "off_grid": 0,
+      "non_monotonic": 0,
+      "ohlc_invariant_failures": 0,
+      "non_positive_volume": 0,
+      "non_finite": 0,
+      "cross_symbol_alignment": true,
+      "forming_rows_appended": 0
+    },
+    "highwaters_before": {
+      "5m": "2026-11-10T23:15:00.000Z",
+      "15m": "2026-11-10T23:00:00.000Z",
+      "1h": "2026-11-10T22:00:00.000Z",
+      "4h": "2026-11-10T16:00:00.000Z"
+    },
+    "highwaters_after": {
+      "5m": "2026-11-11T00:20:00.000Z",
+      "15m": "2026-11-11T00:00:00.000Z",
+      "1h": "2026-11-10T23:00:00.000Z",
+      "4h": "2026-11-10T16:00:00.000Z"
+    },
+    "strategy_metrics": "NOT_APPLICABLE",
+    "strategy_experiment_executed": false,
+    "oos_evaluated": false,
+    "result_path": "research/context-strategy/experiments/incremental_archive_append_20261111T0025Z_auto22.result.json",
+    "result_sha256": "c2ec4cd5a91cb90f6d5381a6775bf9450d0d403dbad3487ccaba6a56cd393271",
+    "result_blob_sha1": "abe627a9ebe86a69a9c8492ee7fea9ee3cf66bad"
+  },
+  "archive": {
+    "repository": "shubhamtaywade82/crypto-trading-agent",
+    "branch": "research/raw-ohlcv-archive-20261108T1026Z",
+    "latest_manifest_path": "research-data/binance-usdm/manifests/archive_manifest_20261111T0025Z_auto22.json",
+    "latest_manifest_sha256": "25f3207eff2e8e0bada0fbdc61afea60f5dea3b05b2157dab7c8a7f13916737f",
+    "latest_manifest_blob_sha1": "7d0882de5044dd1c6f3758065a14399f0f33282b",
+    "manifests": [
+      {
+        "path": "research-data/binance-usdm/manifests/archive_manifest_20261111T0023Z_auto22.json",
+        "sha256": "5d25a7985cd186f9f1cd6f304fca794baed391b0091ee169f01d9940d7bf9c25",
+        "blobSha1": "1045bca3c723147434085d13275f1f2ff8fc5162"
+      },
+      {
+        "path": "research-data/binance-usdm/manifests/archive_manifest_20261111T0025Z_auto22.json",
+        "sha256": "25f3207eff2e8e0bada0fbdc61afea60f5dea3b05b2157dab7c8a7f13916737f",
+        "blobSha1": "7d0882de5044dd1c6f3758065a14399f0f33282b"
+      }
+    ],
+    "deltas": [
+      {
+        "path": "research-data/binance-usdm/delta/binance_usdm_delta_20261111T0023Z_5m15m1h_completed.jsonl",
+        "sha256": "9d133f1da46d642da70a12ee35e7a2cb18b7c5d3c48777981c99eb71358a7a49",
+        "blobSha1": "85476bf26c956d318345b00814fe7c78ca40250a",
+        "rows": 68
+      },
+      {
+        "path": "research-data/binance-usdm/delta/binance_usdm_delta_20261111T0025Z_5m_completed.jsonl",
+        "sha256": "e59890390229142125d82fbd04dbe4c7437224d724d359fedf4c1c199d8f62e7",
+        "blobSha1": "0fed03433f89c10d8c90eb3ce6437e2aff52156d",
+        "rows": 4
+      }
+    ],
+    "delta_manifests": [
+      {
+        "path": "research-data/binance-usdm/delta/manifest-20261111T0023Z-5m15m1h.json",
+        "sha256": "b01f04b89217aedcc2cdd8e0816906a147d17c02341c2c9a6c988a8f46ec6a51",
+        "blobSha1": "e196f3dbecc13fb42a7f6a2b07cbb035109e6e0e"
+      },
+      {
+        "path": "research-data/binance-usdm/delta/manifest-20261111T0025Z-5m.json",
+        "sha256": "adaea08b0a52714bd71c4181ce98b5197204faae394f53603a08e275997dbd6a",
+        "blobSha1": "b956cffd511acede688438df88b366bc4aa1e0b4"
+      }
+    ],
+    "indexes": {
+      "5m": {
+        "path": "research-data/binance-usdm/5m/archive-index.json",
+        "sha256": "ff355475a62ec5ed2c56759e248eb97986dfb6517aa79cb54f197ee028f1cdc2",
+        "blobSha1": "3b491941fb6548df85033ecbf9671797eef908e7"
+      },
+      "15m": {
+        "path": "research-data/binance-usdm/15m/archive-index.json",
+        "sha256": "ecee57d3f34d63649ec8fa7563cfc1d30e02e703ee8563485ef62b8329cead14",
+        "blobSha1": "f701e77f5c23a89014f57a8b122211e6c7a17820"
+      },
+      "1h": {
+        "path": "research-data/binance-usdm/1h/archive-index.json",
+        "sha256": "3f9c8e5d6b5d11282447c5f8de03215149c6836c332fe2ade6845cc18f1dd8d8",
+        "blobSha1": "3385bcccdf700d1fb6a39e70b77501bab50a743b"
+      },
+      "4h": {
+        "path": "research-data/binance-usdm/4h/archive-index.json",
+        "status": "UNCHANGED_BLOCKED_PROVENANCE",
+        "blobSha1": "f51e49b7fe0447a650d7a009daf392a53803eba2"
+      }
+    },
+    "readback_verified": true
+  },
+  "context_discovery": {
+    "latest_completed_experiment": "EXP-CTX-4H-001",
+    "completed_at_utc": "2026-11-10",
+    "rerun_this_run": false,
+    "taxonomy_status": "UNCHANGED_STABILITY_GATE_FAILED",
+    "thresholds": {
+      "emaSpreadQ33Pct": 1.0301,
+      "tr14SmaQ33Pct": 1.9012,
+      "tr14SmaQ67Pct": 3.0433,
+      "tr14SmaQ99Pct": 11.0656
+    },
+    "train_validation_test_effective_bars_per_symbol": {
+      "train": 7972,
+      "validation": 2691,
+      "untouchedTest": 2691
+    },
+    "stability": {
+      "trainValidationPearson": 0.855,
+      "trainTestPearson": 0.718,
+      "trainValidationJSD": 0.0349,
+      "trainTestJSD": 0.126,
+      "sparseTestContextsBelow1Pct": 4,
+      "gate": "FAIL"
+    },
+    "reason_not_refit": "Weekly review blocked by missing 5m/15m base, 4h provenance and executable compatible harness."
+  },
+  "registry": {
+    "path": "research/context-strategy/registry.json",
+    "snapshot_path": "research-data/binance-usdm/conditional-strategy-registry-snapshot-v112.json",
+    "version": 109,
+    "snapshot_blob_sha1": "5565a4298bd047f8ece30deeea470939c6c80314",
+    "snapshot_sha256": "824620ba229d638b86df0abbd5ee5f967b5c833fdd8ea1bc437b0b0497e5d042",
+    "status_counts": {
+      "OOS_VALIDATED": 0,
+      "OOS_PROMISING": 1,
+      "INSUFFICIENT_EVIDENCE": 4,
+      "REJECTED": 1,
+      "HYPOTHESIS": 0,
+      "IN_SAMPLE_ONLY": 0,
+      "VALIDATION_ONLY": 0
+    },
+    "evidence_entries_changed": false
+  },
+  "current_market_snapshot": {
+    "path": "research-data/binance-usdm/current_market_snapshot_20261111T0027Z_auto22.json",
+    "sha256": "c72a8678bdd459c9c2aa96c62d9a6e42ba8d4c5b8ea82b1ca61e8d8c523d162d",
+    "blob_sha1": "90ef1379f88e85389c9dd3a90630ee6db096a028",
+    "as_of_utc": "2026-11-11T00:27:07.176Z",
+    "regimes": {
+      "BTCUSDT": "BEAR_ALIGNED",
+      "ETHUSDT": "BEAR_ALIGNED",
+      "SOLUSDT": "BEAR_ALIGNED",
+      "XRPUSDT": "BEAR_ALIGNED"
+    },
+    "tradable_decisions": {
+      "SOLUSDT": "NO_TRADE",
+      "ETHUSDT": "NO_TRADE",
+      "XRPUSDT": "NO_TRADE"
+    },
+    "oosValidatedEntries": 0
+  },
+  "preflight": {
+    "path": "research/context-strategy/preflight/preflight_20261111T0027Z_auto22.json",
+    "sha256": "379c2b89064763741b9060d5529b2abaff2737ac3cf84cfb0925cf9d1ad60911",
+    "blob_sha1": "5d577565d0ee184e73d4c2a8c1859da8c8e34043"
+  },
+  "report": {
+    "path": "research/context-strategy/reports/2026-11-11T0027Z_auto22.md",
+    "sha256": "3f012b98d097a18f24637400a64af6e2c3d09dde55e34e9c787c35381f9e0064",
+    "blob_sha1": "26fb5fd17dd4580a0eacec7965e734b1251e8e7f"
+  },
+  "queue": {
+    "path": "research-data/binance-usdm/research-queue-v112.json",
+    "sha256": "2dd11d2d74b83bb2963eba2989fe83ebc652de9e98c73ef3f26cd6ed88279f97",
+    "blob_sha1": "cf891dd0ec61f63780690999ac31652883f3e0f4",
+    "item_count": 98,
+    "daily_cycle": "DATA_QUALITY_ONLY_STRATEGY_BLOCKED",
+    "weekly_review": "BLOCKED"
+  },
+  "decisions": {
+    "SOLUSDT": "NO_TRADE",
+    "ETHUSDT": "NO_TRADE",
+    "XRPUSDT": "NO_TRADE",
+    "reason": "No OOS_VALIDATED rule exists; context is not an entry trigger; contract metadata is stale."
+  },
+  "limitations": [
+    "No fresh Binance server time or contract metadata; direct REST DNS failed.",
+    "No local repository checkout or compatible Node24/npm11 runtime; SDK absent.",
+    "No deterministic backtest smoke test, strategy experiment or untouched OOS evaluation.",
+    "5m/15m multi-year base history absent.",
+    "4h raw/aligned/canonical provenance remains unresolved with 13 SHA mismatches.",
+    "Historical point-in-time funding/OI/taker archive incomplete.",
+    "No liquidation feed, historical basis or BTC rolling correlation/lead-lag computed."
+  ],
+  "next_actions": [
+    "Provision persistent Node>=24/npm>=11 checkout and install pinned Binance SDK.",
+    "Backfill multi-year 5m/15m for all four symbols.",
+    "Reconcile 4h raw/aligned/canonical row keys and 13 original SHA mismatches without rewriting source hashes.",
+    "Build timestamp-aligned historical funding/OI/taker/mark/index and execution-cost archive.",
+    "Run deterministic fixture twice and verify no-lookahead; then freeze and execute EXP-001 with purging/embargo, realistic costs, block bootstrap and multiple-testing correction."
+  ]
+}

@@ -1,0 +1,114 @@
+{
+  "schemaVersion": 1,
+  "id": "EXP-INCREMENTAL-ARCHIVE-REFRESH-AUTO30",
+  "type": "HISTORICAL_DATA_QUALITY_INCREMENTAL_ARCHIVE_REFRESH",
+  "status": "COMPLETED_REPRODUCIBLE_READBACK_VERIFIED",
+  "runId": "context-strategy-20261111T113647Z-auto30",
+  "startedAtUtc": "2026-11-11T11:32:49.557Z",
+  "completedAtUtc": "2026-11-11T11:36:22.077Z",
+  "sourceEndpoint": "GET /fapi/v1/klines",
+  "access": "Binance USD-M public market-data connector; SDK_NOT_USED; HTTP status codes unavailable.",
+  "specification": {
+    "symbols": [
+      "BTCUSDT",
+      "ETHUSDT",
+      "SOLUSDT",
+      "XRPUSDT"
+    ],
+    "intervals": [
+      "5m",
+      "15m"
+    ],
+    "formingCandleRule": "Include only rows with closeTime < retrieval time.",
+    "appendRule": "Only openTime > current per-interval archive highwater.",
+    "qualityChecks": [
+      "interval continuity",
+      "UTC grid alignment",
+      "strict monotonicity",
+      "duplicate openTime",
+      "OHLC invariants",
+      "finite fields",
+      "positive volume",
+      "closeTime=openTime+interval-1",
+      "cross-symbol alignment",
+      "exact readback"
+    ]
+  },
+  "result": {
+    "rowsAppended": 52,
+    "rowsByInterval": {
+      "5m": 40,
+      "15m": 12
+    },
+    "rowsBySymbol": {
+      "BTCUSDT": 13,
+      "ETHUSDT": 13,
+      "SOLUSDT": 13,
+      "XRPUSDT": 13
+    },
+    "rowsFetchedIncludingForming": 64,
+    "formingRowsExcluded": 12,
+    "duplicates": 0,
+    "missingIntervals": 0,
+    "offGrid": 0,
+    "nonMonotonic": 0,
+    "ohlcFailures": 0,
+    "nonFinite": 0,
+    "nonPositiveVolume": 0,
+    "closeTimeFailures": 0,
+    "crossSymbolAlignment": true,
+    "readbackExact": true
+  },
+  "batches": [
+    {
+      "deltaPath": "research-data/binance-usdm/delta/binance_usdm_delta_20261111T113249Z_5m15m_completed.jsonl",
+      "deltaSha256": "2bf1795abd6316dd0c187014177b89abcb132672e778d45c986ec5826804dac6",
+      "deltaBytes": 8511,
+      "deltaBlobSha": "e68f9555fda52f64b37a358407cdc3b4a1459faf",
+      "manifestPath": "research-data/binance-usdm/delta/manifest-20261111T113249Z-5m15m.json",
+      "manifestSha256": "b4878afdc56915563b69a577b5b6a4434e41903d7020d44db0904b6493528576",
+      "manifestBytes": 3740,
+      "manifestBlobSha": "542e17bfe53f8f871377813919949cc2ee300e3e",
+      "rows": 48,
+      "rowsByInterval": {
+        "5m": 36,
+        "15m": 12
+      },
+      "readbackVerified": true
+    },
+    {
+      "deltaPath": "research-data/binance-usdm/delta/binance_usdm_delta_20261111T113622Z_5m_completed.jsonl",
+      "deltaSha256": "3310cbd352eb7e8d0728ec26117578496230e9246306961098429112d149731c",
+      "deltaBytes": 702,
+      "deltaBlobSha": "51ee32a33734d6eb5ca53de0a4ee57c6e01e5747",
+      "manifestPath": "research-data/binance-usdm/delta/manifest-20261111T113622Z-5m.json",
+      "manifestSha256": "0f6a15e5730594212321e3e25909c858ccd671fc6e369944081949f8284cc7cb",
+      "manifestBytes": 2496,
+      "manifestBlobSha": "aeb08d9922d562afa740bb47c63cea8aca05d364",
+      "rows": 4,
+      "rowsByInterval": {
+        "5m": 4
+      },
+      "readbackVerified": true
+    }
+  ],
+  "archiveManifest": {
+    "path": "research-data/binance-usdm/manifests/archive_manifest_20261111T113647Z_auto30.json",
+    "sha256": "c798916bae7e7ae755ae64a26505ca91b4bf0f538e3cc2bc1136616fa992f451",
+    "bytes": 6669,
+    "blobSha": "37c6633a8f0db3bb0397b283d365bca9b6024e2e",
+    "readbackVerified": true
+  },
+  "postAppendHighwaters": {
+    "5m": "2026-11-11T11:30:00.000Z",
+    "15m": "2026-11-11T11:15:00.000Z"
+  },
+  "strategyExperiment": {
+    "status": "RESEARCH_BLOCKED",
+    "reason": "No local checkout; Node 22.16/npm 10.9 below repository floor Node>=24/npm>=11; backtest CLI omits 5m; no deterministic fixture smoke test; 1h bridge/4h provenance and PIT derivatives incomplete."
+  },
+  "oosEvaluated": false,
+  "registryChanged": false,
+  "registryVersion": 110,
+  "oosValidatedEntries": 0
+}

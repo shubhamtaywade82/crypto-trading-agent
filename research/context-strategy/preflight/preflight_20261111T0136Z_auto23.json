@@ -1,0 +1,163 @@
+{
+  "schemaVersion": "1.0.0",
+  "runId": "context-strategy-20261111T013621Z-auto23",
+  "asOfUtc": "2026-11-11T01:36:21.000Z",
+  "environment": {
+    "cwd": "/",
+    "os": "Linux 6.18.57 x86_64",
+    "node": "v22.16.0",
+    "npm": "10.9.2",
+    "python": "3.13.5",
+    "cpuCores": 5,
+    "availableMemory": "5.8 GiB",
+    "diskFree": "30 GiB",
+    "localRepositoryCheckout": "ABSENT",
+    "requiredRepository": "shubhamtaywade82/crypto-trading-agent",
+    "requiredNode": ">=24",
+    "requiredNpm": ">=11",
+    "binanceSdkPackages": {
+      "@nemesis-oss/binance-sdk": "NOT_INSTALLED",
+      "binance": "NOT_INSTALLED"
+    }
+  },
+  "checks": [
+    {
+      "capability": "shell/compute",
+      "status": "PASS",
+      "evidence": "pwd=/; Linux 6.18.57 x86_64; Node 22.16.0; npm 10.9.2; Python 3.13.5; 5 CPU cores; 5.8 GiB available memory; 30 GiB disk free.",
+      "impact": "Bounded data validation and metadata processing executed.",
+      "nextAction": "Provision compatible Node 24/npm 11 runtime."
+    },
+    {
+      "capability": "repo/code",
+      "status": "DEGRADED",
+      "evidence": "Remote main branch accessible at commit cbdc69c64f20578f7d62a137277d1486d8a44ede; package.json, scripts/backtest.ts and scripts/conditional-edge.ts fetched; local checkout absent.",
+      "impact": "Harness source exists remotely but cannot be invoked locally.",
+      "nextAction": "Provision local checkout at verified commit."
+    },
+    {
+      "capability": "Binance SDK",
+      "status": "BLOCKED",
+      "evidence": "@nemesis-oss/binance-sdk and binance both fail require.resolve; Node runtime below repository engine requirement.",
+      "impact": "No SDK execution.",
+      "nextAction": "Install pinned dependencies in Node 24/npm 11 environment."
+    },
+    {
+      "capability": "network/Binance endpoints",
+      "status": "DEGRADED",
+      "evidence": "Direct curl/getent to fapi.binance.com failed DNS; HTTP 000 for /fapi/v1/time, exchangeInfo, klines, premiumIndex, openInterest and ticker/24hr. Binance connector returned current market data but does not expose HTTP status. exchangeInfo.serverTime=2026-11-11T01:01:01.885Z, 2119.115 seconds stale at snapshot time.",
+      "impact": "Connector supports monitoring; direct REST and fresh contract metadata validation unavailable.",
+      "nextAction": "Restore direct DNS/network and require fresh exchangeInfo/time before execution eligibility."
+    },
+    {
+      "capability": "raw historical archive",
+      "status": "PASS",
+      "evidence": "GitHub raw branch research/raw-ohlcv-archive-20261108T1026Z contains 8 verified page-0001 files (12,000 raw rows), page manifests, 3 incremental deltas in this run (80 rows), updated indexes and latest archive manifest; readback succeeded.",
+      "impact": "Historical archive progressed, but page coverage remains partial.",
+      "nextAction": "Continue page-0002 for all four symbols on 5m and 15m."
+    },
+    {
+      "capability": "data quality/coverage",
+      "status": "DEGRADED",
+      "evidence": "Current 16 kline series: 1,904 completed bars and 16 forming bars excluded; zero duplicates, gaps, off-grid, non-monotonic, OHLC, volume or non-finite failures. Page-0001 backfill: 12,000 raw bars, 8 zero-volume bars retained raw and excluded from analysis. 5m/15m remain discontinuous; 4h raw/canonical reconciliation unresolved.",
+      "impact": "No valid multi-year 5m/15m experiment dataset; 4h canonical ends 2026-11-05T16:00Z.",
+      "nextAction": "Continue paged backfill; reconcile 4h row keys and hash provenance."
+    },
+    {
+      "capability": "backtest harness/smoke test",
+      "status": "BLOCKED",
+      "evidence": "Remote scripts/backtest.ts and scripts/conditional-edge.ts exist; local checkout absent, Node/npm below engines, dependencies unavailable; deterministic fixture smoke test NOT_RUN.",
+      "impact": "No strategy experiment and no OOS evaluation.",
+      "nextAction": "Provision compatible checkout/runtime; run tiny fixture twice and no-lookahead test before full experiment."
+    },
+    {
+      "capability": "disk/storage",
+      "status": "PASS",
+      "evidence": "30 GiB free local disk; GitHub raw archive branch accepts persistent writes.",
+      "impact": "Small incremental artifacts and page files persisted.",
+      "nextAction": "Monitor GitHub file sizes; keep per-symbol pages below Contents API size limits."
+    },
+    {
+      "capability": "artifact readback",
+      "status": "PASS",
+      "evidence": "8 page files, 2 page manifests, 3 incremental delta files/manifests, updated 5m/15m/1h indexes and archive manifests fetched back and verified.",
+      "impact": "Archive artifacts are durable and verifiable.",
+      "nextAction": "Record hashes and continue page sequence."
+    }
+  ],
+  "endpointObservations": {
+    "serverTime": {
+      "directRest": "DNS_FAILURE_HTTP_000",
+      "exchangeInfoServerTimeUtc": "2026-11-11T01:01:01.885Z",
+      "ageSeconds": 2119.115
+    },
+    "exchangeInfo": {
+      "connector": "SUCCESS",
+      "serverTimeFreshness": "STALE",
+      "contractStatusUse": "BLOCKED"
+    },
+    "klines": {
+      "connector": "SUCCESS",
+      "series": 16,
+      "rowsPerSeries": 120,
+      "completedPerSeries": 119,
+      "formingExcludedPerSeries": 1,
+      "httpStatus": "NOT_EXPOSED"
+    },
+    "premiumIndex": {
+      "connector": "SUCCESS",
+      "symbols": 4,
+      "httpStatus": "NOT_EXPOSED"
+    },
+    "openInterest": {
+      "connector": "SUCCESS",
+      "symbols": 4,
+      "httpStatus": "NOT_EXPOSED"
+    },
+    "ticker24hr": {
+      "connector": "SUCCESS",
+      "symbols": 4,
+      "httpStatus": "NOT_EXPOSED"
+    },
+    "fundingHistory": {
+      "connector": "SUCCESS",
+      "symbols": 4,
+      "recordsPerSymbol": 2,
+      "httpStatus": "NOT_EXPOSED"
+    },
+    "openInterestHistory": {
+      "connector": "SUCCESS",
+      "symbols": 4,
+      "period": "1h",
+      "recordsPerSymbol": 2,
+      "httpStatus": "NOT_EXPOSED"
+    },
+    "takerFlow": {
+      "connector": "SUCCESS",
+      "symbols": 4,
+      "period": "1h",
+      "recordsPerSymbol": 2,
+      "httpStatus": "NOT_EXPOSED"
+    },
+    "globalLongShort": {
+      "connector": "SUCCESS",
+      "symbols": 4,
+      "period": "1h",
+      "recordsPerSymbol": 2,
+      "httpStatus": "NOT_EXPOSED"
+    },
+    "depth": {
+      "connector": "SUCCESS",
+      "symbols": 4,
+      "levelsPerSide": 20,
+      "httpStatus": "NOT_EXPOSED"
+    }
+  },
+  "outcome": {
+    "overall": "RESEARCH_EXECUTED",
+    "dataQualityExperiment": "COMPLETED",
+    "strategyExperiment": "RESEARCH_BLOCKED",
+    "oosEvaluated": false,
+    "monitoring": "COMPLETED"
+  }
+}

@@ -1,0 +1,157 @@
+{
+  "schema_version": "1.0.0",
+  "run_id": "context-strategy-20261111T1926Z-auto32",
+  "as_of_utc": "2026-11-11T19:26:35.000Z",
+  "environment": {
+    "runtime": "managed shell plus managed V8 Code Mode; no local project workspace",
+    "cwd": "/",
+    "os": "Linux 6.18.57 x86_64",
+    "python": "3.13.5",
+    "node": "v22.16.0",
+    "npm": "10.9.2",
+    "pnpm": "UNAVAILABLE",
+    "yarn": "UNAVAILABLE",
+    "docker": "UNAVAILABLE",
+    "cpu_cores": 3,
+    "memory_total_kb": 6091004,
+    "memory_available_kb": 4945220,
+    "disk_total_gb": 32,
+    "disk_used_gb": 5.3,
+    "disk_free_gb": 30,
+    "local_repository": "NOT_PRESENT",
+    "remote_repository": "shubhamtaywade82/crypto-trading-agent",
+    "required_node": " >=24",
+    "required_npm": ">=11",
+    "binance_sdk_packages": {
+      "@nemesis-oss/binance-sdk": "NOT_INSTALLED",
+      "binance": "NOT_INSTALLED",
+      "@binance/connector": "NOT_INSTALLED",
+      "binance-api-node": "NOT_INSTALLED"
+    }
+  },
+  "direct_rest_probes": [
+    {
+      "endpoint": "GET /fapi/v1/time",
+      "http_status": 0,
+      "result": "DNS resolution failed; curl exit 6"
+    },
+    {
+      "endpoint": "GET /fapi/v1/exchangeInfo",
+      "http_status": 0,
+      "result": "DNS resolution timed out; curl exit 28"
+    },
+    {
+      "endpoint": "GET /fapi/v1/klines?symbol=BTCUSDT&interval=1h&limit=1",
+      "http_status": 0,
+      "result": "DNS resolution failed; curl exit 6"
+    },
+    {
+      "endpoint": "GET /fapi/v1/premiumIndex?symbol=BTCUSDT",
+      "http_status": 0,
+      "result": "DNS resolution timed out; curl exit 28"
+    },
+    {
+      "endpoint": "GET /fapi/v1/openInterest?symbol=BTCUSDT",
+      "http_status": 0,
+      "result": "DNS resolution failed; curl exit 6"
+    },
+    {
+      "endpoint": "GET /fapi/v1/ticker/24hr?symbol=BTCUSDT",
+      "http_status": 0,
+      "result": "DNS resolution timed out; curl exit 28"
+    }
+  ],
+  "connector_endpoints": {
+    "klines": "PASS; 4 symbols x 4 intervals; HTTP status/headers not exposed",
+    "premiumIndex": "PASS; mark/funding timestamps around 2026-11-11T19:26:11Z",
+    "ticker24h": "PASS; close timestamps 2026-11-11T19:26:16Z to 19:26:20Z",
+    "openInterest": "PASS; timestamps 2026-11-11T19:26:19Z to 19:26:23Z",
+    "fundingRateHistory": "PASS; latest settlement 2026-11-11T16:00:00Z",
+    "openInterestHist": "PASS; latest point timestamp 19:00Z is an in-progress hourly bucket",
+    "takerLongShortRatio": "PASS; latest completed hourly point 18:00Z",
+    "globalLongShortAccountRatio": "PASS; latest point 19:00Z",
+    "basis": "PASS; latest point 18:00Z",
+    "bookTicker": "PASS; top-of-book timestamps 19:26:23Z to 19:26:25Z"
+  },
+  "exchange_metadata": {
+    "endpoint": "GET /fapi/v1/exchangeInfo via Binance connector",
+    "server_time_utc": "2026-11-11T10:18:31.943Z",
+    "reference_mark_time_utc": "2026-11-11T19:26:12Z",
+    "drift_seconds": 32860.057,
+    "allowed_drift_seconds": 60,
+    "status": "BLOCKED_STALE"
+  },
+  "archive": {
+    "prior_branch": "research/raw-ohlcv-archive-20261111T1230Z-auto31",
+    "new_branch": "research/raw-ohlcv-archive-20261111T1926Z-auto32",
+    "delta_path": "research-data/binance-usdm/delta/binance_usdm_delta_20261111T1926Z_5m15m1h4h_completed.jsonl",
+    "delta_rows": 472,
+    "delta_bytes": 132548,
+    "delta_sha256": "69de39cd5130f37a0fb007471032d6c980fda0b7b35a3a04b4bee45ce3414036",
+    "manifest_path": "research-data/binance-usdm/delta/manifest-20261111T1926Z-5m15m1h4h.json",
+    "manifest_sha256": "a7dbd3d39ad87987da11268da6167789bcf3d1c8773197a750c2e00330901dc9",
+    "readback_verified": true
+  },
+  "checks": [
+    {
+      "capability": "shell/compute",
+      "status": "DEGRADED",
+      "evidence": "Linux x86_64; Python 3.13.5; Node 22.16.0; 3 CPU; ~5.8 GiB RAM; 30 GiB free disk",
+      "impact": "V8 data-quality computation ran; project Node harness cannot run",
+      "next_action": "Provide Node >=24/npm >=11 runtime and local worktree"
+    },
+    {
+      "capability": "repo/code",
+      "status": "DEGRADED",
+      "evidence": "GitHub remote repo and source files accessible; cwd has no .git checkout",
+      "impact": "Harness source can be inspected but not invoked from repository",
+      "next_action": "Mount exact repository commit locally"
+    },
+    {
+      "capability": "network/Binance endpoints",
+      "status": "DEGRADED",
+      "evidence": "Direct REST probes HTTP 000 due DNS; connector data requests succeeded; connector metadata serverTime stale by 32860.057s",
+      "impact": "Fresh candles/market metrics available; contract status/execution validation blocked",
+      "next_action": "Restore direct DNS or uncached server-time/exchangeInfo path; require <=60s drift"
+    },
+    {
+      "capability": "raw historical archive",
+      "status": "PASS",
+      "evidence": "Remote 4h archive pages and delta lineage accessible; 472-row delta committed to new branch",
+      "impact": "Incremental raw data preserved; full multi-timeframe common-start audit remains open",
+      "next_action": "Audit 1h pages and backfill 5m/15m to common start"
+    },
+    {
+      "capability": "data quality/coverage",
+      "status": "PASS",
+      "evidence": "16 series; 119 completed/1 forming in each 120-bar window; appended 472 rows; 0 duplicate/gap/OHLC/volume/nonfinite/off-grid defects; cross-symbol aligned",
+      "impact": "Incremental append passed; long-history completeness not established for 5m/15m/1h",
+      "next_action": "Continue bounded backfill and full archive reconciliation"
+    },
+    {
+      "capability": "backtest harness/smoke test",
+      "status": "BLOCKED",
+      "evidence": "Remote JS harness source exists; local checkout absent; Node 22.16.0/npm 10.9.2 below repo requirement Node >=24/npm >=11; Docker and SDK absent",
+      "impact": "No strategy experiment or OOS run; no current-run harness smoke test",
+      "next_action": "Mount exact repo under supported runtime and run deterministic fixture tests"
+    },
+    {
+      "capability": "disk/storage",
+      "status": "PASS",
+      "evidence": "30 GiB free on 32 GiB overlay; GitHub branch write succeeded",
+      "impact": "Remote persistence available; local archive not written",
+      "next_action": "Continue remote append with atomic delta/manifest pattern"
+    },
+    {
+      "capability": "artifact readback",
+      "status": "PASS",
+      "evidence": "Delta 472 rows, 132548 bytes; SHA-256 69de... verified against readback; manifest and checksum file read back",
+      "impact": "Incremental archive persistence confirmed",
+      "next_action": "Read back new research snapshots after writing"
+    }
+  ],
+  "run_classification": "RESEARCH_EXECUTED",
+  "experiment_scope": "incremental archive integrity only",
+  "oos_evaluated": false,
+  "contract_status_validation": "BLOCKED_STALE_METADATA"
+}

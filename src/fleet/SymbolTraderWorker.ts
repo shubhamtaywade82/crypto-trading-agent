@@ -14,7 +14,9 @@ export interface SymbolWorkerConfig {
   apiKey: string;
   marginPerPosition: number;
   leverage: number;
-  /** When false, no entry is submitted: this path sizes by fixed margin and takes the LLM's stop distance unbounded (spec section 2, R1). Exits still run. */
+  /** Max loss at the stop as a % of `marginPerPosition`; caps quantity so a wide LLM stop cannot size a large loss. */
+  riskPerTradePct: number;
+  /** When false, no entry is submitted. Exits still run. */
   entriesEnabled: boolean;
   /** Ollama tag of the model driving this worker's decisions; recorded on every opened position for attribution. */
   modelTag: string;
@@ -239,8 +241,8 @@ export class SymbolTraderWorker {
   private async executeEntry(rec: LlmTradeRecommendation, markPrice: number): Promise<void> {
     // The only entry submission: refused while paused, even if evaluate() were ever changed to reach it
     if (!this.config.entriesEnabled) return;
-    const notional = this.config.marginPerPosition * 0.98 * this.config.leverage;
-    const quantity = Number((notional / markPrice).toFixed(4));
+    const quantity = fleetEntryQuantity(this.config, markPrice, Math.abs(markPrice - rec.stopLoss));
+    if (!(quantity > 0)) return;
     const side = rec.action === 'ENTER_LONG' ? 'buy' : 'sell';
     this.status.lastDecision = `${rec.action} @ ${markPrice} | SL: ${rec.stopLoss} | TP: ${rec.takeProfit} (${rec.reason})`;
 
@@ -482,4 +484,15 @@ export class SymbolTraderWorker {
     if (diffPct < -0.3) return 'BEARISH';
     return 'SIDEWAYS';
   }
+}
+
+/**
+ * Risk-capped size: the fixed-margin notional, cut down so a stop-out loses at most `riskPerTradePct` of the margin.
+ * Without the cap a 10x position with a 1.5% stop loses ~15% of the account per trade.
+ */
+export function fleetEntryQuantity(config: Pick<SymbolWorkerConfig, 'marginPerPosition' | 'leverage' | 'riskPerTradePct'>, markPrice: number, stopDistance: number): number {
+  if (!(markPrice > 0) || !(stopDistance > 0)) return 0;
+  const notionalCap = (config.marginPerPosition * 0.98 * config.leverage) / markPrice;
+  const riskCap = (config.marginPerPosition * config.riskPerTradePct) / 100 / stopDistance;
+  return Number(Math.min(notionalCap, riskCap).toFixed(4));
 }

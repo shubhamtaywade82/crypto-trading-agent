@@ -215,6 +215,7 @@ export class FleetSupervisor extends EventEmitter {
           apiKey: fleetConfig.paperExchange.apiKey,
           marginPerPosition: 1000,
           leverage: 10,
+          riskPerTradePct: config.risk.riskPerTradePct,
           entriesEnabled: fleetConfig.entriesEnabled,
           modelTag,
           // [FLEET] Telegram cards on the shared bot config. Fire-and-forget by design: a

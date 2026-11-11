@@ -8,13 +8,15 @@
 import { execSync } from 'node:child_process';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { loadFunding, loadMetrics, type FundingPoint, type MetricsPoint } from '../src/backtesting/archiveDerivatives.js';
-import { fetchArchiveKlines, fetchArchiveMarkPriceKlines } from '../src/backtesting/archiveKlines.js';
+import { fetchArchiveMarkPriceKlines, mirrorFirstFetch } from '../src/backtesting/archiveKlines.js';
+import { fetchFlowMinutes } from '../src/market/directional/archive-flow.js';
+import { crowdingSignalAt, type CrowdingData } from '../src/research/CrowdingReplay.js';
 import { resampleCandles } from '../src/market/TimeframeEngine.js';
 import { mulberry32 } from '../src/research/Bootstrap.js';
 import { breakoutB1, fundingFadeE1, fundingStates, hourContext, meanReversionC1, momentumBenchmark, type HourContext } from '../src/research/CandidateSignals.js';
 import { acceptance, type Fold, type SymbolTrade } from '../src/research/G5Acceptance.js';
 import { classifyRegime, regimeFeatures, type RegimeFeatures } from '../src/research/RegimeClassifier.js';
-import { HOUR_MS, MINUTE_MS, runStrategy, simulateTrade, type Market, type MinuteSeries, type Signal } from '../src/research/SignalBacktest.js';
+import { HOUR_MS, MINUTE_MS, runOnBars, runStrategy, simulateTrade, type Market, type MinuteSeries, type Signal, type Trade } from '../src/research/SignalBacktest.js';
 import type { Candle } from '../src/types.js';
 
 const SYMBOLS = ['SOLUSDT', 'ETHUSDT', 'XRPUSDT'];
@@ -24,37 +26,71 @@ const LEVERAGE = 5; // MIN_LEVERAGE default; at 1% risk with ATR stops the posit
 const MMR = 0.01; // Binance tier-1 maintenance margin rate for these contracts' smallest bracket
 
 type Factory = (sym: SymbolData) => (hour: number) => Signal | null;
-interface Variant { id: string; strategy: string; axes: number[]; make: Factory }
-interface SymbolData { symbol: string; market: Market; ctx: HourContext; hours: number }
+interface Variant { id: string; strategy: string; axes: number[]; make?: Factory; runTrades?: (sym: SymbolData) => Trade[] }
+interface SymbolData { symbol: string; market: Market; ctx: HourContext; hours: number; crowding: CrowdingData }
 
-async function minuteSeries(symbol: string, mark: boolean, from: number, to: number): Promise<{ series: MinuteSeries; hours: Candle[] }> {
-  const n = (to - from) / MINUTE_MS;
-  const series: MinuteSeries = { start: from, open: new Float64Array(n).fill(NaN), high: new Float64Array(n).fill(NaN), low: new Float64Array(n).fill(NaN), close: new Float64Array(n).fill(NaN) };
-  const hours: Candle[] = [];
+interface Loaded { series: MinuteSeries; hours: Candle[]; quarters: Candle[]; takerByHour: Map<number, { buy: number; total: number }> }
+
+const emptySeries = (from: number, n: number): MinuteSeries => ({ start: from, open: new Float64Array(n).fill(NaN), high: new Float64Array(n).fill(NaN), low: new Float64Array(n).fill(NaN), close: new Float64Array(n).fill(NaN) });
+
+function fill(series: MinuteSeries, candles: readonly Candle[]): void {
+  for (const c of candles) {
+    const i = (c.openTime - series.start) / MINUTE_MS;
+    series.open[i] = c.open; series.high[i] = c.high; series.low[i] = c.low; series.close[i] = c.close;
+  }
+}
+
+/** Trade 1m bars with taker volume (full-column archive rows), month by month, plus 1h/15m bars and hourly taker volume. */
+async function tradeMinutes(symbol: string, from: number, to: number): Promise<Loaded> {
+  const loaded: Loaded = { series: emptySeries(from, (to - from) / MINUTE_MS), hours: [], quarters: [], takerByHour: new Map() };
   for (let start = from; start < to;) {
     const d = new Date(start);
     const end = Math.min(to, Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 1));
-    const { candles } = await (mark ? fetchArchiveMarkPriceKlines(symbol, '1m', start, end) : fetchArchiveKlines(symbol, '1m', start, end));
-    for (const c of candles) {
-      const i = (c.openTime - from) / MINUTE_MS;
-      series.open[i] = c.open; series.high[i] = c.high; series.low[i] = c.low; series.close[i] = c.close;
+    const { minutes } = await fetchFlowMinutes(symbol, start, end, mirrorFirstFetch);
+    const candles = minutes.map((m) => ({ openTime: m.openTime, open: m.open, high: m.high, low: m.low, close: m.close, volume: m.baseVolume }));
+    fill(loaded.series, candles);
+    for (const m of minutes) {
+      const hour = Math.floor(m.openTime / HOUR_MS) * HOUR_MS;
+      const acc = loaded.takerByHour.get(hour) ?? { buy: 0, total: 0 };
+      acc.buy += m.takerBuyBaseVolume; acc.total += m.baseVolume;
+      loaded.takerByHour.set(hour, acc);
     }
-    if (!mark) hours.push(...resampleCandles(candles, '1h'));
+    loaded.hours.push(...resampleCandles(candles, '1h'));
+    loaded.quarters.push(...resampleCandles(candles, '15m'));
     start = end;
   }
-  return { series, hours };
+  return loaded;
+}
+
+async function markMinutes(symbol: string, from: number, to: number): Promise<MinuteSeries> {
+  const series = emptySeries(from, (to - from) / MINUTE_MS);
+  for (let start = from; start < to;) {
+    const d = new Date(start);
+    const end = Math.min(to, Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 1));
+    fill(series, (await fetchArchiveMarkPriceKlines(symbol, '1m', start, end)).candles);
+    start = end;
+  }
+  return series;
 }
 
 async function loadSymbol(symbol: string, btc: Map<number, RegimeFeatures>, from: number, to: number) {
-  const trade = await minuteSeries(symbol, false, from, to);
-  const mark = await minuteSeries(symbol, true, from, to);
+  const trade = await tradeMinutes(symbol, from, to);
+  const mark = { series: await markMinutes(symbol, from, to) };
   const features = regimeFeatures(trade.hours);
   const regimes = trade.hours.map((b, i) => classifyRegime(features[i]!, btc.get(b.openTime)));
   const funding = await loadFunding(symbol, from, to);
   const metrics = await loadMetrics(symbol, from - 2 * 86_400_000, to);
   const fundingByMinute = new Map(funding.points.map((p) => [Math.floor((p.time - from) / MINUTE_MS), p.rate]));
   const market: Market = { trade: trade.series, mark: mark.series, fundingByMinute, hourStart: from, leverage: LEVERAGE, mmr: MMR };
-  const data: SymbolData = { symbol, market, ctx: hourContext(trade.hours, features, regimes), hours: trade.hours.length };
+  const markBefore = (time: number): number => {
+    const i = (time - from) / MINUTE_MS - 1;
+    return Number.isFinite(mark.series.close[i]!) ? mark.series.close[i]! : trade.series.close[i]!;
+  };
+  const crowding: CrowdingData = {
+    bars15: trade.quarters, bars1h: trade.hours, bars4h: resampleCandles(trade.hours, '4h'), takerByHour: trade.takerByHour,
+    metrics: metrics.points, funding: funding.points, markBefore,
+  };
+  const data: SymbolData = { symbol, market, ctx: hourContext(trade.hours, features, regimes), hours: trade.hours.length, crowding };
   return { data, funding: funding.points, metrics: metrics.points };
 }
 
@@ -68,6 +104,10 @@ function variants(e1: Map<string, FundingInputs>): Variant[] {
     id: `E1:Q=${q * 100},OI=${oi ? 'on' : 'off'}`, strategy: 'E1', axes: [a, b],
     make: (s) => { const d = e1.get(`${s.symbol}|${q}`)!; return fundingFadeE1(s.ctx, d, d.metrics, { quantile: q, requireOiRise: oi }); },
   })));
+  [1.2, 1.5, 2].forEach((rr, a) => out.push({
+    id: `E2:minRR=${rr}`, strategy: 'E2', axes: [a],
+    runTrades: (s) => runOnBars(s.market, s.crowding.bars15.length, crowdingSignalAt(s.crowding, s.ctx, rr), (k) => s.crowding.bars15[k]!.openTime + 15 * MINUTE_MS),
+  }));
   return out;
 }
 
@@ -96,7 +136,7 @@ function matchedRandom(trades: SymbolTrade[], data: Map<string, SymbolData>, see
 }
 
 async function main(): Promise<void> {
-  const btcHours = (await minuteSeries('BTCUSDT', false, DEV_FROM, DEV_TO)).hours;
+  const btcHours = (await tradeMinutes('BTCUSDT', DEV_FROM, DEV_TO)).hours;
   const btcFeatures = regimeFeatures(btcHours);
   const btc = new Map(btcHours.map((b, i) => [b.openTime, btcFeatures[i]!]));
   const data = new Map<string, SymbolData>();
@@ -111,13 +151,13 @@ async function main(): Promise<void> {
   const tradesByVariant = new Map<string, SymbolTrade[]>();
   for (const v of allVariants) {
     const trades: SymbolTrade[] = [];
-    for (const s of data.values()) trades.push(...runStrategy(s.market, s.hours, v.make(s)).map((t) => ({ ...t, symbol: s.symbol })));
+    for (const s of data.values()) trades.push(...(v.runTrades ? v.runTrades(s) : runStrategy(s.market, s.hours, v.make!(s))).map((t) => ({ ...t, symbol: s.symbol })));
     tradesByVariant.set(v.id, trades);
     console.log(`  ${v.id.padEnd(22)} trades ${trades.length}`);
   }
   const momentum: SymbolTrade[] = [];
   for (const s of data.values()) momentum.push(...runStrategy(s.market, s.hours, momentumBenchmark(s.ctx)).map((t) => ({ ...t, symbol: s.symbol })));
-  const results = ['B1', 'C1', 'E1'].map((strategy) => acceptance({
+  const results = ['B1', 'C1', 'E1', 'E2'].map((strategy) => acceptance({
     strategy, variants: allVariants.filter((v) => v.strategy === strategy), allVariants, tradesByVariant, folds: FOLDS, momentum,
     randomFor: (trades) => matchedRandom(trades, data, 2026), symbols: SYMBOLS, trialCount: 27,
   }));
@@ -126,7 +166,7 @@ async function main(): Promise<void> {
   const dirty = execSync('git status --porcelain -- src scripts').toString().trim().length > 0;
   mkdirSync('research-runs', { recursive: true });
   const out = `research-runs/g5-dev-${new Date().toISOString().replace(/[:.]/g, '').slice(0, 15)}Z.json`;
-  writeFileSync(out, JSON.stringify({ commit, dirty, window: { from: '2023-01-01', to: '2025-01-01' }, folds: FOLDS, leverage: LEVERAGE, mmr: MMR, notTested: { E2: 'needs a historical MarketState replay (crowding, sweeps, liquidity pools) for CrowdingAgent; not built' }, results: results.map(({ lines, ...r }) => r) }, null, 1));
+  writeFileSync(out, JSON.stringify({ commit, dirty, window: { from: '2023-01-01', to: '2025-01-01' }, folds: FOLDS, leverage: LEVERAGE, mmr: MMR, e2ReplayNotes: 'funding = last settled rate (live: predicted); taker ratio = last closed hour from 1m klines; ratios = 5m archive snapshot usable at bar close; 48h time cap', results: results.map(({ lines, ...r }) => r) }, null, 1));
   console.log(`\nreport: ${out}`);
 }
 

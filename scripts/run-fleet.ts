@@ -99,6 +99,7 @@ async function main() {
         apiKey: paperExchange.apiKey,
         marginPerPosition: 1000,
         leverage: 10,
+        riskPerTradePct: config.risk.riskPerTradePct,
         entriesEnabled,
         modelTag,
         onTradeEvent: (event) => {

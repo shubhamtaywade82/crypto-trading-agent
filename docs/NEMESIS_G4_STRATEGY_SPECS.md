@@ -175,7 +175,7 @@ Order is by priority, from §1 evidence and data now available.
 
 ## 7. G5 result (development window, 2023-01 → 2024-12)
 
-Run: `npx tsx scripts/g5-backtest.ts` → `research-runs/g5-dev-2026-11-11T0902Z.json` (commit `7fd87b7` + uncommitted
+Run: `npx tsx scripts/g5-backtest.ts` → `research-runs/g5-dev-2026-11-11T0915Z.json` (commit `7fd87b7` + uncommitted
 G0–G5 work). Walk-forward test folds 2023-07 → 2024-12, six 3-month folds, variant chosen per fold on its 6-month train.
 
 | Strategy | Edge | Instruments | Dir | Regime gate | TF | Trades | Gross R | Net R | 90% LCB | 1.5× cost | DSR | Verdict |
@@ -183,11 +183,15 @@ G0–G5 work). Walk-forward test folds 2023-07 → 2024-12, six 3-month folds, v
 | B1 compression breakout | expansion after quiet | SOL/ETH/XRP | L/S | not STRESS | 1h/1m | 186 | −0.067 | −0.173 | −0.287 | −0.224 | 0.002 | **REJECTED** |
 | C1 quiet-range reversion | stretch reverts | SOL/ETH/XRP | L/S | RV pct < 0.5 | 1h/1m | 343 | −0.095 | −0.202 | −0.309 | −0.257 | 0.000 | **REJECTED** |
 | E1 funding-extreme fade | crowd pays, then unwinds | SOL/ETH/XRP | L/S | not STRESS | 1h/1m | 666 | −0.049 | −0.113 | −0.178 | −0.146 | 0.001 | **REJECTED** |
-| E2 crowding fade | sweep exhaustion | — | — | — | — | — | — | — | — | — | — | **NOT TESTED** |
+| E2 crowding fade | sweep exhaustion | SOL/ETH/XRP | L/S | not STRESS | 15m/1m | 3293 | −0.017 | −0.233 | −0.275 | −0.346 | 0.000 | **REJECTED** |
 
 - Every strategy is negative **before** costs, on every symbol, and fails 6 of 7 checks; only the trade-count check passes.
+- E2 is ~flat before costs (−0.017R) but its 15m-ATR stops are tight, so 12 bps round trip costs 0.225R per trade. It
+  fires 3,293 times in 18 months: the agent's crowding thresholds (e.g. top-trader position ratio ≥ 1.7) are met most of
+  the time, so "crowded" is not an extreme on these symbols.
 - B1 and C1 also lose to the matched random-entry baseline (−0.098R, −0.170R); E1 beats random (−0.144R) but not the
   24h momentum benchmark (−0.062R), and is itself negative.
-- E2 was not run: `CrowdingAgent` needs a historical `MarketState` (crowding, sweeps, liquidity pools) that no replay
-  builds yet. It stays in the variant count (N = 27), which makes the deflated Sharpe stricter, not looser.
+- E2 replays the live agent's own decision (`crowdingFade`, extracted from `CrowdingAgent`) on a `MarketState` rebuilt
+  at every closed 15m bar by `src/research/CrowdingReplay.ts`. Known gaps vs live: settled (not predicted) funding,
+  1h taker ratio from 1m klines, 5m ratio snapshots usable at bar close, and a 48h time cap the agent does not define.
 - Per §4, no strategy reached PASSED_DEV, so the untouched 2025-01 → 2026-10 window was **not** read and stays sealed.

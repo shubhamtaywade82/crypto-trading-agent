@@ -32,6 +32,10 @@ export interface Signal {
   /** Index of the closed 1h bar that produced the signal. */
   hour: number;
   stopDistance: number;
+  /** Absolute stop (e.g. behind a sweep). When set, the risk distance is measured from the actual fill to it. */
+  stopPrice?: number;
+  /** Entry minute for signals that are not on a 1h close (e.g. 15m); defaults to the open after `hour` closes. */
+  entryTime?: number;
   target?: number;
   /** Chandelier trail distance in price, ratcheted on 1h closes. */
   trailDistance?: number;
@@ -56,11 +60,16 @@ const ENGINE = new PerpetualExecutionEngine();
 
 interface Open { signal: Signal; entryIndex: number; entry: number; stop: number; extreme: number; fundingPerUnit: number; markGap: boolean; liquidation: number }
 
-function openPosition(market: Market, signal: Signal): Open | null {
-  const entryTime = market.hourStart + (signal.hour + 1) * HOUR_MS;
+function openPosition(market: Market, requested: Signal): Open | null {
+  let signal = requested;
+  const entryTime = signal.entryTime ?? market.hourStart + (signal.hour + 1) * HOUR_MS;
   const entryIndex = (entryTime - market.trade.start) / MINUTE_MS;
   const entry = market.trade.open[entryIndex];
   if (entry === undefined || !Number.isFinite(entry)) return null;
+  if (signal.stopPrice !== undefined) {
+    if (signal.side * (entry - signal.stopPrice) <= 0) return null; // filled through the stop: the setup is gone
+    signal = { ...signal, stopDistance: Math.abs(entry - signal.stopPrice) };
+  }
   const liquidation = ENGINE.calculateLiquidationPrice({ entryPrice: entry, leverage: market.leverage, mmr: market.mmr, isLong: signal.side === 1 });
   return { signal, entryIndex, entry, stop: entry - signal.side * signal.stopDistance, extreme: entry, fundingPerUnit: 0, markGap: false, liquidation };
 }
@@ -147,6 +156,21 @@ export function runStrategy(market: Market, hours: number, signalAt: (hour: numb
     if (!trade) continue;
     trades.push(trade);
     hour = Math.floor((trade.exitTime - market.hourStart) / HOUR_MS) - 1; // the exit hour's own close may signal again
+  }
+  return trades;
+}
+
+/** Like runStrategy for signals on any bar grid: `closeTimeOf(k)` is when bar k closes; bars closing before the last exit are skipped. */
+export function runOnBars(market: Market, count: number, signalAt: (k: number) => Signal | null, closeTimeOf: (k: number) => number, costs: CostModel = DEFAULT_COSTS): Trade[] {
+  const trades: Trade[] = [];
+  let flatFrom = -Infinity;
+  for (let k = 0; k < count; k += 1) {
+    if (closeTimeOf(k) < flatFrom) continue;
+    const signal = signalAt(k);
+    const trade = signal ? simulateTrade(market, signal, costs) : null;
+    if (!trade) continue;
+    trades.push(trade);
+    flatFrom = trade.exitTime;
   }
   return trades;
 }

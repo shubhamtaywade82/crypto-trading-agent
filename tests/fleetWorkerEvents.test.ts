@@ -4,7 +4,7 @@ import type { AddressInfo } from 'node:net';
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { test } from 'node:test';
-import { SymbolTraderWorker } from '../src/fleet/SymbolTraderWorker.js';
+import { fleetEntryQuantity, SymbolTraderWorker } from '../src/fleet/SymbolTraderWorker.js';
 import type { FleetLlmService } from '../src/fleet/FleetLlmService.js';
 import type { FleetTradeEvent } from '../src/fleet/FleetTelegram.js';
 import type { Candle } from '../src/types.js';
@@ -170,6 +170,7 @@ test('a worker emits ENTRY, BREAK_EVEN and EXIT trade events across a full posit
         apiKey: 'test-key',
         marginPerPosition: 1000,
         leverage: 10,
+        riskPerTradePct: 1,
         entriesEnabled: true,
         modelTag: 'qwen3.5:2b',
         onTradeEvent: (event) => events.push(event),
@@ -198,7 +199,7 @@ test('a worker emits ENTRY, BREAK_EVEN and EXIT trade events across a full posit
     assert.equal(entry.entryPrice, 100);
     assert.equal(entry.stopLoss, 95);
     assert.equal(entry.takeProfit, 110);
-    assert.equal(entry.quantity, 98, 'notional 1000 * 0.98 * 10x / 100');
+    assert.equal(entry.quantity, 2, '1% of 1000 = 10 at risk over a 5-point stop; the 98-unit margin cap is not binding');
     assert.equal(entry.leverage, 10);
     assert.equal(entry.note, 'reclaimed support');
     assert.equal(exchange.orders.length, 1, 'exactly one entry order was submitted');
@@ -226,8 +227,8 @@ test('a worker emits ENTRY, BREAK_EVEN and EXIT trade events across a full posit
     assert.equal(exit.action, 'TAKE_PROFIT');
     assert.equal(exit.price, 111);
     assert.equal(exit.entryPrice, 100);
-    assert.equal(exit.pnl, 1078, '(111 - 100) * 98');
-    assert.equal(exit.quantity, 98);
+    assert.equal(exit.pnl, 22, '(111 - 100) * 2');
+    assert.equal(exit.quantity, 2);
     assert.equal(exit.stopLoss, 100, 'reports the guarding level at exit (the BE stop)');
     assert.equal(exit.takeProfit, 110);
     assert.equal(exchange.orders.length, 2);
@@ -254,6 +255,7 @@ test('shadow mode never emits trade events (no order, no notification)', async (
         apiKey: 'test-key',
         marginPerPosition: 1000,
         leverage: 10,
+        riskPerTradePct: 1,
         entriesEnabled: false,
         modelTag: 'qwen3.5:2b',
         onTradeEvent: (event) => events.push(event),
@@ -283,6 +285,7 @@ test('a throwing notification sink never breaks trading', async () => {
         apiKey: 'test-key',
         marginPerPosition: 1000,
         leverage: 10,
+        riskPerTradePct: 1,
         entriesEnabled: true,
         modelTag: 'qwen3.5:2b',
         onTradeEvent: () => {
@@ -305,4 +308,11 @@ test('a throwing notification sink never breaks trading', async () => {
     await exchange.close();
     restoreState(snapshot);
   }
+});
+
+test('fleet entry size is the smaller of the margin notional and the risk budget over the stop', () => {
+  const cfg = { marginPerPosition: 1000, leverage: 10, riskPerTradePct: 1 };
+  assert.equal(fleetEntryQuantity(cfg, 100, 5), 2, 'risk cap binds: 10 / 5');
+  assert.equal(fleetEntryQuantity(cfg, 100, 0.05), 98, 'margin cap binds on a very tight stop');
+  assert.equal(fleetEntryQuantity(cfg, 100, 0), 0, 'no stop distance, no entry');
 });

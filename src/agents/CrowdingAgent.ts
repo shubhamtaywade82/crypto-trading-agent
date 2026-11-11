@@ -42,64 +42,59 @@ export class CrowdingAgent extends BaseAgent {
 
   private evaluateSymbol(symbol: string, state: MarketState): Signal | null {
     if (this.lastHandledTime.get(symbol) === state.generatedAt) return null;
-    const crowding = state.crowding;
-    if (!crowding || crowding.positioningExtreme === 'BALANCED') return null;
-
-    const atr = state.timeframes['15m'].atr14 ?? state.timeframes['1h'].atr14 ?? 0;
-    if (atr <= 0) return null;
-
-    if (crowding.positioningExtreme === 'LONG_CROWDED' && state.pricing.premium) {
-      return this.buildFadeLongs(symbol, state, atr);
-    }
-    if (crowding.positioningExtreme === 'SHORT_CROWDED' && state.pricing.discount) {
-      return this.buildFadeShorts(symbol, state, atr);
-    }
-    return null;
-  }
-
-  private buildFadeLongs(symbol: string, state: MarketState, atr: number): Signal | null {
-    // Only fade over-leveraged longs if buy-side liquidity was swept at resistance
-    const sweep = state.liquidity.ltf.latestSweeps.find((s) => s.direction === 'BUY_SIDE');
-    if (!sweep) return null;
-
-    const entry = state.mark;
-    const stopLoss = Math.max(sweep.sweepPrice, entry + 1.2 * atr);
-    const target = nearestPoolWithRewardRisk(state, 'SHORT', entry, stopLoss - entry, this.minimumRewardRisk);
-    if (!target) return null;
-
+    const fade = crowdingFade(state, this.minimumRewardRisk);
+    if (!fade) return null;
     this.lastHandledTime.set(symbol, state.generatedAt);
     return this.signal({
       symbol,
-      type: 'OPEN_SHORT',
+      type: fade.side === 'SHORT' ? 'OPEN_SHORT' : 'OPEN_LONG',
       confidence: 0.85,
-      entry,
-      stopLoss,
-      takeProfit: target.pool.price,
-      reason: `Fading LONG_CROWDED at premium after buy-side sweep at ${sweep.sweepPrice}; target ${target.pool.type} ${target.pool.price} (${target.rewardRisk.toFixed(2)}R)`,
+      entry: fade.entry,
+      stopLoss: fade.stopLoss,
+      takeProfit: fade.takeProfit,
+      reason: fade.reason,
       ts: state.generatedAt,
     });
   }
+}
 
-  private buildFadeShorts(symbol: string, state: MarketState, atr: number): Signal | null {
-    // Only squeeze over-leveraged shorts if sell-side liquidity was swept at support
-    const sweep = state.liquidity.ltf.latestSweeps.find((s) => s.direction === 'SELL_SIDE');
-    if (!sweep) return null;
+export interface CrowdingFade { side: 'LONG' | 'SHORT'; entry: number; stopLoss: number; takeProfit: number; reason: string }
 
-    const entry = state.mark;
-    const stopLoss = Math.min(sweep.sweepPrice, entry - 1.2 * atr);
-    const target = nearestPoolWithRewardRisk(state, 'LONG', entry, entry - stopLoss, this.minimumRewardRisk);
-    if (!target) return null;
+/** The agent's decision as a pure function of one MarketState, so history can replay exactly what live would do. */
+export function crowdingFade(state: MarketState, minimumRewardRisk: number): CrowdingFade | null {
+  const crowding = state.crowding;
+  if (!crowding || crowding.positioningExtreme === 'BALANCED') return null;
+  const atr = state.timeframes['15m'].atr14 ?? state.timeframes['1h'].atr14 ?? 0;
+  if (atr <= 0) return null;
+  if (crowding.positioningExtreme === 'LONG_CROWDED' && state.pricing.premium) return fadeLongs(state, atr, minimumRewardRisk);
+  if (crowding.positioningExtreme === 'SHORT_CROWDED' && state.pricing.discount) return fadeShorts(state, atr, minimumRewardRisk);
+  return null;
+}
 
-    this.lastHandledTime.set(symbol, state.generatedAt);
-    return this.signal({
-      symbol,
-      type: 'OPEN_LONG',
-      confidence: 0.85,
-      entry,
-      stopLoss,
-      takeProfit: target.pool.price,
-      reason: `Squeezing SHORT_CROWDED at discount after sell-side sweep at ${sweep.sweepPrice}; target ${target.pool.type} ${target.pool.price} (${target.rewardRisk.toFixed(2)}R)`,
-      ts: state.generatedAt,
-    });
-  }
+function fadeLongs(state: MarketState, atr: number, minimumRewardRisk: number): CrowdingFade | null {
+  // Only fade over-leveraged longs if buy-side liquidity was swept at resistance
+  const sweep = state.liquidity.ltf.latestSweeps.find((s) => s.direction === 'BUY_SIDE');
+  if (!sweep) return null;
+  const entry = state.mark;
+  const stopLoss = Math.max(sweep.sweepPrice, entry + 1.2 * atr);
+  const target = nearestPoolWithRewardRisk(state, 'SHORT', entry, stopLoss - entry, minimumRewardRisk);
+  if (!target) return null;
+  return {
+    side: 'SHORT', entry, stopLoss, takeProfit: target.pool.price,
+    reason: `Fading LONG_CROWDED at premium after buy-side sweep at ${sweep.sweepPrice}; target ${target.pool.type} ${target.pool.price} (${target.rewardRisk.toFixed(2)}R)`,
+  };
+}
+
+function fadeShorts(state: MarketState, atr: number, minimumRewardRisk: number): CrowdingFade | null {
+  // Only squeeze over-leveraged shorts if sell-side liquidity was swept at support
+  const sweep = state.liquidity.ltf.latestSweeps.find((s) => s.direction === 'SELL_SIDE');
+  if (!sweep) return null;
+  const entry = state.mark;
+  const stopLoss = Math.min(sweep.sweepPrice, entry - 1.2 * atr);
+  const target = nearestPoolWithRewardRisk(state, 'LONG', entry, entry - stopLoss, minimumRewardRisk);
+  if (!target) return null;
+  return {
+    side: 'LONG', entry, stopLoss, takeProfit: target.pool.price,
+    reason: `Squeezing SHORT_CROWDED at discount after sell-side sweep at ${sweep.sweepPrice}; target ${target.pool.type} ${target.pool.price} (${target.rewardRisk.toFixed(2)}R)`,
+  };
 }

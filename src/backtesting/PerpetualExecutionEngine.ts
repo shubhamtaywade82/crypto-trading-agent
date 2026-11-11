@@ -91,6 +91,7 @@ export class PerpetualExecutionEngine {
       quantity: pos.quantity,
     });
 
+    // Binance liquidates on mark price: `bar` must be a mark-price bar, not last-traded, or wicks overstate liquidations
     // Intra-bar wick breach triggers immediate liquidation
     const liquidated = isLong ? bar.low <= liqPrice : bar.high >= liqPrice;
     return { liquidated, liquidationPrice: liqPrice };

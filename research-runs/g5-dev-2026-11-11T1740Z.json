@@ -1,0 +1,717 @@
+{
+ "commit": "deba0c28",
+ "dirty": true,
+ "window": {
+  "from": "2023-01-01",
+  "to": "2025-01-01"
+ },
+ "folds": [
+  {
+   "trainFrom": 1672531200000,
+   "trainTo": 1688169600000,
+   "testFrom": 1688169600000,
+   "testTo": 1696118400000
+  },
+  {
+   "trainFrom": 1680307200000,
+   "trainTo": 1696118400000,
+   "testFrom": 1696118400000,
+   "testTo": 1704067200000
+  },
+  {
+   "trainFrom": 1688169600000,
+   "trainTo": 1704067200000,
+   "testFrom": 1704067200000,
+   "testTo": 1711929600000
+  },
+  {
+   "trainFrom": 1696118400000,
+   "trainTo": 1711929600000,
+   "testFrom": 1711929600000,
+   "testTo": 1719792000000
+  },
+  {
+   "trainFrom": 1704067200000,
+   "trainTo": 1719792000000,
+   "testFrom": 1719792000000,
+   "testTo": 1727740800000
+  },
+  {
+   "trainFrom": 1711929600000,
+   "trainTo": 1727740800000,
+   "testFrom": 1727740800000,
+   "testTo": 1735689600000
+  }
+ ],
+ "leverage": 5,
+ "mmr": 0.01,
+ "e2ReplayNotes": "funding = last settled rate (live: predicted); taker ratio = last closed hour from 1m klines; ratios = 5m archive snapshot usable at bar close; 48h time cap",
+ "results": [
+  {
+   "strategy": "B1",
+   "verdict": "REJECTED",
+   "selections": [
+    "B1:N=96,P=0.2",
+    "B1:N=96,P=0.2",
+    "B1:N=96,P=0.4",
+    "B1:N=48,P=0.4",
+    "B1:N=48,P=0.3",
+    "B1:N=48,P=0.2"
+   ],
+   "checks": [
+    {
+     "id": "1-trades>=100",
+     "pass": true,
+     "detail": "186 trades"
+    },
+    {
+     "id": "2-mean>0-and-lcb>0",
+     "pass": false,
+     "detail": "mean -0.173R, 90% one-sided LCB -0.287R"
+    },
+    {
+     "id": "3-two-of-three-symbols",
+     "pass": false,
+     "detail": "SOLUSDT -0.095R/66, ETHUSDT -0.095R/64, XRPUSDT -0.352R/56"
+    },
+    {
+     "id": "4-costs-1.5x",
+     "pass": false,
+     "detail": "mean at 1.5x costs -0.224R, at 2x -0.276R"
+    },
+    {
+     "id": "5-neighbours",
+     "pass": false,
+     "detail": "modal B1:N=96,P=0.2; B1:N=48,P=0.2 -0.165R, B1:N=96,P=0.3 -0.274R"
+    },
+    {
+     "id": "6-beats-baselines",
+     "pass": false,
+     "detail": "strategy -0.173R vs matched random -0.098R vs momentum -0.062R"
+    },
+    {
+     "id": "7-deflated-sharpe",
+     "pass": false,
+     "detail": "DSR 0.000 (daily SR -0.076, trials 42, trial SR var 9.29e-3)"
+    }
+   ],
+   "stats": {
+    "trades": 186,
+    "meanNetR": -0.17267794394788732,
+    "meanGrossR": -0.06701595331439811,
+    "meanCostR": 0.10299425084133876,
+    "meanFundingR": -0.0026677397921506005,
+    "winRate": 0.2903225806451613,
+    "maxLosingStreak": 13,
+    "ciLow": -0.2867881635196223,
+    "dsr": 5.23796783724606e-10
+   },
+   "bySymbol": {
+    "SOLUSDT": {
+     "trades": 66,
+     "meanNetR": -0.0951755379784458
+    },
+    "ETHUSDT": {
+     "trades": 64,
+     "meanNetR": -0.09531962628090675
+    },
+    "XRPUSDT": {
+     "trades": 56,
+     "meanNetR": -0.3524295711741358
+    }
+   }
+  },
+  {
+   "strategy": "C1",
+   "verdict": "REJECTED",
+   "selections": [
+    "C1:k=2,L=96",
+    "C1:k=3,L=96",
+    "C1:k=3,L=96",
+    "C1:k=3,L=48",
+    "C1:k=2,L=96",
+    "C1:k=2,L=96"
+   ],
+   "checks": [
+    {
+     "id": "1-trades>=100",
+     "pass": true,
+     "detail": "343 trades"
+    },
+    {
+     "id": "2-mean>0-and-lcb>0",
+     "pass": false,
+     "detail": "mean -0.202R, 90% one-sided LCB -0.309R"
+    },
+    {
+     "id": "3-two-of-three-symbols",
+     "pass": false,
+     "detail": "SOLUSDT -0.112R/111, ETHUSDT -0.227R/107, XRPUSDT -0.261R/125"
+    },
+    {
+     "id": "4-costs-1.5x",
+     "pass": false,
+     "detail": "mean at 1.5x costs -0.257R, at 2x -0.311R"
+    },
+    {
+     "id": "5-neighbours",
+     "pass": false,
+     "detail": "modal C1:k=2,L=96; C1:k=2,L=48 -0.169R, C1:k=2.5,L=96 -0.261R"
+    },
+    {
+     "id": "6-beats-baselines",
+     "pass": false,
+     "detail": "strategy -0.202R vs matched random -0.170R vs momentum -0.062R"
+    },
+    {
+     "id": "7-deflated-sharpe",
+     "pass": false,
+     "detail": "DSR 0.000 (daily SR -0.092, trials 42, trial SR var 9.29e-3)"
+    }
+   ],
+   "stats": {
+    "trades": 343,
+    "meanNetR": -0.20232929790184895,
+    "meanGrossR": -0.09485346903821101,
+    "meanCostR": 0.108528500871411,
+    "meanFundingR": 0.001052672007772965,
+    "winRate": 0.3236151603498542,
+    "maxLosingStreak": 15,
+    "ciLow": -0.30884789953068503,
+    "dsr": 1.1457501614131615e-13
+   },
+   "bySymbol": {
+    "SOLUSDT": {
+     "trades": 111,
+     "meanNetR": -0.11209363665450042
+    },
+    "ETHUSDT": {
+     "trades": 107,
+     "meanNetR": -0.22725822679766272
+    },
+    "XRPUSDT": {
+     "trades": 125,
+     "meanNetR": -0.26111940195467803
+    }
+   }
+  },
+  {
+   "strategy": "E1",
+   "verdict": "REJECTED",
+   "selections": [
+    "E1:Q=97.5,OI=on",
+    "E1:Q=97.5,OI=on",
+    "E1:Q=97.5,OI=off",
+    "E1:Q=90,OI=off",
+    "E1:Q=95,OI=off",
+    "E1:Q=95,OI=on"
+   ],
+   "checks": [
+    {
+     "id": "1-trades>=100",
+     "pass": true,
+     "detail": "666 trades"
+    },
+    {
+     "id": "2-mean>0-and-lcb>0",
+     "pass": false,
+     "detail": "mean -0.113R, 90% one-sided LCB -0.178R"
+    },
+    {
+     "id": "3-two-of-three-symbols",
+     "pass": false,
+     "detail": "SOLUSDT -0.011R/186, ETHUSDT -0.129R/191, XRPUSDT -0.168R/289"
+    },
+    {
+     "id": "4-costs-1.5x",
+     "pass": false,
+     "detail": "mean at 1.5x costs -0.146R, at 2x -0.180R"
+    },
+    {
+     "id": "5-neighbours",
+     "pass": false,
+     "detail": "modal E1:Q=97.5,OI=on; E1:Q=95,OI=on -0.123R, E1:Q=97.5,OI=off -0.077R"
+    },
+    {
+     "id": "6-beats-baselines",
+     "pass": false,
+     "detail": "strategy -0.113R vs matched random -0.144R vs momentum -0.062R"
+    },
+    {
+     "id": "7-deflated-sharpe",
+     "pass": false,
+     "detail": "DSR 0.000 (daily SR -0.073, trials 42, trial SR var 9.29e-3)"
+    }
+   ],
+   "stats": {
+    "trades": 666,
+    "meanNetR": -0.1127398737137448,
+    "meanGrossR": -0.04933255277878506,
+    "meanCostR": 0.06743506903764827,
+    "meanFundingR": 0.004027748102688451,
+    "winRate": 0.3843843843843844,
+    "maxLosingStreak": 19,
+    "ciLow": -0.17812402368830363,
+    "dsr": 1.1049783310568273e-10
+   },
+   "bySymbol": {
+    "SOLUSDT": {
+     "trades": 186,
+     "meanNetR": -0.01082618946290641
+    },
+    "ETHUSDT": {
+     "trades": 191,
+     "meanNetR": -0.12875495104419887
+    },
+    "XRPUSDT": {
+     "trades": 289,
+     "meanNetR": -0.16774702077443449
+    }
+   }
+  },
+  {
+   "strategy": "E2",
+   "verdict": "REJECTED",
+   "selections": [
+    "E2:minRR=1.2",
+    "E2:minRR=1.2",
+    "E2:minRR=1.2",
+    "E2:minRR=1.2",
+    "E2:minRR=2",
+    "E2:minRR=2"
+   ],
+   "checks": [
+    {
+     "id": "1-trades>=100",
+     "pass": true,
+     "detail": "3293 trades"
+    },
+    {
+     "id": "2-mean>0-and-lcb>0",
+     "pass": false,
+     "detail": "mean -0.233R, 90% one-sided LCB -0.275R"
+    },
+    {
+     "id": "3-two-of-three-symbols",
+     "pass": false,
+     "detail": "SOLUSDT -0.170R/1024, ETHUSDT -0.272R/1147, XRPUSDT -0.251R/1122"
+    },
+    {
+     "id": "4-costs-1.5x",
+     "pass": false,
+     "detail": "mean at 1.5x costs -0.346R, at 2x -0.458R"
+    },
+    {
+     "id": "5-neighbours",
+     "pass": false,
+     "detail": "modal E2:minRR=1.2; E2:minRR=1.5 -0.246R"
+    },
+    {
+     "id": "6-beats-baselines",
+     "pass": false,
+     "detail": "strategy -0.233R vs matched random -0.255R vs momentum -0.062R"
+    },
+    {
+     "id": "7-deflated-sharpe",
+     "pass": false,
+     "detail": "DSR 0.000 (daily SR -0.279, trials 42, trial SR var 9.29e-3)"
+    }
+   ],
+   "stats": {
+    "trades": 3293,
+    "meanNetR": -0.2331260855225152,
+    "meanGrossR": -0.016866198741001998,
+    "meanCostR": 0.22516657828484743,
+    "meanFundingR": 0.008906691503333486,
+    "winRate": 0.3058001822046766,
+    "maxLosingStreak": 28,
+    "ciLow": -0.27452812790276454,
+    "dsr": 0
+   },
+   "bySymbol": {
+    "SOLUSDT": {
+     "trades": 1024,
+     "meanNetR": -0.1700205978542868
+    },
+    "ETHUSDT": {
+     "trades": 1147,
+     "meanNetR": -0.2717118892689186
+    },
+    "XRPUSDT": {
+     "trades": 1122,
+     "meanNetR": -0.25127412694421175
+    }
+   }
+  },
+  {
+   "strategy": "T1",
+   "verdict": "REJECTED",
+   "selections": [
+    "T1:tau=2",
+    "T1:tau=2.5",
+    "T1:tau=3",
+    "T1:tau=3",
+    "T1:tau=3",
+    "T1:tau=2.5"
+   ],
+   "checks": [
+    {
+     "id": "1-trades>=100",
+     "pass": true,
+     "detail": "1825 trades"
+    },
+    {
+     "id": "2-mean>0-and-lcb>0",
+     "pass": false,
+     "detail": "mean -0.011R, 90% one-sided LCB -0.018R"
+    },
+    {
+     "id": "3-two-of-three-symbols",
+     "pass": false,
+     "detail": "SOLUSDT -0.013R/190, ETHUSDT -0.057R/328, XRPUSDT 0.001R/1307"
+    },
+    {
+     "id": "4-costs-1.5x",
+     "pass": false,
+     "detail": "mean at 1.5x costs -0.036R, at 2x -0.061R"
+    },
+    {
+     "id": "5-neighbours",
+     "pass": false,
+     "detail": "modal T1:tau=3; T1:tau=2.5 -0.010R"
+    },
+    {
+     "id": "6-beats-baselines",
+     "pass": true,
+     "detail": "strategy -0.011R vs matched random -0.054R vs momentum -0.062R"
+    },
+    {
+     "id": "7-deflated-sharpe",
+     "pass": false,
+     "detail": "DSR 0.000 (daily SR -0.094, trials 42, trial SR var 9.29e-3)"
+    }
+   ],
+   "stats": {
+    "trades": 1825,
+    "meanNetR": -0.010764545286165187,
+    "meanGrossR": 0.03959746662541879,
+    "meanCostR": 0.05038475666601625,
+    "meanFundingR": 0.000022744754432118195,
+    "winRate": 0.45315068493150684,
+    "maxLosingStreak": 14,
+    "ciLow": -0.01847130595126241,
+    "dsr": 1.9462209621678994e-13
+   },
+   "bySymbol": {
+    "SOLUSDT": {
+     "trades": 190,
+     "meanNetR": -0.012862858737301428
+    },
+    "ETHUSDT": {
+     "trades": 328,
+     "meanNetR": -0.05693022227997456
+    },
+    "XRPUSDT": {
+     "trades": 1307,
+     "meanNetR": 0.0011260603830661317
+    }
+   }
+  },
+  {
+   "strategy": "T2",
+   "verdict": "REJECTED",
+   "selections": [
+    "T2:H=2",
+    "T2:H=2",
+    "T2:H=4",
+    "T2:H=4",
+    "T2:H=1",
+    "T2:H=1"
+   ],
+   "checks": [
+    {
+     "id": "1-trades>=100",
+     "pass": true,
+     "detail": "3603 trades"
+    },
+    {
+     "id": "2-mean>0-and-lcb>0",
+     "pass": false,
+     "detail": "mean -0.041R, 90% one-sided LCB -0.052R"
+    },
+    {
+     "id": "3-two-of-three-symbols",
+     "pass": false,
+     "detail": "SOLUSDT -0.026R/1201, ETHUSDT -0.053R/1148, XRPUSDT -0.044R/1254"
+    },
+    {
+     "id": "4-costs-1.5x",
+     "pass": false,
+     "detail": "mean at 1.5x costs -0.063R, at 2x -0.085R"
+    },
+    {
+     "id": "5-neighbours",
+     "pass": false,
+     "detail": "modal T2:H=2; T2:H=1 -0.043R, T2:H=4 -0.043R"
+    },
+    {
+     "id": "6-beats-baselines",
+     "pass": false,
+     "detail": "strategy -0.041R vs matched random -0.034R vs momentum -0.062R"
+    },
+    {
+     "id": "7-deflated-sharpe",
+     "pass": false,
+     "detail": "DSR 0.000 (daily SR -0.225, trials 42, trial SR var 9.29e-3)"
+    }
+   ],
+   "stats": {
+    "trades": 3603,
+    "meanNetR": -0.04111983693296426,
+    "meanGrossR": 0.0023358697385230244,
+    "meanCostR": 0.04345570667148719,
+    "meanFundingR": 0,
+    "winRate": 0.4421315570358035,
+    "maxLosingStreak": 27,
+    "ciLow": -0.0515589220973274,
+    "dsr": 0
+   },
+   "bySymbol": {
+    "SOLUSDT": {
+     "trades": 1201,
+     "meanNetR": -0.026441021520853206
+    },
+    "ETHUSDT": {
+     "trades": 1148,
+     "meanNetR": -0.05328851373575432
+    },
+    "XRPUSDT": {
+     "trades": 1254,
+     "meanNetR": -0.04403819127135527
+    }
+   }
+  },
+  {
+   "strategy": "T1M",
+   "verdict": "REJECTED",
+   "selections": [
+    "T1M:tau=2",
+    "T1M:tau=2.5",
+    "T1M:tau=3",
+    "T1M:tau=3",
+    "T1M:tau=3",
+    "T1M:tau=2.5"
+   ],
+   "checks": [
+    {
+     "id": "1-trades>=100",
+     "pass": true,
+     "detail": "1725 trades"
+    },
+    {
+     "id": "2-mean>0-and-lcb>0",
+     "pass": false,
+     "detail": "mean 0.002R, 90% one-sided LCB -0.005R"
+    },
+    {
+     "id": "3-two-of-three-symbols",
+     "pass": false,
+     "detail": "SOLUSDT -0.000R/184, ETHUSDT -0.045R/313, XRPUSDT 0.015R/1228"
+    },
+    {
+     "id": "4-costs-1.5x",
+     "pass": false,
+     "detail": "mean at 1.5x costs -0.014R, at 2x -0.031R"
+    },
+    {
+     "id": "5-neighbours",
+     "pass": true,
+     "detail": "modal T1M:tau=3; T1M:tau=2.5 0.002R"
+    },
+    {
+     "id": "6-beats-baselines",
+     "pass": true,
+     "detail": "strategy 0.002R vs matched random -0.023R vs momentum -0.062R"
+    },
+    {
+     "id": "7-deflated-sharpe",
+     "pass": false,
+     "detail": "DSR 0.000 (daily SR -0.000, trials 42, trial SR var 9.29e-3)"
+    }
+   ],
+   "stats": {
+    "trades": 1725,
+    "meanNetR": 0.0024539151615498586,
+    "meanGrossR": 0.035734127560028285,
+    "meanCostR": 0.03330432464550858,
+    "meanFundingR": 0.000024112247030150915,
+    "winRate": 0.4881159420289855,
+    "maxLosingStreak": 11,
+    "ciLow": -0.005188800021355038,
+    "dsr": 2.9876416007823536e-7
+   },
+   "bySymbol": {
+    "SOLUSDT": {
+     "trades": 184,
+     "meanNetR": -0.00016294251028005176
+    },
+    "ETHUSDT": {
+     "trades": 313,
+     "meanNetR": -0.044556379774463986
+    },
+    "XRPUSDT": {
+     "trades": 1228,
+     "meanNetR": 0.014828283342811312
+    }
+   }
+  },
+  {
+   "strategy": "L1",
+   "verdict": "REJECTED",
+   "selections": [
+    "L1:L=7",
+    "L1:L=14",
+    "L1:L=14",
+    "L1:L=28",
+    "L1:L=28",
+    "L1:L=7"
+   ],
+   "checks": [
+    {
+     "id": "1-trades>=100",
+     "pass": true,
+     "detail": "236 trades"
+    },
+    {
+     "id": "2-mean>0-and-lcb>0",
+     "pass": false,
+     "detail": "mean 0.003R, 90% one-sided LCB -0.065R"
+    },
+    {
+     "id": "3-two-of-three-symbols",
+     "pass": false,
+     "detail": "SOLUSDT -0.002R/79, ETHUSDT -0.052R/78, XRPUSDT 0.060R/79"
+    },
+    {
+     "id": "4-costs-1.5x",
+     "pass": false,
+     "detail": "mean at 1.5x costs -0.001R, at 2x -0.004R"
+    },
+    {
+     "id": "5-neighbours",
+     "pass": true,
+     "detail": "modal L1:L=7; L1:L=14 0.027R"
+    },
+    {
+     "id": "6-beats-baselines",
+     "pass": false,
+     "detail": "strategy 0.003R vs matched random 0.077R vs momentum -0.062R"
+    },
+    {
+     "id": "7-deflated-sharpe",
+     "pass": false,
+     "detail": "DSR 0.000 (daily SR -0.004, trials 42, trial SR var 9.29e-3)"
+    }
+   ],
+   "stats": {
+    "trades": 236,
+    "meanNetR": 0.002512687589643476,
+    "meanGrossR": 0.012817589631814522,
+    "meanCostR": 0.006857808877856171,
+    "meanFundingR": -0.0034470931643148747,
+    "winRate": 0.4449152542372881,
+    "maxLosingStreak": 11,
+    "ciLow": -0.06506136179825954,
+    "dsr": 1.9700094400221246e-7
+   },
+   "bySymbol": {
+    "SOLUSDT": {
+     "trades": 79,
+     "meanNetR": -0.0015026108810775494
+    },
+    "ETHUSDT": {
+     "trades": 78,
+     "meanNetR": -0.05198935803803016
+    },
+    "XRPUSDT": {
+     "trades": 79,
+     "meanNetR": 0.06034013237629544
+    }
+   }
+  },
+  {
+   "strategy": "L3",
+   "verdict": "REJECTED",
+   "selections": [
+    "L3:N=10",
+    "L3:N=20",
+    "L3:N=55",
+    "L3:N=55",
+    "L3:N=20",
+    "L3:N=10"
+   ],
+   "checks": [
+    {
+     "id": "1-trades>=100",
+     "pass": false,
+     "detail": "71 trades"
+    },
+    {
+     "id": "2-mean>0-and-lcb>0",
+     "pass": false,
+     "detail": "mean 0.205R, 90% one-sided LCB -0.015R"
+    },
+    {
+     "id": "3-two-of-three-symbols",
+     "pass": true,
+     "detail": "SOLUSDT 0.445R/24, ETHUSDT -0.058R/23, XRPUSDT 0.217R/24"
+    },
+    {
+     "id": "4-costs-1.5x",
+     "pass": true,
+     "detail": "mean at 1.5x costs 0.195R, at 2x 0.186R"
+    },
+    {
+     "id": "5-neighbours",
+     "pass": true,
+     "detail": "modal L3:N=10; L3:N=20 0.237R"
+    },
+    {
+     "id": "6-beats-baselines",
+     "pass": true,
+     "detail": "strategy 0.205R vs matched random -0.015R vs momentum -0.062R"
+    },
+    {
+     "id": "7-deflated-sharpe",
+     "pass": false,
+     "detail": "DSR 0.000 (daily SR 0.046, trials 42, trial SR var 9.29e-3)"
+    }
+   ],
+   "stats": {
+    "trades": 71,
+    "meanNetR": 0.2047634466233107,
+    "meanGrossR": 0.24290955795377475,
+    "meanCostR": 0.0185726835212195,
+    "meanFundingR": -0.01957342780924451,
+    "winRate": 0.39436619718309857,
+    "maxLosingStreak": 5,
+    "ciLow": -0.015324548250356462,
+    "dsr": 0.000009389152580197013
+   },
+   "bySymbol": {
+    "SOLUSDT": {
+     "trades": 24,
+     "meanNetR": 0.44467547749601505
+    },
+    "ETHUSDT": {
+     "trades": 23,
+     "meanNetR": -0.058173437032229915
+    },
+    "XRPUSDT": {
+     "trades": 24,
+     "meanNetR": 0.21683259592049953
+    }
+   }
+  }
+ ]
+}

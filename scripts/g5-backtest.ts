@@ -13,15 +13,27 @@ import { fetchFlowMinutes } from '../src/market/directional/archive-flow.js';
 import { crowdingSignalAt, type CrowdingData } from '../src/research/CrowdingReplay.js';
 import { resampleCandles } from '../src/market/TimeframeEngine.js';
 import { mulberry32 } from '../src/research/Bootstrap.js';
-import { breakoutB1, fundingFadeE1, fundingStates, hourContext, meanReversionC1, momentumBenchmark, type HourContext } from '../src/research/CandidateSignals.js';
+import { breakoutB1, fundingFadeE1, fundingStates, hourContext, hourOfDayT1, meanReversionC1, weeklyMomentumL1, dailyDonchianL3, momentumBenchmark, settlementReboundT2, type HourContext } from '../src/research/CandidateSignals.js';
 import { acceptance, type Fold, type SymbolTrade } from '../src/research/G5Acceptance.js';
 import { classifyRegime, regimeFeatures, type RegimeFeatures } from '../src/research/RegimeClassifier.js';
 import { HOUR_MS, MINUTE_MS, runOnBars, runStrategy, simulateTrade, type Market, type MinuteSeries, type Signal, type Trade } from '../src/research/SignalBacktest.js';
 import type { Candle } from '../src/types.js';
 
 const SYMBOLS = ['SOLUSDT', 'ETHUSDT', 'XRPUSDT'];
-const DEV_FROM = Date.UTC(2023, 0, 1);
-const DEV_TO = Date.UTC(2025, 0, 1);
+const arg = (name: string, fallback: string): string => {
+  const i = process.argv.indexOf(`--${name}`);
+  return i > 0 && process.argv[i + 1] ? process.argv[i + 1]! : fallback;
+};
+const day = (iso: string): number => Date.parse(`${iso}T00:00:00Z`);
+// Defaults are the §4 development window; §11 replays an earlier window with --from/--to/--first-test.
+const DEV_FROM = day(arg('from', '2023-01-01'));
+const DEV_TO = day(arg('to', '2025-01-01'));
+const FIRST_TEST = day(arg('first-test', '2023-07-01'));
+const STRATEGIES = arg('strategies', 'B1,C1,E1,E2,T1,T2,T1M,L1,L3').split(',');
+const TRIALS = Number(arg('trials', '42'));
+/** Optional: the trial Sharpe variance measured on a fuller search, when this run simulates only a few variants. */
+const TRIAL_SR_VAR = arg('trial-sr-var', '') === '' ? undefined : Number(arg('trial-sr-var', ''));
+const NEEDS_POSITIONING = STRATEGIES.some((s) => s === 'E1' || s === 'E2');
 const LEVERAGE = 5; // MIN_LEVERAGE default; at 1% risk with ATR stops the position is far below 1x notional
 const MMR = 0.01; // Binance tier-1 maintenance margin rate for these contracts' smallest bracket
 
@@ -79,7 +91,7 @@ async function loadSymbol(symbol: string, btc: Map<number, RegimeFeatures>, from
   const features = regimeFeatures(trade.hours);
   const regimes = trade.hours.map((b, i) => classifyRegime(features[i]!, btc.get(b.openTime)));
   const funding = await loadFunding(symbol, from, to);
-  const metrics = await loadMetrics(symbol, from - 2 * 86_400_000, to);
+  const metrics = NEEDS_POSITIONING ? await loadMetrics(symbol, from, to) : { points: [], missing: [] }; // early OI lookbacks are simply unavailable
   const fundingByMinute = new Map(funding.points.map((p) => [Math.floor((p.time - from) / MINUTE_MS), p.rate]));
   const market: Market = { trade: trade.series, mark: mark.series, fundingByMinute, hourStart: from, leverage: LEVERAGE, mmr: MMR };
   const markBefore = (time: number): number => {
@@ -104,6 +116,11 @@ function variants(e1: Map<string, FundingInputs>): Variant[] {
     id: `E1:Q=${q * 100},OI=${oi ? 'on' : 'off'}`, strategy: 'E1', axes: [a, b],
     make: (s) => { const d = e1.get(`${s.symbol}|${q}`)!; return fundingFadeE1(s.ctx, d, d.metrics, { quantile: q, requireOiRise: oi }); },
   })));
+  [2, 2.5, 3].forEach((tau, a) => out.push({ id: `T1:tau=${tau}`, strategy: 'T1', axes: [a], make: (s) => hourOfDayT1(s.ctx, tau) }));
+  [2, 2.5, 3].forEach((tau, a) => out.push({ id: `T1M:tau=${tau}`, strategy: 'T1M', axes: [a], make: (s) => passive(hourOfDayT1(s.ctx, tau), `T1M:tau=${tau}`) }));
+  [7, 14, 28].forEach((l, a) => out.push({ id: `L1:L=${l}`, strategy: 'L1', axes: [a], make: (s) => weeklyMomentumL1(s.ctx, l) }));
+  [10, 20, 55].forEach((n, a) => out.push({ id: `L3:N=${n}`, strategy: 'L3', axes: [a], make: (s) => dailyDonchianL3(s.ctx, n) }));
+  [1, 2, 4].forEach((h, a) => out.push({ id: `T2:H=${h}`, strategy: 'T2', axes: [a], make: (s) => settlementReboundT2(s.ctx, e1.get(`${s.symbol}|0.75`)!, h) }));
   [1.2, 1.5, 2].forEach((rr, a) => out.push({
     id: `E2:minRR=${rr}`, strategy: 'E2', axes: [a],
     runTrades: (s) => runOnBars(s.market, s.crowding.bars15.length, crowdingSignalAt(s.crowding, s.ctx, rr), (k) => s.crowding.bars15[k]!.openTime + 15 * MINUTE_MS),
@@ -111,10 +128,21 @@ function variants(e1: Map<string, FundingInputs>): Variant[] {
   return out;
 }
 
-const FOLDS: Fold[] = [0, 1, 2, 3, 4, 5].map((k) => {
-  const testFrom = Date.UTC(2023, 6 + 3 * k, 1);
-  return { trainFrom: Date.UTC(2023, 3 * k, 1), trainTo: testFrom, testFrom, testTo: Date.UTC(2023, 9 + 3 * k, 1) };
-});
+const MAKER_WINDOW_MINUTES = 5;
+
+/** §9: the same signal entered with a passive limit at the nominal open. */
+function passive(signalAt: (hour: number) => Signal | null, label: string): (hour: number) => Signal | null {
+  return (hour) => { const s = signalAt(hour); return s && { ...s, label, makerEntryWindowMinutes: MAKER_WINDOW_MINUTES }; };
+}
+
+/** 6-month train / 3-month test, stepping 3 months from FIRST_TEST until DEV_TO (§4). */
+const FOLDS: Fold[] = (() => {
+  const folds: Fold[] = [];
+  const first = new Date(FIRST_TEST);
+  const at = (months: number): number => Date.UTC(first.getUTCFullYear(), first.getUTCMonth() + months, 1);
+  for (let k = 0; at(3 * k + 3) <= DEV_TO; k += 1) folds.push({ trainFrom: at(3 * k - 6), trainTo: at(3 * k), testFrom: at(3 * k), testTo: at(3 * k + 3) });
+  return folds;
+})();
 
 /** Random entries matched to each real trade: same symbol, side, regime, stop in ATR units, holding time; same fold window. */
 function matchedRandom(trades: SymbolTrade[], data: Map<string, SymbolData>, seed: number): SymbolTrade[] {
@@ -129,7 +157,8 @@ function matchedRandom(trades: SymbolTrade[], data: Map<string, SymbolData>, see
     if (candidates.length === 0) continue;
     const hour = candidates[Math.floor(rand() * candidates.length)]!;
     const holdMs = Math.max(HOUR_MS, Math.ceil((t.exitTime - t.entryTime) / HOUR_MS) * HOUR_MS);
-    const sim = simulateTrade(s.market, { side: t.side, hour, label: 'BENCH:random', stopDistance: atrMultiple * s.ctx.atr[hour]!, maxHoldMs: holdMs, sizeMultiplier: 1 });
+    const makerEntryWindowMinutes = t.label.startsWith('T1M') ? MAKER_WINDOW_MINUTES : undefined;
+    const sim = simulateTrade(s.market, { side: t.side, hour, label: 'BENCH:random', stopDistance: atrMultiple * s.ctx.atr[hour]!, maxHoldMs: holdMs, sizeMultiplier: 1, makerEntryWindowMinutes });
     if (sim) out.push({ ...sim, symbol: t.symbol });
   }
   return out;
@@ -144,10 +173,10 @@ async function main(): Promise<void> {
   for (const symbol of SYMBOLS) {
     const loaded = await loadSymbol(symbol, btc, DEV_FROM, DEV_TO);
     data.set(symbol, loaded.data);
-    for (const q of [0.9, 0.95, 0.975]) e1.set(`${symbol}|${q}`, { states: fundingStates(loaded.funding, q), points: loaded.funding, metrics: loaded.metrics });
+    for (const q of [0.75, 0.9, 0.95, 0.975]) e1.set(`${symbol}|${q}`, { states: fundingStates(loaded.funding, q), points: loaded.funding, metrics: loaded.metrics });
     console.log(`loaded ${symbol}: ${loaded.data.hours} hours, ${loaded.funding.length} funding, ${loaded.metrics.length} metrics`);
   }
-  const allVariants = variants(e1);
+  const allVariants = variants(e1).filter((v) => STRATEGIES.includes(v.strategy));
   const tradesByVariant = new Map<string, SymbolTrade[]>();
   for (const v of allVariants) {
     const trades: SymbolTrade[] = [];
@@ -157,16 +186,16 @@ async function main(): Promise<void> {
   }
   const momentum: SymbolTrade[] = [];
   for (const s of data.values()) momentum.push(...runStrategy(s.market, s.hours, momentumBenchmark(s.ctx)).map((t) => ({ ...t, symbol: s.symbol })));
-  const results = ['B1', 'C1', 'E1', 'E2'].map((strategy) => acceptance({
+  const results = STRATEGIES.map((strategy) => acceptance({
     strategy, variants: allVariants.filter((v) => v.strategy === strategy), allVariants, tradesByVariant, folds: FOLDS, momentum,
-    randomFor: (trades) => matchedRandom(trades, data, 2026), symbols: SYMBOLS, trialCount: 27,
+    randomFor: (trades) => matchedRandom(trades, data, 2026), symbols: SYMBOLS, trialCount: TRIALS, trialSharpeVariance: TRIAL_SR_VAR,
   }));
   for (const r of results) console.log(`\n${r.strategy}: ${r.verdict}\n${r.lines.join('\n')}`);
   const commit = execSync('git rev-parse --short HEAD').toString().trim();
   const dirty = execSync('git status --porcelain -- src scripts').toString().trim().length > 0;
   mkdirSync('research-runs', { recursive: true });
   const out = `research-runs/g5-dev-${new Date().toISOString().replace(/[:.]/g, '').slice(0, 15)}Z.json`;
-  writeFileSync(out, JSON.stringify({ commit, dirty, window: { from: '2023-01-01', to: '2025-01-01' }, folds: FOLDS, leverage: LEVERAGE, mmr: MMR, e2ReplayNotes: 'funding = last settled rate (live: predicted); taker ratio = last closed hour from 1m klines; ratios = 5m archive snapshot usable at bar close; 48h time cap', results: results.map(({ lines, ...r }) => r) }, null, 1));
+  writeFileSync(out, JSON.stringify({ commit, dirty, window: { from: arg('from', '2023-01-01'), to: arg('to', '2025-01-01') }, strategies: STRATEGIES, trials: TRIALS, trialSharpeVarianceOverride: TRIAL_SR_VAR ?? null, folds: FOLDS, leverage: LEVERAGE, mmr: MMR, e2ReplayNotes: 'funding = last settled rate (live: predicted); taker ratio = last closed hour from 1m klines; ratios = 5m archive snapshot usable at bar close; 48h time cap', results: results.map(({ lines, ...r }) => r) }, null, 1));
   console.log(`\nreport: ${out}`);
 }
 

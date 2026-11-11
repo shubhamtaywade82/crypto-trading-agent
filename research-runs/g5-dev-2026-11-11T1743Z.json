@@ -1,0 +1,130 @@
+{
+ "commit": "deba0c28",
+ "dirty": true,
+ "window": {
+  "from": "2020-11-01",
+  "to": "2023-01-01"
+ },
+ "strategies": [
+  "L3"
+ ],
+ "trials": 45,
+ "trialSharpeVarianceOverride": 0.00929,
+ "folds": [
+  {
+   "trainFrom": 1609459200000,
+   "trainTo": 1625097600000,
+   "testFrom": 1625097600000,
+   "testTo": 1633046400000
+  },
+  {
+   "trainFrom": 1617235200000,
+   "trainTo": 1633046400000,
+   "testFrom": 1633046400000,
+   "testTo": 1640995200000
+  },
+  {
+   "trainFrom": 1625097600000,
+   "trainTo": 1640995200000,
+   "testFrom": 1640995200000,
+   "testTo": 1648771200000
+  },
+  {
+   "trainFrom": 1633046400000,
+   "trainTo": 1648771200000,
+   "testFrom": 1648771200000,
+   "testTo": 1656633600000
+  },
+  {
+   "trainFrom": 1640995200000,
+   "trainTo": 1656633600000,
+   "testFrom": 1656633600000,
+   "testTo": 1664582400000
+  },
+  {
+   "trainFrom": 1648771200000,
+   "trainTo": 1664582400000,
+   "testFrom": 1664582400000,
+   "testTo": 1672531200000
+  }
+ ],
+ "leverage": 5,
+ "mmr": 0.01,
+ "e2ReplayNotes": "funding = last settled rate (live: predicted); taker ratio = last closed hour from 1m klines; ratios = 5m archive snapshot usable at bar close; 48h time cap",
+ "results": [
+  {
+   "strategy": "L3",
+   "verdict": "REJECTED",
+   "selections": [
+    "L3:N=20",
+    "L3:N=20",
+    "L3:N=55",
+    "L3:N=10",
+    "L3:N=20",
+    "L3:N=55"
+   ],
+   "checks": [
+    {
+     "id": "1-trades>=100",
+     "pass": false,
+     "detail": "61 trades"
+    },
+    {
+     "id": "2-mean>0-and-lcb>0",
+     "pass": true,
+     "detail": "mean 0.274R, 90% one-sided LCB 0.060R"
+    },
+    {
+     "id": "3-two-of-three-symbols",
+     "pass": true,
+     "detail": "SOLUSDT 0.742R/19, ETHUSDT -0.080R/25, XRPUSDT 0.270R/17"
+    },
+    {
+     "id": "4-costs-1.5x",
+     "pass": true,
+     "detail": "mean at 1.5x costs 0.267R, at 2x 0.261R"
+    },
+    {
+     "id": "5-neighbours",
+     "pass": true,
+     "detail": "modal L3:N=20; L3:N=10 0.321R, L3:N=55 0.501R"
+    },
+    {
+     "id": "6-beats-baselines",
+     "pass": true,
+     "detail": "strategy 0.274R vs matched random 0.207R vs momentum -0.108R"
+    },
+    {
+     "id": "7-deflated-sharpe",
+     "pass": false,
+     "detail": "DSR 0.000 (daily SR 0.068, trials 45, trial SR var 9.29e-3)"
+    }
+   ],
+   "stats": {
+    "trades": 61,
+    "meanNetR": 0.27358134596117983,
+    "meanGrossR": 0.3042914219590114,
+    "meanCostR": 0.012853871923712195,
+    "meanFundingR": -0.01785620407411937,
+    "winRate": 0.5245901639344263,
+    "maxLosingStreak": 5,
+    "ciLow": 0.05961982326537889,
+    "dsr": 0.000007780118898237376
+   },
+   "bySymbol": {
+    "SOLUSDT": {
+     "trades": 19,
+     "meanNetR": 0.7418201234075937
+    },
+    "ETHUSDT": {
+     "trades": 25,
+     "meanNetR": -0.07987668482918803
+    },
+    "XRPUSDT": {
+     "trades": 17,
+     "meanNetR": 0.27004687527161103
+    }
+   }
+  }
+ ]
+}

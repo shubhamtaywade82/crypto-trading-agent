@@ -53,3 +53,16 @@ test('runStrategy holds one position at a time', () => {
   assert.equal(trades.length, 2);
   assert.deepEqual(trades.map((t) => t.entryTime), [HOUR_MS, 2 * HOUR_MS]);
 });
+
+test('a passive entry fills only when price trades strictly through the limit inside the window, at the limit, maker fee', () => {
+  const costs = { feeRate: 0.0004, slippageRate: 0.0002, makerFeeRate: 0.0002 };
+  const touchOnly = simulateTrade(market({ 60: { low: 100 }, 61: { low: 100 } }), long({ makerEntryWindowMinutes: 5 }), costs);
+  assert.equal(touchOnly, null, 'a touch at the limit is not a fill: no queue-position assumption');
+  const filled = simulateTrade(market({ 62: { open: 100, high: 100, low: 99.5, close: 99.8 } }), long({ makerEntryWindowMinutes: 5, maxHoldMs: HOUR_MS }), costs)!;
+  assert.equal(filled.entry, 100);
+  assert.equal(filled.entryTime, HOUR_MS + 2 * MINUTE_MS);
+  assert.equal(filled.exitTime, 2 * HOUR_MS - MINUTE_MS, 'the hold ends at the nominal deadline, not 1h after the fill');
+  assert.ok(Math.abs(filled.costR - (0.0002 * 100 + 0.0006 * 100) / 2) < 1e-12);
+  const late = simulateTrade(market({ 66: { low: 99 } }), long({ makerEntryWindowMinutes: 5 }), costs);
+  assert.equal(late, null, 'outside the 5-minute window');
+});

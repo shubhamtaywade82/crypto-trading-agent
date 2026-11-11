@@ -151,3 +151,90 @@ export function momentumBenchmark(ctx: HourContext): (hour: number) => Signal | 
     return { side, hour, label: 'BENCH:momentum24h', stopDistance: 1.5 * atr, maxHoldMs: 24 * HOUR_MS, sizeMultiplier: 1 };
   };
 }
+
+const T1_LOOKBACK_DAYS = 180;
+const T1_MAX_BLOCK_HOURS = 6;
+
+/** t-statistic of the open→close log return of the same UTC hour as bar `target`, over the trailing 180 days before it. */
+function sameHourT(returns: readonly number[], target: number): number {
+  if (target - 24 * T1_LOOKBACK_DAYS < 0 || target >= returns.length + 24) return NaN;
+  const values: number[] = [];
+  for (let k = 1; k <= T1_LOOKBACK_DAYS; k += 1) values.push(returns[target - 24 * k]!);
+  const m = values.reduce((s, v) => s + v, 0) / values.length;
+  const sd = Math.sqrt(values.reduce((s, v) => s + (v - m) ** 2, 0) / (values.length - 1));
+  return sd > 0 ? m / (sd / Math.sqrt(values.length)) : NaN;
+}
+
+/** T1 (§8): trade the next UTC hour(s) whose trailing same-hour mean return is significant, as one block. */
+export function hourOfDayT1(ctx: HourContext, tau: number): (hour: number) => Signal | null {
+  const returns = ctx.bars.map((b) => Math.log(b.close / b.open));
+  return (hour) => {
+    const size = sizeFor(ctx, hour);
+    const atr = usableAtr(ctx, hour);
+    const first = sameHourT(returns, hour + 1);
+    if (size === null || atr === null || !(Math.abs(first) >= tau)) return null;
+    const side = first > 0 ? 1 : -1;
+    let block = 1;
+    while (block < T1_MAX_BLOCK_HOURS) {
+      const next = sameHourT(returns, hour + 1 + block);
+      if (!(Math.abs(next) >= tau) || Math.sign(next) !== side) break;
+      block += 1;
+    }
+    return { side, hour, label: `T1:tau=${tau}`, stopDistance: 3 * atr, maxHoldMs: block * HOUR_MS, sizeMultiplier: size };
+  };
+}
+
+/** T2 (§8): after a settlement in the top (bottom) quartile of trailing funding, expect the dodged side to come back. */
+export function settlementReboundT2(
+  ctx: HourContext,
+  funding: { states: readonly (FundingState | null)[] },
+  holdHours: number,
+): (hour: number) => Signal | null {
+  const byHour = new Map<number, FundingState>();
+  for (const s of funding.states) if (s) byHour.set(Math.ceil((s.time - ctx.hourStart) / HOUR_MS) - 1, s);
+  return (hour) => {
+    const state = byHour.get(hour);
+    const size = sizeFor(ctx, hour);
+    const atr = usableAtr(ctx, hour);
+    if (!state || size === null || atr === null) return null;
+    const side = state.rate >= state.high ? 1 : state.rate <= state.low ? -1 : 0;
+    if (side === 0) return null;
+    return { side, hour, label: `T2:H=${holdHours}`, stopDistance: 3 * atr, maxHoldMs: holdHours * HOUR_MS, sizeMultiplier: size };
+  };
+}
+
+const isUtcDayClose = (ctx: HourContext, hour: number): boolean => (ctx.hourStart + (hour + 1) * HOUR_MS) % DAY_MS === 0;
+const isMondayOpen = (ctx: HourContext, hour: number): boolean =>
+  isUtcDayClose(ctx, hour) && new Date(ctx.hourStart + (hour + 1) * HOUR_MS).getUTCDay() === 1;
+const dailySigmaPrice = (ctx: HourContext, hour: number): number | null => {
+  const sigma = ctx.features[hour]?.dailySigma;
+  return sigma !== undefined && Number.isFinite(sigma) && sigma > 0 ? sigma * ctx.bars[hour]!.close : null;
+};
+
+/** L1 (§10): every Monday 00:00 UTC, trade the sign of the last L days' return for one week. */
+export function weeklyMomentumL1(ctx: HourContext, lookbackDays: number): (hour: number) => Signal | null {
+  return (hour) => {
+    const size = sizeFor(ctx, hour);
+    const sigma = dailySigmaPrice(ctx, hour);
+    if (!isMondayOpen(ctx, hour) || hour < 24 * lookbackDays || size === null || sigma === null) return null;
+    const side = ctx.bars[hour]!.close >= ctx.bars[hour - 24 * lookbackDays]!.close ? 1 : -1;
+    return { side, hour, label: `L1:L=${lookbackDays}`, stopDistance: 2 * sigma * Math.sqrt(7), maxHoldMs: 7 * DAY_MS, sizeMultiplier: size };
+  };
+}
+
+/** L3 (§10): a UTC day close beyond the prior N days' range, trailed at 3 daily sigma, held up to 14 days. */
+export function dailyDonchianL3(ctx: HourContext, days: number): (hour: number) => Signal | null {
+  return (hour) => {
+    const size = sizeFor(ctx, hour);
+    const sigma = dailySigmaPrice(ctx, hour);
+    const dayStart = hour - 23; // first hour of the day that just closed
+    if (!isUtcDayClose(ctx, hour) || dayStart - 24 * days < 0 || size === null || sigma === null) return null;
+    let high = -Infinity;
+    let low = Infinity;
+    for (let k = dayStart - 24 * days; k < dayStart; k += 1) { high = Math.max(high, ctx.bars[k]!.high); low = Math.min(low, ctx.bars[k]!.low); }
+    const close = ctx.bars[hour]!.close;
+    const side = close > high ? 1 : close < low ? -1 : 0;
+    if (side === 0) return null;
+    return { side, hour, label: `L3:N=${days}`, stopDistance: 2 * sigma, trailDistance: 3 * sigma, maxHoldMs: 14 * DAY_MS, sizeMultiplier: size };
+  };
+}

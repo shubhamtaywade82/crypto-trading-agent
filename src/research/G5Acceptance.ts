@@ -20,6 +20,8 @@ export interface AcceptanceInput {
   randomFor: (trades: SymbolTrade[]) => SymbolTrade[];
   symbols: string[];
   trialCount: number;
+  /** Overrides the trial Sharpe variance measured from `allVariants` (use when this run simulates only a few of them). */
+  trialSharpeVariance?: number;
 }
 
 export interface Check { id: string; pass: boolean; detail: string }
@@ -90,7 +92,7 @@ function neighbourCheck(input: AcceptanceInput, selections: string[], span: [num
 function deflatedSharpeCheck(input: AcceptanceInput, trades: SymbolTrade[], span: [number, number]): { check: Check; dsr: number | null } {
   const trialSharpes = input.allVariants.map((v) => sharpe(dailyReturns((input.tradesByVariant.get(v.id) ?? []).filter((t) => within(t, span[0], span[1])), span[0], span[1])));
   const m = mean(trialSharpes);
-  const variance = trialSharpes.reduce((s, v) => s + (v - m) ** 2, 0) / Math.max(1, trialSharpes.length - 1);
+  const variance = input.trialSharpeVariance ?? trialSharpes.reduce((s, v) => s + (v - m) ** 2, 0) / Math.max(1, trialSharpes.length - 1);
   try {
     const r = computeDeflatedSharpeFromReturns({ returns: dailyReturns(trades, span[0], span[1]), samplingFrequencyMs: DAY_MS, trialCount: input.trialCount, trialSharpeVariance: variance });
     return { check: { id: '7-deflated-sharpe', pass: r.dsr > 0.95, detail: `DSR ${r.dsr.toFixed(3)} (daily SR ${r.sharpeRatio.toFixed(3)}, trials ${input.trialCount}, trial SR var ${variance.toExponential(2)})` }, dsr: r.dsr };

@@ -175,7 +175,7 @@ Order is by priority, from §1 evidence and data now available.
 
 ## 7. G5 result (development window, 2023-01 → 2024-12)
 
-Run: `npx tsx scripts/g5-backtest.ts` → `research-runs/g5-dev-2026-11-11T0915Z.json` (commit `7fd87b7` + uncommitted
+Run: `npx tsx scripts/g5-backtest.ts` → `research-runs/g5-dev-2026-11-11T1740Z.json` (commit `7fd87b7` + uncommitted
 G0–G5 work). Walk-forward test folds 2023-07 → 2024-12, six 3-month folds, variant chosen per fold on its 6-month train.
 
 | Strategy | Edge | Instruments | Dir | Regime gate | TF | Trades | Gross R | Net R | 90% LCB | 1.5× cost | DSR | Verdict |
@@ -195,3 +195,190 @@ G0–G5 work). Walk-forward test folds 2023-07 → 2024-12, six 3-month folds, v
   at every closed 15m bar by `src/research/CrowdingReplay.ts`. Known gaps vs live: settled (not predicted) funding,
   1h taker ratio from 1m klines, 5m ratio snapshots usable at bar close, and a 48h time cap the agent does not define.
 - Per §4, no strategy reached PASSED_DEV, so the untouched 2025-01 → 2026-10 window was **not** read and stays sealed.
+
+## 8. Addendum (pre-registered 2026-11-11, before any time-of-day statistic was computed)
+
+Same execution model (§3), folds and acceptance (§4). Variant budget rises from 27 to **33**; deflated Sharpe uses N = 33
+for every strategy in the re-run. Price-only intraday rules failed in §7 with gross ≈ 0, so these test the clock and the
+funding cycle instead of chart patterns.
+
+### T1 — Hour-of-day drift
+
+1. **Edge:** some UTC hours have a persistent mean return (session flows: Asia/EU/US opens, fixings, rebalancing).
+2. **Why:** recurring, clock-driven flows that are not information-driven, so they need not be arbitraged instantly.
+3. **Other side:** participants who must trade at fixed times (index/fund rebalancing, payroll-style DCA, session hedgers).
+4. **Instruments:** SOLUSDT, ETHUSDT, XRPUSDT, each with its own statistics.
+5. **Regimes:** any except STRESS_CRASH; HIGH_VOL halves size (§1).
+6–7. **Entry:** at each 1h close, for the next UTC hour u: mean and t-statistic of that symbol's open→close log return of
+   hour u over the trailing 180 days (point-in-time: only completed bars). If |t| ≥ τ, enter in the sign of the mean at
+   the next 1m open. Consecutive upcoming hours that also pass with the same sign extend the hold, so one round trip
+   covers the whole block.
+8. **Invalidation:** none beyond the clock.
+9. **Stop:** 3 × ATR(14, 1h), a disaster stop only.
+10–11. **Target/trail:** none.
+12. **Max hold:** the selected block, at most 6h.
+13. **Frequency:** depends on how many hours pass; measured.
+14. **Costs:** 12 bps per block. A 1h block must clear it with its own mean return, which §2 data suggests is hard.
+15. **Stop trading:** as B1.
+- **Variants (3):** τ ∈ {2, 2.5, 3}.
+
+### T2 — Funding-settlement rebound
+
+1. **Edge:** when funding is high, longs close into the settlement to avoid paying it and reopen after, so price
+   rebounds after settlement (mirror for negative funding).
+2. **Why:** a mechanical, scheduled flow tied to the funding clock.
+3. **Other side:** traders who flatten before settlement to dodge funding and re-enter after.
+4. **Instruments:** SOLUSDT, ETHUSDT, XRPUSDT.
+5. **Regimes:** any except STRESS_CRASH; HIGH_VOL halves size.
+6–7. **Entry:** at the first 1h close at or after a settlement whose settled rate is ≥ the trailing-90-day p75 → long;
+   ≤ p25 → short. Next 1m open.
+8. **Invalidation:** none.
+9. **Stop:** 3 × ATR(14, 1h).
+10–11. **Target/trail:** none.
+12. **Max hold:** H hours.
+13. **Frequency:** up to 3 per day per symbol, at most half the settlements by construction.
+14. **Costs:** 12 bps round trip.
+15. **Stop trading:** as B1.
+- **Variants (3):** H ∈ {1, 2, 4}.
+
+### §8 result (development window, N = 33)
+
+Run `npx tsx scripts/g5-backtest.ts` → `research-runs/g5-dev-2026-11-11T1740Z.json` (B1/C1/E1/E2 numbers unchanged
+except DSR now uses N = 33; all still REJECTED).
+
+| Strategy | Trades | Gross R | Cost R | Net R | 90% LCB | 1.5× cost | Beats random/momentum | DSR | Verdict |
+|---|---|---|---|---|---|---|---|---|---|
+| T1 hour-of-day drift | 1825 | **+0.040** | 0.050 | −0.011 | −0.018 | −0.036 | yes (−0.054 / −0.062) | 0.000 | **REJECTED** |
+| T2 settlement rebound | 3603 | +0.002 | 0.043 | −0.041 | −0.052 | −0.063 | no (random −0.034) | 0.000 | **REJECTED** |
+
+- T1 is the first candidate with a **positive gross** result; the interval half-width (~0.007R) puts it several standard
+  errors above zero before costs. Taker costs (0.050R) erase it. XRPUSDT carries most trades (1,307 of 1,825) and is the
+  only symbol at or above zero net.
+- T2 shows no gross effect.
+- Any cheaper-execution version of T1 is a **new** hypothesis: it must be pre-registered and counted (N = 34+), not
+  re-scored from this run.
+
+## 9. Addendum (pre-registered 2026-11-11, after §8, before any maker-entry run)
+
+### T1M — Hour-of-day drift with passive entry
+
+Prompted by §8: T1 was positive before costs and negative after. Same signal, holds and stops as T1. Only the entry changes:
+
+- **Entry:** limit order at the nominal entry minute's open price. Filled only if, within the first **5 minutes**, price
+  trades **strictly through** the limit (low below it for a buy, high above it for a sell), so no queue position is
+  assumed. No fill → no trade. Fill price = the limit. The hold still ends at the nominal block end.
+- **Costs:** entry 2 bps maker fee, no slippage; exit and stops at taker 4 bps + 2 bps slippage. Round trip 8 bps vs 12.
+- **Adverse selection is in the model, not assumed away:** fills happen only when price moves against the entry first;
+  missed trades are the ones that moved in our favour immediately.
+- **Benchmark fairness:** the matched random baseline uses the same passive entry rule.
+- **Variants (3):** τ ∈ {2, 2.5, 3}. N rises from 33 to **36**.
+- **Known risk carried in:** in §8, XRPUSDT carried 1,307 of 1,825 T1 trades; check 3 (two of three symbols) is the guard.
+
+### §9 result (N = 36)
+
+Run `npx tsx scripts/g5-backtest.ts` → `research-runs/g5-dev-2026-11-11T1740Z.json`.
+
+| Strategy | Trades | Gross R | Cost R | Net R | 90% LCB | 1.5× cost | Symbols > 0 | vs random / momentum | DSR | Verdict |
+|---|---|---|---|---|---|---|---|---|---|---|
+| T1M passive-entry hour drift | 1725 | +0.036 | 0.033 | **+0.002** | −0.005 | −0.014 | XRP only (+0.015R/1228) | beats both (−0.023 / −0.062) | 0.000 | **REJECTED** |
+
+- Passive entry cut costs from 0.050R to 0.033R per trade and filled 1,725 of the ~1,825 T1 opportunities; adverse
+  selection cost about 0.004R of gross (0.040 → 0.036). Net is breakeven, not an edge.
+- Fails checks 2, 3, 4 and 7; passes trade count, neighbours and both baselines.
+- The effect lives almost entirely in XRPUSDT. An XRP-only follow-up would be chosen *after* seeing this split, so it
+  would need its own pre-registration with that disclosure and a fresh untouched window to mean anything.
+
+## 10. Addendum (pre-registered 2026-11-11, before any multi-day statistic was computed) — short swing
+
+Intraday rules found no edge larger than costs (§7–§9). These move to multi-day holds, where 12 bps is small relative to
+the move. Still within the mandate: short-term swing, max hold 14 days, no long-term investing. Same execution (§3),
+folds and acceptance (§4); the §1 regime gate (STRESS no entry, HIGH_VOL half size) applies unchanged. Variant budget
+rises from 36 to **42**.
+
+Daily sigma = the 30-day realized 1h-return volatility × √24, at the signal bar (point-in-time, from `RegimeClassifier`).
+
+### L1 — Weekly time-series momentum
+
+1. **Edge:** crypto returns over the past 1–4 weeks predict the next week's sign (time-series momentum).
+2. **Why:** slow information diffusion and trend-chasing flows in a retail-heavy market; documented at weekly horizons
+   in crypto, unlike the 24h horizon where G3 found none.
+3. **Other side:** contrarian and mean-reverting liquidity providers on weekly horizons.
+4. **Instruments:** SOLUSDT, ETHUSDT, XRPUSDT.
+6–7. **Entry:** every Monday 00:00 UTC close: side = sign of the log return over the last L days. Next 1m open.
+9. **Stop:** 2 × daily sigma × √7 × price (a ~2 weekly-sigma disaster stop).
+10–11. **Target/trail:** none.
+12. **Max hold:** 7 days (re-decided next Monday).
+13. **Frequency:** ≤ 1 per symbol per week (~100 per symbol in the dev window).
+14. **Costs:** 12 bps per week.
+- **Variants (3):** L ∈ {7, 14, 28}.
+
+### L3 — Daily Donchian breakout with trail
+
+1. **Edge:** a daily close beyond the N-day range starts a multi-day trend.
+2. **Why:** stop clusters and trend-following flows at well-known daily levels; multi-day moves dwarf costs.
+3. **Other side:** range traders and short-volatility sellers.
+4. **Instruments:** SOLUSDT, ETHUSDT, XRPUSDT.
+6–7. **Entry:** at each UTC day close (00:00), if the day's close is above the highest high (below the lowest low) of
+   the N prior days → long (short). Next 1m open.
+9. **Stop:** 2 × daily sigma × price.
+11. **Trail:** chandelier at 3 × daily sigma × price from the best price since entry, ratcheted on 1h closes.
+12. **Max hold:** 14 days.
+13. **Frequency:** low; the trade-count check (≥ 100) may fail on two years of data, and that is a valid rejection.
+14. **Costs:** 12 bps round trip.
+- **Variants (3):** N ∈ {10, 20, 55}.
+
+### §10 result (N = 42)
+
+Run `npx tsx scripts/g5-backtest.ts` → `research-runs/g5-dev-2026-11-11T1740Z.json`.
+
+| Strategy | Trades | Gross R | Cost R | Funding R | Net R | 90% LCB | 1.5× cost | Symbols > 0 | vs random / momentum | DSR | Verdict |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| L1 weekly momentum | 236 | +0.013 | 0.007 | −0.003 | +0.003 | −0.065 | −0.001 | XRP only | loses to random (+0.077) | 0.000 | **REJECTED** |
+| L3 daily Donchian + trail | 71 | **+0.243** | 0.019 | −0.020 | **+0.205** | −0.015 | +0.195 | SOL, XRP | beats both (−0.015 / −0.062) | 0.000 | **REJECTED** |
+
+- L3 is the strongest candidate so far: costs are ~0.02R, the result survives 2× costs, both parameter neighbours are
+  positive, and it beats both baselines by a wide margin. It fails on **evidence size**: 71 trades (< 100), a lower
+  bound just below zero, and a deflated Sharpe near zero with 42 trials. Win rate 39% with a fat right tail, the usual
+  trend-following shape.
+- L1 shows no weekly momentum on these symbols in 2023–2024.
+- Per §4 there is no rescue inside G5. L3's rules are frozen as written; the honest next test is more independent data.
+
+## 11. Addendum (pre-registered 2026-11-11, before any 2020–2022 data was downloaded) — L3 replication
+
+L3 (§10) passed every check except evidence size. The cleanest test that does not touch the sealed 2025–2026 window is
+an **earlier, never-seen period**, run with L3 exactly as frozen in §10 (same three variants, same stops, trail, hold,
+regime gate, costs and acceptance).
+
+- **Data:** 2020-11-01 → 2023-01-01 from the same archive (klines, mark price, funding; positioning metrics not needed).
+  First two months are warm-up only.
+- **Folds:** 6-month train / 3-month test, test windows 2021-07-01 → 2023-01-01 (six folds), as in §4.
+- **Trial count:** N = **45** (all 42 earlier variants + these 3), not 3: the replication is chosen because of §10.
+- **Decision rule:** L3 counts as PASSED_DEV only if it passes all seven checks here **and** the pooled 2021–2022 +
+  2023–2024 walk-forward trades show mean net R > 0 with a positive 90% lower bound. Only then is the sealed
+  2025–2026 window opened, once, for L3 alone.
+- Nothing else changes. No new variants, no filter added after seeing 2020–2022.
+
+### §11 result — L3 replication on 2021–2022 (N = 45)
+
+Run `npx tsx scripts/g5-backtest.ts --from 2020-11-01 --to 2023-01-01 --first-test 2021-07-01 --strategies L3 --trials 45
+--trial-sr-var 9.29e-3` → `research-runs/g5-dev-2026-11-11T1743Z.json` (trial Sharpe variance taken from the full §10
+search, so three similar variants cannot make the deflated Sharpe lenient).
+
+| Window | Trades | Gross R | Net R | 90% LCB | 1.5× cost | Symbols > 0 | Matched random | DSR | Checks |
+|---|---|---|---|---|---|---|---|---|---|
+| 2023–2024 (§10) | 71 | +0.243 | +0.205 | −0.015 | +0.195 | SOL, XRP | −0.015 | 0.000 | 5/7 |
+| 2021–2022 (§11) | 61 | +0.304 | **+0.274** | **+0.060** | +0.267 | SOL, XRP | **+0.207** | 0.000 | 5/7 |
+
+**Verdict: REJECTED under the §11 rule** (it must pass all seven checks in the replication window): it fails the trade
+count (61 < 100) and the deflated Sharpe (daily SR 0.068 vs the bar set by 45 trials). The sealed 2025–2026 window stays
+closed.
+
+What the evidence does say, without overstating it:
+- L3 is positive net in **both** independent periods, robust to 2× costs, with positive parameter neighbours in both.
+  Pooled (132 trades) the mean is about +0.24R; a rough pooled lower bound is positive, but that is an approximation
+  from the two runs' intervals, not a computed result.
+- In 2021–2022 the matched random baseline was itself +0.207R: a strong bull market rewarded any long-biased entry.
+  L3's margin over random there is only ~0.07R. Part of L3's result is market direction, not the breakout rule.
+- ETHUSDT is negative in both periods; SOLUSDT carries most of the result (+0.742R on 19 trades in 2021–2022).
+- The binding constraint is sample size: a daily breakout fires ~30 times a year across three symbols. More history on
+  these symbols does not exist on Binance perps before 2020–2021.

@@ -24,8 +24,9 @@ export function toMinuteSeries(candles: readonly Candle[], start: number, end: n
   return series;
 }
 
-export interface CostModel { feeRate: number; slippageRate: number }
-export const DEFAULT_COSTS: CostModel = { feeRate: 0.0004, slippageRate: 0.0002 };
+/** Taker fee + slippage per side; `makerFeeRate` applies instead to a passive limit fill (no slippage). */
+export interface CostModel { feeRate: number; slippageRate: number; makerFeeRate?: number }
+export const DEFAULT_COSTS: CostModel = { feeRate: 0.0004, slippageRate: 0.0002, makerFeeRate: 0.0002 };
 
 export interface Signal {
   side: 1 | -1;
@@ -44,6 +45,11 @@ export interface Signal {
   label: string;
   /** Checked on every 1h close while open; true exits at the next 1m open. */
   invalidate?: (hour: number) => boolean;
+  /**
+   * Passive entry: a limit at the nominal entry minute's open, filled only if price trades strictly through it within
+   * this many minutes (so queue position never matters). No fill, no trade. The hold still ends at the nominal deadline.
+   */
+  makerEntryWindowMinutes?: number;
 }
 
 export type ExitReason = 'STOP' | 'TARGET' | 'INVALIDATED' | 'TIME' | 'LIQUIDATED' | 'END_OF_DATA';
@@ -58,20 +64,34 @@ export interface Market { trade: MinuteSeries; mark: MinuteSeries; fundingByMinu
 
 const ENGINE = new PerpetualExecutionEngine();
 
-interface Open { signal: Signal; entryIndex: number; entry: number; stop: number; extreme: number; fundingPerUnit: number; markGap: boolean; liquidation: number }
+interface Open { signal: Signal; entryIndex: number; deadline: number; maker: boolean; entry: number; stop: number; extreme: number; fundingPerUnit: number; markGap: boolean; liquidation: number }
+
+/** First minute in the window where price trades strictly through the limit, or -1. */
+function makerFillIndex(market: Market, side: 1 | -1, nominal: number, windowMinutes: number): number {
+  const limit = market.trade.open[nominal]!;
+  for (let m = nominal; m < nominal + windowMinutes && m < market.trade.open.length; m += 1) {
+    const through = side === 1 ? market.trade.low[m]! < limit : market.trade.high[m]! > limit;
+    if (through) return m;
+  }
+  return -1;
+}
 
 function openPosition(market: Market, requested: Signal): Open | null {
   let signal = requested;
   const entryTime = signal.entryTime ?? market.hourStart + (signal.hour + 1) * HOUR_MS;
-  const entryIndex = (entryTime - market.trade.start) / MINUTE_MS;
-  const entry = market.trade.open[entryIndex];
+  const nominal = (entryTime - market.trade.start) / MINUTE_MS;
+  const entry = market.trade.open[nominal];
   if (entry === undefined || !Number.isFinite(entry)) return null;
+  const maker = signal.makerEntryWindowMinutes !== undefined;
+  const entryIndex = maker ? makerFillIndex(market, signal.side, nominal, signal.makerEntryWindowMinutes!) : nominal;
+  if (entryIndex < 0) return null;
+  const deadline = nominal + signal.maxHoldMs / MINUTE_MS;
   if (signal.stopPrice !== undefined) {
     if (signal.side * (entry - signal.stopPrice) <= 0) return null; // filled through the stop: the setup is gone
     signal = { ...signal, stopDistance: Math.abs(entry - signal.stopPrice) };
   }
   const liquidation = ENGINE.calculateLiquidationPrice({ entryPrice: entry, leverage: market.leverage, mmr: market.mmr, isLong: signal.side === 1 });
-  return { signal, entryIndex, entry, stop: entry - signal.side * signal.stopDistance, extreme: entry, fundingPerUnit: 0, markGap: false, liquidation };
+  return { signal, entryIndex, deadline, maker, entry, stop: entry - signal.side * signal.stopDistance, extreme: entry, fundingPerUnit: 0, markGap: false, liquidation };
 }
 
 /** Exit price for minute i if a stop, liquidation or target fires there, stop before target. */
@@ -114,8 +134,9 @@ function onHourClose(market: Market, pos: Open, i: number, hour: number): boolea
 function closeTrade(market: Market, pos: Open, exitIndex: number, exit: number, reason: ExitReason, costs: CostModel): Trade {
   const { side, stopDistance, sizeMultiplier, label } = pos.signal;
   const perSide = costs.feeRate + costs.slippageRate;
+  const entryRate = pos.maker ? (costs.makerFeeRate ?? perSide) : perSide;
   const grossR = (side * (exit - pos.entry)) / stopDistance;
-  const costR = (perSide * (pos.entry + exit)) / stopDistance;
+  const costR = (entryRate * pos.entry + perSide * exit) / stopDistance;
   const fundingR = pos.fundingPerUnit / stopDistance;
   const entryTime = market.trade.start + pos.entryIndex * MINUTE_MS;
   return {
@@ -129,7 +150,7 @@ export function simulateTrade(market: Market, signal: Signal, costs: CostModel =
   const pos = openPosition(market, signal);
   if (!pos) return null;
   const last = market.trade.open.length - 1;
-  const deadline = pos.entryIndex + signal.maxHoldMs / MINUTE_MS;
+  const { deadline } = pos;
   let exitNextOpen: ExitReason | null = null;
   for (let i = pos.entryIndex; i <= last; i += 1) {
     if (exitNextOpen) return closeTrade(market, pos, i, market.trade.open[i]!, exitNextOpen, costs);

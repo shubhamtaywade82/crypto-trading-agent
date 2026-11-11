@@ -2,7 +2,8 @@
  * Mirrors Binance's public USD-M archive (data.binance.vision) into data/cache/vision as the original zips, then
  * validates each file and writes a manifest. Raw zips are kept so every research number traces to exact source bytes.
  *
- *   npx tsx scripts/archive-backfill.ts [--from 2023-01-01] [--symbols SOLUSDT,ETHUSDT,XRPUSDT,BTCUSDT]
+ *   npx tsx scripts/archive-backfill.ts [--from 2023-01-01] [--to 2023-01-01] [--symbols SOLUSDT,ETHUSDT,XRPUSDT,BTCUSDT]
+ *     [--datasets klines,markPriceKlines,fundingRate,metrics]
  */
 import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
@@ -44,7 +45,7 @@ function fileFor(dataset: Dataset, symbol: string, period: string): ArchiveFile 
 }
 
 /** Full months come as monthly zips; the current, unpublished month as dailies. Metrics are only published daily. */
-function planFiles(symbol: string, fromMs: number, untilMs: number): ArchiveFile[] {
+function planFiles(symbol: string, fromMs: number, untilMs: number, datasets: ReadonlySet<string>): ArchiveFile[] {
   const currentMonthStart = Date.UTC(new Date(untilMs).getUTCFullYear(), new Date(untilMs).getUTCMonth(), 1);
   const fullMonths = months(fromMs, currentMonthStart);
   const tailDays = days(currentMonthStart, untilMs);
@@ -55,7 +56,7 @@ function planFiles(symbol: string, fromMs: number, untilMs: number): ArchiveFile
   // ponytail: fundingRate has no daily files; the running month comes from REST /fapi/v1/fundingRate when research needs it
   files.push(...fullMonths.map((m) => fileFor('fundingRate', symbol, m)));
   files.push(...days(fromMs, untilMs).map((d) => fileFor('metrics', symbol, d)));
-  return files;
+  return files.filter((f) => datasets.has(f.dataset));
 }
 
 async function download(file: ArchiveFile): Promise<Buffer | null> {
@@ -162,9 +163,11 @@ function markSuperseded(files: ArchiveFile[], monthly: FileReport[], dailies: Ar
 
 async function main(): Promise<void> {
   const fromMs = Date.parse(`${arg('from', '2023-01-01')}T00:00:00Z`);
-  const untilMs = Math.floor(Date.now() / DAY_MS) * DAY_MS; // the archive lags a day: today is never published
+  const today = Math.floor(Date.now() / DAY_MS) * DAY_MS; // the archive lags a day: today is never published
+  const untilMs = Math.min(today, Date.parse(`${arg('to', iso(today))}T00:00:00Z`));
+  const datasets = new Set(arg('datasets', 'klines,markPriceKlines,fundingRate,metrics').split(','));
   const symbols = arg('symbols', 'SOLUSDT,ETHUSDT,XRPUSDT,BTCUSDT').split(',');
-  const files = symbols.flatMap((s) => planFiles(s, fromMs, untilMs));
+  const files = symbols.flatMap((s) => planFiles(s, fromMs, untilMs, datasets));
   console.log(`planning ${files.length} files for ${symbols.join(',')} from ${iso(fromMs)} until ${iso(untilMs)} (exclusive)`);
   const firstPass = await runPool(files);
   const replacements = dailyReplacements(files, firstPass, untilMs);
@@ -175,8 +178,9 @@ async function main(): Promise<void> {
   const counts = { OK: 0, INVALID: 0, MISSING: 0, SUPERSEDED_BY_DAILY: 0 };
   for (const r of reports) counts[r.status] += 1;
   const manifest = { generatedAt: new Date().toISOString(), source: BASE, from: iso(fromMs), untilExclusive: iso(untilMs), symbols, counts, files: reports };
-  writeFileSync(path.join(ROOT, 'manifest.json'), JSON.stringify(manifest, null, 1));
-  console.log(`done: ${JSON.stringify(counts)} -> ${path.join(ROOT, 'manifest.json')}`);
+  const manifestPath = path.join(ROOT, `manifest-${iso(fromMs)}_${iso(untilMs)}.json`); // one per window: runs never overwrite each other
+  writeFileSync(manifestPath, JSON.stringify(manifest, null, 1));
+  console.log(`done: ${JSON.stringify(counts)} -> ${manifestPath}`);
   for (const r of reports.filter((x) => x.status !== 'OK')) console.log(`  ${r.status} ${r.relPath}${r.issue ? `: ${r.issue}` : ''}`);
 }
 

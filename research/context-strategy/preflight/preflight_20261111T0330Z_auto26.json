@@ -1,0 +1,114 @@
+{
+  "schemaVersion": 1,
+  "runId": "context-strategy-20261111T033030Z-auto26",
+  "checkedAtUtc": "2026-11-11T03:35:42.924Z",
+  "environment": {
+    "cwd": "/",
+    "os": "Linux x86_64 kernel 6.18.57",
+    "node": "v22.16.0",
+    "npm": "10.9.2",
+    "python": "3.13.5",
+    "cpuCores": 5,
+    "ramGiB": 5.8,
+    "diskFreeGiB": 30,
+    "localRepositoryCheckout": false
+  },
+  "checks": [
+    {
+      "capability": "shell_compute",
+      "status": "PASS",
+      "evidence": "pwd=/; Linux x86_64; Node 22.16.0; npm 10.9.2; Python 3.13.5; 5 CPU cores; 5.8 GiB RAM; 30 GiB free.",
+      "impact": "Bounded validation and orchestration available; compatible project runtime absent.",
+      "nextAction": "Provision project-compatible runtime."
+    },
+    {
+      "capability": "repository_code",
+      "status": "DEGRADED",
+      "evidence": "GitHub fetch_file read package.json, scripts/backtest.ts and scripts/conditional-edge.ts; no local checkout at /.",
+      "impact": "Remote source inspection possible; local harness cannot run.",
+      "nextAction": "Provision persistent checkout and pin the reviewed code commit."
+    },
+    {
+      "capability": "node_package_compatibility",
+      "status": "BLOCKED",
+      "evidence": "Runtime Node 22.16.0/npm 10.9.2; package.json engines require Node >=24/npm >=11.",
+      "impact": "Do not invoke project scripts under incompatible runtime.",
+      "nextAction": "Install Node 24/npm 11 with lockfile dependencies."
+    },
+    {
+      "capability": "binance_sdk",
+      "status": "NOT_CHECKED",
+      "evidence": "No local checkout/dependencies; no SDK import attempted.",
+      "impact": "No SDK execution claimed.",
+      "nextAction": "Install pinned SDK in compatible checkout and verify import."
+    },
+    {
+      "capability": "direct_binance_rest",
+      "status": "BLOCKED",
+      "evidence": "curl to /fapi/v1/time, /exchangeInfo, /klines, /premiumIndex, /openInterest and /ticker/24hr returned DNS resolution failure, HTTP 000.",
+      "impact": "No direct REST HTTP status, server time or independent endpoint verification.",
+      "nextAction": "Restore DNS/outbound access; retry with explicit timeouts."
+    },
+    {
+      "capability": "binance_connector",
+      "status": "DEGRADED",
+      "evidence": "Fresh mark/ticker/OI/book/funding/taker/LSR/klines returned with timestamps around 03:29 UTC; connector does not expose HTTP status.",
+      "impact": "Current classification possible; transport status and independent freshness probe unavailable.",
+      "nextAction": "Retain connector provenance and restore direct REST."
+    },
+    {
+      "capability": "exchange_metadata_freshness",
+      "status": "BLOCKED",
+      "evidence": "exchangeInfo serverTime 2026-11-11T01:01:01.884Z vs retrieval 03:29:33.556Z; stale by 2h28m31.672s.",
+      "impact": "Observed TRADING status cannot be used for execution validation.",
+      "nextAction": "Refresh exchangeInfo after network recovery."
+    },
+    {
+      "capability": "raw_historical_archive",
+      "status": "PASS",
+      "evidence": "8 page-0004 JSONL files created on archive branch; all read back exactly. Page manifests, 5m/15m/1h indexes and archive manifest read back.",
+      "impact": "Page-0004 raw data is persisted and verifiable.",
+      "nextAction": "Continue page-0005 from recorded per-symbol nextStart."
+    },
+    {
+      "capability": "data_quality_coverage",
+      "status": "DEGRADED",
+      "evidence": "Page-0004: 12,000 rows; 0 duplicate/gap/off-grid/OHLC/non-finite/negative-volume failures; 2 zero-volume XRP 5m rows flagged. Current klines: 1,904 completed +16 forming excluded. 5m/15m remain discontinuous; 4h metadata inconsistent.",
+      "impact": "Data-quality experiment passes with exclusions; no robust continuous intraday panel.",
+      "nextAction": "Continue backfill; reconcile 4h metadata before rebuild."
+    },
+    {
+      "capability": "backtest_harness",
+      "status": "BLOCKED",
+      "evidence": "Remote scripts/backtest.ts exists but local checkout/runtime unavailable. TIMEFRAMES is 15m/1h/4h; 5m omitted. conditional-edge CLI defaults minN=30 and 90% bootstrap confidence.",
+      "impact": "No harness invocation or strategy experiment.",
+      "nextAction": "Provision runtime; add 5m support and align CI/sample/purge controls with research policy."
+    },
+    {
+      "capability": "deterministic_smoke_test",
+      "status": "NOT_CHECKED",
+      "evidence": "No fixture was run; harness not executable in current workspace.",
+      "impact": "No no-lookahead or repeatability claim.",
+      "nextAction": "Run known fixture twice after runtime provisioning."
+    },
+    {
+      "capability": "disk_persistent_storage",
+      "status": "PASS",
+      "evidence": "30 GiB free locally; GitHub main and archive branch writes succeeded.",
+      "impact": "Durable remote persistence available.",
+      "nextAction": "Continue atomic file creation and exact readback."
+    },
+    {
+      "capability": "artifact_readback",
+      "status": "PASS",
+      "evidence": "Page-0004 JSONL, page manifests, indexes, archive manifest, queue v116 and registry v116 read back exactly.",
+      "impact": "Data and metadata persistence verified.",
+      "nextAction": "Read back each new run artifact after creation."
+    }
+  ],
+  "classification": "RESEARCH_EXECUTED",
+  "strategyExperiment": "BLOCKED",
+  "oosEvaluated": false,
+  "blocker": "No local checkout; Node/npm below package engine requirements; direct Binance REST DNS failure; 5m/15m archive remains discontinuous; 4h metadata reconciliation unresolved.",
+  "nextExecutableRemediation": "Provision persistent checkout with Node24/npm11, restore direct REST DNS, continue page-0005, reconcile 4h row keys/hash metadata, then run deterministic fixture twice before any frozen strategy experiment."
+}

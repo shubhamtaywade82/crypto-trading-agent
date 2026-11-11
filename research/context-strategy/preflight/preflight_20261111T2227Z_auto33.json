@@ -1,0 +1,185 @@
+{
+  "schemaVersion": "1.0.0",
+  "runId": "context-strategy-20261111T2227Z-auto33",
+  "asOfUtc": "2026-11-11T22:27:49.000Z",
+  "environment": {
+    "runtime": "Managed container shell plus Code Mode V8 and connected GitHub/Binance data tools",
+    "cwd": "/",
+    "os": "Debian GNU/Linux 13 (trixie)",
+    "kernel": "6.18.57",
+    "python": "Python 3.13.5",
+    "node": "v22.16.0",
+    "npm": "10.9.2",
+    "pnpm": "NOT_INSTALLED",
+    "yarn": "NOT_INSTALLED",
+    "cpuCount": 3,
+    "memoryTotalKiB": 6091004,
+    "memoryAvailableKiB": 4946636,
+    "diskTotal": "32G",
+    "diskUsed": "5.3M",
+    "diskAvailable": "30G",
+    "localGitRepositoriesFound": [
+      "/opt/novnc/.git",
+      "/opt/nvm/.git"
+    ],
+    "targetRepositoryLocal": "NOT_FOUND",
+    "binanceSdkPackages": {
+      "binance": "NOT_INSTALLED",
+      "binance-api-node": "NOT_INSTALLED",
+      "@binance/connector": "NOT_INSTALLED",
+      "@binance/futures-connector": "NOT_INSTALLED"
+    }
+  },
+  "checks": [
+    {
+      "capability": "shell/compute",
+      "status": "PASS",
+      "evidence": "pwd=/; Debian GNU/Linux 13; Python 3.13.5; Node 22.16.0; npm 10.9.2; 3 CPUs; 6,091,004 KiB total RAM; 4,946,636 KiB available; 30G free disk.",
+      "impact": "Bounded connector-side data processing and artifact validation completed; local Node project runtime not suitable.",
+      "nextAction": "Provision Node 24+/npm 11+ in a persistent project workspace."
+    },
+    {
+      "capability": "repo/code",
+      "status": "DEGRADED",
+      "evidence": "Target repository shubhamtaywade82/crypto-trading-agent is accessible through GitHub connector; no local checkout or project .git found; required Binance SDK packages absent.",
+      "impact": "Remote archive writes work, but local project scripts/harness cannot be invoked.",
+      "nextAction": "Clone the exact recorded repository commit into a persistent workspace and install pinned dependencies."
+    },
+    {
+      "capability": "network/Binance endpoints",
+      "status": "DEGRADED",
+      "evidence": "Direct curl GET /fapi/v1/time failed: curl exit 6, HTTP 000, DNS resolution failed. Binance connector returned klines, premium index, ticker, OI, funding history, OI statistics, taker flow, account ratio, depth and basis; HTTP status/headers are not exposed. exchangeInfo serverTime=2026-11-11T10:18:31.943Z, stale by 43,757.057 seconds against 22:27:49Z.",
+      "impact": "Market snapshot is usable as timestamped connector data; current contract-status validation and direct REST freshness proof are blocked.",
+      "nextAction": "Restore outbound DNS/HTTPS; directly probe /fapi/v1/time and /fapi/v1/exchangeInfo with bounded timeouts."
+    },
+    {
+      "capability": "raw historical archive",
+      "status": "DEGRADED",
+      "evidence": "Writable GitHub archive branch research/raw-ohlcv-archive-20261108T1026Z. Page 0014 persisted: 8 files, 12,000 rows, 1,500 rows/file across 5m/15m and four symbols. Separate live delta persisted: 20 completed rows.",
+      "impact": "5m/15m coverage extends, but remains partial and discontinuous to 2026 incremental deltas; 1h bridge and 4h provenance unresolved.",
+      "nextAction": "Continue page 0015; reconcile 1h and 4h before strategy use."
+    },
+    {
+      "capability": "data quality/coverage",
+      "status": "DEGRADED",
+      "evidence": "Page-0014 quality: 0 duplicates, gaps, off-grid, non-monotonic, OHLC, non-finite, non-positive-volume or close-time failures; 0 zero-volume rows. Incremental append: 36 fetched, 20 completed appended, 16 forming/future rows excluded; all checks zero. Recent snapshot: 9,760 rows, 9,744 completed, 16 forming excluded; all checks zero. 1h index still has 8-row discrepancy and 28-hour bridge; 4h raw/aligned/canonical counts 53,960/53,816/53,844 with 13 original manifest SHA mismatches.",
+      "impact": "Local page-level checks pass, but multi-year aligned panel is not research-ready.",
+      "nextAction": "Resolve 1h openTime keys and 4h hash/highwater lineage; do not infer continuity from page-level checks."
+    },
+    {
+      "capability": "backtest harness/smoke test",
+      "status": "BLOCKED",
+      "evidence": "No local target repo; Node 22.16.0/npm 10.9.2; required Node 24+/npm 11+; Binance SDK packages absent; no project harness invoked and no deterministic fixture smoke test run.",
+      "impact": "No strategy experiment or OOS evaluation can be claimed this run.",
+      "nextAction": "Provision compatible runtime, clone exact commit, run fixture twice and verify no-lookahead invariance before any full experiment."
+    },
+    {
+      "capability": "disk/storage",
+      "status": "PASS",
+      "evidence": "Local overlay 32G total, 30G available. GitHub archive branch accepted page files, manifests, deltas and index updates.",
+      "impact": "Persistent remote artifact storage is available and used; local working files were not relied on.",
+      "nextAction": "Continue atomic/verified GitHub commits and retain raw data separately from derived results."
+    },
+    {
+      "capability": "artifact readback",
+      "status": "PASS",
+      "evidence": "Page-0014 raw files and manifests read back exactly; 5m/15m indexes read back by resulting commit; delta JSONL and corrected delta manifest read back by commit; global archive manifest and current market snapshot read back exactly.",
+      "impact": "This run's data-quality artifacts are persisted and independently readable.",
+      "nextAction": "Read back and hash every new preflight, experiment, queue, registry and report artifact after commit."
+    }
+  ],
+  "endpointOutcomes": {
+    "GET /fapi/v1/time": {
+      "status": "BLOCKED",
+      "httpStatus": 0,
+      "curlExit": 6
+    },
+    "GET /fapi/v1/exchangeInfo": {
+      "status": "DEGRADED",
+      "connectorResult": "SUCCESS",
+      "serverTimeUtc": "2026-11-11T10:18:31.943Z",
+      "stalenessSeconds": 43757.057,
+      "executionStatusValidation": "BLOCKED"
+    },
+    "GET /fapi/v1/klines": {
+      "status": "PASS_VIA_CONNECTOR",
+      "series": 16,
+      "recentRows": 9760,
+      "page14Rows": 12000,
+      "incrementalRowsAppended": 20,
+      "httpStatus": "NOT_EXPOSED"
+    },
+    "GET /fapi/v1/premiumIndex": {
+      "status": "PASS_VIA_CONNECTOR",
+      "symbols": 4,
+      "httpStatus": "NOT_EXPOSED"
+    },
+    "GET /fapi/v1/ticker/24hr": {
+      "status": "PASS_VIA_CONNECTOR",
+      "symbols": 4,
+      "httpStatus": "NOT_EXPOSED"
+    },
+    "GET /fapi/v1/openInterest": {
+      "status": "PASS_VIA_CONNECTOR",
+      "symbols": 4,
+      "httpStatus": "NOT_EXPOSED"
+    },
+    "GET /fapi/v1/fundingRate": {
+      "status": "PASS_VIA_CONNECTOR",
+      "symbols": 4,
+      "httpStatus": "NOT_EXPOSED"
+    },
+    "GET /futures/data/openInterestHist": {
+      "status": "PASS_VIA_CONNECTOR",
+      "periods": [
+        "5m",
+        "1h"
+      ],
+      "symbols": 4,
+      "httpStatus": "NOT_EXPOSED"
+    },
+    "GET /futures/data/takerBuySellVol": {
+      "status": "PASS_VIA_CONNECTOR",
+      "periods": [
+        "5m",
+        "1h"
+      ],
+      "symbols": 4,
+      "httpStatus": "NOT_EXPOSED"
+    },
+    "GET /futures/data/globalLongShortAccountRatio": {
+      "status": "PASS_VIA_CONNECTOR",
+      "period": "1h",
+      "symbols": 4,
+      "httpStatus": "NOT_EXPOSED"
+    },
+    "GET /fapi/v1/depth": {
+      "status": "PASS_VIA_CONNECTOR",
+      "symbols": 4,
+      "levels": 20,
+      "httpStatus": "NOT_EXPOSED"
+    },
+    "GET /futures/data/basis": {
+      "status": "PASS_VIA_CONNECTOR",
+      "period": "1h",
+      "symbols": 4,
+      "httpStatus": "NOT_EXPOSED"
+    }
+  },
+  "artifacts": {
+    "archiveManifest": "research-data/binance-usdm/manifests/archive_manifest_20261111T2227Z_auto33.json",
+    "marketSnapshot": "research-data/binance-usdm/current_market_snapshot_20261111T2227Z_auto33.json",
+    "page14BackfillResult": "research/context-strategy/experiments/historical_page_0014_backfill_20261111T2227Z_auto33.result.json",
+    "incrementalAppendResult": "research/context-strategy/experiments/incremental_archive_append_20261111T2227Z_auto33.result.json"
+  },
+  "runStatus": "RESEARCH_EXECUTED",
+  "strategyExperimentStatus": "RESEARCH_BLOCKED",
+  "oosEvaluated": false,
+  "oosValidatedEntries": 0,
+  "blockers": [
+    "No local compatible backtest harness or deterministic smoke test.",
+    "Direct Binance REST DNS unavailable and exchangeInfo stale.",
+    "1h bridge and 4h provenance reconciliation incomplete.",
+    "No point-in-time derivatives panel or calibrated execution-cost model."
+  ]
+}

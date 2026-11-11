@@ -1,0 +1,105 @@
+{
+  "runId": "context-strategy-20261111T022740Z-auto25",
+  "asOfUtc": "2026-11-11T02:29:28.000Z",
+  "environment": {
+    "cwd": "/",
+    "os": "Linux 6.18.57 x86_64",
+    "node": "v22.16.0",
+    "npm": "10.9.2",
+    "cpuCores": 5,
+    "memoryTotalGiB": 5.8,
+    "diskFreeGiB": 30,
+    "localRepositoryPresent": false,
+    "binanceSdkImportable": false
+  },
+  "checks": [
+    {
+      "capability": "shell/compute",
+      "status": "PASS",
+      "evidence": "Linux container; 5 cores; 5.8 GiB RAM; 30 GiB free disk; node v22.16.0; npm 10.9.2.",
+      "impact": "Basic inspection and connector orchestration possible; repository backtest cannot run.",
+      "nextAction": "Provision Node >=24 and npm >=11 in a persistent workspace."
+    },
+    {
+      "capability": "repository/code",
+      "status": "DEGRADED",
+      "evidence": "GitHub repo shubhamtaywade82/crypto-trading-agent accessible; main commit at start 9569509a0800690460458aa241c3b233d62b0807; no local .git checkout.",
+      "impact": "Source can be inspected remotely; local TypeScript execution unavailable.",
+      "nextAction": "Provision persistent checkout and pin code commit."
+    },
+    {
+      "capability": "Node/package engine",
+      "status": "BLOCKED",
+      "evidence": "package.json engines Node >=24/npm >=11; runtime Node 22.16.0/npm 10.9.2.",
+      "impact": "Do not install/run pinned project dependencies or claim SDK execution.",
+      "nextAction": "Provision compatible Node/npm and install lockfile-pinned dependencies."
+    },
+    {
+      "capability": "Binance SDK",
+      "status": "BLOCKED",
+      "evidence": "No local repo/node_modules; SDK import not attempted because project runtime/dependencies absent.",
+      "impact": "No SDK execution.",
+      "nextAction": "Install pinned @nemesis-oss/binance-sdk only in compatible checkout."
+    },
+    {
+      "capability": "direct Binance REST",
+      "status": "BLOCKED",
+      "evidence": "curl probes to /fapi/v1/time, /exchangeInfo, /klines, /premiumIndex, /openInterest and /ticker/24hr returned HTTP 000; DNS resolution failed or timed out.",
+      "impact": "Cannot independently verify endpoint HTTP status, server time, or REST freshness.",
+      "nextAction": "Restore outbound DNS/network; repeat bounded official endpoint probes."
+    },
+    {
+      "capability": "Binance market-data connector",
+      "status": "DEGRADED",
+      "evidence": "Klines, mark price, ticker, OI, funding history, taker flow, top-trader accounts and bookTicker returned data; HTTP status not exposed.",
+      "impact": "Snapshot and historical data fetches possible, but no HTTP-level diagnostics.",
+      "nextAction": "Keep connector-derived records timestamped and do not claim direct REST."
+    },
+    {
+      "capability": "exchangeInfo freshness",
+      "status": "BLOCKED",
+      "evidence": "exchangeInfo.serverTime=2026-11-11T01:01:01.885Z versus mark/ticker timestamps around 02:29:28Z; lag 5,306,115 ms.",
+      "impact": "Returned TRADING statuses are stale and cannot validate execution.",
+      "nextAction": "Refresh metadata through direct REST when DNS works; fail closed meanwhile."
+    },
+    {
+      "capability": "raw historical archive",
+      "status": "PASS",
+      "evidence": "Remote archive branch readable/writable; page-0003 8 files, two page manifests, 5m/15m indexes and current delta/manifest read back.",
+      "impact": "Page-0003 data-quality experiment reproducible.",
+      "nextAction": "Continue page-0004 from manifest nextStart values."
+    },
+    {
+      "capability": "data quality/coverage",
+      "status": "DEGRADED",
+      "evidence": "Page-0003: 12,000 rows, all structural checks zero; incremental append: 36 completed rows, 12 forming excluded, all checks zero. 5m/15m still discontinuous; 4h raw 53,960/aligned 53,816/canonical 53,844 with 13 SHA mismatches.",
+      "impact": "Intraday strategy research remains underpowered/incomplete; 4h provenance blocks canonical use.",
+      "nextAction": "Continue 5m/15m pages and reconcile 4h row-key/hash differences."
+    },
+    {
+      "capability": "backtest harness/smoke test",
+      "status": "BLOCKED",
+      "evidence": "scripts/backtest.ts and scripts/conditional-edge.ts exist remotely; no local checkout, runtime below engines floor, no fixture execution.",
+      "impact": "No deterministic smoke test, strategy experiment or OOS run.",
+      "nextAction": "Provision Node24/npm11 checkout; run tiny deterministic fixture twice and verify no-lookahead."
+    },
+    {
+      "capability": "disk/storage",
+      "status": "PASS",
+      "evidence": "30 GiB free local disk; GitHub archive branch accepts commits.",
+      "impact": "Remote persistence available; local archive not mounted.",
+      "nextAction": "Continue atomic remote writes and exact readback."
+    },
+    {
+      "capability": "artifact readback",
+      "status": "PASS",
+      "evidence": "8 page-0003 files SHA-256 verified; page manifests, indexes, 36-row delta, delta manifest and archive manifest read back.",
+      "impact": "Data-quality artifacts persisted and verifiable.",
+      "nextAction": "Persist snapshot, queue, registry, preflight and run ledger; read back each."
+    }
+  ],
+  "classification": "RESEARCH_EXECUTED",
+  "strategyExperimentExecuted": false,
+  "oosEvaluated": false,
+  "note": "A reproducible data-quality/backfill experiment completed. No strategy backtest or untouched OOS evaluation was performed."
+}

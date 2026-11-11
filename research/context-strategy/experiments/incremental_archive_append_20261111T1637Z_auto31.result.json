@@ -1,0 +1,120 @@
+{
+  "schemaVersion": "1.0.0",
+  "experimentId": "DQ-USDMS-INCREMENTAL-APPEND-20261111T163318Z-AUTO31",
+  "runId": "context-strategy-20261111T163318Z-auto31",
+  "type": "DATA_QUALITY_INCREMENTAL_ARCHIVE",
+  "status": "COMPLETED_REPRODUCIBLE_DATA_QUALITY_ONLY",
+  "hypothesis": "Appending only completed klines strictly after verified interval highwaters yields contiguous, aligned, valid incremental series with exact remote readback.",
+  "source": {
+    "endpoint": "GET /fapi/v1/klines",
+    "access": "Binance USD-M public connector; SDK_NOT_USED; direct REST DNS unavailable; HTTP status not exposed.",
+    "repository": "shubhamtaywade82/crypto-trading-agent",
+    "branch": "research/raw-ohlcv-archive-20261108T1026Z"
+  },
+  "specification": {
+    "symbols": [
+      "BTCUSDT",
+      "ETHUSDT",
+      "SOLUSDT",
+      "XRPUSDT"
+    ],
+    "intervals": [
+      "5m",
+      "15m",
+      "1h"
+    ],
+    "priorHighwaters": {
+      "5m": "2026-11-11T15:05:00.000Z",
+      "15m": "2026-11-11T14:45:00.000Z",
+      "1h": "2026-11-11T13:00:00.000Z"
+    },
+    "newHighwaters": {
+      "5m": "2026-11-11T16:30:00.000Z",
+      "15m": "2026-11-11T16:15:00.000Z",
+      "1h": "2026-11-11T15:00:00.000Z"
+    },
+    "appendPolicy": "Only rows with closeTime < retrieval timestamp; exclude forming candles; append-only JSONL; no 4h append due unresolved provenance."
+  },
+  "results": {
+    "rowsAppended": 100,
+    "rowsFetched": 116,
+    "formingRowsExcluded": 16,
+    "rowsByInterval": {
+      "5m": 68,
+      "15m": 24,
+      "1h": 8
+    },
+    "rowsBySymbol": {
+      "BTCUSDT": 25,
+      "ETHUSDT": 25,
+      "SOLUSDT": 25,
+      "XRPUSDT": 25
+    },
+    "quality": {
+      "duplicates": 0,
+      "missingIntervals": 0,
+      "offGrid": 0,
+      "nonMonotonic": 0,
+      "ohlcInvariantFailures": 0,
+      "nonPositiveVolume": 0,
+      "nonFinite": 0,
+      "closeTimeFailures": 0,
+      "crossSymbolAlignment": true,
+      "contiguousFromPriorHighwater": true
+    },
+    "readbackVerified": true
+  },
+  "artifacts": [
+    {
+      "path": "research-data/binance-usdm/delta/binance_usdm_delta_20261111T163133Z_5m15m_completed.jsonl",
+      "sha256": "2237d5833efa33fcf5a8497bbbf946277e88684950f8d4baafc34740855062d6",
+      "blobSha1": "68a36d46f775f93291d78c2ab9cea69134549d05",
+      "rows": 88,
+      "readbackVerified": true
+    },
+    {
+      "path": "research-data/binance-usdm/delta/manifest-20261111T163133Z-5m15m.json",
+      "sha256": "098d16a50f3aa0ddde92638e9961447ef2fea11d3aed5ed4a09806ceb0ac3c67",
+      "blobSha1": "3ab27e9deb2d5c9fcb816c2189e059ed0c8e4498",
+      "readbackVerified": true
+    },
+    {
+      "path": "research-data/binance-usdm/delta/binance_usdm_delta_20261111T163318Z_1h_completed.jsonl",
+      "sha256": "508c811b881f77158738c4f063b0ed2fd86b183518765b3f0bf708ddf48cb343",
+      "blobSha1": "0edbe4798ab212785eac0fbbdcf53a6f8b4a0e9d",
+      "rows": 8,
+      "readbackVerified": true
+    },
+    {
+      "path": "research-data/binance-usdm/delta/manifest-20261111T163318Z-1h.json",
+      "sha256": "97091ad92871df8023c5cfad7e3a40d5515d2ff491106fa268559a4e676efdab",
+      "blobSha1": "3e5df65b08b4329bc63024122fc714f257a20aa9",
+      "readbackVerified": true
+    },
+    {
+      "path": "research-data/binance-usdm/delta/binance_usdm_delta_20261111T163732Z_5m_completed.jsonl",
+      "sha256": "26deb48862b89de4d6ab21345db22b9bb9e65b1cd04e34543372f772a3b40791",
+      "blobSha1": "8055146f25d31834b557ecc08253a7458d1be96b",
+      "rows": 4,
+      "readbackVerified": true
+    },
+    {
+      "path": "research-data/binance-usdm/delta/manifest-20261111T163732Z-5m.json",
+      "sha256": "f964854249fce81d42fac317ef69bd017439a54c5de21cf79f333d3c4112913c",
+      "blobSha1": "04cc0334beed6a44bfe53101ce6cc5332107ddce",
+      "readbackVerified": true
+    },
+    {
+      "path": "research-data/binance-usdm/manifests/archive_manifest_20261111T163732Z_auto31.json",
+      "sha256": "c88ef5aee1fd49fc3b3a18fdf8e8b00db9edd362e7b9321d23c6d507b794ff91",
+      "blobSha1": "f165ceb6c6e16e2084b917a75ad72ab4cc05eafe",
+      "readbackVerified": true
+    }
+  ],
+  "strategyExperiment": {
+    "status": "BLOCKED",
+    "reason": "No local checkout; Node/npm below remote package engine floor; SDK absent; direct REST DNS unavailable; 5m/15m historical base remains discontinuous; 1h bridge/index discrepancy and 4h provenance mismatch remain; point-in-time derivatives history incomplete; deterministic smoke test not run."
+  },
+  "oosEvaluated": false,
+  "evaluationUtc": "2026-11-11T16:37:32.003Z"
+}

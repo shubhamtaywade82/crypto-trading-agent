@@ -1,0 +1,67 @@
+{
+  "schema_version": "1.0.0",
+  "run_id": "context-strategy-20261111T183214Z-run11",
+  "as_of_utc": "2026-11-11T18:32:14.165Z",
+  "repository": "shubhamtaywade82/crypto-trading-agent",
+  "branch": "research/raw-ohlcv-archive-20261108T1026Z",
+  "source": "Binance USDⓈ-M public market-data connector; SDK_NOT_USED; direct REST DNS unavailable; connector HTTP status/headers not exposed.",
+  "source_endpoint": "GET /fapi/v1/klines",
+  "highwaters": {
+    "5m": "2026-11-11T18:25:00.000Z",
+    "15m": "2026-11-11T18:15:00.000Z",
+    "1h": "2026-11-11T17:00:00.000Z",
+    "4h_raw_per_symbol": "2026-11-10T16:00:00.000Z",
+    "4h_index_monitoring": "2026-11-11T08:00:00.000Z",
+    "4h_canonical": "2026-11-05T16:00:00.000Z"
+  },
+  "append_this_run": {
+    "rows_appended": 68,
+    "rows_fetched": 80,
+    "forming_rows_excluded": 12,
+    "pre_highwater_rows_excluded": 0,
+    "delta_path": "research-data/binance-usdm/delta/binance_usdm_delta_20261111T183214Z_5m15m1h_completed.jsonl",
+    "delta_sha256": "e25e204d3d905833de36891df7136e3953072b234f349238e11aa6f9dcdec614",
+    "delta_blob_sha": "3a574e1428bd98e7ffe82b151ea6db952d750d8b",
+    "manifest_path": "research-data/binance-usdm/delta/manifest-20261111T183214Z-5m15m1h.json",
+    "manifest_sha256": "d6973d744674bfa122500e141658395ce94b66e767046481b08205af99bf4536",
+    "manifest_blob_sha": "76fd897756c0becd20fd440dc2626860c0d474aa",
+    "readback_verified": true,
+    "rows_by_interval": {
+      "5m": 48,
+      "15m": 16,
+      "1h": 4
+    },
+    "rows_by_symbol": {
+      "BTCUSDT": 17,
+      "ETHUSDT": 17,
+      "SOLUSDT": 17,
+      "XRPUSDT": 17
+    }
+  },
+  "prior_archive_state": {
+    "five_minute_and_fifteen_minute": "PARTIAL_PAGE_ARCHIVE_WITH_LARGE_GAP_TO_INCREMENTAL_HIGHWATER",
+    "one_hour": "DEGRADED_BRIDGE_GAP_AND_INDEX_COUNT_DISCREPANCY",
+    "four_hour": "DEGRADED_PROVENANCE; APPEND_PROHIBITED_UNTIL_RECONCILIATION"
+  },
+  "quality_this_run": {
+    "fetchFailures": 0,
+    "duplicates": 0,
+    "missingIntervals": 0,
+    "offGrid": 0,
+    "nonMonotonic": 0,
+    "ohlcFailures": 0,
+    "nonPositiveVolume": 0,
+    "nonFinite": 0,
+    "closeTimeFailures": 0,
+    "crossSymbolAlignment": true,
+    "allSeriesContiguousFromPriorHighwater": true
+  },
+  "readback_verified": true,
+  "next_actions": [
+    "Reconcile the 5m/15m base-page coverage gaps before strategy inference.",
+    "Reconcile 1h base/delta bridge gap and 8-row index discrepancy.",
+    "Reconcile 4h raw/aligned/canonical provenance; do not append 4h.",
+    "Restore direct official REST time and exchangeInfo; require fresh metadata.",
+    "Provision compatible Node24/npm11 local checkout and deterministic backtest smoke fixture."
+  ]
+}

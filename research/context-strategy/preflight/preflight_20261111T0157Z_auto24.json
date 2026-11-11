@@ -1,0 +1,155 @@
+{
+  "schemaVersion": "1.0.0",
+  "runId": "context-strategy-20261111T015720Z-auto24",
+  "asOfUtc": "2026-11-11T01:57:20.000Z",
+  "environment": {
+    "cwd": "/",
+    "os": "Linux 6.18.57 x86_64",
+    "node": "v22.16.0",
+    "npm": "10.9.2",
+    "python": "3.13.5",
+    "cpuCores": 5,
+    "memoryTotalGiB": 5.8,
+    "memoryAvailableGiB": 4.7,
+    "diskTotalGiB": 32,
+    "diskFreeGiB": 30,
+    "git": "2.47.3",
+    "localRepositoryPresent": false
+  },
+  "repository": {
+    "remote": "shubhamtaywade82/crypto-trading-agent",
+    "defaultBranch": "main",
+    "mainCommit": "75545ee42e03dd2cefba82b3c3a4033f106644c9",
+    "remoteReadWriteAccess": true,
+    "localCheckout": false,
+    "packageEngines": {
+      "node": ">=24",
+      "npm": ">=11"
+    },
+    "sdkDependencies": [
+      "@nemesis-oss/binance-sdk",
+      "binance"
+    ],
+    "sdkImportable": false
+  },
+  "network": {
+    "directRest": {
+      "status": "BLOCKED",
+      "host": "fapi.binance.com",
+      "dnsError": "Could not resolve host",
+      "httpStatus": 0,
+      "probed": [
+        "/fapi/v1/time",
+        "/fapi/v1/exchangeInfo",
+        "/fapi/v1/klines",
+        "/fapi/v1/premiumIndex",
+        "/fapi/v1/openInterest",
+        "/fapi/v1/ticker/24hr"
+      ]
+    },
+    "connector": {
+      "status": "DEGRADED_DATA_RETURNED",
+      "httpStatus": "NOT_EXPOSED_BY_CONNECTOR",
+      "dataReturned": true
+    }
+  },
+  "exchangeMetadata": {
+    "endpoint": "GET /fapi/v1/exchangeInfo",
+    "serverTimeUtc": "2026-11-11T01:01:01.881Z",
+    "observedAtUtc": "2026-11-11T01:57:20.000Z",
+    "stalenessSeconds": 3378.119,
+    "contractStatusStrings": [
+      "TRADING"
+    ],
+    "executionValidation": "BLOCKED_STALE_METADATA"
+  },
+  "archive": {
+    "status": "PASS_WITH_COVERAGE_LIMITATIONS",
+    "branch": "research/raw-ohlcv-archive-20261108T1026Z",
+    "5m": {
+      "baseRows": 12000,
+      "rowsPerSymbol": 3000,
+      "pages": 2,
+      "highwaterUtc": "2026-11-11T01:50:00.000Z",
+      "readbackVerified": true
+    },
+    "15m": {
+      "baseRows": 12000,
+      "rowsPerSymbol": 3000,
+      "pages": 2,
+      "highwaterUtc": "2026-11-11T01:30:00.000Z",
+      "readbackVerified": true
+    },
+    "1h": {
+      "baseRows": 215484,
+      "rowsPerSymbol": 53871,
+      "highwaterUtc": "2026-11-11T00:00:00.000Z"
+    },
+    "4h": {
+      "rawRows": 53960,
+      "alignedRows": 53816,
+      "canonicalRows": 53844,
+      "rawCanonicalDifferences": {
+        "BTCUSDT": 40,
+        "ETHUSDT": 40,
+        "SOLUSDT": -4,
+        "XRPUSDT": 40
+      },
+      "hashProvenanceMismatches": 13,
+      "canonicalHighwaterUtc": "2026-11-05T16:00:00.000Z",
+      "status": "BLOCKED_PROVENANCE"
+    }
+  },
+  "dataQuality": {
+    "page2Rows": 12000,
+    "duplicates": 0,
+    "missingIntervals": 0,
+    "offGrid": 0,
+    "nonMonotonic": 0,
+    "ohlcFailures": 0,
+    "nonFinite": 0,
+    "zeroVolumePage2": 0,
+    "zeroVolumePage1RetainedRawAndExcluded": 8,
+    "incrementalRows": 20,
+    "incrementalReadbackVerified": true,
+    "currentCandleSeries": 16,
+    "returnedRows": 1920,
+    "completedRows": 1904,
+    "formingExcluded": 16,
+    "seriesQualityFailures": 0
+  },
+  "backtest": {
+    "remoteScriptsPresent": [
+      "scripts/backtest.ts",
+      "scripts/conditional-edge.ts"
+    ],
+    "backtestScriptSha": "65bb03853382be1ed0d82aed373f805173aaa6f5",
+    "conditionalEdgeScriptSha": "29034c61fdd42a5e40272234b221d29cb95fb3ee",
+    "canInvoke": false,
+    "reason": "No local checkout; Node/npm below package engine floor; dependencies absent; direct REST DNS unavailable.",
+    "smokeTest": "NOT_RUN",
+    "knownSourceGaps": [
+      "scripts/backtest.ts declares 15m/1h/4h only and omits 5m",
+      "scripts/backtest.ts does not preserve/check closeTime or exclude forming rows",
+      "scripts/backtest.ts has no explicit fetch timeout",
+      "scripts/conditional-edge.ts defaults minN=30 and 90% bootstrap confidence; required >=100 per symbol/context and 95% CI not enforced by this CLI",
+      "No explicit purging/embargo wiring exposed in conditional-edge CLI"
+    ]
+  },
+  "storage": {
+    "localDiskFreeGiB": 30,
+    "remoteGitHubWriteAccess": true,
+    "archiveReadbackVerified": true,
+    "deltaReadbackVerified": true,
+    "manifestReadbackVerified": true,
+    "indexReadbackVerified": true,
+    "artifactReadbackPending": true
+  },
+  "status": "RESEARCH_EXECUTED_DATA_QUALITY_ONLY",
+  "research": {
+    "dataQualityExperimentCompleted": true,
+    "strategyExperimentCompleted": false,
+    "oosEvaluated": false,
+    "validatedStrategies": 0
+  }
+}

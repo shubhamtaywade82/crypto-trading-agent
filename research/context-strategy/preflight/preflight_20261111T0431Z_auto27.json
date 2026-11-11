@@ -1,0 +1,145 @@
+{
+  "schemaVersion": 1,
+  "runId": "context-strategy-20261111T043146Z-auto27",
+  "asOfUtc": "2026-11-11T04:31:46.898Z",
+  "environment": {
+    "cwd": "/",
+    "os": "Linux 6.18.57",
+    "node": "v22.16.0",
+    "npm": "10.9.2",
+    "cpuCores": 5,
+    "memoryGiB": 5.8,
+    "diskFreeGiB": 30,
+    "localCheckout": false,
+    "remoteRepositoryAccessible": true,
+    "packageEngines": {
+      "node": ">=24",
+      "npm": ">=11"
+    },
+    "binanceSdk": {
+      "declaredVersion": "3.2.0",
+      "installedOrImportable": "NOT_CHECKED_LOCAL_CHECKOUT_ABSENT"
+    }
+  },
+  "checks": [
+    {
+      "capability": "shell/compute",
+      "status": "PASS",
+      "evidence": "Linux 6.18.57; 5 CPU cores; 5.8 GiB RAM; 30 GiB free disk.",
+      "impact": "Bounded tasks feasible; no repo checkout.",
+      "nextAction": "Provision compatible workspace."
+    },
+    {
+      "capability": "repo/code",
+      "status": "DEGRADED",
+      "evidence": "GitHub remote source read/write succeeded; local checkout absent.",
+      "impact": "Source inspection possible; harness cannot execute.",
+      "nextAction": "Clone reviewed commit into persistent workspace."
+    },
+    {
+      "capability": "Node/npm and Binance SDK",
+      "status": "BLOCKED",
+      "evidence": "Node 22.16.0/npm 10.9.2; package requires Node >=24/npm >=11; SDK not installed/imported.",
+      "impact": "No SDK execution or local TypeScript backtest.",
+      "nextAction": "Provision Node24/npm11 and verify SDK import."
+    },
+    {
+      "capability": "direct Binance REST",
+      "status": "BLOCKED",
+      "evidence": "/fapi/v1/time, exchangeInfo, klines, premiumIndex, openInterest and ticker/24hr returned HTTP 000 due DNS failure/timeout.",
+      "impact": "No direct HTTP status or server-time verification.",
+      "nextAction": "Restore DNS/network or continue connector-only with limitation."
+    },
+    {
+      "capability": "Binance connector",
+      "status": "DEGRADED",
+      "evidence": "Klines, mark, ticker, OI, funding, OI stats, taker, positioning and bookTicker returned data; HTTP status not exposed.",
+      "impact": "Monitoring/archive possible; metadata freshness degraded.",
+      "nextAction": "Recheck exchangeInfo when direct REST available."
+    },
+    {
+      "capability": "exchangeInfo",
+      "status": "BLOCKED",
+      "evidence": "serverTime 04:18:02.756 UTC, retrieval 04:31:40.279 UTC, age 817.523s; symbols reported TRADING but stale.",
+      "impact": "Contract status cannot be used for execution validation.",
+      "nextAction": "Require fresh exchange metadata before execution."
+    },
+    {
+      "capability": "raw archive",
+      "status": "PASS",
+      "evidence": "Page-0005 8 files/12,000 rows persisted; 5m/15m indexes 30,000 rows each, 7,500 per symbol.",
+      "impact": "Historical archive extended.",
+      "nextAction": "Continue page-0006."
+    },
+    {
+      "capability": "data quality/coverage",
+      "status": "DEGRADED",
+      "evidence": "Page-0005 zero failures; current 16 series 1,920 received/1,904 completed/16 forming; zero current quality failures. Intraday history discontinuous; 4h provenance unresolved.",
+      "impact": "No full continuous multi-cycle intraday panel.",
+      "nextAction": "Backfill page-0006 and reconcile 4h keys/hashes/highwater."
+    },
+    {
+      "capability": "backtest harness",
+      "status": "BLOCKED",
+      "evidence": "Remote scripts exist; backtest timeframe list excludes 5m; conditional-edge defaults minN=30 and confidence=90%; no purge/embargo CLI; local runtime absent.",
+      "impact": "No strategy experiment or OOS.",
+      "nextAction": "Provision runtime, add 5m, freeze gates and test harness."
+    },
+    {
+      "capability": "deterministic smoke test",
+      "status": "NOT_CHECKED",
+      "evidence": "No local checkout or fixture execution.",
+      "impact": "Full backtest prohibited.",
+      "nextAction": "Run fixture twice and verify repeatability/no-lookahead."
+    },
+    {
+      "capability": "disk/storage",
+      "status": "PASS",
+      "evidence": "30 GiB free; GitHub writes succeeded.",
+      "impact": "Persistent archive available.",
+      "nextAction": "Continue atomic writes."
+    },
+    {
+      "capability": "artifact readback",
+      "status": "PASS",
+      "evidence": "Page-0005 JSONL/manifests/indexes, archive manifest, 60-row and 8-row deltas read back; row counts and SHA-256 matched.",
+      "impact": "Archive persistence verified.",
+      "nextAction": "Verify report/snapshot/queue/registry/run artifacts."
+    }
+  ],
+  "directRestProbes": [
+    {
+      "endpoint": "GET /fapi/v1/time",
+      "httpStatus": 0,
+      "result": "DNS resolution failed"
+    },
+    {
+      "endpoint": "GET /fapi/v1/exchangeInfo",
+      "httpStatus": 0,
+      "result": "DNS resolution timed out"
+    },
+    {
+      "endpoint": "GET /fapi/v1/klines",
+      "httpStatus": 0,
+      "result": "DNS resolution failed"
+    },
+    {
+      "endpoint": "GET /fapi/v1/premiumIndex",
+      "httpStatus": 0,
+      "result": "DNS resolution timed out"
+    },
+    {
+      "endpoint": "GET /fapi/v1/openInterest",
+      "httpStatus": 0,
+      "result": "DNS resolution failed"
+    },
+    {
+      "endpoint": "GET /fapi/v1/ticker/24hr",
+      "httpStatus": 0,
+      "result": "DNS resolution timed out"
+    }
+  ],
+  "runClassification": "RESEARCH_EXECUTED",
+  "strategyResearchStatus": "RESEARCH_BLOCKED",
+  "oosEvaluated": false
+}

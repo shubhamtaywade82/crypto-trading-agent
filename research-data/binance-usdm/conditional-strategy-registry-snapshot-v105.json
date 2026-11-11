@@ -1,0 +1,258 @@
+{
+  "schema_version": "1.0.0",
+  "version": "v105",
+  "as_of_utc": "2026-11-11T18:37:18.942Z",
+  "parent_registry": "research-data/binance-usdm/conditional-strategy-registry-snapshot-v104.json",
+  "repository": "shubhamtaywade82/crypto-trading-agent",
+  "branch": "research/raw-ohlcv-archive-20261108T1026Z",
+  "universe": {
+    "tradable": [
+      "SOLUSDT",
+      "ETHUSDT",
+      "XRPUSDT"
+    ],
+    "reference_only": [
+      "BTCUSDT"
+    ]
+  },
+  "evidence_policy": {
+    "provisional_oos_min_trades_per_symbol_context": 100,
+    "stronger_evidence_trades": 200,
+    "require_positive_net_expectancy_after_costs": true,
+    "block_bootstrap": true,
+    "multiple_testing_correction": "Holm",
+    "purge_embargo": true
+  },
+  "counts": {
+    "oos_validated": 0,
+    "oos_promising": 1,
+    "insufficient_evidence_cells": 36,
+    "rejected": 0,
+    "hypothesis_families": 7
+  },
+  "entries": [
+    {
+      "key": "SOLUSDT|BULL_LOW|DONCHIAN20_4H_v1",
+      "symbol": "SOLUSDT",
+      "context": "BULL_LOW",
+      "strategy": "4h Donchian20 breakout",
+      "version": "v1",
+      "status": "OOS_PROMISING",
+      "last_evaluation_utc": "2026-11-05T09:43:57.448Z",
+      "oos_trades": 12,
+      "win_rate_pct": 66.7,
+      "target_before_stop_pct": 41.7,
+      "mean_net_R": 0.606,
+      "profit_factor": 2.72,
+      "max_drawdown_R": 1.3,
+      "block_bootstrap_ci95_mean_R": [
+        0.086,
+        1.199
+      ],
+      "promotion_blocker": "12 OOS trades < 100 per symbol/context; costs and robustness incomplete.",
+      "actionable": false
+    },
+    {
+      "key": "ALL_SYMBOLS|MULTI_CONTEXT|DONCHIAN20_WF_V2",
+      "symbol_scope": [
+        "SOLUSDT",
+        "ETHUSDT",
+        "XRPUSDT"
+      ],
+      "context": "36 strategy-context cells",
+      "strategy": "Context-aligned Donchian20 walk-forward v2",
+      "version": "v2",
+      "status": "INSUFFICIENT_EVIDENCE",
+      "cells": 36,
+      "reason": "All cells below 100 OOS trades; nominal block-bootstrap CI includes zero; Holm-adjusted p=1.0; 15bp round-trip proxy is not a calibrated execution model.",
+      "actionable": false
+    }
+  ],
+  "family_status": {
+    "trend_pullback": "HYPOTHESIS",
+    "breakout_retest": "HYPOTHESIS",
+    "range_mean_reversion": "HYPOTHESIS",
+    "failed_breakout_fade": "HYPOTHESIS",
+    "volatility_expansion": "HYPOTHESIS",
+    "btc_relative_strength": "HYPOTHESIS",
+    "funding_oi_filters": "HYPOTHESIS"
+  },
+  "context_taxonomy": {
+    "source": "v56",
+    "status": "CARRIED_FORWARD_NOT_RECOMPUTED",
+    "definition": {
+      "trend_strength": "(EMA20-EMA50)/Wilder ATR14",
+      "transition": "abs(trend_strength) below training q67 of abs trend strength; otherwise BULL/BEAR by sign",
+      "volatility": "ATR14/close LOW/NORMAL/HIGH using training-only q33/q67",
+      "warmup_bars": 500,
+      "split": "70% train / 15% validation / 15% untouched test"
+    },
+    "sample_adequacy": "ADEQUATE_FOR_DESCRIPTIVE_4H_TAXONOMY; INSUFFICIENT_FOR_STRATEGY_EDGE_OR_MULTI_TF_GENERALIZATION"
+  },
+  "status_change_this_run": "NONE. Persisted 68 completed 5m/15m/1h incremental bars and 12,000 historical 5m/15m page-0010 rows; no strategy evidence, OOS status or context taxonomy change.",
+  "registry_persistence": "Persisted on GitHub research branch; archive delta/manifests/indexes, page-0010 files/manifests, current snapshot, data-quality experiment, preflight, report, queue, receipt, artifact manifest and main run record were readback-verified. This v105 registry snapshot is being committed and will be read back.",
+  "run_id": "context-strategy-20261111T183406Z-run11",
+  "current_market_snapshot_ref": "research-data/binance-usdm/current_market_snapshot_20261111T183406Z_run11.json",
+  "archive_highwaters_utc": {
+    "5m": "2026-11-11T18:25:00.000Z",
+    "15m": "2026-11-11T18:15:00.000Z",
+    "1h": "2026-11-11T17:00:00.000Z",
+    "4h_raw_per_symbol": "2026-11-10T16:00:00.000Z",
+    "4h_index_monitoring": "2026-11-11T08:00:00.000Z",
+    "4h_canonical": "2026-11-05T16:00:00.000Z"
+  },
+  "data_readiness": {
+    "5m": "PARTIAL_BASE_PAGES_1_TO_10_PLUS_INCREMENTALS; 60,000 base rows total (15,000/symbol); base coverage end BTC/ETH 2020-02-22T01:55Z, SOL 2020-11-05T08:55Z, XRP 2020-02-27T10:15Z; 2026 incrementals separate, large gap remains.",
+    "15m": "PARTIAL_BASE_PAGES_1_TO_10_PLUS_INCREMENTALS; 60,000 base rows total (15,000/symbol); base coverage end BTC/ETH 2020-06-05T05:45Z, SOL 2021-02-17T12:45Z, XRP 2020-06-10T14:00Z; 2026 incrementals separate, large gap remains.",
+    "1h": "DEGRADED; 215,492 indexed rows (53,873/symbol), start 2020-09-14T08:00Z; 28-hour base/delta bridge gap and 8-row index discrepancy; incremental highwater 2026-11-11T17:00Z.",
+    "4h": "DEGRADED_PROVENANCE; raw/aligned/canonical 53,960/53,816/53,844; raw highwater 2026-11-10T16:00Z; monitoring completed open 2026-11-11T08:00Z; canonical end 2026-11-05T16:00Z; 13 original manifest SHA mismatches; append prohibited."
+  },
+  "parent_registry_blob_sha1": "7a2d9f1c26c201ddbbba62ca30d99e5f98e315c8",
+  "current_market_snapshot_blob_sha1": "165280732e70d7d8005255eacbfdfdf0c013675f",
+  "archive_manifest_ref": "research-data/binance-usdm/manifests/archive_manifest_20261111T183214Z_run11.json",
+  "archive_manifest_blob_sha1": "060561618c272bd77b79262ab20312b7f304c674",
+  "last_run_report_ref": "research/context-strategy/reports/2026-11-11T183718Z_run11.md",
+  "last_run_report_blob_sha1": "e93235340822c666ef73de27a629b4abe3d919ca",
+  "last_run_report_readback_verified": true,
+  "current_market_snapshot_sha256": "92e7ab7eacd92b029887c341f852a310f78440a177f00b0860f2d348eb085a23",
+  "archive_manifest_sha256": "54e6fb83de1dffa9385c5cd4f0e0551f237e4fa7aa230f62342d0703b0723e56",
+  "last_data_quality_experiment": {
+    "id": "DQ-20261111-PAGE0010",
+    "status": "COMPLETED_DATA_QUALITY_PASS",
+    "rows": 12000,
+    "quality_failures": 0,
+    "readback_verified": true,
+    "ref": "research-data/binance-usdm/experiments/data_quality_backfill_page0010_20261111T183718Z.json",
+    "sha256": "f73d8bf9b196dc4b4ad6e37c4f6f608213f4ed287048499a0b87e89ac77fcc7e"
+  },
+  "archive_updates": [
+    {
+      "path": "research-data/binance-usdm/delta/binance_usdm_delta_20261110T1102_5m15m_completed.jsonl",
+      "manifest_path": "research-data/binance-usdm/delta/manifest-20261110T1102-5m15m.json",
+      "rows": 24,
+      "rows_by_interval": {
+        "5m": 16,
+        "15m": 8
+      },
+      "sha256": "9c87aedd59984ee12b249cb358d307f9a2fe6b612490f4d24b1fce7bb100aa87",
+      "manifest_sha256": "1b3977f24b99b407a70ee3130d2605299616010b6bf48855ab1b99ad5f810ead",
+      "readback_verified": true
+    },
+    {
+      "path": "research-data/binance-usdm/delta/binance_usdm_delta_20261110T1105_1h_completed.jsonl",
+      "manifest_path": "research-data/binance-usdm/delta/manifest-20261110T1105-1h.json",
+      "rows": 4,
+      "rows_by_interval": {
+        "1h": 4
+      },
+      "sha256": "2756dae0422ac8fc058bcd9de8a0610bc64829f26996c270f9a53044d7961c18",
+      "manifest_sha256": "bc04ff89b49ce8415ad3813ab049a268142e550f4cefdf3a538e165c44bdd6ae",
+      "readback_verified": true
+    },
+    {
+      "path": "research-data/binance-usdm/delta/binance_usdm_delta_20261110T1134Z_5m15m_completed.jsonl",
+      "manifest_path": "research-data/binance-usdm/delta/manifest-20261110T1134Z-5m15m.json",
+      "rows": 32,
+      "rows_by_interval": {
+        "5m": 24,
+        "15m": 8
+      },
+      "sha256": "111f19bb552737eb1cfb6919d3c8b15e3e896ae51ed0c00bfdbaa04fae5be3dd",
+      "manifest_sha256": "126f2ec0b50018cab33ce1f21139decd3997ea9cff0345177712254cfe395bdf",
+      "readback_verified": true
+    },
+    {
+      "path": "research-data/binance-usdm/delta/binance_usdm_delta_20261110T123016Z_all_intervals_completed.jsonl",
+      "manifest_path": "research-data/binance-usdm/delta/manifest-20261110T123016Z-all-intervals.json",
+      "rows": 72,
+      "rows_by_interval": {
+        "5m": 48,
+        "15m": 16,
+        "1h": 4,
+        "4h": 4
+      },
+      "sha256": "e174b0070e756930c129558debfc149d26817215853dd38fac13b262c97ac964",
+      "manifest_sha256": "af7fa83015c9531415eeb4c0943762be07ebe14a9e1a9e8cd8622dd1d36305dc",
+      "readback_verified": true
+    },
+    {
+      "path": "research-data/binance-usdm/delta/binance_usdm_delta_20261111T183214Z_5m15m1h_completed.jsonl",
+      "manifest_path": "research-data/binance-usdm/delta/manifest-20261111T183214Z-5m15m1h.json",
+      "rows": 68,
+      "rows_by_interval": {
+        "5m": 48,
+        "15m": 16,
+        "1h": 4
+      },
+      "forming_rows_excluded": 12,
+      "sha256": "e25e204d3d905833de36891df7136e3953072b234f349238e11aa6f9dcdec614",
+      "manifest_sha256": "d6973d744674bfa122500e141658395ce94b66e767046481b08205af99bf4536",
+      "readback_verified": true
+    }
+  ],
+  "strategy_experiment_status": "NOT_RUN: only a data-quality/archive backfill experiment completed. Strategy backtest blocked by absent local checkout/harness, fragmented 5m/15m base history, 4h provenance and incomplete historical execution-cost data.",
+  "oos_evaluation_status": "NOT_RUN",
+  "append_audit_totals": {
+    "rows_fetched": 80,
+    "rows_appended": 68,
+    "forming_rows_excluded": 12,
+    "pre_highwater_rows_excluded": 0,
+    "quality_failures": 0
+  },
+  "last_run_report_sha256": "5d0c73059b178fe12d25a7a9cf91ce7e8db1ced8b97de2394ece925984b9eba6",
+  "preflight_ref": "research/context-strategy/preflight/preflight_20261111T183718Z_run11.json",
+  "preflight_blob_sha1": "29ed0a89336f18c1f25087784d57e682e18f0b20",
+  "preflight_sha256": "3f7f340b66e78306028eee76e774918065efe81429591578e96ad2fdcafddcea",
+  "current_market_snapshot_readback_verified": true,
+  "archive_manifest_readback_verified": true,
+  "cumulative_append_audit_totals": {
+    "rows_fetched": 4704,
+    "rows_appended": 200,
+    "forming_rows_excluded": 48,
+    "pre_highwater_rows_excluded": 4456,
+    "quality_failures": 0
+  },
+  "receipt_ref": "research/context-strategy/runs/research_run_receipt_20261111T183718Z_run11.json",
+  "receipt_sha256": "1b6006adaba0b1a8f1d26ca688eee2a41141efd934c023ce1e7029f8e4681762",
+  "receipt_blob_sha1": "37d040e9d4f3bfe56456017e697fce6d3424c48c",
+  "artifact_manifest_ref": "research/context-strategy/manifests/artifact_manifest_20261111T183718Z_run11.json",
+  "artifact_manifest_sha256": "72f1e2388faa97a31c48f09c57b01cb9f6ab859ec160f0fce2f20fdf8b542146",
+  "artifact_manifest_blob_sha1": "5a98fefe933791d1708adfd85e246fa3a9c2ec89",
+  "main_run_record_ref": "research-runs/context-strategy-20261111T183718Z-run11.json",
+  "main_run_record_sha256": "dfaaf061d5369018276a6a7be9411bd2541b3fe00ed277253e87739588c0243e",
+  "main_run_record_blob_sha1": "21b3874aad45f88747ee9e01c6054ca54e9e65f4",
+  "preflight_readback_verified": true,
+  "receipt_readback_verified": true,
+  "artifact_manifest_readback_verified": true,
+  "main_run_record_readback_verified": true,
+  "research_queue_ref": "research-data/binance-usdm/research-queue-v105.json",
+  "research_queue_sha256": "d463cae8d603f4e8b89f3305c65d0f055cb58fb5c9610fd144dde802e604a3e3",
+  "research_queue_blob_sha1": "856f929c6ca1b7ebefee2dfc024d551804ad0021",
+  "research_queue_readback_verified": true,
+  "historical_backfill_updates": [
+    {
+      "experiment_id": "DQ-20261111-PAGE0010",
+      "intervals": [
+        "5m",
+        "15m"
+      ],
+      "page": 10,
+      "files": 8,
+      "rows_total": 12000,
+      "rows_by_interval": {
+        "5m": 6000,
+        "15m": 6000
+      },
+      "rows_per_symbol_interval": 1500,
+      "zero_volume_rows": 0,
+      "quality_failures": 0,
+      "readback_verified": true,
+      "manifest_refs": [
+        "research-data/binance-usdm/5m/manifest-page-0010.json",
+        "research-data/binance-usdm/15m/manifest-page-0010.json"
+      ],
+      "experiment_ref": "research-data/binance-usdm/experiments/data_quality_backfill_page0010_20261111T183718Z.json",
+      "experiment_sha256": "f73d8bf9b196dc4b4ad6e37c4f6f608213f4ed287048499a0b87e89ac77fcc7e"
+    }
+  ]
+}

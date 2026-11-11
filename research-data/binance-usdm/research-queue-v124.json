@@ -122,7 +122,7 @@
     {
       "id": "Q_PAGE_0015_BACKFILL",
       "priority": 1,
-      "status": "READY",
+      "status": "BLOCKED_PROVENANCE_AUDIT",
       "title": "Backfill 5m/15m historical page 0015 across BTC/ETH/SOL/XRP",
       "prerequisites": [
         "Page-0014 manifests and indexes readback verified",
@@ -131,8 +131,8 @@
         "Binance connector historical klines",
         "Writable archive branch"
       ],
-      "blocker": null,
-      "nextAction": "After auditing pages 0010-0013, fetch 1,500 rows per symbol for 5m and 15m from exact page-0014 nextStart values; validate, persist, read back and hash."
+      "blocker": "Page-0014 is complete, but indexed pages 0010-0013 have not been independently read back in this run; avoid extending the base archive until those files/manifests are reconciled.",
+      "nextAction": "Audit raw page-0010 through page-0013 files and manifests against the index hashes; if verified, fetch page-0015 from the per-symbol nextStart values recorded in the page-0014 indexes."
     },
     {
       "id": "Q_DAILY_STRATEGY_EXPERIMENT_20261112",

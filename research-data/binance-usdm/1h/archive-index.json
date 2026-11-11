@@ -126,7 +126,10 @@
       "forming_rows_excluded": 4,
       "rows_appended": 4,
       "as_of_utc": "2026-11-11T05:42:58.656Z"
-    }
+    },
+    "combined_continuity": "DEGRADED",
+    "known_bridge_gap_hourly_opens_per_symbol": 28,
+    "top_level_count_discrepancy_rows": 8
   },
   "status": "COMPLETE_HISTORICAL_1H_PAGES_WITH_INCREMENTAL_DELTA",
   "next_actions": [
@@ -3559,5 +3562,30 @@
   "latest_incremental_delta_manifest": "research-data/binance-usdm/delta/manifest-20261111T0631Z-5m15m1h.json",
   "latest_incremental_delta_sha256": "2f6787e3bda9074adc5d06f846c322971bcef09cf7440f88922333a0007f42e0",
   "latest_incremental_delta_rows": 4,
-  "latest_incremental_delta_readback_verified": true
+  "latest_incremental_delta_readback_verified": true,
+  "combined_coverage_status": "DEGRADED_BASE_DELTA_BRIDGE",
+  "coverage_reconciliation": {
+    "verified_at_utc": "2026-11-11T06:44:28.231Z",
+    "page_progress": {
+      "rows_per_symbol": 53871,
+      "rows_total": 215484,
+      "last_completed_open_utc": "2026-11-06T22:00:00.000Z",
+      "next_start_utc": "2026-11-06T23:00:00.000Z"
+    },
+    "top_level_index_counts": {
+      "rows_per_symbol": 53873,
+      "rows_total": 215492,
+      "excess_rows": 8,
+      "excess_per_symbol": 2
+    },
+    "first_post_base_incremental_latest_open_utc": "2026-11-08T03:00:00.000Z",
+    "missing_hourly_opens_per_symbol": 28,
+    "missing_open_range_utc": {
+      "first": "2026-11-06T23:00:00.000Z",
+      "last": "2026-11-08T02:00:00.000Z"
+    },
+    "incremental_highwater_utc": "2026-11-11T05:00:00.000Z",
+    "status": "BLOCKED_UNTIL_KEYSET_AND_COUNT_RECONCILIATION",
+    "note": "Page-level base quality remains PASS; combined base plus incremental deltas are not continuous. Preserve existing counts and hashes until exact row-key reconciliation is complete."
+  }
 }

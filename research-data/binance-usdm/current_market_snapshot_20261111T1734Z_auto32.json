@@ -1,0 +1,474 @@
+{
+  "schemaVersion": "1.0.0",
+  "runId": "context-strategy-20261111T173054Z-auto32",
+  "asOfUtc": "2026-11-11T17:34:40.305Z",
+  "retrieval": {
+    "markTickerOiRetrievedUtc": "2026-11-11T17:32:39Z/17:32:59Z",
+    "derivativesRetrievedUtc": "2026-11-11T17:25:00Z/17:30:00Z",
+    "klinesRetrievedUtc": "2026-11-11T17:34:20.025Z",
+    "orderBookRetrievedUtc": "2026-11-11T17:34:36.814Z/17:34:40.305Z",
+    "exchangeInfoRetrievedUtc": "2026-11-11T17:34:53.468Z",
+    "source": "Binance USD-M public market-data connector; SDK_NOT_USED; direct REST DNS unavailable; connector does not expose HTTP status/headers."
+  },
+  "endpoints": {
+    "klines": "GET /fapi/v1/klines",
+    "premiumIndex": "GET /fapi/v1/premiumIndex",
+    "ticker24h": "GET /fapi/v1/ticker/24hr",
+    "openInterest": "GET /fapi/v1/openInterest",
+    "fundingHistory": "GET /fapi/v1/fundingRate",
+    "oiHistory": "GET /futures/data/openInterestHist",
+    "takerFlow": "GET /futures/data/takerlongshortRatio",
+    "globalLongShort": "GET /futures/data/globalLongShortAccountRatio",
+    "orderBook": "GET /fapi/v1/depth",
+    "basis": "GET /futures/data/basis",
+    "exchangeMetadata": "GET /fapi/v1/exchangeInfo",
+    "serverTime": "GET /fapi/v1/time"
+  },
+  "exchangeMetadata": {
+    "serverTimeUtc": "2026-11-11T10:18:31.942Z",
+    "comparisonRetrievalUtc": "2026-11-11T17:34:53.468Z",
+    "staleBySeconds": 26181.526,
+    "status": "STALE_NOT_VALID_FOR_EXECUTION",
+    "symbolStatusStrings": {
+      "BTCUSDT": "TRADING",
+      "ETHUSDT": "TRADING",
+      "SOLUSDT": "TRADING",
+      "XRPUSDT": "TRADING"
+    },
+    "note": "The connector returned TRADING strings but its serverTime is over 7 hours stale. Direct /fapi/v1/time and /fapi/v1/exchangeInfo DNS probes failed; contract status is not considered freshly validated."
+  },
+  "contextMethod": {
+    "taxonomyId": "CTX-4H-EMA50xEMA200-ATRQ-v2-FULL-ARCHIVE",
+    "thresholdsArtifact": "research/context-strategy/context-discovery/context_distribution_20261108T022532Z.json",
+    "thresholdFit": "V100 training-derived thresholds carried forward; no refit this run.",
+    "fourHourTrend": "EMA50/EMA200 spread; SIDEWAYS if absolute spread is at or below symbol training q30 flat threshold; otherwise BULL/BEAR by sign.",
+    "fourHourVolatility": "Wilder ATR14/close; LOW below training q33, NORMAL through q67, HIGH above q67.",
+    "shock": "SHOCK overrides if absolute completed 4h close-to-close return exceeds symbol training q99.",
+    "lowerTimeframes": "Descriptive EMA20/EMA50 alignment, 20-bar return, ATR14/close and volume ratio; not a train-fitted regime taxonomy.",
+    "confidence": "Deterministic feature classification only; threshold separation is not a calibrated probability of a future trade win."
+  },
+  "archive": {
+    "repository": "shubhamtaywade82/crypto-trading-agent",
+    "branch": "research/raw-ohlcv-archive-20261108T1026Z",
+    "manifestPath": "research-data/binance-usdm/manifests/archive_manifest_20261111T173054Z_auto32.json",
+    "manifestBlobSha": "29acd9d50a7a4bc302721c7c24287e9e8539c292",
+    "latestCompletedOpenUtc": {
+      "5m": "2026-11-11T17:25:00.000Z",
+      "15m": "2026-11-11T17:15:00.000Z",
+      "1h": "2026-11-11T16:00:00.000Z",
+      "4h": "2026-11-10T16:00:00.000Z"
+    },
+    "note": "4h highwater is the raw archive highwater only; 4h canonical data remains stale and append is prohibited pending provenance reconciliation."
+  },
+  "symbols": {
+    "BTCUSDT": {
+      "role": "BTC regime/confirmation reference only",
+      "markPrice": 74378.8,
+      "lastPrice": 74373.3,
+      "change24hPct": 1.742,
+      "high24h": 74750,
+      "low24h": 72737.9,
+      "quoteVolume24h": 9123755239.31,
+      "funding": {
+        "premiumIndexLastFundingRate": 0.00004834,
+        "premiumIndexRatePct": 0.004834,
+        "lastSettledRate": 0.00006639,
+        "lastSettledRatePct": 0.006639,
+        "lastSettledUtc": "2026-11-11T16:00:00.000Z",
+        "nextFundingUtc": "2026-11-12T00:00:00.000Z",
+        "intervalHours": 8,
+        "over005Pct": false
+      },
+      "openInterest": {
+        "current": 98986.713,
+        "currentUtc": "2026-11-11T17:32:39.359Z",
+        "hist5mPrevious": 98888.194,
+        "hist5mPreviousUtc": "2026-11-11T17:25:00.000Z",
+        "hist5m": 98969.59,
+        "hist5mUtc": "2026-11-11T17:30:00.000Z",
+        "change5mPct": 0.08231
+      },
+      "flow": {
+        "takerBuySellRatio5m": 1.0503,
+        "buyVolume": 265.509,
+        "sellVolume": 252.795,
+        "timestampUtc": "2026-11-11T17:25:00.000Z",
+        "globalLongShortRatio5m": 2.7064,
+        "longAccountPct": 73.02,
+        "shortAccountPct": 26.98,
+        "positioningTimestampUtc": "2026-11-11T17:30:00.000Z"
+      },
+      "orderBook": {
+        "timestampUtc": "2026-11-11T17:34:36.814Z",
+        "spreadBps": 0.01344,
+        "bid20Notional": 35330.7452,
+        "ask20Notional": 975669.1151,
+        "depthImbalance": -0.93011,
+        "levelsPerSide": 20
+      },
+      "basis": {
+        "indexPrice": 74568.88630435,
+        "futuresPrice": 74528.4,
+        "basis": -40.48630435,
+        "basisBps": -5.4294,
+        "basisRate": -0.0005,
+        "timestampUtc": "2026-11-11T17:25:00.000Z"
+      },
+      "context4h": {
+        "label": "BEAR_LOW",
+        "sourceSnapshotUtc": "2026-11-11T16:36:02.516Z",
+        "lastCompletedOpenUtc": "2026-11-11T12:00:00.000Z",
+        "close": 73953.5,
+        "ema50": 75756.5532,
+        "ema200": 78781.4622,
+        "trendSpreadPct": -3.83962,
+        "atr14ToClosePct": 1.21884,
+        "return20BarsPct": -2.6146,
+        "thresholds": {
+          "flatPct": 2.5048,
+          "volQ33Pct": 1.4474,
+          "volQ67Pct": 2.0674,
+          "shockAbsReturnQ99Pct": 4.8982
+        },
+        "shock": false
+      },
+      "timeframeContext": {
+        "1h": {
+          "trend": "BEARISH",
+          "lastCompletedOpenUtc": "2026-11-11T16:00:00.000Z",
+          "return20BarsPct": 0.63466,
+          "atr14ToClosePct": 0.66104,
+          "volumeVsPrior20": 2.02657
+        },
+        "15m": {
+          "trend": "BULLISH",
+          "lastCompletedOpenUtc": "2026-11-11T17:15:00.000Z",
+          "return20BarsPct": 0.71705,
+          "atr14ToClosePct": 0.38215,
+          "volumeVsPrior20": 2.50024
+        },
+        "5m": {
+          "trend": "BULLISH",
+          "lastCompletedOpenUtc": "2026-11-11T17:25:00.000Z",
+          "return20BarsPct": 0.63495,
+          "atr14ToClosePct": 0.26187,
+          "volumeVsPrior20": 0.59213
+        }
+      }
+    },
+    "ETHUSDT": {
+      "role": "Tradable",
+      "markPrice": 2088.55043411,
+      "lastPrice": 2088.42,
+      "change24hPct": 3.017,
+      "high24h": 2103.62,
+      "low24h": 2013.4,
+      "quoteVolume24h": 6028813425.62,
+      "funding": {
+        "premiumIndexLastFundingRate": 0.00006957,
+        "premiumIndexRatePct": 0.006957,
+        "lastSettledRate": 0.00006582,
+        "lastSettledRatePct": 0.006582,
+        "lastSettledUtc": "2026-11-11T16:00:00.000Z",
+        "nextFundingUtc": "2026-11-12T00:00:00.000Z",
+        "intervalHours": 8,
+        "over005Pct": false
+      },
+      "openInterest": {
+        "current": 2266926.463,
+        "currentUtc": "2026-11-11T17:32:48.919Z",
+        "hist5mPrevious": 2268345.601,
+        "hist5mPreviousUtc": "2026-11-11T17:25:00.000Z",
+        "hist5m": 2266732.081,
+        "hist5mUtc": "2026-11-11T17:30:00.000Z",
+        "change5mPct": -0.07113
+      },
+      "flow": {
+        "takerBuySellRatio5m": 0.5705,
+        "buyVolume": 6082.574,
+        "sellVolume": 10662.269,
+        "timestampUtc": "2026-11-11T17:25:00.000Z",
+        "globalLongShortRatio5m": 3.2176,
+        "longAccountPct": 76.29,
+        "shortAccountPct": 23.71,
+        "positioningTimestampUtc": "2026-11-11T17:30:00.000Z"
+      },
+      "orderBook": {
+        "timestampUtc": "2026-11-11T17:34:37.905Z",
+        "spreadBps": 0.04789,
+        "bid20Notional": 704914.49567,
+        "ask20Notional": 266446.06041,
+        "depthImbalance": 0.4514,
+        "levelsPerSide": 20
+      },
+      "basis": {
+        "indexPrice": 2096.69488372,
+        "futuresPrice": 2095.04,
+        "basis": -1.65488372,
+        "basisBps": -7.8928,
+        "basisRate": -0.0008,
+        "timestampUtc": "2026-11-11T17:25:00.000Z"
+      },
+      "context4h": {
+        "label": "BEAR_NORMAL",
+        "sourceSnapshotUtc": "2026-11-11T16:36:02.516Z",
+        "lastCompletedOpenUtc": "2026-11-11T12:00:00.000Z",
+        "close": 2074.25,
+        "ema50": 2182.7242,
+        "ema200": 2326.4635,
+        "trendSpreadPct": -6.17845,
+        "atr14ToClosePct": 1.78101,
+        "return20BarsPct": -7.40947,
+        "thresholds": {
+          "flatPct": 2.5106,
+          "volQ33Pct": 1.755,
+          "volQ67Pct": 2.5876,
+          "shockAbsReturnQ99Pct": 6.3197
+        },
+        "shock": false
+      },
+      "timeframeContext": {
+        "1h": {
+          "trend": "BEARISH",
+          "lastCompletedOpenUtc": "2026-11-11T16:00:00.000Z",
+          "return20BarsPct": 0.88317,
+          "atr14ToClosePct": 0.88859,
+          "volumeVsPrior20": 1.42781
+        },
+        "15m": {
+          "trend": "BULLISH",
+          "lastCompletedOpenUtc": "2026-11-11T17:15:00.000Z",
+          "return20BarsPct": 1.85292,
+          "atr14ToClosePct": 0.52318,
+          "volumeVsPrior20": 2.7515
+        },
+        "5m": {
+          "trend": "BULLISH",
+          "lastCompletedOpenUtc": "2026-11-11T17:25:00.000Z",
+          "return20BarsPct": 0.75971,
+          "atr14ToClosePct": 0.35809,
+          "volumeVsPrior20": 0.83374
+        }
+      }
+    },
+    "SOLUSDT": {
+      "role": "Tradable",
+      "markPrice": 85.27251558,
+      "lastPrice": 85.27,
+      "change24hPct": 3.307,
+      "high24h": 85.83,
+      "low24h": 81.82,
+      "quoteVolume24h": 1196423669.7007,
+      "funding": {
+        "premiumIndexLastFundingRate": 0.00007294,
+        "premiumIndexRatePct": 0.007294,
+        "lastSettledRate": 0.00008936,
+        "lastSettledRatePct": 0.008936,
+        "lastSettledUtc": "2026-11-11T16:00:00.000Z",
+        "nextFundingUtc": "2026-11-12T00:00:00.000Z",
+        "intervalHours": 8,
+        "over005Pct": false
+      },
+      "openInterest": {
+        "current": 9702167.51,
+        "currentUtc": "2026-11-11T17:32:53.349Z",
+        "hist5mPrevious": 9692175.16,
+        "hist5mPreviousUtc": "2026-11-11T17:25:00.000Z",
+        "hist5m": 9690828.41,
+        "hist5mUtc": "2026-11-11T17:30:00.000Z",
+        "change5mPct": -0.0139
+      },
+      "flow": {
+        "takerBuySellRatio5m": 0.6957,
+        "buyVolume": 16688.05,
+        "sellVolume": 23986.89,
+        "timestampUtc": "2026-11-11T17:25:00.000Z",
+        "globalLongShortRatio5m": 3.3459,
+        "longAccountPct": 76.99,
+        "shortAccountPct": 23.01,
+        "positioningTimestampUtc": "2026-11-11T17:30:00.000Z"
+      },
+      "orderBook": {
+        "timestampUtc": "2026-11-11T17:34:38.909Z",
+        "spreadBps": 1.17295,
+        "bid20Notional": 7279657.0691,
+        "ask20Notional": 4136416.5173,
+        "depthImbalance": 0.27533,
+        "levelsPerSide": 20
+      },
+      "basis": {
+        "indexPrice": 85.59737217,
+        "futuresPrice": 85.54,
+        "basis": -0.05737217,
+        "basisBps": -6.7026,
+        "basisRate": -0.0007,
+        "timestampUtc": "2026-11-11T17:25:00.000Z"
+      },
+      "context4h": {
+        "label": "BEAR_LOW",
+        "sourceSnapshotUtc": "2026-11-11T16:36:02.516Z",
+        "lastCompletedOpenUtc": "2026-11-11T12:00:00.000Z",
+        "close": 84.8,
+        "ema50": 88.7862,
+        "ema200": 97.7512,
+        "trendSpreadPct": -9.17117,
+        "atr14ToClosePct": 1.9679,
+        "return20BarsPct": -5.04983,
+        "thresholds": {
+          "flatPct": 4.0735,
+          "volQ33Pct": 2.7494,
+          "volQ67Pct": 4.0357,
+          "shockAbsReturnQ99Pct": 9.7612
+        },
+        "shock": false
+      },
+      "timeframeContext": {
+        "1h": {
+          "trend": "BEARISH",
+          "lastCompletedOpenUtc": "2026-11-11T16:00:00.000Z",
+          "return20BarsPct": 1.88543,
+          "atr14ToClosePct": 1.0814,
+          "volumeVsPrior20": 1.22074
+        },
+        "15m": {
+          "trend": "BULLISH",
+          "lastCompletedOpenUtc": "2026-11-11T17:15:00.000Z",
+          "return20BarsPct": 1.88634,
+          "atr14ToClosePct": 0.5818,
+          "volumeVsPrior20": 1.71738
+        },
+        "5m": {
+          "trend": "BULLISH",
+          "lastCompletedOpenUtc": "2026-11-11T17:25:00.000Z",
+          "return20BarsPct": 0.57749,
+          "atr14ToClosePct": 0.3851,
+          "volumeVsPrior20": 0.57832
+        }
+      }
+    },
+    "XRPUSDT": {
+      "role": "Tradable",
+      "markPrice": 1.0688053,
+      "lastPrice": 1.0688,
+      "change24hPct": 1.771,
+      "high24h": 1.0805,
+      "low24h": 1.0467,
+      "quoteVolume24h": 591329016.1035,
+      "funding": {
+        "premiumIndexLastFundingRate": 0.00008774,
+        "premiumIndexRatePct": 0.008774,
+        "lastSettledRate": 0.0001,
+        "lastSettledRatePct": 0.01,
+        "lastSettledUtc": "2026-11-11T16:00:00.000Z",
+        "nextFundingUtc": "2026-11-12T00:00:00.000Z",
+        "intervalHours": 8,
+        "over005Pct": false
+      },
+      "openInterest": {
+        "current": 305617650.3,
+        "currentUtc": "2026-11-11T17:32:59.105Z",
+        "hist5mPrevious": 305580831.7,
+        "hist5mPreviousUtc": "2026-11-11T17:25:00.000Z",
+        "hist5m": 305616230.2,
+        "hist5mUtc": "2026-11-11T17:30:00.000Z",
+        "change5mPct": 0.01158
+      },
+      "flow": {
+        "takerBuySellRatio5m": 0.5132,
+        "buyVolume": 548865.9,
+        "sellVolume": 1069579,
+        "timestampUtc": "2026-11-11T17:25:00.000Z",
+        "globalLongShortRatio5m": 3.0453,
+        "longAccountPct": 75.28,
+        "shortAccountPct": 24.72,
+        "positioningTimestampUtc": "2026-11-11T17:30:00.000Z"
+      },
+      "orderBook": {
+        "timestampUtc": "2026-11-11T17:34:40.305Z",
+        "spreadBps": 0.93602,
+        "bid20Notional": 2910943.01553,
+        "ask20Notional": 2235821.94707,
+        "depthImbalance": 0.13117,
+        "levelsPerSide": 20
+      },
+      "basis": {
+        "indexPrice": 1.07567422,
+        "futuresPrice": 1.0751,
+        "basis": -0.00057422,
+        "basisBps": -5.3382,
+        "basisRate": -0.0005,
+        "timestampUtc": "2026-11-11T17:25:00.000Z"
+      },
+      "context4h": {
+        "label": "BEAR_NORMAL",
+        "sourceSnapshotUtc": "2026-11-11T16:36:02.516Z",
+        "lastCompletedOpenUtc": "2026-11-11T12:00:00.000Z",
+        "close": 1.0723,
+        "ema50": 1.1511385,
+        "ema200": 1.2652588,
+        "trendSpreadPct": -9.01952,
+        "atr14ToClosePct": 2.21458,
+        "return20BarsPct": -7.90174,
+        "thresholds": {
+          "flatPct": 2.3359,
+          "volQ33Pct": 1.9936,
+          "volQ67Pct": 3.0167,
+          "shockAbsReturnQ99Pct": 9.098
+        },
+        "shock": false
+      },
+      "timeframeContext": {
+        "1h": {
+          "trend": "BEARISH",
+          "lastCompletedOpenUtc": "2026-11-11T16:00:00.000Z",
+          "return20BarsPct": 1.10482,
+          "atr14ToClosePct": 1.10387,
+          "volumeVsPrior20": 1.48233
+        },
+        "15m": {
+          "trend": "BULLISH",
+          "lastCompletedOpenUtc": "2026-11-11T17:15:00.000Z",
+          "return20BarsPct": 1.7374,
+          "atr14ToClosePct": 0.64725,
+          "volumeVsPrior20": 1.31319
+        },
+        "5m": {
+          "trend": "BULLISH",
+          "lastCompletedOpenUtc": "2026-11-11T17:25:00.000Z",
+          "return20BarsPct": 0.06537,
+          "atr14ToClosePct": 0.41954,
+          "volumeVsPrior20": 0.62785
+        }
+      }
+    }
+  },
+  "crossSymbol": {
+    "rollingCorrelation4h50Returns": {
+      "ETH_BTC": 0.936,
+      "SOL_BTC": 0.925,
+      "XRP_BTC": 0.823
+    },
+    "relative20Bar4hStrengthVsBTCpp": {
+      "ETH": -4.79,
+      "SOL": -2.44,
+      "XRP": -5.29
+    },
+    "sourceSnapshotUtc": "2026-11-11T16:36:02.516Z",
+    "status": "CARRIED_FORWARD_NOT_RECOMPUTED_THIS_RUN"
+  },
+  "quality": {
+    "sampledSeries": 16,
+    "rowsFetched": 1212,
+    "completedRows": 1196,
+    "formingRowsExcluded": 16,
+    "duplicates": 0,
+    "missingIntervals": 0,
+    "nonMonotonic": 0,
+    "ohlcInvariantFailures": 0,
+    "nonPositiveVolume": 0,
+    "offGrid": "NOT_EXPLICITLY_COUNTED_FOR_FULL_MONITORING_SAMPLE",
+    "nonFinite": "NOT_EXPLICITLY_COUNTED_FOR_FULL_MONITORING_SAMPLE",
+    "closeTimeInvariant": "COMPLETED/FORMS FILTERED BY closeTime; exact closeTime invariant checked on appended delta only",
+    "note": "The current snapshot sample passed duplicate, monotonicity, continuity and OHLC/positive-volume checks. Full historical archive coverage remains degraded."
+  }
+}

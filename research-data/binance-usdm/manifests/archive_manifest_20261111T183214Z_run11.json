@@ -58,11 +58,12 @@
   },
   "readback_verified": true,
   "next_actions": [
-    "Reconcile the 5m/15m base-page coverage gaps before strategy inference.",
-    "Reconcile 1h base/delta bridge gap and 8-row index discrepancy.",
-    "Reconcile 4h raw/aligned/canonical provenance; do not append 4h.",
-    "Restore direct official REST time and exchangeInfo; require fresh metadata.",
-    "Provision compatible Node24/npm11 local checkout and deterministic backtest smoke fixture."
+    "Backfill 5m and 15m page 0011 from the updated per-symbol next_start_utc values.",
+    "Reconcile the 1h base/delta bridge gap and index row-count discrepancy.",
+    "Reconcile 4h raw/aligned/canonical provenance; keep 4h append prohibited.",
+    "Provision Node24/npm11 checkout and run deterministic no-lookahead smoke fixture.",
+    "Restore direct REST DNS and fresh /fapi/v1/time and /fapi/v1/exchangeInfo responses.",
+    "Backfill point-in-time funding/OI/taker/basis/positioning and execution-cost history."
   ],
   "index_updates": {
     "5m": {
@@ -90,5 +91,76 @@
       "highwater_utc": "2026-11-11T17:00:00.000Z"
     }
   },
-  "index_readback_verified": true
+  "index_readback_verified": true,
+  "historical_backfill_this_run": {
+    "page": 10,
+    "intervals": [
+      "5m",
+      "15m"
+    ],
+    "symbols": [
+      "BTCUSDT",
+      "ETHUSDT",
+      "SOLUSDT",
+      "XRPUSDT"
+    ],
+    "files": 8,
+    "rows_total": 12000,
+    "rows_per_interval": {
+      "5m": 6000,
+      "15m": 6000
+    },
+    "rows_per_symbol_per_interval": 1500,
+    "zero_volume_rows": 0,
+    "quality": {
+      "duplicates": 0,
+      "missing_intervals": 0,
+      "off_grid": 0,
+      "non_monotonic": 0,
+      "ohlc_failures": 0,
+      "non_finite": 0,
+      "close_time_failures": 0
+    },
+    "manifests": {
+      "5m": {
+        "path": "research-data/binance-usdm/5m/manifest-page-0010.json",
+        "sha256": "75b6d1bc6823d90cc17878a6723fe5451d2a87cf82ade368d611339e57046560",
+        "blob_sha": "9dc2e52952c762c90a70387f8517761ae76405cf"
+      },
+      "15m": {
+        "path": "research-data/binance-usdm/15m/manifest-page-0010.json",
+        "sha256": "5bdcbf7593128d98c243531fcbcf850c39bdb651dbc56091af65545909db2450",
+        "blob_sha": "0493ac708c7e7778bbeb87e52bfcea7abb55fd3b"
+      }
+    },
+    "readback_exact_for_all_files": true,
+    "next_start_utc": {
+      "5m": {
+        "BTCUSDT": "2020-02-22T02:00:00.000Z",
+        "ETHUSDT": "2020-02-22T02:00:00.000Z",
+        "SOLUSDT": "2020-11-05T09:00:00.000Z",
+        "XRPUSDT": "2020-02-27T10:20:00.000Z"
+      },
+      "15m": {
+        "BTCUSDT": "2020-06-05T06:00:00.000Z",
+        "ETHUSDT": "2020-06-05T06:00:00.000Z",
+        "SOLUSDT": "2021-02-17T13:00:00.000Z",
+        "XRPUSDT": "2020-06-10T14:15:00.000Z"
+      }
+    }
+  },
+  "archive_indexes": {
+    "5m": {
+      "path": "research-data/binance-usdm/5m/archive-index.json",
+      "blob_sha": "bd3594a7d4f5a2b8fec6bb081771f03ceab7176d",
+      "page_0010_manifest_sha256": "75b6d1bc6823d90cc17878a6723fe5451d2a87cf82ade368d611339e57046560",
+      "readback_verified": true
+    },
+    "15m": {
+      "path": "research-data/binance-usdm/15m/archive-index.json",
+      "blob_sha": "454d5d27d91a2f87a9526d79825425e136228654",
+      "page_0010_manifest_sha256": "5bdcbf7593128d98c243531fcbcf850c39bdb651dbc56091af65545909db2450",
+      "readback_verified": true
+    }
+  }
 }

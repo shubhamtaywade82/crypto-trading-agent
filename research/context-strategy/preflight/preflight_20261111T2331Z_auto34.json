@@ -1,0 +1,104 @@
+{
+  "schemaVersion": "1.0.0",
+  "runId": "context-strategy-20261111T2331Z-auto34",
+  "asOfUtc": "2026-11-11T23:41:04.016Z",
+  "overallStatus": "RESEARCH_EXECUTED",
+  "strategyBacktestStatus": "RESEARCH_BLOCKED",
+  "oosEvaluated": false,
+  "environment": {
+    "cwd": "/",
+    "os": "Linux 6.18.57 x86_64",
+    "python": "3.13.5",
+    "node": "v22.16.0",
+    "npm": "10.9.2",
+    "pnpm": "NOT_INSTALLED",
+    "yarn": "NOT_INSTALLED",
+    "cpuCores": 3,
+    "memory": "5.8 GiB",
+    "disk": "32 GiB overlay; 30 GiB free; 5.7 MiB used",
+    "localRepositoryCheckout": "NOT_PRESENT",
+    "remoteRepository": "shubhamtaywade82/crypto-trading-agent (GitHub connector read/write accessible)",
+    "packageEngines": {
+      "node": ">=24",
+      "npm": ">=11"
+    },
+    "remoteBacktestEntrypoint": "scripts/backtest.ts",
+    "remoteConditionalResearchEntrypoint": "scripts/conditional-edge.ts",
+    "sdkPackages": {
+      "@nemesis-oss/binance-sdk": "NOT_INSTALLED",
+      "@binance/connector": "NOT_INSTALLED",
+      "binance": "NOT_INSTALLED",
+      "binance-api-node": "NOT_INSTALLED"
+    }
+  },
+  "checks": [
+    {
+      "capability": "shell_compute",
+      "status": "PASS",
+      "evidence": "cwd=/; Linux 6.18.57 x86_64; Python 3.13.5; Node 22.16.0; npm 10.9.2; 3 CPU; 5.8 GiB RAM; 30 GiB free disk.",
+      "impact": "Compute is available; runtime is below repository requirement.",
+      "nextAction": "Provision Node 24+ and npm 11+."
+    },
+    {
+      "capability": "repository_code",
+      "status": "DEGRADED",
+      "evidence": "Remote package.json and scripts/backtest.ts are accessible through GitHub; no local .git checkout found in /workspace, /mnt/data, /home or /root.",
+      "impact": "Remote source can be inspected but not invoked in this runtime.",
+      "nextAction": "Clone exact repository commit into a persistent workspace after runtime upgrade."
+    },
+    {
+      "capability": "network_binance_endpoints",
+      "status": "DEGRADED",
+      "evidence": "Binance connector returned klines, premiumIndex/mark, ticker, exchangeInfo, funding history, openInterest, taker flow, OI history, long-short ratio and depth. Direct GET /fapi/v1/time failed DNS resolution (curl exit 6, HTTP 000). Connector does not expose HTTP status/headers. exchangeInfo.serverTime=2026-11-11T10:18:31.943Z, 13h12m29.057s older than market data.",
+      "impact": "Fresh market snapshot is usable for observation; contract metadata cannot validate execution.",
+      "nextAction": "Restore outbound DNS/HTTPS and probe /time and /exchangeInfo with bounded timeouts."
+    },
+    {
+      "capability": "raw_historical_archive",
+      "status": "DEGRADED",
+      "evidence": "Remote raw archive branch research/raw-ohlcv-archive-20261108T1026Z; 5m/15m pages 0010-0013 and 0015 independently read back; 36 completed 5m/15m bars appended; 1h/4h archives remain degraded.",
+      "impact": "5m/15m partial base windows are not continuous multi-year history; 1h/4h not research-ready.",
+      "nextAction": "Backfill page 0016 from per-symbol nextStart; reconcile 1h and 4h before using those panels."
+    },
+    {
+      "capability": "data_quality_coverage",
+      "status": "DEGRADED",
+      "evidence": "60,000 raw rows audited across 40 files; 10 manifests verified. All checks pass except 3 zero-volume rows in SOLUSDT 15m page0011, retained raw/excluded from analysis. 1h has 28-hour bridge and 8-row discrepancy; 4h counts 53,960 raw / 53,816 aligned / 53,844 canonical with 13 original manifest SHA mismatches.",
+      "impact": "No full multi-symbol multi-timeframe panel for strategy tests.",
+      "nextAction": "Continue 5m/15m page backfill and reconcile 1h/4h row keys and provenance."
+    },
+    {
+      "capability": "backtest_harness_smoke_test",
+      "status": "BLOCKED",
+      "evidence": "Remote scripts/backtest.ts exists; local repo absent; Node 22.16.0/npm 10.9.2 below package requirements; SDK dependencies absent; deterministic fixture smoke test not run.",
+      "impact": "No strategy experiment or untouched OOS can be claimed.",
+      "nextAction": "Provision Node24/npm11, clone exact commit, install lockfile, run fixture twice and no-lookahead invariance test."
+    },
+    {
+      "capability": "disk_storage",
+      "status": "PASS",
+      "evidence": "30 GiB free local disk; GitHub raw archive branch accepted writes for delta, manifest, indexes and archive manifest.",
+      "impact": "Remote durable archive persistence is available; local raw archive is not present.",
+      "nextAction": "Continue atomic GitHub writes with exact readback."
+    },
+    {
+      "capability": "artifact_readback",
+      "status": "PASS",
+      "evidence": "Delta, delta manifest, 5m/15m indexes, archive manifest and audited page files/manifests read back from GitHub; SHA-256 and Git blob references reconciled.",
+      "impact": "Archive artifacts are persisted and retrievable.",
+      "nextAction": "Persist run report, preflight, queue and registry snapshot; verify readback."
+    }
+  ],
+  "requiredEndpoints": {
+    "serverTime": "BLOCKED_DIRECT_DNS",
+    "exchangeInfo": "CONNECTOR_DATA_RETURNED_BUT_STALE",
+    "klines": "CONNECTOR_DATA_RETURNED",
+    "premiumIndex": "CONNECTOR_DATA_RETURNED",
+    "openInterest": "CONNECTOR_DATA_RETURNED",
+    "ticker24hr": "CONNECTOR_DATA_RETURNED",
+    "fundingHistory": "CONNECTOR_DATA_RETURNED",
+    "takerFlow": "CONNECTOR_DATA_RETURNED",
+    "orderBook": "CONNECTOR_DATA_RETURNED"
+  },
+  "note": "RESEARCH_EXECUTED refers to the completed historical archive data-quality experiment and incremental append only. No strategy backtest, walk-forward or OOS evaluation ran."
+}

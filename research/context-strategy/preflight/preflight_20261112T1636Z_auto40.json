@@ -1,0 +1,252 @@
+{
+  "schema_version": "1.0.0",
+  "run_id": "context-strategy-20261112T1633Z-auto40",
+  "as_of_utc": "2026-11-12T16:36:47.924Z",
+  "checks": [
+    {
+      "capability": "shell/compute",
+      "status": "PASS",
+      "evidence": {
+        "cwd": "/home/oai",
+        "os": "Linux 6.18.57 x86_64 glibc2.41",
+        "python": "3.13.5",
+        "node": "v22.16.0",
+        "npm": "10.9.2",
+        "cpu_cores": 3,
+        "memory_total_gb": 6.24,
+        "memory_available_gb": 5.06,
+        "disk_free_gb": 32.03
+      },
+      "impact": "Compute is available for reconnaissance and small calculations; repository harness runtime floor is not met.",
+      "next_action": "Provision Node>=24 and npm>=11."
+    },
+    {
+      "capability": "repo/code",
+      "status": "BLOCKED",
+      "evidence": {
+        "local_checkout": false,
+        "cwd": "/home/oai",
+        "git_dir": false,
+        "remote_repository": "shubhamtaywade82/crypto-trading-agent",
+        "remote_main_commit": "c00af68f6939b854383778aa7930bbfd3c486d6d",
+        "remote_package_json_sha": "22576968ec662fd7d17dda10069489c69c597bcd",
+        "remote_engines": {
+          "node": ">=24",
+          "npm": ">=11"
+        },
+        "remote_scripts": [
+          "backtest",
+          "research:run",
+          "research:conditional",
+          "research:ablation"
+        ],
+        "local_sdk_packages": {
+          "binance": "NOT_INSTALLED",
+          "binanceApiNode": "NOT_INSTALLED",
+          "@binance/connector": "NOT_INSTALLED",
+          "@binance/futures-connector": "NOT_INSTALLED"
+        }
+      },
+      "impact": "No local backtest or deterministic fixture can be invoked.",
+      "next_action": "Provision Node24/npm11, clone exact main commit, install pinned dependencies and run fixture twice."
+    },
+    {
+      "capability": "network/direct Binance REST",
+      "status": "BLOCKED",
+      "evidence": {
+        "probes": [
+          {
+            "endpoint": "/fapi/v1/time",
+            "http": "000",
+            "curl_exit": 6,
+            "detail": "Could not resolve host"
+          },
+          {
+            "endpoint": "/fapi/v1/exchangeInfo",
+            "http": "000",
+            "curl_exit": 28,
+            "detail": "DNS resolution timed out"
+          },
+          {
+            "endpoint": "/fapi/v1/klines?symbol=BTCUSDT&interval=1h&limit=2",
+            "http": "000",
+            "curl_exit": 6,
+            "detail": "Could not resolve host"
+          },
+          {
+            "endpoint": "/fapi/v1/premiumIndex?symbol=BTCUSDT",
+            "http": "000",
+            "curl_exit": 28,
+            "detail": "DNS resolution timed out"
+          },
+          {
+            "endpoint": "/fapi/v1/openInterest?symbol=BTCUSDT",
+            "http": "000",
+            "curl_exit": 6,
+            "detail": "Could not resolve host"
+          },
+          {
+            "endpoint": "/fapi/v1/ticker/24hr?symbol=BTCUSDT",
+            "http": "000",
+            "curl_exit": 28,
+            "detail": "DNS resolution timed out"
+          }
+        ]
+      },
+      "impact": "Direct endpoint HTTP status/headers and server-time verification unavailable.",
+      "next_action": "Restore outbound DNS/HTTPS or obtain a fresh independently verifiable endpoint probe."
+    },
+    {
+      "capability": "Binance connector market data",
+      "status": "DEGRADED",
+      "evidence": {
+        "payloads_received": [
+          "mark price",
+          "24h ticker",
+          "open interest",
+          "book ticker",
+          "funding history",
+          "funding rate info",
+          "open interest history",
+          "taker buy/sell volume",
+          "global long/short account ratio",
+          "klines"
+        ],
+        "latest_market_retrieval_utc": "2026-11-12T16:33:19.903Z",
+        "latest_kline_retrieval_utc": "2026-11-12T16:36:47.924Z",
+        "http_status_headers": "NOT_EXPOSED",
+        "exchangeInfo_serverTime_utc": "2026-11-12T09:45:01.948Z",
+        "exchangeInfo_age_seconds": 24510.226
+      },
+      "impact": "Market snapshot usable descriptively; contract status not valid for execution checks.",
+      "next_action": "Re-probe fresh server time and exchange metadata via direct REST."
+    },
+    {
+      "capability": "raw historical archive",
+      "status": "PASS",
+      "evidence": {
+        "repository": "shubhamtaywade82/crypto-trading-agent",
+        "branch": "research/raw-ohlcv-archive-20261108T1026Z",
+        "page22_rows_added": 12000,
+        "incremental_rows_added": 32,
+        "page22_files_and_manifests_readback_verified": true,
+        "incremental_deltas_readback_verified": true,
+        "archive_manifest": "research-data/binance-usdm/manifests/archive_manifest_20261112T1635Z_auto40_refresh.json",
+        "archive_manifest_sha256": "de7da00e9fa1d36d71ef8d2f3bca9f31d17d8602c000d71fa7a8c8ec00be0657"
+      },
+      "impact": "Persistent remote archive updated; historical coverage still incomplete.",
+      "next_action": "Continue page23 and reconcile existing 1h/4h lineage before strategy use."
+    },
+    {
+      "capability": "data quality/coverage",
+      "status": "DEGRADED",
+      "evidence": {
+        "recent_windows": {
+          "5m": {
+            "returned_per_symbol": 120,
+            "completed_per_symbol": 119,
+            "forming_excluded_per_symbol": 1,
+            "first_open_utc": "2026-11-12T06:40:00Z",
+            "latest_completed_open_utc": "2026-11-12T16:30:00Z",
+            "recent_integrity_failures": 0
+          },
+          "15m": {
+            "returned_per_symbol": 120,
+            "completed_per_symbol": 119,
+            "forming_excluded_per_symbol": 1,
+            "first_open_utc": "2026-11-11T10:45:00Z",
+            "latest_completed_open_utc": "2026-11-12T16:15:00Z",
+            "recent_integrity_failures": 0
+          },
+          "1h": {
+            "returned_per_symbol": 220,
+            "completed_per_symbol": 219,
+            "forming_excluded_per_symbol": 1,
+            "first_open_utc": "2026-11-03T13:00:00Z",
+            "latest_completed_open_utc": "2026-11-12T15:00:00Z",
+            "recent_integrity_failures": 0
+          },
+          "4h": {
+            "returned_per_symbol": 220,
+            "completed_per_symbol": 219,
+            "forming_excluded_per_symbol": 1,
+            "first_open_utc": "2026-10-07T04:00:00Z",
+            "latest_completed_open_utc": "2026-11-12T12:00:00Z",
+            "recent_integrity_failures": 0
+          }
+        },
+        "archive_5m": {
+          "rows_per_symbol": 33000,
+          "rows_total": 132000,
+          "pages": 22
+        },
+        "archive_15m": {
+          "rows_per_symbol": 33000,
+          "rows_total": 132000,
+          "pages": 22
+        },
+        "archive_1h": {
+          "rows_per_symbol": 53871,
+          "rows_total": 215484,
+          "missing_hourly_opens_per_symbol": 28,
+          "top_level_count_discrepancy_rows": 8
+        },
+        "archive_4h": {
+          "raw_rows": 53960,
+          "aligned_rows": 53816,
+          "canonical_rows": 53844,
+          "original_manifest_sha_mismatches": 13
+        }
+      },
+      "impact": "Recent slices pass; full multi-timeframe historical sample is not research-ready.",
+      "next_action": "Finish multi-year 5m/15m backfill; reconcile 1h missing keys and 4h provenance."
+    },
+    {
+      "capability": "backtest harness/smoke test",
+      "status": "BLOCKED",
+      "evidence": {
+        "remote_package_script": "npm run backtest / npm run research:conditional",
+        "local_runtime": "Node22.16/npm10.9",
+        "required_runtime": "Node>=24/npm>=11",
+        "local_repo": false,
+        "deterministic_fixture": "NOT_RUN",
+        "no_lookahead_test": "NOT_RUN"
+      },
+      "impact": "No strategy experiment or OOS result produced.",
+      "next_action": "Provision compatible runtime and checkout, then run deterministic fixture twice before full experiment."
+    },
+    {
+      "capability": "disk/storage",
+      "status": "PASS",
+      "evidence": {
+        "local_disk_free_gb": 32.03,
+        "remote_github_branch_writable": true,
+        "remote_branch": "research/raw-ohlcv-archive-20261108T1026Z"
+      },
+      "impact": "Remote persistent storage is available and was used; local workspace is not the repository.",
+      "next_action": "Continue using exact branch and atomic/readback-verified artifacts."
+    },
+    {
+      "capability": "artifact readback",
+      "status": "PASS",
+      "evidence": {
+        "page22_raw_files": 8,
+        "page22_manifests": 2,
+        "incremental_delta_files": 2,
+        "incremental_delta_manifests": 2,
+        "global_archive_manifests": 2,
+        "updated_indexes": 2,
+        "all_exact_readback": true
+      },
+      "impact": "New archive artifacts and indexes are verified on the remote branch.",
+      "next_action": "Preserve SHA-256 and Git blob identities in the run artifact manifest."
+    }
+  ],
+  "run_classification": "RESEARCH_EXECUTED_DATA_QUALITY_ONLY",
+  "strategy_experiment_status": "RESEARCH_BLOCKED",
+  "oos_evaluated": false,
+  "notes": [
+    "The run completed real historical backfill and incremental archive integrity work; this is not a strategy backtest.",
+    "No OOS_VALIDATED entries exist."
+  ]
+}

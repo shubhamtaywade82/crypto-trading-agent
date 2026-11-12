@@ -38,10 +38,10 @@
       "open_interest_timestamp_utc": "2026-11-12T16:33:08.364Z",
       "open_interest_change_10_to_15_utc_pct": 3.1472,
       "current_oi_vs_15_utc_pct": -0.6335,
-      "global_long_short_account_ratio_1h": 3.1374,
+      "global_long_short_account_ratio_1h": 3.0733,
       "positioning_timestamp_utc": "2026-11-12T15:00:00Z",
-      "taker_buy_sell_ratio_15m": 1.4132,
-      "taker_timestamp_utc": "2026-11-12T16:00:00Z",
+      "taker_buy_sell_ratio_15m": 0.7231,
+      "taker_timestamp_utc": "2026-11-12T16:15:00Z",
       "funding": {
         "premium_index_lastFundingRate_field": 0.00009311,
         "premium_index_rate_pct": 0.009311,
@@ -134,7 +134,9 @@
           "transition_state_frequency_pct": 70.94
         },
         "warning": "4h candle was -1.72% (~1.29 ATR); short-term 5m is mixed while 1h/4h remain bearish. This is a watch warning, not a training-derived shock label."
-      }
+      },
+      "long_account_fraction": 0.7545,
+      "short_account_fraction": 0.2455
     },
     "ETHUSDT": {
       "role": "TRADABLE",
@@ -150,10 +152,10 @@
       "open_interest_timestamp_utc": "2026-11-12T16:33:14.271Z",
       "open_interest_change_10_to_15_utc_pct": 0.929,
       "current_oi_vs_15_utc_pct": 0.1302,
-      "global_long_short_account_ratio_1h": 3.5269,
+      "global_long_short_account_ratio_1h": 3.4803,
       "positioning_timestamp_utc": "2026-11-12T15:00:00Z",
-      "taker_buy_sell_ratio_15m": 1.201,
-      "taker_timestamp_utc": "2026-11-12T16:00:00Z",
+      "taker_buy_sell_ratio_15m": 1.0413,
+      "taker_timestamp_utc": "2026-11-12T16:15:00Z",
       "funding": {
         "premium_index_lastFundingRate_field": 0.00005208,
         "premium_index_rate_pct": 0.005208,
@@ -246,7 +248,9 @@
           "transition_state_frequency_pct": 72.22
         },
         "warning": "1h/4h bearish; 5m/15m mixed-to-bullish micro-bounce. High validation/test context-distribution drift."
-      }
+      },
+      "long_account_fraction": 0.7768,
+      "short_account_fraction": 0.2232
     },
     "SOLUSDT": {
       "role": "TRADABLE",
@@ -262,10 +266,10 @@
       "open_interest_timestamp_utc": "2026-11-12T16:33:14.485Z",
       "open_interest_change_10_to_15_utc_pct": 0.6888,
       "current_oi_vs_15_utc_pct": -0.2841,
-      "global_long_short_account_ratio_1h": 3.5998,
+      "global_long_short_account_ratio_1h": 3.5579,
       "positioning_timestamp_utc": "2026-11-12T15:00:00Z",
-      "taker_buy_sell_ratio_15m": 0.8706,
-      "taker_timestamp_utc": "2026-11-12T16:00:00Z",
+      "taker_buy_sell_ratio_15m": 0.6342,
+      "taker_timestamp_utc": "2026-11-12T16:15:00Z",
       "funding": {
         "premium_index_lastFundingRate_field": -7.8e-7,
         "premium_index_rate_pct": -0.000078,
@@ -359,7 +363,9 @@
           "median_transition_run_hours": 104
         },
         "warning": "TRANSITION_LOW occupied 67.33% of the v56 test sample; current BEAR_LOW label is descriptive, not a trade trigger."
-      }
+      },
+      "long_account_fraction": 0.7806,
+      "short_account_fraction": 0.2194
     },
     "XRPUSDT": {
       "role": "TRADABLE",
@@ -375,10 +381,10 @@
       "open_interest_timestamp_utc": "2026-11-12T16:33:14.410Z",
       "open_interest_change_10_to_15_utc_pct": 2.2759,
       "current_oi_vs_15_utc_pct": 0.2286,
-      "global_long_short_account_ratio_1h": 3.095,
+      "global_long_short_account_ratio_1h": 3.0437,
       "positioning_timestamp_utc": "2026-11-12T15:00:00Z",
-      "taker_buy_sell_ratio_15m": 1.3799,
-      "taker_timestamp_utc": "2026-11-12T16:00:00Z",
+      "taker_buy_sell_ratio_15m": 0.8265,
+      "taker_timestamp_utc": "2026-11-12T16:15:00Z",
       "funding": {
         "premium_index_lastFundingRate_field": 0.00005314,
         "premium_index_rate_pct": 0.005314,
@@ -471,7 +477,9 @@
           "transition_state_frequency_pct": 64.61
         },
         "warning": "1h/4h bearish with bearish 5m/15m; context occupancy and transition-distribution drift are high."
-      }
+      },
+      "long_account_fraction": 0.7527,
+      "short_account_fraction": 0.2473
     }
   },
   "summary": {
@@ -489,5 +497,9 @@
       "XRPUSDT": "NO_TRADE"
     },
     "reason": "No OOS_VALIDATED symbol/context entry exists; regime labels are not entry triggers."
+  },
+  "data_semantics": {
+    "positioning": "Use last completed 1h global long/short account-ratio observation at 15:00Z; 16:00Z 1h observation excluded as forming.",
+    "taker_flow": "Use latest completed 15m taker buy/sell observation at 16:15Z; 16:30Z observation not yet complete."
   }
 }

@@ -1,0 +1,327 @@
+{
+  "schema_version": "1.0.0",
+  "version": "v97",
+  "run_id": "context-strategy-2026-11-12T1609Z-auto39",
+  "as_of_utc": "2026-11-12T16:09:00Z",
+  "as_of_local": "2026-11-12T21:39:00+05:30",
+  "research_status": "RESEARCH_EXECUTED_DATA_QUALITY_ONLY",
+  "strategy_research_status": "RESEARCH_BLOCKED",
+  "sdk_used": false,
+  "universe": {
+    "tradable": [
+      "SOLUSDT",
+      "ETHUSDT",
+      "XRPUSDT"
+    ],
+    "reference_only": [
+      "BTCUSDT"
+    ]
+  },
+  "archive": {
+    "repository": "shubhamtaywade82/crypto-trading-agent",
+    "branch": "research/raw-ohlcv-archive-20261108T1026Z",
+    "latest_completed_highwater_utc": {
+      "5m": "2026-11-12T16:00:00.000Z",
+      "15m": "2026-11-12T15:45:00.000Z",
+      "1h": "2026-11-12T15:00:00.000Z",
+      "4h": "2026-11-12T12:00:00.000Z"
+    },
+    "rows_appended_this_run": 88,
+    "delta_paths": [
+      "research-data/binance-usdm/delta/binance_usdm_delta_20261112T1602Z_all_intervals_completed.jsonl",
+      "research-data/binance-usdm/delta/binance_usdm_delta_20261112T1609Z_5m_completed.jsonl"
+    ],
+    "historical_coverage": {
+      "5m": {
+        "rows_total": 126000,
+        "rows_per_symbol": 31500,
+        "coverage_start_utc": "2020-01-01T00:00:00Z",
+        "coverage_end_by_symbol": {
+          "BTCUSDT": "2020-04-19T08:55:00Z",
+          "ETHUSDT": "2020-04-19T08:55:00Z",
+          "SOLUSDT": "2021-01-01T15:55:00Z",
+          "XRPUSDT": "2020-04-24T17:15:00Z"
+        },
+        "status": "PARTIAL"
+      },
+      "15m": {
+        "rows_total": 126000,
+        "rows_per_symbol": 31500,
+        "coverage_start_utc": "2020-01-01T00:00:00Z",
+        "coverage_end_by_symbol": {
+          "BTCUSDT": "2020-11-24T02:45:00Z",
+          "ETHUSDT": "2020-11-24T02:45:00Z",
+          "SOLUSDT": "2021-08-08T09:45:00Z",
+          "XRPUSDT": "2020-11-29T11:00:00Z"
+        },
+        "status": "PARTIAL"
+      },
+      "1h": {
+        "rows_total": 215484,
+        "rows_per_symbol": 53871,
+        "coverage_start_utc": "2020-09-14T08:00:00Z",
+        "base_end_utc": "2026-11-06T22:00:00Z",
+        "status": "COMPLETE_HISTORICAL_PAGES_WITH_DELTAS"
+      },
+      "4h": {
+        "raw_rows_total": 53960,
+        "aligned_rows_total": 53816,
+        "canonical_rows_total": 53844,
+        "status": "DEGRADED_ROWCOUNT_RECONCILIATION"
+      }
+    }
+  },
+  "context_discovery": {
+    "version": "v56",
+    "status": "CARRIED_FORWARD_NOT_RECOMPUTED",
+    "thresholds_reestimated": false,
+    "definition": {
+      "trend_strength": "(EMA20-EMA50)/Wilder ATR14",
+      "transition": "training-derived absolute trend-strength q67 threshold",
+      "volatility": "training-derived ATR/close quantiles",
+      "split": "70/15/15 chronological",
+      "warmup_bars": 500
+    },
+    "test_split_occupancy": {
+      "BTC": {
+        "BEAR_LOW": 6.53,
+        "TRANSITION_LOW": 50.66,
+        "BULL_LOW": 9.85,
+        "tvd": 0.175,
+        "median_transition_duration_h": 38
+      },
+      "ETH": {
+        "BEAR_LOW": 6.42,
+        "TRANSITION_LOW": 46.24,
+        "BULL_LOW": 6.64,
+        "tvd": 0.338,
+        "median_transition_duration_h": 42
+      },
+      "SOL": {
+        "BEAR_LOW": 10.9,
+        "TRANSITION_LOW": 67.56,
+        "BULL_LOW": 10.7,
+        "tvd": 0.245,
+        "median_transition_duration_h": 120
+      },
+      "XRP": {
+        "BEAR_LOW": 15.2,
+        "TRANSITION_LOW": 43.63,
+        "BULL_LOW": 3.22,
+        "tvd": 0.293,
+        "median_transition_duration_h": 68
+      },
+      "note": "Feature-state frequencies/durations, not win probabilities. ETH/XRP show material validation/test context drift."
+    }
+  },
+  "strategy_scorecard": [
+    {
+      "candidate": "Donchian20 4h breakout walk-forward v2",
+      "scope": "36 symbol/context cells",
+      "evidence_status": "INSUFFICIENT_EVIDENCE",
+      "evidence": "All cells below 100 OOS trades; nominal block-bootstrap intervals include zero; Holm-adjusted p=1.0; 15bp round-trip proxy uncalibrated.",
+      "actionability": "Research only; not actionable."
+    },
+    {
+      "candidate": "Donchian20 4h breakout",
+      "scope": "SOLUSDT / BULL_LOW",
+      "evidence_status": "OOS_PROMISING",
+      "oos_trades": 12,
+      "win_rate_pct": 66.7,
+      "target_before_stop_pct": 41.7,
+      "mean_net_R": 0.606,
+      "profit_factor": 2.72,
+      "max_drawdown_R": 1.3,
+      "nominal_block_bootstrap_95ci_R": [
+        0.086,
+        1.199
+      ],
+      "actionability": "Not validated; 12 trades below the 100-per-cell gate and costs/parameter robustness incomplete."
+    },
+    {
+      "candidate": "Trend/pullback continuation",
+      "scope": "All symbols/contexts",
+      "evidence_status": "HYPOTHESIS"
+    },
+    {
+      "candidate": "Breakout/retest and volatility contraction",
+      "scope": "All symbols/contexts",
+      "evidence_status": "HYPOTHESIS"
+    },
+    {
+      "candidate": "Range mean reversion / failed-breakout fade",
+      "scope": "All symbols/contexts",
+      "evidence_status": "HYPOTHESIS"
+    },
+    {
+      "candidate": "Volatility expansion / momentum",
+      "scope": "All symbols/contexts",
+      "evidence_status": "HYPOTHESIS"
+    },
+    {
+      "candidate": "BTC-led relative strength / weakness",
+      "scope": "All symbols/contexts",
+      "evidence_status": "HYPOTHESIS"
+    },
+    {
+      "candidate": "Funding/OI filters",
+      "scope": "All symbols/contexts",
+      "evidence_status": "HYPOTHESIS"
+    }
+  ],
+  "oos_validated_entries": [],
+  "last_strategy_evaluation_utc": "2026-11-09T19:55:00Z",
+  "last_registry_update_utc": "2026-11-12T16:09:00Z",
+  "current_context_snapshot": {
+    "retrieved_at_utc": "2026-11-12T16:06:42.969Z",
+    "classifier": "descriptive EMA alignment; local ATR percentiles over 180 completed bars; not v56 training-fitted thresholds",
+    "symbols": {
+      "BTCUSDT": {
+        "trend_1h": "BEARISH",
+        "trend_4h": "BEARISH",
+        "combined": "BEARISH",
+        "ret20_1h_pct": -3.635,
+        "ret20_4h_pct": -2.934,
+        "close_vs_ema20_1h_pct": -2.027,
+        "ema20_vs_ema50_1h_pct": -0.705,
+        "close_vs_ema20_4h_pct": -3.082,
+        "ema20_vs_ema50_4h_pct": -1.705,
+        "atr14_local_pctile_1h": 55,
+        "atr14_local_pctile_4h": 74,
+        "last_return_5m_pct": 0.133,
+        "last_return_15m_pct": 0.378,
+        "shock_5m": false
+      },
+      "ETHUSDT": {
+        "trend_1h": "BEARISH",
+        "trend_4h": "BEARISH",
+        "combined": "BEARISH",
+        "ret20_1h_pct": -3.348,
+        "ret20_4h_pct": -4.054,
+        "close_vs_ema20_1h_pct": -1.483,
+        "ema20_vs_ema50_1h_pct": -1.066,
+        "close_vs_ema20_4h_pct": -3.447,
+        "ema20_vs_ema50_4h_pct": -3.394,
+        "atr14_local_pctile_1h": 43,
+        "atr14_local_pctile_4h": 57,
+        "last_return_5m_pct": 0.186,
+        "last_return_15m_pct": 0.38,
+        "shock_5m": false
+      },
+      "SOLUSDT": {
+        "trend_1h": "BEARISH",
+        "trend_4h": "BEARISH",
+        "combined": "BEARISH",
+        "ret20_1h_pct": -3.715,
+        "ret20_4h_pct": -4.536,
+        "close_vs_ema20_1h_pct": -1.308,
+        "ema20_vs_ema50_1h_pct": -1.065,
+        "close_vs_ema20_4h_pct": -3.258,
+        "ema20_vs_ema50_4h_pct": -3.597,
+        "atr14_local_pctile_1h": 42,
+        "atr14_local_pctile_4h": 54,
+        "last_return_5m_pct": 0.11,
+        "last_return_15m_pct": 0.703,
+        "shock_5m": false
+      },
+      "XRPUSDT": {
+        "trend_1h": "BEARISH",
+        "trend_4h": "BEARISH",
+        "combined": "BEARISH",
+        "ret20_1h_pct": -3.087,
+        "ret20_4h_pct": -5.287,
+        "close_vs_ema20_1h_pct": -1.645,
+        "ema20_vs_ema50_1h_pct": -1.305,
+        "close_vs_ema20_4h_pct": -4.124,
+        "ema20_vs_ema50_4h_pct": -5.1,
+        "atr14_local_pctile_1h": 22,
+        "atr14_local_pctile_4h": 58,
+        "last_return_5m_pct": 0.088,
+        "last_return_15m_pct": 0.489,
+        "shock_5m": false
+      }
+    }
+  },
+  "current_market_snapshot": {
+    "retrieved_at_utc": "2026-11-12T16:04:50.802Z",
+    "next_funding_time_utc": "2026-11-13T00:00:00Z",
+    "last_settlement_utc": "2026-11-12T16:00:00.003Z",
+    "funding_interval_hours": 8,
+    "metrics": {
+      "BTCUSDT": {
+        "last": 71781,
+        "mark": 71782.86365067,
+        "change_24h_pct": -3.02,
+        "quote_volume_24h_usdt": 11730764998.24,
+        "open_interest": 102309.926,
+        "oi_change_1h_pct": 0.387,
+        "indicated_funding_pct": 0.008874,
+        "settled_funding_pct": 0.008904,
+        "spread_bps": 0.0139,
+        "taker_buy_sell_15m": 1.2503,
+        "global_long_short_ratio": 3.1374
+      },
+      "ETHUSDT": {
+        "last": 2012.23,
+        "mark": 2012.18720155,
+        "change_24h_pct": -3.026,
+        "quote_volume_24h_usdt": 7741937375.77,
+        "open_interest": 2346145.943,
+        "oi_change_1h_pct": 0.71,
+        "indicated_funding_pct": 0.004748,
+        "settled_funding_pct": 0.004733,
+        "spread_bps": 0.0497,
+        "taker_buy_sell_15m": 1.0773,
+        "global_long_short_ratio": 3.5269
+      },
+      "SOLUSDT": {
+        "last": 81.76,
+        "mark": 81.76,
+        "change_24h_pct": -3.517,
+        "quote_volume_24h_usdt": 1358915858.3639,
+        "open_interest": 9742372.87,
+        "oi_change_1h_pct": 0.582,
+        "indicated_funding_pct": 0.000405,
+        "settled_funding_pct": 0.000716,
+        "spread_bps": 1.2233,
+        "taker_buy_sell_15m": 1.1135,
+        "global_long_short_ratio": 3.5998
+      },
+      "XRPUSDT": {
+        "last": 1.0275,
+        "mark": 1.02757834,
+        "change_24h_pct": -4.035,
+        "quote_volume_24h_usdt": 710043664.2346,
+        "open_interest": 310103505.2,
+        "oi_change_1h_pct": 0.254,
+        "indicated_funding_pct": 0.004468,
+        "settled_funding_pct": 0.00456,
+        "spread_bps": 0.9734,
+        "taker_buy_sell_15m": 0.8582,
+        "global_long_short_ratio": 3.095
+      }
+    }
+  },
+  "decision_matrix": {
+    "SOLUSDT": {
+      "eligible_OOS_VALIDATED_strategy": null,
+      "trigger": "NOT_EVALUATED",
+      "decision": "NO_TRADE",
+      "reason": "Zero OOS_VALIDATED entries; contract metadata stale; no proven symbol/context edge."
+    },
+    "ETHUSDT": {
+      "eligible_OOS_VALIDATED_strategy": null,
+      "trigger": "NOT_EVALUATED",
+      "decision": "NO_TRADE",
+      "reason": "Zero OOS_VALIDATED entries; no symbol-specific proven setup; contract metadata stale."
+    },
+    "XRPUSDT": {
+      "eligible_OOS_VALIDATED_strategy": null,
+      "trigger": "NOT_EVALUATED",
+      "decision": "NO_TRADE",
+      "reason": "Zero OOS_VALIDATED entries; no symbol-specific proven setup; contract metadata stale."
+    }
+  },
+  "status_transition": "NONE; no strategy promoted, downgraded or rejected this run.",
+  "registry_note": "Compact v97 snapshot carries forward the v96 evidence and v56 taxonomy; no strategy experiment or per-cell re-evaluation ran. Full registry evidence source: 01_context_strategy_registry_2026-11-09_1953Z_v96.json and 00_context_strategy_report_2026-11-09_1953Z_v96.md."
+}

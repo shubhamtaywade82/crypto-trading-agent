@@ -382,3 +382,38 @@ What the evidence does say, without overstating it:
 - ETHUSDT is negative in both periods; SOLUSDT carries most of the result (+0.742R on 19 trades in 2021–2022).
 - The binding constraint is sample size: a daily breakout fires ~30 times a year across three symbols. More history on
   these symbols does not exist on Binance perps before 2020–2021.
+
+## 12. Addendum (pre-registered 2026-11-11, before any data for these symbols was downloaded) — L3 breadth test
+
+**Research only. Nothing here changes what NEMESIS may trade** (SOL/ETH/XRP; BTC context-only).
+
+L3's binding constraint is sample size (§11). The same frozen L3 rules run on other liquid USDⓈ-M perpetuals add
+independent trades.
+
+- **Symbols (fixed list, 10):** BTCUSDT, BNBUSDT, ADAUSDT, DOGEUSDT, LINKUSDT, LTCUSDT, DOTUSDT, AVAXUSDT, TRXUSDT,
+  BCHUSDT. Rule: large, liquid perps listed before 2020-11 that still trade under the same symbol today (MATIC excluded:
+  renamed to POL in 2024). **Survivorship bias disclosure:** the list is chosen with today's knowledge of which
+  contracts survived; delisted coins are missing, which flatters any long-biased rule.
+- **Windows:** both non-sealed walk-forward windows, run separately: 2021-07 → 2023-01 (data from 2020-11) and
+  2023-07 → 2025-01 (data from 2023-01). The 2025–2026 window stays sealed.
+- **Variants:** the same three (N ∈ {10, 20, 55}), selected per fold on train exactly as §4. Trial count **N = 48**.
+- **Regime gate:** each symbol's own regime, with BTCUSDT as the crash anchor (as for SOL/ETH/XRP).
+- **Acceptance:** the seven §4 checks per window, with check 3 generalised to "mean net R > 0 on at least ⌈2/3⌉ of the
+  symbols" (7 of 10; for three symbols this is the original 2 of 3).
+- **What a pass means:** evidence that the L3 *rule* carries across liquid perps, supporting a forward paper test of L3
+  on SOL/ETH/XRP. It does **not** add any symbol to the trading universe.
+
+### §12 result — L3 breadth test (N = 48)
+
+| Window | Trades | Gross R | Net R | 90% LCB | Symbols > 0 | Matched random | Momentum | Checks | Report |
+|---|---|---|---|---|---|---|---|---|---|
+| 2021–2022 | 218 | −0.014 | **−0.041** | −0.161 | 4 of 10 | +0.182 | −0.127 | 1/7 | `research-runs/g5-dev-2026-11-11T1800Z.json` |
+| 2023–2024 | 261 | +0.021 | **−0.012** | −0.147 | 5 of 10 | +0.019 | −0.018 | 1/7 | `research-runs/g5-dev-2026-11-11T1801Z.json` |
+
+**Verdict: REJECTED in both windows.** On ten other liquid perps the same frozen L3 rules are flat to negative after
+costs and funding, lose to matched random entries, and are positive on only 4–5 of 10 symbols, with the sign of each
+symbol flipping between windows (e.g. LTC +0.470R then −0.388R; TRX −0.217R then +0.355R).
+
+Interpretation: L3's positive SOL/XRP results in §10–§11 do not generalise to the rule. They are consistent with
+symbol-specific luck in a small sample (SOL's 2021 rally in particular), not with a breakout edge. A forward paper test of
+L3 is **not** justified by this evidence. The sealed 2025–2026 window remains unopened.

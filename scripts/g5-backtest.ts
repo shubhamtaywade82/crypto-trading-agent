@@ -19,7 +19,7 @@ import { classifyRegime, regimeFeatures, type RegimeFeatures } from '../src/rese
 import { HOUR_MS, MINUTE_MS, runOnBars, runStrategy, simulateTrade, type Market, type MinuteSeries, type Signal, type Trade } from '../src/research/SignalBacktest.js';
 import type { Candle } from '../src/types.js';
 
-const SYMBOLS = ['SOLUSDT', 'ETHUSDT', 'XRPUSDT'];
+
 const arg = (name: string, fallback: string): string => {
   const i = process.argv.indexOf(`--${name}`);
   return i > 0 && process.argv[i + 1] ? process.argv[i + 1]! : fallback;
@@ -33,6 +33,7 @@ const STRATEGIES = arg('strategies', 'B1,C1,E1,E2,T1,T2,T1M,L1,L3').split(',');
 const TRIALS = Number(arg('trials', '42'));
 /** Optional: the trial Sharpe variance measured on a fuller search, when this run simulates only a few variants. */
 const TRIAL_SR_VAR = arg('trial-sr-var', '') === '' ? undefined : Number(arg('trial-sr-var', ''));
+const SYMBOLS = arg('symbols', 'SOLUSDT,ETHUSDT,XRPUSDT').split(',');
 const NEEDS_POSITIONING = STRATEGIES.some((s) => s === 'E1' || s === 'E2');
 const LEVERAGE = 5; // MIN_LEVERAGE default; at 1% risk with ATR stops the position is far below 1x notional
 const MMR = 0.01; // Binance tier-1 maintenance margin rate for these contracts' smallest bracket
@@ -195,7 +196,7 @@ async function main(): Promise<void> {
   const dirty = execSync('git status --porcelain -- src scripts').toString().trim().length > 0;
   mkdirSync('research-runs', { recursive: true });
   const out = `research-runs/g5-dev-${new Date().toISOString().replace(/[:.]/g, '').slice(0, 15)}Z.json`;
-  writeFileSync(out, JSON.stringify({ commit, dirty, window: { from: arg('from', '2023-01-01'), to: arg('to', '2025-01-01') }, strategies: STRATEGIES, trials: TRIALS, trialSharpeVarianceOverride: TRIAL_SR_VAR ?? null, folds: FOLDS, leverage: LEVERAGE, mmr: MMR, e2ReplayNotes: 'funding = last settled rate (live: predicted); taker ratio = last closed hour from 1m klines; ratios = 5m archive snapshot usable at bar close; 48h time cap', results: results.map(({ lines, ...r }) => r) }, null, 1));
+  writeFileSync(out, JSON.stringify({ commit, dirty, window: { from: arg('from', '2023-01-01'), to: arg('to', '2025-01-01') }, symbols: SYMBOLS, strategies: STRATEGIES, trials: TRIALS, trialSharpeVarianceOverride: TRIAL_SR_VAR ?? null, folds: FOLDS, leverage: LEVERAGE, mmr: MMR, e2ReplayNotes: 'funding = last settled rate (live: predicted); taker ratio = last closed hour from 1m klines; ratios = 5m archive snapshot usable at bar close; 48h time cap', results: results.map(({ lines, ...r }) => r) }, null, 1));
   console.log(`\nreport: ${out}`);
 }
 

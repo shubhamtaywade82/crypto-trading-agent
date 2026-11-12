@@ -114,7 +114,7 @@ export function acceptance(input: AcceptanceInput): AcceptanceResult {
   const checks: Check[] = [
     { id: '1-trades>=100', pass: trades.length >= 100, detail: `${trades.length} trades` },
     { id: '2-mean>0-and-lcb>0', pass: mean(net) > 0 && (boot?.ciLow ?? -1) > 0, detail: `mean ${mean(net).toFixed(3)}R, 90% one-sided LCB ${boot?.ciLow.toFixed(3) ?? 'n/a'}R` },
-    { id: '3-two-of-three-symbols', pass: Object.values(bySymbol).filter((s) => s.meanNetR > 0).length >= 2, detail: Object.entries(bySymbol).map(([s, v]) => `${s} ${v.meanNetR.toFixed(3)}R/${v.trades}`).join(', ') },
+    { id: '3-two-thirds-of-symbols', pass: Object.values(bySymbol).filter((s) => s.meanNetR > 0).length >= Math.ceil((2 * input.symbols.length) / 3), detail: Object.entries(bySymbol).map(([s, v]) => `${s} ${v.meanNetR.toFixed(3)}R/${v.trades}`).join(', ') },
     { id: '4-costs-1.5x', pass: stressed > 0, detail: `mean at 1.5x costs ${stressed.toFixed(3)}R, at 2x ${mean(trades.map((t) => t.netR - t.costR)).toFixed(3)}R` },
     neighbourCheck(input, selections, span),
     { id: '6-beats-baselines', pass: mean(net) > random && mean(net) > momentum, detail: `strategy ${mean(net).toFixed(3)}R vs matched random ${random.toFixed(3)}R vs momentum ${momentum.toFixed(3)}R` },

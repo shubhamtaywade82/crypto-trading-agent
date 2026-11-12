@@ -1,0 +1,339 @@
+{
+  "schema_version": "1.0.0",
+  "review_id": "TAX-REVIEW-2026-11-12-1208Z",
+  "evaluated_at_utc": "2026-11-12T12:08:43.766Z",
+  "repository": "shubhamtaywade82/crypto-trading-agent",
+  "branch": "research/raw-ohlcv-archive-20261108T1026Z",
+  "status": "COMPLETED_WITH_SCOPE_LIMITATION",
+  "taxonomy_version": "v56",
+  "taxonomy_change": "NONE",
+  "scope": {
+    "timeframe": "4h",
+    "symbols": [
+      "BTCUSDT",
+      "ETHUSDT",
+      "SOLUSDT",
+      "XRPUSDT"
+    ],
+    "canonical_data_only": true,
+    "multi_timeframe_review": false,
+    "reason": "The 4h canonical files are readable and row-aligned. 5m/15m base archives remain partial; 4h canonical tail is not yet reconciled with raw incremental deltas."
+  },
+  "input_data": {
+    "rows_per_symbol": 13461,
+    "total_rows": 53844,
+    "start_open_utc": "2020-09-14T08:00:00.000Z",
+    "last_open_utc": "2026-11-05T16:00:00.000Z",
+    "symbols": {
+      "BTCUSDT": {
+        "path": "research-data/binance-usdm/4h/canonical/BTCUSDT_4h_20200914T0800Z_20261105T1600Z.jsonl",
+        "sha256": "7088aa2b2cc48c3895fd77dfc2ece0ae812062f24a70374ec556273a2d8380d7",
+        "git_blob_sha": "a465025b2276a0e9cfbf805ba64be4da6ed08868"
+      },
+      "ETHUSDT": {
+        "path": "research-data/binance-usdm/4h/canonical/ETHUSDT_4h_20200914T0800Z_20261105T1600Z.jsonl",
+        "sha256": "0e1ba53fb3c4c42e89440f2aaabfc7eead44ac84bc67a083c86df96a2f12dce2",
+        "git_blob_sha": "26034cbb638d45295504f8e1a52862adca63eea6"
+      },
+      "SOLUSDT": {
+        "path": "research-data/binance-usdm/4h/canonical/SOLUSDT_4h_20200914T0800Z_20261105T1600Z.jsonl",
+        "sha256": "148389f0347fe05307e2a274c579ccc1c495e32eaad2e49cfb19ca211df89156",
+        "git_blob_sha": "77af5caa7d5e76c8efc3fd8571c55a20376ac97f"
+      },
+      "XRPUSDT": {
+        "path": "research-data/binance-usdm/4h/canonical/XRPUSDT_4h_20200914T0800Z_20261105T1600Z.jsonl",
+        "sha256": "b1a96c24f0e91aff7368facc428dffa22360093ce74dfe186d259b66d19f8023",
+        "git_blob_sha": "242e2c96a05feb175e869edbdea23ee85a136f69"
+      }
+    },
+    "quality": {
+      "duplicates": 0,
+      "missing_4h_intervals": 0,
+      "off_grid": 0,
+      "non_monotonic": 0,
+      "ohlc_failures": 0,
+      "non_positive_volume": 0,
+      "non_finite": 0,
+      "close_time_failures": 0,
+      "all_four_series_timestamp_aligned": true
+    }
+  },
+  "specification": {
+    "split": "chronological 70% train / 15% validation / 15% untouched test; boundaries applied per symbol to the same aligned 13,461-row 4h sample",
+    "train_rows": 9422,
+    "validation_rows": 2019,
+    "test_rows": 2020,
+    "warmup_bars": 500,
+    "train_eligible_rows": 8922,
+    "validation_eligible_rows": 2019,
+    "test_eligible_rows": 2020,
+    "train_eligible_start_utc": "2020-12-06T16:00:00.000Z",
+    "train_last_open_utc": "2025-01-01T12:00:00.000Z",
+    "validation_start_utc": "2025-01-01T16:00:00.000Z",
+    "validation_last_open_utc": "2025-12-04T00:00:00.000Z",
+    "test_start_utc": "2025-12-04T04:00:00.000Z",
+    "test_last_open_utc": "2026-11-05T16:00:00.000Z",
+    "features": {
+      "trend_strength": "(EMA20 - EMA50) / Wilder ATR14",
+      "volatility": "Wilder ATR14 / close",
+      "trend_state": "TRANSITION if abs(trend_strength) < training q67(abs(trend_strength)); otherwise BULL if positive, BEAR if negative",
+      "volatility_state": "LOW below training q33; NORMAL from q33 to q67; HIGH at/above q67",
+      "quantile_method": "linear interpolation, Type-7",
+      "fit_scope": "thresholds fitted on train rows only after 500-bar warmup; validation and test use frozen training thresholds"
+    },
+    "execution": "inline JavaScript in functions.exec; deterministic; no random seed; code was not persisted as a standalone script",
+    "code_hash": "NOT_PERSISTED"
+  },
+  "per_symbol": {
+    "BTCUSDT": {
+      "thresholds_training_only": {
+        "trend_abs_q67": 1.0981721850434896,
+        "atr_close_q33": 0.014374031570013613,
+        "atr_close_q67": 0.020593930471821034
+      },
+      "training_half_threshold_drift_pct": {
+        "trend": 4.67886491660745,
+        "vol_q33": -35.932997196115736,
+        "vol_q67": -38.57687407604604
+      },
+      "test_frequency_pct": {
+        "BEAR_LOW": 6.78,
+        "BEAR_NORMAL": 3.22,
+        "BEAR_HIGH": 5.3,
+        "TRANSITION_LOW": 54.01,
+        "TRANSITION_NORMAL": 15.35,
+        "TRANSITION_HIGH": 1.58,
+        "BULL_LOW": 10.99,
+        "BULL_NORMAL": 2.77,
+        "BULL_HIGH": 0
+      },
+      "test_median_run_hours": 20,
+      "test_median_transition_run_hours": 26,
+      "test_self_transition_pct": 93.4621,
+      "validation_test_occupancy_tvd": 0.11545,
+      "validation_test_transition_tvd": 0.12992,
+      "test_near_threshold_share_pct": 15.6931,
+      "top_non_self_transitions": [
+        [
+          "TRANSITION_NORMAL",
+          "TRANSITION_LOW",
+          22,
+          1.0896
+        ],
+        [
+          "TRANSITION_LOW",
+          "TRANSITION_NORMAL",
+          21,
+          1.0401
+        ],
+        [
+          "TRANSITION_LOW",
+          "BULL_LOW",
+          12,
+          0.5944
+        ],
+        [
+          "BULL_LOW",
+          "TRANSITION_LOW",
+          12,
+          0.5944
+        ]
+      ]
+    },
+    "ETHUSDT": {
+      "thresholds_training_only": {
+        "trend_abs_q67": 1.1495356071018408,
+        "atr_close_q33": 0.017443833232330674,
+        "atr_close_q67": 0.025873446395888434
+      },
+      "training_half_threshold_drift_pct": {
+        "trend": -10.818883831658887,
+        "vol_q33": -40.75199793190176,
+        "vol_q67": -42.25785357116646
+      },
+      "test_frequency_pct": {
+        "BEAR_LOW": 6.58,
+        "BEAR_NORMAL": 3.76,
+        "BEAR_HIGH": 5.84,
+        "TRANSITION_LOW": 47.77,
+        "TRANSITION_NORMAL": 21.93,
+        "TRANSITION_HIGH": 2.52,
+        "BULL_LOW": 6.88,
+        "BULL_NORMAL": 4.65,
+        "BULL_HIGH": 0.05
+      },
+      "test_median_run_hours": 16,
+      "test_median_transition_run_hours": 18,
+      "test_self_transition_pct": 91.8772,
+      "validation_test_occupancy_tvd": 0.4019,
+      "validation_test_transition_tvd": 0.41544,
+      "test_near_threshold_share_pct": 18.7624,
+      "top_non_self_transitions": [
+        [
+          "TRANSITION_LOW",
+          "TRANSITION_NORMAL",
+          34,
+          1.684
+        ],
+        [
+          "TRANSITION_NORMAL",
+          "TRANSITION_LOW",
+          32,
+          1.5849
+        ],
+        [
+          "TRANSITION_LOW",
+          "BULL_LOW",
+          11,
+          0.5448
+        ],
+        [
+          "BULL_LOW",
+          "TRANSITION_LOW",
+          10,
+          0.4953
+        ]
+      ]
+    },
+    "SOLUSDT": {
+      "thresholds_training_only": {
+        "trend_abs_q67": 1.1350479196576662,
+        "atr_close_q33": 0.027301090917959424,
+        "atr_close_q67": 0.039967817717144985
+      },
+      "training_half_threshold_drift_pct": {
+        "trend": 1.5127258423661472,
+        "vol_q33": -31.89204978523107,
+        "vol_q67": -30.859254521554867
+      },
+      "test_frequency_pct": {
+        "BEAR_LOW": 10.74,
+        "BEAR_NORMAL": 4.7,
+        "BEAR_HIGH": 1.44,
+        "TRANSITION_LOW": 67.33,
+        "TRANSITION_NORMAL": 3.81,
+        "TRANSITION_HIGH": 0,
+        "BULL_LOW": 10.54,
+        "BULL_NORMAL": 1.44,
+        "BULL_HIGH": 0
+      },
+      "test_median_run_hours": 56,
+      "test_median_transition_run_hours": 104,
+      "test_self_transition_pct": 96.4339,
+      "validation_test_occupancy_tvd": 0.26115,
+      "validation_test_transition_tvd": 0.27712,
+      "test_near_threshold_share_pct": 7.5248,
+      "top_non_self_transitions": [
+        [
+          "TRANSITION_LOW",
+          "BULL_LOW",
+          10,
+          0.4953
+        ],
+        [
+          "BULL_LOW",
+          "TRANSITION_LOW",
+          10,
+          0.4953
+        ],
+        [
+          "TRANSITION_LOW",
+          "BEAR_LOW",
+          9,
+          0.4458
+        ],
+        [
+          "BEAR_LOW",
+          "TRANSITION_LOW",
+          9,
+          0.4458
+        ]
+      ]
+    },
+    "XRPUSDT": {
+      "thresholds_training_only": {
+        "trend_abs_q67": 0.9496210457753316,
+        "atr_close_q33": 0.01989429827042195,
+        "atr_close_q67": 0.0301988911135515
+      },
+      "training_half_threshold_drift_pct": {
+        "trend": -4.522305233390778,
+        "vol_q33": -36.98465790712903,
+        "vol_q67": -42.778698476470545
+      },
+      "test_frequency_pct": {
+        "BEAR_LOW": 16.78,
+        "BEAR_NORMAL": 6.24,
+        "BEAR_HIGH": 3.51,
+        "TRANSITION_LOW": 49.11,
+        "TRANSITION_NORMAL": 15,
+        "TRANSITION_HIGH": 0.5,
+        "BULL_LOW": 3.12,
+        "BULL_NORMAL": 3.42,
+        "BULL_HIGH": 2.33
+      },
+      "test_median_run_hours": 32,
+      "test_median_transition_run_hours": 28,
+      "test_self_transition_pct": 93.1649,
+      "validation_test_occupancy_tvd": 0.35965,
+      "validation_test_transition_tvd": 0.36733,
+      "test_near_threshold_share_pct": 16.9802,
+      "top_non_self_transitions": [
+        [
+          "TRANSITION_NORMAL",
+          "TRANSITION_LOW",
+          27,
+          1.3373
+        ],
+        [
+          "TRANSITION_LOW",
+          "TRANSITION_NORMAL",
+          22,
+          1.0896
+        ],
+        [
+          "TRANSITION_LOW",
+          "BEAR_LOW",
+          16,
+          0.7925
+        ],
+        [
+          "BEAR_LOW",
+          "TRANSITION_LOW",
+          14,
+          0.6934
+        ]
+      ]
+    }
+  },
+  "interpretation": {
+    "btc": "Lowest validation/test occupancy drift (TVD 0.115); retain descriptive v56 labels, but volatility thresholds still drifted about 36-39% between training halves.",
+    "eth": "High occupancy and transition-distribution drift (0.402/0.415); do not treat v56 context frequencies as stable for strategy gating.",
+    "sol": "Moderate drift (0.261/0.277); TRANSITION_LOW dominates 67.33% of test observations and median transition run is 104h.",
+    "xrp": "High drift (0.360/0.367); test occupancy is materially different from validation and volatility thresholds drifted about 37-43% between training halves.",
+    "cross_symbol": "The same 3x3 taxonomy is not equally stable across symbols. Test BULL_HIGH is nearly absent for BTC/ETH/SOL; context cell sparsity will constrain any strategy x context sample.",
+    "decision": "Retain the v56 taxonomy formula without a version bump. Add per-symbol stability warnings; do not use context classification as a trade trigger or as a proxy for trade-win probability."
+  },
+  "prior_v56_reference_only": {
+    "validation_test_tvd": {
+      "BTCUSDT": 0.175,
+      "ETHUSDT": 0.338,
+      "SOLUSDT": 0.245,
+      "XRPUSDT": 0.293
+    },
+    "comparability": "Prior v56 test row counts and boundaries differ from this 13,461-row aligned canonical sample; compare only directionally, not as a paired drift test."
+  },
+  "limitations": [
+    "This is a context-taxonomy stability review, not a strategy backtest or edge test.",
+    "No win probability, expectancy, PF, drawdown or strategy OOS metrics are estimated.",
+    "Canonical 4h data ends 2026-11-05T16:00Z; the 2026-11-05 to 2026-11-12 raw delta tail is not merged because raw/canonical reconciliation is incomplete.",
+    "No 1h/15m/5m taxonomy review was run; 5m/15m base history remains partial.",
+    "Inline analysis code was not persisted; hashes identify input data only."
+  ],
+  "next_actions": [
+    "Backfill multi-year 5m and 15m base history.",
+    "Reconcile 4h raw/canonical row keys and 13 original manifest SHA provenance mismatches before canonical rebuild.",
+    "Repeat taxonomy stability review across 1h and 4h after archive reconciliation, then add 15m when base coverage is sufficient.",
+    "Do not start strategy experiments until compatible Node24/npm11 repo checkout, deterministic harness smoke test, calibrated costs and historical funding cashflows are available."
+  ]
+}

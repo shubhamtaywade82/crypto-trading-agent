@@ -28,14 +28,14 @@
 
 Taxonomy v56 is carried forward, not refit. It uses `(EMA20-EMA50)/Wilder ATR14`, training-derived transition and ATR/close quantiles, a 70/15/15 chronological split and 500-bar warmup.
 
-| Symbol | BEAR_LOW | TRANSITION_LOW | BULL_LOW | Validation/test TVD | Median transition duration |
+| Symbol | Test rows | BEAR_LOW | TRANSITION_LOW | BULL_LOW | Validation/test TVD | Median transition duration |
 |---|---:|---:|---:|---:|---:|
-| BTC | 6.53% | 50.66% | 9.85% | 0.175 | 38h |
-| ETH | 6.42% | 46.24% | 6.64% | 0.338 | 42h |
-| SOL | 10.90% | 67.56% | 10.70% | 0.245 | 120h |
-| XRP | 15.20% | 43.63% | 3.22% | 0.293 | 68h |
+| BTC | 2,345 | 6.53% | 50.66% | 9.85% | 0.175 | 38h |
+| ETH | 2,273 | 6.42% | 46.24% | 6.64% | 0.338 | 42h |
+| SOL | 2,010 | 10.90% | 67.56% | 10.70% | 0.245 | 120h |
+| XRP | 2,237 | 15.20% | 43.63% | 3.22% | 0.293 | 68h |
 
-These are historical feature-state frequencies, not trade-win probabilities. ETH/XRP context drift remains material. No frequency, duration or transition matrix was recomputed today.
+These are historical feature-state frequencies, not trade-win probabilities. Carried-forward notable transitions: SOL BULL_LOW → TRANSITION_LOW 83.3% (n=12); XRP TRANSITION_NORMAL → TRANSITION_LOW 69.4% (n=25). ETH/XRP context drift remains material. No full transition matrix was recomputed today.
 
 ## 3. Strategy-context scorecard
 
@@ -51,6 +51,9 @@ These are historical feature-state frequencies, not trade-win probabilities. ETH
 | Funding/OI filters | All | `HYPOTHESIS` | Full settlement history and causal/filter test unavailable | Not actionable |
 
 **OOS_VALIDATED entries: 0.** No strategy status changed this run.
+
+Prior unconditional Donchian20 aggregate results (not conditional evidence): BTC 200 trades, 36.5% win, 21.5% target-before-stop, −0.101R mean net; ETH 182, 38.46%, 28.02%, +0.048R; SOL 208, 37.02%, 24.52%, −0.018R; XRP 188, 37.77%, 29.79%, +0.049R. These aggregate values are near-zero/negative and do not demonstrate a context-conditioned edge.
+
 
 ## 4. Key discoveries
 

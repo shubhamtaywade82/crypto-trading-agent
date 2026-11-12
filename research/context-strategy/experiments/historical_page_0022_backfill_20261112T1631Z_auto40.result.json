@@ -1,0 +1,188 @@
+{
+  "schema_version": "1.0.0",
+  "experiment_id": "DQ-ARCHIVE-PAGE22-AND-INCREMENTAL-APPEND-20261112T1631Z-AUTO40",
+  "run_id": "context-strategy-20261112T1633Z-auto40",
+  "type": "DATA_QUALITY_AND_ARCHIVE_COMPLETION",
+  "status": "COMPLETED_DATA_QUALITY_ONLY",
+  "as_of_utc": "2026-11-12T16:36:47.924Z",
+  "hypothesis": "The next contiguous 1500-row historical pages for each symbol and the newly completed live 5m/15m bars can be appended without duplicates, missing intervals, off-grid timestamps, invalid OHLC, non-finite values or forming-candle leakage.",
+  "specification": {
+    "source": "Binance USD-M public connector",
+    "endpoint": "GET /fapi/v1/klines",
+    "sdk_used": false,
+    "symbols": [
+      "BTCUSDT",
+      "ETHUSDT",
+      "SOLUSDT",
+      "XRPUSDT"
+    ],
+    "intervals": [
+      "5m",
+      "15m"
+    ],
+    "historical_page": 22,
+    "limit_per_symbol_interval": 1500,
+    "incremental_cutoffs": {
+      "5m": "2026-11-12T16:00:00Z",
+      "15m": "2026-11-12T15:45:00Z"
+    },
+    "forming_rule": "include only rows whose closeTime <= retrieval time",
+    "checks": [
+      "exact first open time",
+      "1500 rows per symbol per interval",
+      "monotonicity",
+      "duplicate openTime",
+      "missing interval",
+      "grid alignment",
+      "OHLC invariants",
+      "finite fields",
+      "positive volume",
+      "closeTime = openTime + interval - 1",
+      "GitHub exact readback",
+      "SHA-256"
+    ]
+  },
+  "historical_backfill": {
+    "rows_added_per_interval": 6000,
+    "total_rows_added": 12000,
+    "rows_per_symbol_per_interval": 1500,
+    "page": 22,
+    "files": [
+      {
+        "symbol": "BTCUSDT",
+        "interval": "5m",
+        "first": "2020-04-19T09:00:00Z",
+        "last": "2020-04-24T13:55:00Z",
+        "sha256": "85c27417b6b0410e5e3b9a9feb2c10e30d0495e14d3f97d0abed62ce952ea5b6",
+        "blob_sha": "5263318266150f591069f4be3f3436f153ce0210"
+      },
+      {
+        "symbol": "ETHUSDT",
+        "interval": "5m",
+        "first": "2020-04-19T09:00:00Z",
+        "last": "2020-04-24T13:55:00Z",
+        "sha256": "810e9fe382cb5f46098ff49395e9e5f907bc1c9618da64b1e268f09d082818bc",
+        "blob_sha": "7c76ba1da74073f2293a6f6cc46de7aa97d45db4"
+      },
+      {
+        "symbol": "SOLUSDT",
+        "interval": "5m",
+        "first": "2021-01-01T16:00:00Z",
+        "last": "2021-01-06T20:55:00Z",
+        "sha256": "8ed1cea1fbd9495b72564767452d9ab7c328043e1fc34e248b2c8eed6b63a09e",
+        "blob_sha": "db25d285e8762c4fd9ce1df20326c66533ac6059"
+      },
+      {
+        "symbol": "XRPUSDT",
+        "interval": "5m",
+        "first": "2020-04-24T17:20:00Z",
+        "last": "2020-04-29T22:15:00Z",
+        "sha256": "d121390877aa68ea04a6cc95e36952f0f38a2ce097ac8c0d68ad4eec051e5beb",
+        "blob_sha": "dbe3440252762742170999c0cfd3fed3c38ac246"
+      },
+      {
+        "symbol": "BTCUSDT",
+        "interval": "15m",
+        "first": "2020-11-24T03:00:00Z",
+        "last": "2020-12-09T17:45:00Z",
+        "sha256": "302e7cb911427a5c5c9f82318840f20305e61aa3ab63cec2058386fa757e9ad1",
+        "blob_sha": "5aea22816839e12dd3c0b88baf73efa60f73626f"
+      },
+      {
+        "symbol": "ETHUSDT",
+        "interval": "15m",
+        "first": "2020-11-24T03:00:00Z",
+        "last": "2020-12-09T17:45:00Z",
+        "sha256": "7a3df220a38a945c2c728a4b691995524a4d3cffcb4a090890f655183cbdf40b",
+        "blob_sha": "57e1f6fc515c564989e57d3d812ebd517f042c18"
+      },
+      {
+        "symbol": "SOLUSDT",
+        "interval": "15m",
+        "first": "2021-08-08T10:00:00Z",
+        "last": "2021-08-24T00:45:00Z",
+        "sha256": "39b734df2ad8b917083dbdc5decf71be9c85f2bba60b327f82f69474725952a3",
+        "blob_sha": "87e612ec8440b61df910542772378ece4254c6d7"
+      },
+      {
+        "symbol": "XRPUSDT",
+        "interval": "15m",
+        "first": "2020-11-29T11:15:00Z",
+        "last": "2020-12-15T02:00:00Z",
+        "sha256": "bb4ea31bf27b6f183d180067e5803a1c1f8bbe77011819d72d884f76c90f9d31",
+        "blob_sha": "c3697b6f9bc489e0250cce125fb6426249a8aa4e"
+      }
+    ],
+    "quality": {
+      "duplicates": 0,
+      "missingIntervals": 0,
+      "offGrid": 0,
+      "nonMonotonic": 0,
+      "ohlcFailures": 0,
+      "nonFinite": 0,
+      "nonPositiveVolume": 0,
+      "closeTimeFailures": 0,
+      "readback_exact": true
+    }
+  },
+  "incremental_appends": [
+    {
+      "as_of_utc": "2026-11-12T16:31:47.160Z",
+      "delta_path": "research-data/binance-usdm/delta/binance_usdm_delta_20261112T1631Z_5m15m_completed.jsonl",
+      "rows": 28,
+      "by_interval": {
+        "5m": 20,
+        "15m": 8
+      },
+      "forming_excluded": 8,
+      "sha256": "a6acb401709e323dbd53309cc5438064b1ecf19868efa4b1aa058a34ed05d95b",
+      "manifest_path": "research-data/binance-usdm/delta/manifest-20261112T1631Z-5m15m.json",
+      "manifest_sha256": "29dae35a138713812fca81e4e53023f5ce0d42f35c3b283418c043f6b13c2bae",
+      "readback_verified": true,
+      "quality": {
+        "duplicates": 0,
+        "missingIntervals": 0,
+        "offGrid": 0,
+        "nonMonotonic": 0,
+        "ohlcFailures": 0,
+        "nonFinite": 0,
+        "nonPositiveVolume": 0,
+        "closeTimeFailures": 0
+      }
+    },
+    {
+      "as_of_utc": "2026-11-12T16:35:36.893Z",
+      "delta_path": "research-data/binance-usdm/delta/binance_usdm_delta_20261112T1635Z_5m_completed.jsonl",
+      "rows": 4,
+      "by_interval": {
+        "5m": 4
+      },
+      "forming_excluded": 4,
+      "sha256": "939945dfc25538cc2f1c7a98ce791b892cd65e4d20c4c8176f115b049c040775",
+      "manifest_path": "research-data/binance-usdm/delta/manifest-20261112T1635Z-5m.json",
+      "manifest_sha256": "054a786358a6077fd3af3e043266dba8e4fe745087437eeea4b72a01040939a1",
+      "readback_verified": true,
+      "quality": {
+        "duplicates": 0,
+        "missingIntervals": 0,
+        "offGrid": 0,
+        "nonMonotonic": 0,
+        "ohlcFailures": 0,
+        "nonFinite": 0,
+        "nonPositiveVolume": 0,
+        "closeTimeFailures": 0
+      }
+    }
+  ],
+  "archive_index_blobs": {
+    "five_minute": "5bcf60153752a3bf9d43f2e259042e5adf361066",
+    "fifteen_minute": "42312a23840d5a36a13e3df5dcdc32fa256d5c21"
+  },
+  "global_archive_manifest": "research-data/binance-usdm/manifests/archive_manifest_20261112T1635Z_auto40_refresh.json",
+  "global_archive_manifest_sha256": "de7da00e9fa1d36d71ef8d2f3bca9f31d17d8602c000d71fa7a8c8ec00be0657",
+  "strategy_backtest": {
+    "status": "BLOCKED",
+    "reason": "No local checkout; Node 22.16/npm 10.9 below remote engines Node>=24/npm>=11; SDK package not installed; direct REST DNS unavailable; 1h/4h lineage unresolved; PIT derivatives and calibrated costs absent.",
+    "oos_evaluated": false
+  }
+}

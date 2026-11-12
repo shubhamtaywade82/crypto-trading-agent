@@ -88,30 +88,41 @@
         "TRANSITION_LOW": 50.66,
         "BULL_LOW": 9.85,
         "tvd": 0.175,
-        "median_transition_duration_h": 38
+        "median_transition_duration_h": 38,
+        "rows": 2345
       },
       "ETH": {
         "BEAR_LOW": 6.42,
         "TRANSITION_LOW": 46.24,
         "BULL_LOW": 6.64,
         "tvd": 0.338,
-        "median_transition_duration_h": 42
+        "median_transition_duration_h": 42,
+        "rows": 2273
       },
       "SOL": {
         "BEAR_LOW": 10.9,
         "TRANSITION_LOW": 67.56,
         "BULL_LOW": 10.7,
         "tvd": 0.245,
-        "median_transition_duration_h": 120
+        "median_transition_duration_h": 120,
+        "rows": 2010
       },
       "XRP": {
         "BEAR_LOW": 15.2,
         "TRANSITION_LOW": 43.63,
         "BULL_LOW": 3.22,
         "tvd": 0.293,
-        "median_transition_duration_h": 68
+        "median_transition_duration_h": 68,
+        "rows": 2237
       },
       "note": "Feature-state frequencies/durations, not win probabilities. ETH/XRP show material validation/test context drift."
+    },
+    "notable_transitions": {
+      "SOL_BULL_LOW_to_TRANSITION_LOW_pct": 83.3,
+      "SOL_transition_count": 12,
+      "XRP_TRANSITION_NORMAL_to_TRANSITION_LOW_pct": 69.4,
+      "XRP_transition_count": 25,
+      "note": "Carried-forward descriptive transitions from v96; full transition matrix not present in accessible summary and not recomputed this run."
     }
   },
   "strategy_scorecard": [
@@ -167,6 +178,38 @@
       "candidate": "Funding/OI filters",
       "scope": "All symbols/contexts",
       "evidence_status": "HYPOTHESIS"
+    },
+    {
+      "candidate": "Donchian20 aggregate prior results (unconditional, not context-specific)",
+      "scope": "All four symbols",
+      "evidence_status": "INSUFFICIENT_EVIDENCE_FOR_CONDITIONAL_EDGE",
+      "results": {
+        "BTCUSDT": {
+          "trades": 200,
+          "win_rate_pct": 36.5,
+          "target_before_stop_pct": 21.5,
+          "mean_net_R": -0.100817
+        },
+        "ETHUSDT": {
+          "trades": 182,
+          "win_rate_pct": 38.46,
+          "target_before_stop_pct": 28.02,
+          "mean_net_R": 0.047803
+        },
+        "SOLUSDT": {
+          "trades": 208,
+          "win_rate_pct": 37.02,
+          "target_before_stop_pct": 24.52,
+          "mean_net_R": -0.017655
+        },
+        "XRPUSDT": {
+          "trades": 188,
+          "win_rate_pct": 37.77,
+          "target_before_stop_pct": 29.79,
+          "mean_net_R": 0.048855
+        }
+      },
+      "note": "Prior aggregate results from v96; they do not establish symbol/context-specific edge and do not override the 36-cell conditional OOS evidence gate."
     }
   ],
   "oos_validated_entries": [],

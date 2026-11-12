@@ -324,11 +324,11 @@
         "quote_volume_24h_usdt": 11730764998.24,
         "open_interest": 102309.926,
         "oi_change_1h_pct": 0.387,
-        "indicated_funding_pct": 0.008874,
         "settled_funding_pct": 0.008904,
         "spread_bps": 0.0139,
         "taker_buy_sell_15m": 1.2503,
-        "global_long_short_ratio": 3.1374
+        "global_long_short_ratio": 3.1374,
+        "premium_index_lastFundingRate_pct": 0.008874
       },
       "ETHUSDT": {
         "last": 2012.23,
@@ -337,11 +337,11 @@
         "quote_volume_24h_usdt": 7741937375.77,
         "open_interest": 2346145.943,
         "oi_change_1h_pct": 0.71,
-        "indicated_funding_pct": 0.004748,
         "settled_funding_pct": 0.004733,
         "spread_bps": 0.0497,
         "taker_buy_sell_15m": 1.0773,
-        "global_long_short_ratio": 3.5269
+        "global_long_short_ratio": 3.5269,
+        "premium_index_lastFundingRate_pct": 0.004748
       },
       "SOLUSDT": {
         "last": 81.76,
@@ -350,11 +350,11 @@
         "quote_volume_24h_usdt": 1358915858.3639,
         "open_interest": 9742372.87,
         "oi_change_1h_pct": 0.582,
-        "indicated_funding_pct": 0.000405,
         "settled_funding_pct": 0.000716,
         "spread_bps": 1.2233,
         "taker_buy_sell_15m": 1.1135,
-        "global_long_short_ratio": 3.5998
+        "global_long_short_ratio": 3.5998,
+        "premium_index_lastFundingRate_pct": 0.000405
       },
       "XRPUSDT": {
         "last": 1.0275,
@@ -363,15 +363,17 @@
         "quote_volume_24h_usdt": 710043664.2346,
         "open_interest": 310103505.2,
         "oi_change_1h_pct": 0.254,
-        "indicated_funding_pct": 0.004468,
         "settled_funding_pct": 0.00456,
         "spread_bps": 0.9734,
         "taker_buy_sell_15m": 0.8582,
-        "global_long_short_ratio": 3.095
+        "global_long_short_ratio": 3.095,
+        "premium_index_lastFundingRate_pct": 0.004468
       }
     },
     "book_depth": "Only best bid/ask snapshots; multi-level depth/impact not measured.",
-    "liquidations": "NOT_AVAILABLE; no liquidation feed retrieved."
+    "liquidations": "NOT_AVAILABLE; no liquidation feed retrieved.",
+    "funding_interval_source": "GET /fapi/v1/fundingInfo; all four symbols returned fundingIntervalHours=8 (disclaimer=true, updateTime=null), consistent with the observed 16:00Z settlement and 00:00Z next funding.",
+    "funding_semantics": "premiumIndex.lastFundingRate is the latest rate field in the current premium-index observation, not a funding-payment record; /fapi/v1/fundingRate history at fundingTime is the settled rate."
   },
   "decision_matrix": {
     "SOLUSDT": {

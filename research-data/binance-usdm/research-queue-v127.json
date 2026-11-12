@@ -1,0 +1,596 @@
+{
+  "schema_version": "1.0.0",
+  "version": 127,
+  "updatedAtUtc": "2026-11-12T16:36:47.924Z",
+  "repository": "shubhamtaywade82/crypto-trading-agent",
+  "branch": "main",
+  "supersedes": "research-data/binance-usdm/research-queue-v126.json",
+  "registryReference": "research-data/binance-usdm/conditional-strategy-registry-snapshot-v126.json",
+  "latestRun": {
+    "asOfUtc": "2026-11-12T16:36:47.924Z",
+    "runId": "context-strategy-20261112T1633Z-auto40",
+    "status": "RESEARCH_EXECUTED",
+    "scope": "HISTORICAL_PAGE_0022_BACKFILL_5M15M_INCREMENTAL_5M15M_APPEND_AND_MARKET_MONITORING",
+    "strategyExperiment": "RESEARCH_BLOCKED",
+    "strategyExperimentStatus": "RESEARCH_BLOCKED",
+    "oosEvaluated": false,
+    "historicalRowsBackfilled": 12000,
+    "incrementalRowsAppended": 32,
+    "formingExcluded": 12,
+    "uncompletedRowsExcluded": 12,
+    "dataQualityExperimentsCompleted": 3,
+    "reportPath": "research/context-strategy/reports/2026-11-12T1636Z_auto40.md",
+    "snapshotPath": "research-data/binance-usdm/current_market_snapshot_20261112T1636Z_auto40.json",
+    "preflightPath": "research/context-strategy/preflight/preflight_20261112T1636Z_auto40.json",
+    "dataQualityArtifactPath": "research/context-strategy/experiments/historical_page_0022_backfill_20261112T1631Z_auto40.result.json",
+    "incrementalDataQualityArtifactPath": "research/context-strategy/experiments/historical_page_0022_backfill_20261112T1631Z_auto40.result.json",
+    "archiveManifestPath": "research-data/binance-usdm/manifests/archive_manifest_20261112T1635Z_auto40_refresh.json",
+    "runManifestPath": "research-runs/context-strategy-20261112T1633Z-auto40.json",
+    "queuePath": "research-data/binance-usdm/research-queue-v127.json",
+    "registrySnapshotPath": "research-data/binance-usdm/conditional-strategy-registry-snapshot-v126.json",
+    "oosValidatedEntryCount": 0,
+    "strategyStatusTransitions": 0,
+    "artifactReadbackVerified": true,
+    "updatedAtUtc": "2026-11-12T16:36:47.924Z"
+  },
+  "items": [
+    {
+      "id": "Q_WEEKLY_CONTEXT_STABILITY_REVIEW_20261112",
+      "status": "COMPLETED_WITH_SCOPE_LIMITATION",
+      "priority": 4,
+      "title": "Weekly 4h context taxonomy/stability review v56",
+      "blocker": null,
+      "nextAction": "Retain v56 formula; repeat multi-timeframe review only after 1h/4h lineage reconciliation and adequate 5m/15m history.",
+      "prerequisites": [
+        "4h canonical sample",
+        "Training-only threshold pipeline"
+      ],
+      "result": {
+        "artifact": "research-data/binance-usdm/manifests/context_taxonomy_weekly_review_20261112T1208Z_v56.json",
+        "taxonomyChange": "NONE"
+      }
+    },
+    {
+      "id": "Q_PAGE_0023_BACKFILL",
+      "status": "READY",
+      "priority": 1,
+      "title": "Backfill 5m/15m historical page 0023 across BTC/ETH/SOL/XRP",
+      "blocker": null,
+      "nextAction": "Fetch 1500 rows per symbol for each interval from the exact per-symbol starts below; verify first open, row count, continuity, OHLC, positive volume, closeTime and SHA-256 before updating indexes.",
+      "prerequisites": [
+        "Page-0022 raw files/manifests and indexes readback verified",
+        "Binance USD-M kline connector",
+        "Writable archive branch"
+      ],
+      "nextStartUtcBySymbol": {
+        "5m": {
+          "BTCUSDT": "2020-04-24T14:00:00Z",
+          "ETHUSDT": "2020-04-24T14:00:00Z",
+          "SOLUSDT": "2021-01-06T21:00:00Z",
+          "XRPUSDT": "2020-04-29T22:20:00Z"
+        },
+        "15m": {
+          "BTCUSDT": "2020-12-09T18:00:00Z",
+          "ETHUSDT": "2020-12-09T18:00:00Z",
+          "SOLUSDT": "2021-08-24T01:00:00Z",
+          "XRPUSDT": "2020-12-15T02:15:00Z"
+        }
+      }
+    },
+    {
+      "id": "Q_CURRENT_MARKET_SNAPSHOT_AUTO40",
+      "status": "COMPLETED_THIS_RUN",
+      "priority": 2,
+      "title": "Refresh BTC reference and ETH/SOL/XRP completed-candle context snapshot",
+      "blocker": null,
+      "nextAction": "Evaluate only OOS_VALIDATED entries on next run; current registry contains zero.",
+      "prerequisites": [
+        "Fresh connector market data",
+        "Completed-candle feature calculation"
+      ],
+      "result": {
+        "asOfUtc": "2026-11-12T16:36:47.924Z",
+        "decisions": {
+          "SOLUSDT": "NO_TRADE",
+          "ETHUSDT": "NO_TRADE",
+          "XRPUSDT": "NO_TRADE"
+        }
+      }
+    },
+    {
+      "id": "Q_INCREMENTAL_ARCHIVE_DQ_AUTO40",
+      "status": "COMPLETED_THIS_RUN",
+      "priority": 1,
+      "title": "Validate page-0022 backfill and incremental delta manifests/indexes",
+      "blocker": null,
+      "nextAction": "Repeat only on newly completed bars; this validates new pages and incremental slices, not full historical archive completeness.",
+      "prerequisites": [
+        "Completed page/delta persisted"
+      ],
+      "result": {
+        "page22Rows": 12000,
+        "incrementalRows": 32,
+        "allNewArtifactsReadbackVerified": true
+      }
+    },
+    {
+      "id": "Q_INCREMENTAL_ARCHIVE_REFRESH_AUTO40",
+      "status": "COMPLETED_THIS_RUN",
+      "priority": 1,
+      "title": "Append completed 5m/15m bars through 16:30Z",
+      "blocker": null,
+      "nextAction": "Next eligible 5m open 16:35Z after closeTime 16:39:59.999Z; next 15m open 16:30Z after closeTime 16:44:59.999Z; 1h 16:00Z after 16:59:59.999Z; 4h 16:00Z after 19:59:59.999Z.",
+      "prerequisites": [
+        "Fresh Binance connector klines",
+        "Verified prior highwaters",
+        "Writable archive branch"
+      ],
+      "result": {
+        "rowsAppended": 32,
+        "byInterval": {
+          "5m": 24,
+          "15m": 8
+        },
+        "formingExcluded": 12,
+        "readbackVerified": true
+      }
+    },
+    {
+      "id": "Q_PAGE_0022_BACKFILL_AUTO40",
+      "status": "COMPLETED_AND_INDEPENDENTLY_VERIFIED",
+      "priority": 1,
+      "title": "Backfill 5m/15m historical page 0022 across BTC/ETH/SOL/XRP",
+      "blocker": null,
+      "nextAction": "Proceed to page 0023 using each interval index's per-symbol nextStartUtcBySymbol.",
+      "prerequisites": [
+        "Page-0021 index and manifest",
+        "Binance USD-M historical klines",
+        "Writable archive branch"
+      ],
+      "result": {
+        "rows": 12000,
+        "rowsPerInterval": 6000,
+        "allEightFilesReadbackVerified": true,
+        "allQualityChecksPassed": true
+      }
+    },
+    {
+      "id": "Q_SHA256_AUDIT_AUTO33",
+      "priority": 1,
+      "status": "COMPLETED_THIS_RUN",
+      "title": "Recompute and reconcile SHA-256 references after exact GitHub readback",
+      "prerequisites": [
+        "Exact persisted file bytes",
+        "Verified SHA-256 implementation"
+      ],
+      "blocker": null,
+      "nextAction": "Use the corrected hashes for all future manifests, indexes and registry snapshots.",
+      "result": {
+        "sha256SelfTest": "PASS (known abc vector)",
+        "deltaSha256": "4864ed7ccf31746baf53363395b5bdd239c4c94331766772ea12a1ed311ec073",
+        "deltaManifestSha256": "b47121b8388a5556c06b18d70f7efa8567056f294273e6c1f6739114d4e6b5ec",
+        "archiveManifestSha256": "3406cb3e56a5aae690ff652cf982fb6cea56f1b9d636f169fe61f43f722156c9",
+        "indexesReadbackVerified": true
+      }
+    },
+    {
+      "id": "Q_INCREMENTAL_ARCHIVE_REFRESH_AUTO35",
+      "priority": 1,
+      "status": "COMPLETED_THIS_RUN",
+      "title": "Append newly completed 5m/15m USD-M bars for auto35",
+      "prerequisites": [
+        "Fresh Binance connector klines",
+        "Verified prior interval highwaters",
+        "Writable archive branch"
+      ],
+      "blocker": null,
+      "nextAction": "Next refresh starts at 5m 2026-11-12T01:00Z and 15m 2026-11-12T01:00Z after closeTime; keep 1h/4h blocked until lineage reconciliation.",
+      "result": {
+        "rowsFetched": 36,
+        "rowsAppended": 20,
+        "uncompletedRowsExcluded": 16,
+        "rowsByInterval": {
+          "5m": 16,
+          "15m": 4
+        },
+        "rowsBySymbol": {
+          "BTCUSDT": 5,
+          "ETHUSDT": 5,
+          "SOLUSDT": 5,
+          "XRPUSDT": 5
+        },
+        "deltaPath": "research-data/binance-usdm/delta/binance_usdm_delta_20261111T2227Z_5m15m_completed.jsonl",
+        "deltaSha256": "4864ed7ccf31746baf53363395b5bdd239c4c94331766772ea12a1ed311ec073",
+        "readbackVerified": true,
+        "deltaManifestSha256": "b47121b8388a5556c06b18d70f7efa8567056f294273e6c1f6739114d4e6b5ec",
+        "deltaManifestBlobSha": "2faed812fa56e7584c8d6d3906713310cc40563d"
+      }
+    },
+    {
+      "id": "Q_INCREMENTAL_ARCHIVE_DQ_AUTO35",
+      "priority": 1,
+      "status": "COMPLETED_THIS_RUN",
+      "title": "Validate auto35 incremental delta, manifest, indexes and readback",
+      "prerequisites": [
+        "Completed delta persisted"
+      ],
+      "blocker": null,
+      "nextAction": "Repeat after the next completed-bar append.",
+      "result": {
+        "duplicates": 0,
+        "missingIntervals": 0,
+        "offGrid": 0,
+        "nonMonotonic": 0,
+        "ohlcFailures": 0,
+        "nonFinite": 0,
+        "nonPositiveVolume": 0,
+        "closeTimeFailures": 0,
+        "crossSymbolAlignment": true,
+        "contiguousFromPriorHighwater": true,
+        "deltaReadbackVerified": true,
+        "manifestReadbackVerified": true,
+        "indexReadbackVerified": true
+      }
+    },
+    {
+      "id": "Q_PAGE_0014_BACKFILL_AUTO33",
+      "priority": 1,
+      "status": "COMPLETED_AND_INDEPENDENTLY_VERIFIED",
+      "title": "Backfill 5m/15m historical page 0014 across BTC/ETH/SOL/XRP",
+      "prerequisites": [
+        "Per-symbol nextStart from page-0013 index",
+        "Binance USD-M historical klines",
+        "Writable archive branch"
+      ],
+      "blocker": null,
+      "nextAction": "Page 0016 completed in auto35; next backfill is page 0017.",
+      "result": {
+        "files": 8,
+        "rows": 12000,
+        "rowsPerFile": 1500,
+        "rowsByInterval": {
+          "5m": 6000,
+          "15m": 6000
+        },
+        "rowsPerSymbolPerInterval": 1500,
+        "readbackExact": 8,
+        "manifestReadbackExact": 2,
+        "indexReadbackVerified": 2,
+        "duplicates": 0,
+        "missingIntervals": 0,
+        "offGrid": 0,
+        "nonMonotonic": 0,
+        "ohlcFailures": 0,
+        "nonFinite": 0,
+        "nonPositiveVolume": 0,
+        "zeroVolumeRows": 0,
+        "experimentPath": "research/context-strategy/experiments/historical_page_0014_backfill_20261111T2227Z_auto33.result.json",
+        "archiveManifestPath": "research-data/binance-usdm/manifests/archive_manifest_20261111T2227Z_auto33.json"
+      }
+    },
+    {
+      "id": "Q_PAGE_0015_BACKFILL",
+      "priority": 1,
+      "status": "COMPLETED_AND_INDEPENDENTLY_VERIFIED",
+      "title": "Backfill 5m/15m historical page 0015 across BTC/ETH/SOL/XRP",
+      "prerequisites": [
+        "Page-0014 manifests and indexes readback verified",
+        "Audit page-0010 through page-0013 raw file/manifests",
+        "Per-symbol nextStart values from current 5m/15m indexes",
+        "Binance connector historical klines",
+        "Writable archive branch"
+      ],
+      "blocker": null,
+      "nextAction": "Continue with page 0017 using the per-symbol nextStart values in the page-0016 indexes.",
+      "completedInRun": "auto34"
+    },
+    {
+      "id": "Q_DAILY_STRATEGY_EXPERIMENT_20261112",
+      "priority": 3,
+      "status": "BLOCKED_STRATEGY_EXPERIMENT",
+      "title": "Run one preregistered strategy×context×symbol experiment",
+      "prerequisites": [
+        "Reconciled multi-timeframe history",
+        "Node24/npm11 compatible harness and passing smoke test",
+        "PIT derivatives and realistic fees/spread/slippage/funding/latency"
+      ],
+      "blocker": "Archive data-quality work completed, but strategy inference remains blocked: no local checkout, Node 22.16/npm 10.9 below remote engines Node>=24/npm>=11, Binance SDK not installed, direct REST DNS unavailable, 1h bridge and 4h provenance unresolved, and no point-in-time derivatives/cost model.",
+      "nextAction": "Provision Node24/npm11 and exact checkout; reconcile 1h/4h lineage; calibrate point-in-time funding/OI and execution costs; run deterministic fixture twice; then freeze one SOL trend/pullback or BTC-confirmed experiment with chronological train/validation/untouched-test."
+    },
+    {
+      "id": "Q_CURRENT_MARKET_SNAPSHOT_AUTO35",
+      "priority": 1,
+      "status": "COMPLETED_THIS_RUN",
+      "title": "Refresh BTC reference and ETH/SOL/XRP context snapshot for auto35",
+      "prerequisites": [
+        "Fresh Binance connector market data",
+        "Completed-candle feature calculation"
+      ],
+      "blocker": null,
+      "nextAction": "Re-evaluate only OOS_VALIDATED registry entries on the next hourly snapshot; current registry has zero.",
+      "result": {
+        "asOfUtc": "2026-11-11T22:27:49.000Z",
+        "contexts": {
+          "BTCUSDT": "BEAR_LOW",
+          "ETHUSDT": "BEAR_NORMAL",
+          "SOLUSDT": "BEAR_LOW",
+          "XRPUSDT": "BEAR_NORMAL"
+        },
+        "snapshotPath": "research-data/binance-usdm/current_market_snapshot_20261111T2227Z_auto33.json",
+        "oosValidatedEntries": 0
+      }
+    },
+    {
+      "id": "Q_INCREMENTAL_ARCHIVE_REFRESH_AUTO32",
+      "priority": 1,
+      "status": "COMPLETED_THIS_RUN",
+      "title": "Append newly completed 5m/15m USD-M bars",
+      "prerequisites": [
+        "Fresh Binance USD-M connector klines",
+        "Verified prior interval highwaters",
+        "Writable archive branch"
+      ],
+      "blocker": null,
+      "nextAction": "Next run: continue 5m from 2026-11-11T17:30Z and 15m from 2026-11-11T17:30Z only after closeTime; do not append forming 1h/4h bars.",
+      "result": {
+        "rowsFetched": 32,
+        "rowsAppended": 24,
+        "formingExcluded": 8,
+        "rowsByInterval": {
+          "5m": 16,
+          "15m": 8
+        },
+        "rowsBySymbol": {
+          "BTCUSDT": 6,
+          "ETHUSDT": 6,
+          "SOLUSDT": 6,
+          "XRPUSDT": 6
+        },
+        "deltaPath": "research-data/binance-usdm/delta/binance_usdm_delta_20261111T173054Z_5m15m_completed.jsonl",
+        "deltaSha256": "6a5f70ccd08e7311e4fccdfc01a3611d800a59e6090ed2887957a0be3d1165ea",
+        "readbackVerified": true
+      }
+    },
+    {
+      "id": "Q_INCREMENTAL_ARCHIVE_DQ_AUTO32",
+      "priority": 1,
+      "status": "COMPLETED_THIS_RUN",
+      "title": "Validate incremental delta, manifest, indexes and readback",
+      "prerequisites": [
+        "Completed delta persisted"
+      ],
+      "blocker": null,
+      "nextAction": "Repeat after the next completed-bar append.",
+      "result": {
+        "duplicates": 0,
+        "missingIntervals": 0,
+        "offGrid": 0,
+        "nonMonotonic": 0,
+        "ohlcFailures": 0,
+        "nonFinite": 0,
+        "nonPositiveVolume": 0,
+        "closeTimeFailures": 0,
+        "crossSymbolAlignment": true,
+        "deltaReadbackVerified": true,
+        "manifestReadbackVerified": true,
+        "indexReadbackVerified": true
+      }
+    },
+    {
+      "id": "Q_PAGE_0009_BACKFILL_AUTO32",
+      "priority": 1,
+      "status": "COMPLETED_AND_INDEPENDENTLY_VERIFIED",
+      "title": "Backfill 5m/15m historical page 0009 across BTC/ETH/SOL/XRP",
+      "prerequisites": [
+        "Per-symbol nextStart from page-0008 index",
+        "Binance USD-M historical klines",
+        "Writable archive branch"
+      ],
+      "blocker": null,
+      "nextAction": "Continue page 0010 from per-symbol nextStart values in the updated indexes.",
+      "result": {
+        "files": 8,
+        "rows": 12000,
+        "rowsPerFile": 1500,
+        "rowsByInterval": {
+          "5m": 6000,
+          "15m": 6000
+        },
+        "rowsPerSymbolPerInterval": 1500,
+        "readbackExact": 8,
+        "manifestReadbackExact": 2,
+        "indexReadbackVerified": 2,
+        "duplicates": 0,
+        "missingIntervals": 0,
+        "offGrid": 0,
+        "nonMonotonic": 0,
+        "ohlcFailures": 0,
+        "nonFinite": 0,
+        "nonPositiveVolume": 0,
+        "zeroVolumeRows": 0,
+        "experimentPath": "research/context-strategy/experiments/historical_page_0009_backfill_20261111T1740Z_auto32.result.json",
+        "archiveManifestPath": "research-data/binance-usdm/manifests/archive_manifest_20261111T174018Z_auto32.json"
+      }
+    },
+    {
+      "id": "Q_PAGE_0010_BACKFILL",
+      "priority": 1,
+      "status": "COMPLETED_AND_INDEPENDENTLY_VERIFIED",
+      "title": "Backfill 5m/15m historical page 0010 across BTC/ETH/SOL/XRP",
+      "prerequisites": [
+        "Page-0009 manifests and indexes readback verified",
+        "Per-symbol nextStart values from current 5m/15m indexes",
+        "Binance connector historical klines",
+        "Writable archive branch"
+      ],
+      "blocker": null,
+      "nextAction": "Pages 0010-0013 and page 0015 have been independently read back; page 0016 was backfilled in auto35.",
+      "result": null,
+      "completedInRun": "auto34"
+    },
+    {
+      "id": "Q_1H_BRIDGE_RECONCILIATION",
+      "priority": 2,
+      "status": "BLOCKED",
+      "title": "Reconcile 1h base/delta bridge and row-count discrepancy",
+      "prerequisites": [
+        "Complete 1h base manifest and delta inventory",
+        "Per-symbol openTime-key reconciliation"
+      ],
+      "blocker": "28 missing hourly opens per symbol and an 8-row top-level count discrepancy remain; current 1h archive cannot be treated as contiguous.",
+      "nextAction": "Enumerate per-symbol base and delta openTime keys, identify the exact 28-hour bridge and 8-row discrepancy, then reconcile before 1h strategy use."
+    },
+    {
+      "id": "Q_4H_PROVENANCE_RECONCILIATION",
+      "priority": 2,
+      "status": "BLOCKED",
+      "title": "Reconcile 4h raw/aligned/canonical highwaters and original page hashes",
+      "prerequisites": [
+        "Immutable raw 4h pages/manifests",
+        "Per-symbol delta inventory",
+        "Canonical row-level reconciliation"
+      ],
+      "blocker": "Raw/aligned/canonical counts remain 53,960/53,816/53,844; 13 original manifest SHA mismatches remain; canonical tail stops 2026-11-05T16:00Z.",
+      "nextAction": "Compare per-symbol 4h openTime keys and actual/expected SHA values side by side; preserve original manifests; do not rebuild or append 4h until resolved."
+    },
+    {
+      "id": "Q_NODE24_BACKTEST_RUNTIME",
+      "priority": 2,
+      "status": "BLOCKED",
+      "title": "Provision compatible backtest runtime and deterministic smoke test",
+      "prerequisites": [
+        "Persistent local checkout",
+        "Node24+",
+        "npm11+",
+        "Pinned dependencies"
+      ],
+      "blocker": "Local checkout absent; local Node22.16/npm10.9 below package engines Node>=24/npm>=11; SDK packages not installed.",
+      "nextAction": "Provision Node24/npm11, clone exact main commit c00af68f6939b854383778aa7930bbfd3c486d6d, install pinned dependencies, run deterministic fixture twice and no-lookahead invariance."
+    },
+    {
+      "id": "Q_BINANCE_REST_METADATA_FRESHNESS",
+      "priority": 2,
+      "status": "BLOCKED",
+      "title": "Restore fresh Binance USD-M server time and exchange metadata",
+      "prerequisites": [
+        "Outbound DNS/HTTPS",
+        "Bounded official REST requests"
+      ],
+      "blocker": "Direct /fapi/v1/time and /fapi/v1/exchangeInfo DNS probes fail; connector exchangeInfo serverTime is about 6h48m stale.",
+      "nextAction": "Restore outbound DNS/HTTPS and require fresh server time plus exchangeInfo before contract execution validation."
+    },
+    {
+      "id": "Q_PIT_DERIVATIVES_AND_COSTS",
+      "priority": 3,
+      "status": "BLOCKED",
+      "title": "Build point-in-time derivatives and realistic execution-cost history",
+      "prerequisites": [
+        "Timestamped historical derivatives",
+        "Fee tier and execution-cost data"
+      ],
+      "blocker": "Current funding/OI/taker/account-ratio snapshots exist, but continuous point-in-time histories and calibrated fee tier, spread, slippage, impact, latency and funding cashflows do not.",
+      "nextAction": "Backfill timestamped funding/OI/taker/positioning data and calibrate fee tiers, spread, slippage, market impact, latency and funding assumptions."
+    },
+    {
+      "id": "Q_DAILY_STRATEGY_EXPERIMENT_20261111",
+      "priority": 3,
+      "status": "BLOCKED_STRATEGY_EXPERIMENT_DATA_QUALITY_COMPLETED",
+      "title": "Run pre-registered strategy × context × symbol experiment",
+      "prerequisites": [
+        "Continuous and reconciled OHLCV archive",
+        "Compatible harness and passing deterministic smoke test",
+        "Point-in-time derivatives and execution costs"
+      ],
+      "blocker": "Auto35 completed page-0016 backfill and incremental append, but strategy prerequisites remain unmet: no local compatible runtime, unresolved 1h/4h lineage, no continuous PIT derivatives panel or calibrated cost model.",
+      "nextAction": "Do not lower the evidence gate; run a frozen strategy×context×symbol test only after the runtime, archive and cost prerequisites pass."
+    },
+    {
+      "id": "Q_WEEKLY_CONTEXT_STABILITY_REVIEW_20261111",
+      "priority": 4,
+      "status": "BLOCKED",
+      "title": "Perform weekly context taxonomy/stability review",
+      "prerequisites": [
+        "Reconciled multi-year 4h and lower-timeframe histories",
+        "Training-only threshold pipeline",
+        "Reproducible compute/harness"
+      ],
+      "blocker": "Weekly review remains blocked by partial 5m/15m historical windows, 1h bridge gap, 4h provenance/count/hash discrepancies and unavailable compatible local harness.",
+      "nextAction": "After archive reconciliation and Node24/npm11 setup, recompute training-only context thresholds, frequency, duration, transitions, JSD/stability and multiple-testing burden."
+    },
+    {
+      "id": "Q_REGISTRY_LINEAGE_V75",
+      "priority": 5,
+      "status": "BLOCKED_PROVENANCE",
+      "title": "Resolve inherited Donchian20 v75 OOS_PROMISING reference",
+      "prerequisites": [
+        "Original v75 experiment artifact",
+        "Exact code/data hashes, split, seed, bootstrap and execution-cost metadata"
+      ],
+      "blocker": "The 12-trade v75 candidate is referenced in prior reports but absent from the canonical registry and its underlying artifacts are not accessible in the current registry snapshot.",
+      "nextAction": "Recover and independently verify original experiment artifacts; until then keep it non-actionable and do not promote or count it as a registry entry."
+    },
+    {
+      "id": "Q_PAGE_0016_BACKFILL_AUTO35",
+      "priority": 1,
+      "status": "COMPLETED_AND_INDEPENDENTLY_VERIFIED",
+      "title": "Backfill 5m/15m historical page 0016 across BTC/ETH/SOL/XRP",
+      "blocker": null,
+      "nextAction": "Page 0017 is ready; use per-symbol nextStartUtcBySymbol from the updated indexes and preserve each symbol's independent page boundary."
+    },
+    {
+      "id": "Q_PAGE_0017_BACKFILL",
+      "priority": 1,
+      "status": "COMPLETED_AND_INDEPENDENTLY_VERIFIED",
+      "title": "Backfill 5m/15m historical page 0017 across BTC/ETH/SOL/XRP",
+      "blocker": null,
+      "prerequisites": [
+        "Page-0016 raw files and manifests readback verified",
+        "5m/15m archive indexes updated and readback verified",
+        "Binance USD-M kline connector available",
+        "GitHub archive branch writable"
+      ],
+      "nextAction": "Page 0022 is now readback-verified; proceed to page 0023 from the current per-symbol nextStart values."
+    }
+  ],
+  "lastRun": {
+    "asOfUtc": "2026-11-12T16:36:47.924Z",
+    "runId": "context-strategy-20261112T1633Z-auto40",
+    "status": "RESEARCH_EXECUTED",
+    "scope": "HISTORICAL_PAGE_0022_BACKFILL_5M15M_INCREMENTAL_5M15M_APPEND_AND_MARKET_MONITORING",
+    "strategyExperiment": "RESEARCH_BLOCKED",
+    "strategyExperimentStatus": "RESEARCH_BLOCKED",
+    "oosEvaluated": false,
+    "historicalRowsBackfilled": 12000,
+    "incrementalRowsAppended": 32,
+    "formingExcluded": 12,
+    "uncompletedRowsExcluded": 12,
+    "dataQualityExperimentsCompleted": 3,
+    "reportPath": "research/context-strategy/reports/2026-11-12T1636Z_auto40.md",
+    "snapshotPath": "research-data/binance-usdm/current_market_snapshot_20261112T1636Z_auto40.json",
+    "preflightPath": "research/context-strategy/preflight/preflight_20261112T1636Z_auto40.json",
+    "dataQualityArtifactPath": "research/context-strategy/experiments/historical_page_0022_backfill_20261112T1631Z_auto40.result.json",
+    "incrementalDataQualityArtifactPath": "research/context-strategy/experiments/historical_page_0022_backfill_20261112T1631Z_auto40.result.json",
+    "archiveManifestPath": "research-data/binance-usdm/manifests/archive_manifest_20261112T1635Z_auto40_refresh.json",
+    "runManifestPath": "research-runs/context-strategy-20261112T1633Z-auto40.json",
+    "queuePath": "research-data/binance-usdm/research-queue-v127.json",
+    "registrySnapshotPath": "research-data/binance-usdm/conditional-strategy-registry-snapshot-v126.json",
+    "oosValidatedEntryCount": 0,
+    "strategyStatusTransitions": 0,
+    "artifactReadbackVerified": true,
+    "updatedAtUtc": "2026-11-12T16:36:47.924Z"
+  },
+  "lastRunId": "context-strategy-20261112T1633Z-auto40",
+  "nextPriority": "Q_PAGE_0023_BACKFILL",
+  "latestRunStatus": "RESEARCH_EXECUTED",
+  "strategyResearchStatus": "RESEARCH_BLOCKED",
+  "oosValidatedEntryCount": 0,
+  "notes": [
+    "Auto35 persisted 12,000 page-0016 historical rows plus 32 incremental 5m/15m rows; both data-quality results and all raw/index artifacts were readback verified. No strategy experiment or OOS evaluation ran.",
+    "Auto40 completed page-0022 5m/15m historical backfill (12,000 rows), 32 incremental completed bars and exact remote readback. No strategy backtest or OOS evaluation ran; all five registry entries remain unchanged and OOS_VALIDATED count remains zero."
+  ],
+  "latestRunPath": "research-runs/context-strategy-20261112T1633Z-auto40.json",
+  "reportPath": "research/context-strategy/reports/2026-11-12T1636Z_auto40.md",
+  "snapshotPath": "research-data/binance-usdm/current_market_snapshot_20261112T1636Z_auto40.json",
+  "preflightPath": "research/context-strategy/preflight/preflight_20261112T1636Z_auto40.json",
+  "archiveManifestPath": "research-data/binance-usdm/manifests/archive_manifest_20261112T1635Z_auto40_refresh.json"
+}

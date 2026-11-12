@@ -174,3 +174,9 @@ A horizon is a **lead** only if all of these hold:
 **Not tested here:** the reversal reading of crowding (an OI build at an extreme predicts a reversal). That would be a separate id with its own section.
 
 **Implementation (not yet written).** A function for categorical labels, in `src/marketdata/EventStudy.ts` or a new module, plus a runner script. Do not edit `HYPOTHESES` or `eventStudy()`: they encode H1, H2 and H4 and their threshold rule. The implementation must match the constants above. Its tests must cover an OI gap, a contiguity break, and a day exclusion. The implementation commit comes before the first run.
+
+**Amendment 1 (2026-11-12, before the runner was written and before any H5 outcome was computed).** Four clarifications. None changes a constant.
+1. Non-overlap applies within each population. Primary events share one cursor per symbol and horizon, as written. Contrast events share a second cursor. Without this, the contrast groups in Test B could contain overlapping observations.
+2. Eligible minute (used for drift): a minute with 255 contiguous minutes of history ending at it, contiguous minutes through t+h, marks at both ends, on a usable day. It need not carry a label or an OI change.
+3. Coverage counts distinct minute records per symbol per UTC day, as loaded, before `cleanRecords`.
+4. The lower bound is the sorted bootstrap value at zero-based index floor(alpha x valid draws): index 62 for 10,000 draws at alpha 0.00625. A draw with no primary or no contrast event is dropped. If more than 1% of draws are dropped, the horizon is not evaluable.

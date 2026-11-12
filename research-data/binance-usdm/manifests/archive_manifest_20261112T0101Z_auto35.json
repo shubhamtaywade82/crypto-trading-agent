@@ -104,45 +104,45 @@
     }
   },
   "coverage": {
-    "baseRowsPerSymbol": 22500,
-    "baseRowsTotalPerInterval": 90000,
-    "pagesPerSymbolPerInterval": 15,
+    "baseRowsPerSymbol": 24000,
+    "baseRowsTotalPerInterval": 96000,
+    "pagesPerSymbolPerInterval": 16,
     "continuousMultiYearCoverage": false,
     "intervals": {
       "5m": {
         "BTCUSDT": {
           "first": "2020-01-01T00:00:00.000Z",
-          "last": "2020-03-19T02:55:00.000Z"
+          "last": "2020-03-24T07:55:00.000Z"
         },
         "ETHUSDT": {
           "first": "2020-01-01T00:00:00.000Z",
-          "last": "2020-03-19T02:55:00.000Z"
+          "last": "2020-03-24T07:55:00.000Z"
         },
         "SOLUSDT": {
           "first": "2020-09-14T00:00:00.000Z",
-          "last": "2020-12-01T09:55:00.000Z"
+          "last": "2020-12-06T14:55:00.000Z"
         },
         "XRPUSDT": {
           "first": "2020-01-06T00:00:00.000Z",
-          "last": "2020-03-24T11:15:00.000Z"
+          "last": "2020-03-29T16:15:00.000Z"
         }
       },
       "15m": {
         "BTCUSDT": {
           "first": "2020-01-01T00:00:00.000Z",
-          "last": "2020-08-22T08:45:00.000Z"
+          "last": "2020-09-06T23:45:00.000Z"
         },
         "ETHUSDT": {
           "first": "2020-01-01T00:00:00.000Z",
-          "last": "2020-08-22T08:45:00.000Z"
+          "last": "2020-09-06T23:45:00.000Z"
         },
         "SOLUSDT": {
           "first": "2020-09-14T00:00:00.000Z",
-          "last": "2021-05-06T15:45:00.000Z"
+          "last": "2021-05-22T06:45:00.000Z"
         },
         "XRPUSDT": {
           "first": "2020-01-06T00:00:00.000Z",
-          "last": "2020-08-27T17:00:00.000Z"
+          "last": "2020-09-12T08:00:00.000Z"
         }
       }
     }
@@ -150,24 +150,24 @@
   "knownBlockers": {
     "1h": "28-hour bridge gap; 8-row count discrepancy; index highwater aliases inconsistent; no append until per-symbol openTime reconciliation.",
     "4h": "Raw/aligned/canonical counts 53,960/53,816/53,844; raw highwater 2026-11-11T16:00Z vs canonical 2026-11-05T16:00Z; 13 original manifest SHA mismatches; no append/rebuild until row-key and provenance reconciliation.",
-    "5m15m": "Base archive remains partial (22,500 rows per symbol, 15 pages) with large historical gaps to current incremental layer; continue page-0016 backfill after provenance audit."
+    "5m15m": "Base archive now has 16 pages (24,000 rows per symbol per interval) but remains partial and does not provide continuous multi-year coverage; page-0017 is the next backfill, using per-symbol nextStartUtcBySymbol from the updated indexes."
   },
   "indexes": {
     "5m": {
       "path": "research-data/binance-usdm/5m/archive-index.json",
-      "blobSha": "db09281e397e4edaefc6c15c06dd32f26abe31b2",
-      "sha256": "7a1b7e6b31c48ba63d4ab8f1b0a3ec85379c7071fee790f13113c07e0cb96ad1",
-      "bytes": 340116,
-      "updatedAtUtc": "2026-11-12T01:03:20.872Z",
-      "status": "PARTIAL_HISTORICAL_PAGE_ARCHIVE_THROUGH_PAGE_0015_WITH_INCREMENTAL_DELTAS"
+      "blobSha": "06004f452996f72ccfdd29acf17d9f9a3f59d4f9",
+      "sha256": "310fa6044bd54a149f3dd2ca683cd316579e4fe36bef80721ee7f65d0308b5a7",
+      "bytes": 342246,
+      "updatedAtUtc": "2026-11-12T01:09:53.380Z",
+      "status": "PARTIAL_HISTORICAL_PAGE_ARCHIVE_THROUGH_PAGE_0016_WITH_INCREMENTAL_DELTAS"
     },
     "15m": {
       "path": "research-data/binance-usdm/15m/archive-index.json",
-      "blobSha": "58e9fa2afb6a672445c631de40b756d4b220b9b0",
-      "sha256": "6290c928169e8cd2046fafac7a582343a53a82515b4c0cb5ace9a220250123b4",
-      "bytes": 297590,
-      "updatedAtUtc": "2026-11-12T01:03:20.872Z",
-      "status": "PARTIAL_HISTORICAL_PAGE_ARCHIVE_THROUGH_PAGE_0015_WITH_INCREMENTAL_DELTAS"
+      "blobSha": "a72e9ce98900d0657c2e2b7cb8c40a83ddb8a0f5",
+      "sha256": "325d3b792258dbfca13f68f78597fdb0164f692f4d4afd3f55659340dde5b3a1",
+      "bytes": 299732,
+      "updatedAtUtc": "2026-11-12T01:09:53.380Z",
+      "status": "PARTIAL_HISTORICAL_PAGE_ARCHIVE_THROUGH_PAGE_0016_WITH_INCREMENTAL_DELTAS"
     },
     "1h": {
       "path": "research-data/binance-usdm/1h/archive-index.json",
@@ -321,5 +321,88 @@
     }
   ],
   "hashAlgorithm": "SHA-256 verified against standard abc and one-million-a known-answer vectors; exact GitHub readback bytes.",
-  "updatedAtUtc": "2026-11-12T01:03:20.872Z"
+  "updatedAtUtc": "2026-11-12T01:09:53.380Z",
+  "pageBackfill": {
+    "page": 16,
+    "asOfUtc": "2026-11-12T01:09:53.380Z",
+    "rowsFetched": 12000,
+    "rowsPersisted": 12000,
+    "filesReadbackVerified": 8,
+    "manifestsReadbackVerified": 2,
+    "intervals": {
+      "5m": {
+        "rowsPerSymbol": 1500,
+        "manifestPath": "research-data/binance-usdm/5m/manifest-page-0016.json",
+        "manifestSha256": "e3e7794a0ec2fab9079b98f51c004e7b2e2666aece646fb0cd0eb9a0fd09b7cb",
+        "manifestBlobSha": "d5c4388b31f530382c867b861db233be6b1ec0a1",
+        "indexSha256": "310fa6044bd54a149f3dd2ca683cd316579e4fe36bef80721ee7f65d0308b5a7",
+        "indexBlobSha": "06004f452996f72ccfdd29acf17d9f9a3f59d4f9"
+      },
+      "15m": {
+        "rowsPerSymbol": 1500,
+        "manifestPath": "research-data/binance-usdm/15m/manifest-page-0016.json",
+        "manifestSha256": "9f10166b20353fffee6879b5b6deec0e506e9bd5a9ed9608d997d0689b9cfb46",
+        "manifestBlobSha": "1fb618120e377dde2dc97bbdd6888807ea74fce1",
+        "indexSha256": "325d3b792258dbfca13f68f78597fdb0164f692f4d4afd3f55659340dde5b3a1",
+        "indexBlobSha": "a72e9ce98900d0657c2e2b7cb8c40a83ddb8a0f5"
+      }
+    },
+    "quality": {
+      "duplicates": 0,
+      "missingIntervals": 0,
+      "offGrid": 0,
+      "nonMonotonic": 0,
+      "ohlcFailures": 0,
+      "nonFinite": 0,
+      "negativeVolume": 0,
+      "zeroVolumeRows": 0,
+      "readbackExact": true
+    },
+    "perSymbol": {
+      "5m": {
+        "BTCUSDT": {
+          "first": "2020-03-19T03:00:00.000Z",
+          "last": "2020-03-24T07:55:00.000Z",
+          "next": "2020-03-24T08:00:00.000Z"
+        },
+        "ETHUSDT": {
+          "first": "2020-03-19T03:00:00.000Z",
+          "last": "2020-03-24T07:55:00.000Z",
+          "next": "2020-03-24T08:00:00.000Z"
+        },
+        "SOLUSDT": {
+          "first": "2020-12-01T10:00:00.000Z",
+          "last": "2020-12-06T14:55:00.000Z",
+          "next": "2020-12-06T15:00:00.000Z"
+        },
+        "XRPUSDT": {
+          "first": "2020-03-24T11:20:00.000Z",
+          "last": "2020-03-29T16:15:00.000Z",
+          "next": "2020-03-29T16:20:00.000Z"
+        }
+      },
+      "15m": {
+        "BTCUSDT": {
+          "first": "2020-08-22T09:00:00.000Z",
+          "last": "2020-09-06T23:45:00.000Z",
+          "next": "2020-09-07T00:00:00.000Z"
+        },
+        "ETHUSDT": {
+          "first": "2020-08-22T09:00:00.000Z",
+          "last": "2020-09-06T23:45:00.000Z",
+          "next": "2020-09-07T00:00:00.000Z"
+        },
+        "SOLUSDT": {
+          "first": "2021-05-06T16:00:00.000Z",
+          "last": "2021-05-22T06:45:00.000Z",
+          "next": "2021-05-22T07:00:00.000Z"
+        },
+        "XRPUSDT": {
+          "first": "2020-08-27T17:15:00.000Z",
+          "last": "2020-09-12T08:00:00.000Z",
+          "next": "2020-09-12T08:15:00.000Z"
+        }
+      }
+    }
+  }
 }

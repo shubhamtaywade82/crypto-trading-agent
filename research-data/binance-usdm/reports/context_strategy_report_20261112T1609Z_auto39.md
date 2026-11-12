@@ -73,7 +73,10 @@ Market data retrieved 2026-11-12 16:04:50-16:06:43 UTC. Current feature classifi
 | SOL | 81.76 / 81.76 | -3.517% | 9,742,372.87 | +0.582% | 0.000405% / 0.000716% | 1.2233 bp |
 | XRP | 1.0275 / 1.02758 | -4.035% | 310,103,505.2 | +0.254% | 0.004468% / 0.004560% | 0.9734 bp |
 
-Funding: latest settlement 16:00:00.003Z; next funding 2026-11-13 00:00Z; observed interval 8h. No indicated or settled rate exceeded |0.05%|. Latest 15m taker buy/sell ratios: BTC1.2503, ETH1.0773, SOL1.1135, XRP0.8582. Global long/short account ratios: BTC3.1374, ETH3.5269, SOL3.5998, XRP3.0950. These are descriptive; they do not establish crowding or liquidations.
+Funding: latest settlement 16:00:00.003Z; next funding 2026-11-13 00:00Z; observed interval 8h.
+
+20-bar 1h correlation with BTC: ETH 0.781, SOL 0.652, XRP 0.751. Mean per-bar return differentials versus BTC: 1h ETH +0.0148pp, SOL −0.0037pp, XRP +0.0287pp; 4h ETH −0.0552pp, SOL −0.0798pp, XRP −0.1161pp. These are contemporaneous measures, not lead/lag or predictive BTC leadership evidence. Only top-of-book bid/ask was sampled; multi-level depth, impact and liquidations were unavailable.
+ No indicated or settled rate exceeded |0.05%|. Latest 15m taker buy/sell ratios: BTC1.2503, ETH1.0773, SOL1.1135, XRP0.8582. Global long/short account ratios: BTC3.1374, ETH3.5269, SOL3.5998, XRP3.0950. These are descriptive; they do not establish crowding or liquidations.
 
 | Symbol | 1h return20 | 4h return20 | 1h close vs EMA20 | 4h close vs EMA20 | 1h ATR local percentile | 4h ATR local percentile |
 |---|---:|---:|---:|---:|---:|---:|

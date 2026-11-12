@@ -1,0 +1,126 @@
+{
+  "schema_version": "1.0.0",
+  "run_id": "context-strategy-2026-11-12T1609Z-auto39",
+  "as_of_utc": "2026-11-12T16:09:00Z",
+  "as_of_local": "2026-11-12T21:39:00+05:30",
+  "environment": {
+    "container": "Managed Debian GNU/Linux 13 (trixie), x86_64",
+    "cwd": "/",
+    "python": "3.13.5",
+    "node": "v22.16.0",
+    "npm": "10.9.2",
+    "git": "2.47.3",
+    "nvm_versions": [
+      "v22.16.0"
+    ],
+    "cpu_cores": 3,
+    "memory_total_kib": 6091004,
+    "memory_available_kib": 4943908,
+    "disk": "overlay 32G total, ~30G free",
+    "local_repo": "ABSENT",
+    "node_modules": "ABSENT",
+    "binance_sdk_imports": {
+      "@binance/connector": "NOT_FOUND",
+      "binance": "NOT_FOUND",
+      "@nemesis-oss/binance-sdk": "NOT_FOUND"
+    }
+  },
+  "checks": [
+    {
+      "capability": "shell/compute",
+      "status": "PASS",
+      "evidence": "Debian13 x86_64; Python3.13.5; Node22.16.0; npm10.9.2; git2.47.3; 3 CPUs; ~4.94GB available RAM; ~30GB free disk.",
+      "impact": "Bounded data validation and remote archive writes completed.",
+      "next_action": "Provision Node24/npm11 for repository scripts."
+    },
+    {
+      "capability": "repo/code",
+      "status": "BLOCKED",
+      "evidence": "cwd=/; no /mnt/data/crypto-trading-agent/.git or node_modules; nvm only v22.16.0; prior package v2.4.1 requires Node>=24/npm>=11.",
+      "impact": "No local source audit, project tests or backtest harness invocation.",
+      "next_action": "Clone and verify current repository HEAD in Node24/npm11 environment."
+    },
+    {
+      "capability": "Binance SDK",
+      "status": "BLOCKED",
+      "evidence": "@binance/connector, binance and @nemesis-oss/binance-sdk not importable.",
+      "impact": "SDK not used; Binance public connector wrappers supplied data.",
+      "next_action": "Use SDK only after compatible checkout/install; otherwise retain public endpoint path."
+    },
+    {
+      "capability": "network/Binance endpoints",
+      "status": "DEGRADED",
+      "evidence": "Direct curl to /fapi/v1/time, exchangeInfo, klines, premiumIndex, openInterest and ticker/24hr returned HTTP000 DNS failures. Connector data returned at 16:04-16:06Z. exchangeInfo serverTime 09:45:01.953Z was 6h20m13.899s stale at 16:05:15.852Z.",
+      "impact": "Market snapshot is fresh, but contract status cannot be trusted for execution validation.",
+      "next_action": "Restore direct DNS/HTTPS or uncached official server-time and metadata route; require <=5s drift."
+    },
+    {
+      "capability": "raw historical archive",
+      "status": "DEGRADED",
+      "evidence": "Remote GitHub branch research/raw-ohlcv-archive-20261108T1026Z accessible. Local archive absent. 5m/15m base partial; 1h 215484 rows from 2020-09-14 through 2026-11-06; 4h raw/aligned/canonical counts 53960/53816/53844.",
+      "impact": "Incremental appends work, but multi-timeframe research sample remains inadequate.",
+      "next_action": "Backfill 5m/15m and reconcile 4h counts/provenance."
+    },
+    {
+      "capability": "data quality/coverage",
+      "status": "DEGRADED",
+      "evidence": "Current 16-series window: 2880 rows fetched, 2864 completed, 16 forming excluded; zero duplicate/gap/off-grid/non-monotonic/OHLC/volume/nonfinite/close-time failures. 88 new completed rows appended and read back.",
+      "impact": "Recent windows are clean; full archive is not proven clean.",
+      "next_action": "Run full archive audit after backfill/reconciliation."
+    },
+    {
+      "capability": "backtest harness/smoke test",
+      "status": "BLOCKED",
+      "evidence": "No local checkout or actual harness available; Node floor unmet. No harness smoke test or strategy backtest run.",
+      "impact": "No strategy experiment, walk-forward or OOS evaluation.",
+      "next_action": "Provision Node24/npm11 and exact repo checkout; run known tiny fixture twice before experiments."
+    },
+    {
+      "capability": "disk/storage",
+      "status": "PASS",
+      "evidence": "~30GB free in current runtime; remote GitHub archive branch accepted append-only files and index updates.",
+      "impact": "Remote durable persistence available and verified.",
+      "next_action": "Continue atomic append, manifest and index readback."
+    },
+    {
+      "capability": "artifact readback",
+      "status": "PASS",
+      "evidence": "Both delta files, per-delta manifests, global manifests and updated interval indexes fetched back and compared; SHA256 and Git blob references verified.",
+      "impact": "Current incremental archive artifacts are persistent.",
+      "next_action": "Continue exact readback for every artifact and status transition."
+    }
+  ],
+  "endpoint_probes": {
+    "direct_rest": "DNS failure; HTTP000",
+    "connector": {
+      "klines": "PASS, rows returned",
+      "premiumIndex": "PASS",
+      "ticker24h": "PASS",
+      "openInterest": "PASS",
+      "fundingRateHistory": "PASS",
+      "openInterestHist": "PASS",
+      "takerBuySellVolume": "PASS",
+      "globalLongShortRatio": "PASS",
+      "bookTicker": "PASS",
+      "exchangeInfo": "DEGRADED_STALE_SERVER_TIME"
+    }
+  },
+  "archive_highwaters": {
+    "5m": "2026-11-12T16:00:00.000Z",
+    "15m": "2026-11-12T15:45:00.000Z",
+    "1h": "2026-11-12T15:00:00.000Z",
+    "4h": "2026-11-12T12:00:00.000Z"
+  },
+  "new_rows_appended": 88,
+  "forming_rows_excluded": 20,
+  "artifact_readback": {
+    "status": "PASS",
+    "delta_files": 2,
+    "manifests": 3,
+    "indexes_updated": 4
+  },
+  "strategy_backtest_executed": false,
+  "oos_evaluated": false,
+  "strategy_research_status": "RESEARCH_BLOCKED",
+  "overall_status": "RESEARCH_EXECUTED_DATA_QUALITY_ONLY"
+}

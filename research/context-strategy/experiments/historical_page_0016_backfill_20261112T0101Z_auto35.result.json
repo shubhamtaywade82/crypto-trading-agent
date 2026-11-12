@@ -1,0 +1,87 @@
+{
+  "schemaVersion": "1.0.0",
+  "runId": "context-strategy-20261112T0101Z-auto35",
+  "experimentId": "DQ-USDMS-HISTORICAL-PAGE-0016-20261112T0101Z-AUTO35",
+  "type": "HISTORICAL_ARCHIVE_BACKFILL_INTEGRITY",
+  "status": "COMPLETED_PASS",
+  "evaluatedAtUtc": "2026-11-12T01:09:53.380Z",
+  "specification": {
+    "endpoint": "GET /fapi/v1/klines",
+    "symbols": [
+      "BTCUSDT",
+      "ETHUSDT",
+      "SOLUSDT",
+      "XRPUSDT"
+    ],
+    "intervals": [
+      "5m",
+      "15m"
+    ],
+    "limit": 1500,
+    "perSymbolPerInterval": 1500,
+    "page": 16,
+    "requestStartBySymbol": {
+      "5m": {
+        "BTCUSDT": "2020-03-19T03:00:00.000Z",
+        "ETHUSDT": "2020-03-19T03:00:00.000Z",
+        "SOLUSDT": "2020-12-01T10:00:00.000Z",
+        "XRPUSDT": "2020-03-24T11:20:00.000Z"
+      },
+      "15m": {
+        "BTCUSDT": "2020-08-22T09:00:00.000Z",
+        "ETHUSDT": "2020-08-22T09:00:00.000Z",
+        "SOLUSDT": "2021-05-06T16:00:00.000Z",
+        "XRPUSDT": "2020-08-27T17:15:00.000Z"
+      }
+    },
+    "contiguousFromPriorPage": true
+  },
+  "results": {
+    "rowsFetched": 12000,
+    "rowsPersisted": 12000,
+    "files": 8,
+    "rowsPerSymbolPerInterval": 1500,
+    "quality": {
+      "duplicates": 0,
+      "missingIntervals": 0,
+      "offGrid": 0,
+      "nonMonotonic": 0,
+      "ohlcFailures": 0,
+      "nonFinite": 0,
+      "negativeVolume": 0,
+      "zeroVolumeRows": 0,
+      "readbackExact": true
+    },
+    "coverageEnd": {
+      "5m": {
+        "BTCUSDT": "2020-03-24T07:55:00.000Z",
+        "ETHUSDT": "2020-03-24T07:55:00.000Z",
+        "SOLUSDT": "2020-12-06T14:55:00.000Z",
+        "XRPUSDT": "2020-03-29T16:15:00.000Z"
+      },
+      "15m": {
+        "BTCUSDT": "2020-09-06T23:45:00.000Z",
+        "ETHUSDT": "2020-09-06T23:45:00.000Z",
+        "SOLUSDT": "2021-05-22T06:45:00.000Z",
+        "XRPUSDT": "2020-09-12T08:00:00.000Z"
+      }
+    }
+  },
+  "artifacts": {
+    "archiveManifestPath": "research-data/binance-usdm/manifests/archive_manifest_20261112T0101Z_auto35.json",
+    "pageManifestPaths": [
+      "research-data/binance-usdm/5m/manifest-page-0016.json",
+      "research-data/binance-usdm/15m/manifest-page-0016.json"
+    ],
+    "indexPaths": [
+      "research-data/binance-usdm/5m/archive-index.json",
+      "research-data/binance-usdm/15m/archive-index.json"
+    ]
+  },
+  "interpretation": "PASS for page-0016 archive integrity only. This is not a strategy backtest and does not create OOS evidence. The archive remains partial; 1h/4h lineage remains blocked.",
+  "limitations": [
+    "5m/15m base pages are not a continuous multi-year panel; 5m and 15m start/end dates differ by symbol.",
+    "No strategy experiment or OOS evaluation ran.",
+    "1h bridge and 4h provenance remain blocked."
+  ]
+}

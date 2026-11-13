@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "created_at_utc": "2026-11-05T09:43:57.448Z",
   "repository": "shubhamtaywade82/crypto-trading-agent",
-  "branch": "research/raw-ohlcv-archive-20261111T1230Z-auto31",
+  "branch": "research/raw-ohlcv-archive-20261113T063450Z-run11",
   "interval": "4h",
   "source_endpoint": "GET /fapi/v1/klines",
   "symbols": [
@@ -267,7 +267,16 @@
       "failed_matches": 0,
       "note": "Prior readback mismatch observations for BTCUSDT and SOLUSDT page-0009 were not reproduced. Expected manifest hashes were preserved."
     },
-    "status": "DEGRADED_HASH_PROVENANCE_MISMATCHES_AND_LOWER_TIMEFRAME_HISTORY_INCOMPLETE"
+    "status": "DEGRADED_HASH_PROVENANCE_MISMATCHES_AND_LOWER_TIMEFRAME_HISTORY_INCOMPLETE",
+    "latest_incremental_delta": {
+      "as_of_utc": "2026-11-13T06:34:50.330Z",
+      "path": "research-data/binance-usdm/delta/binance_usdm_delta_20261113T063450Z_5m15m1h4h_completed.jsonl",
+      "manifest": "research-data/binance-usdm/delta/manifest-20261113T063450Z-5m15m1h4h.json",
+      "rows": 100,
+      "sha256": "668e3abf8376350d80eba6c42c17aa3cf32e93198690246b7c16059814e8b471",
+      "git_blob_sha": "31c649239f6fa8538edd6f52262171172adb2eba",
+      "readback_verified": true
+    }
   },
   "incremental_deltas": [
     {
@@ -2478,11 +2487,27 @@
         "4h": "2026-11-11T08:00:00.000Z"
       },
       "readback_verified": true
+    },
+    {
+      "as_of_utc": "2026-11-13T06:34:50.330Z",
+      "delta_path": "research-data/binance-usdm/delta/binance_usdm_delta_20261113T063450Z_5m15m1h4h_completed.jsonl",
+      "manifest_path": "research-data/binance-usdm/delta/manifest-20261113T063450Z-5m15m1h4h.json",
+      "rows": 100,
+      "sha256": "668e3abf8376350d80eba6c42c17aa3cf32e93198690246b7c16059814e8b471",
+      "manifest_sha256": "fcbd0118cbaea4d615640bdbd89aa9c239771d2986c0b296294aa76b579a728b",
+      "readback_verified": true,
+      "row_counts_by_symbol": {
+        "BTCUSDT": 25,
+        "ETHUSDT": 25,
+        "SOLUSDT": 25,
+        "XRPUSDT": 25
+      },
+      "latest_completed_open_utc": "2026-11-13T00:00:00.000Z"
     }
   ],
   "incremental_delta_rows_total": 9500,
   "next_actions": [
-    "Continue 5m after 2026-11-08T16:15:00.000Z; next open 2026-11-08T16:20:00.000Z must close.",
+    "Continue 4h after 2026-11-13T00:00:00.000Z; next open 2026-11-13T04:00:00.000Z must close before append.",
     "Continue 15m after 2026-11-08T16:00:00.000Z; next open 2026-11-08T16:15:00.000Z must close.",
     "Continue 1h after 2026-11-08T15:00:00.000Z; next open 2026-11-08T16:00:00.000Z must close.",
     "Continue 4h after 2026-11-08T12:00:00.000Z; next open 2026-11-08T16:00:00.000Z must close.",
@@ -2536,7 +2561,7 @@
       "supersedes_line": 16
     }
   ],
-  "updated_at_utc": "2026-11-11T12:41:16.638Z",
+  "updated_at_utc": "2026-11-13T06:34:50.330Z",
   "canonical_4h": {
     "status": "PASS",
     "start_utc": "2020-09-14T08:00:00.000Z",
@@ -2738,15 +2763,15 @@
     }
   ],
   "incremental_coverage": {
-    "lastCompletedOpenUtc": "2026-11-08T20:00:00.000Z",
-    "nextStartUtc": "2026-11-09T00:00:00.000Z",
-    "rowsAppended": 4,
-    "deltaPath": "research-data/binance-usdm/delta/binance_usdm_delta_20261109T003245Z_5m15m1h4h_completed.jsonl",
-    "deltaManifestPath": "research-data/binance-usdm/delta/manifest-20261109T003245Z-5m15m1h4h.json",
-    "deltaSha256": null,
-    "manifestSha256": null,
+    "lastCompletedOpenUtc": "2026-11-13T00:00:00.000Z",
+    "nextStartUtc": "2026-11-13T04:00:00.000Z",
+    "rowsAppended": 100,
+    "deltaPath": "research-data/binance-usdm/delta/binance_usdm_delta_20261113T063450Z_5m15m1h4h_completed.jsonl",
+    "deltaManifestPath": "research-data/binance-usdm/delta/manifest-20261113T063450Z-5m15m1h4h.json",
+    "deltaSha256": "668e3abf8376350d80eba6c42c17aa3cf32e93198690246b7c16059814e8b471",
+    "manifestSha256": "fcbd0118cbaea4d615640bdbd89aa9c239771d2986c0b296294aa76b579a728b",
     "readbackVerified": true,
-    "rowsFetched": 8,
+    "rowsFetched": 104,
     "formingRowsExcluded": 4,
     "rowCountsBySymbolInterval": {
       "BTCUSDT:4h": 1,
@@ -2755,19 +2780,19 @@
       "XRPUSDT:4h": 1
     },
     "latestCompletedOpenUtcByInterval": {
-      "4h": "2026-11-08T20:00:00.000Z"
+      "4h": "2026-11-13T00:00:00.000Z"
     },
-    "readbackVerifiedAtUtc": "2026-11-09T00:35:36.830Z",
+    "readbackVerifiedAtUtc": "2026-11-13T06:36:43.922Z",
     "rowCountsBySymbol": {
-      "BTCUSDT": 1,
-      "ETHUSDT": 1,
-      "SOLUSDT": 1,
-      "XRPUSDT": 1
+      "BTCUSDT": 25,
+      "ETHUSDT": 25,
+      "SOLUSDT": 25,
+      "XRPUSDT": 25
     },
     "preHighwaterRowsExcluded": 0,
-    "checksumStatus": "SHA256_NOT_VERIFIED",
-    "deltaGitBlobSha": "d30d5b4706998ba29c2ead2755aabb35e05c1fd7",
-    "manifestGitBlobSha": "b9a3b5bed51c2bf9248293064900e82fd7c858d0"
+    "checksumStatus": "LATEST_DELTA_SHA256_AND_GIT_BLOB_VERIFIED",
+    "deltaGitBlobSha": "31c649239f6fa8538edd6f52262171172adb2eba",
+    "manifestGitBlobSha": "1c39394687affa064651f8aa70ebdbeca9d147f9"
   },
   "incremental_delta_history": [
     {
@@ -3118,9 +3143,9 @@
       "non_finite": 0,
       "non_monotonic": 0,
       "close_time_failures": 0,
-      "forming_rows_excluded": 20,
-      "pre_highwater_rows_excluded": 11564,
-      "rows_appended": 4416
+      "forming_rows_excluded": 4,
+      "pre_highwater_rows_excluded": 0,
+      "rows_appended": 100
     }
   },
   "updated_at": "2026-11-11T12:41:16.638Z",

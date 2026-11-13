@@ -1,0 +1,72 @@
+{
+  "schema_version": "1.0.0",
+  "as_of_utc": "2026-11-13T18:39:10Z",
+  "execution_status": "RESEARCH_EXECUTED",
+  "oos_evaluated": false,
+  "strategy_backtest_status": "BLOCKED",
+  "checks": [
+    {
+      "capability": "shell/compute",
+      "status": "PASS",
+      "evidence": "pwd=/; Debian13; Python3.13.5; Node22.16.0; npm/npx10.9.2; 3 CPUs; 5.8GiB RAM; 30GiB free.",
+      "impact": "Python data-quality work possible; runtime below project engine requirement.",
+      "next_action": "Provision Node24/npm11 for project scripts."
+    },
+    {
+      "capability": "repository/code",
+      "status": "DEGRADED",
+      "evidence": "Remote shubhamtaywade82/crypto-trading-agent exists; package.json requires node>=24/npm>=11 and declares backtest/research scripts; local checkout absent.",
+      "impact": "Remote code inspected but not invokable locally.",
+      "next_action": "Mount or clone repository."
+    },
+    {
+      "capability": "Binance SDK",
+      "status": "BLOCKED",
+      "evidence": "Local @binance/connector, binance and @binance/spot not installed; no local node_modules.",
+      "impact": "No SDK execution; connector tools used.",
+      "next_action": "Install declared SDK after compatible runtime is available."
+    },
+    {
+      "capability": "network/Binance",
+      "status": "DEGRADED",
+      "evidence": "Connector market calls succeeded; direct DNS probes to /fapi/v1/time and /fapi/v1/exchangeInfo failed; exchangeInfo serverTime 06:02:01.705Z, 755.8 minutes old.",
+      "impact": "Fresh connector snapshot available; contract execution validation blocked.",
+      "next_action": "Restore DNS; probe time and exchangeInfo with bounded timeouts."
+    },
+    {
+      "capability": "raw historical archive",
+      "status": "PASS",
+      "evidence": "32-row canonical delta and manifests persisted; all four archive indexes advanced/read back; GitHub branch writable.",
+      "impact": "Incremental append persisted; historical base gaps remain.",
+      "next_action": "Backfill 5m/15m and reconcile 1h/4h."
+    },
+    {
+      "capability": "data quality/coverage",
+      "status": "DEGRADED",
+      "evidence": "Current 32 rows: zero duplicates/gaps/OHLC errors/non-finite/volume errors; historical 5m/15m gaps, 1h missing opens and 4h hash mismatches remain.",
+      "impact": "No strategy inference.",
+      "next_action": "Complete archive repair."
+    },
+    {
+      "capability": "backtest harness/smoke",
+      "status": "BLOCKED",
+      "evidence": "Remote scripts exist; local checkout absent; no fixture smoke test or harness invocation.",
+      "impact": "No backtest/OOS.",
+      "next_action": "Restore repo/runtime, smoke-test deterministic fixture."
+    },
+    {
+      "capability": "disk/storage",
+      "status": "DEGRADED",
+      "evidence": "30GiB free; GitHub branch writable; Library upload attempts failed with library_storage_limit_exceeded.",
+      "impact": "GitHub is the durable store for this run; Library copy unavailable.",
+      "next_action": "Continue GitHub persistence; user may free Library quota if a Library copy is required."
+    },
+    {
+      "capability": "artifact readback",
+      "status": "PASS",
+      "evidence": "GitHub delta, manifests, snapshot, four indexes and index receipt read back after writes.",
+      "impact": "GitHub persistence verified; no Library upload succeeded.",
+      "next_action": "Use GitHub branch as source of truth."
+    }
+  ]
+}

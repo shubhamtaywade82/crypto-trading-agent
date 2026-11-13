@@ -11,7 +11,7 @@
 - **Raw data persisted:** **232 completed bars** were written as a separate GitHub delta and read back. SHA-256 `93fb878cbf2095212c18a686dd2f589fbc91615759fd0be44cd20420cd94b2bd`; 5m=164, 15m=52, 1h=12, 4h=4; 58 per symbol.
 - **Canonical archive:** interval indexes and canonical highwaters were **not** changed. The delta is preserved but not integrated into canonical indexes because the index files contain duplicated alias fields and unresolved 1h/4h row-count/provenance defects.
 - **Experiments:** 0. **OOS evaluations:** 0. No promotion, downgrade or rejection.
-- **Persistent snapshots:** v106 registry, queue, market snapshot, archive manifest and report are stored on the research branch; readback verification follows.
+- **Persistent snapshots:** v106 registry, queue, market snapshot, archive manifest and report are stored on the research branch and readback-verified. Raw delta and delta manifest SHA-256 readback checks also passed.
 
 ## 2. Context discovery
 

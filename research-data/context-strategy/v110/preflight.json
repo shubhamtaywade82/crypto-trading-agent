@@ -78,9 +78,9 @@
     {
       "capability": "network/Binance endpoints",
       "status": "DEGRADED",
-      "evidence": "Connector kline/mark/ticker/OI/funding/depth/taker/basis/ratio calls succeeded; direct /fapi/v1/time DNS failed; direct /fapi/v1/exchangeInfo timed out; exchangeInfo serverTime 06:02:01Z is stale.",
-      "impact": "Snapshot is usable descriptively; contract-status validation blocked.",
-      "next_action": "Restore DNS/direct REST and verify current server time and exchangeInfo."
+      "evidence": "Connector-backed kline/mark/ticker/OI/funding/depth/taker/basis/ratio calls succeeded. Direct curl probes used --connect-timeout 3s and --max-time 7s: /fapi/v1/time HTTP 000 DNS failure (0.0015s); /fapi/v1/exchangeInfo HTTP 000 DNS failure (4.755s); /fapi/v1/klines HTTP 000 DNS failure (0.0003s); /fapi/v1/premiumIndex HTTP 000 DNS failure (4.755s); /fapi/v1/openInterest HTTP 000 DNS failure (0.0001s); /fapi/v1/ticker/24hr HTTP 000 DNS failure (4.755s). Connector exchangeInfo serverTime 2026-11-13T06:02:01.705Z is stale by 13h22m at 19:24:17Z.",
+      "impact": "Live descriptive snapshot available via connector; direct REST and current contract-status verification blocked.",
+      "next_action": "Restore DNS/direct REST, then verify /fapi/v1/time, /fapi/v1/exchangeInfo and all required endpoints with HTTP status and freshness."
     },
     {
       "capability": "backtest harness/smoke test",

@@ -43,16 +43,16 @@
       "priority": "P0",
       "status": "BLOCKED",
       "title": "Fix candle contract, positive-volume validation, 5m replay and purge/embargo",
-      "evidence": "Remote source inspected: backtest.ts TIMEFRAMES are 15m/1h/4h (5m omitted); Candle mapping omits closeTime; archiveKlines.validateCandles accepts volume==0 because it only rejects volume<0; conditional-edge CLI has no embargoDays parameter and minN defaults to 30.",
-      "next_action": "Add closeTime and full raw-field preservation; reject non-positive volume; add 5m replay; implement purge/embargo; raise sample gates and add deterministic gap/zero-volume/lookahead fixtures."
+      "evidence": "Source confirmed: scripts/backtest.ts TIMEFRAMES is 15m/1h/4h (5m omitted); Candle mapping omits closeTime; archiveKlines.validateCandles rejects volume<0 but accepts volume==0; scripts/conditional-edge.ts defaults min-n=30 and exposes no embargo CLI flag. Underlying walk-forward purging behavior has not been verified.",
+      "next_action": "Preserve closeTime and raw fields; reject volume<=0 or explicitly quarantine zero-volume bars; add 5m replay; implement and test purge/embargo; raise sample gates; add deterministic gap/zero-volume/lookahead fixtures."
     },
     {
       "id": "RQ-029",
       "priority": "P0",
       "status": "BLOCKED",
       "title": "Enforce BTC reference-only universe",
-      "evidence": "Prior v105 source audit says default tradable SYMBOLS included BTC; not independently rechecked in this cycle.",
-      "next_action": "Audit src/config.ts and every sizing/order path; restrict tradables to SOL/ETH/XRP and test BTC never receives labels, sizing or orders."
+      "evidence": "Source confirmed by GitHub file inspection: src/config.ts default SYMBOLS is BTCUSDT,ETHUSDT,SOLUSDT,XRPUSDT; scripts/backtest.ts defaults its symbol argument to BTCUSDT. This violates the required BTC reference-only universe.",
+      "next_action": "Change default tradables to SOLUSDT/ETHUSDT/XRPUSDT; keep BTCUSDT in reference-only regime/confirmation inputs; audit every signal, label, sizing and order path and add a test proving BTC never receives a trade."
     },
     {
       "id": "RQ-004",

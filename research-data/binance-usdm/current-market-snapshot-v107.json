@@ -16,7 +16,7 @@
   "contract_validation": {
     "status": "BLOCKED_STALE_METADATA",
     "exchangeInfo_serverTime_utc": "2026-11-13T06:02:01.702Z",
-    "metadata_age_at_snapshot_ms": 37924376,
+    "metadata_age_at_snapshot_ms": 37943376,
     "metadata_reported_status": "TRADING for all four symbols, but stale and not used for execution validation"
   },
   "current_market_data": {
@@ -421,5 +421,101 @@
     "full historical funding cashflows",
     "training-calibrated context thresholds",
     "validated setup trigger"
-  ]
+  ],
+  "open_interest_units": "base asset units; OI changes are point-to-point observations, not liquidation evidence",
+  "sample_quality": {
+    "series_count": 16,
+    "returned_rows": 24000,
+    "completed_rows": 23984,
+    "forming_rows_excluded": 16,
+    "duplicates": 0,
+    "missing_intervals_within_sample": 0,
+    "off_grid_timestamps": 0,
+    "non_monotonic": 0,
+    "ohlc_invariant_failures": 0,
+    "non_positive_volume": 0,
+    "non_finite_values": 0,
+    "scope": "Only the rolling 1,500-row windows returned for this run; not a certification of the full historical archive."
+  },
+  "source_endpoints": [
+    {
+      "endpoint": "GET /fapi/v1/time",
+      "status": "BLOCKED_DNS",
+      "evidence": "Direct curl exit 6; HTTP 000; no current server-time connector action exposed."
+    },
+    {
+      "endpoint": "GET /fapi/v1/exchangeInfo",
+      "status": "DEGRADED_STALE",
+      "evidence": "Response contained requested symbols and TRADING status, but serverTime 2026-11-13T06:02:01.702Z was 10h32m23.376s older than run as-of; not used for execution validation."
+    },
+    {
+      "endpoint": "GET /fapi/v1/klines",
+      "status": "SUCCESS_VIA_BINANCE_CONNECTOR",
+      "evidence": "4 symbols x 4 intervals, limit 1500 each; 24,000 rows returned, 23,984 completed; 16 forming excluded. Additional 24 bounded requests created 72-row append-only raw delta."
+    },
+    {
+      "endpoint": "GET /fapi/v1/premiumIndex",
+      "status": "SUCCESS_VIA_BINANCE_CONNECTOR",
+      "evidence": "Mark/index/latest published funding rate/next funding time for all four symbols."
+    },
+    {
+      "endpoint": "GET /fapi/v1/openInterest",
+      "status": "SUCCESS_VIA_BINANCE_CONNECTOR",
+      "evidence": "Current open interest for all four symbols."
+    },
+    {
+      "endpoint": "GET /fapi/v1/ticker/24hr",
+      "status": "SUCCESS_VIA_BINANCE_CONNECTOR",
+      "evidence": "24h price/volume statistics for all four symbols."
+    },
+    {
+      "endpoint": "GET /fapi/v1/fundingRate",
+      "status": "SUCCESS_VIA_BINANCE_CONNECTOR",
+      "evidence": "Last three settled funding events per symbol; latest event 2026-11-13T16:00:00Z."
+    },
+    {
+      "endpoint": "GET /fapi/v1/fundingInfo",
+      "status": "SUCCESS_VIA_BINANCE_CONNECTOR",
+      "evidence": "8h fundingIntervalHours observed for BTCUSDT, ETHUSDT, SOLUSDT, XRPUSDT."
+    },
+    {
+      "endpoint": "GET /futures/data/openInterestHist",
+      "status": "SUCCESS_VIA_BINANCE_CONNECTOR",
+      "evidence": "Three 1h OI observations per symbol; 15:00-to-16:00 point-to-point change recorded."
+    },
+    {
+      "endpoint": "GET /futures/data/takerlongshortRatio",
+      "status": "SUCCESS_VIA_BINANCE_CONNECTOR",
+      "evidence": "Three 1h taker buy/sell observations per symbol; 15:00 UTC completed bucket used."
+    },
+    {
+      "endpoint": "GET /futures/data/globalLongShortAccountRatio",
+      "status": "SUCCESS_VIA_BINANCE_CONNECTOR",
+      "evidence": "Three 1h global account positioning observations per symbol; 15:00 UTC used."
+    },
+    {
+      "endpoint": "GET /futures/data/basis",
+      "status": "SUCCESS_VIA_BINANCE_CONNECTOR",
+      "evidence": "Three 1h perpetual basis observations per symbol; 15:00 UTC used."
+    },
+    {
+      "endpoint": "GET /fapi/v1/ticker/bookTicker",
+      "status": "SUCCESS_VIA_BINANCE_CONNECTOR",
+      "evidence": "Best bid/ask for all four symbols."
+    },
+    {
+      "endpoint": "GET /fapi/v1/depth",
+      "status": "SUCCESS_VIA_BINANCE_CONNECTOR",
+      "evidence": "Top-20 depth for all four symbols; notional imbalance is a point-in-time measure."
+    }
+  ],
+  "archive_delta_manifest_path": "research-data/binance-usdm/manifests/delta_manifest_20261113T1634Z_auto11_v107.json",
+  "archive_manifest_path": "research-data/binance-usdm/manifests/archive_manifest_20261113T1634Z_auto11_v107.json",
+  "archive_delta_rows": 72,
+  "archive_delta_rows_by_interval": {
+    "5m": 48,
+    "15m": 16,
+    "1h": 4,
+    "4h": 4
+  }
 }

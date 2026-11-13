@@ -95,7 +95,7 @@ No entry, stop, target or size is issued.
 
 **Cost model:** current top-of-book spread observed; account fee tier, historical spread/depth, market impact, latency, fill probability and complete funding cashflows remain unavailable. No net expectancy can be evaluated.
 
-**Code contract risks observed remotely:** backtest timeframe list omits 5m; archive candle mapping omits closeTime; zero volume is accepted by the current validator; conditional-edge CLI has no purge/embargo parameter and defaults minN to 30. These must be fixed and covered by fixtures before research.
+**Critical source-contract violations confirmed remotely:** `src/config.ts` defaults `SYMBOLS` to `BTCUSDT,ETHUSDT,SOLUSDT,XRPUSDT`, and `scripts/backtest.ts` defaults its symbol argument to BTCUSDT. This violates the BTC reference-only requirement and is a P0 fix. The backtest timeframe list omits 5m; the Candle mapping omits closeTime; the current validator accepts volume==0; `conditional-edge.ts` defaults minN to 30 and exposes no embargo CLI flag. Underlying walk-forward purging behavior was not verified. Fix these contracts and add deterministic fixtures before any research execution.
 
 **Next execution order:** (1) restore fresh server time and exchange metadata; (2) provision Node>=24/npm>=11 and clone the exact branch; (3) reconcile 1h/4h and backfill 5m/15m; (4) repair candle/5m/purge/embargo contracts and BTC reference-only enforcement; (5) calibrate fees, spread, slippage, impact, latency, fills and funding; (6) run a pre-registered strategy x context x symbol experiment with untouched OOS and serial-dependence-aware uncertainty.
 

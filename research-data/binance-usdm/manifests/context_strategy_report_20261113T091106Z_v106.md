@@ -1,6 +1,6 @@
 # Binance USD-M Context Strategy Research - v106
 
-**As of:** 2026-11-13T09:11:06.872Z  
+**As of:** 2026-11-13T09:17:54.982Z  
 **Core market snapshot:** 2026-11-13T09:05:55Z; **basis/depth refresh:** 2026-11-13T09:14:42Z  
 **Archive append highwater:** 5m 09:00Z; 15m 08:45Z; 1h 08:00Z; 4h 04:00Z  
 **Run outcome:** RESEARCH_BLOCKED

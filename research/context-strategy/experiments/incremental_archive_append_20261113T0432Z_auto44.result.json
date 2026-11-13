@@ -1,0 +1,141 @@
+{
+  "schemaVersion": 1,
+  "experimentId": "DATA-QUALITY-INCREMENTAL-APPEND-20261113T0432Z-AUTO44",
+  "runId": "context-strategy-20261113T0438Z-auto44",
+  "type": "DATA_QUALITY_INCREMENTAL_ARCHIVE_APPEND",
+  "status": "COMPLETED_READBACK_VERIFIED",
+  "createdAtUtc": "2026-11-13T04:32:05.005Z",
+  "hypothesis": "Fetching from each prior verified next-open highwater and retaining only candles whose closeTime is not later than the Binance mark-price timestamp produces a contiguous, aligned and valid incremental delta.",
+  "specification": {
+    "symbols": [
+      "BTCUSDT",
+      "ETHUSDT",
+      "SOLUSDT",
+      "XRPUSDT"
+    ],
+    "intervals": [
+      "5m",
+      "15m",
+      "1h",
+      "4h"
+    ],
+    "startUtcByInterval": {
+      "5m": "2026-11-13T03:10:00Z",
+      "15m": "2026-11-13T03:00:00Z",
+      "1h": "2026-11-13T03:00:00Z",
+      "4h": "2026-11-13T00:00:00Z"
+    },
+    "priorHighwaterUtc": {
+      "5m": "2026-11-13T03:05:00Z",
+      "15m": "2026-11-13T02:45:00Z",
+      "1h": "2026-11-13T02:00:00Z",
+      "4h": "2026-11-12T20:00:00Z"
+    },
+    "latestCompletedOpenUtc": {
+      "5m": "2026-11-13T04:25:00Z",
+      "15m": "2026-11-13T04:15:00Z",
+      "1h": "2026-11-13T03:00:00Z",
+      "4h": "2026-11-13T00:00:00Z"
+    },
+    "nextStartUtc": {
+      "5m": "2026-11-13T04:30:00Z",
+      "15m": "2026-11-13T04:30:00Z",
+      "1h": "2026-11-13T04:00:00Z",
+      "4h": "2026-11-13T04:00:00Z"
+    },
+    "limits": {
+      "5m": 40,
+      "15m": 40,
+      "1h": 10,
+      "4h": 10
+    },
+    "completedRule": "closeTime <= markPrice.time",
+    "schema": [
+      "symbol",
+      "interval",
+      "openTime",
+      "open",
+      "high",
+      "low",
+      "close",
+      "volume",
+      "closeTime",
+      "quoteVolume",
+      "trades",
+      "takerBuyBaseVolume",
+      "takerBuyQuoteVolume"
+    ],
+    "endpoints": [
+      "GET /fapi/v1/klines",
+      "GET /fapi/v1/markPrice"
+    ]
+  },
+  "result": {
+    "rowsFetched": 112,
+    "rowsAppended": 96,
+    "formingRowsExcluded": 16,
+    "rowsByInterval": {
+      "5m": 64,
+      "15m": 24,
+      "1h": 4,
+      "4h": 4
+    },
+    "rowsBySymbol": {
+      "BTCUSDT": 24,
+      "ETHUSDT": 24,
+      "SOLUSDT": 24,
+      "XRPUSDT": 24
+    },
+    "quality": {
+      "duplicates": 0,
+      "missingIntervals": 0,
+      "offGrid": 0,
+      "nonMonotonic": 0,
+      "ohlcFailures": 0,
+      "nonFinite": 0,
+      "nonPositiveVolume": 0,
+      "closeTimeFailures": 0,
+      "crossSymbolAlignment": true,
+      "contiguousFromPriorHighwater": true
+    },
+    "readback": {
+      "deltaFiles": 2,
+      "deltaManifests": 2,
+      "globalManifest": 1,
+      "intervalIndexes": 4,
+      "allExactReadbackVerified": true
+    }
+  },
+  "artifacts": {
+    "delta5m15m": {
+      "path": "research-data/binance-usdm/delta/binance_usdm_delta_20261113T043024Z_5m15m_completed.jsonl",
+      "sha256": "a1f6cc4ab238c140a99f76469765ad79b48057dcae0dbadfdb0e3ac6307170ce",
+      "blobSha": "fcd7a9febec4bf4648ea80c11c05cdb76f6e102d",
+      "manifest": "research-data/binance-usdm/delta/manifest-20261113T043024Z-5m15m.json",
+      "manifestSha256": "bee9130f4d68aacd387d21f3677bd35d1ef6526ac90e95e186593d79f3f35841"
+    },
+    "delta1h4h": {
+      "path": "research-data/binance-usdm/delta/binance_usdm_delta_20261113T043205Z_1h4h_completed.jsonl",
+      "sha256": "f2242f593c420a4ba8899231ac961d3545057c0e5094c794c75db2a339690991",
+      "blobSha": "506df4d53d54d6b32d064c16ed946df9238dc5b0",
+      "manifest": "research-data/binance-usdm/delta/manifest-20261113T043205Z-1h4h.json",
+      "manifestSha256": "d1a4efdb693a1b0930599176fe1b7f2577ca4ea9e890b87df59a3c2041b61f7d"
+    },
+    "globalManifest": {
+      "path": "research-data/binance-usdm/manifests/archive_manifest_20261113T043205Z_auto44.json",
+      "sha256": "5f2b09e009701364fbdd546346db3655e5dd8199307f2d7564e10a7b1d25e981",
+      "blobSha": "556a5175c427517385e431fb989f1f6f6a2695d2"
+    }
+  },
+  "costs": "NOT_APPLICABLE_TO_DATA_QUALITY_EXPERIMENT",
+  "strategyBacktest": "NOT_RUN",
+  "oos": "NOT_EVALUATED",
+  "codeCommit": "NOT_APPLICABLE_NO_LOCAL_HARNESS_EXECUTED",
+  "limitations": [
+    "This is archive/data-quality work, not a strategy experiment or OOS test.",
+    "No long-history backfill was performed in this run.",
+    "1h historical bridge/count discrepancy and 4h provenance/count mismatches remain unresolved.",
+    "Direct REST HTTP status/headers unavailable; connector does not expose them.",
+    "ExchangeInfo metadata is stale; execution validation remains blocked."
+  ]
+}

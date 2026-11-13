@@ -37,7 +37,7 @@ Inherited v56 per-symbol test occupancy (selected low-vol states only):
 
 ETH/XRP had material validation/test context drift. A separate older v37 taxonomy had 10,760 4h test observations: BEAR_LOW 33.07%, BULL_LOW 27.96%, BEAR_NORMAL 12.58%, TRANSITION_LOW 10.54%, BULL_NORMAL 6.38%, BEAR_HIGH 5.06%, TRANSITION_NORMAL 3.32%, BULL_HIGH 0.87%, TRANSITION_HIGH 0.23%. Median runs ranged from 2 transition bars to 11.5 BEAR_HIGH bars. Trend persistence was BEAR→BEAR 94.22%, BULL→BULL 92.16%, TRANSITION→TRANSITION 60.95%. This is a different inherited taxonomy version, not a v56 re-estimate.
 
-Current 119-bar descriptors: all four symbols are bearish on 1h/4h; all are mixed on 15m; 5m is bullish for BTC/ETH/XRP and mixed for SOL. 4h ATR14/close percentile within this short sample is 95–100. Feature confidence is moderate for higher-timeframe bearish alignment, low for transition structure. These percentiles are local-sample descriptors, not trained regime thresholds or win probabilities. Shock detector is not calibrated.
+Kline sample windows (120 returned / 119 completed / 1 forming excluded per symbol/interval): first completed opens 5m 09:20Z, 15m 13:30Z on Nov12, 1h 20:00Z on Nov8, 4h 20:00Z on Oct24; latest completed opens 5m 19:10Z, 15m 19:00Z, 1h 18:00Z, 4h 12:00Z. Current 119-bar descriptors: all four symbols are bearish on 1h/4h; all are mixed on 15m; 5m is bullish for BTC/ETH/XRP and mixed for SOL. 4h ATR14/close percentile within this short sample is 95–100. Feature confidence is moderate for higher-timeframe bearish alignment, low for transition structure. These percentiles are local-sample descriptors, not trained regime thresholds or win probabilities. Shock detector is not calibrated.
 
 ## 3. Strategy-context scorecard
 
@@ -65,7 +65,7 @@ Current 119-bar descriptors: all four symbols are bearish on 1h/4h; all are mixe
 
 ## 5. Current market snapshot
 
-Data timestamp: **2026-11-13 19:19:45Z**. Mark data 19:14:58–19:15:00Z; 24h ticker close 19:14:42Z; order book 19:18:55Z; OI snapshot 19:14:53Z. Last completed derivative aggregates (basis/taker/global-LS) 18:00Z.
+Data timestamp: **2026-11-13 19:19:45Z**. Transition warning: all four symbols show short-term/higher-timeframe divergence (5m bullish for BTC/ETH/XRP and mixed for SOL; 15m mixed; 1h/4h bearish). Feature confidence is moderate for higher-timeframe direction and low for transition/shock classification. Mark data 19:14:58–19:15:00Z; 24h ticker close 19:14:42Z; order book 19:18:55Z; OI snapshot 19:14:53Z. Last completed derivative aggregates (basis/taker/global-LS) 18:00Z.
 
 | Symbol | Mark / last | 24h change | 24h high / low | 24h quote vol | 5m / 15m / 1h / 4h | ATR14 percentile 1h / 4h | OI 17→18Z |
 |---|---:|---:|---:|---:|---|---:|---:|
@@ -99,10 +99,10 @@ No entry, stop, target or size emitted. BTCUSDT remains reference-only.
 | 1h | 215,492 (53,873/symbol), 36 page manifests / 144 files | 2020-09-14 08:00 → 2026-11-11 05:00 | 28 missing opens/symbol; 8-row discrepancy |
 | 4h | 53,960 raw / 53,816 aligned / 53,844 canonical (13,461/symbol) | 2020-09-14 08:00 → 2026-11-05 16:00 | Canonical series PASS; raw page provenance DEGRADED |
 
-Base page files are raw Binance kline-array JSONL. Representative verified examples:
+Base page files are raw Binance kline-array JSONL. Incremental delta JSONL schema: `symbol`, `interval`, `openTime` (epoch ms), `open`, `high`, `low`, `close`, `volume`, `closeTime`, `quoteVolume`, `trades`, `takerBuyBaseVolume`, `takerBuyQuoteVolume`. Representative verified examples:
 - 5m BTC page 1: `research-data/binance-usdm/5m/BTCUSDT/page-0001.jsonl`, 1,500 rows, 193,035 bytes, 2020-01-01 00:00→2020-01-06 04:55Z, SHA-256 `b0000460febf5ae8ce7ff28154a87041fed061082fb40a39aded88194134697d`, Git blob `373ede431f422ee6656def813b031220f1c0c237`, readback exact.
 - 15m BTC page 1: `research-data/binance-usdm/15m/BTCUSDT/page-0001.jsonl`, 1,500 rows, 198,580 bytes, 2020-01-01 00:00→2020-01-16 14:45Z, SHA-256 `4469592269a0b28e5e47e3a4d0460624ec60a75dde90e5e68c99363d14511993`, Git blob `e5072b0301fd89ce1a39a33af226655828cba748`, readback exact.
-- 1h BTC page 1: `research-data/binance-usdm/1h/BTCUSDT/page-0001.jsonl`, 1,500 rows, 2020-09-14 08:00→2020-11-15 19:00Z, SHA-256 `9a11769e0c1e473dc0293286fa468bdeba6b9d8a4b1ade224d14dd0e3f002921`, Git blob `79af4d04b95870fc1535ab13e60aeee517d2d6b3`, readback exact.
+- 1h BTC page 1: `research-data/binance-usdm/1h/BTCUSDT/page-0001.jsonl`, 1,500 rows, 211,718 bytes, 2020-09-14 08:00→2020-11-15 19:00Z, SHA-256 `9a11769e0c1e473dc0293286fa468bdeba6b9d8a4b1ade224d14dd0e3f002921`, Git blob `79af4d04b95870fc1535ab13e60aeee517d2d6b3`, readback exact.
 - 4h BTC canonical: `research-data/binance-usdm/4h/canonical/BTCUSDT_4h_20200914T0800Z_20261105T1600Z.jsonl`, 13,461 rows, 1,971,801 bytes, SHA-256 `7088aa2b2cc48c3895fd77dfc2ece0ae812062f24a70374ec556273a2d8380d7`, Git blob `a465025b2276a0e9cfbf805ba64be4da6ed08868`, readback verified. All four canonical 4h files report zero gaps/duplicates. Raw 4h page provenance retains 13 SHA mismatch observations; page 9 re-read matched all four symbols. One malformed XRP original row is preserved with a separate correction artifact.
 
 ### v110 incremental artifacts
@@ -110,7 +110,7 @@ Base page files are raw Binance kline-array JSONL. Representative verified examp
 - Delta `research-data/binance-usdm/delta/binance_usdm_delta_20261113T1917Z_5m15m1h_completed.jsonl`: **48 rows / 14,003 bytes**, SHA-256 `c5109989f2e4285549b36af1e09f5148b3610ea7f9ae51c12672c1be7800b812`, Git blob `4d8679fc8bc4c3142955eb5dff5d677fe1f15be7`, readback verified.
 - Delta manifest `...1917Z_5m15m1h_completed.manifest.json`: **6,265 bytes**, SHA-256 `dca0e0372acb942be04d671474dacf355338bd4e81ed80e76735c19a0738f32d`, readback verified.
 - Snapshot `research-data/binance-usdm/snapshots/current_market_snapshot_20261113T1919Z_auto11_v110.json`: **10,263 bytes**, SHA-256 `85c4c0630aac7dbf8ef4ec7acd40b36667edb4168f037194f8698c26d45cd512`, Git blob `6e12f843dec1001c42aef5f3fdec1d6ea1b752ba`, readback verified.
-- Archive manifest `research-data/binance-usdm/manifests/archive_manifest_20261113T1920Z_auto11_v110.json`: SHA-256 `38f06163435a27d2ef231929b51072adc416cbc10a85ca501b2bfc1478a8d9d8`, Git blob `49ed3f0ab08728530efa636081808d318923df4f`, readback verified.
+- Archive manifest `research-data/binance-usdm/manifests/archive_manifest_20261113T1920Z_auto11_v110.json`: **12,382 bytes**, SHA-256 `38f06163435a27d2ef231929b51072adc416cbc10a85ca501b2bfc1478a8d9d8`, Git blob `49ed3f0ab08728530efa636081808d318923df4f`, readback verified.
 - Index receipt `research-data/binance-usdm/manifests/index_update_receipt_20261113T1920Z_auto11_v110.json`: **3,829 bytes**, SHA-256 `fd0023ef3ce0823d8e599d0e26141ee49e2bd2f232956ab18b02ba8245929c9f`, Git blob `d3e3dc19baff117e11a3609997a788663ccf25e9`, readback verified.
 - Index files read back: 5m **552,910 bytes** (commit `a49bbf0c28e959684bc85784432a2a44d9269b5a`); 15m **505,314** (commit `f12e76e4fb9516bce9ff55d855a498787cd0c49d`); 1h **368,918** (commit `42cb21c92fdf881c978cff911a56745cb8679eac`); 4h **272,693** (commit `1082bdbe99a93f4f630a37d7727a11aad82b90f0`). Exact blob SHA-1 and file SHA-256 are recorded in the receipt.
 

@@ -1,0 +1,162 @@
+{
+  "schema_version": "1.0.0",
+  "version": "v108",
+  "run_id": "context-strategy-20261113T234110Z-auto11-v112",
+  "as_of_utc": "2026-11-13T23:41:10.425Z",
+  "repository": "shubhamtaywade82/crypto-trading-agent",
+  "branch": "research/raw-ohlcv-archive-20261108T1026Z",
+  "parent_queue_ref": "research-queue-v107.json",
+  "overall_status": "RESEARCH_EXECUTED_CONTEXT_REVIEW_COMPLETE_STRATEGY_OOS_BLOCKED",
+  "daily_cycle": {
+    "status": "COMPLETED_WITH_CONTEXT_TAXONOMY_REVIEW_AND_RAW_ARCHIVE_APPEND",
+    "experiment_id": "EXP-CONTEXT-4H-TRAINQ-2026-11-14-001",
+    "strategy_backtest": "BLOCKED",
+    "oos_evaluation": "NOT_RUN",
+    "blocker": "Repository harness not executable in this run: no local checkout, Node 22.16.0/npm 10.9.2 below remote engine requirement Node >=24/npm >=11; full aligned multi-timeframe history and calibrated costs/funding remain incomplete.",
+    "next_action": "Provision compatible Node runner, repair candle parser and archive indexes, then pre-register one strategy×context×symbol experiment."
+  },
+  "weekly_review": {
+    "status": "PARTIALLY_COMPLETED_4H_ONLY",
+    "last_review_utc": "2026-11-13T23:41:10.425Z",
+    "active_taxonomy": "v56",
+    "candidate_taxonomy": "v57-candidate",
+    "candidate_promoted": false,
+    "reason": "4h training-only quantile review completed, but train/test context TVD 0.319-0.558 and ±10% threshold sensitivity agreement 80.8-91.3%; multi-timeframe stability is not established.",
+    "next_due_utc": "2026-11-20T23:41:10.425Z"
+  },
+  "items": [
+    {
+      "id": "RQ-002",
+      "priority": "P0",
+      "title": "Fresh Binance server time and exchange metadata",
+      "status": "BLOCKED",
+      "evidence": "Direct curl to https://fapi.binance.com/fapi/v1/time failed DNS (curl exit 6, HTTP 000). Binance connector supplied live market payloads, but HTTP status/headers and /fapi/v1/time are not exposed. exchangeInfo serverTime=2026-11-13T06:02:01.705Z, ~17h34m stale at latest market sample.",
+      "next_action": "Restore direct DNS/HTTPS or expose server-time endpoint; require <=5s clock drift and fresh exchangeInfo before contract validation.",
+      "last_updated_utc": "2026-11-13T23:41:10.425Z"
+    },
+    {
+      "id": "RQ-005",
+      "priority": "P0",
+      "title": "Provision compatible local repository runner",
+      "status": "BLOCKED",
+      "evidence": "Local cwd=/, no .git/package.json checkout; Node v22.16.0, npm 10.9.2, Python 3.13.5, 3 CPUs, ~29.8GB free disk. Remote package requires Node >=24/npm >=11. binance, @binance/connector and binance-api-node packages are not installed.",
+      "next_action": "Provision Node >=24/npm >=11, clone exact branch, install lockfile dependencies, verify commit, then run repository fixtures.",
+      "last_updated_utc": "2026-11-13T23:41:10.425Z"
+    },
+    {
+      "id": "RQ-003",
+      "priority": "P0",
+      "title": "Backfill 5m/15m and reconcile 1h/4h archive",
+      "status": "PARTIALLY_COMPLETED_BLOCKED",
+      "evidence": "96 completed candles appended to three GitHub delta files and fetched back byte-identically: 5m68, 15m20, 1h4, 4h4; 24 rows per symbol. Delta manifests and aggregate archive manifest are readback-verified. Highwaters: 5m23:35Z, 15m23:15Z, 1h22:00Z, 4h16:00Z. Base 5m/15m remains partial; 1h has 28 missing opens per symbol plus 8-row discrepancy; 4h raw page-manifest has 13 SHA mismatches.",
+      "next_action": "Reconcile raw page provenance/counts and 1h bridge gaps; backfill common multi-year 5m/15m history; only then advance canonical indexes.",
+      "last_updated_utc": "2026-11-13T23:41:10.425Z"
+    },
+    {
+      "id": "RQ-012",
+      "priority": "P0",
+      "title": "Fix candle contract, positive-volume validation, 5m replay and purge/embargo",
+      "status": "BLOCKED",
+      "evidence": "Remote scripts/conditional-edge.ts still has minN=30 and confidence=0.9; walkForward receives no embargoDays. scripts/backtest.ts uses 15m/1h/4h only. Existing archive parser/zero-volume issue remains in the queue; no repository harness was executed.",
+      "next_action": "Preserve all kline fields including closeTime, quote volume, trade count and taker fields; reject volume<=0; add 5m replay; expose 95% CI, min 100 OOS trades and purge/embargo fixtures.",
+      "last_updated_utc": "2026-11-13T23:41:10.425Z"
+    },
+    {
+      "id": "RQ-029",
+      "priority": "P0",
+      "title": "Enforce BTC reference-only universe",
+      "status": "BLOCKED",
+      "evidence": "Remote src/config.ts and scripts/backtest.ts still include/default BTCUSDT in trade symbols; policy requires BTC reference-only.",
+      "next_action": "Set tradable defaults to SOLUSDT/ETHUSDT/XRPUSDT and isolate BTC reference features; add tests preventing BTC trade labels/orders.",
+      "last_updated_utc": "2026-11-13T23:41:10.425Z"
+    },
+    {
+      "id": "RQ-004",
+      "priority": "P1",
+      "title": "Calibrate execution costs",
+      "status": "BLOCKED",
+      "evidence": "Current top-of-book/depth snapshots are point-in-time only. Actual fee tier, synchronized historical depth/trades, market impact, latency and fill probability remain unavailable; source defaults are not calibrated.",
+      "next_action": "Capture actual fee tier and synchronized depth/trade history; estimate symbol/size/order-style cost curves and validate fills.",
+      "last_updated_utc": "2026-11-13T23:41:10.425Z"
+    },
+    {
+      "id": "RQ-014",
+      "priority": "P1",
+      "title": "Backfill historical funding cashflows",
+      "status": "BLOCKED",
+      "evidence": "Only three recent settled funding events per symbol were retrieved; full settlement history is not archived. Current funding snapshots do not replace historical cashflows.",
+      "next_action": "Backfill full /fapi/v1/fundingRate history and align settlement cashflows to each simulated holding interval.",
+      "last_updated_utc": "2026-11-13T23:41:10.425Z"
+    },
+    {
+      "id": "RQ-019",
+      "priority": "P1",
+      "title": "Integrate new completed bars into canonical indexes",
+      "status": "BLOCKED_INDEX_NOT_ADVANCED",
+      "evidence": "Three new raw delta files (96 rows total) plus manifests and current snapshot are persisted/readback-verified. Canonical archive-index pointers were deliberately not advanced because the 1h bridge and 4h provenance/count defects remain.",
+      "next_action": "Repair index schema/provenance, atomically advance each interval highwater and reopen/readback row counts and hashes.",
+      "last_updated_utc": "2026-11-13T23:41:10.425Z"
+    },
+    {
+      "id": "RQ-021",
+      "priority": "P0_AFTER_PREREQUISITES",
+      "title": "Run pre-registered strategy×context×symbol experiment",
+      "status": "BLOCKED",
+      "evidence": "No strategy backtest or trade OOS evaluation was run. A context-taxonomy research experiment was completed, but strategy harness, trusted multi-timeframe history, cost calibration and purge/embargo are still blocked.",
+      "next_action": "After RQ-002/003/005/012/029/004/014/030, freeze one candidate and run chronological train/validation/untouched test with block bootstrap, 95% CI and multiple-testing control.",
+      "last_updated_utc": "2026-11-13T23:41:10.425Z"
+    },
+    {
+      "id": "RQ-028",
+      "priority": "P2",
+      "title": "Weekly context taxonomy stability review",
+      "status": "PARTIALLY_COMPLETED_REVIEW_ONLY",
+      "evidence": "4h taxonomy review executed with 500-bar warmup, 70/15/15 split, per-symbol train-only q67 trend and q33/q67 volatility thresholds, 1,945 untouched test bars/symbol, 300 circular block-bootstrap replicates (10-bar blocks), and ±10% threshold sensitivity. Active v56 retained; v57 not promoted due train/test TVD 0.319-0.558.",
+      "next_action": "Extend taxonomy review to aligned 5m/15m/1h/4h data after archive repair; assess transition stability and keep v56 active until multi-timeframe drift is acceptable.",
+      "last_updated_utc": "2026-11-13T23:41:10.425Z"
+    },
+    {
+      "id": "RQ-030",
+      "priority": "P0",
+      "title": "Resolve confidence-level, minimum-sample and embargo contract",
+      "status": "BLOCKED",
+      "evidence": "conditional-edge.ts still hard-codes confidence=0.9, minN=30 and no embargo argument; prior registry interval provenance remains inconsistent.",
+      "next_action": "Expose confidence=0.95 default, enforce >=100 OOS trades per symbol/context, pass purge/embargo through CLI, and persist command/seed/95% CI.",
+      "last_updated_utc": "2026-11-13T23:41:10.425Z"
+    },
+    {
+      "id": "RQ-032",
+      "priority": "P1",
+      "title": "Verify and advance hourly delta checksums/index pointers",
+      "status": "PARTIALLY_COMPLETED",
+      "evidence": "All three new raw delta files were readback-verified; SHA-256 computed for delta files and snapshot; GitHub blob SHA1 retained. Canonical indexes remain unchanged.",
+      "next_action": "After resolving historical provenance defects, atomically advance interval indexes and verify highwaters/checksums.",
+      "last_updated_utc": "2026-11-13T23:41:10.425Z"
+    },
+    {
+      "id": "RQ-033",
+      "priority": "P1",
+      "title": "Persist current hourly market snapshot and decision matrix",
+      "status": "COMPLETED",
+      "evidence": "Current market snapshot v112 was written to GitHub and fetched back byte-identically; no OOS_VALIDATED entries, so SOL/ETH/XRP remain NO_TRADE.",
+      "next_action": "Refresh on next scheduled run and evaluate only OOS_VALIDATED entries.",
+      "last_updated_utc": "2026-11-13T23:41:10.425Z"
+    },
+    {
+      "id": "RQ-034",
+      "priority": "P2",
+      "title": "Run deterministic inline feature smoke fixture",
+      "status": "COMPLETED_INLINE_ONLY",
+      "evidence": "Deterministic 12-row fixture reproduced identical EMA outputs; changing future candles left prior outputs unchanged. This validates the inline feature function only, not the repository backtest harness.",
+      "next_action": "Repeat as repository unit tests after Node >=24 runner is provisioned.",
+      "last_updated_utc": "2026-11-13T23:41:10.425Z"
+    }
+  ],
+  "monitoring": {
+    "last_snapshot_ref": "research-data/binance-usdm/snapshots/current_market_snapshot_20261113T234110Z_auto11_v112.json",
+    "last_snapshot_utc": "2026-11-13T23:41:10.425Z",
+    "decision": "NO_TRADE_ALL_TRADABLE_SYMBOLS",
+    "registry_version": "v108",
+    "archive_manifest_ref": "research-data/binance-usdm/manifests/archive_manifest_20261113T234110Z_auto11_v112.json"
+  }
+}

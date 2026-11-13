@@ -60,13 +60,13 @@ The 200-bar rolling windows are too short to infer multiple-cycle context occupa
 | SOLUSDT | 79.90 / 79.92 | -3.455% | Bearish / Bearish | 1.0634 | -1.681% |
 | XRPUSDT | 1.02923 / 1.02940 | -1.417% | Bearish / Bearish | 0.8177 | -0.272% |
 
-**Funding:** indicated / last settled, both percent per 8h settlement interval:
+**Funding:** `premiumIndex.lastFundingRate` (latest API-reported rate, not treated as a guaranteed next-settlement forecast) / last settled funding from `/fapi/v1/fundingRate`, both percent per observed 8h cadence:
 - BTC: +0.001314% / +0.001270%
 - ETH: -0.000250% / +0.000971%
 - SOL: -0.007839% / -0.005430%
 - XRP: +0.000308% / +0.000653%
 
-Next funding: 16:00 UTC. No absolute observed rate exceeds 0.05%.
+Next funding: 16:00 UTC. No absolute premiumIndex-reported or last-settled rate exceeds 0.05%.
 
 Best bid/ask spreads: BTC 0.0145 bps, ETH 0.0516 bps, SOL 1.2516 bps, XRP 0.9717 bps. These are top-of-book snapshots, not size-dependent execution costs.
 

@@ -10,7 +10,7 @@ No strategy backtest or OOS run occurred. Remote scripts exist, but local checko
 
 ## 2. Context discovery
 
-No new taxonomy was fitted. Parent v56 used training-only q67 absolute trend strength and q33/q67 ATR14/close thresholds. Prior validation/test context TVD=0.293 with ETH/XRP drift; SOL BULL_LOW→TRANSITION_LOW 83.3% (n=12), XRP TRANSITION_NORMAL→TRANSITION_LOW 69.4% (n=25). Current local 119-bar descriptors show all four symbols bearish on 1h/4h and all bearish on 15m; 5m is mixed/bullish only for ETH/XRP. 1h/4h ATR14 sample percentiles: BTC 88.6/87.6, ETH 71.4/80.0, SOL 79.0/68.6, XRP 67.6/67.6. These are not training-derived thresholds or win probabilities.
+No new taxonomy was fitted. Parent v56 used training-only q67 absolute trend strength and q33/q67 ATR14/close thresholds. Prior validation/test context TVD=0.293 with ETH/XRP drift; SOL BULL_LOW→TRANSITION_LOW 83.3% (n=12), XRP TRANSITION_NORMAL→TRANSITION_LOW 69.4% (n=25). Current local 119-bar descriptors show all four symbols bearish on 1h/4h and all bearish on 15m; 5m is mixed/bullish only for ETH/XRP. Feature-classification confidence is **moderate** for higher-timeframe bearish alignment (EMA20 below EMA50 with negative 5-bar slopes on 1h/4h), but **low** for transition structure because the local window is short and no current training-fitted shock/transition model was run. This is not a win probability. 1h/4h ATR14 sample percentiles: BTC 88.6/87.6, ETH 71.4/80.0, SOL 79.0/68.6, XRP 67.6/67.6. These are not training-derived thresholds or win probabilities.
 
 ## 3. Strategy-context scorecard
 

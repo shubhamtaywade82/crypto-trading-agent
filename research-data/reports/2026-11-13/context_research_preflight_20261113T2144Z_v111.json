@@ -1,0 +1,135 @@
+{
+  "schema_version": "1.0.0",
+  "run_id": "context-strategy-2026-11-13T2144Z-v111",
+  "as_of_utc": "2026-11-13T21:45:57.489Z",
+  "status": "RESEARCH_BLOCKED",
+  "checks": [
+    {
+      "capability": "shell/compute",
+      "status": "PASS",
+      "evidence": "cwd=/; Debian 13 Linux 6.18.57 x86_64; Python 3.13.5; Node v22.16.0; npm 10.9.2; 3 CPUs; about 4.7 GiB available RAM; about 30 GiB free disk.",
+      "impact": "Bounded inspection and Python analysis possible; project scripts cannot run under declared requirements.",
+      "next_action": "Provision Node >=24/npm >=11."
+    },
+    {
+      "capability": "repo/code",
+      "status": "BLOCKED",
+      "evidence": "No .git, package.json or project checkout in cwd=/; remote GitHub files accessible through connector only.",
+      "impact": "Cannot invoke repository scripts or record a local code commit.",
+      "next_action": "Clone exact research branch and lockfile into a compatible workspace."
+    },
+    {
+      "capability": "network/Binance endpoints",
+      "status": "DEGRADED",
+      "evidence": "Direct DNS/HTTPS to fapi.binance.com and api.github.com failed; Binance connector returned current market data but hides HTTP status/headers. exchangeInfo serverTime 06:02:01.706Z is 15h43m51s behind mark time 21:45:53Z; /fapi/v1/time unavailable.",
+      "impact": "Monitoring is usable; fresh contract/execution validation is blocked.",
+      "next_action": "Restore direct DNS/HTTPS; obtain fresh /fapi/v1/time and uncached exchangeInfo."
+    },
+    {
+      "capability": "raw historical archive",
+      "status": "DEGRADED",
+      "evidence": "Remote GitHub archive available; 1h base 215,528 rows, 5m/15m base absent, 4h raw 53,964 vs canonical 53,844. This run appended 72 rows to the remote archive; no local archive copy.",
+      "impact": "1h supports exploratory multi-cycle work; 5m/15m and 4h canonical are not research-ready.",
+      "next_action": "Backfill 5m/15m and reconcile/rebuild 4h canonical."
+    },
+    {
+      "capability": "data quality/coverage",
+      "status": "DEGRADED",
+      "evidence": "Current 1,600-row sample: 1,584 completed and 16 forming excluded; zero duplicates, missing intervals, off-grid timestamps, non-monotonic rows, OHLC failures, non-positive volume or non-finite values. Historical coverage remains incomplete.",
+      "impact": "Recent monitoring sample passes integrity checks; multi-cycle cross-timeframe research is blocked.",
+      "next_action": "Complete lower-timeframe base backfill and 4h canonical reconciliation."
+    },
+    {
+      "capability": "backtest harness/smoke test",
+      "status": "BLOCKED",
+      "evidence": "Remote scripts exist, but local checkout absent and Node/npm below required versions. No deterministic fixture smoke test or backtest ran. Source audit found missing 5m, BTC default, missing closeTime, zero-volume acceptance and no explicit purge/embargo control.",
+      "impact": "No experiment or OOS result can be claimed.",
+      "next_action": "Fix source defects, provision compatible runner, then run deterministic fixture tests."
+    },
+    {
+      "capability": "disk/storage",
+      "status": "PASS",
+      "evidence": "About 30 GiB free local disk; local filesystem is ephemeral; GitHub remote branch writes and readback are available.",
+      "impact": "Remote persistence is usable; no local durable archive is present.",
+      "next_action": "Continue remote GitHub persistence with readback verification."
+    },
+    {
+      "capability": "artifact readback",
+      "status": "DEGRADED",
+      "evidence": "Three new raw delta files, one manifest and all four interval indexes were reopened; SHA-256 and Git blob SHA matched. New v111 context artifacts are being written and will be read back before finalizing.",
+      "impact": "Raw archive persistence is verified; context artifact verification is pending.",
+      "next_action": "Read back every v111 context artifact and record hashes in the artifact manifest."
+    }
+  ],
+  "endpoints": [
+    {
+      "endpoint": "GET /fapi/v1/time",
+      "status": "BLOCKED",
+      "evidence": "Direct DNS failure; fresh server timestamp not obtained."
+    },
+    {
+      "endpoint": "GET /fapi/v1/exchangeInfo",
+      "status": "DEGRADED",
+      "evidence": "serverTime 2026-11-13T06:02:01.706Z; symbols listed TRADING/PERPETUAL but metadata stale."
+    },
+    {
+      "endpoint": "GET /fapi/v1/klines",
+      "status": "DEGRADED",
+      "evidence": "100 rows per symbol for 5m/15m/1h/4h via connector; 1,600 returned, 1,584 completed; HTTP status hidden."
+    },
+    {
+      "endpoint": "GET /fapi/v1/premiumIndex",
+      "status": "PASS",
+      "evidence": "Mark/index, lastFundingRate and nextFundingTime returned at 21:45:53-21:45:57Z."
+    },
+    {
+      "endpoint": "GET /fapi/v1/openInterest",
+      "status": "PASS",
+      "evidence": "Current OI returned for all four symbols at 21:45:46-21:45:51Z."
+    },
+    {
+      "endpoint": "GET /fapi/v1/ticker/24hr",
+      "status": "PASS",
+      "evidence": "24h change/high/low/quote volume returned for all four symbols at 21:45:49-21:45:54Z."
+    },
+    {
+      "endpoint": "GET /fapi/v1/fundingRate",
+      "status": "DEGRADED",
+      "evidence": "Latest three settlements per symbol retrieved; 8h cadence observed; full history not backfilled."
+    },
+    {
+      "endpoint": "GET /fapi/v1/ticker/bookTicker",
+      "status": "PASS",
+      "evidence": "Best bid/ask observed from 20-level depth snapshots at 21:45:42Z."
+    },
+    {
+      "endpoint": "GET /fapi/v1/depth",
+      "status": "PASS",
+      "evidence": "20 bid/ask levels per symbol at 21:45:42Z; one snapshot only."
+    },
+    {
+      "endpoint": "GET /futures/data/takerBuySellVol",
+      "status": "PASS",
+      "evidence": "Latest completed 15m taker volume bars through 21:15Z."
+    },
+    {
+      "endpoint": "GET /futures/data/openInterestHist",
+      "status": "PASS",
+      "evidence": "Four 1h OI observations per symbol from 18:00Z through 21:00Z."
+    },
+    {
+      "endpoint": "GET /futures/data/globalLongShortAccountRatio",
+      "status": "PASS",
+      "evidence": "Latest 1h account ratios at 21:00Z."
+    }
+  ],
+  "sdk": {
+    "used": false,
+    "installed": false,
+    "evidence": "binance, binance-api-node, @binance/connector and @nemesis-oss/binance-sdk are not importable in Node v22.16.0; Binance public-data connector used instead."
+  },
+  "experiment_executed": false,
+  "oos_evaluated": false,
+  "classification_run": true,
+  "archive_append_completed": true
+}

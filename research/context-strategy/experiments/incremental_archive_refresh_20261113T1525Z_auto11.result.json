@@ -1,0 +1,101 @@
+{
+  "schemaVersion": 1,
+  "experimentId": "INCREMENTAL_ARCHIVE_REFRESH_AUTO11",
+  "runId": "context-strategy-20261113T1531Z-auto11",
+  "asOfUtc": "2026-11-13T15:31:23.779Z",
+  "type": "DATA_QUALITY_AND_ARCHIVE_REFRESH",
+  "hypothesis": "All completed Binance USD-M klines strictly after verified interval highwaters can be appended without gaps, duplicates, malformed OHLC, zero volume or forming-candle leakage.",
+  "source": "Binance USD-M connector; GET /fapi/v1/klines equivalent; SDK not used; direct REST DNS unavailable.",
+  "symbols": [
+    "BTCUSDT",
+    "ETHUSDT",
+    "SOLUSDT",
+    "XRPUSDT"
+  ],
+  "intervals": [
+    "5m",
+    "15m",
+    "1h",
+    "4h"
+  ],
+  "deltas": [
+    {
+      "path": "research-data/binance-usdm/delta/binance_usdm_delta_20261113T1525Z_all_intervals_completed.jsonl",
+      "sha256": "0205738b2bca9d589423ba24e23c65f81f2d1f7b900de83f24a070ae76961618",
+      "rowsAppended": 44,
+      "rowsByInterval": {
+        "5m": 32,
+        "15m": 8,
+        "1h": 4,
+        "4h": 0
+      },
+      "formingRowsExcluded": 16
+    },
+    {
+      "path": "research-data/binance-usdm/delta/binance_usdm_delta_20261113T1530Z_5m15m_completed.jsonl",
+      "sha256": "69238abd850cd8c0f2e4cb8eeb6c7bc888a6bbc42e9c401335fdfc8be6ed22a9",
+      "rowsAppended": 8,
+      "rowsByInterval": {
+        "5m": 4,
+        "15m": 4
+      },
+      "formingRowsExcluded": 8
+    }
+  ],
+  "totals": {
+    "rowsReturned": 76,
+    "rowsAppended": 52,
+    "formingRowsExcluded": 24,
+    "rowsByInterval": {
+      "5m": 36,
+      "15m": 12,
+      "1h": 4,
+      "4h": 0
+    },
+    "rowsBySymbol": {
+      "BTCUSDT": 13,
+      "ETHUSDT": 13,
+      "SOLUSDT": 13,
+      "XRPUSDT": 13
+    }
+  },
+  "previousHighwatersUtc": {
+    "5m": "2026-11-13T14:40:00Z",
+    "15m": "2026-11-13T14:30:00Z",
+    "1h": "2026-11-13T13:00:00Z",
+    "4h": "2026-11-13T08:00:00Z"
+  },
+  "finalHighwatersUtc": {
+    "5m": "2026-11-13T15:25:00Z",
+    "15m": "2026-11-13T15:15:00Z",
+    "1h": "2026-11-13T14:00:00Z",
+    "4h": "2026-11-13T08:00:00Z"
+  },
+  "quality": {
+    "duplicates": 0,
+    "missingIntervals": 0,
+    "offGrid": 0,
+    "nonMonotonic": 0,
+    "ohlcFailures": 0,
+    "nonFinite": 0,
+    "nonPositiveVolume": 0,
+    "closeTimeFailures": 0,
+    "crossSymbolAlignment": true,
+    "contiguousFromPriorHighwater": true
+  },
+  "persistence": {
+    "archiveBranch": "research/raw-ohlcv-archive-20261108T1026Z",
+    "deltaReadbackVerified": true,
+    "deltaManifestReadbackVerified": true,
+    "globalManifestPath": "research-data/binance-usdm/manifests/archive_manifest_20261113T1531Z_auto11b.json",
+    "globalManifestSha256": "7cb0f94885bfb42b4a3cc3feebea2b3419160ae9b14e95fd1e4abd1f87157b76",
+    "allFourIndexReadbacksVerified": true
+  },
+  "outcome": "PASS_DATA_QUALITY_INCREMENTAL_REFRESH",
+  "limitations": [
+    "No historical page backfill performed in this run.",
+    "1h historical bridge and 4h raw/aligned/canonical lineage remain degraded.",
+    "No strategy backtest, OOS evaluation or strategy status transition."
+  ],
+  "nextAction": "Backfill 5m/15m page 0027 from per-symbol nextStartUtcBySymbol, then reconcile 1h/4h before a preregistered strategy experiment."
+}

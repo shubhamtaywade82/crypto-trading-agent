@@ -55,5 +55,63 @@
   "research_executed": false,
   "oos_evaluated": false,
   "monitoring_completed": true,
-  "archive_append_completed": true
+  "archive_append_completed": true,
+  "binance_endpoint_probes": [
+    {
+      "endpoint": "GET /fapi/v1/time",
+      "status": "UNAVAILABLE_DIRECT_NETWORK",
+      "evidence": "curl DNS failure (exit 6, HTTP 000); no connector time method."
+    },
+    {
+      "endpoint": "GET /fapi/v1/exchangeInfo",
+      "status": "DEGRADED_STALE",
+      "evidence": "Connector reports four symbols TRADING/PERPETUAL but serverTime=2026-11-13T06:02:01.702Z, 3h31m43s stale versus 09:33:45Z."
+    },
+    {
+      "endpoint": "GET /fapi/v1/klines",
+      "status": "DATA_RETURNED_VIA_CONNECTOR",
+      "evidence": "200 rows per symbol per interval for BTC/ETH/SOL/XRP and 5m/15m/1h/4h; 3,200 rows total; HTTP status hidden."
+    },
+    {
+      "endpoint": "GET /fapi/v1/premiumIndex",
+      "status": "DATA_RETURNED_VIA_CONNECTOR",
+      "evidence": "Mark/index, lastFundingRate, nextFundingTime and time returned."
+    },
+    {
+      "endpoint": "GET /fapi/v1/openInterest",
+      "status": "DATA_RETURNED_VIA_CONNECTOR",
+      "evidence": "Current open interest returned for all four symbols."
+    },
+    {
+      "endpoint": "GET /fapi/v1/ticker/24hr",
+      "status": "DATA_RETURNED_VIA_CONNECTOR",
+      "evidence": "24h ticker statistics returned for all four symbols."
+    },
+    {
+      "endpoint": "GET /fapi/v1/fundingRate",
+      "status": "DATA_RETURNED_VIA_CONNECTOR",
+      "evidence": "Latest two funding settlements per symbol; full history not backfilled."
+    },
+    {
+      "endpoint": "GET /fapi/v1/ticker/bookTicker",
+      "status": "DATA_RETURNED_VIA_CONNECTOR",
+      "evidence": "Top-of-book bid/ask returned; no depth curve."
+    },
+    {
+      "endpoint": "GET /futures/data/takerBuySellVol",
+      "status": "DATA_RETURNED_VIA_CONNECTOR",
+      "evidence": "15m taker buy/sell volume returned."
+    },
+    {
+      "endpoint": "GET /futures/data/openInterestHist",
+      "status": "DATA_RETURNED_VIA_CONNECTOR",
+      "evidence": "Three recent 1h OI observations returned."
+    },
+    {
+      "endpoint": "GET /futures/data/globalLongShortAccountRatio",
+      "status": "DATA_RETURNED_VIA_CONNECTOR",
+      "evidence": "1h global account ratio returned; descriptive only."
+    }
+  ],
+  "contract_status_note": "exchangeInfo reports all four symbols TRADING/PERPETUAL, but metadata is stale; contract status is not freshly verified for execution."
 }

@@ -27,6 +27,8 @@ No new taxonomy was fitted. Parent v56 used training-only q67 absolute trend str
 
 Market snapshot 18:39:10Z; features 18:37:48Z. Funding interval 8h; next funding 2026-11-14 00:00Z; last settled 16:00Z. Indicated/settled funding: BTC 0.009171%/0.004045%; ETH 0.005262%/0.004743%; SOL 0.010000%/0.007203%; XRP 0.010000%/0.010000%. None exceeds |0.05%|. 5m/15m/1h/4h trends: BTC B/B/B/B; ETH M/B/B/B; SOL B/B/B/B; XRP B/B/B/B, where B=bearish and M=mixed; XRP 5m was bullish. Short-term bounce is not a reversal trigger.
 
+24h high/low and quote volume: BTC 71,966 / 67,449; 19.23B USDT. ETH 2,023.21 / 1,893.39; 10.96B USDT. SOL 82.38 / 77.85; 1.82B USDT. XRP 1.0438 / 0.9963; 0.806B USDT.
+
 ## 6. Decisions
 
 | Symbol | Eligible validated rule | Decision | Reason |

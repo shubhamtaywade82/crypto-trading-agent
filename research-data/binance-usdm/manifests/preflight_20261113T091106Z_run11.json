@@ -1,0 +1,85 @@
+{
+  "schema_version": "1.0.0",
+  "run_id": "context-strategy-20261113T091106Z-run11",
+  "as_of_utc": "2026-11-13T09:11:06.872Z",
+  "execution_environment": {
+    "cwd": "/",
+    "os": "Linux 6.18.57 x86_64",
+    "node": "v22.16.0",
+    "npm": "10.9.2",
+    "python": "3.13.5",
+    "cpu_cores": 3,
+    "memory_total_kb": 6091004,
+    "memory_available_kb": 4957292,
+    "disk_total_gb": 32,
+    "disk_available_gb": 30,
+    "git_repository_present": false,
+    "local_sdk_packages": {
+      "binance": false,
+      "binance_api_node": false,
+      "binance_connector": false,
+      "nemesis_binance_sdk": false
+    }
+  },
+  "checks": [
+    {
+      "capability": "Shell/compute",
+      "status": "PASS",
+      "evidence": "pwd=/; Linux 6.18.57; 3 CPU cores; 4.96 GB available RAM; Python3.13.5; /mnt/data writable.",
+      "impact": "Bounded data checks and artifact creation possible.",
+      "next_action": "Use small deterministic batches; do not assume project checkout."
+    },
+    {
+      "capability": "Repository/code",
+      "status": "BLOCKED",
+      "evidence": "No local .git checkout; remote GitHub source accessible at branch research/raw-ohlcv-archive-20261108T1026Z; source inspected at commit 81907846f4df30986019c5d9f18344f0dfac87af; project requires Node>=24/npm>=11.",
+      "impact": "Remote source inspection possible; local backtest execution impossible.",
+      "next_action": "Provision compatible Node/npm and clone exact branch."
+    },
+    {
+      "capability": "Network/Binance endpoints",
+      "status": "DEGRADED",
+      "evidence": "Direct curl to fapi.binance.com failed DNS (curl exit6, HTTP000, 12s timeout); connector wrappers returned klines/mark/ticker/OI/depth/funding/positioning; exchangeInfo serverTime stale by ~3h03m; HTTP status/headers unavailable.",
+      "impact": "Live snapshot usable for descriptive classification; contract execution validation blocked.",
+      "next_action": "Restore DNS and probe /fapi/v1/time and /fapi/v1/exchangeInfo uncached."
+    },
+    {
+      "capability": "Raw historical archive",
+      "status": "DEGRADED",
+      "evidence": "Remote GitHub raw archive accessible; local raw archive absent; 5m/15m partial, 1h gaps/count discrepancy, 4h provenance mismatch.",
+      "impact": "No robust all-timeframe aligned sample.",
+      "next_action": "Backfill 5m/15m and reconcile 1h/4h."
+    },
+    {
+      "capability": "Data quality/coverage",
+      "status": "DEGRADED",
+      "evidence": "Current live 3,200 klines: 3,184 completed, 16 forming excluded; zero duplicates/gaps/off-grid/OHLC/volume/nonfinite failures; cross-symbol aligned. Historical archive quality remains degraded.",
+      "impact": "Live context snapshot only; insufficient for robust strategy research.",
+      "next_action": "Use reconciled archive and full quality audit before experiments."
+    },
+    {
+      "capability": "Backtest harness/smoke test",
+      "status": "BLOCKED",
+      "evidence": "Remote scripts/backtest.ts and scripts/conditional-edge.ts exist; local runner absent; Node/npm below engines; no deterministic fixture smoke test run.",
+      "impact": "No experiment and no OOS evaluation.",
+      "next_action": "Provision runner, clone, run fixture twice, verify no-lookahead."
+    },
+    {
+      "capability": "Disk/storage",
+      "status": "PASS",
+      "evidence": "Overlay 32GB total, 30GB available; /mnt/data writable; GitHub branch write access available.",
+      "impact": "Local artifacts and remote durable snapshots possible.",
+      "next_action": "Persist only readback-verified artifacts."
+    },
+    {
+      "capability": "Artifact readback",
+      "status": "PASS",
+      "evidence": "Two OHLCV deltas, two delta manifests, two global archive manifests, four archive indexes and two receipts were readback-verified; registry/queue/snapshot/preflight/report to be readback-verified.",
+      "impact": "Archive append persistence verified.",
+      "next_action": "Verify remaining run artifacts after creation."
+    }
+  ],
+  "outcome": "RESEARCH_BLOCKED",
+  "experiment_executed": false,
+  "oos_evaluated": false
+}

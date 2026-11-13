@@ -52,8 +52,6 @@
       "quote_volume_24h": 20517346350.72,
       "open_interest_contracts": 100722.918,
       "oi_change_07_to_08_pct": -0.5027843,
-      "indicated_funding_pct": 0.001314,
-      "settled_funding_pct": 0.00127,
       "settled_funding_utc": "2026-11-13T08:00:00.000Z",
       "next_funding_utc": "2026-11-13T16:00:00.000Z",
       "funding_interval_hours": 8,
@@ -114,7 +112,9 @@
           "trend": "BEARISH"
         }
       },
-      "context": "4h/1h/15m bearish; 5m mixed; short-horizon buying does not reverse higher-timeframe downtrend."
+      "context": "4h/1h/15m bearish; 5m mixed; short-horizon buying does not reverse higher-timeframe downtrend.",
+      "premium_index_last_funding_rate_pct": 0.001314,
+      "last_settled_funding_pct": 0.00127
     },
     "ETHUSDT": {
       "mark_price": 1936.22,
@@ -126,8 +126,6 @@
       "quote_volume_24h": 11776786437.24,
       "open_interest_contracts": 2342190.363,
       "oi_change_07_to_08_pct": -0.20292485,
-      "indicated_funding_pct": -0.00025,
-      "settled_funding_pct": 0.000971,
       "settled_funding_utc": "2026-11-13T08:00:00.000Z",
       "next_funding_utc": "2026-11-13T16:00:00.000Z",
       "funding_interval_hours": 8,
@@ -188,7 +186,9 @@
           "trend": "BEARISH"
         }
       },
-      "context": "4h/1h/15m bearish; 5m mixed; short-term taker buying is not higher-timeframe confirmation."
+      "context": "4h/1h/15m bearish; 5m mixed; short-term taker buying is not higher-timeframe confirmation.",
+      "premium_index_last_funding_rate_pct": -0.00025,
+      "last_settled_funding_pct": 0.000971
     },
     "SOLUSDT": {
       "mark_price": 79.9,
@@ -200,8 +200,6 @@
       "quote_volume_24h": 1908557995.8772,
       "open_interest_contracts": 9415948.32,
       "oi_change_07_to_08_pct": -1.68149207,
-      "indicated_funding_pct": -0.007839,
-      "settled_funding_pct": -0.00543,
       "settled_funding_utc": "2026-11-13T08:00:00.000Z",
       "next_funding_utc": "2026-11-13T16:00:00.000Z",
       "funding_interval_hours": 8,
@@ -262,7 +260,9 @@
           "trend": "BEARISH"
         }
       },
-      "context": "4h/1h bearish; 15m/5m mixed; 1h OI declined 1.68% from 07:00 to 08:00."
+      "context": "4h/1h bearish; 15m/5m mixed; 1h OI declined 1.68% from 07:00 to 08:00.",
+      "premium_index_last_funding_rate_pct": -0.007839,
+      "last_settled_funding_pct": -0.00543
     },
     "XRPUSDT": {
       "mark_price": 1.02922679,
@@ -274,8 +274,6 @@
       "quote_volume_24h": 869987261.2677,
       "open_interest_contracts": 295139104.6,
       "oi_change_07_to_08_pct": -0.27230146,
-      "indicated_funding_pct": 0.000308,
-      "settled_funding_pct": 0.000653,
       "settled_funding_utc": "2026-11-13T08:00:00.000Z",
       "next_funding_utc": "2026-11-13T16:00:00.000Z",
       "funding_interval_hours": 8,
@@ -336,7 +334,9 @@
           "trend": "BEARISH"
         }
       },
-      "context": "4h/1h bearish; 15m mixed; 5m bullish divergence; latest 15m taker flow sell-dominant."
+      "context": "4h/1h bearish; 15m mixed; 5m bullish divergence; latest 15m taker flow sell-dominant.",
+      "premium_index_last_funding_rate_pct": 0.000308,
+      "last_settled_funding_pct": 0.000653
     }
   },
   "data_quality": {
@@ -355,7 +355,7 @@
     },
     "classification_note": "EMA/ATR summaries are descriptive features from a 200-bar rolling window. No training-derived context thresholds, volatility percentiles, structure labels or win probabilities were fitted."
   },
-  "funding_note": "Premium-index lastFundingRate field treated as current indicated funding; funding history at 08:00 UTC is last settled. Settlements observed at 00:00 and 08:00 UTC imply 8-hour cadence. No absolute funding value exceeds 0.05%.",
+  "funding_note": "GET /fapi/v1/premiumIndex lastFundingRate is the latest API-reported funding-rate field, not treated here as a guaranteed next-settlement forecast. GET /fapi/v1/fundingRate supplies the last settled rate at 08:00 UTC. Observed settlement spacing is 8h; nextFundingTime is 16:00 UTC. No absolute rate exceeds 0.05%.",
   "endpoint_mapping": {
     "klines": "GET /fapi/v1/klines",
     "mark_and_indicated_funding": "GET /fapi/v1/premiumIndex",

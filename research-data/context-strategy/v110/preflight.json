@@ -8,7 +8,7 @@
     {
       "capability": "shell/compute",
       "status": "PASS",
-      "evidence": "Debian 13; Python 3.13.5; Node 22.16.0; npm 10.9.2; 3 CPUs; 5.8 GiB RAM; 30 GiB free.",
+      "evidence": "pwd=/; Debian GNU/Linux 13 (trixie); Python 3.13.5; Node v22.16.0; npm 10.9.2; 3 CPUs; MemTotal 6,091,004 kB; MemAvailable 4,938,724 kB; overlay filesystem 32G total / 30G available (1% used).",
       "impact": "Python/JS data checks possible; project runtime requirement not met.",
       "next_action": "Provision Node 24/npm 11 and mount local checkout."
     },
@@ -22,7 +22,7 @@
     {
       "capability": "Binance SDK",
       "status": "BLOCKED",
-      "evidence": "SDK package not installed/importable; connector-backed public endpoints used instead.",
+      "evidence": "Node require.resolve returned MODULE_NOT_FOUND for binance-api-node, @binance/connector and binance. No Binance SDK dependency is importable.",
       "impact": "No SDK execution; direct REST DNS path unavailable.",
       "next_action": "Install SDK after network/runtime restoration."
     },
@@ -57,7 +57,7 @@
     {
       "capability": "disk/storage",
       "status": "DEGRADED",
-      "evidence": "30 GiB free; GitHub branch writable; Library upload failed with library_storage_limit_exceeded.",
+      "evidence": "df -h /: overlay 32G total, 5.3M used, 30G available; GitHub branch writable; Library upload failed with library_storage_limit_exceeded.",
       "impact": "GitHub persists artifacts; Library copy unavailable.",
       "next_action": "Continue GitHub persistence; retry Library only after quota remediation."
     },
@@ -71,7 +71,7 @@
     {
       "capability": "repo/code",
       "status": "DEGRADED",
-      "evidence": "Remote repository exists; package.json requires Node>=24/npm>=11; local checkout absent.",
+      "evidence": "pwd=/; git rev-parse --show-toplevel reports not a git repository; /workspace/crypto-trading-agent/package.json not found. Only unrelated runtime repositories under /opt/novnc and /opt/nvm were found.",
       "impact": "Remote scripts cannot be invoked in this runtime.",
       "next_action": "Restore local checkout and compatible runtime."
     },

@@ -1,0 +1,197 @@
+{
+  "schemaVersion": 1,
+  "runId": "context-strategy-20261113T0438Z-auto44",
+  "asOfUtc": "2026-11-13T04:40:27Z",
+  "environment": {
+    "runtime": "Managed Linux shell/container plus GitHub and Binance data connectors",
+    "cwd": "/",
+    "os": "Linux 6.18.57 x86_64 GNU/Linux",
+    "python": "3.13.5",
+    "node": "v22.16.0",
+    "npm": "10.9.2",
+    "pnpm": "NOT_INSTALLED",
+    "yarn": "NOT_INSTALLED",
+    "cpuCores": 3,
+    "memTotalKb": 6091004,
+    "memAvailableKb": 4913172,
+    "diskTotal": "32G",
+    "diskFree": "30G",
+    "localGitRepositoryPresent": false,
+    "localArchivePresent": false
+  },
+  "repository": {
+    "remote": "shubhamtaywade82/crypto-trading-agent",
+    "remoteMainAccessible": true,
+    "packageJsonBlobSha": "22576968ec662fd7d17dda10069489c69c597bcd",
+    "requiredEngines": {
+      "node": ">=24",
+      "npm": ">=11"
+    },
+    "remoteHarnessFiles": [
+      "scripts/backtest.ts",
+      "scripts/conditional-edge.ts"
+    ],
+    "localCheckout": "ABSENT",
+    "localNodeCompatible": false,
+    "sdkPackages": {
+      "binance": "NOT_INSTALLED",
+      "binanceApiNode": "NOT_INSTALLED",
+      "binanceConnector": "NOT_INSTALLED",
+      "nemesisBinanceSdk": "NOT_INSTALLED"
+    }
+  },
+  "network": {
+    "directRest": {
+      "status": "UNAVAILABLE",
+      "timeEndpoint": {
+        "endpoint": "GET /fapi/v1/time",
+        "curlExit": 6,
+        "error": "Could not resolve host: fapi.binance.com"
+      },
+      "exchangeInfoEndpoint": {
+        "endpoint": "GET /fapi/v1/exchangeInfo",
+        "curlExit": 6,
+        "error": "Could not resolve host: fapi.binance.com"
+      }
+    },
+    "binanceConnector": {
+      "status": "DEGRADED_HTTP_STATUS_UNAVAILABLE",
+      "successfulEndpoints": [
+        "GET /fapi/v1/markPrice",
+        "GET /fapi/v1/ticker/24hr",
+        "GET /fapi/v1/openInterest",
+        "GET /fapi/v1/fundingRate",
+        "GET /fapi/v1/klines",
+        "GET /fapi/v1/ticker/bookTicker",
+        "GET /futures/data/takerlongshortRatio",
+        "GET /futures/data/openInterestHist",
+        "GET /futures/data/globalLongShortAccountRatio"
+      ],
+      "httpStatusAndHeaders": "NOT_EXPOSED_BY_CONNECTOR",
+      "exchangeInfoServerTimeUtc": "2026-11-13T01:01:01.660Z",
+      "exchangeInfoRetrievedAtUtc": "2026-11-13T04:38:12.791Z",
+      "exchangeInfoAgeSeconds": 13031.131,
+      "observedStatuses": {
+        "BTCUSDT": "TRADING",
+        "ETHUSDT": "TRADING",
+        "SOLUSDT": "TRADING",
+        "XRPUSDT": "TRADING"
+      },
+      "executionValidation": "BLOCKED_STALE_METADATA"
+    }
+  },
+  "archive": {
+    "remoteBranch": "research/raw-ohlcv-archive-20261108T1026Z",
+    "localRawArchive": "ABSENT",
+    "globalManifest": "research-data/binance-usdm/manifests/archive_manifest_20261113T043205Z_auto44.json",
+    "globalManifestSha256": "5f2b09e009701364fbdd546346db3655e5dd8199307f2d7564e10a7b1d25e981",
+    "globalManifestBlobSha": "556a5175c427517385e431fb989f1f6f6a2695d2",
+    "intervalStatus": {
+      "5m": {
+        "rowsPerSymbol": 36000,
+        "rowsTotal": 144000,
+        "pages": 24,
+        "highwaterUtc": "2026-11-13T04:25:00Z",
+        "nextOpenUtc": "2026-11-13T04:30:00Z"
+      },
+      "15m": {
+        "rowsPerSymbol": 36000,
+        "rowsTotal": 144000,
+        "pages": 24,
+        "highwaterUtc": "2026-11-13T04:15:00Z",
+        "nextOpenUtc": "2026-11-13T04:30:00Z"
+      },
+      "1h": {
+        "rowsPerSymbol": 53873,
+        "rowsTotal": 215492,
+        "missingOpensPerSymbol": 28,
+        "countDiscrepancyRows": 8,
+        "highwaterUtc": "2026-11-13T03:00:00Z",
+        "nextOpenUtc": "2026-11-13T04:00:00Z"
+      },
+      "4h": {
+        "rawRows": 53960,
+        "alignedRows": 53816,
+        "canonicalRows": 53844,
+        "originalManifestShaMismatches": 13,
+        "highwaterUtc": "2026-11-13T00:00:00Z",
+        "nextOpenUtc": "2026-11-13T04:00:00Z"
+      }
+    }
+  },
+  "backtest": {
+    "remoteHarnessExists": true,
+    "localHarnessInvocable": false,
+    "smokeTest": "NOT_RUN",
+    "reason": "No local checkout; local Node/npm versions below remote package engines; direct REST DNS unavailable; no fixture executed; no strategy backtest ran."
+  },
+  "storage": {
+    "localDiskFree": "30G",
+    "remoteGitHubBranchWritable": true,
+    "deltaAndManifestReadbackVerified": true,
+    "indexReadbackVerified": true,
+    "globalManifestReadbackVerified": true,
+    "durableArchive": "GitHub branch; no local persistent archive mounted"
+  },
+  "checks": [
+    {
+      "capability": "shell/compute",
+      "status": "PASS",
+      "evidence": "Linux 6.18.57; Python 3.13.5; Node 22.16.0; npm 10.9.2; 3 CPU; 6.09 GB RAM; 30 GB free disk",
+      "impact": "Shell works, but Node is below project requirement",
+      "nextAction": "Provision Node 24+ and npm 11+"
+    },
+    {
+      "capability": "repo/code",
+      "status": "DEGRADED",
+      "evidence": "Remote repository and scripts readable; local .git absent; package requires Node>=24/npm>=11; SDK packages not installed",
+      "impact": "Cannot invoke harness or deterministic smoke test",
+      "nextAction": "Clone exact branch into compatible runtime"
+    },
+    {
+      "capability": "network/Binance endpoints",
+      "status": "DEGRADED",
+      "evidence": "Direct /time and /exchangeInfo curl exit 6; connector market calls succeeded but HTTP status unavailable; exchangeInfo is 13031.131s stale",
+      "impact": "Monitoring is possible; contract execution validation blocked",
+      "nextAction": "Restore DNS/HTTPS and require fresh /time and /exchangeInfo"
+    },
+    {
+      "capability": "raw historical archive",
+      "status": "DEGRADED",
+      "evidence": "Remote GitHub branch accessible; local archive absent; 5m/15m 36k rows/symbol; 1h 28 missing opens/symbol and 8-row discrepancy; 4h 13 manifest SHA mismatches",
+      "impact": "No robust aligned multi-cycle panel",
+      "nextAction": "Backfill page25 and reconcile 1h/4h lineage"
+    },
+    {
+      "capability": "data quality/coverage",
+      "status": "DEGRADED",
+      "evidence": "New 96-bar delta passed all integrity checks; current 120/220-bar windows passed; base history remains partial/degraded",
+      "impact": "Incremental slices are clean; full research panel is not ready",
+      "nextAction": "Continue historical backfill and lineage reconciliation"
+    },
+    {
+      "capability": "backtest harness/smoke test",
+      "status": "BLOCKED",
+      "evidence": "Remote scripts exist; local checkout absent; Node22/npm10 below Node24/npm11; no fixture smoke run",
+      "impact": "No strategy experiment or OOS evaluation",
+      "nextAction": "Provision compatible runtime and run fixture twice with no-lookahead invariance"
+    },
+    {
+      "capability": "disk/storage",
+      "status": "PASS",
+      "evidence": "30 GB local free; remote GitHub archive branch accepted writes",
+      "impact": "Storage capacity adequate; local filesystem is not durable archive",
+      "nextAction": "Continue verified GitHub archive writes"
+    },
+    {
+      "capability": "artifact readback",
+      "status": "PASS",
+      "evidence": "Both delta files, both delta manifests, global manifest and all four interval indexes read back exactly",
+      "impact": "Incremental archive artifacts are remotely persisted",
+      "nextAction": "Record hashes in run record and latest pointer"
+    }
+  ],
+  "runClassification": "RESEARCH_EXECUTED_DATA_QUALITY_ONLY",
+  "strategyExperimentStatus": "RESEARCH_BLOCKED",
+  "oosEvaluated": false
+}

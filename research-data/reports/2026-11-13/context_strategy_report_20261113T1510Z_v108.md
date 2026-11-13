@@ -67,7 +67,7 @@ The Donchian summaries are carried forward from the prior accessible evaluation;
 
 **Market timestamp:** 2026-11-13 15:10:17 UTC. Price, OI and book snapshots were retrieved around 15:09:30–15:09:35Z; OI-history and global ratios are through 15:00Z; taker flow is the 14:45Z 15m bucket. Funding interval observed: **8 hours**; next funding **16:00Z**; latest settlement **08:00Z**. No indicated or settled funding rate exceeds |0.05%|.
 
-| Symbol | Mark / last | 24h change | 5m / 15m / 1h / 4h | Indicated / settled funding | OI | OI change 13→15Z | Taker buy/sell | Top spread |
+| Symbol | Mark / last | 24h change | 5m / 15m / 1h / 4h | Premium-index field / settled funding | OI | OI change 13→15Z | Taker buy/sell | Top spread |
 |---|---:|---:|---|---:|---:|---:|---:|---:|
 | BTCUSDT (reference) | 68,754.87 / 68,760.90 | −3.535% | BEAR / MIXED / BEAR / BEAR | +0.002359% / +0.001270% | 99,611.301 BTC | −1.087% | 0.8787 | 0.0145 bp |
 | ETHUSDT | 1,938.76 / 1,939.02 | −2.952% | BEAR / MIXED / BEAR / BEAR | +0.005942% / +0.000971% | 2,342,368.370 ETH | −0.143% | 0.6997 | 0.1031 bp |

@@ -1,0 +1,133 @@
+{
+  "schema_version": "1.0.0",
+  "run_id": "context-strategy-2026-11-13T2041Z-v110",
+  "as_of_utc": "2026-11-13T20:41:14.599Z",
+  "current_sample": {
+    "rows_returned": 1600,
+    "completed_rows": 1586,
+    "forming_rows_excluded": 14,
+    "limit_per_symbol_interval": 100,
+    "checks": {
+      "duplicates": 0,
+      "missing_intervals": 0,
+      "off_grid": 0,
+      "non_monotonic": 0,
+      "ohlc_failures": 0,
+      "non_positive_volume": 0,
+      "non_finite": 0,
+      "cross_symbol_alignment": true
+    }
+  },
+  "historical_archive": {
+    "1h": {
+      "path": "research-data/binance-usdm/1h/archive-index.json",
+      "index_bytes": 72946,
+      "index_blob_sha": "bf992d01a63d48fdc1feac0a5a3435cea94bd6f1",
+      "rows_total": 215528,
+      "rows_per_symbol": 53882,
+      "pages": 36,
+      "first_open_utc": "2020-09-14T08:00:00.000Z",
+      "last_base_open_utc": "2026-11-13T14:00:00.000Z",
+      "latest_incremental_open_utc": "2026-11-13T19:00:00.000Z",
+      "quality": {
+        "duplicates": 0,
+        "missing_intervals": 0,
+        "ohlc_failures": 0,
+        "non_positive_volume": 0,
+        "non_finite": 0,
+        "misaligned": 0
+      }
+    },
+    "4h": {
+      "path": "research-data/binance-usdm/4h/archive-index.json",
+      "index_blob_sha": "bb50005d086e51d024076c365656ce876cda8934",
+      "raw_rows_total": 53964,
+      "raw_rows_by_symbol": {
+        "BTCUSDT": 13502,
+        "ETHUSDT": 13502,
+        "SOLUSDT": 13458,
+        "XRPUSDT": 13502
+      },
+      "canonical_rows_total": 53844,
+      "canonical_rows_per_symbol": 13461,
+      "canonical_start_utc": "2020-09-14T08:00:00.000Z",
+      "canonical_last_open_utc": "2026-11-05T16:00:00.000Z",
+      "raw_latest_incremental_open_utc": "2026-11-13T16:00:00.000Z",
+      "status": "DEGRADED_RAW_CANONICAL_ROWCOUNT_DISCREPANCY_AND_LOWER_TIMEFRAME_HISTORY_INCOMPLETE",
+      "page_hash_provenance_mismatches": 13,
+      "alternate_source_row_replay": {
+        "pairs": 14,
+        "rows_compared": 21000,
+        "exact_matches": 21000
+      },
+      "unresolved_missing_delta_files": 0
+    },
+    "5m": {
+      "path": "research-data/binance-usdm/5m/archive-index.json",
+      "index_bytes": 24843,
+      "index_blob_sha": "1e1cdd8ab7543f298f0f5f05b7b248b3a04feaac",
+      "base_history": "ABSENT_INCREMENTAL_ONLY",
+      "latest_completed_open_utc": "2026-11-13T20:30:00.000Z"
+    },
+    "15m": {
+      "path": "research-data/binance-usdm/15m/archive-index.json",
+      "index_bytes": 23300,
+      "index_blob_sha": "27a72056640df3e132f30b23db3c859f73a32ad0",
+      "base_history": "ABSENT_INCREMENTAL_ONLY",
+      "latest_completed_open_utc": "2026-11-13T20:15:00.000Z"
+    }
+  },
+  "append": {
+    "branch": "research/raw-ohlcv-archive-20261113T2040Z-run12",
+    "rows": 32,
+    "rows_by_interval": {
+      "5m": 24,
+      "15m": 8
+    },
+    "rows_by_symbol": {
+      "BTCUSDT": 8,
+      "ETHUSDT": 8,
+      "SOLUSDT": 8,
+      "XRPUSDT": 8
+    },
+    "quality": {
+      "duplicates": 0,
+      "missing_intervals": 0,
+      "off_grid": 0,
+      "ohlc_failures": 0,
+      "non_positive_volume": 0,
+      "non_finite": 0,
+      "forming_rows_excluded": 8
+    },
+    "files": [
+      {
+        "path": "research-data/binance-usdm/delta/binance_usdm_delta_20261113T203755Z_5m_completed.jsonl",
+        "bytes": 4201,
+        "rows": 24,
+        "sha256": "cbf857d2f9c2613f417f8c949356d0fdc99b304f38374bd0bb5ed99458bd945f",
+        "git_blob_sha": "808f40e202e39ddd6cb8126a81dfcd06c0f1b19d",
+        "readback_verified": true
+      },
+      {
+        "path": "research-data/binance-usdm/delta/binance_usdm_delta_20261113T203755Z_15m_completed.jsonl",
+        "bytes": 1432,
+        "rows": 8,
+        "sha256": "6ee182fee074156709b325f8fb68fb0965dc30f6d553e843bf3b64499f1c5a60",
+        "git_blob_sha": "a8a242cd4a78a123757fc80a7aa7277cd397bda0",
+        "readback_verified": true
+      },
+      {
+        "path": "research-data/binance-usdm/delta/manifest-20261113T203755Z-5m15m.json",
+        "rows": 32,
+        "sha256": "6c927975f7c288122b23929729969f1e8f02f768b42ed2d8b68413b5b6eacc67",
+        "git_blob_sha": "93d3abca87bb6cc36e907c92908eb263d52a643b",
+        "readback_verified": true
+      }
+    ]
+  },
+  "research_readiness": {
+    "experiment_executed": false,
+    "oos_evaluated": false,
+    "reason": "No local compatible runner or fixture smoke test; missing 5m/15m base history; 4h canonical rebuild and cost/funding calibration incomplete."
+  }
+}

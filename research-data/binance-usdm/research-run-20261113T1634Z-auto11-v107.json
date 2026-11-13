@@ -1,0 +1,142 @@
+{
+  "schema_version": "1.0.0",
+  "run_id": "context-strategy-20261113T163425Z-auto11-v107",
+  "as_of_utc": "2026-11-13T16:34:25.078Z",
+  "status": "RESEARCH_BLOCKED",
+  "monitoring_status": "COMPLETED",
+  "experiment_executed": false,
+  "oos_evaluated": false,
+  "environment": {
+    "shell": "PASS",
+    "cwd": "/",
+    "os": "Linux 6.18.57 x86_64",
+    "node": "v22.16.0",
+    "npm": "10.9.2",
+    "python": "3.13.5",
+    "cpu_cores": 3,
+    "memory_total_bytes": 6091004000,
+    "memory_available_bytes": 4945620000,
+    "disk_total_bytes": 33770192896,
+    "disk_free_bytes": 32029843456,
+    "pnpm": "NOT_USABLE_PERMISSION_ERROR",
+    "local_repo": "ABSENT",
+    "binance_sdk_packages": "NOT_INSTALLED"
+  },
+  "repo_code": {
+    "remote_repo": "shubhamtaywade82/crypto-trading-agent",
+    "branch": "research/raw-ohlcv-archive-20261108T1026Z",
+    "remote_source_access": "PASS_VIA_GITHUB_CONNECTOR",
+    "local_checkout": "ABSENT",
+    "package_engines": {
+      "node": ">=24",
+      "npm": ">=11"
+    },
+    "harness_files_present_remotely": [
+      "scripts/backtest.ts",
+      "scripts/conditional-edge.ts",
+      "src/backtesting/ReplayService.ts"
+    ],
+    "harness_invocation": "BLOCKED_NODE_ENGINE_AND_NO_LOCAL_CHECKOUT",
+    "smoke_test": "NOT_RUN"
+  },
+  "network": {
+    "direct_rest": "BLOCKED_DNS_CURL_EXIT_6_HTTP_000",
+    "binance_connector": "SUCCESS_FOR_MARK_TICKER_OI_KLINES_FUNDING_BASIS_TAKER_BOOK_POSITIONING",
+    "connector_http_status_headers": "NOT_EXPOSED",
+    "server_time": "UNAVAILABLE",
+    "exchangeInfo_serverTime_utc": "2026-11-13T06:02:01.702Z",
+    "exchangeInfo_age_ms": 37943376,
+    "contract_execution_validation": "BLOCKED_STALE_METADATA"
+  },
+  "raw_archive": {
+    "status": "PARTIALLY_COMPLETED",
+    "rows_appended": 72,
+    "rows_by_interval": {
+      "5m": 48,
+      "15m": 16,
+      "1h": 4,
+      "4h": 4
+    },
+    "delta_manifest_ref": "research-data/binance-usdm/manifests/delta_manifest_20261113T1634Z_auto11_v107.json",
+    "delta_manifest_sha256": "c4dbc1b1fa591cec04e422a95cf2e4c384efeb3ac33b3d212519027a9a77fe12",
+    "archive_manifest_ref": "research-data/binance-usdm/manifests/archive_manifest_20261113T1634Z_auto11_v107.json",
+    "archive_manifest_sha256": "12301f537613651c9af12a31d58929cd297ef037c67c68755c19930c6f3d57f7",
+    "index_advance": "NOT_ADVANCED"
+  },
+  "data_quality": {
+    "rolling_sample_rows": 24000,
+    "completed_rows": 23984,
+    "forming_excluded": 16,
+    "duplicates": 0,
+    "missing_intervals_within_sample": 0,
+    "off_grid": 0,
+    "non_monotonic": 0,
+    "ohlc_failures": 0,
+    "non_positive_volume": 0,
+    "non_finite": 0,
+    "full_archive": "DEGRADED"
+  },
+  "backtest": {
+    "harness": "REMOTE_ONLY",
+    "smoke_test": "NOT_RUN",
+    "experiment": "NOT_EXECUTED",
+    "oos": "NOT_EVALUATED",
+    "blockers": [
+      "No local repo/compatible Node runner",
+      "Archive base/index integrity defects",
+      "Backtest CLI excludes 5m",
+      "Candle parser drops closeTime and other kline fields; zero volume accepted",
+      "BTC included as tradable default",
+      "Conditional-edge confidence hard-coded 90%, minN default30, no CLI embargo",
+      "Execution costs and historical funding not calibrated"
+    ]
+  },
+  "artifacts": {
+    "delta_files": [
+      {
+        "path": "research-data/binance-usdm/delta/binance_usdm_delta_20261113T162834Z_5m15m_completed.jsonl",
+        "rows": 56,
+        "sha256": "c661a8abbca983190ff4a75e66d31a476caf325344f8b4f2ef80f711c34e28dc",
+        "git_blob_sha": "2911ca4f0bc88c27c9f83cb609a8c7e6e6439602"
+      },
+      {
+        "path": "research-data/binance-usdm/delta/binance_usdm_delta_20261113T162853Z_1h4h_completed.jsonl",
+        "rows": 8,
+        "sha256": "db8dab1809baed3945a5cc3cdc80a833c208c3d9da66ca2a2ee514d1532913f9",
+        "git_blob_sha": "77ca286a5ddd32ca0e9b968c64d7a7abf8d66cd8"
+      },
+      {
+        "path": "research-data/binance-usdm/delta/binance_usdm_delta_20261113T163301Z_5m15m_tail_completed.jsonl",
+        "rows": 8,
+        "sha256": "86246c38fe3d4415e57b423c21d27f5e9ad4cecae3b2bd91910ad6ceaacf18a7",
+        "git_blob_sha": "4014e2852b769fde4b14a7e06dbd4ca4171595dd"
+      }
+    ],
+    "delta_manifest": {
+      "path": "research-data/binance-usdm/manifests/delta_manifest_20261113T1634Z_auto11_v107.json",
+      "sha256": "c4dbc1b1fa591cec04e422a95cf2e4c384efeb3ac33b3d212519027a9a77fe12",
+      "blob_sha": "f01bc51b3e9448004da32e4445c7aaf9bf444654"
+    },
+    "archive_manifest": {
+      "path": "research-data/binance-usdm/manifests/archive_manifest_20261113T1634Z_auto11_v107.json",
+      "sha256": "12301f537613651c9af12a31d58929cd297ef037c67c68755c19930c6f3d57f7",
+      "blob_sha": "4b565e43a3b219b1d0180afd14d14b169b2d8223"
+    },
+    "current_snapshot": {
+      "path": "research-data/binance-usdm/current-market-snapshot-v107.json",
+      "sha256": "63f32edd9a73bd1d050242d5252ca5499d7ddb008f38fc4a6174e7497a02cf47",
+      "blob_sha": "cda9833473d5b44f9790ea66fe30ebd59c5c7c37"
+    },
+    "registry": {
+      "path": "research-data/binance-usdm/conditional-strategy-registry-snapshot-v107.json",
+      "sha256": "TO_BE_FILLED",
+      "blob_sha": "TO_BE_FILLED"
+    },
+    "queue": {
+      "path": "research-data/binance-usdm/research-queue-v107.json",
+      "sha256": "TO_BE_FILLED",
+      "blob_sha": "TO_BE_FILLED"
+    }
+  },
+  "next_action": "Provision Node >=24/npm >=11, clone exact branch, fix RQ-012/RQ-029/RQ-030 and reconcile archive indexes before any backtest."
+}

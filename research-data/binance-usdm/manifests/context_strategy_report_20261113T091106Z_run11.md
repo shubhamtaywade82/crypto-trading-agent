@@ -1,7 +1,7 @@
 # Binance USD-M Context Strategy Research - Run 11 / v106
 
 **As of:** 2026-11-13T09:11:06.872Z  
-**Market snapshot:** 2026-11-13T09:05:55.007Z  
+**Core market snapshot:** 2026-11-13T09:05:55Z; **basis/depth refresh:** 2026-11-13T09:14:42Z  
 **Archive append highwater:** 5m 09:00Z; 15m 08:45Z; 1h 08:00Z; 4h 04:00Z  
 **Run outcome:** RESEARCH_BLOCKED
 
@@ -67,6 +67,9 @@ The 200-bar rolling windows are too short to infer multiple-cycle context occupa
 - XRP: +0.000308% / +0.000653%
 
 Next funding: 16:00 UTC. No absolute premiumIndex-reported or last-settled rate exceeds 0.05%.
+
+**1h basis at 08:00 UTC:** BTC -0.06%, ETH -0.08%, SOL -0.05%, XRP -0.05%.
+**20-level order-book notional imbalance (bid minus ask, divided by total):** BTC +23.38%, ETH +83.88%, SOL -6.51%, XRP -5.19%. Depth snapshots exclude RPI orders and are not a size-dependent impact/fill model.
 
 Best bid/ask spreads: BTC 0.0145 bps, ETH 0.0516 bps, SOL 1.2516 bps, XRP 0.9717 bps. These are top-of-book snapshots, not size-dependent execution costs.
 

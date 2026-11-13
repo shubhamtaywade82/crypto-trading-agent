@@ -1,0 +1,126 @@
+{
+  "schema_version": "1.0.0",
+  "experiment_id": "EXP-DQ-20261113T1917Z-013",
+  "version": "v110",
+  "created_at_utc": "2026-11-13T19:19:45.028Z",
+  "experiment_type": "DATA_QUALITY_INCREMENTAL_APPEND",
+  "status": "RESEARCH_EXECUTED",
+  "strategy_evidence_status": "NOT_APPLICABLE",
+  "oos_status": "NOT_EVALUATED",
+  "hypothesis": "Completed Binance USDⓈ-M kline bars after active 5m/15m/1h highwaters can be appended without gaps, duplicates, timestamp misalignment or OHLCV invariant failures; 4h remains unchanged while its current candle is forming.",
+  "source": {
+    "provider": "Binance USDⓈ-M",
+    "method": "connector-backed public endpoints",
+    "endpoint": "GET /fapi/v1/klines",
+    "symbols": [
+      "BTCUSDT",
+      "ETHUSDT",
+      "SOLUSDT",
+      "XRPUSDT"
+    ],
+    "intervals": [
+      "5m",
+      "15m",
+      "1h",
+      "4h"
+    ]
+  },
+  "data_window": {
+    "first_new_open_utc": "2026-11-13T18:35:00Z",
+    "last_new_open_utc": "2026-11-13T19:10:00Z",
+    "rows_appended": 48,
+    "rows_by_interval": {
+      "5m": 32,
+      "15m": 12,
+      "1h": 4,
+      "4h": 0
+    },
+    "rows_by_symbol": {
+      "BTCUSDT": 12,
+      "ETHUSDT": 12,
+      "SOLUSDT": 12,
+      "XRPUSDT": 12
+    },
+    "sample_rows_per_symbol_interval": 120,
+    "completed_rows_per_sample": 119,
+    "forming_rows_excluded_per_sample": 1
+  },
+  "previous_highwaters_utc": {
+    "5m": "2026-11-13T18:30:00Z",
+    "15m": "2026-11-13T18:15:00Z",
+    "1h": "2026-11-13T17:00:00Z",
+    "4h": "2026-11-13T12:00:00Z"
+  },
+  "resulting_highwaters_utc": {
+    "5m": "2026-11-13T19:10:00Z",
+    "15m": "2026-11-13T19:00:00Z",
+    "1h": "2026-11-13T18:00:00Z",
+    "4h": "2026-11-13T12:00:00Z"
+  },
+  "quality_checks": {
+    "duplicates": 0,
+    "missing_intervals": 0,
+    "off_grid": 0,
+    "non_monotonic": 0,
+    "ohlc_invariant_failures": 0,
+    "non_finite": 0,
+    "non_positive_volume": 0,
+    "close_time_failures": 0,
+    "delta_duplicate_keys": 0,
+    "cross_symbol_alignment": "PASS",
+    "readback": "PASS"
+  },
+  "train_validation_test_split": "NOT_APPLICABLE — data-quality append, not a strategy experiment",
+  "costs": "NOT_APPLICABLE — no trade simulation",
+  "metrics": "No win rate, expectancy, profit factor, drawdown or OOS metrics generated.",
+  "code": {
+    "runtime": "functions.exec managed JavaScript runtime",
+    "repository_commit": null,
+    "script_hash": null,
+    "seed": null,
+    "backtest_harness": "NOT_INVOKED"
+  },
+  "artifacts": [
+    {
+      "path": "research-data/binance-usdm/delta/binance_usdm_delta_20261113T1917Z_5m15m1h_completed.jsonl",
+      "sha256": "c5109989f2e4285549b36af1e09f5148b3610ea7f9ae51c12672c1be7800b812",
+      "blob_sha1": "4d8679fc8bc4c3142955eb5dff5d677fe1f15be7",
+      "bytes": 14003,
+      "readback_verified": true
+    },
+    {
+      "path": "research-data/binance-usdm/delta/binance_usdm_delta_20261113T1917Z_5m15m1h_completed.manifest.json",
+      "sha256": "dca0e0372acb942be04d671474dacf355338bd4e81ed80e76735c19a0738f32d",
+      "blob_sha1": "bb2b5bfebb77dae5d234af27a9ff4504df530148",
+      "bytes": 6265,
+      "readback_verified": true
+    },
+    {
+      "path": "research-data/binance-usdm/snapshots/current_market_snapshot_20261113T1919Z_auto11_v110.json",
+      "sha256": "85c4c0630aac7dbf8ef4ec7acd40b36667edb4168f037194f8698c26d45cd512",
+      "blob_sha1": "6e12f843dec1001c42aef5f3fdec1d6ea1b752ba",
+      "bytes": 10263,
+      "readback_verified": true
+    },
+    {
+      "path": "research-data/binance-usdm/manifests/archive_manifest_20261113T1920Z_auto11_v110.json",
+      "sha256": "38f06163435a27d2ef231929b51072adc416cbc10a85ca501b2bfc1478a8d9d8",
+      "blob_sha1": "49ed3f0ab08728530efa636081808d318923df4f",
+      "readback_verified": true
+    },
+    {
+      "path": "research-data/binance-usdm/manifests/index_update_receipt_20261113T1920Z_auto11_v110.json",
+      "sha256": "fd0023ef3ce0823d8e599d0e26141ee49e2bd2f232956ab18b02ba8245929c9f",
+      "blob_sha1": "d3e3dc19baff117e11a3609997a788663ccf25e9",
+      "bytes": 3829,
+      "readback_verified": true
+    }
+  ],
+  "limitations": [
+    "No local repository checkout",
+    "Node/npm below project requirements",
+    "Direct REST DNS/timeout failures",
+    "Historical base archive gaps and derivative archive hash mismatch",
+    "No strategy backtest or OOS evaluation"
+  ]
+}

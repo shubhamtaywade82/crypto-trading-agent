@@ -142,14 +142,14 @@ Connector-backed endpoints: `/fapi/v1/klines`, `/fapi/v1/premiumIndex`, `/fapi/v
 
 | Capability | Status | Evidence | Impact / next action |
 |---|---|---|---|
-| Shell/compute | PASS | Debian 13; Python 3.13.5; Node 22.16.0; npm 10.9.2; 3 CPUs; 5.8 GiB RAM; 30 GiB free | Compute available; install Node24/npm11 |
-| Repo/code | DEGRADED | Remote repo exists; local checkout absent; project requires Node≥24/npm≥11 | Scripts not invoked; restore checkout/runtime |
-| Binance SDK | BLOCKED | SDK not installed/importable | Connector/REST only; install SDK after runtime restoration |
+| Shell/compute | PASS | `pwd=/`; Debian 13; Python 3.13.5; Node 22.16.0; npm 10.9.2; 3 CPUs; 6.09 GB total / 4.94 GB available RAM; 32 GB disk / 30 GB free | Compute available; install Node24/npm11 |
+| Repo/code | DEGRADED | `git rev-parse` says not a repository at `/`; `/workspace/crypto-trading-agent/package.json` absent; only unrelated `/opt/novnc` and `/opt/nvm` repos found; remote repo exists | Scripts not invoked; restore checkout/runtime |
+| Binance SDK | BLOCKED | `require.resolve` returned `MODULE_NOT_FOUND` for `binance-api-node`, `@binance/connector` and `binance` | Connector only; install SDK after runtime restoration |
 | Network/Binance | DEGRADED | Connector market calls succeeded; direct DNS failed; exchangeInfo stale | Current descriptive snapshot available; contract-status validation blocked |
 | Raw archive | PASS | 48-row delta, manifest, snapshot, archive manifest, four indexes and receipt persisted/read back | Continue from latest highwaters |
 | Data quality/coverage | DEGRADED | Current sample passes; base 5m/15m gaps, 1h missing opens, 4h raw provenance degraded, SOL funding hash mismatch | Historical strategy inference blocked pending repair |
 | Backtest/smoke | BLOCKED | Remote scripts exist; no local checkout; no fixture smoke | No strategy backtest/OOS |
-| Disk/storage | DEGRADED | 30 GiB free; GitHub branch writable; Library upload failed with `library_storage_limit_exceeded` | GitHub branch is durable source of truth |
+| Disk/storage | DEGRADED | `df -h /`: 32 GB total, 5.3 MB used, 30 GB free; GitHub branch writable; Library upload failed with `library_storage_limit_exceeded` | GitHub branch is durable source of truth |
 | Artifact readback | PASS | Delta, manifests, snapshot, receipt, indexes and v110 context artifacts re-read | Persistence verified on GitHub |
 
 **Execution label:** `RESEARCH_EXECUTED` (data-quality append only). `OOS_EVALUATED`: **NO**. Strategy backtest: **BLOCKED**.

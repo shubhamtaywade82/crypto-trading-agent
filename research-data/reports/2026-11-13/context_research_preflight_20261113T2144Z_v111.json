@@ -55,10 +55,10 @@
     },
     {
       "capability": "artifact readback",
-      "status": "DEGRADED",
-      "evidence": "Three new raw delta files, one manifest and all four interval indexes were reopened; SHA-256 and Git blob SHA matched. New v111 context artifacts are being written and will be read back before finalizing.",
+      "status": "PASS",
+      "evidence": "Three raw deltas, raw manifest and four archive indexes plus all seven initial v111 context artifacts were reopened. Exact-content UTF-8 SHA-256 and Git blob SHA checks passed.",
       "impact": "Raw archive persistence is verified; context artifact verification is pending.",
-      "next_action": "Read back every v111 context artifact and record hashes in the artifact manifest."
+      "next_action": "Continue remote GitHub readback verification for the final report, run receipt and artifact manifest."
     }
   ],
   "endpoints": [
@@ -131,5 +131,56 @@
   "experiment_executed": false,
   "oos_evaluated": false,
   "classification_run": true,
-  "archive_append_completed": true
+  "archive_append_completed": true,
+  "context_artifact_readback": [
+    {
+      "path": "research-data/registry/context_strategy_registry_20261113T2144Z_v111.json",
+      "bytes": 12836,
+      "sha256": "e94c40ac81a2e2df9184e3ae79b19db1e1a0619bd10902ab3233862c3b02fbf9",
+      "git_blob_sha": "057a7abd95b9f0e365779124e4930530cef5837d",
+      "readback_verified": true
+    },
+    {
+      "path": "research-data/registry/research_queue_20261113T2144Z_v111.json",
+      "bytes": 7637,
+      "sha256": "38a2dfb58327f1a37fdce53cff1bfcb06002a563ad20f852999cb441f63bf041",
+      "git_blob_sha": "692470c9c059804c4eb945c8bf9c6aaafa2c5006",
+      "readback_verified": true
+    },
+    {
+      "path": "research-data/reports/2026-11-13/current_market_snapshot_20261113T2144Z_v111.json",
+      "bytes": 9131,
+      "sha256": "cf523ea2d2a2651f0fd14a448f8098d171fc7f6517e74e74ea3b0f64c32db38a",
+      "git_blob_sha": "bcb206310bf0c3491d53e4dcd3408ccbf2ffa538",
+      "readback_verified": true
+    },
+    {
+      "path": "research-data/reports/2026-11-13/context_research_preflight_20261113T2144Z_v111.json",
+      "bytes": 6520,
+      "sha256": "88f812f515bcfd52add0e89fa72a0ad4cc3a8e72a57764fcab83f58a001f342d",
+      "git_blob_sha": "f35b382fa43e00e15298be87c7d185eecf70d049",
+      "readback_verified": true
+    },
+    {
+      "path": "research-data/reports/2026-11-13/data_quality_audit_20261113T2144Z_v111.json",
+      "bytes": 4528,
+      "sha256": "05951126d2bd03c869a3d5e7d9196249372d909b0caad694a8644e01bbb172e6",
+      "git_blob_sha": "45c6edd6a957ee627f3457091f726b84e220588d",
+      "readback_verified": true
+    },
+    {
+      "path": "research-data/reports/2026-11-13/archive_update_manifest_20261113T2144Z_v111.json",
+      "bytes": 3435,
+      "sha256": "85f4c11bfb0b9df265507518a32eba4a254c102084267cba5f4dc69145289e2e",
+      "git_blob_sha": "6e4058700cc2476dbd33246b712e368f432734fd",
+      "readback_verified": true
+    },
+    {
+      "path": "research/context-strategy/runs/20261113T2144Z_v111.json",
+      "bytes": 1712,
+      "sha256": "d365dcde74b28ff7ce1e15355716f9b0fed85708a7be1886b3a875c3dcd6c921",
+      "git_blob_sha": "125e0ef0f5f9497dafd26dfb4f9ca6069470df6a",
+      "readback_verified": true
+    }
+  ]
 }

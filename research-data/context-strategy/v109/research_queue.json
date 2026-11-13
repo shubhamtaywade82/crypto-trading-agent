@@ -31,7 +31,7 @@
       "id": "DQ-4H-RECONCILE",
       "status": "BLOCKED",
       "title": "Reconcile 4h raw/aligned/canonical history",
-      "blocker": "53,960 raw; 53,816 aligned; 53,844 canonical; 13 page-manifest SHA mismatches.",
+      "blocker": "Canonical 4h series is PASS (53,844 rows; 13,461/symbol; zero gaps/duplicates; readback verified) but raw page provenance remains DEGRADED with 13 recorded page-manifest SHA mismatch observations; one malformed XRP original record is preserved with a separate correction artifact.",
       "next_action": "Recompute exact-byte page hashes; isolate mismatches; repair alignment without rewriting raw evidence."
     },
     {
@@ -82,6 +82,14 @@
       "title": "Hourly snapshot and validated-rule eligibility",
       "blocker": "No OOS_VALIDATED entries; exchangeInfo metadata stale.",
       "next_action": "Refresh completed-candle snapshot; remain NO_TRADE until a validated rule and exact trigger exist."
+    },
+    {
+      "priority": 4.5,
+      "id": "DQ-DERIVATIVE-FUNDING",
+      "title": "Reconcile historical funding archive and extend derivative history",
+      "status": "BLOCKED",
+      "blocker": "Only SOLUSDT funding archive is indexed: 6,806 rows from 2020-09-14 08:00Z to 2026-11-05 16:00Z, 802,973 bytes; expected SHA-256 34bfd473... differs from exact readback SHA-256 6440cb65...; 3,501 blank mark-price rows. No BTC/ETH/XRP funding archive or historical OI archive is present.",
+      "next_action": "Re-read exact SOL funding bytes, reconcile serialization/hash provenance, retain both hashes, quantify blank mark-price rows; fetch and archive funding history for BTC/ETH/XRP and OI history if endpoints support it."
     }
   ]
 }

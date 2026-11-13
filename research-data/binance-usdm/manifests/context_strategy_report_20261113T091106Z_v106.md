@@ -60,13 +60,15 @@ The 200-bar rolling windows are too short to infer multiple-cycle context occupa
 | SOLUSDT | 79.90 / 79.92 | -3.455% | Bearish / Bearish | 1.0634 | -1.681% |
 | XRPUSDT | 1.02923 / 1.02940 | -1.417% | Bearish / Bearish | 0.8177 | -0.272% |
 
-**Funding:** `premiumIndex.lastFundingRate` (latest API-reported rate, not treated as a guaranteed next-settlement forecast) / last settled funding from `/fapi/v1/fundingRate`, both percent per observed 8h cadence:
+**Funding:** `premiumIndex.lastFundingRate` (latest API-reported rate, not treated as a guaranteed next-settlement forecast) / last settled funding from `/fapi/v1/fundingRate`, both percent; `/fapi/v1/fundingInfo` explicitly reports 8h for all four symbols:
 - BTC: +0.001314% / +0.001270%
 - ETH: -0.000250% / +0.000971%
 - SOL: -0.007839% / -0.005430%
 - XRP: +0.000308% / +0.000653%
 
-Next funding: 16:00 UTC. No absolute premiumIndex-reported or last-settled rate exceeds 0.05%.
+Next funding: 16:00 UTC. No absolute premiumIndex-reported or last-settled rate exceeds 0.05% per 8h interval.
+
+Funding interval verification: `/fapi/v1/fundingInfo` returned `fundingIntervalHours=8` for BTCUSDT, ETHUSDT, SOLUSDT and XRPUSDT (response `updateTime` was null for these entries).
 
 **1h basis at 08:00 UTC:** BTC -0.06%, ETH -0.08%, SOL -0.05%, XRP -0.05%.
 **20-level order-book notional imbalance (bid minus ask, divided by total):** BTC +23.38%, ETH +83.88%, SOL -6.51%, XRP -5.19%. Depth snapshots exclude RPI orders and are not a size-dependent impact/fill model.

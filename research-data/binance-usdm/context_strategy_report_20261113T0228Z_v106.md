@@ -8,7 +8,7 @@
 ## 1. Research progress
 
 - **Monitoring:** 200 klines per symbol × interval, 4 symbols × 4 intervals = **3,200 rows fetched**; **3,184 completed**, **16 forming excluded**. All 16 series passed current-window integrity checks.
-- **Raw data persisted:** **232 completed bars** were written as a separate GitHub delta and read back. SHA-256 `89b599e602115267917334e251d722eca351ac1f909f316d8f09f342b6baa582`; 5m=164, 15m=52, 1h=12, 4h=4; 58 per symbol.
+- **Raw data persisted:** **232 completed bars** were written as a separate GitHub delta and read back. SHA-256 `93fb878cbf2095212c18a686dd2f589fbc91615759fd0be44cd20420cd94b2bd`; 5m=164, 15m=52, 1h=12, 4h=4; 58 per symbol.
 - **Canonical archive:** interval indexes and canonical highwaters were **not** changed. The delta is preserved but not integrated into canonical indexes because the index files contain duplicated alias fields and unresolved 1h/4h row-count/provenance defects.
 - **Experiments:** 0. **OOS evaluations:** 0. No promotion, downgrade or rejection.
 - **Persistent snapshots:** v106 registry, queue, market snapshot, archive manifest and report are stored on the research branch and readback-verified. Raw delta and delta manifest SHA-256 readback checks also passed.

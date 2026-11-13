@@ -124,7 +124,7 @@ No calibrated cost model ran. Parent 15bp round-trip proxy is uncalibrated; remo
 
 ### Endpoints and freshness
 
-Connector-backed endpoints: `/fapi/v1/klines`, `/fapi/v1/premiumIndex`, `/fapi/v1/ticker/24hr`, `/fapi/v1/openInterest`, `/futures/data/openInterestHist`, `/fapi/v1/depth`, `/futures/data/takerlongshortRatio`, `/futures/data/globalLongShortAccountRatio`, `/fapi/v1/fundingRate`, `/fapi/v1/fundingInfo`, `/futures/data/basis`. Connector calls do not expose HTTP status/headers. Direct `/fapi/v1/time` DNS failed and direct `/fapi/v1/exchangeInfo` timed out. Connector exchangeInfo serverTime **06:02:01.705Z** is stale by over 13 hours; contract status is not accepted for execution validation.
+Connector-backed endpoints: `/fapi/v1/klines`, `/fapi/v1/premiumIndex`, `/fapi/v1/ticker/24hr`, `/fapi/v1/openInterest`, `/futures/data/openInterestHist`, `/fapi/v1/depth`, `/futures/data/takerlongshortRatio`, `/futures/data/globalLongShortAccountRatio`, `/fapi/v1/fundingRate`, `/fapi/v1/fundingInfo`, `/futures/data/basis`. Connector calls do not expose HTTP status/headers. Direct curl probes with `--connect-timeout 3s` and `--max-time 7s` returned **HTTP 000 / DNS resolution failure** for all six probes: `/fapi/v1/time` (0.0015s), `/fapi/v1/exchangeInfo` (4.755s), `/fapi/v1/klines` (0.0003s), `/fapi/v1/premiumIndex` (4.755s), `/fapi/v1/openInterest` (0.0001s), `/fapi/v1/ticker/24hr` (4.755s). Connector exchangeInfo serverTime **06:02:01.705Z** was stale by **13h22m** at 19:24:17Z; contract status is not accepted for execution validation.
 
 ### Next research queue
 

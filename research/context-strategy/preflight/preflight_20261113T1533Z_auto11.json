@@ -1,0 +1,86 @@
+{
+  "schemaVersion": 1,
+  "runId": "context-strategy-20261113T1531Z-auto11",
+  "asOfUtc": "2026-11-13T15:33:49.875Z",
+  "checks": [
+    {
+      "capability": "shell_compute",
+      "status": "PASS",
+      "evidence": "Debian 13; Linux 6.18.57; 3 CPUs; RAM 6,091,004 kB total / 4,945,232 kB available; Node v22.16.0; npm 10.9.2; Python 3.13.5; 30G free on overlay.",
+      "impact": "Shell and bounded analysis available.",
+      "nextAction": "Use only for reconnaissance and data-quality checks until compatible harness is provisioned."
+    },
+    {
+      "capability": "repository_code",
+      "status": "DEGRADED",
+      "evidence": "No local .git checkout found. GitHub repository shubhamtaywade82/crypto-trading-agent readable; package.json declares Node >=24 and npm >=11; scripts/backtest.ts and scripts/conditional-edge.ts fetched remotely; remote code commit c00af68f6939b854383778aa7930bbfd3c486d6d.",
+      "impact": "Code inspected remotely, but not executable locally.",
+      "nextAction": "Provision Node24/npm11 and clone exact commit; verify branch/manifest code lineage."
+    },
+    {
+      "capability": "binance_sdk",
+      "status": "UNAVAILABLE",
+      "evidence": "binance, binance-api-node, @binance/connector and @binance/futures-connector all fail require.resolve.",
+      "impact": "No SDK execution; Binance connector wrappers used.",
+      "nextAction": "Do not claim SDK use; provision only if required by the project."
+    },
+    {
+      "capability": "direct_network_binance_rest",
+      "status": "BLOCKED",
+      "evidence": "Bounded curl/urllib probes to fapi.binance.com fail DNS (curl exit 6 / HTTP 000); /fapi/v1/time, exchangeInfo, klines, premiumIndex, openInterest and ticker direct REST unavailable.",
+      "impact": "No direct REST HTTP status/headers or server-time drift measurement.",
+      "nextAction": "Restore outbound DNS/HTTPS; probe official endpoints with explicit timeouts."
+    },
+    {
+      "capability": "binance_connector_data",
+      "status": "DEGRADED",
+      "evidence": "Binance USD-M connector returned mark/ticker/OI/book/funding history, 200 klines per symbol/interval, taker flow, OI statistics and global long-short ratio. Connector does not expose HTTP status/headers. exchangeInfo.serverTime=2026-11-13T06:02:01.706Z, retrieved ~15:21:36Z (age 33,574s).",
+      "impact": "Current descriptive snapshot usable; contract status not trusted for execution.",
+      "nextAction": "Obtain fresh exchangeInfo/server time; require <5s drift before execution validation."
+    },
+    {
+      "capability": "raw_historical_archive",
+      "status": "PASS",
+      "evidence": "Remote GitHub archive branch research/raw-ohlcv-archive-20261108T1026Z; two delta files, two delta manifests, global archive manifest and four interval indexes persisted and read back exactly.",
+      "impact": "Incremental raw archive persistence verified; historical base remains partial/degraded.",
+      "nextAction": "Continue page-0027 backfill and reconcile 1h/4h provenance."
+    },
+    {
+      "capability": "data_quality_coverage",
+      "status": "DEGRADED",
+      "evidence": "52 completed rows appended; 24 forming rows excluded; zero duplicate/gap/off-grid/OHLC/non-finite/non-positive-volume/close-time errors in new deltas. 200-row window: 3,184 completed across 16 series, 16 forming excluded, zero detected quality failures. Historical 5m/15m page archive partial; 1h/4h lineage defects remain.",
+      "impact": "Current monitoring data clean; historical inference still blocked.",
+      "nextAction": "Backfill page27; reconcile 1h/4h before research splits."
+    },
+    {
+      "capability": "backtest_harness_smoke_test",
+      "status": "BLOCKED",
+      "evidence": "Remote scripts exist but no local checkout; Node22.16/npm10.9 below package engines Node>=24/npm>=11; no deterministic fixture run.",
+      "impact": "No valid strategy experiment or OOS run.",
+      "nextAction": "Provision compatible runtime and checkout; run deterministic fixture twice and no-lookahead invariance."
+    },
+    {
+      "capability": "disk_storage",
+      "status": "PASS",
+      "evidence": "30G free local overlay; GitHub archive branch writes succeeded.",
+      "impact": "Remote persistent archive available; local raw archive absent.",
+      "nextAction": "Continue remote append and readback verification."
+    },
+    {
+      "capability": "artifact_readback",
+      "status": "PASS",
+      "evidence": "Delta files and manifests fetched back byte-identically; SHA-256 verified; 5m/15m/1h/4h archive indexes fetched back with updated timestamps and global manifest pointer.",
+      "impact": "Archive update is reproducible and persisted on GitHub branch.",
+      "nextAction": "Read back all run-level main-branch artifacts after creation."
+    }
+  ],
+  "exchangeInfo": {
+    "serverTimeUtc": "2026-11-13T06:02:01.706Z",
+    "retrievedUtc": "2026-11-13T15:21:36Z",
+    "ageSeconds": 33574.294,
+    "status": "STALE_BLOCKED_FOR_EXECUTION"
+  },
+  "runClassification": "RESEARCH_EXECUTED_DATA_QUALITY_ONLY",
+  "strategyExperiment": "RESEARCH_BLOCKED",
+  "oosEvaluated": false
+}

@@ -68,9 +68,9 @@
     {
       "capability": "artifact readback",
       "status": "PASS",
-      "evidence": "New 32-row raw delta, delta manifest, archive manifest and four archive indexes were reopened and hash-verified; all seven v112 context artifacts (registry, queue, market snapshot, data-quality audit, preflight, archive update manifest and report) were reopened. Exact-content SHA-256 and Git blob SHA checks passed.",
-      "impact": "Raw archive and context snapshot persistence are verified; run receipt and final artifact manifest remain to be written/read back.",
-      "next_action": "Write and verify the run receipt and final artifact manifest."
+      "evidence": "Raw delta, delta manifest, archive manifest and four archive indexes reopened; registry, queue, market snapshot, data-quality audit, preflight, archive update manifest, report and run receipt reopened. The v112 artifact manifest was also reopened; exact-content SHA-256 and Git blob SHA checks passed.",
+      "impact": "Remote raw archive, registry, queue and research artifacts are persisted and readback-verified.",
+      "next_action": "On the next run, repeat capability probes and continue the highest-priority unblocked research-queue item."
     }
   ],
   "endpoints": [
@@ -157,12 +157,6 @@
       "git_blob_sha": "726d621c18f0473c6d1d3ef643f34f3fdb42939e"
     },
     {
-      "path": "research-data/registry/research_queue_20261113T2245Z_v112.json",
-      "bytes": 8387,
-      "sha256": "74609b1c35d66612b6fb97066d1df1d9713631aca2fbbb7b6d994e44e43e7afe",
-      "git_blob_sha": "4556942e3ac75f9f3de6946d4100bb8ed617c45f"
-    },
-    {
       "path": "research-data/reports/2026-11-14/current_market_snapshot_20261113T2245Z_v112.json",
       "bytes": 10891,
       "sha256": "c02225c4bd22611279b9aa543205a3610f10f8735c92569b8d45e64782c8aa86",
@@ -191,6 +185,24 @@
       "bytes": 8773,
       "sha256": "bf230e4d1c7c35b999f0608ffbf9de88f6816ba1c89f09fbe3b7c18b5a8df396",
       "git_blob_sha": "a68756949ee20aa443dd80b411ddf475e305118c"
+    },
+    {
+      "path": "research-data/registry/research_queue_20261113T2245Z_v112.json",
+      "bytes": 8595,
+      "sha256": "a986700abacf69f25560f19e58e8f134fa9e414908908bc3c26e684f31e0e025",
+      "git_blob_sha": "c3e452c2230be40b7f7c2f963a94426144e3e173"
+    },
+    {
+      "path": "research/context-strategy/runs/20261113T2245Z_v112.json",
+      "bytes": 3631,
+      "sha256": "e0ef2f50ab479b6a04660880d3af297b875416388bacf4b78d5dd5f71f7525ad",
+      "git_blob_sha": "91be9d6dfc3bacf1ef5315ac8e1399eecf549f83"
     }
-  ]
+  ],
+  "artifact_manifest_readback": {
+    "path": "research/context-strategy/runs/20261113T2245Z_v112_artifact_manifest.json",
+    "readback_verified": true,
+    "prior_blob_sha": "0d05aef962318e9299e8ec4024858ca9a85dd92c",
+    "note": "Manifest will be re-read after its final hash index is updated."
+  }
 }

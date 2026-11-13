@@ -1,0 +1,1020 @@
+{
+  "experiment_id": "EXP-CONTEXT-4H-TRAINQ-2026-11-14-001",
+  "status": "RESEARCH_EXECUTED_CONTEXT_TAXONOMY_REVIEW_ONLY",
+  "created_at_utc": "2026-11-13T23:41:10.425Z",
+  "hypothesis": "A compact 3×3 trend-strength/volatility taxonomy remains sufficiently stable across chronological periods to support strategy conditioning.",
+  "method": {
+    "timeframe": "4h",
+    "features": {
+      "trend_strength": "(EMA20 - EMA50) / Wilder ATR14",
+      "volatility": "Wilder ATR14 / close"
+    },
+    "trend_states": "BULL if trend_strength > training q67(abs(trend_strength)); BEAR if < -q67; otherwise TRANSITION",
+    "volatility_states": "LOW <= training q33; NORMAL between q33 and q67; HIGH >= training q67",
+    "threshold_scope": "per-symbol",
+    "warmup_bars": 500,
+    "chronological_split": "70% train / 15% validation / 15% untouched test after warmup",
+    "bootstrap": {
+      "method": "circular moving-block bootstrap",
+      "block_length_bars": 10,
+      "replicates": 300,
+      "confidence_level": 0.95,
+      "seed": 20261121
+    },
+    "sensitivity": "test-label agreement after ±10% perturbation of trend q67 and volatility q33/q67"
+  },
+  "data": {
+    "source": "GitHub canonical 4h JSONL files",
+    "archive_index_blob_sha1": "89c63581a3a57d88f5c8d2b041670c6dd4681981",
+    "per_symbol": {
+      "BTCUSDT": {
+        "blob_sha1": "a465025b2276a0e9cfbf805ba64be4da6ed08868",
+        "index_sha256": "7088aa2b2cc48c3895fd77dfc2ece0ae812062f24a70374ec556273a2d8380d7",
+        "sha256_recomputed": false,
+        "rows": 13461,
+        "first_open_utc": "2020-09-14T08:00:00.000Z",
+        "last_open_utc": "2026-11-05T16:00:00.000Z",
+        "duplicates": 0,
+        "gaps": 0,
+        "offgrid": 0,
+        "non_monotonic": 0,
+        "ohlc_failures": 0,
+        "nonpositive_volume": 0,
+        "nonfinite": 0,
+        "close_time_failures": 0
+      },
+      "ETHUSDT": {
+        "blob_sha1": "26034cbb638d45295504f8e1a52862adca63eea6",
+        "index_sha256": "0e1ba53fb3c4c42e89440f2aaabfc7eead44ac84bc67a083c86df96a2f12dce2",
+        "sha256_recomputed": false,
+        "rows": 13461,
+        "first_open_utc": "2020-09-14T08:00:00.000Z",
+        "last_open_utc": "2026-11-05T16:00:00.000Z",
+        "duplicates": 0,
+        "gaps": 0,
+        "offgrid": 0,
+        "non_monotonic": 0,
+        "ohlc_failures": 0,
+        "nonpositive_volume": 0,
+        "nonfinite": 0,
+        "close_time_failures": 0
+      },
+      "SOLUSDT": {
+        "blob_sha1": "77af5caa7d5e76c8efc3fd8571c55a20376ac97f",
+        "index_sha256": "148389f0347fe05307e2a274c579ccc1c495e32eaad2e49cfb19ca211df89156",
+        "sha256_recomputed": false,
+        "rows": 13461,
+        "first_open_utc": "2020-09-14T08:00:00.000Z",
+        "last_open_utc": "2026-11-05T16:00:00.000Z",
+        "duplicates": 0,
+        "gaps": 0,
+        "offgrid": 0,
+        "non_monotonic": 0,
+        "ohlc_failures": 0,
+        "nonpositive_volume": 0,
+        "nonfinite": 0,
+        "close_time_failures": 0
+      },
+      "XRPUSDT": {
+        "blob_sha1": "242e2c96a05feb175e869edbdea23ee85a136f69",
+        "index_sha256": "b1a96c24f0e91aff7368facc428dffa22360093ce74dfe186d259b66d19f8023",
+        "sha256_recomputed": false,
+        "rows": 13461,
+        "first_open_utc": "2020-09-14T08:00:00.000Z",
+        "last_open_utc": "2026-11-05T16:00:00.000Z",
+        "duplicates": 0,
+        "gaps": 0,
+        "offgrid": 0,
+        "non_monotonic": 0,
+        "ohlc_failures": 0,
+        "nonpositive_volume": 0,
+        "nonfinite": 0,
+        "close_time_failures": 0
+      }
+    },
+    "cross_symbol_open_alignment": true
+  },
+  "taxonomy": {
+    "version": "v57-candidate",
+    "active_version": "v56",
+    "promotion_status": "NOT_PROMOTED",
+    "method": "4h trend-strength × volatility quantile taxonomy; per-symbol thresholds fitted on train only",
+    "warmup_bars": 500,
+    "split": [
+      0.7,
+      0.15,
+      0.15
+    ],
+    "thresholds": {
+      "BTCUSDT": {
+        "trend_abs_q67": 1.0928138271470653,
+        "volatility_q33": 0.014364940707012072,
+        "volatility_q67": 0.02053063309844187,
+        "fit_rows": 9072,
+        "validation_rows": 1944,
+        "test_rows": 1945,
+        "train_start_utc": "2020-12-06T16:00:00.000Z",
+        "train_end_utc": "2025-01-26T12:00:00.000Z",
+        "validation_start_utc": "2025-01-26T16:00:00.000Z",
+        "validation_end_utc": "2025-12-16T12:00:00.000Z",
+        "test_start_utc": "2025-12-16T16:00:00.000Z",
+        "test_end_utc": "2026-11-05T16:00:00.000Z"
+      },
+      "ETHUSDT": {
+        "trend_abs_q67": 1.1465114961444955,
+        "volatility_q33": 0.017458366626933383,
+        "volatility_q67": 0.02577517851681495,
+        "fit_rows": 9072,
+        "validation_rows": 1944,
+        "test_rows": 1945,
+        "train_start_utc": "2020-12-06T16:00:00.000Z",
+        "train_end_utc": "2025-01-26T12:00:00.000Z",
+        "validation_start_utc": "2025-01-26T16:00:00.000Z",
+        "validation_end_utc": "2025-12-16T12:00:00.000Z",
+        "test_start_utc": "2025-12-16T16:00:00.000Z",
+        "test_end_utc": "2026-11-05T16:00:00.000Z"
+      },
+      "SOLUSDT": {
+        "trend_abs_q67": 1.1376674014015353,
+        "volatility_q33": 0.02720777303141066,
+        "volatility_q67": 0.03994572533260874,
+        "fit_rows": 9072,
+        "validation_rows": 1944,
+        "test_rows": 1945,
+        "train_start_utc": "2020-12-06T16:00:00.000Z",
+        "train_end_utc": "2025-01-26T12:00:00.000Z",
+        "validation_start_utc": "2025-01-26T16:00:00.000Z",
+        "validation_end_utc": "2025-12-16T12:00:00.000Z",
+        "test_start_utc": "2025-12-16T16:00:00.000Z",
+        "test_end_utc": "2026-11-05T16:00:00.000Z"
+      },
+      "XRPUSDT": {
+        "trend_abs_q67": 0.951707299749774,
+        "volatility_q33": 0.020017467442759545,
+        "volatility_q67": 0.030318462911799637,
+        "fit_rows": 9072,
+        "validation_rows": 1944,
+        "test_rows": 1945,
+        "train_start_utc": "2020-12-06T16:00:00.000Z",
+        "train_end_utc": "2025-01-26T12:00:00.000Z",
+        "validation_start_utc": "2025-01-26T16:00:00.000Z",
+        "validation_end_utc": "2025-12-16T12:00:00.000Z",
+        "test_start_utc": "2025-12-16T16:00:00.000Z",
+        "test_end_utc": "2026-11-05T16:00:00.000Z"
+      }
+    },
+    "results": {
+      "BTCUSDT": {
+        "train_counts": {
+          "BEAR_LOW": 294,
+          "BEAR_NORMAL": 306,
+          "BEAR_HIGH": 504,
+          "TRANSITION_LOW": 2104,
+          "TRANSITION_NORMAL": 2143,
+          "TRANSITION_HIGH": 1831,
+          "BULL_LOW": 596,
+          "BULL_NORMAL": 635,
+          "BULL_HIGH": 659
+        },
+        "validation_counts": {
+          "BEAR_LOW": 96,
+          "BEAR_NORMAL": 114,
+          "BEAR_HIGH": 47,
+          "TRANSITION_LOW": 1002,
+          "TRANSITION_NORMAL": 263,
+          "TRANSITION_HIGH": 118,
+          "BULL_LOW": 293,
+          "BULL_NORMAL": 11,
+          "BULL_HIGH": 0
+        },
+        "test_counts": {
+          "BEAR_LOW": 138,
+          "BEAR_NORMAL": 65,
+          "BEAR_HIGH": 108,
+          "TRANSITION_LOW": 1052,
+          "TRANSITION_NORMAL": 269,
+          "TRANSITION_HIGH": 33,
+          "BULL_LOW": 223,
+          "BULL_NORMAL": 57,
+          "BULL_HIGH": 0
+        },
+        "test_top_contexts": [
+          {
+            "context": "TRANSITION_LOW",
+            "count": 1052,
+            "frequency_pct": 54.08740359897172,
+            "block_bootstrap_95_ci_pct": [
+              47.55784061696658,
+              59.79434447300771
+            ],
+            "duration": {
+              "runs": 33,
+              "median": 15,
+              "p90": 89
+            }
+          },
+          {
+            "context": "TRANSITION_NORMAL",
+            "count": 269,
+            "frequency_pct": 13.830334190231364,
+            "block_bootstrap_95_ci_pct": [
+              9.717223650385604,
+              18.663239074550127
+            ],
+            "duration": {
+              "runs": 26,
+              "median": 4,
+              "p90": 22
+            }
+          },
+          {
+            "context": "BULL_LOW",
+            "count": 223,
+            "frequency_pct": 11.465295629820051,
+            "block_bootstrap_95_ci_pct": [
+              7.969151670951156,
+              15.372750642673521
+            ],
+            "duration": {
+              "runs": 21,
+              "median": 5,
+              "p90": 21
+            }
+          },
+          {
+            "context": "BEAR_LOW",
+            "count": 138,
+            "frequency_pct": 7.095115681233934,
+            "block_bootstrap_95_ci_pct": [
+              3.9588688946015425,
+              10.539845758354756
+            ],
+            "duration": {
+              "runs": 12,
+              "median": 4,
+              "p90": 24
+            }
+          },
+          {
+            "context": "BEAR_HIGH",
+            "count": 108,
+            "frequency_pct": 5.552699228791774,
+            "block_bootstrap_95_ci_pct": [
+              2.467866323907455,
+              9.254498714652955
+            ],
+            "duration": {
+              "runs": 2,
+              "median": 29,
+              "p90": 29
+            }
+          },
+          {
+            "context": "BEAR_NORMAL",
+            "count": 65,
+            "frequency_pct": 3.3419023136246784,
+            "block_bootstrap_95_ci_pct": [
+              1.4910025706940875,
+              5.347043701799485
+            ],
+            "duration": {
+              "runs": 10,
+              "median": 4,
+              "p90": 10
+            }
+          },
+          {
+            "context": "BULL_NORMAL",
+            "count": 57,
+            "frequency_pct": 2.930591259640103,
+            "block_bootstrap_95_ci_pct": [
+              1.1311053984575836,
+              5.141388174807198
+            ],
+            "duration": {
+              "runs": 11,
+              "median": 1,
+              "p90": 9
+            }
+          },
+          {
+            "context": "TRANSITION_HIGH",
+            "count": 33,
+            "frequency_pct": 1.6966580976863752,
+            "block_bootstrap_95_ci_pct": [
+              0.30848329048843187,
+              3.1362467866323906
+            ],
+            "duration": {
+              "runs": 4,
+              "median": 2,
+              "p90": 3
+            }
+          },
+          {
+            "context": "BULL_HIGH",
+            "count": 0,
+            "frequency_pct": 0,
+            "block_bootstrap_95_ci_pct": [
+              0,
+              0
+            ],
+            "duration": {
+              "runs": 0,
+              "median": null,
+              "p90": null
+            }
+          }
+        ],
+        "train_test_tvd": 0.39645169407380204,
+        "median_test_run_bars": 6,
+        "p90_test_run_bars": 36,
+        "top_transitions": [
+          {
+            "transition": "TRANSITION_LOW->TRANSITION_LOW",
+            "count": 1019,
+            "probability": 0.9686311787072244
+          },
+          {
+            "transition": "TRANSITION_NORMAL->TRANSITION_NORMAL",
+            "count": 243,
+            "probability": 0.9067164179104478
+          },
+          {
+            "transition": "BULL_LOW->BULL_LOW",
+            "count": 202,
+            "probability": 0.905829596412556
+          },
+          {
+            "transition": "BEAR_LOW->BEAR_LOW",
+            "count": 126,
+            "probability": 0.9130434782608695
+          },
+          {
+            "transition": "BEAR_HIGH->BEAR_HIGH",
+            "count": 106,
+            "probability": 0.9814814814814815
+          },
+          {
+            "transition": "BEAR_NORMAL->BEAR_NORMAL",
+            "count": 55,
+            "probability": 0.8461538461538461
+          },
+          {
+            "transition": "BULL_NORMAL->BULL_NORMAL",
+            "count": 46,
+            "probability": 0.8070175438596491
+          },
+          {
+            "transition": "TRANSITION_HIGH->TRANSITION_HIGH",
+            "count": 29,
+            "probability": 0.8787878787878788
+          }
+        ],
+        "threshold_sensitivity_agreement_pct": 85.1413881748072
+      },
+      "ETHUSDT": {
+        "train_counts": {
+          "BEAR_LOW": 256,
+          "BEAR_NORMAL": 221,
+          "BEAR_HIGH": 657,
+          "TRANSITION_LOW": 2228,
+          "TRANSITION_NORMAL": 2051,
+          "TRANSITION_HIGH": 1799,
+          "BULL_LOW": 510,
+          "BULL_NORMAL": 812,
+          "BULL_HIGH": 538
+        },
+        "validation_counts": {
+          "BEAR_LOW": 22,
+          "BEAR_NORMAL": 75,
+          "BEAR_HIGH": 211,
+          "TRANSITION_LOW": 319,
+          "TRANSITION_NORMAL": 791,
+          "TRANSITION_HIGH": 222,
+          "BULL_LOW": 51,
+          "BULL_NORMAL": 198,
+          "BULL_HIGH": 55
+        },
+        "test_counts": {
+          "BEAR_LOW": 134,
+          "BEAR_NORMAL": 76,
+          "BEAR_HIGH": 119,
+          "TRANSITION_LOW": 959,
+          "TRANSITION_NORMAL": 374,
+          "TRANSITION_HIGH": 51,
+          "BULL_LOW": 141,
+          "BULL_NORMAL": 90,
+          "BULL_HIGH": 1
+        },
+        "test_top_contexts": [
+          {
+            "context": "TRANSITION_LOW",
+            "count": 959,
+            "frequency_pct": 49.30591259640103,
+            "block_bootstrap_95_ci_pct": [
+              42.365038560411314,
+              55.52699228791774
+            ],
+            "duration": {
+              "runs": 46,
+              "median": 10,
+              "p90": 41
+            }
+          },
+          {
+            "context": "TRANSITION_NORMAL",
+            "count": 374,
+            "frequency_pct": 19.22879177377892,
+            "block_bootstrap_95_ci_pct": [
+              14.344473007712082,
+              24.47300771208226
+            ],
+            "duration": {
+              "runs": 46,
+              "median": 3,
+              "p90": 19
+            }
+          },
+          {
+            "context": "BULL_LOW",
+            "count": 141,
+            "frequency_pct": 7.249357326478149,
+            "block_bootstrap_95_ci_pct": [
+              4.215938303341902,
+              10.488431876606684
+            ],
+            "duration": {
+              "runs": 19,
+              "median": 4,
+              "p90": 22
+            }
+          },
+          {
+            "context": "BEAR_LOW",
+            "count": 134,
+            "frequency_pct": 6.889460154241646,
+            "block_bootstrap_95_ci_pct": [
+              3.8046272493573263,
+              10.38560411311054
+            ],
+            "duration": {
+              "runs": 9,
+              "median": 11,
+              "p90": 26
+            }
+          },
+          {
+            "context": "BEAR_HIGH",
+            "count": 119,
+            "frequency_pct": 6.118251928020565,
+            "block_bootstrap_95_ci_pct": [
+              3.033419023136247,
+              9.820051413881748
+            ],
+            "duration": {
+              "runs": 6,
+              "median": 2,
+              "p90": 32
+            }
+          },
+          {
+            "context": "BULL_NORMAL",
+            "count": 90,
+            "frequency_pct": 4.627249357326478,
+            "block_bootstrap_95_ci_pct": [
+              2.570694087403599,
+              7.249357326478149
+            ],
+            "duration": {
+              "runs": 12,
+              "median": 4,
+              "p90": 13
+            }
+          },
+          {
+            "context": "BEAR_NORMAL",
+            "count": 76,
+            "frequency_pct": 3.9074550128534704,
+            "block_bootstrap_95_ci_pct": [
+              2.159383033419023,
+              5.70694087403599
+            ],
+            "duration": {
+              "runs": 14,
+              "median": 3,
+              "p90": 13
+            }
+          },
+          {
+            "context": "TRANSITION_HIGH",
+            "count": 51,
+            "frequency_pct": 2.622107969151671,
+            "block_bootstrap_95_ci_pct": [
+              1.0796915167095116,
+              4.5758354755784065
+            ],
+            "duration": {
+              "runs": 6,
+              "median": 1,
+              "p90": 4
+            }
+          },
+          {
+            "context": "BULL_HIGH",
+            "count": 1,
+            "frequency_pct": 0.051413881748071974,
+            "block_bootstrap_95_ci_pct": [
+              0,
+              0.15424164524421594
+            ],
+            "duration": {
+              "runs": 1,
+              "median": 1,
+              "p90": 1
+            }
+          }
+        ],
+        "train_test_tvd": 0.3191347256792844,
+        "median_test_run_bars": 4,
+        "p90_test_run_bars": 26,
+        "top_transitions": [
+          {
+            "transition": "TRANSITION_LOW->TRANSITION_LOW",
+            "count": 913,
+            "probability": 0.9520333680917622
+          },
+          {
+            "transition": "TRANSITION_NORMAL->TRANSITION_NORMAL",
+            "count": 328,
+            "probability": 0.8793565683646113
+          },
+          {
+            "transition": "BEAR_LOW->BEAR_LOW",
+            "count": 125,
+            "probability": 0.9328358208955224
+          },
+          {
+            "transition": "BULL_LOW->BULL_LOW",
+            "count": 122,
+            "probability": 0.8652482269503546
+          },
+          {
+            "transition": "BEAR_HIGH->BEAR_HIGH",
+            "count": 113,
+            "probability": 0.9495798319327731
+          },
+          {
+            "transition": "BULL_NORMAL->BULL_NORMAL",
+            "count": 78,
+            "probability": 0.8666666666666667
+          },
+          {
+            "transition": "BEAR_NORMAL->BEAR_NORMAL",
+            "count": 62,
+            "probability": 0.8157894736842105
+          },
+          {
+            "transition": "TRANSITION_HIGH->TRANSITION_HIGH",
+            "count": 45,
+            "probability": 0.8823529411764706
+          }
+        ],
+        "threshold_sensitivity_agreement_pct": 80.77120822622108
+      },
+      "SOLUSDT": {
+        "train_counts": {
+          "BEAR_LOW": 370,
+          "BEAR_NORMAL": 412,
+          "BEAR_HIGH": 503,
+          "TRANSITION_LOW": 2213,
+          "TRANSITION_NORMAL": 2098,
+          "TRANSITION_HIGH": 1767,
+          "BULL_LOW": 411,
+          "BULL_NORMAL": 574,
+          "BULL_HIGH": 724
+        },
+        "validation_counts": {
+          "BEAR_LOW": 118,
+          "BEAR_NORMAL": 173,
+          "BEAR_HIGH": 72,
+          "TRANSITION_LOW": 933,
+          "TRANSITION_NORMAL": 303,
+          "TRANSITION_HIGH": 85,
+          "BULL_LOW": 219,
+          "BULL_NORMAL": 41,
+          "BULL_HIGH": 0
+        },
+        "test_counts": {
+          "BEAR_LOW": 215,
+          "BEAR_NORMAL": 96,
+          "BEAR_HIGH": 29,
+          "TRANSITION_LOW": 1295,
+          "TRANSITION_NORMAL": 69,
+          "TRANSITION_HIGH": 0,
+          "BULL_LOW": 210,
+          "BULL_NORMAL": 31,
+          "BULL_HIGH": 0
+        },
+        "test_top_contexts": [
+          {
+            "context": "TRANSITION_LOW",
+            "count": 1295,
+            "frequency_pct": 66.58097686375322,
+            "block_bootstrap_95_ci_pct": [
+              59.33161953727506,
+              72.39074550128535
+            ],
+            "duration": {
+              "runs": 26,
+              "median": 30,
+              "p90": 90
+            }
+          },
+          {
+            "context": "BEAR_LOW",
+            "count": 215,
+            "frequency_pct": 11.053984575835475,
+            "block_bootstrap_95_ci_pct": [
+              7.300771208226221,
+              15.372750642673521
+            ],
+            "duration": {
+              "runs": 11,
+              "median": 16,
+              "p90": 47
+            }
+          },
+          {
+            "context": "BULL_LOW",
+            "count": 210,
+            "frequency_pct": 10.796915167095115,
+            "block_bootstrap_95_ci_pct": [
+              6.632390745501285,
+              15.526992287917738
+            ],
+            "duration": {
+              "runs": 15,
+              "median": 8,
+              "p90": 29
+            }
+          },
+          {
+            "context": "BEAR_NORMAL",
+            "count": 96,
+            "frequency_pct": 4.93573264781491,
+            "block_bootstrap_95_ci_pct": [
+              2.2622107969151672,
+              7.300771208226221
+            ],
+            "duration": {
+              "runs": 5,
+              "median": 13,
+              "p90": 27
+            }
+          },
+          {
+            "context": "TRANSITION_NORMAL",
+            "count": 69,
+            "frequency_pct": 3.547557840616967,
+            "block_bootstrap_95_ci_pct": [
+              1.3881748071979434,
+              5.70694087403599
+            ],
+            "duration": {
+              "runs": 6,
+              "median": 4,
+              "p90": 12
+            }
+          },
+          {
+            "context": "BULL_NORMAL",
+            "count": 31,
+            "frequency_pct": 1.5938303341902313,
+            "block_bootstrap_95_ci_pct": [
+              0.2570694087403599,
+              3.496143958868895
+            ],
+            "duration": {
+              "runs": 5,
+              "median": 1,
+              "p90": 3
+            }
+          },
+          {
+            "context": "BEAR_HIGH",
+            "count": 29,
+            "frequency_pct": 1.4910025706940875,
+            "block_bootstrap_95_ci_pct": [
+              0.35989717223650386,
+              3.444730077120823
+            ],
+            "duration": {
+              "runs": 3,
+              "median": 3,
+              "p90": 3
+            }
+          },
+          {
+            "context": "TRANSITION_HIGH",
+            "count": 0,
+            "frequency_pct": 0,
+            "block_bootstrap_95_ci_pct": [
+              0,
+              0
+            ],
+            "duration": {
+              "runs": 0,
+              "median": null,
+              "p90": null
+            }
+          },
+          {
+            "context": "BULL_HIGH",
+            "count": 0,
+            "frequency_pct": 0,
+            "block_bootstrap_95_ci_pct": [
+              0,
+              0
+            ],
+            "duration": {
+              "runs": 0,
+              "median": null,
+              "p90": null
+            }
+          }
+        ],
+        "train_test_tvd": 0.5582351754374034,
+        "median_test_run_bars": 13,
+        "p90_test_run_bars": 59,
+        "top_transitions": [
+          {
+            "transition": "TRANSITION_LOW->TRANSITION_LOW",
+            "count": 1269,
+            "probability": 0.9806800618238022
+          },
+          {
+            "transition": "BEAR_LOW->BEAR_LOW",
+            "count": 204,
+            "probability": 0.9488372093023256
+          },
+          {
+            "transition": "BULL_LOW->BULL_LOW",
+            "count": 195,
+            "probability": 0.9285714285714286
+          },
+          {
+            "transition": "BEAR_NORMAL->BEAR_NORMAL",
+            "count": 91,
+            "probability": 0.9479166666666666
+          },
+          {
+            "transition": "TRANSITION_NORMAL->TRANSITION_NORMAL",
+            "count": 63,
+            "probability": 0.9130434782608695
+          },
+          {
+            "transition": "BEAR_HIGH->BEAR_HIGH",
+            "count": 26,
+            "probability": 0.896551724137931
+          },
+          {
+            "transition": "BULL_NORMAL->BULL_NORMAL",
+            "count": 26,
+            "probability": 0.8387096774193549
+          },
+          {
+            "transition": "TRANSITION_LOW->BULL_LOW",
+            "count": 10,
+            "probability": 0.0077279752704791345
+          }
+        ],
+        "threshold_sensitivity_agreement_pct": 91.31105398457584
+      },
+      "XRPUSDT": {
+        "train_counts": {
+          "BEAR_LOW": 437,
+          "BEAR_NORMAL": 525,
+          "BEAR_HIGH": 658,
+          "TRANSITION_LOW": 2340,
+          "TRANSITION_NORMAL": 2162,
+          "TRANSITION_HIGH": 1576,
+          "BULL_LOW": 217,
+          "BULL_NORMAL": 397,
+          "BULL_HIGH": 760
+        },
+        "validation_counts": {
+          "BEAR_LOW": 69,
+          "BEAR_NORMAL": 118,
+          "BEAR_HIGH": 171,
+          "TRANSITION_LOW": 616,
+          "TRANSITION_NORMAL": 588,
+          "TRANSITION_HIGH": 170,
+          "BULL_LOW": 82,
+          "BULL_NORMAL": 91,
+          "BULL_HIGH": 39
+        },
+        "test_counts": {
+          "BEAR_LOW": 331,
+          "BEAR_NORMAL": 125,
+          "BEAR_HIGH": 70,
+          "TRANSITION_LOW": 960,
+          "TRANSITION_NORMAL": 270,
+          "TRANSITION_HIGH": 10,
+          "BULL_LOW": 63,
+          "BULL_NORMAL": 70,
+          "BULL_HIGH": 46
+        },
+        "test_top_contexts": [
+          {
+            "context": "TRANSITION_LOW",
+            "count": 960,
+            "frequency_pct": 49.3573264781491,
+            "block_bootstrap_95_ci_pct": [
+              42.5706940874036,
+              55.62982005141388
+            ],
+            "duration": {
+              "runs": 38,
+              "median": 19,
+              "p90": 63
+            }
+          },
+          {
+            "context": "BEAR_LOW",
+            "count": 331,
+            "frequency_pct": 17.017994858611825,
+            "block_bootstrap_95_ci_pct": [
+              11.979434447300772,
+              22.673521850899743
+            ],
+            "duration": {
+              "runs": 22,
+              "median": 9,
+              "p90": 30
+            }
+          },
+          {
+            "context": "TRANSITION_NORMAL",
+            "count": 270,
+            "frequency_pct": 13.881748071979436,
+            "block_bootstrap_95_ci_pct": [
+              9.820051413881748,
+              18.251928020565554
+            ],
+            "duration": {
+              "runs": 29,
+              "median": 4,
+              "p90": 27
+            }
+          },
+          {
+            "context": "BEAR_NORMAL",
+            "count": 125,
+            "frequency_pct": 6.426735218508997,
+            "block_bootstrap_95_ci_pct": [
+              3.9074550128534704,
+              9.151670951156813
+            ],
+            "duration": {
+              "runs": 18,
+              "median": 3,
+              "p90": 16
+            }
+          },
+          {
+            "context": "BEAR_HIGH",
+            "count": 70,
+            "frequency_pct": 3.5989717223650386,
+            "block_bootstrap_95_ci_pct": [
+              1.5424164524421593,
+              6.375321336760925
+            ],
+            "duration": {
+              "runs": 6,
+              "median": 3,
+              "p90": 15
+            }
+          },
+          {
+            "context": "BULL_NORMAL",
+            "count": 70,
+            "frequency_pct": 3.5989717223650386,
+            "block_bootstrap_95_ci_pct": [
+              1.4910025706940875,
+              5.912596401028278
+            ],
+            "duration": {
+              "runs": 5,
+              "median": 12,
+              "p90": 20
+            }
+          },
+          {
+            "context": "BULL_LOW",
+            "count": 63,
+            "frequency_pct": 3.2390745501285343,
+            "block_bootstrap_95_ci_pct": [
+              1.1825192802056554,
+              5.655526992287918
+            ],
+            "duration": {
+              "runs": 6,
+              "median": 7,
+              "p90": 18
+            }
+          },
+          {
+            "context": "BULL_HIGH",
+            "count": 46,
+            "frequency_pct": 2.365038560411311,
+            "block_bootstrap_95_ci_pct": [
+              0.7712082262210797,
+              4.884318766066838
+            ],
+            "duration": {
+              "runs": 2,
+              "median": 1,
+              "p90": 1
+            }
+          },
+          {
+            "context": "TRANSITION_HIGH",
+            "count": 10,
+            "frequency_pct": 0.5141388174807198,
+            "block_bootstrap_95_ci_pct": [
+              0.051413881748071974,
+              1.3367609254498714
+            ],
+            "duration": {
+              "runs": 3,
+              "median": 2,
+              "p90": 2
+            }
+          }
+        ],
+        "train_test_tvd": 0.3725144856571591,
+        "median_test_run_bars": 9,
+        "p90_test_run_bars": 33,
+        "top_transitions": [
+          {
+            "transition": "TRANSITION_LOW->TRANSITION_LOW",
+            "count": 922,
+            "probability": 0.9604166666666667
+          },
+          {
+            "transition": "BEAR_LOW->BEAR_LOW",
+            "count": 309,
+            "probability": 0.9335347432024169
+          },
+          {
+            "transition": "TRANSITION_NORMAL->TRANSITION_NORMAL",
+            "count": 241,
+            "probability": 0.895910780669145
+          },
+          {
+            "transition": "BEAR_NORMAL->BEAR_NORMAL",
+            "count": 107,
+            "probability": 0.856
+          },
+          {
+            "transition": "BULL_NORMAL->BULL_NORMAL",
+            "count": 65,
+            "probability": 0.9285714285714286
+          },
+          {
+            "transition": "BEAR_HIGH->BEAR_HIGH",
+            "count": 64,
+            "probability": 0.9142857142857143
+          },
+          {
+            "transition": "BULL_LOW->BULL_LOW",
+            "count": 57,
+            "probability": 0.9047619047619048
+          },
+          {
+            "transition": "BULL_HIGH->BULL_HIGH",
+            "count": 44,
+            "probability": 0.9565217391304348
+          }
+        ],
+        "threshold_sensitivity_agreement_pct": 83.31619537275064
+      }
+    },
+    "cross_symbol_open_alignment": true
+  },
+  "limitations": [
+    "4h-only; no 5m/15m/1h joint state",
+    "No participation/order-book/funding/OI features in historical taxonomy",
+    "No strategy entries, trades, expectancy or win probability estimated",
+    "Per-symbol thresholds are not transferable across symbols",
+    "Index SHA256 values are metadata; SHA256 was not recomputed in this run",
+    "Test ends at 2026-11-05 because canonical 4h file has not yet incorporated the newer raw deltas"
+  ],
+  "interpretation": {
+    "decision": "RETAIN_ACTIVE_V56; DO NOT PROMOTE V57 CANDIDATE",
+    "reason": "Train/test context distribution drift is material; threshold perturbation changes labels for a non-trivial share of the test sample. Transition/low-volatility dominates; rare high-volatility directional cells lack adequate context support.",
+    "strategy_oos": "NOT_EVALUATED",
+    "trade_probability": "NOT_ESTIMATED"
+  }
+}

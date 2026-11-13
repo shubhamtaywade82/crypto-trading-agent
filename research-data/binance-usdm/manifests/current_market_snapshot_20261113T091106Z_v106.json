@@ -411,7 +411,7 @@
     },
     "classification_note": "EMA/ATR summaries are descriptive features from a 200-bar rolling window. No training-derived context thresholds, volatility percentiles, structure labels or win probabilities were fitted."
   },
-  "funding_note": "GET /fapi/v1/premiumIndex lastFundingRate is the latest API-reported funding-rate field, not treated here as a guaranteed next-settlement forecast. GET /fapi/v1/fundingRate supplies the last settled rate at 08:00 UTC. Observed settlement spacing is 8h; nextFundingTime is 16:00 UTC. No absolute rate exceeds 0.05%.",
+  "funding_note": "GET /fapi/v1/premiumIndex lastFundingRate is the latest API-reported funding-rate field; GET /fapi/v1/fundingRate supplies settled funding. GET /fapi/v1/fundingInfo explicitly reports fundingIntervalHours=8 for BTCUSDT, ETHUSDT, SOLUSDT and XRPUSDT. Next funding is 16:00 UTC. No absolute latest-reported or settled rate exceeds 0.05%.",
   "endpoint_mapping": {
     "klines": "GET /fapi/v1/klines",
     "mark_and_indicated_funding": "GET /fapi/v1/premiumIndex",
@@ -433,5 +433,39 @@
     "taker_long_short_funding_history": "2026-11-13T09:05:55.007Z",
     "basis_and_depth20": "2026-11-13T09:14:42.776Z"
   },
-  "depth_note": "Depth20 sums are one snapshot; Binance connector excludes RPI orders. Not a size-dependent impact or fill model."
+  "depth_note": "Depth20 sums are one snapshot; Binance connector excludes RPI orders. Not a size-dependent impact or fill model.",
+  "funding_info": {
+    "endpoint": "GET /fapi/v1/fundingInfo",
+    "retrieved_at_utc": "2026-11-13T09:17:54.982Z",
+    "symbols": {
+      "BTCUSDT": {
+        "fundingIntervalHours": 8,
+        "adjustedFundingRateCap": "0.00300",
+        "adjustedFundingRateFloor": "-0.00300",
+        "disclaimer": true,
+        "updateTime": null
+      },
+      "ETHUSDT": {
+        "fundingIntervalHours": 8,
+        "adjustedFundingRateCap": "0.00300",
+        "adjustedFundingRateFloor": "-0.00300",
+        "disclaimer": true,
+        "updateTime": null
+      },
+      "SOLUSDT": {
+        "fundingIntervalHours": 8,
+        "adjustedFundingRateCap": "0.00375",
+        "adjustedFundingRateFloor": "-0.00375",
+        "disclaimer": true,
+        "updateTime": null
+      },
+      "XRPUSDT": {
+        "fundingIntervalHours": 8,
+        "adjustedFundingRateCap": "0.00375",
+        "adjustedFundingRateFloor": "-0.00375",
+        "disclaimer": true,
+        "updateTime": null
+      }
+    }
+  }
 }

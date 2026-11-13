@@ -68,9 +68,9 @@
     {
       "capability": "artifact readback",
       "status": "PASS",
-      "evidence": "New 32-row delta, delta manifest, archive manifest and all four archive indexes reopened; exact SHA-256 and Git blob SHA checks passed. Context artifacts are being written.",
-      "impact": "Raw archive persistence verified; context artifact readback pending.",
-      "next_action": "Read back all v112 context artifacts and record hashes."
+      "evidence": "New 32-row raw delta, delta manifest, archive manifest and four archive indexes were reopened and hash-verified; all seven v112 context artifacts (registry, queue, market snapshot, data-quality audit, preflight, archive update manifest and report) were reopened. Exact-content SHA-256 and Git blob SHA checks passed.",
+      "impact": "Raw archive and context snapshot persistence are verified; run receipt and final artifact manifest remain to be written/read back.",
+      "next_action": "Write and verify the run receipt and final artifact manifest."
     }
   ],
   "endpoints": [
@@ -148,5 +148,49 @@
     "artifact_path": "research-data/reports/2026-11-14/data_quality_audit_20261113T2245Z_v112.json"
   },
   "final_status": "RESEARCH_EXECUTED",
-  "status_note": "Research executed means the rolling data-quality audit and archive append completed with reproducible artifacts. No strategy experiment, untouched OOS evaluation or taxonomy refit ran; strategy research remains blocked."
+  "status_note": "Research executed means the rolling data-quality audit and archive append completed with reproducible artifacts. No strategy experiment, untouched OOS evaluation or taxonomy refit ran; strategy research remains blocked.",
+  "context_artifact_readback": [
+    {
+      "path": "research-data/registry/context_strategy_registry_20261113T2245Z_v112.json",
+      "bytes": 14152,
+      "sha256": "762b837384fb7d3740fc50c680b507b8a00d1dfc757ac9a0c16ea372afd5d0be",
+      "git_blob_sha": "726d621c18f0473c6d1d3ef643f34f3fdb42939e"
+    },
+    {
+      "path": "research-data/registry/research_queue_20261113T2245Z_v112.json",
+      "bytes": 8387,
+      "sha256": "74609b1c35d66612b6fb97066d1df1d9713631aca2fbbb7b6d994e44e43e7afe",
+      "git_blob_sha": "4556942e3ac75f9f3de6946d4100bb8ed617c45f"
+    },
+    {
+      "path": "research-data/reports/2026-11-14/current_market_snapshot_20261113T2245Z_v112.json",
+      "bytes": 10891,
+      "sha256": "c02225c4bd22611279b9aa543205a3610f10f8735c92569b8d45e64782c8aa86",
+      "git_blob_sha": "e535d639c56e76b66e84ce89c9c5eb2338d89eea"
+    },
+    {
+      "path": "research-data/reports/2026-11-14/data_quality_audit_20261113T2245Z_v112.json",
+      "bytes": 11267,
+      "sha256": "228c6035601a0b46c50c77a5386840cd5d25ec24530dfe35e84d66b08329c98b",
+      "git_blob_sha": "1aab13eba59cd0cbb197ffba006eb80ad0999fdc"
+    },
+    {
+      "path": "research-data/reports/2026-11-14/context_research_preflight_20261113T2245Z_v112.json",
+      "bytes": 7166,
+      "sha256": "95bb949d281c4be0d99915b6b31aed2b4cf17401a312c34d8f34e07f77f948f5",
+      "git_blob_sha": "a940f1c203d783838a453ae922b0e87ed0ed0512"
+    },
+    {
+      "path": "research-data/reports/2026-11-14/archive_update_manifest_20261113T2245Z_v112.json",
+      "bytes": 3518,
+      "sha256": "b1401b0ae8f9bbbfd9fcd9f876950b8373cd56a79b7640adb2c936a5c20a6a30",
+      "git_blob_sha": "a2ed75042d241651034f8d3439c8a34bec508d6f"
+    },
+    {
+      "path": "research-data/reports/2026-11-14/context_strategy_report_20261113T2245Z_v112.md",
+      "bytes": 8773,
+      "sha256": "bf230e4d1c7c35b999f0608ffbf9de88f6816ba1c89f09fbe3b7c18b5a8df396",
+      "git_blob_sha": "a68756949ee20aa443dd80b411ddf475e305118c"
+    }
+  ]
 }

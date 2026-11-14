@@ -1,0 +1,346 @@
+{
+  "schema_version": "1.0.0",
+  "run_id": "context-strategy-20261114T092637Z-auto11-run18",
+  "as_of_utc": "2026-11-14T09:19:29.000Z",
+  "source": "Binance USD-M public market-data connector; SDK not used; direct REST DNS unavailable; connector HTTP status/headers not exposed.",
+  "endpoints": {
+    "mark_price": "GET /fapi/v1/premiumIndex",
+    "ticker_24h": "GET /fapi/v1/ticker/24hr",
+    "open_interest": "GET /fapi/v1/openInterest",
+    "klines": "GET /fapi/v1/klines",
+    "funding_history": "GET /fapi/v1/fundingRate",
+    "open_interest_history": "GET /futures/data/openInterestHist",
+    "taker_buy_sell": "GET /futures/data/takerlongshortRatio",
+    "long_short_accounts": "GET /futures/data/globalLongShortAccountRatio",
+    "order_book": "GET /fapi/v1/depth"
+  },
+  "contract_metadata": {
+    "status": "UNVERIFIED_STALE",
+    "exchange_info_server_time_utc": "2026-11-13T06:02:01.702Z",
+    "market_data_time_utc": "2026-11-14T09:19:29.000Z",
+    "staleness_seconds": 98247.298,
+    "reason": "exchangeInfo serverTime is stale; direct /fapi/v1/time and /fapi/v1/exchangeInfo DNS probes fail; do not use this metadata for execution validation."
+  },
+  "funding_semantics": "premiumIndex.lastFundingRate is stored separately from the latest settled fundingRate history. No separate predicted next-settlement rate is asserted.",
+  "funding_interval_hours": 8,
+  "next_funding_time_utc": "2026-11-14T16:00:00.000Z",
+  "funding_alert_threshold_pct": 0.05,
+  "context_taxonomy": {
+    "id": "CTX-4H-EMA50xEMA200-ATRQ-v2-FULL-ARCHIVE",
+    "source_path": "research/context-strategy/context-discovery/context_distribution_20261108T022532Z.json",
+    "source_as_of_utc": "2026-11-08T02:29:59.853Z",
+    "threshold_refit_this_run": false,
+    "classification_basis": "4h EMA50/EMA200 spread vs training flat threshold; Wilder ATR14/close vs training q33/q67; absolute completed 4h return vs training shock q99."
+  },
+  "symbols": {
+    "BTCUSDT": {
+      "role": "regime_reference_only",
+      "mark_price": 67132.83169415,
+      "index_price": 67172.97869565,
+      "last_price": 67132.7,
+      "change_24h_pct": -2.531,
+      "high_24h": 70188,
+      "low_24h": 66427.5,
+      "quote_volume_24h": 13855091852.41,
+      "open_interest": 96655.9,
+      "oi_notional_change_24h_pct": -6.3168,
+      "oi_history_window_utc": [
+        "2026-11-13T08:00:00.000Z",
+        "2026-11-14T08:00:00.000Z"
+      ],
+      "premium_index_last_funding_rate_pct": 0.004523,
+      "latest_settled_funding_rate_pct": 0.004461,
+      "latest_settlement_utc": "2026-11-14T08:00:00.001Z",
+      "funding_abs_threshold_breached": false,
+      "account_long_pct": 75.52,
+      "account_short_pct": 24.48,
+      "long_short_account_ratio": 3.085,
+      "taker_buy_sell_ratio_15m": 1.8119,
+      "taker_flow_timestamp_utc": "2026-11-14T09:00:00.000Z",
+      "orderbook": {
+        "best_bid": 67104.2,
+        "best_ask": 67104.3,
+        "spread_bps": 0.0149,
+        "depth20_bid_notional": 378128.05,
+        "depth20_ask_notional": 101663.1,
+        "depth20_imbalance": 0.5762,
+        "update_id": 12110290884362
+      },
+      "timeframes": {
+        "5m": {
+          "ema20": 67126.21,
+          "ema50": 67191.25,
+          "ema200": 67744.76,
+          "stack": "BEAR"
+        },
+        "15m": {
+          "ema20": 67223.45,
+          "ema50": 67626.7,
+          "ema200": 69501.68,
+          "stack": "BEAR"
+        },
+        "1h": {
+          "ema20": 68056.79,
+          "ema50": 69585.83,
+          "ema200": 72861.47,
+          "stack": "BEAR"
+        },
+        "4h": {
+          "ema20": 70583.54,
+          "ema50": 73128.27,
+          "ema200": 77848.58,
+          "stack": "BEAR",
+          "ema50_ema200_spread_pct": -6.0635,
+          "flat_threshold_pct": 2.5048,
+          "atr14_pct": 1.7895,
+          "vol_q33_pct": 1.4474,
+          "vol_q67_pct": 2.0674,
+          "abs_return_pct": 0.606,
+          "shock_q99_pct": 4.8982,
+          "context": "BEAR_NORMAL",
+          "shock_warning": false,
+          "latest_completed_open_utc": "2026-11-14T04:00:00.000Z"
+        }
+      }
+    },
+    "ETHUSDT": {
+      "role": "tradable_universe",
+      "mark_price": 1902.02,
+      "index_price": 1902.81023256,
+      "last_price": 1902.02,
+      "change_24h_pct": -1.9,
+      "high_24h": 1988.57,
+      "low_24h": 1875,
+      "quote_volume_24h": 8738802592.24,
+      "open_interest": 2332645.304,
+      "oi_notional_change_24h_pct": -2.187,
+      "oi_history_window_utc": [
+        "2026-11-13T08:00:00.000Z",
+        "2026-11-14T08:00:00.000Z"
+      ],
+      "premium_index_last_funding_rate_pct": 0.003499,
+      "latest_settled_funding_rate_pct": 0.002584,
+      "latest_settlement_utc": "2026-11-14T08:00:00.001Z",
+      "funding_abs_threshold_breached": false,
+      "account_long_pct": 78.2,
+      "account_short_pct": 21.8,
+      "long_short_account_ratio": 3.5872,
+      "taker_buy_sell_ratio_15m": 1.6854,
+      "taker_flow_timestamp_utc": "2026-11-14T09:00:00.000Z",
+      "orderbook": {
+        "best_bid": 1901.41,
+        "best_ask": 1901.42,
+        "spread_bps": 0.0526,
+        "depth20_bid_notional": 227579.4,
+        "depth20_ask_notional": 198882.24,
+        "depth20_imbalance": 0.0673,
+        "update_id": 12110290887250
+      },
+      "timeframes": {
+        "5m": {
+          "ema20": 1899.62,
+          "ema50": 1900.77,
+          "ema200": 1912.95,
+          "stack": "BEAR"
+        },
+        "15m": {
+          "ema20": 1901.56,
+          "ema50": 1911.4,
+          "ema200": 1956.12,
+          "stack": "BEAR"
+        },
+        "1h": {
+          "ema20": 1921.82,
+          "ema50": 1960.03,
+          "ema200": 2075.88,
+          "stack": "BEAR"
+        },
+        "4h": {
+          "ema20": 1988.95,
+          "ema50": 2083.19,
+          "ema200": 2274.75,
+          "stack": "BEAR",
+          "ema50_ema200_spread_pct": -8.4212,
+          "flat_threshold_pct": 2.5106,
+          "atr14_pct": 2.2719,
+          "vol_q33_pct": 1.755,
+          "vol_q67_pct": 2.5876,
+          "abs_return_pct": 0.722,
+          "shock_q99_pct": 6.3197,
+          "context": "BEAR_NORMAL",
+          "shock_warning": false,
+          "latest_completed_open_utc": "2026-11-14T04:00:00.000Z"
+        }
+      }
+    },
+    "SOLUSDT": {
+      "role": "tradable_universe",
+      "mark_price": 75.50366994,
+      "index_price": 75.54878693,
+      "last_price": 75.5,
+      "change_24h_pct": -5.448,
+      "high_24h": 82.38,
+      "low_24h": 74.77,
+      "quote_volume_24h": 1866066646.0237,
+      "open_interest": 9332886.84,
+      "oi_notional_change_24h_pct": -6.7283,
+      "oi_history_window_utc": [
+        "2026-11-13T08:00:00.000Z",
+        "2026-11-14T08:00:00.000Z"
+      ],
+      "premium_index_last_funding_rate_pct": -0.008232,
+      "latest_settled_funding_rate_pct": -0.007941,
+      "latest_settlement_utc": "2026-11-14T08:00:00.001Z",
+      "funding_abs_threshold_breached": false,
+      "account_long_pct": 79.56,
+      "account_short_pct": 20.44,
+      "long_short_account_ratio": 3.8924,
+      "taker_buy_sell_ratio_15m": 1.0153,
+      "taker_flow_timestamp_utc": "2026-11-14T09:00:00.000Z",
+      "orderbook": {
+        "best_bid": 75.48,
+        "best_ask": 75.49,
+        "spread_bps": 1.3248,
+        "depth20_bid_notional": 7474930.6,
+        "depth20_ask_notional": 6771556.06,
+        "depth20_imbalance": 0.0494,
+        "update_id": 12110290894099
+      },
+      "timeframes": {
+        "5m": {
+          "ema20": 75.3621,
+          "ema50": 75.5079,
+          "ema200": 76.9467,
+          "stack": "BEAR"
+        },
+        "15m": {
+          "ema20": 75.5867,
+          "ema50": 76.5766,
+          "ema200": 79.2498,
+          "stack": "BEAR"
+        },
+        "1h": {
+          "ema20": 77.4004,
+          "ema50": 79.4447,
+          "ema200": 84.0719,
+          "stack": "BEAR"
+        },
+        "4h": {
+          "ema20": 80.6874,
+          "ema50": 84.681,
+          "ema200": 95.3348,
+          "stack": "BEAR",
+          "ema50_ema200_spread_pct": -11.1752,
+          "flat_threshold_pct": 4.0735,
+          "atr14_pct": 2.6974,
+          "vol_q33_pct": 2.7494,
+          "vol_q67_pct": 4.0357,
+          "abs_return_pct": 0.2399,
+          "shock_q99_pct": 9.7612,
+          "context": "BEAR_LOW",
+          "distance_below_vol_q33_pct": 0.052,
+          "shock_warning": false,
+          "latest_completed_open_utc": "2026-11-14T04:00:00.000Z"
+        }
+      }
+    },
+    "XRPUSDT": {
+      "role": "tradable_universe",
+      "mark_price": 0.9861,
+      "index_price": 0.98659972,
+      "last_price": 0.986,
+      "change_24h_pct": -4.216,
+      "high_24h": 1.0433,
+      "low_24h": 0.9789,
+      "quote_volume_24h": 763608078.7987,
+      "open_interest": 300947097.6,
+      "oi_notional_change_24h_pct": -1.7857,
+      "oi_history_window_utc": [
+        "2026-11-13T08:00:00.000Z",
+        "2026-11-14T08:00:00.000Z"
+      ],
+      "premium_index_last_funding_rate_pct": -0.002525,
+      "latest_settled_funding_rate_pct": -0.003523,
+      "latest_settlement_utc": "2026-11-14T08:00:00.001Z",
+      "funding_abs_threshold_breached": false,
+      "account_long_pct": 75.59,
+      "account_short_pct": 24.41,
+      "long_short_account_ratio": 3.0967,
+      "taker_buy_sell_ratio_15m": 1.0713,
+      "taker_flow_timestamp_utc": "2026-11-14T09:00:00.000Z",
+      "orderbook": {
+        "best_bid": 0.9856,
+        "best_ask": 0.9857,
+        "spread_bps": 1.0146,
+        "depth20_bid_notional": 2389931.51,
+        "depth20_ask_notional": 1864674.78,
+        "depth20_imbalance": 0.1235,
+        "update_id": 12110290915115
+      },
+      "timeframes": {
+        "5m": {
+          "ema20": 0.98565,
+          "ema50": 0.98889,
+          "ema200": 1.00096,
+          "stack": "BEAR"
+        },
+        "15m": {
+          "ema20": 0.98979,
+          "ema50": 0.99837,
+          "ema200": 1.01729,
+          "stack": "BEAR"
+        },
+        "1h": {
+          "ema20": 1.00458,
+          "ema50": 1.0207,
+          "ema200": 1.08383,
+          "stack": "BEAR"
+        },
+        "4h": {
+          "ema20": 1.0334,
+          "ema50": 1.09055,
+          "ema200": 1.22708,
+          "stack": "BEAR",
+          "ema50_ema200_spread_pct": -11.1259,
+          "flat_threshold_pct": 2.3359,
+          "atr14_pct": 2.5082,
+          "vol_q33_pct": 1.9936,
+          "vol_q67_pct": 3.0167,
+          "abs_return_pct": 0.7779,
+          "shock_q99_pct": 9.098,
+          "context": "BEAR_NORMAL",
+          "shock_warning": false,
+          "latest_completed_open_utc": "2026-11-14T04:00:00.000Z"
+        }
+      }
+    }
+  },
+  "candle_fetch_summary": {
+    "returned_rows": 3200,
+    "completed_rows": 3180,
+    "non_completed_rows_excluded": 20,
+    "per_symbol_interval": "200 rows each for 4 symbols × 4 intervals",
+    "quality": {
+      "duplicates": 0,
+      "missing_intervals": 0,
+      "off_grid": 0,
+      "ohlc_failures": 0,
+      "non_finite": 0,
+      "non_positive_volume": 0,
+      "close_time_failures": 0
+    },
+    "note": "The unbounded 200-row 5m request contained two non-completed rows at the fixed cutoff; both were excluded. The bounded incremental request used explicit endTime and passed all timestamp/continuity checks."
+  },
+  "decisions": {
+    "SOLUSDT": "NO_TRADE",
+    "ETHUSDT": "NO_TRADE",
+    "XRPUSDT": "NO_TRADE",
+    "reason": "Registry has zero OOS_VALIDATED entries; exchangeInfo metadata is stale and contract status cannot be freshly verified."
+  },
+  "unavailable": [
+    "Liquidation feed not queried; no liquidation inference made.",
+    "Historical order-book/depth/trade data and account fee tier unavailable; live spread is not a calibrated cost model.",
+    "No separate next-funding forecast field asserted.",
+    "No fresh exchangeInfo/serverTime due direct DNS failure."
+  ]
+}

@@ -1,0 +1,176 @@
+{
+  "schema_version": "1.0.0",
+  "run_id": "context-strategy-20261111T220916Z-auto11",
+  "as_of_utc": "2026-11-11T22:11:45.745Z",
+  "environment": {
+    "cwd": "/",
+    "os": "Linux 6.18.57 x86_64",
+    "python": "3.13.5",
+    "node": "v22.16.0",
+    "npm": "10.9.2",
+    "pnpm": "NOT_INSTALLED",
+    "yarn": "NOT_INSTALLED",
+    "cpu_count": 3,
+    "memory_total_mb": 5948,
+    "memory_available_mb": 4828,
+    "root_disk_total_gb": 32,
+    "root_disk_free_gb": 30,
+    "local_git_repository": false,
+    "local_binance_sdk_packages": {
+      "@nemesis-oss/binance-sdk": "NOT_FOUND",
+      "binance": "NOT_FOUND",
+      "ccxt": "NOT_FOUND"
+    },
+    "local_storage": "ephemeral overlay; not durable"
+  },
+  "repository": {
+    "full_name": "shubhamtaywade82/crypto-trading-agent",
+    "local_checkout": false,
+    "remote_read_access": true,
+    "base_commit": "a45415053c6cf4d645057c8b2301d4729316e64d",
+    "base_commit_time_utc": "2026-11-11T17:48:15.000Z",
+    "remote_package_engines": {
+      "node": ">=24",
+      "npm": ">=11"
+    },
+    "package_json_blob_sha": "22576968ec662fd7d17dda10069489c69c597bcd",
+    "backtest_script_blob_sha": "65bb03853382be1ed0d82aed373f805173aaa6f5",
+    "research_run_script_blob_sha": "0f8003f4ee11e9e71ef46766bdf0d6daed1c7bba",
+    "conditional_edge_script_blob_sha": "29034c61fdd42a5e40272234b221d29cb95fb3ee",
+    "kline_loader_blob_sha": "bc5048107293470f5f8dfe8836fc7fcd7a44d451",
+    "candle_integrity_blob_sha": "fdecd98a5429e590078537e2a94633c9a3361591"
+  },
+  "direct_rest_probes": [
+    {
+      "endpoint": "GET /fapi/v1/time",
+      "status": "HTTP 000",
+      "error": "curl error 6: Could not resolve host"
+    },
+    {
+      "endpoint": "GET /fapi/v1/exchangeInfo",
+      "status": "HTTP 000",
+      "error": "DNS resolution timed out"
+    },
+    {
+      "endpoint": "GET /fapi/v1/klines",
+      "status": "HTTP 000",
+      "error": "curl error 6: Could not resolve host"
+    },
+    {
+      "endpoint": "GET /fapi/v1/premiumIndex",
+      "status": "HTTP 000",
+      "error": "DNS resolution timed out"
+    },
+    {
+      "endpoint": "GET /fapi/v1/openInterest",
+      "status": "HTTP 000",
+      "error": "curl error 6: Could not resolve host"
+    },
+    {
+      "endpoint": "GET /fapi/v1/ticker/24hr",
+      "status": "HTTP 000",
+      "error": "DNS resolution timed out"
+    }
+  ],
+  "connector_market_data": {
+    "status": "PARTIAL_PASS",
+    "successful": [
+      "exchangeInfo",
+      "klines 5m/15m/1h/4h",
+      "mark price/premium index",
+      "24h ticker",
+      "open interest",
+      "funding rate history",
+      "open interest history",
+      "taker buy/sell volume",
+      "global long/short account ratio",
+      "order book depth",
+      "basis"
+    ],
+    "http_status_headers_exposed": false,
+    "exchange_info_server_time_utc": "2026-11-11T10:18:31.943Z",
+    "exchange_info_age_seconds_at_snapshot": 42644.115,
+    "contract_status_validation": "BLOCKED_STALE_METADATA",
+    "exchange_info_age_seconds_at_preflight": 42793.802
+  },
+  "archive": {
+    "repository": "shubhamtaywade82/crypto-trading-agent",
+    "branch": "research/raw-ohlcv-archive-20261108T1026Z",
+    "local_archive_present": false,
+    "remote_archive_readable": true,
+    "latest_highwaters_utc": {
+      "5m": "2026-11-11T22:00:00.000Z",
+      "15m": "2026-11-11T21:45:00.000Z",
+      "1h": "2026-11-11T21:00:00.000Z",
+      "4h": "2026-11-11T16:00:00.000Z"
+    },
+    "page13_backfill_rows": 12000,
+    "incremental_rows_appended": 36,
+    "forming_rows_excluded": 16,
+    "archive_manifest_path": "research-data/binance-usdm/manifests/archive_manifest_20261111T220957Z_auto11.json",
+    "archive_manifest_blob_sha": "f4692c37621aa5c70c6529c12fc3d06d65ddd065",
+    "archive_manifest_readback_verified": true
+  },
+  "checks": [
+    {
+      "capability": "shell/compute",
+      "status": "PASS",
+      "evidence": "Linux x86_64; Python 3.13.5; 3 CPUs; 5.8GB RAM (4.8GB available); 30GB free root disk; V8 Code Mode executed data validation and SHA-256.",
+      "impact": "Compute is available for bounded data QA; repository Node harness cannot run because runtime floor is unmet.",
+      "next_action": "Keep data QA bounded; provision Node24/npm11 for repo scripts."
+    },
+    {
+      "capability": "repo/code",
+      "status": "DEGRADED",
+      "evidence": "GitHub repository readable at commit a45415053c6cf4d645057c8b2301d4729316e64d; no local .git checkout; package requires Node>=24/npm>=11.",
+      "impact": "Remote source inspected but no local build/test/backtest invocation.",
+      "next_action": "Clone exact commit into a compatible persistent workspace."
+    },
+    {
+      "capability": "network/Binance endpoints",
+      "status": "DEGRADED",
+      "evidence": "Six direct fapi REST probes returned HTTP000 DNS failure/timeouts; connector returned market data but no HTTP status/headers; exchangeInfo serverTime is 11h47m stale.",
+      "impact": "Current connector snapshot usable for descriptive classification; contract status and direct REST freshness cannot be certified for execution.",
+      "next_action": "Restore DNS/HTTPS and re-probe server time, exchangeInfo and data endpoints."
+    },
+    {
+      "capability": "raw historical archive",
+      "status": "DEGRADED",
+      "evidence": "GitHub raw archive branch readable/writable; page13 12,000 rows and two incremental deltas persisted; all new files/manifests/indexes read back.",
+      "impact": "5m/15m remain partial; 1h bridge and 4h provenance remain unresolved.",
+      "next_action": "Backfill page14; reconcile 1h bridge and 4h provenance."
+    },
+    {
+      "capability": "data quality/coverage",
+      "status": "DEGRADED",
+      "evidence": "New page13 and deltas: zero duplicates/gaps/off-grid/OHLC/non-finite/non-positive-volume/close-time failures; current highwaters 5m22:00,15m21:45,1h21:00,4h16:00. 1h has 28h bridge/8-row discrepancy; 4h has 13 original hash mismatches.",
+      "impact": "New data is clean; full aligned multi-timeframe research panel is not yet certified.",
+      "next_action": "Resolve historical continuity/provenance before strategy backtests."
+    },
+    {
+      "capability": "backtest harness/smoke test",
+      "status": "BLOCKED",
+      "evidence": "scripts/backtest.ts and scripts/research-run.ts exist remotely; Node22.16/npm10.9 fail repo engine floor; no local checkout or SDK import; deterministic fixture smoke test NOT_RUN. backtest.ts supports 15m/1h/4h only; conditional-edge.ts consumes decision journals.",
+      "impact": "No strategy experiment or OOS evaluation executed.",
+      "next_action": "Provision Node24/npm11, install pinned dependencies, run fixture twice, verify no-lookahead, then run frozen registered spec."
+    },
+    {
+      "capability": "disk/storage",
+      "status": "PASS",
+      "evidence": "30GB free local ephemeral overlay; GitHub raw archive branch and dedicated research branch provide durable remote storage.",
+      "impact": "No local durable archive; remote GitHub artifacts are the persistence mechanism.",
+      "next_action": "Continue atomic remote writes and readback/hash verification."
+    },
+    {
+      "capability": "artifact readback",
+      "status": "PASS",
+      "evidence": "8 page13 files, 2 page manifests, 2 indexes, 2 incremental deltas, 2 delta manifests and archive manifest read back; SHA-256/blob identities verified.",
+      "impact": "Data-quality artifacts are reproducible and persisted remotely.",
+      "next_action": "Verify every new report/queue/registry artifact after creation."
+    }
+  ],
+  "run_status": "RESEARCH_EXECUTED_DATA_QUALITY_ONLY",
+  "strategy_experiment_status": "BLOCKED",
+  "oos_evaluated": false,
+  "oos_validated_entries": 0
+}

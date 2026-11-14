@@ -1,0 +1,226 @@
+{
+ "commit": "357051cf",
+ "dirty": true,
+ "window": {
+  "from": "2020-11-01",
+  "to": "2025-01-01"
+ },
+ "symbols": [
+  "BTCUSDT",
+  "BNBUSDT",
+  "ADAUSDT",
+  "DOGEUSDT",
+  "LINKUSDT",
+  "LTCUSDT",
+  "DOTUSDT",
+  "AVAXUSDT",
+  "TRXUSDT",
+  "BCHUSDT"
+ ],
+ "strategies": [
+  "F9"
+ ],
+ "trials": 103,
+ "trialSharpeVarianceOverride": 0.0724,
+ "folds": [
+  {
+   "trainFrom": 1609459200000,
+   "trainTo": 1625097600000,
+   "testFrom": 1625097600000,
+   "testTo": 1633046400000
+  },
+  {
+   "trainFrom": 1617235200000,
+   "trainTo": 1633046400000,
+   "testFrom": 1633046400000,
+   "testTo": 1640995200000
+  },
+  {
+   "trainFrom": 1625097600000,
+   "trainTo": 1640995200000,
+   "testFrom": 1640995200000,
+   "testTo": 1648771200000
+  },
+  {
+   "trainFrom": 1633046400000,
+   "trainTo": 1648771200000,
+   "testFrom": 1648771200000,
+   "testTo": 1656633600000
+  },
+  {
+   "trainFrom": 1640995200000,
+   "trainTo": 1656633600000,
+   "testFrom": 1656633600000,
+   "testTo": 1664582400000
+  },
+  {
+   "trainFrom": 1648771200000,
+   "trainTo": 1664582400000,
+   "testFrom": 1664582400000,
+   "testTo": 1672531200000
+  },
+  {
+   "trainFrom": 1656633600000,
+   "trainTo": 1672531200000,
+   "testFrom": 1672531200000,
+   "testTo": 1680307200000
+  },
+  {
+   "trainFrom": 1664582400000,
+   "trainTo": 1680307200000,
+   "testFrom": 1680307200000,
+   "testTo": 1688169600000
+  },
+  {
+   "trainFrom": 1672531200000,
+   "trainTo": 1688169600000,
+   "testFrom": 1688169600000,
+   "testTo": 1696118400000
+  },
+  {
+   "trainFrom": 1680307200000,
+   "trainTo": 1696118400000,
+   "testFrom": 1696118400000,
+   "testTo": 1704067200000
+  },
+  {
+   "trainFrom": 1688169600000,
+   "trainTo": 1704067200000,
+   "testFrom": 1704067200000,
+   "testTo": 1711929600000
+  },
+  {
+   "trainFrom": 1696118400000,
+   "trainTo": 1711929600000,
+   "testFrom": 1711929600000,
+   "testTo": 1719792000000
+  },
+  {
+   "trainFrom": 1704067200000,
+   "trainTo": 1719792000000,
+   "testFrom": 1719792000000,
+   "testTo": 1727740800000
+  },
+  {
+   "trainFrom": 1711929600000,
+   "trainTo": 1727740800000,
+   "testFrom": 1727740800000,
+   "testTo": 1735689600000
+  }
+ ],
+ "leverage": 5,
+ "mmr": 0.01,
+ "e2ReplayNotes": "funding = last settled rate (live: predicted); taker ratio = last closed hour from 1m klines; ratios = 5m archive snapshot usable at bar close; 48h time cap",
+ "results": [
+  {
+   "strategy": "F9",
+   "verdict": "REJECTED",
+   "selections": [
+    "F9:5",
+    "F9:5",
+    "F9:10",
+    "F9:20",
+    "F9:20",
+    "F9:20",
+    "F9:5",
+    "F9:5",
+    "F9:10",
+    "F9:10",
+    "F9:20",
+    "F9:5",
+    "F9:5",
+    "F9:5"
+   ],
+   "checks": [
+    {
+     "id": "1-trades>=100",
+     "pass": true,
+     "detail": "1590 trades"
+    },
+    {
+     "id": "2-mean>0-and-lcb>0",
+     "pass": false,
+     "detail": "mean 0.040R, 90% one-sided LCB -0.044R"
+    },
+    {
+     "id": "3-two-thirds-of-symbols",
+     "pass": true,
+     "detail": "BTCUSDT 0.173R/156, BNBUSDT 0.159R/163, ADAUSDT 0.128R/153, DOGEUSDT 0.027R/154, LINKUSDT -0.098R/169, LTCUSDT -0.179R/149, DOTUSDT 0.005R/166, AVAXUSDT 0.073R/172, TRXUSDT 0.113R/156, BCHUSDT -0.009R/152"
+    },
+    {
+     "id": "4-costs-1.5x",
+     "pass": true,
+     "detail": "mean at 1.5x costs 0.019R, at 2x -0.002R"
+    },
+    {
+     "id": "5-neighbours",
+     "pass": true,
+     "detail": "modal F9:5; F9:10 0.028R"
+    },
+    {
+     "id": "6-beats-baselines",
+     "pass": true,
+     "detail": "strategy 0.040R vs matched random -0.008R vs momentum -0.085R"
+    },
+    {
+     "id": "7-deflated-sharpe",
+     "pass": false,
+     "detail": "DSR 0.000 (daily SR 0.010, trials 103, trial SR var 7.24e-2)"
+    }
+   ],
+   "stats": {
+    "trades": 1590,
+    "meanNetR": 0.03955775401242947,
+    "meanGrossR": 0.09156111696291175,
+    "meanCostR": 0.04184300001454914,
+    "meanFundingR": -0.010160362935933235,
+    "winRate": 0.3150943396226415,
+    "maxLosingStreak": 20,
+    "ciLow": -0.043594418707629645,
+    "dsr": 0
+   },
+   "bySymbol": {
+    "BTCUSDT": {
+     "trades": 156,
+     "meanNetR": 0.172921516705579
+    },
+    "BNBUSDT": {
+     "trades": 163,
+     "meanNetR": 0.15876615652073245
+    },
+    "ADAUSDT": {
+     "trades": 153,
+     "meanNetR": 0.12809110701334755
+    },
+    "DOGEUSDT": {
+     "trades": 154,
+     "meanNetR": 0.026969343166701232
+    },
+    "LINKUSDT": {
+     "trades": 169,
+     "meanNetR": -0.09842180832102712
+    },
+    "LTCUSDT": {
+     "trades": 149,
+     "meanNetR": -0.17877173457025106
+    },
+    "DOTUSDT": {
+     "trades": 166,
+     "meanNetR": 0.005083685402931623
+    },
+    "AVAXUSDT": {
+     "trades": 172,
+     "meanNetR": 0.0730778953594403
+    },
+    "TRXUSDT": {
+     "trades": 156,
+     "meanNetR": 0.11255959570933062
+    },
+    "BCHUSDT": {
+     "trades": 152,
+     "meanNetR": -0.009285145473987061
+    }
+   }
+  }
+ ]
+}

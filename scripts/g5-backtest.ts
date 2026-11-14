@@ -15,6 +15,8 @@ import { resampleCandles } from '../src/market/TimeframeEngine.js';
 import { mulberry32 } from '../src/research/Bootstrap.js';
 import { breakoutB1, fundingFadeE1, fundingStates, hourContext, hourOfDayT1, meanReversionC1, weeklyMomentumL1, dailyDonchianL3, momentumBenchmark, settlementReboundT2, type HourContext } from '../src/research/CandidateSignals.js';
 import { acceptance, type Fold, type SymbolTrade } from '../src/research/G5Acceptance.js';
+import { buildFrame, type Frame } from '../src/research/MtfFrame.js';
+import { bandReversionF7, btcLeadF6, dailyBreakF9, ignitionF4, openingRangeF5, pullbackF1, retestF2, squeezeF8, sweepF3, type Env, type SignalAt } from '../src/research/IntradaySignals.js';
 import { classifyRegime, regimeFeatures, type RegimeFeatures } from '../src/research/RegimeClassifier.js';
 import { HOUR_MS, MINUTE_MS, runOnBars, runStrategy, simulateTrade, type Market, type MinuteSeries, type Signal, type Trade } from '../src/research/SignalBacktest.js';
 import type { Candle } from '../src/types.js';
@@ -40,9 +42,9 @@ const MMR = 0.01; // Binance tier-1 maintenance margin rate for these contracts'
 
 type Factory = (sym: SymbolData) => (hour: number) => Signal | null;
 interface Variant { id: string; strategy: string; axes: number[]; make?: Factory; runTrades?: (sym: SymbolData) => Trade[] }
-interface SymbolData { symbol: string; market: Market; ctx: HourContext; hours: number; crowding: CrowdingData }
+interface SymbolData { btcClose: Float64Array; symbol: string; market: Market; ctx: HourContext; hours: number; crowding: CrowdingData; frame: Frame }
 
-interface Loaded { series: MinuteSeries; hours: Candle[]; quarters: Candle[]; takerByHour: Map<number, { buy: number; total: number }> }
+interface Loaded { series: MinuteSeries; hours: Candle[]; quarters: Candle[]; takerByHour: Map<number, { buy: number; total: number }>; volume: Float64Array; takerBuy: Float64Array }
 
 const emptySeries = (from: number, n: number): MinuteSeries => ({ start: from, open: new Float64Array(n).fill(NaN), high: new Float64Array(n).fill(NaN), low: new Float64Array(n).fill(NaN), close: new Float64Array(n).fill(NaN) });
 
@@ -55,7 +57,8 @@ function fill(series: MinuteSeries, candles: readonly Candle[]): void {
 
 /** Trade 1m bars with taker volume (full-column archive rows), month by month, plus 1h/15m bars and hourly taker volume. */
 async function tradeMinutes(symbol: string, from: number, to: number): Promise<Loaded> {
-  const loaded: Loaded = { series: emptySeries(from, (to - from) / MINUTE_MS), hours: [], quarters: [], takerByHour: new Map() };
+  const minuteCount = (to - from) / MINUTE_MS;
+  const loaded: Loaded = { series: emptySeries(from, minuteCount), hours: [], quarters: [], takerByHour: new Map(), volume: new Float64Array(minuteCount), takerBuy: new Float64Array(minuteCount) };
   for (let start = from; start < to;) {
     const d = new Date(start);
     const end = Math.min(to, Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 1));
@@ -63,6 +66,8 @@ async function tradeMinutes(symbol: string, from: number, to: number): Promise<L
     const candles = minutes.map((m) => ({ openTime: m.openTime, open: m.open, high: m.high, low: m.low, close: m.close, volume: m.baseVolume }));
     fill(loaded.series, candles);
     for (const m of minutes) {
+      const slot = (m.openTime - from) / MINUTE_MS;
+      loaded.volume[slot] = m.baseVolume; loaded.takerBuy[slot] = m.takerBuyBaseVolume;
       const hour = Math.floor(m.openTime / HOUR_MS) * HOUR_MS;
       const acc = loaded.takerByHour.get(hour) ?? { buy: 0, total: 0 };
       acc.buy += m.takerBuyBaseVolume; acc.total += m.baseVolume;
@@ -86,7 +91,7 @@ async function markMinutes(symbol: string, from: number, to: number): Promise<Mi
   return series;
 }
 
-async function loadSymbol(symbol: string, btc: Map<number, RegimeFeatures>, from: number, to: number) {
+async function loadSymbol(symbol: string, btc: Map<number, RegimeFeatures>, from: number, to: number, btcClose: Float64Array) {
   const trade = await tradeMinutes(symbol, from, to);
   const mark = { series: await markMinutes(symbol, from, to) };
   const features = regimeFeatures(trade.hours);
@@ -103,11 +108,31 @@ async function loadSymbol(symbol: string, btc: Map<number, RegimeFeatures>, from
     bars15: trade.quarters, bars1h: trade.hours, bars4h: resampleCandles(trade.hours, '4h'), takerByHour: trade.takerByHour,
     metrics: metrics.points, funding: funding.points, markBefore,
   };
-  const data: SymbolData = { symbol, market, ctx: hourContext(trade.hours, features, regimes), hours: trade.hours.length, crowding };
+  const frame = buildFrame({ start: from, open: trade.series.open, high: trade.series.high, low: trade.series.low, close: trade.series.close, volume: trade.volume, takerBuy: trade.takerBuy });
+  const data: SymbolData = { symbol, market, ctx: hourContext(trade.hours, features, regimes), hours: trade.hours.length, crowding, frame, btcClose };
   return { data, funding: funding.points, metrics: metrics.points };
 }
 
 interface FundingInputs { states: ReturnType<typeof fundingStates>; points: FundingPoint[]; metrics: MetricsPoint[] }
+
+/** §22: 27 intraday variants, signals on every closed 1m bar, entries at the next 1m open. */
+function intradayVariants(): Variant[] {
+  const family = (strategy: string, params: number[] | string[], make: (env: Env, s: SymbolData, p: never) => SignalAt): Variant[] => params.map((p, a) => ({
+    id: `${strategy}:${p}`, strategy, axes: [a],
+    runTrades: (s) => runOnBars(s.market, s.frame.minutes, make({ f: s.frame, regimes: s.ctx.regimes, hourIndex: new Map(s.ctx.bars.map((b, i) => [b.openTime, i])) }, s, p as never), (k) => s.frame.start + (k + 1) * MINUTE_MS),
+  }));
+  return [
+    ...family('F1', [30, 35, 40], (env, _s, p: number) => pullbackF1(env, p)),
+    ...family('F2', [24, 48, 96], (env, _s, p: number) => retestF2(env, p)),
+    ...family('F3', [48, 96, 192], (env, _s, p: number) => sweepF3(env, p)),
+    ...family('F4', [3, 4, 5], (env, _s, p: number) => ignitionF4(env, p)),
+    ...family('F5', ['00:00', '08:00', '13:30'], (env, _s, p: '00:00' | '08:00' | '13:30') => openingRangeF5(env, p)),
+    ...family('F6', [0.003, 0.005, 0.008], (env, s, p: number) => btcLeadF6(env, s.btcClose, p)),
+    ...family('F7', [2.5, 3, 3.5], (env, _s, p: number) => bandReversionF7(env, p)),
+    ...family('F8', [10, 20, 30], (env, _s, p: number) => squeezeF8(env, p)),
+    ...family('F9', [5, 10, 20], (env, _s, p: number) => dailyBreakF9(env, p)),
+  ];
+}
 
 function variants(e1: Map<string, FundingInputs>): Variant[] {
   const out: Variant[] = [];
@@ -126,7 +151,7 @@ function variants(e1: Map<string, FundingInputs>): Variant[] {
     id: `E2:minRR=${rr}`, strategy: 'E2', axes: [a],
     runTrades: (s) => runOnBars(s.market, s.crowding.bars15.length, crowdingSignalAt(s.crowding, s.ctx, rr), (k) => s.crowding.bars15[k]!.openTime + 15 * MINUTE_MS),
   }));
-  return out;
+  return [...out, ...intradayVariants()];
 }
 
 const MAKER_WINDOW_MINUTES = 5;
@@ -152,6 +177,7 @@ function matchedRandom(trades: SymbolTrade[], data: Map<string, SymbolData>, see
   for (const t of trades) {
     const s = data.get(t.symbol)!;
     const atrMultiple = t.stopDistance / s.ctx.atr[t.hour]!;
+    if (!Number.isFinite(atrMultiple)) continue; // the hourly ATR is undefined for the first bars
     const fold = FOLDS.find((f) => t.entryTime >= f.testFrom && t.entryTime < f.testTo)!;
     const candidates: number[] = [];
     for (let h = Math.ceil((fold.testFrom - s.ctx.hourStart) / HOUR_MS); h < (fold.testTo - s.ctx.hourStart) / HOUR_MS - 1; h += 1) if (s.ctx.regimes[h] === s.ctx.regimes[t.hour]) candidates.push(h);
@@ -166,13 +192,14 @@ function matchedRandom(trades: SymbolTrade[], data: Map<string, SymbolData>, see
 }
 
 async function main(): Promise<void> {
-  const btcHours = (await tradeMinutes('BTCUSDT', DEV_FROM, DEV_TO)).hours;
+  const btcLoaded = await tradeMinutes('BTCUSDT', DEV_FROM, DEV_TO);
+  const btcHours = btcLoaded.hours;
   const btcFeatures = regimeFeatures(btcHours);
   const btc = new Map(btcHours.map((b, i) => [b.openTime, btcFeatures[i]!]));
   const data = new Map<string, SymbolData>();
   const e1 = new Map<string, FundingInputs>();
   for (const symbol of SYMBOLS) {
-    const loaded = await loadSymbol(symbol, btc, DEV_FROM, DEV_TO);
+    const loaded = await loadSymbol(symbol, btc, DEV_FROM, DEV_TO, btcLoaded.series.close);
     data.set(symbol, loaded.data);
     for (const q of [0.75, 0.9, 0.95, 0.975]) e1.set(`${symbol}|${q}`, { states: fundingStates(loaded.funding, q), points: loaded.funding, metrics: loaded.metrics });
     console.log(`loaded ${symbol}: ${loaded.data.hours} hours, ${loaded.funding.length} funding, ${loaded.metrics.length} metrics`);
@@ -185,6 +212,8 @@ async function main(): Promise<void> {
     tradesByVariant.set(v.id, trades);
     console.log(`  ${v.id.padEnd(22)} trades ${trades.length}`);
   }
+  const dumpPath = arg('dump-trades', '');
+  if (dumpPath) writeFileSync(dumpPath, JSON.stringify(Object.fromEntries([...tradesByVariant].map(([id, ts]) => [id, ts.map((t) => ({ symbol: t.symbol, side: t.side, entryTime: t.entryTime, exitTime: t.exitTime, netR: t.netR, grossR: t.grossR, costR: t.costR, stopDistance: t.stopDistance, entry: t.entry, reason: t.reason }))]))));
   const momentum: SymbolTrade[] = [];
   for (const s of data.values()) momentum.push(...runStrategy(s.market, s.hours, momentumBenchmark(s.ctx)).map((t) => ({ ...t, symbol: s.symbol })));
   const results = STRATEGIES.map((strategy) => acceptance({

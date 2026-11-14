@@ -723,3 +723,228 @@ promoted; the sealed 2025-01 → 2026-10 window is **unread**.
 **The one lead left standing is §14 (short new perp listings against BTC).** Independent evidence for it can only come from
 (a) the sealed 2025-2026 window, once, for one frozen variant, which is the user's decision, or (b) forward paper
 trading of new listings. It needs no new capital class (perps only) but a wider universe than SOL/ETH/XRP.
+
+## 21. Phase 1 — intraday opportunity map (registered 2026-11-14; descriptive, **adds no trials**)
+
+Purpose: before testing any intraday entry rule, measure on the 1m path what a *signal-free* trade can do. It cannot approve
+a strategy; it shows whether 1–10% moves are frequent enough to pay costs and what an entry rule would have to beat.
+
+- **Data:** local 1m klines (mirror), development window 2021-01-01 → 2024-12-31, 13 contracts (BTC, ETH, SOL, XRP first).
+  The sealed 2025-01 → 2026-10 window is not read.
+- **Samples:** an entry every 30 minutes at the 1m open, both sides, no signal. Resolution on the 1m path: adverse level
+  (stop) vs favourable level (target); both in the same minute → the stop; neither within the horizon → exit at the horizon
+  close. Costs 12 bps round trip.
+- **Grid (descriptive, fixed):** stop S ∈ {0.5%, 1%, 2%}, target T ∈ {1%, 2%, 3%, 5%, 10%}, horizon ∈ {4h, 24h, 72h}.
+- **Benchmark:** a driftless path hits T before S with probability S/(S+T); an excess over that (before costs) is what an
+  entry rule would be trying to find. Costs add 0.12% per trade against it.
+- **Swing ceiling:** zigzag swings (reversal threshold r ∈ {1, 2, 3, 5, 10}%) on the 1m highs/lows per symbol and year, and the
+  net a perfect trader would keep after 12 bps per swing. An upper bound only: it uses hindsight.
+- **Not allowed to follow from it:** picking the best (S, T, hour, symbol) cell and trading it. Any rule that uses a cell must
+  be registered separately, counted, and tested on data this map did not select it from.
+
+### §21 result (run 2026-11-14)
+
+`npx tsx scripts/opportunity-map.ts --symbols <13 contracts>` → `research-runs/opportunity-map-20261114T1022Z.json`
+(1.82 M signal-free entries per cell, 2021–2024, both sides, 1m path, 12 bps costs).
+
+- **A signal-free entry earns nothing.** Pooled over 13 contracts the gross expectancy of every (stop, target, horizon)
+  cell is within ±0.03% per trade, so the net is the cost, about −0.12%, in every cell, side and year. Not one of the 90
+  cell/side combinations is positive in all four years. Hit rates sit at or below the driftless benchmark.
+- **What a rule must beat:** with a 1% stop and 3% target the break-even hit rate is 28.0% against a 25.0% benchmark; for
+  5% it is 18.7% vs 16.7%; for 10%, 10.2% vs 9.1%. A rule needs about **+1 to +3 points of hit rate** over chance, or a
+  gross edge above 0.12% per trade, in out-of-sample data.
+- **Moves exist.** Zigzag swings (hindsight, one unit of notional): BTC 18–97 swings ≥ 10% a year, ETH 22–173, SOL 94–345,
+  XRP 63–305; ≥ 3% swings run in the hundreds to thousands a year. Capturing even 1–5% of that ceiling would be a large
+  return, so the problem is predicting them, not their frequency.
+- Direction alone is not it: in 2021–2024 neither side's pooled net beats −cost in a consistent way (long loses most in 2022,
+  short least; both flip sign by year).
+
+## 22. Phase 2 — intraday multi-timeframe families with 1m entries (registered 2026-11-14, before any family was simulated)
+
+Nine families, both sides, three variants each (27). N = 73 + 27 = **100** for the deflated Sharpe. Every signal is
+evaluated on each **closed 1m bar**; the entry fills at the **next 1m open** (+ slippage); stops, targets, trails and time
+exits resolve on the 1m path with the §3 rules (stop first on a same-minute touch; gaps through the stop fill at the open;
+the trail ratchets on 1h closes, an engine limit). Higher timeframes (5m, 15m, 1h, 4h, 1d) are built from the 1m bars and
+read only after they close. §1 gating applies: STRESS_CRASH blocks entries, HIGH_VOL halves size. One position per symbol.
+Costs 12 bps round trip (+ real funding). **Symbols:** SOLUSDT, ETHUSDT, XRPUSDT; BTCUSDT is context only (F6).
+**Window / protocol:** `--from 2020-11-01 --to 2025-01-01 --first-test 2021-07-01`, six-month train / three-month test
+walk-forward (fourteen test folds), the seven §4 checks, matched random baseline and the 24h momentum benchmark; no rescue;
+2025-01 onward sealed. ATR = Wilder 14 on the stated timeframe; EMA/RSI standard.
+
+| Family | Context (higher timeframes) | 1m trigger and entry | Stop | Exit | Max hold | Variants |
+|---|---|---|---|---|---|---|
+| F1 trend pullback | 4h EMA50 vs EMA200 and 1h close vs 1h EMA50 agree (side) | within 8 closed 15m bars after 15m RSI14 ≤ P (long) / ≥ 100−P (short): a 1m close crosses back through the 1m EMA30 in the trend direction | 1.5 × ATR(15m) | trail 3 × ATR(15m), no target | 72h | P ∈ {30, 35, 40} |
+| F2 breakout + retest | 1h close beyond the prior N-bar 1h channel; 4h EMA50 now vs 6 bars ago agrees | within 12h, first 1m bar whose low (long) / high (short) comes within 0.1 × ATR(1h) of the broken level and closes back on the breakout side; cancelled if a 1h close returns through the level | level ∓ 1.2 × ATR(1h) | trail 2.5 × ATR(1h) | 72h | N ∈ {24, 48, 96} |
+| F3 sweep reversal | prior W 5m bars' range (excluding the forming bar) | a 1m bar trades beyond the range extreme and closes back inside, with 1m volume ≥ 2 × its prior-60-minute mean | sweep extreme ± 0.2 × ATR(15m) | target = range midpoint, skipped if reward < 1.5R | 12h | W ∈ {48, 96, 192} |
+| F4 momentum ignition | none | 1m return ÷ stdev of the prior 240 1m returns ≥ Z in magnitude, 1m volume z (prior 240) ≥ 3, taker-buy share ≥ 0.65 (long) / ≤ 0.35 (short) | 1 × ATR(15m) | target 2R | 2h | Z ∈ {3, 4, 5} |
+| F5 opening range | sessions starting 00:00, 08:00, 13:30 UTC; range = high/low of the first 30 minutes | first 1m close beyond the range after it forms; one trade per session | opposite side of the range, within [0.8, 3] × ATR(15m) | target 2R | 6h from session start | session ∈ {00:00, 08:00, 13:30} |
+| F6 BTC lead (alts only) | none | BTC move over the last 5 minutes ≥ θ in magnitude and the alt moved ≤ 30% of it in the same direction; trade the alt in BTC's direction | 0.5 × ATR(15m) | target 1 × ATR(15m) | 1h | θ ∈ {0.3%, 0.5%, 0.8%} |
+| F7 band reversion | range regime: |4h EMA50 − EMA200| / close < 2% | 1m bar trades beyond the 1h Bollinger(48, σ) band and closes back inside | 1m extreme ± 1 × ATR(1h) | target = 1h Bollinger mean, skipped if reward < 1.2R | 24h | σ ∈ {2.5, 3, 3.5} |
+| F8 squeeze expansion | 1h Bollinger(24, 2) width percentile over the prior 720 1h bars ≤ P | at a 15m close beyond that band (in the 1h bar's direction), the next 1m open | 1.5 × ATR(1h) | trail 3 × ATR(1h) | 72h | P ∈ {10, 20, 30}% |
+| F9 daily range break | 4h EMA50 vs EMA200 agrees; previous N completed UTC days' high/low | first 1m close beyond the N-day high (long) / low (short) | 1.5 × ATR(4h) | trail 3 × ATR(4h) | 7 days | N ∈ {5, 10, 20} |
+
+- **Reported per variant (not gated):** long and short separately, per symbol, per year, gross vs cost vs funding R, the
+  share of exits by reason (STOP/TARGET/INVALIDATED/TIME), average hold.
+- **Power:** the number of trades is printed against `minimumDetectableEffect`; a family with too few trades is
+  "untestable at this sample".
+- **Exit sensitivity:** only for a family that shows positive gross edge (net R > 0 in training folds on at least 2 of 3
+  symbols), and registered separately and counted before it is run.
+
+## 23. Addendum (pre-registered 2026-11-14, after the first §22 run showed F9 at 6 of 7 checks, before F9 was run on any other symbol)
+
+F9 (daily-range break, 4h trend filter, 1m entry) failed only the deflated Sharpe on SOL/ETH/XRP. The earlier daily-breakout
+lead (L3, §10–§12) looked the same on SOL/ETH/XRP and then **failed on ten other perps**. So F9 gets the same test first,
+frozen, before anything else is built on it:
+
+- **Rules:** F9 exactly as §22 (N ∈ {5, 10, 20}; 4h EMA50 vs EMA200 trend filter; 1m close beyond the prior N completed
+  UTC days' high/low; once per day per side; stop 1.5 × ATR(4h); trail 3 × ATR(4h); max hold 7 days; §1 gating; 12 bps).
+- **Symbols (fixed, research only, same disclosure as §12):** BTCUSDT, BNBUSDT, ADAUSDT, DOGEUSDT, LINKUSDT, LTCUSDT, DOTUSDT,
+  AVAXUSDT, TRXUSDT, BCHUSDT. Survivorship caveat as §12 (contracts alive today).
+- **Window and protocol:** `--from 2020-11-01 --to 2025-01-01 --first-test 2021-07-01`, the seven checks with check 3 read
+  as "positive on at least 7 of the 10 symbols"; N = 100 + 3 = **103**.
+- **Reading it:** if F9 is positive on at least 7 of 10 symbols it replicates across contracts, which L3 did not; if not, F9
+  is the same symbol-specific result as L3 and the daily-breakout family is closed.
+
+### §22 result (run 2026-11-14, N = 100)
+
+`NODE_OPTIONS=--max-old-space-size=12288 npx tsx scripts/g5-backtest.ts --from 2020-11-01 --to 2025-01-01 --first-test 2021-07-01 --strategies F1,…,F9 --trials 100`
+→ `research-runs/g5-dev-2026-11-14T1030Z.json` (SOL, ETH, XRP; fourteen walk-forward test folds, 2021-07 → 2024-12).
+Two engine/loader fixes preceded the final run and are covered by tests: a time exit that landed on a missing minute produced a
+NaN price (now exits at the latest real price), and the hour index is now matched by time, not offset, because 2020–2022
+archives have missing hours. A look-ahead test (`tests/intradaySignals.test.ts`) checks every family gives the same signals with and without future minutes.
+
+| Family | Trades | Gross R | Cost R | Net R | 90% LCB | Symbols > 0 | vs random / momentum | Checks | Verdict |
+|---|---|---|---|---|---|---|---|---|---|
+| F1 trend pullback | 2,958 | −0.049 | 0.161 | −0.214 | −0.260 | 0 of 3 | no / no | 1/7 | REJECTED |
+| F2 breakout + retest | 1,283 | −0.004 | 0.080 | −0.089 | −0.149 | 0 of 3 | no / no | 1/7 | REJECTED |
+| F3 sweep reversal | 19,013 | −0.048 | 0.440 | −0.488 | −0.512 | 0 of 3 | no / no | 1/7 | REJECTED |
+| F4 momentum ignition | 13,982 | +0.036 | 0.304 | −0.268 | −0.285 | 0 of 3 | no / no | 1/7 | REJECTED |
+| F5 opening range | 3,691 | −0.016 | 0.160 | −0.176 | −0.209 | 0 of 3 | no / no | 1/7 | REJECTED |
+| F6 BTC lead | 2,674 | +0.032 | 0.327 | −0.296 | −0.340 | 0 of 3 | beats random / no | 1/7 | REJECTED |
+| F7 band reversion | 894 | −0.041 | 0.123 | −0.162 | −0.234 | 0 of 3 | no / no | 1/7 | REJECTED |
+| F8 squeeze expansion | 1,452 | +0.115 | 0.108 | +0.006 | −0.063 | 1 of 3 (SOL) | beats both | 2/7 | REJECTED |
+| **F9 daily-range break** | 404 | **+0.221** | 0.037 | **+0.169** | **+0.043** | **3 of 3** (SOL +0.233, ETH +0.112, XRP +0.162) | **beats both** (−0.053 / −0.120) | **6/7** | REJECTED (DSR only) |
+
+- Every short-horizon family (F1–F7) is negative before or because of costs: with stops of 0.3–0.6% the 12 bps round trip
+  is 0.12–0.40R per trade (F3 0.44R, F4 0.30R, F6 0.33R), which is more than any gross edge found. Their gross is within
+  ±0.05R of zero; F4 and F6 have a small positive gross that costs erase.
+- F8 has a real gross (+0.115R) that costs cancel (+0.006R net); a cheaper entry would be a new, counted hypothesis.
+- F9 is the only family positive on all three symbols, at 1.5× and 2× costs (+0.151R, +0.132R), with both parameter
+  neighbours positive, and beats the matched random and momentum baselines. Its deflated Sharpe is ≈ 0 (daily SR 0.044,
+  N = 100, trial Sharpe variance 7.2e-2 dominated by the very negative F3/F4 trials).
+
+### §23 result — F9 breadth (run 2026-11-14, N = 103)
+
+`… --strategies F9 --trials 103 --trial-sr-var 7.24e-2 --symbols BTC,BNB,ADA,DOGE,LINK,LTC,DOT,AVAX,TRX,BCH` → `research-runs/g5-dev-2026-11-14T1041Z.json`
+
+| Trades | Gross R | Net R | 90% LCB | Symbols > 0 | 1.5× cost | Neighbour F9:10 | Beats random (−0.008) / momentum (−0.085) | DSR | Checks | Verdict |
+|---|---|---|---|---|---|---|---|---|---|---|
+| 1,590 | +0.092 | **+0.040** | −0.044 | **7 of 10** | +0.019 | +0.028 | yes / yes | 0.000 | 5/7 | REJECTED |
+
+Per symbol (net R / trades): BTC +0.173/156, BNB +0.159/163, ADA +0.128/153, TRX +0.113/156, AVAX +0.073/172, DOGE +0.027/154, DOT
++0.005/166, BCH −0.009/152, LINK −0.098/169, LTC −0.179/149.
+
+- Unlike L3 (4–5 of 10 symbols, net −0.012R), F9 is positive on 7 of 10 contracts and beats random and momentum, so it
+  is not just the SOL/XRP result seen in the first run. The effect outside SOL/ETH/XRP is small (+0.04R, lower bound below zero),
+  which is why checks 2 and 7 fail.
+- Verdict by the §23 rule: **not a pass, but the first family to replicate in sign across contracts.** The sealed
+  2025-2026 window is still unread.
+
+### §24 F9 as a portfolio (descriptive, run 2026-11-14; no trial added)
+
+`--dump-trades` on F9 over 13 contracts, entries 2021-07 → 2024-12. Winners average +2.1R, losers −0.91R, win rate 31–33%,
+average stop 3.7% of price, average hold 1.4 days (the 3 × ATR(4h) trail ends trades early). Shorts earn more than longs (F9:10 all 13:
+short +0.080R vs long −0.006R; F9:20: +0.176R vs +0.014R).
+
+| Book | Net R/trade | Trades | 0.5% risk per trade | 1% risk per trade |
+|---|---|---|---|---|
+| F9:10, all 13 contracts | +0.031 | 1,891 | ×1.24, CAGR 6%, max drawdown **−39%** (2021 −2%, 2022 −7%, 2023 +8%, 2024 +25%) | ×1.32, max drawdown −64% |
+| F9:5, SOL/ETH/XRP | +0.116 | 514 | ×1.32, CAGR 8%, max drawdown −13% | ×1.67, CAGR 16%, −24% |
+| F9:10, SOL/ETH/XRP | +0.039 | 425 | ×1.07, CAGR 2%, −14% | ×1.10, −26% |
+| F9:20, SOL/ETH/XRP | +0.142 | 338 | ×1.25, CAGR 7%, −9% | ×1.52, CAGR 13%, −17% |
+
+The edge is real in sign but small. On 13 correlated contracts (up to 13 open at once) a +0.03R/trade expectancy gives
+6% a year for a 39% drawdown; on the three in-mandate contracts 2–16% a year at 14–26% drawdown, which is within the
+noise of the sample (the in-mandate rows are also the subset F9 was first seen on). It is not a tradable edge by itself.
+
+## 25. Consolidated intraday result (2026-11-14)
+
+Trial budget spent: **103**. Intraday 1m-entry families F1–F8 (every timeframe from 5m to 4h, both sides, 24 variants): all
+negative or flat after 12 bps; stop widths of 0.3–0.6% make cost 0.1–0.44R per trade. F9 (multi-day trend break with a 1m
+trigger) is the single family with positive net on all of SOL/ETH/XRP and 7 of 10 other contracts, but its expectancy is
++0.03 to +0.14R and it fails the lower-bound and deflated-Sharpe checks outside SOL/ETH/XRP. The sealed window is unread.
+
+## 26. One-shot read of the sealed window (registered 2026-11-14, before it was read; user asked to try every remaining option)
+
+**Option 1 (smart-money signals) — not testable for futures.** The Binance `trading-signal` endpoint serves history (pages 50 and
+200 still return rows) but only for Solana/BSC DEX tokens (pump.fun style names), none of which has a Binance perpetual or
+a price archive here, so no signal can be turned into a perp trade. Closed without a test.
+
+**Option 3 — F9 on the sealed 2025-01-01 → 2026-10-31 window, once.** Frozen before reading:
+- **Rule:** F9 exactly as §22 on SOLUSDT, ETHUSDT, XRPUSDT. **Primary: N = 20** (the modal walk-forward selection on the
+  in-mandate symbols); N = 5 and N = 10 are reported as neighbours. No other change of any kind.
+- **Data:** the local mirror, 1m klines and mark prices from 2024-10 (indicator warm-up only) through 2026-10; trades counted only
+  if they enter on or after 2025-01-01. Breadth symbols have no mirror past 2024-12, so they are not tested.
+- **Pass (primary variant, all required):** ≥ 40 trades; mean net R > 0 with a one-sided 90% day-clustered bootstrap lower bound
+  > 0; mean net R > 0 on at least 2 of 3 symbols; mean net R > 0 at 1.5× costs; mean above the matched random baseline.
+  A pass supports forward paper trading, not live capital. A fail closes F9.
+- This uses the window. Nothing tuned or selected afterwards may claim it as out-of-sample.
+
+### §26 result — F9 on the sealed window (run 2026-11-14, read once)
+
+`scripts/g5-backtest.ts --from 2024-10-01 --to 2026-11-01 --first-test 2025-01-01 --strategies F9`, trades entering 2025-01-01 → 2026-10; per-variant statistics from
+`--dump-trades` (day-clustered bootstrap, 4,000 draws).
+
+| Variant | Trades | Mean net R | 90% LCB | SOL / ETH / XRP | 1.5× cost | 2025 / 2026 | Long / short |
+|---|---|---|---|---|---|---|---|
+| **F9:20 (frozen primary)** | 172 | **+0.135** | **−0.078** | +0.04 / +0.47 / −0.08 | +0.114 | +0.30 / −0.05 | +0.33 / −0.04 |
+| F9:10 | 214 | +0.092 | −0.104 | −0.01 / +0.32 / −0.04 | +0.070 | +0.26 / −0.11 | +0.26 / −0.04 |
+| F9:5 | 253 | +0.191 | −0.007 | +0.14 / +0.42 / +0.01 | +0.169 | +0.41 / −0.05 | +0.41 / +0.02 |
+
+**Verdict by the §26 rule: the frozen primary fails** (lower bound below zero). It keeps a positive mean, positive on 2 of 3
+symbols and at 1.5× costs, but the edge is concentrated in ETH and in 2025 (long side), and **2026 is flat to slightly
+negative in all three variants**. The walk-forward-selected mixture the harness reports (+0.284R, LCB +0.063, all three symbols positive)
+is not the frozen rule and is not used. As a book on SOL/ETH/XRP the frozen F9:20 made ×1.11 at 0.5% risk per trade
+(CAGR 6%, drawdown −9%). The sealed window for F9 is now spent; F9 is closed as a validated edge.
+
+## 27. One-shot read of the sealed window for the listing short (registered 2026-11-14, before it was read)
+
+The user asked for every remaining option, so the second lead is tested the same way as F9 (§26).
+- **Rule:** §14 exactly, **primary D = 3 days, H = 21 days** (the best development variant, fixed in advance); the other three
+  (D, H) are neighbours. Every USDⓈ-M USDT perpetual whose first daily bar falls in 2025-01-01 → 2026-10-05 and whose entry (day L+3) is in
+  that range; exits need data through 2026-10-31. Short the listing against a BTC long, 24 bps costs, funding both legs, no stop.
+- **Pass (primary, all required):** ≥ 40 events; mean net > 0 with a one-sided 90% month-clustered lower bound > 0; mean net > 0 in
+  both 2025 and 2026; mean net > 0 at 3× costs; mean above the 95th percentile of the cost-free random-peer baseline;
+  all four variants' means > 0. A pass supports forward paper trading of new listings (small size: the dev tail was −460%), not live capital.
+- Run: `npx tsx scripts/xsection-backtest.ts --listings --listings-sealed`.
+
+### §27 result — listing short on the sealed window (run 2026-11-14, read once)
+
+`npx tsx scripts/xsection-backtest.ts --listings --listings-sealed` (events entering 2025-01-01 → 2026-10-05, ~500 per variant).
+
+| (D, H) | Events | Mean net | 90% LCB | 2025 / 2026 | 3× cost | Random p95 | Checks | Verdict |
+|---|---|---|---|---|---|---|---|---|
+| 3, 7 | 507 | +0.37% | −2.70% | −1.68 / +2.22 | −0.11% | 1.97% | 1/7 | REJECTED |
+| **3, 21 (frozen primary)** | 507 | **−5.50%** | **−21.01%** | −14.60 / +2.74 | −5.98% | 4.23% | **1/7** | **REJECTED** |
+| 7, 7 | 499 | −1.27% | −6.01% | −4.84 / +2.06 | −1.75% | 2.40% | 1/7 | REJECTED |
+| 7, 21 | 499 | −7.45% | −21.40% | −15.96 / +0.50 | −7.93% | 4.45% | 1/7 | REJECTED |
+
+**The listing short fails the frozen test.** The typical event still wins (median +8.8%, 63% win rate; without the worst 5 events the
+mean is +7.2%), but the sealed window contains tail events that wipe the mean out (worst hedged event −5,396%: a perp that rose
+more than 50× while short; 1st percentile −175%). With no stop, the rule's average is dominated by a few unbounded losses, which
+is what the development tail (−460%) hinted at. A stop rule is a **new hypothesis** on data that has now been read; it cannot be
+confirmed on this history and is only testable going forward (§28). The sealed window is now spent for both leads.
+
+## 28. Forward-only test (registered 2026-11-14; entries before this date are labelled retrospective and do not count)
+
+History is exhausted: every dataset here has been used for development or the sealed read. The only honest evidence left is forward.
+Frozen, nothing may be changed after the first forward event:
+- **Listing short with a hard stop:** every new USDⓈ-M USDT perpetual (Binance `onboardDate`); short at the daily open of day L+3, BTC
+  long hedge for the same notional, **hard stop 30% above the entry** (checked on daily highs; a day opening above the stop fills at its
+  open), exit at the open of day L+24, costs 24 bps, real funding on both legs.
+- **Sample and pass:** at least 100 forward events; mean net > 0, month-clustered one-sided 90% lower bound > 0, mean net > 0 at 3× costs.
+  **Correction found when the tracker first ran:** Binance now lists only about 2–3 USDT perpetuals a month (exchange info: 2026-06 to 2026-10 shows 7, 3, 2, 3, 2),
+  not the ~23 a month the archive averaged in 2025–2026 (that count included contracts since delisted). 100 forward events would take about three years, so
+  this is a **monitor, not a usable test**; it is kept because it costs nothing, and no conclusion is drawn before 100 events. Any rule change restarts the count.
+- **Tooling:** `scripts/shadow-listings.ts`, run once per day; journal `data/shadow/listings.jsonl`, state `data/shadow/listings-state.json`.
+  No orders are placed; it reads public exchange info and klines only.

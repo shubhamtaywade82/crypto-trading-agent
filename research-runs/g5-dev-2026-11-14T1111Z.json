@@ -1,0 +1,142 @@
+{
+ "commit": "357051cf",
+ "dirty": true,
+ "window": {
+  "from": "2024-10-01",
+  "to": "2026-11-01"
+ },
+ "symbols": [
+  "SOLUSDT",
+  "ETHUSDT",
+  "XRPUSDT"
+ ],
+ "strategies": [
+  "F9"
+ ],
+ "trials": 103,
+ "trialSharpeVarianceOverride": 0.0724,
+ "folds": [
+  {
+   "trainFrom": 1719792000000,
+   "trainTo": 1735689600000,
+   "testFrom": 1735689600000,
+   "testTo": 1743465600000
+  },
+  {
+   "trainFrom": 1727740800000,
+   "trainTo": 1743465600000,
+   "testFrom": 1743465600000,
+   "testTo": 1751328000000
+  },
+  {
+   "trainFrom": 1735689600000,
+   "trainTo": 1751328000000,
+   "testFrom": 1751328000000,
+   "testTo": 1759276800000
+  },
+  {
+   "trainFrom": 1743465600000,
+   "trainTo": 1759276800000,
+   "testFrom": 1759276800000,
+   "testTo": 1767225600000
+  },
+  {
+   "trainFrom": 1751328000000,
+   "trainTo": 1767225600000,
+   "testFrom": 1767225600000,
+   "testTo": 1775001600000
+  },
+  {
+   "trainFrom": 1759276800000,
+   "trainTo": 1775001600000,
+   "testFrom": 1775001600000,
+   "testTo": 1782864000000
+  },
+  {
+   "trainFrom": 1767225600000,
+   "trainTo": 1782864000000,
+   "testFrom": 1782864000000,
+   "testTo": 1790812800000
+  }
+ ],
+ "leverage": 5,
+ "mmr": 0.01,
+ "e2ReplayNotes": "funding = last settled rate (live: predicted); taker ratio = last closed hour from 1m klines; ratios = 5m archive snapshot usable at bar close; 48h time cap",
+ "results": [
+  {
+   "strategy": "F9",
+   "verdict": "REJECTED",
+   "selections": [
+    "F9:5",
+    "F9:5",
+    "F9:5",
+    "F9:5",
+    "F9:20",
+    "F9:20",
+    "F9:20"
+   ],
+   "checks": [
+    {
+     "id": "1-trades>=100",
+     "pass": true,
+     "detail": "208 trades"
+    },
+    {
+     "id": "2-mean>0-and-lcb>0",
+     "pass": true,
+     "detail": "mean 0.284R, 90% one-sided LCB 0.063R"
+    },
+    {
+     "id": "3-two-thirds-of-symbols",
+     "pass": true,
+     "detail": "SOLUSDT 0.181R/69, ETHUSDT 0.573R/69, XRPUSDT 0.101R/70"
+    },
+    {
+     "id": "4-costs-1.5x",
+     "pass": true,
+     "detail": "mean at 1.5x costs 0.262R, at 2x 0.241R"
+    },
+    {
+     "id": "5-neighbours",
+     "pass": true,
+     "detail": "modal F9:5; F9:10 0.135R"
+    },
+    {
+     "id": "6-beats-baselines",
+     "pass": true,
+     "detail": "strategy 0.284R vs matched random -0.106R vs momentum 0.021R"
+    },
+    {
+     "id": "7-deflated-sharpe",
+     "pass": false,
+     "detail": "DSR 0.000 (daily SR 0.063, trials 103, trial SR var 7.24e-2)"
+    }
+   ],
+   "stats": {
+    "trades": 208,
+    "meanNetR": 0.2839006053872723,
+    "meanGrossR": 0.3330307778936653,
+    "meanCostR": 0.04281443054068612,
+    "meanFundingR": -0.006315741965707084,
+    "winRate": 0.36538461538461536,
+    "maxLosingStreak": 11,
+    "ciLow": 0.06335653823737308,
+    "dsr": 0
+   },
+   "bySymbol": {
+    "SOLUSDT": {
+     "trades": 69,
+     "meanNetR": 0.18117947135089754
+    },
+    "ETHUSDT": {
+     "trades": 69,
+     "meanNetR": 0.5726652792964027
+    },
+    "XRPUSDT": {
+     "trades": 70,
+     "meanNetR": 0.1005148303698414
+    }
+   }
+  }
+ ]
+}

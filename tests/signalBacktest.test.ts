@@ -66,3 +66,10 @@ test('a passive entry fills only when price trades strictly through the limit in
   const late = simulateTrade(market({ 66: { low: 99 } }), long({ makerEntryWindowMinutes: 5 }), costs);
   assert.equal(late, null, 'outside the 5-minute window');
 });
+
+test('a time exit that lands on a missing minute exits at the latest real price, not NaN', () => {
+  const t = simulateTrade(market({ 119: { open: NaN, high: NaN, low: NaN, close: NaN }, 118: { close: 103, high: 103 } }), long({ maxHoldMs: 60 * MINUTE_MS }), ZERO)!;
+  assert.equal(t.reason, 'TIME');
+  assert.equal(t.exit, 103);
+  assert.ok(Number.isFinite(t.netR));
+});

@@ -1,0 +1,100 @@
+{
+ "commit": "357051cf",
+ "dirty": true,
+ "window": {
+  "from": "2022-01-01",
+  "to": "2022-10-01"
+ },
+ "symbols": [
+  "SOLUSDT",
+  "ETHUSDT",
+  "XRPUSDT"
+ ],
+ "strategies": [
+  "F1"
+ ],
+ "trials": 100,
+ "trialSharpeVarianceOverride": null,
+ "folds": [
+  {
+   "trainFrom": 1640995200000,
+   "trainTo": 1656633600000,
+   "testFrom": 1656633600000,
+   "testTo": 1664582400000
+  }
+ ],
+ "leverage": 5,
+ "mmr": 0.01,
+ "e2ReplayNotes": "funding = last settled rate (live: predicted); taker ratio = last closed hour from 1m klines; ratios = 5m archive snapshot usable at bar close; 48h time cap",
+ "results": [
+  {
+   "strategy": "F1",
+   "verdict": "REJECTED",
+   "selections": [
+    "F1:40"
+   ],
+   "checks": [
+    {
+     "id": "1-trades>=100",
+     "pass": true,
+     "detail": "291 trades"
+    },
+    {
+     "id": "2-mean>0-and-lcb>0",
+     "pass": false,
+     "detail": "mean -0.285R, 90% one-sided LCB -0.428R"
+    },
+    {
+     "id": "3-two-thirds-of-symbols",
+     "pass": false,
+     "detail": "SOLUSDT -0.083R/89, ETHUSDT -0.294R/105, XRPUSDT -0.461R/97"
+    },
+    {
+     "id": "4-costs-1.5x",
+     "pass": false,
+     "detail": "mean at 1.5x costs -0.349R, at 2x -0.412R"
+    },
+    {
+     "id": "5-neighbours",
+     "pass": false,
+     "detail": "modal F1:40; F1:35 -0.347R"
+    },
+    {
+     "id": "6-beats-baselines",
+     "pass": false,
+     "detail": "strategy -0.285R vs matched random NaNR vs momentum -0.439R"
+    },
+    {
+     "id": "7-deflated-sharpe",
+     "pass": false,
+     "detail": "DSR 0.001 (daily SR -0.212, trials 100, trial SR var 4.26e-3)"
+    }
+   ],
+   "stats": {
+    "trades": 291,
+    "meanNetR": -0.2853176762762421,
+    "meanGrossR": -0.1560036987763274,
+    "meanCostR": 0.12686942787305475,
+    "meanFundingR": -0.0024445496268598868,
+    "winRate": 0.24742268041237114,
+    "maxLosingStreak": 14,
+    "ciLow": -0.4281178554598791,
+    "dsr": 0.0006798292962408858
+   },
+   "bySymbol": {
+    "SOLUSDT": {
+     "trades": 89,
+     "meanNetR": -0.08314128997128051
+    },
+    "ETHUSDT": {
+     "trades": 105,
+     "meanNetR": -0.29398701246027936
+    },
+    "XRPUSDT": {
+     "trades": 97,
+     "meanNetR": -0.46143538845992926
+    }
+   }
+  }
+ ]
+}

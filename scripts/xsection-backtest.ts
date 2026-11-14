@@ -22,10 +22,11 @@ const COST_STRESS = Number(flag('cost-stress', '1.5'));
 const GATE_DSR = flag('gate-dsr', 'true') === 'true';
 const ONLY = flag('ids', '');
 const sealedId = process.argv.includes('--sealed') ? (process.argv[process.argv.indexOf('--sealed') + 1] as SignalId) : null;
-const PANEL_END = sealedId ? Date.UTC(2026, 10, 1) : Date.UTC(2025, 0, 1);
+const LISTINGS_SEALED = process.argv.includes('--listings-sealed');
+const PANEL_END = sealedId || LISTINGS_SEALED ? Date.UTC(2026, 10, 1) : Date.UTC(2025, 0, 1);
 const FIRST_MONDAY = sealedId ? Date.UTC(2025, 0, 6) : Date.parse(`${flag('first', '2021-03-01')}T00:00:00Z`);
 const LAST_MONDAY = sealedId ? Date.UTC(2026, 9, 26) : Date.UTC(2024, 11, 30);
-const HALF_SPLIT = Date.UTC(2023, 0, 1);
+const HALF_SPLIT = LISTINGS_SEALED ? Date.UTC(2026, 0, 1) : Date.UTC(2023, 0, 1);
 const TRIALS = Number(flag("trials", "54"));
 const RANDOM_RUNS = 2000;
 
@@ -81,8 +82,8 @@ function evaluate(panel: Panel, id: SignalId | 'CARRY', run: (q: number) => Week
 
 const LISTING_VARIANTS = [{ delay: 3, hold: 7 }, { delay: 3, hold: 21 }, { delay: 7, hold: 7 }, { delay: 7, hold: 21 }];
 const LISTING_TRIALS = 58;
-const LISTING_FIRST = Date.UTC(2021, 2, 1);
-const LISTING_LAST = Date.UTC(2024, 11, 30);
+const LISTING_FIRST = LISTINGS_SEALED ? Date.UTC(2025, 0, 1) : Date.UTC(2021, 2, 1);
+const LISTING_LAST = LISTINGS_SEALED ? Date.UTC(2026, 9, 5) : Date.UTC(2024, 11, 30);
 
 const EVENT_NOTIONAL = 0.03; // equity share per event, a sizing example, not a tuned value
 

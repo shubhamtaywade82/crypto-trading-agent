@@ -145,6 +145,12 @@ function closeTrade(market: Market, pos: Open, exitIndex: number, exit: number, 
   };
 }
 
+/** Price to exit at when minute i has no bar (an archive gap): the latest real price since entry, never NaN. */
+function priceAtOrBefore(series: Float64Array, i: number, pos: Open): number {
+  for (let j = i; j >= pos.entryIndex; j -= 1) if (Number.isFinite(series[j]!)) return series[j]!;
+  return pos.entry;
+}
+
 /** Walks one position minute by minute until it exits. */
 export function simulateTrade(market: Market, signal: Signal, costs: CostModel = DEFAULT_COSTS): Trade | null {
   const pos = openPosition(market, signal);
@@ -153,15 +159,15 @@ export function simulateTrade(market: Market, signal: Signal, costs: CostModel =
   const { deadline } = pos;
   let exitNextOpen: ExitReason | null = null;
   for (let i = pos.entryIndex; i <= last; i += 1) {
-    if (exitNextOpen) return closeTrade(market, pos, i, market.trade.open[i]!, exitNextOpen, costs);
+    if (exitNextOpen) return closeTrade(market, pos, i, priceAtOrBefore(market.trade.open, i, pos), exitNextOpen, costs);
     const hit = intraminuteExit(market, pos, i);
     if (hit) return closeTrade(market, pos, i, hit.price, hit.reason, costs);
     settleFunding(market, pos, i);
-    if (i + 1 >= deadline) return closeTrade(market, pos, i, market.trade.close[i]!, 'TIME', costs);
+    if (i + 1 >= deadline) return closeTrade(market, pos, i, priceAtOrBefore(market.trade.close, i, pos), 'TIME', costs);
     const minuteEnd = market.trade.start + (i + 1) * MINUTE_MS;
     if (minuteEnd % HOUR_MS === 0 && onHourClose(market, pos, i, (minuteEnd - market.hourStart) / HOUR_MS - 1)) exitNextOpen = 'INVALIDATED';
   }
-  return closeTrade(market, pos, last, market.trade.close[last]!, 'END_OF_DATA', costs);
+  return closeTrade(market, pos, last, priceAtOrBefore(market.trade.close, last, pos), 'END_OF_DATA', costs);
 }
 
 /**

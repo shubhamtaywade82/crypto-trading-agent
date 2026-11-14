@@ -1,0 +1,118 @@
+{
+  "schema_version": "1.0.0",
+  "run_id": "context-strategy-20261114T203406Z-run10",
+  "created_at_utc": "2026-11-14T20:34:06.221Z",
+  "verified_at_utc": "2026-11-14T20:34:06.221Z",
+  "repository": "shubhamtaywade82/crypto-trading-agent",
+  "branch": "research/raw-ohlcv-archive-20261108T1026Z",
+  "source": "Binance USD-M public market-data connector; SDK not used; direct REST DNS/HTTPS unavailable.",
+  "source_endpoint": "GET /fapi/v1/klines",
+  "symbols": [
+    "BTCUSDT",
+    "ETHUSDT",
+    "SOLUSDT",
+    "XRPUSDT"
+  ],
+  "intervals": [
+    "5m",
+    "15m"
+  ],
+  "previous_highwater_utc_by_interval": {
+    "5m": "2026-11-14T20:20:00.000Z",
+    "15m": "2026-11-14T20:00:00.000Z"
+  },
+  "latest_completed_open_utc_by_interval": {
+    "5m": "2026-11-14T20:25:00.000Z",
+    "15m": "2026-11-14T20:15:00.000Z"
+  },
+  "next_start_utc_by_interval": {
+    "5m": "2026-11-14T20:30:00.000Z",
+    "15m": "2026-11-14T20:30:00.000Z"
+  },
+  "rows": 8,
+  "bytes": 2350,
+  "sha256": "08b293174d6c6a212c0a726419f173acc3e4747ccbc557ae057f177d30913fb8",
+  "delta_git_blob_sha": "cdb1cfe12d058e407bd4bd481743aa8d81672d77",
+  "rows_fetched": 8,
+  "completed_rows": 8,
+  "forming_rows_excluded": 0,
+  "pre_highwater_rows_excluded": 0,
+  "rows_by_interval": {
+    "5m": 4,
+    "15m": 4
+  },
+  "rows_by_symbol": {
+    "BTCUSDT": 2,
+    "ETHUSDT": 2,
+    "SOLUSDT": 2,
+    "XRPUSDT": 2
+  },
+  "rows_by_symbol_interval": {
+    "BTCUSDT": {
+      "5m": 1,
+      "15m": 1
+    },
+    "ETHUSDT": {
+      "5m": 1,
+      "15m": 1
+    },
+    "SOLUSDT": {
+      "5m": 1,
+      "15m": 1
+    },
+    "XRPUSDT": {
+      "5m": 1,
+      "15m": 1
+    }
+  },
+  "quality": {
+    "duplicates": 0,
+    "missing_intervals": 0,
+    "off_grid": 0,
+    "non_monotonic": 0,
+    "ohlc_failures": 0,
+    "non_finite": 0,
+    "non_positive_volume": 0,
+    "close_time_failures": 0,
+    "forming_rows_included": 0,
+    "cross_symbol_alignment": true,
+    "contiguous_from_prior_highwater": true
+  },
+  "raw_only": true,
+  "delta": {
+    "path": "research-data/binance-usdm/delta/binance_usdm_delta_20261114T203406Z_5m15m_completed.jsonl",
+    "sha256": "08b293174d6c6a212c0a726419f173acc3e4747ccbc557ae057f177d30913fb8",
+    "bytes": 2350,
+    "rows": 8,
+    "blob_sha": "cdb1cfe12d058e407bd4bd481743aa8d81672d77",
+    "readback_verified": true
+  },
+  "experiment": {
+    "id": "DQ-20261114T203406Z",
+    "type": "incremental_archive_data_quality_append",
+    "status": "EXECUTED",
+    "scope": "DATA_QUALITY_ONLY; validator source unversioned",
+    "hypothesis": "The newly completed 5m/15m bars after 20:20Z/20:00Z highwaters append without gaps, duplicates, off-grid timestamps, OHLCV failures or symbol misalignment.",
+    "entrypoint": "functions.exec inline deterministic validator",
+    "code_hash": "UNAVAILABLE_INLINE_EXECUTION",
+    "lookahead": false,
+    "metrics": {
+      "rows_appended": 8,
+      "duplicates": 0,
+      "missing_intervals": 0,
+      "off_grid": 0,
+      "ohlc_failures": 0,
+      "non_finite": 0,
+      "non_positive_volume": 0,
+      "close_time_failures": 0,
+      "forming_rows_included": 0,
+      "cross_symbol_alignment": true,
+      "contiguous_from_prior_highwater": true
+    }
+  },
+  "limitations": [
+    "Incremental slice only; it does not repair partial 5m/15m base history or page-28 alignment.",
+    "1h bridge and 4h provenance remain blocked.",
+    "No strategy experiment or OOS evaluation was run."
+  ]
+}

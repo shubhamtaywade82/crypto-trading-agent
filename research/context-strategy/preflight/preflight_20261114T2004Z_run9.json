@@ -1,0 +1,94 @@
+{
+  "schema_version": "1.0.0",
+  "run_id": "context-strategy-20261114T200152Z-run9",
+  "as_of_utc": "2026-11-14T20:04:35.000Z",
+  "environment": {
+    "runtime": "managed container plus GitHub and Binance connectors",
+    "cwd": "/",
+    "os": "Debian 13",
+    "kernel": "6.18.57",
+    "node": "v22.16.0",
+    "npm": "10.9.2",
+    "python": "3.13.5",
+    "cpu_count": 3,
+    "memory_total": "5.8 GiB",
+    "memory_available": "4.7 GiB",
+    "disk_total": "32 GiB",
+    "disk_available": "30 GiB",
+    "repository_checkout": "NOT_PRESENT",
+    "sdk_packages": {
+      "binance": "NOT_INSTALLED",
+      "@binance/connector": "NOT_INSTALLED",
+      "binance-api-node": "NOT_INSTALLED"
+    }
+  },
+  "checks": [
+    {
+      "capability": "shell_compute",
+      "status": "DEGRADED",
+      "evidence": "Debian 13; Node 22.16.0/npm 10.9.2; Python 3.13.5; 3 CPU; 5.8 GiB RAM (4.7 GiB available); 30 GiB free.",
+      "impact": "Connector-side deterministic data validation ran; project CLI cannot run because runtime is below project engines.",
+      "nextAction": "Provision Node 24 and npm 11 in a persistent workspace."
+    },
+    {
+      "capability": "repo_code",
+      "status": "DEGRADED",
+      "evidence": "Remote repository shubhamtaywade82/crypto-trading-agent is accessible. scripts/directional-experiment.ts exists remotely (blob d2ac8b6b1a7f25a1bc8ccfad8c18cee11b19a0eb); no local checkout. package requires Node >=24/npm >=11. EXP-001 config includes BTCUSDT in the tradable symbols array.",
+      "impact": "Code can be inspected but not invoked; EXP-001 is not compliant with BTC reference-only policy as currently configured.",
+      "nextAction": "Restore a local checkout at a pinned commit, correct EXP-001 tradable symbols to SOL/ETH/XRP, and run tests after installing pinned dependencies."
+    },
+    {
+      "capability": "network_direct_binance_rest",
+      "status": "BLOCKED",
+      "evidence": "Bounded curl probes to /fapi/v1/time, /exchangeInfo, /klines, /premiumIndex, /openInterest and /ticker/24hr returned HTTP 000 with curl error 6: Could not resolve host fapi.binance.com.",
+      "impact": "No direct REST HTTP status/headers or fresh serverTime endpoint result.",
+      "nextAction": "Restore outbound DNS/HTTPS and probe the six official endpoints with explicit timeouts."
+    },
+    {
+      "capability": "binance_connector_market_data",
+      "status": "DEGRADED",
+      "evidence": "Connector calls succeeded for exchangeInfo, klines, premiumIndex, 24h ticker, openInterest, fundingRate history, 1h OI statistics, 15m taker volume, global long/short account ratio, bookTicker and depth. Connector does not expose HTTP status/headers. exchangeInfo.serverTime=2026-11-13T06:02:01.702Z; age=136953.298 seconds at snapshot.",
+      "impact": "Current market data can be monitored; contract status is not execution-validated because metadata is stale.",
+      "nextAction": "Restore direct REST; retain fail-closed execution gate until fresh exchangeInfo/time."
+    },
+    {
+      "capability": "raw_historical_archive",
+      "status": "PASS",
+      "evidence": "GitHub raw branch updated. Delta 132 rows, SHA-256 7b140318546ce175ba0fb599f8be2b7fa0a3e6a60ab02ffda4ac13ca970bc701; delta manifest and archive manifest created; 5m/15m/1h index readbacks verified. 4h bars intentionally held.",
+      "impact": "Incremental raw data persistence succeeded for 5m/15m/1h only.",
+      "nextAction": "Continue from 5m 19:55Z, 15m 19:45Z, 1h 19:00Z; reconcile 4h before releasing held bars."
+    },
+    {
+      "capability": "data_quality_full_coverage",
+      "status": "DEGRADED",
+      "evidence": "New 132-row delta: zero duplicates, gaps, off-grid timestamps, non-monotonic rows, OHLC violations, non-finite values, non-positive volume, closeTime failures; cross-symbol alignment and continuity pass. Historical 5m/15m base remains partial; 1h has 28 missing hourly opens per symbol plus 8-row count discrepancy; 4h raw/aligned/canonical counts 53960/53816/53844 and 13 page SHA mismatches.",
+      "impact": "Incremental slice is clean but the multi-year aligned research panel is not ready for strategy OOS.",
+      "nextAction": "Backfill 5m/15m and reconcile page28, 1h bridge, and 4h canonical lineage."
+    },
+    {
+      "capability": "backtest_harness_smoke_test",
+      "status": "BLOCKED",
+      "evidence": "Remote harness exists, but no local repo checkout; Node 22.16.0/npm 10.9.2 below Node >=24/npm >=11; no SDK packages installed; deterministic fixture smoke test not run.",
+      "impact": "No strategy experiment or OOS evaluation can be invoked in this runtime.",
+      "nextAction": "Provision compatible runtime, install pinned dependencies, run deterministic fixture twice, verify no-lookahead."
+    },
+    {
+      "capability": "disk_and_storage",
+      "status": "DEGRADED",
+      "evidence": "Container overlay has 30 GiB free but is ephemeral. Durable writes used GitHub branch APIs; no local raw archive written.",
+      "impact": "GitHub is the durable store for this run; container filesystem is not treated as persistent.",
+      "nextAction": "Continue using verified GitHub artifacts or provision an explicitly persistent workspace."
+    },
+    {
+      "capability": "artifact_readback",
+      "status": "PASS",
+      "evidence": "Delta, delta manifest, archive manifest and 5m/15m/1h index files were fetched back and exact content/hash identities verified. Main-branch run artifacts will be read back before completion.",
+      "impact": "Archive append is reproducible and persisted.",
+      "nextAction": "Verify all main-branch run artifacts and latest/queue pointers after creation."
+    }
+  ],
+  "classification": "RESEARCH_EXECUTED",
+  "classification_detail": "Data-quality/archive experiment completed with reproducible artifacts. No strategy experiment and no untouched OOS evaluation.",
+  "strategy_experiment": "BLOCKED",
+  "oos_evaluated": false
+}

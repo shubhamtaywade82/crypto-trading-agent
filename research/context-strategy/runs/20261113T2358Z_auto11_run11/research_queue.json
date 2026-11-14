@@ -1,0 +1,87 @@
+{
+  "run_id": "auto11-20261113T2358Z-run11",
+  "as_of_utc": "2026-11-13T23:58:52.843Z",
+  "persistent_snapshot": true,
+  "items": [
+    {
+      "id": "Q1_ARCHIVE_MULTIYEAR",
+      "priority": 1,
+      "status": "PARTIALLY_COMPLETED_BLOCKED",
+      "prerequisites": [
+        "Auditable Binance bulk/history source",
+        "Archive index reconciliation"
+      ],
+      "blocker": "5m/15m base history is partial; 1h has 28 missing hourly opens per symbol and an 8-row discrepancy; 4h raw/aligned/canonical counts differ and 13 page-manifest SHA mismatches remain.",
+      "next_action": "Backfill continuous multi-year 5m/15m history; reconcile 1h missing opens and 4h page manifests before inference."
+    },
+    {
+      "id": "Q2_EXCHANGE_TIME_METADATA",
+      "priority": 1,
+      "status": "BLOCKED",
+      "prerequisites": [
+        "Working direct DNS/HTTPS or uncached official endpoint"
+      ],
+      "blocker": "All six bounded direct Binance REST probes returned HTTP000 DNS failures; connector exchangeInfo serverTime is 17h46m57.297s behind the contemporaneous market time proxy.",
+      "next_action": "Restore DNS or obtain uncached /fapi/v1/time and /fapi/v1/exchangeInfo; require <=5 seconds drift and fresh TRADING metadata."
+    },
+    {
+      "id": "Q3_BACKTEST_HARNESS",
+      "priority": 1,
+      "status": "BLOCKED",
+      "prerequisites": [
+        "Local checkout",
+        "Node >=24",
+        "npm >=11",
+        "Installed dependencies",
+        "Deterministic fixture"
+      ],
+      "blocker": "Local checkout and node_modules absent; Node 22.16.0/npm 10.9.2 below project floor; SDK packages not installed; smoke test not run.",
+      "next_action": "Provision Node >=24/npm >=11, checkout main commit cc48c0a7c7eab197f9ac0f0ec135a66abdd1613e, install dependencies and run deterministic no-lookahead fixture twice."
+    },
+    {
+      "id": "Q4_DERIVATIVES_ARCHIVE",
+      "priority": 4,
+      "status": "PARTIALLY_COMPLETED",
+      "prerequisites": [
+        "Persistent timestamp-aligned derivatives recorder",
+        "Account fee tier and execution assumptions"
+      ],
+      "blocker": "Current premium-index rates, settled funding, 8h interval, OI, one completed hourly OI/taker/global-LS bucket and top-20 depth snapshots are available; multi-year derivatives/depth/trade history and calibrated costs are not.",
+      "next_action": "Backfill historical funding/OI/taker/global-LS/depth for all four symbols; obtain fee tier, spread/slippage and latency/fill model."
+    },
+    {
+      "id": "Q5_CONDITIONAL_STRATEGY_TEST",
+      "priority": 5,
+      "status": "INSUFFICIENT_EVIDENCE",
+      "prerequisites": [
+        "Q1 archive repair",
+        "Q2 metadata freshness",
+        "Q3 deterministic harness",
+        "Q4 costs/derivatives"
+      ],
+      "blocker": "Registry has zero OOS_VALIDATED entries; latest SOL-only evidence is 4 INSUFFICIENT_EVIDENCE and 1 REJECTED. No ETH/XRP symbol-specific evidence.",
+      "next_action": "After Q1-Q4, pre-register one strategy x context x symbol experiment; retain >=100 OOS trades per symbol/context and do not retune the prior SOL holdout."
+    },
+    {
+      "id": "Q6_TAXONOMY_STABILITY_REVIEW",
+      "priority": 2,
+      "status": "DUE_BLOCKED",
+      "prerequisites": [
+        "Reconciled multi-year archive",
+        "Executable detector harness"
+      ],
+      "blocker": "Weekly review is due, but full aligned history and compatible runner are unavailable; this run only produced descriptive 119-bar features.",
+      "next_action": "After Q1/Q3, refit thresholds on training only and recompute context frequency, duration, transitions, JSD, stability and multiple-testing burden."
+    },
+    {
+      "id": "Q7_HOURLY_ARCHIVE_REFRESH",
+      "priority": 1,
+      "status": "NOT_APPENDED_THIS_RUN",
+      "prerequisites": [
+        "Verified canonical archive append/index workflow"
+      ],
+      "blocker": "Current completed bars were persisted as a separate run sample, not merged into canonical archive indexes; local archive runner is unavailable and 4h provenance remains blocked.",
+      "next_action": "Use the repository's verified append runner after provisioning Node >=24/npm >=11; append 5m/15m/1h only after validating index continuity, and keep 4h blocked until reconciliation."
+    }
+  ]
+}

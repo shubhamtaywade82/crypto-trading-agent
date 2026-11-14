@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "created_at_utc": "2026-11-05T09:43:57.448Z",
   "repository": "shubhamtaywade82/crypto-trading-agent",
-  "branch": "research/raw-ohlcv-archive-20261108T1026Z",
+  "branch": "research/raw-ohlcv-archive-20261113T063450Z-run11",
   "interval": "4h",
   "source_endpoint": "GET /fapi/v1/klines",
   "symbols": [
@@ -267,7 +267,16 @@
       "failed_matches": 0,
       "note": "Prior readback mismatch observations for BTCUSDT and SOLUSDT page-0009 were not reproduced. Expected manifest hashes were preserved."
     },
-    "status": "DEGRADED_HASH_PROVENANCE_MISMATCHES_AND_LOWER_TIMEFRAME_HISTORY_INCOMPLETE"
+    "status": "DEGRADED_HASH_PROVENANCE_MISMATCHES_AND_LOWER_TIMEFRAME_HISTORY_INCOMPLETE",
+    "latest_incremental_delta": {
+      "as_of_utc": "2026-11-13T06:34:50.330Z",
+      "path": "research-data/binance-usdm/delta/binance_usdm_delta_20261113T063450Z_5m15m1h4h_completed.jsonl",
+      "manifest": "research-data/binance-usdm/delta/manifest-20261113T063450Z-5m15m1h4h.json",
+      "rows": 100,
+      "sha256": "668e3abf8376350d80eba6c42c17aa3cf32e93198690246b7c16059814e8b471",
+      "git_blob_sha": "31c649239f6fa8538edd6f52262171172adb2eba",
+      "readback_verified": true
+    }
   },
   "incremental_deltas": [
     {
@@ -2471,10 +2480,10 @@
   ],
   "last_incremental_refresh_utc": "2026-11-09T01:01:46.375Z",
   "monitoring_latest_completed_open_utc_by_interval": {
-    "5m": "2026-11-08T13:25:00.000Z",
-    "15m": "2026-11-08T13:15:00.000Z",
-    "1h": "2026-11-08T12:00:00.000Z",
-    "4h": "2026-11-08T08:00:00.000Z"
+    "5m": "2026-11-13T09:25:00.000Z",
+    "15m": "2026-11-13T09:15:00.000Z",
+    "1h": "2026-11-13T08:00:00.000Z",
+    "4h": "2026-11-13T04:00:00.000Z"
   },
   "latest_incremental_delta_file": "research-data/binance-usdm/delta/binance_usdm_delta_20261109T010146Z_5m15m1h4h_completed.jsonl",
   "latest_incremental_delta_manifest": "research-data/binance-usdm/delta/manifest-20261109T010146Z-5m15m1h4h.json",
@@ -2719,15 +2728,15 @@
     }
   ],
   "incremental_coverage": {
-    "lastCompletedOpenUtc": "2026-11-08T20:00:00.000Z",
-    "nextStartUtc": "2026-11-09T00:00:00.000Z",
+    "lastCompletedOpenUtc": "2026-11-13T04:00:00.000Z",
+    "nextStartUtc": "2026-11-13T08:00:00.000Z",
     "rowsAppended": 4,
     "deltaPath": "research-data/binance-usdm/delta/binance_usdm_delta_20261109T010146Z_5m15m1h4h_completed.jsonl",
     "deltaManifestPath": "research-data/binance-usdm/delta/manifest-20261109T010146Z-5m15m1h4h.json",
     "deltaSha256": "36f7f87a42ed0b4bc3a559f43a91ea385e18cd93e44a4d22ab883672044531d6",
     "manifestSha256": "dbbecc7594817b8cd1e2f4c2c58c41d921c6cb03c9227af9f2618b650f6c29ef",
     "readbackVerified": true,
-    "rowsFetched": 8,
+    "rowsFetched": 800,
     "formingRowsExcluded": 4,
     "rowCountsBySymbolInterval": {
       "BTCUSDT:4h": 1,
@@ -3057,6 +3066,12 @@
       "readback_verified": true,
       "recovered_at_utc": "2026-11-08T04:41:50.709Z",
       "canonical_4h_overlap": "12 4h rows already represented in canonical 4h through 2026-11-05T16:00Z; 5m/15m/1h rows restored as separate delta."
+    },
+    "auto31IntervalHighwaterReconciliation": {
+      "observedAtUtc": "2026-11-11T12:41:16.638Z",
+      "priorOneHourIndexHighwaterUtc": "2026-11-08T22:00:00.000Z",
+      "priorCrossIntervalIndexOneHourHighwaterUtc": "2026-11-08T19:00:00.000Z",
+      "resolution": "Used dedicated 1h archive index as authoritative 1h highwater; updated cross-interval index to the same completed-bar sequence before append."
     }
   },
   "latest_incremental_delta_blob_sha1": "f26facec969929d022c8b5a53c22ee159254e068",
@@ -3098,13 +3113,42 @@
     "4h": "2026-11-09T2026-11-09T00:00:00.000Z"
   },
   "incremental_next_start_marks": {
-    "5m": "2026-11-08T13:30:00.000Z",
-    "15m": "2026-11-08T13:30:00.000Z",
-    "1h": "2026-11-08T13:00:00.000Z",
-    "4h": "2026-11-08T12:00:00.000Z"
+    "5m": "2026-11-13T09:30:00.000Z",
+    "15m": "2026-11-13T09:30:00.000Z",
+    "1h": "2026-11-13T09:00:00.000Z",
+    "4h": "2026-11-13T08:00:00.000Z"
   },
-  "incremental_highwater_utc": "2026-11-08T20:24:34.420Z",
-  "statusReason": "The 76-row delta is restored and readback/hash verified; all four canonical 4h SHA-256 values and manifests pass the recorded audit. Remaining issues are raw-vs-canonical row-count differences, canonical 4h not yet rebuilt through the latest incremental high-water, and missing multi-year 5m/15m history. Page-level provenance should be re-audited rather than carrying forward an unverified mismatch count.",
+  "incremental_highwater_utc": {
+    "0": "2",
+    "1": "0",
+    "2": "2",
+    "3": "6",
+    "4": "-",
+    "5": "1",
+    "6": "1",
+    "7": "-",
+    "8": "1",
+    "9": "1",
+    "10": "T",
+    "11": "1",
+    "12": "2",
+    "13": ":",
+    "14": "4",
+    "15": "1",
+    "16": ":",
+    "17": "1",
+    "18": "6",
+    "19": ".",
+    "20": "6",
+    "21": "3",
+    "22": "8",
+    "23": "Z",
+    "4h": "2026-11-13T04:00:00.000Z",
+    "5m": "2026-11-13T09:25:00.000Z",
+    "15m": "2026-11-13T09:15:00.000Z",
+    "1h": "2026-11-13T08:00:00.000Z"
+  },
+  "statusReason": "Latest completed-bar delta appended and readback verified. Historical status remains DEGRADED because the 4h raw/canonical row-count mismatch and multi-year 5m/15m coverage gap remain unresolved.",
   "resolvedIssues": [
     "Restored original 76-row delta at research-data/binance-usdm/delta/binance_usdm_delta_2026-11-05T0524Z.jsonl; SHA-256 and readback verified.",
     "Canonical 4h hashes and manifests for BTCUSDT, ETHUSDT, SOLUSDT, XRPUSDT independently verified; gaps=0 and duplicates=0 in each canonical series."
@@ -3147,8 +3191,11 @@
       "pre_highwater_rows_excluded": 0
     }
   },
-  "updated_at": "2026-11-09T00:35:36.830Z",
+  "updated_at": "2026-11-13T09:34:59.104Z",
   "raw_highwater_utc": {
-    "4h": "2026-11-08T20:00:00.000Z"
+    "5m": "2026-11-13T09:25:00.000Z",
+    "15m": "2026-11-13T09:15:00.000Z",
+    "1h": "2026-11-13T08:00:00.000Z",
+    "4h": "2026-11-13T04:00:00.000Z"
   }
 }

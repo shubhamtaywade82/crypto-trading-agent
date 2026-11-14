@@ -1,0 +1,126 @@
+{
+  "schema_version": "1.0.0",
+  "as_of_utc": "2026-11-13T10:38:24.778Z",
+  "current_snapshot_quality": {
+    "source": "GET /fapi/v1/klines via Binance connector",
+    "symbols": [
+      "BTCUSDT",
+      "ETHUSDT",
+      "SOLUSDT",
+      "XRPUSDT"
+    ],
+    "intervals": [
+      "5m",
+      "15m",
+      "1h",
+      "4h"
+    ],
+    "rows_returned": 1920,
+    "completed_rows": 1904,
+    "forming_rows_excluded": 16,
+    "per_symbol_interval": {
+      "returned": 120,
+      "completed": 119,
+      "forming": 1
+    },
+    "first_open_utc_approx": {
+      "5m": "2026-11-13T00:35:00.000Z",
+      "15m": "2026-11-12T04:45:00.000Z",
+      "1h": "2026-11-08T11:00:00.000Z",
+      "4h": "2026-10-24T12:00:00.000Z"
+    },
+    "latest_completed_open_utc": {
+      "5m": "2026-11-13T10:25:00.000Z",
+      "15m": "2026-11-13T10:15:00.000Z",
+      "1h": "2026-11-13T09:00:00.000Z",
+      "4h": "2026-11-13T04:00:00.000Z"
+    },
+    "failures": {
+      "duplicates": 0,
+      "missing_intervals": 0,
+      "off_grid": 0,
+      "ohlc_invariants": 0,
+      "nonpositive_volume": 0,
+      "nonfinite": 0,
+      "close_time_mismatch": 0
+    },
+    "caveat": "120-bar windows are snapshot windows, not adequate multi-cycle research samples."
+  },
+  "archive": {
+    "remote_branch": "research/raw-ohlcv-archive-20261113T1030Z-run12",
+    "branch_head_commit": "ea3af9a02ce45d63eb5bf05805e74c6b98a91b7c",
+    "local_archive_path": null,
+    "local_archive_mounted": false,
+    "1h": {
+      "status": "COMPLETE_HISTORICAL_1H_PAGES_WITH_INCREMENTAL_DELTA",
+      "rows_total": 215500,
+      "rows_per_symbol": 53875,
+      "first_open_utc": "2020-09-14T08:00:00.000Z",
+      "latest_completed_open_utc": "2026-11-13T09:00:00.000Z",
+      "coverage_years_approx": 6.14,
+      "quality": "Prior full index audit clean; current 4-row append clean and readback verified."
+    },
+    "4h": {
+      "status": "DEGRADED",
+      "raw_rows_total": 53956,
+      "aligned_analysis_rows_total": 53816,
+      "analysis_start_utc": "2020-09-14T08:00:00.000Z",
+      "canonical_end_utc": "2026-11-05T16:00:00.000Z",
+      "original_page_manifest_hash_mismatches": 13,
+      "raw_canonical_reconciliation": "INCOMPLETE"
+    },
+    "5m": {
+      "status": "INCREMENTAL_ONLY_NO_BASE_HISTORY",
+      "base_history_rows": 0,
+      "latest_completed_open_utc": "2026-11-13T10:25:00.000Z",
+      "rows_appended_this_run": 48
+    },
+    "15m": {
+      "status": "INCREMENTAL_ONLY_NO_BASE_HISTORY",
+      "base_history_rows": 0,
+      "latest_completed_open_utc": "2026-11-13T10:15:00.000Z",
+      "rows_appended_this_run": 16
+    },
+    "new_delta": {
+      "path": "research-data/binance-usdm/delta/binance_usdm_delta_20261113T1030Z_5m15m1h_completed.jsonl",
+      "rows": 68,
+      "rows_by_interval": {
+        "5m": 48,
+        "15m": 16,
+        "1h": 4,
+        "4h": 0
+      },
+      "bytes": 12150,
+      "git_blob_sha1": "46f3123b0fc50265fe58c82d4e28ed63bd204f7b",
+      "manifest_path": "research-data/binance-usdm/delta/manifest-20261113T1030Z-5m15m1h.json",
+      "manifest_bytes": 4782,
+      "manifest_git_blob_sha1": "77860e703b227e53d661ff0a6c3adfca24bf0723",
+      "readback_verified": true,
+      "sha256_computed": false
+    },
+    "append_quality": {
+      "duplicates": 0,
+      "missing_intervals": 0,
+      "off_grid": 0,
+      "ohlc_failures": 0,
+      "nonpositive_volume": 0,
+      "nonfinite": 0,
+      "close_time_failures": 0,
+      "forming_rows_excluded": 16
+    }
+  },
+  "unavailable_or_unverified": [
+    "Direct Binance HTTP status/headers",
+    "Fresh /fapi/v1/time",
+    "Fresh exchangeInfo metadata",
+    "Multi-year 5m/15m base history",
+    "Fully reconciled 4h canonical archive",
+    "Historical synchronized order book and trades",
+    "Historical funding cashflows for all symbols",
+    "Basis",
+    "Liquidation feed",
+    "Reliable leverage/crowding measure",
+    "Fee tier and size-dependent execution costs",
+    "BTC-alt rolling correlation and lead/lag"
+  ]
+}

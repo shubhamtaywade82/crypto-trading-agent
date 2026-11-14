@@ -1,0 +1,167 @@
+{
+  "schema_version": "1.0.0",
+  "queue_version": "v108",
+  "as_of_utc": "2026-11-13T11:26:21.071Z",
+  "daily_research_cycle": {
+    "status": "BLOCKED",
+    "experiment_run": false,
+    "blocker": "No local repository checkout; Node v22.16.0/npm 10.9.2 do not satisfy package engines Node>=24/npm>=11; no deterministic fixture smoke test or valid harness execution.",
+    "next_action": "Provision Node >=24/npm >=11, clone the exact research source branch, install locked dependencies, then run a deterministic tiny-fixture smoke test and harden the harness before any strategy experiment."
+  },
+  "weekly_review": {
+    "status": "BLOCKED_NOT_EXECUTED",
+    "blocker": "Historical archive reconciliation and compatible local runner remain incomplete.",
+    "next_action": "Run training-only taxonomy threshold refit, occupancy/duration/transition and stability review after archive prerequisites pass.",
+    "completed": false
+  },
+  "items": [
+    {
+      "id": "RQ-002",
+      "priority": 1,
+      "status": "BLOCKED",
+      "title": "Fresh exchange clock and contract metadata",
+      "prerequisites": [
+        "Direct HTTPS/DNS or uncached Binance endpoint"
+      ],
+      "evidence": "Direct shell probes to fapi.binance.com failed DNS (curl exit 6 / HTTP 000). Connector exchangeInfo serverTime 2026-11-13T06:02:01.706Z was about 5h24m stale at 11:26Z.",
+      "next_action": "Restore direct HTTPS/DNS and require fresh /fapi/v1/time plus exchangeInfo before contract/execution validation."
+    },
+    {
+      "id": "RQ-003",
+      "priority": 2,
+      "status": "PARTIALLY_COMPLETED_BLOCKED",
+      "title": "Historical archive completion and reconciliation",
+      "prerequisites": [
+        "Binance data connector",
+        "Remote GitHub archive write access"
+      ],
+      "evidence": "This run appended 56 completed rows and verified remote readback. 1h archive is 215,504 rows / 53,876 per symbol from 2020-09-14T08:00Z to 2026-11-13T10:00Z. 5m/15m base history absent; 4h reconciliation and 13 page-manifest hash mismatches remain.",
+      "next_action": "Backfill multi-year 5m/15m, materialize and audit 1h locally, and reconcile 4h provenance without rewriting expected hashes."
+    },
+    {
+      "id": "RQ-005",
+      "priority": 3,
+      "status": "BLOCKED",
+      "title": "Compatible local research runner",
+      "prerequisites": [
+        "Node >=24",
+        "npm >=11",
+        "Exact repository checkout"
+      ],
+      "evidence": "CWD=/; no local .git checkout or package.json; Node v22.16.0/npm 10.9.2; nvm has no installed Node 24; SDK packages not installed.",
+      "next_action": "Provision compatible Node/npm, clone exact research branch locally, install from lockfile, and record commit/environment."
+    },
+    {
+      "id": "RQ-012",
+      "priority": 4,
+      "status": "BLOCKED_SOURCE_AUDIT_REQUIRED",
+      "title": "Backtest and conditional-edge harness hardening",
+      "prerequisites": [
+        "Local checkout",
+        "Node >=24/npm >=11",
+        "Fixture tests"
+      ],
+      "evidence": "Remote backtest.ts defaults to BTCUSDT/30 days and supports 15m/1h/4h only. conditional-edge.ts defaults minN=30 and 90% CI; no purge/embargo option exposed. No local invocation or fixture test.",
+      "next_action": "Enforce SOL/ETH/XRP allowlist, BTC reference-only, 5m support, >=100 OOS trades per symbol/context, 95% CI, purging/embargo and realistic costs."
+    },
+    {
+      "id": "RQ-029",
+      "priority": 4,
+      "status": "BLOCKED",
+      "title": "Enforce BTC reference-only research policy",
+      "prerequisites": [
+        "Harness source changes and tests"
+      ],
+      "evidence": "Remote backtest CLI default remains BTCUSDT; not executed.",
+      "next_action": "Require an explicit tradable symbol and reject BTCUSDT as a trade target."
+    },
+    {
+      "id": "RQ-004",
+      "priority": 5,
+      "status": "BLOCKED",
+      "title": "Calibrate execution costs",
+      "prerequisites": [
+        "Fee tier",
+        "Synchronized depth/trades",
+        "Execution/fill observations"
+      ],
+      "evidence": "No account fee tier, historical synchronized depth/trades, size-conditioned impact, latency or fill distribution observed; top-of-book only.",
+      "next_action": "Acquire fee schedule and historical book/trade samples; calibrate size-dependent spread, slippage, impact and funding."
+    },
+    {
+      "id": "RQ-014",
+      "priority": 6,
+      "status": "BLOCKED",
+      "title": "Historical funding archive",
+      "prerequisites": [
+        "Funding history backfill"
+      ],
+      "evidence": "Only latest two settled funding records per symbol retrieved; historical funding cashflows not archived.",
+      "next_action": "Backfill /fapi/v1/fundingRate for all four symbols and align settlement cashflows to trade holding periods."
+    },
+    {
+      "id": "RQ-019",
+      "priority": 7,
+      "status": "COMPLETED",
+      "title": "Append newly completed Binance bars",
+      "prerequisites": [
+        "Fresh market timestamp",
+        "Validated klines",
+        "Remote storage"
+      ],
+      "evidence": "56 completed bars persisted and read back: 5m=40, 15m=12, 1h=4, 4h=0. Updated 5m/15m/1h indexes and verified delta/manifest Git blob SHA-1s.",
+      "next_action": "Continue hourly append; 4h advances only after the 08:00Z candle closes at 12:00Z."
+    },
+    {
+      "id": "RQ-021",
+      "priority": 8,
+      "status": "BLOCKED",
+      "title": "Run pre-registered conditional strategy experiment",
+      "prerequisites": [
+        "Compatible runner",
+        "Smoke test",
+        "Frozen experiment spec",
+        "Cost model"
+      ],
+      "evidence": "No valid experiment ran; no local runner, no deterministic smoke test, incompatible Node/npm, cost model uncalibrated.",
+      "next_action": "After RQ-005/RQ-012/RQ-004, pre-register one 1h trend/pullback or 4h Donchian experiment with chronological splits, purge/embargo, 95% block-bootstrap CI and Holm correction."
+    },
+    {
+      "id": "RQ-028",
+      "priority": 9,
+      "status": "BLOCKED_NOT_EXECUTED",
+      "title": "Weekly taxonomy and strategy-family review",
+      "prerequisites": [
+        "Complete archive",
+        "Executable runner",
+        "Training-only threshold fitting"
+      ],
+      "evidence": "No training-only threshold refit, context occupancy/duration/transition analysis or taxonomy stability test ran this week.",
+      "next_action": "Run weekly taxonomy/stability review after archive reconciliation and compatible runner are available."
+    },
+    {
+      "id": "RQ-031",
+      "priority": 10,
+      "status": "COMPLETED",
+      "title": "Persist and verify v107 run snapshot",
+      "prerequisites": [
+        "GitHub branch write/read access"
+      ],
+      "evidence": "All v108 report, queue, registry, snapshot, data audit, preflight, archive manifest and run receipt artifacts were reopened from the context branch and their Git blob SHA-1 identities recorded.",
+      "next_action": "Use v108 as the next monitoring baseline; continue hourly append and resolve RQ-003/RQ-005/RQ-012 before strategy experiments."
+    }
+  ],
+  "priority_next": [
+    "RQ-003",
+    "RQ-005",
+    "RQ-012",
+    "RQ-004",
+    "RQ-021"
+  ],
+  "run_notes": [
+    "Monitoring completed with fresh Binance connector data; direct shell REST remained DNS-blocked.",
+    "56 completed OHLCV rows appended to remote raw archive and indexes updated/readback verified.",
+    "No research experiment, smoke test or untouched OOS evaluation executed.",
+    "SOLUSDT, ETHUSDT and XRPUSDT remain NO_TRADE because registry contains zero OOS_VALIDATED entries."
+  ]
+}

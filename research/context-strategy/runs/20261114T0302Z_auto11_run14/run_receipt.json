@@ -1,0 +1,61 @@
+{
+  "schema_version": "1.0.0",
+  "run_id": "auto11-20261114T0302Z-run14",
+  "as_of_utc": "2026-11-14T03:05:29.000Z",
+  "status": "RESEARCH_EXECUTED",
+  "completed": [
+    "Fresh Binance USD-M connector snapshot for BTC/ETH/SOL/XRP across 5m/15m/1h/4h; completed candles only.",
+    "Incremental archive append validation: 32 rows persisted across 5m/15m/1h; 12 forming rows excluded; 4h held.",
+    "SHA-256 and GitHub readback verification for delta files, manifests, snapshot, global manifest and four archive indexes.",
+    "Conditional registry snapshot refreshed without changing any strategy evidence status.",
+    "Research queue advanced with explicit blockers and next actions."
+  ],
+  "not_completed": [
+    "No strategy-family experiment executed.",
+    "No untouched OOS evaluation executed.",
+    "No OOS_VALIDATED strategy exists; trade selection remains disabled.",
+    "No fresh exchangeInfo/server-time contract validation.",
+    "No deterministic backtest harness smoke test."
+  ],
+  "artifacts": {
+    "current_snapshot": "research-data/binance-usdm/current_market_snapshot_20261114T0302Z_auto11.json",
+    "current_snapshot_sha256": "9c9eadc16270faab78b0d5a4d7a596b0dc1861e246b7fc79033135a1bf40c60b",
+    "registry_snapshot": "research-data/binance-usdm/conditional-strategy-registry-snapshot-v131.json",
+    "registry_snapshot_sha256": "0077e3235735d2218f5614d782d633c9b6e8e6b3f4531f44e411f9bc7df1e165",
+    "experiment_result": "research/context-strategy/experiments/incremental_archive_append_20261114T0300Z_auto11_run14.result.json",
+    "experiment_result_sha256": "870b4ed56ca76060c2c81aa28dfde6bb807c57d381c82878cb4ba2b870a801fa",
+    "preflight": "research/context-strategy/runs/20261114T0302Z_auto11_run14/preflight.json",
+    "preflight_sha256": "1a77b2f76076806f3f7689a3b1bd64725d756789dec103f404916d618b680b0d",
+    "run_registry_snapshot": "research/context-strategy/runs/20261114T0302Z_auto11_run14/conditional_strategy_registry_snapshot.json",
+    "queue": "research-data/binance-usdm/research-queue-v131.json"
+  },
+  "archive": {
+    "branch": "research/raw-ohlcv-archive-20261108T1026Z",
+    "manifest": "research-data/binance-usdm/manifests/archive_manifest_20261114T0302Z_auto11_v118.json",
+    "manifest_sha256": "04354d3daac165c0e23b4c7ef5e77b8fbc915634ac9ee760680c818d466aae51",
+    "rows_appended": 32,
+    "rows_by_interval": {
+      "5m": 20,
+      "15m": 8,
+      "1h": 4,
+      "4h": 0
+    },
+    "forming_rows_excluded": 12,
+    "readback_verified": true
+  },
+  "registry": {
+    "path": "research-data/binance-usdm/conditional-strategy-registry-snapshot-v131.json",
+    "registry_version": 114,
+    "entries": 5,
+    "oos_validated_entries": 0,
+    "status_counts": {}
+  },
+  "decision": {
+    "BTC": "REFERENCE_ONLY",
+    "ETH": "NO_TRADE",
+    "SOL": "NO_TRADE",
+    "XRP": "NO_TRADE",
+    "reason": "No OOS_VALIDATED registry entries; fresh contract metadata unavailable; no validated trigger."
+  },
+  "next_action": "Reconcile page-0028 checksum/alignment defects, then the 1h bridge and 4h provenance; provision Node24/npm11 and run the deterministic smoke test before any strategy experiment."
+}

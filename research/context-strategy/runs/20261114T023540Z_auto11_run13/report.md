@@ -42,9 +42,29 @@ The short monitoring windows are 5m 2026-11-12 09:00Z to 2026-11-14 02:30Z; 15m 
 
 ## 2. Context discovery
 
-No training-only thresholds, context frequencies, duration distributions, transition probabilities, stability statistics or taxonomy revision were computed. The compact taxonomy remains a hypothesis: trend (bull/bear/sideways/transition), volatility (compression/normal/expansion/shock), structure (range/breakout/retest/failed breakout/continuation/pullback/reversal), participation/liquidity, derivatives, BTC-relative state, and data state (UNKNOWN/TRANSITION/SHOCK/INSUFFICIENT_DATA).
+### Frozen historical taxonomy - carried forward, not refit
 
-Current feature classification is descriptive only. EMA20 < EMA50 < EMA200 on all four timeframes for all four symbols indicates high confidence in bearish trend alignment. The 15m downside impulse and subsequent positive 5m bars create a high transition warning. These labels are not probabilities of a winning trade.
+The latest accessible diagnostic is CTX-4H-EMA50xEMA200-ATRQ-v2-FULL-ARCHIVE, created 2026-11-08. It uses per-symbol EMA50/EMA200 spread thresholds for trend (flat threshold), Wilder ATR14/close training q33/q67 for LOW/NORMAL/HIGH volatility, and training q99 of absolute completed 4h return for a separate SHOCK state. Thresholds were inherited from V100 and were not refit in the Nov 8 diagnostic or this run.
+
+Source panel: 13,461 completed 4h bars per symbol from 2020-09-14 08:00Z through 2026-11-05 16:00Z; 12,462 labelled bars per symbol after 999 EMA warm-up bars. The diagnostic split was chronological 60/20/20: 7,077 train, 2,692 validation and 2,693 test bars per symbol. All four historical series passed their contemporaneous integrity checks and were cross-symbol aligned. This supports descriptive 4h context distributions, not strategy edge or multi-timeframe generalization. The current archive has since developed page-0028/1h/4h provenance issues; this old distribution has not been recomputed on the repaired/current archive.
+
+| Symbol | Most frequent contexts (frequency; median run in 4h bars) | Shock frequency | Overall self-transition | Top self-transition | Train/test JSD |
+|---|---|---:|---:|---|---:|
+| BTC | SIDEWAYS_LOW 25.56% (11.5); BULL_LOW 16.05% (12); BEAR_HIGH 11.79% (7) | 0.634% | 93.03% | SIDEWAYS_LOW 97.05% | 0.202 |
+| ETH | SIDEWAYS_LOW 18.58% (9); BULL_NORMAL 16.24% (8); BEAR_HIGH 14.03% (8) | 0.746% | 92.64% | SIDEWAYS_LOW 95.64% | 0.108 |
+| SOL | SIDEWAYS_LOW 24.77% (10); BEAR_LOW 12.86% (7); BULL_NORMAL 11.86% (5.5) | 0.586% | 92.38% | SIDEWAYS_LOW 96.73% | 0.297 |
+| XRP | BEAR_LOW 17.12% (14); SIDEWAYS_LOW 18.86% (9.5); BEAR_NORMAL 14.23% (8) | 0.554% | 92.91% | BEAR_LOW 96.16% | 0.128 |
+
+Shock states had median duration one 4h bar for all symbols. The largest train/test distribution shift diagnostic is SOL (JSD 0.297), followed by BTC (0.202), XRP (0.128) and ETH (0.108); these are distribution diagnostics, not p-values or evidence of a strategy edge.
+
+| Symbol | Flat EMA50/EMA200 spread threshold | ATR14/close q33 | q67 | Absolute 4h return shock q99 |
+|---|---:|---:|---:|---:|
+| BTC | 2.5048% | 1.4474% | 2.0674% | 4.8982% |
+| ETH | 2.5106% | 1.7550% | 2.5876% | 6.3197% |
+| SOL | 4.0735% | 2.7494% | 4.0357% | 9.7612% |
+| XRP | 2.3359% | 1.9936% | 3.0167% | 9.0980% |
+
+These thresholds remain frozen. This run did not recompute context frequencies, durations, transitions or stability. The live 5m/15m/1h/4h EMA/ATR labels below are descriptive monitoring features and are not the same as the frozen 4h taxonomy. Full prior distribution and transition counts are retained in context_discovery_snapshot.json.
 
 ## 3. Strategy-context scorecard
 

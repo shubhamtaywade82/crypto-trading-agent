@@ -1,0 +1,91 @@
+{
+  "schema_version": "1.0.0",
+  "run_id": "context-strategy-20261114T160628Z-auto6-run7",
+  "as_of_utc": "2026-11-14T16:06:28.837Z",
+  "status": "MONITORING_ONLY",
+  "oos_evaluated": false,
+  "checks": [
+    {
+      "capability": "shell_compute",
+      "status": "PASS",
+      "evidence": "cwd=/; Debian GNU/Linux 13 x86_64; Python 3.13.5; Node v22.16.0; npm 10.9.2; 3 CPUs; ~4.7 GiB available RAM; overlay 32 GiB total / ~30 GiB free.",
+      "impact": "Bounded connector orchestration and 4,800-row rolling-window integrity checks completed; Node/npm below project engine floor.",
+      "next_action": "Provision Node >=24 and npm >=11 in a persistent workspace."
+    },
+    {
+      "capability": "repo_code",
+      "status": "DEGRADED",
+      "evidence": "Remote repository shubhamtaywade82/crypto-trading-agent main readable at 27278d5856f4a3a448fbb8411101361ca4f6cf37; package v2.4.1 requires Node>=24/npm>=11; local checkout absent under current cwd and /mnt/data.",
+      "impact": "Remote artifacts/scripts inspected; no local project script or backtest harness invoked.",
+      "next_action": "Restore persistent checkout at current main commit after compatible runtime provisioning."
+    },
+    {
+      "capability": "binance_sdk",
+      "status": "BLOCKED",
+      "evidence": "Node v22.16.0/npm 10.9.2; binance, binance-api-node, @binance/connector and ccxt are NOT_INSTALLED.",
+      "impact": "No SDK execution; Binance USDⓈ-M connector used for market data.",
+      "next_action": "Use SDK only after compatible runtime and pinned dependencies are installed; otherwise retain REST/connector route."
+    },
+    {
+      "capability": "network_binance_endpoints",
+      "status": "DEGRADED",
+      "evidence": "Bounded curl probes at 2026-11-14T16:04:22Z: /time exit 28 HTTP 000 DNS timeout; /exchangeInfo exit 28 HTTP 000; /klines exit 6 HTTP 000; /premiumIndex exit 28 HTTP 000; /openInterest exit 28 HTTP 000; /ticker/24hr exit 28 HTTP 000. Connector returned fresh klines/mark/ticker/OI/funding/OIHist/taker/long-short/book data. Connector does not expose HTTP status/headers. exchangeInfo serverTime=2026-11-13T06:02:01.709Z, 34.07h stale.",
+      "impact": "Descriptive snapshot usable; /time and fresh exchange metadata blocked, contract status not execution-validated.",
+      "next_action": "Restore outbound DNS/HTTPS and require fresh /fapi/v1/time plus /fapi/v1/exchangeInfo."
+    },
+    {
+      "capability": "raw_historical_archive",
+      "status": "BLOCKED",
+      "evidence": "Archive branch research/raw-ohlcv-archive-20261108T1026Z absent from branch list; fetch_file on that ref returns 404. Current main contains manifests/snapshots/registries but no raw 5m/15m/1h/4h arrays.",
+      "impact": "Cannot inspect raw files, verify highwaters, reconcile 1h/4h rows or append new completed bars.",
+      "next_action": "Recover exact immutable archive commit/branch; verify page/index/manifest hashes and per-symbol openTime keys before any append."
+    },
+    {
+      "capability": "data_quality_coverage",
+      "status": "DEGRADED",
+      "evidence": "Current rolling 4 symbols x 4 intervals x 300 bars = 4,800 rows; 4,784 completed and 16 forming excluded. Zero duplicates, missing intervals, off-grid, non-monotonic, OHLC, non-positive-volume, non-finite or closeTime failures. Windows cover ~25h/75h/12.5d/50d, not multiple market cycles.",
+      "impact": "Recent sample clean; historical archive remains incomplete/unverified and not sufficient for strategy generalization.",
+      "next_action": "Restore and reconcile archive; backfill multi-year 5m/15m and resolve 1h/4h lineage."
+    },
+    {
+      "capability": "backtest_harness_smoke_test",
+      "status": "BLOCKED",
+      "evidence": "Remote scripts are readable, but no local checkout, Node22/npm10 below package engines, dependencies absent; deterministic fixture smoke test NOT_RUN.",
+      "impact": "No new strategy experiment, walk-forward run or untouched OOS evaluation.",
+      "next_action": "Restore current main commit, provision Node24/npm11, install lockfile dependencies, run deterministic fixture twice and verify no-lookahead."
+    },
+    {
+      "capability": "disk_storage",
+      "status": "PASS",
+      "evidence": "Current overlay 32 GiB total / ~30 GiB free; GitHub main branch writable. Raw archive branch is not accessible.",
+      "impact": "Versioned metadata artifacts can be persisted to main; raw OHLCV archive cannot be safely appended.",
+      "next_action": "Persist metadata only; do not reconstruct raw archive from summaries."
+    },
+    {
+      "capability": "artifact_readback",
+      "status": "NOT_CHECKED",
+      "evidence": "No artifacts from this run written at preflight time.",
+      "impact": "Persistence is not yet claimed.",
+      "next_action": "Commit run artifacts to main and fetch them back to verify exact blob identities."
+    }
+  ],
+  "execution": {
+    "environment": "Managed Debian GNU/Linux 13 container",
+    "directBinanceRest": "BLOCKED_DNS",
+    "binanceSdk": "NOT_INSTALLED",
+    "localRepository": "ABSENT",
+    "remoteRepository": {
+      "name": "shubhamtaywade82/crypto-trading-agent",
+      "branch": "main",
+      "commit": "27278d5856f4a3a448fbb8411101361ca4f6cf37"
+    },
+    "localBacktestExecuted": false,
+    "smokeTestExecuted": false,
+    "experimentExecutedThisRun": false,
+    "oosEvaluatedThisRun": false,
+    "marketSnapshotExecuted": true,
+    "rollingWindowIntegrityAuditExecuted": true,
+    "rawArchiveRowsAppended": 0,
+    "classification": "MONITORING_ONLY"
+  }
+}

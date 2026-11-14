@@ -1,0 +1,108 @@
+{
+  "schema_version": "1.0.0",
+  "run_id": "context-strategy-20261114T160628Z-auto6-run7",
+  "as_of_utc": "2026-11-14T16:06:28.837Z",
+  "experiment_id": null,
+  "type": "STRATEGY_EXPERIMENT",
+  "status": "BLOCKED_NO_EXECUTION",
+  "strategyExperimentExecuted": false,
+  "oosEvaluated": false,
+  "reason": "No valid strategy experiment could be run in this runtime. Raw archive branch is unavailable, the local repository/backtest harness is absent, Node/npm are below the declared engine floor, no deterministic fixture smoke test ran, 1h/4h lineage remains unresolved, and the execution-cost/PIT derivatives model is incomplete.",
+  "dailyResearchCycle": {
+    "status": "COMPLETED_EARLIER_TODAY_WITH_GATE_FAILURE",
+    "artifacts": [
+      "research-runs/state-study-A1-20261114T1144Z.json",
+      "research-runs/state-study-A2-20261114T1303Z.json"
+    ],
+    "note": "These are Layer A feature-predictability walk-forward studies, not strategy trade backtests. Both failed their predeclared predictive gates; do not retune A1/A2 under the current specification."
+  },
+  "priorSameDayStudies": {
+    "A1": {
+      "trials": 111,
+      "costPct": 0.12,
+      "stressedCostPct": 0.18,
+      "bootstrapConfidence": 0.8,
+      "results": [
+        {
+          "horizonMinutes": 15,
+          "picks": 57952,
+          "meanNetPct": -0.108228,
+          "lower80Pct": -0.11324,
+          "stressedMeanNetPct": -0.168228,
+          "gate": false
+        },
+        {
+          "horizonMinutes": 60,
+          "picks": 62408,
+          "meanNetPct": -0.082576,
+          "lower80Pct": -0.098433,
+          "stressedMeanNetPct": -0.142576,
+          "gate": false
+        },
+        {
+          "horizonMinutes": 240,
+          "picks": 65383,
+          "meanNetPct": -0.041013,
+          "lower80Pct": -0.097984,
+          "stressedMeanNetPct": -0.101013,
+          "gate": false
+        },
+        {
+          "horizonMinutes": 1440,
+          "picks": 63715,
+          "meanNetPct": -0.060134,
+          "lower80Pct": -0.300644,
+          "stressedMeanNetPct": -0.120134,
+          "gate": false
+        }
+      ]
+    },
+    "A2": {
+      "trials": 111,
+      "costPct": 0.12,
+      "stressedCostPct": 0.18,
+      "bootstrapConfidence": 0.8,
+      "results": [
+        {
+          "horizonMinutes": 15,
+          "picks": 14878,
+          "meanNetPct": -0.116923,
+          "lower80Pct": -0.124799,
+          "stressedMeanNetPct": -0.176923,
+          "gate": false
+        },
+        {
+          "horizonMinutes": 60,
+          "picks": 15372,
+          "meanNetPct": -0.099789,
+          "lower80Pct": -0.124436,
+          "stressedMeanNetPct": -0.159789,
+          "gate": false
+        },
+        {
+          "horizonMinutes": 240,
+          "picks": 15690,
+          "meanNetPct": -0.135742,
+          "lower80Pct": -0.22296,
+          "stressedMeanNetPct": -0.195742,
+          "gate": false
+        },
+        {
+          "horizonMinutes": 1440,
+          "picks": 18951,
+          "meanNetPct": -0.214072,
+          "lower80Pct": -0.526121,
+          "stressedMeanNetPct": -0.274072,
+          "gate": false
+        }
+      ]
+    }
+  },
+  "prerequisites": [
+    "Restore exact raw archive branch and reconcile page-0028 panel, 1h bridge, 4h raw/canonical hashes",
+    "Provision persistent local checkout at current main commit with Node>=24/npm>=11 and pinned dependencies",
+    "Run deterministic fixture twice; prove no-lookahead and purged/embargoed splits",
+    "Backfill point-in-time funding/OI/taker/positioning and calibrate fees, spread, slippage, impact, latency and fills"
+  ],
+  "nextAction": "After all prerequisites pass, preregister one independent setup-specific strategy×context×symbol experiment with frozen rules, train-only thresholds, validation tuning, untouched test, block bootstrap and multiplicity control. Do not retune A1/A2."
+}

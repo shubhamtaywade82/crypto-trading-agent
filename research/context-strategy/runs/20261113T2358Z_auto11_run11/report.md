@@ -9,7 +9,7 @@ Strategy backtest: NOT RUN. Untouched OOS: NOT EVALUATED. OOS_VALIDATED registry
 - Persisted 1,904 completed raw kline rows across BTCUSDT, ETHUSDT, SOLUSDT and XRPUSDT at 5m/15m/1h/4h. The 16 forming bars were excluded from the audit input.
 - Current-window integrity checks: zero duplicates, missing intervals, off-grid timestamps, non-monotonic rows, OHLC invariant failures, non-positive volume, non-finite values or close-time failures.
 - This is a bounded data-quality audit, not multi-cycle coverage validation and not a strategy experiment.
-- The canonical archive was not advanced. The new raw sample is a separate run artifact.
+- The canonical archive was not advanced. The new raw sample is a separate run artifact. There are 108 completed rows ahead of the canonical 5m/15m/1h highwaters (80/24/4 by interval); four additional completed 4h rows remain held behind the provenance blocker.
 
 ## 2. Context discovery
 

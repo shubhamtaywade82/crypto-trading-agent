@@ -1,0 +1,148 @@
+{
+  "schema_version": "1.0.0",
+  "run_id": "context-strategy-20261114T202436Z-run10",
+  "created_at_utc": "2026-11-14T20:24:36.697Z",
+  "verified_at_utc": "2026-11-14T20:24:36.697Z",
+  "repository": "shubhamtaywade82/crypto-trading-agent",
+  "branch": "research/raw-ohlcv-archive-20261108T1026Z",
+  "source": "Binance USD-M public market-data connector; Binance SDK not used; direct HTTPS DNS unavailable; connector HTTP status/headers not exposed.",
+  "source_endpoint": "GET /fapi/v1/klines",
+  "symbols": [
+    "BTCUSDT",
+    "ETHUSDT",
+    "SOLUSDT",
+    "XRPUSDT"
+  ],
+  "intervals": [
+    "5m",
+    "15m"
+  ],
+  "requested_intervals": [
+    "5m",
+    "15m",
+    "1h",
+    "4h"
+  ],
+  "held_intervals": {
+    "1h": "No new completed bar after prior 19:00Z highwater; historical 28-hour bridge/count discrepancy remains.",
+    "4h": "BLOCKED_PROVENANCE_RECONCILIATION; 16:00Z completed bar remains held."
+  },
+  "clock": {
+    "source": "premiumIndex.time max across symbols",
+    "exchange_time_utc": "2026-11-14T20:23:52.003Z",
+    "local_retrieval_utc": "2026-11-14T20:24:36.697Z",
+    "server_time_endpoint": "GET /fapi/v1/time UNAVAILABLE; direct HTTPS DNS resolution failed"
+  },
+  "exchange_metadata": {
+    "source": "GET /fapi/v1/exchangeInfo via connector",
+    "server_time_utc": "2026-11-13T06:02:01.706Z",
+    "age_seconds": 138154.991,
+    "status": "STALE; not used for execution validation"
+  },
+  "previous_highwater_utc_by_interval": {
+    "5m": "2026-11-14T19:55:00.000Z",
+    "15m": "2026-11-14T19:45:00.000Z",
+    "1h": "2026-11-14T19:00:00.000Z",
+    "4h": "2026-11-14T12:00:00.000Z"
+  },
+  "latest_completed_open_utc_by_interval": {
+    "5m": "2026-11-14T20:15:00.000Z",
+    "15m": "2026-11-14T20:00:00.000Z"
+  },
+  "next_start_utc_by_interval": {
+    "5m": "2026-11-14T20:20:00.000Z",
+    "15m": "2026-11-14T20:15:00.000Z"
+  },
+  "rows": 20,
+  "bytes": 5853,
+  "sha256": "6b143838ef992c4e26c6b8012d2fb4e931354c4808811c70f78125d24019cc4a",
+  "delta_git_blob_sha": "281a794b1eadbcbb6aace016d443396f5e6c5759",
+  "rows_fetched": 24,
+  "completed_rows": 20,
+  "forming_rows_excluded": 4,
+  "pre_highwater_rows_excluded": 0,
+  "rows_by_interval": {
+    "5m": 16,
+    "15m": 4
+  },
+  "rows_by_symbol": {
+    "BTCUSDT": 5,
+    "ETHUSDT": 5,
+    "SOLUSDT": 5,
+    "XRPUSDT": 5
+  },
+  "rows_by_symbol_interval": {
+    "BTCUSDT": {
+      "5m": 4,
+      "15m": 1
+    },
+    "ETHUSDT": {
+      "5m": 4,
+      "15m": 1
+    },
+    "SOLUSDT": {
+      "5m": 4,
+      "15m": 1
+    },
+    "XRPUSDT": {
+      "5m": 4,
+      "15m": 1
+    }
+  },
+  "quality": {
+    "duplicates": 0,
+    "missing_intervals": 0,
+    "off_grid": 0,
+    "non_monotonic": 0,
+    "ohlc_failures": 0,
+    "non_finite": 0,
+    "non_positive_volume": 0,
+    "close_time_failures": 0,
+    "forming_rows_included": 0,
+    "cross_symbol_alignment": true,
+    "contiguous_from_prior_highwater": true
+  },
+  "raw_only": true,
+  "delta": {
+    "path": "research-data/binance-usdm/delta/binance_usdm_delta_20261114T202436Z_5m15m_completed.jsonl",
+    "sha256": "6b143838ef992c4e26c6b8012d2fb4e931354c4808811c70f78125d24019cc4a",
+    "bytes": 5853,
+    "rows": 20,
+    "blob_sha": "281a794b1eadbcbb6aace016d443396f5e6c5759",
+    "readback_verified": true
+  },
+  "experiment": {
+    "id": "DQ-20261114T202436Z",
+    "type": "incremental_raw_archive_integrity",
+    "status": "EXECUTED",
+    "scope": "DATA_QUALITY_ONLY; not a strategy experiment",
+    "hypothesis": "Only newly completed 5m/15m bars strictly after the verified prior highwaters can be appended without gaps, duplicates, off-grid timestamps, OHLCV invariant failures, forming-candle inclusion or cross-symbol misalignment.",
+    "entrypoint": "functions.exec inline deterministic validator",
+    "seed": null,
+    "lookahead": false,
+    "metrics": {
+      "duplicates": 0,
+      "missing_intervals": 0,
+      "off_grid": 0,
+      "non_monotonic": 0,
+      "ohlc_failures": 0,
+      "non_finite": 0,
+      "non_positive_volume": 0,
+      "close_time_failures": 0,
+      "forming_rows_included": 0,
+      "cross_symbol_alignment": true,
+      "contiguous_from_prior_highwater": true,
+      "rows_appended": 20,
+      "rows_fetched": 24,
+      "forming_rows_excluded": 4
+    }
+  },
+  "limitations": [
+    "5m/15m base history remains partial through 2021; this append does not repair multi-cycle coverage.",
+    "1h base/delta bridge still has 28 missing hourly opens per symbol and an 8-row top-level count discrepancy.",
+    "4h raw/aligned/canonical lineage and 13 original page-manifest SHA provenance discrepancies remain unresolved; the 16:00Z completed bars remain held.",
+    "ExchangeInfo serverTime is stale by 138154.991s; direct /fapi/v1/time and direct REST DNS/HTTPS are unavailable; connector HTTP status/headers are not exposed.",
+    "No local Node24/npm11 checkout or installed SDK; no strategy backtest or untouched OOS evaluation.",
+    "Historical point-in-time funding, depth, fee tier, impact, latency and fill assumptions remain incomplete."
+  ]
+}

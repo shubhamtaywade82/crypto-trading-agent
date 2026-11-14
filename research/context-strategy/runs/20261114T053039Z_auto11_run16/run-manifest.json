@@ -192,8 +192,31 @@
         "sha256": "dcac64881947ff65dbb28cda80be4dab44c2199d78027d4a18623a092f4e1b8e",
         "blobSha": "5fc8c92f11a11f6f17e788ed19b944d905a335af",
         "bytes": 13288
+      },
+      {
+        "path": "research-data/binance-usdm/conditional-strategy-registry-snapshot-v132.json",
+        "sha256": "6cdcd9cf921602f156c73043faf15eec1391a6b7d4bc1d1cc9c2fb70cba6b356",
+        "blobSha": "d237ea6e6922350e7794d34f9929ebb254552cf2",
+        "bytes": 49108
+      },
+      {
+        "path": "research-data/binance-usdm/research-queue-v132.json",
+        "sha256": "6e6002fcd8a9d27d272a2e02ba224e67f48fe84295a0202162823744c890e35d",
+        "blobSha": "6e2427e5de2e67e966291546081cf1585ff73b5c",
+        "bytes": 29022
       }
     ]
   },
-  "nextAction": "Provision Node24/npm11 workspace and run deterministic smoke test; then align full multi-symbol 5m/15m history and reconcile 1h/4h lineage before strategy OOS."
+  "nextAction": "Provision Node24/npm11 workspace and run deterministic smoke test; then align full multi-symbol 5m/15m history and reconcile 1h/4h lineage before strategy OOS.",
+  "registrySnapshotPath": "research-data/binance-usdm/conditional-strategy-registry-snapshot-v132.json",
+  "queueSnapshotPath": "research-data/binance-usdm/research-queue-v132.json",
+  "branchConsolidation": {
+    "targetBranch": "research/umbrella",
+    "targetCreatedFrom": "main@7b4be7c90777d865e9f82de86159070098a54933",
+    "sourceBranchInventoryReviewed": true,
+    "mergesExecuted": 0,
+    "sourceBranchesDeleted": 0,
+    "reason": "Research branches are highly divergent and many are successive snapshot runs with overlapping history; bulk merging all branches would create unnecessary conflicts and duplicate/superseded artifacts.",
+    "nextAction": "Select the latest non-ancestor tip per research family, review file-level diffs and merge one family at a time with source refs preserved."
+  }
 }

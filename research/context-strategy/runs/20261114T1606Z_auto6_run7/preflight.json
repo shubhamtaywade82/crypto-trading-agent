@@ -63,10 +63,10 @@
     },
     {
       "capability": "artifact_readback",
-      "status": "NOT_CHECKED",
-      "evidence": "No artifacts from this run written at preflight time.",
-      "impact": "Persistence is not yet claimed.",
-      "next_action": "Commit run artifacts to main and fetch them back to verify exact blob identities."
+      "status": "PASS",
+      "evidence": "Post-commit GitHub readback at 2026-11-14T16:09:20.440Z verified all 8 run artifacts by exact path and Git blob SHA; branch head is e2466534fb58368e8737325ef0f9f75491fccd4c. SHA-256 was not computed; Git blob SHA-1 identities were verified.",
+      "impact": "Research metadata persistence is verified on main; raw OHLCV archive remains unavailable and was not appended.",
+      "next_action": "Recover the raw archive branch; retain blob identities in the run manifest."
     }
   ],
   "execution": {
@@ -87,5 +87,12 @@
     "rollingWindowIntegrityAuditExecuted": true,
     "rawArchiveRowsAppended": 0,
     "classification": "MONITORING_ONLY"
+  },
+  "post_commit_readback": {
+    "status": "PASS",
+    "verifiedAtUtc": "2026-11-14T16:09:20.440Z",
+    "branchHead": "e2466534fb58368e8737325ef0f9f75491fccd4c",
+    "verifiedArtifacts": 8,
+    "sha256": "NOT_COMPUTED"
   }
 }

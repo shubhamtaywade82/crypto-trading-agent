@@ -28,7 +28,7 @@ The runner defaults `PAPER_EXCHANGE_URL` to `http://127.0.0.1:3100` when it is o
 
 If `MODE=live` is set in the environment, the command refuses to start rather than silently overriding it. It also refuses `BINANCE_TESTNET=on`.
 
-The `predev:paper-exchange` lifecycle hook reuses `predev:paper`: it checks the configured PaperExchange health endpoint and, when the local service is unavailable, starts the Docker Compose service and runs the repository's migration/smoke-test steps. Set `PAPER_EXCHANGE_DIR` when the PaperExchange checkout is not at the existing default path.
+Start PaperExchange separately before launching the agent. For a local checkout, start it with `docker compose up -d --build`, then run its migrations and smoke test using that repository's documented commands. The runner loads `.env`, probes the selected `/up` health endpoint with a 3-second timeout, and refuses to start the cockpit if the service is unavailable. This avoids accidentally starting a local instance when `.env` points to a remote URL.
 
 ## Runtime ownership
 

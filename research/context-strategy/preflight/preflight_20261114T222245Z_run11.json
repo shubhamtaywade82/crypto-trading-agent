@@ -1,0 +1,143 @@
+{
+  "schema_version": "1.0.0",
+  "run_id": "context-strategy-20261114T222245Z-auto11-run11",
+  "as_of_utc": "2026-11-14T22:22:46.171Z",
+  "environment": {
+    "shell_compute": {
+      "status": "PASS",
+      "cwd": "/",
+      "os": "Debian GNU/Linux 13 (trixie)",
+      "node": "v22.16.0",
+      "npm": "10.9.2",
+      "python": "3.13.5",
+      "cpu_count": 3,
+      "memory_total": "5.8 GiB",
+      "disk_total": "32 GiB",
+      "disk_free": "30 GiB",
+      "note": "Shell and bounded computation available; project requires Node >=24 and npm >=11."
+    },
+    "repository_code": {
+      "status": "DEGRADED",
+      "remote_repository": "shubhamtaywade82/crypto-trading-agent",
+      "remote_access": "PASS via GitHub connector",
+      "local_checkout": "NOT_PRESENT",
+      "package_engines": "Node >=24; npm >=11",
+      "remote_backtest_entrypoint": "scripts/backtest.ts exists; scripts/research-run.ts exists",
+      "local_invocation": "NOT_POSSIBLE"
+    },
+    "binance_sdk": {
+      "status": "UNAVAILABLE",
+      "packages_checked": [
+        "@nemesis-oss/binance-sdk",
+        "binance",
+        "binance-connector",
+        "@binance/connector"
+      ],
+      "resolution": "NOT_INSTALLED",
+      "sdk_used": false
+    },
+    "direct_network": {
+      "status": "BLOCKED",
+      "probes": [
+        "https://fapi.binance.com/fapi/v1/time",
+        "https://fapi.binance.com/fapi/v1/exchangeInfo"
+      ],
+      "result": "DNS resolution failed before HTTP; no HTTP status received."
+    },
+    "connector_market_data": {
+      "status": "DEGRADED",
+      "successful_data_families": [
+        "klines",
+        "premiumIndex/mark price",
+        "ticker/24hr",
+        "openInterest",
+        "fundingRate history",
+        "openInterestHist",
+        "taker buy/sell volume",
+        "global long/short account ratio",
+        "bookTicker"
+      ],
+      "http_status_headers": "NOT_EXPOSED"
+    },
+    "server_time": {
+      "status": "BLOCKED",
+      "endpoint": "GET /fapi/v1/time",
+      "reason": "Direct DNS failure; connector has no server-time action."
+    },
+    "exchange_info": {
+      "status": "BLOCKED",
+      "endpoint": "GET /fapi/v1/exchangeInfo",
+      "server_time_utc": "2026-11-13T06:02:01.705Z",
+      "retrieved_against_utc": "2026-11-14T22:22:46.171Z",
+      "staleness_seconds": 145244.466,
+      "contract_status_execution_validation": "BLOCKED"
+    },
+    "raw_archive": {
+      "status": "DEGRADED",
+      "archive_branch": "research/raw-ohlcv-archive-20261108T1026Z",
+      "new_rows_appended": 52,
+      "rows_by_interval": {
+        "5m": 40,
+        "15m": 12,
+        "1h": 0,
+        "4h": 0
+      },
+      "delta_manifest_readback_verified": true,
+      "archive_indexes_updated": [
+        "5m",
+        "15m"
+      ],
+      "full_history": "PARTIAL; 5m/15m base pages, 1h bridge and 4h provenance remain unresolved."
+    },
+    "data_quality": {
+      "status": "DEGRADED",
+      "recent_window_rows": 8000,
+      "completed_rows": 7984,
+      "forming_excluded": 16,
+      "duplicates": 0,
+      "missing_intervals": 0,
+      "off_grid": 0,
+      "non_monotonic": 0,
+      "ohlc_failures": 0,
+      "non_finite": 0,
+      "non_positive_volume": 0,
+      "note": "Recent windows pass; historical base coverage and canonical lineage are inadequate for strategy validation."
+    },
+    "backtest_harness": {
+      "status": "BLOCKED",
+      "remote_entrypoint": "scripts/backtest.ts",
+      "smoke_test": "NOT_RUN",
+      "reason": "No local checkout; Node22.16/npm10.9.2 below package engines; dependencies absent; no compatible deterministic smoke test."
+    },
+    "disk_storage": {
+      "status": "PASS",
+      "local_disk_free": "30 GiB",
+      "durable_storage": "GitHub raw archive branch writable; delta, manifest and indexes were committed and read back."
+    },
+    "artifact_readback": {
+      "status": "PASS",
+      "artifacts": [
+        "research-data/binance-usdm/delta/binance_usdm_delta_20261114T222245Z_5m15m_completed.jsonl",
+        "research-data/binance-usdm/delta/manifest-20261114T222245Z-5m15m.json",
+        "research-data/binance-usdm/5m/archive-index.json",
+        "research-data/binance-usdm/15m/archive-index.json"
+      ],
+      "verification": "Exact content readback; SHA-256 and Git blob identities recorded."
+    }
+  },
+  "outcome": {
+    "run_status": "RESEARCH_EXECUTED",
+    "scope": "DATA_QUALITY_ONLY",
+    "strategy_experiment": "BLOCKED",
+    "oos_evaluation": "NOT_RUN",
+    "oos_evaluated": false
+  },
+  "blockers": [
+    "5m/15m base history is partial; page-28 common panel is not aligned and predecessor provenance is unresolved.",
+    "1h bridge has 28 missing hourly opens per symbol and an 8-row count discrepancy.",
+    "4h raw/aligned/canonical totals disagree and 13 original page-manifest SHA mismatches remain; canonical 4h ends 2026-11-05T16:00Z.",
+    "Node24/npm11 local checkout and deterministic smoke test are unavailable.",
+    "Fresh /fapi/v1/time and /fapi/v1/exchangeInfo are unavailable; exchangeInfo is stale.",
+    "Point-in-time funding cashflows and calibrated fee/spread/slippage/impact/latency/fill assumptions are unavailable."
+  ]
+}

@@ -1,0 +1,96 @@
+{
+  "schema_version": "1.0.0",
+  "run_id": "context-strategy-20261114T095406Z-auto11-run19",
+  "type": "INCREMENTAL_ARCHIVE_APPEND_DATA_QUALITY",
+  "hypothesis": "A bounded fetch starting exactly after the verified 5m/15m highwaters appends only completed USD-M bars across all four symbols without gaps, duplicates, off-grid opens or OHLC violations.",
+  "specification": {
+    "endpoint": "GET /fapi/v1/klines",
+    "symbols": [
+      "BTCUSDT",
+      "ETHUSDT",
+      "SOLUSDT",
+      "XRPUSDT"
+    ],
+    "intervals": [
+      "5m",
+      "15m"
+    ],
+    "previous_highwater_utc": {
+      "5m": "2026-11-14T09:20:00.000Z",
+      "15m": "2026-11-14T09:00:00.000Z",
+      "1h": "2026-11-14T08:00:00.000Z",
+      "4h": "2026-11-13T12:00:00.000Z"
+    },
+    "request_start_utc": {
+      "5m": "2026-11-14T09:25:00.000Z",
+      "15m": "2026-11-14T09:15:00.000Z"
+    },
+    "retrieval_cutoff_utc": "2026-11-14T09:52:53.666Z",
+    "completed_rule": "closeTime < fixed retrieval cutoff; forming rows excluded",
+    "seed": null
+  },
+  "results": {
+    "status": "PASS_INCREMENTAL_SLICE_BASE_ARCHIVE_DEGRADED",
+    "rows_fetched": 36,
+    "completed_rows": 28,
+    "forming_rows_excluded": 8,
+    "bytes": 8184,
+    "rows_by_interval": {
+      "5m": 20,
+      "15m": 8
+    },
+    "rows_by_symbol": {
+      "BTCUSDT": 7,
+      "ETHUSDT": 7,
+      "SOLUSDT": 7,
+      "XRPUSDT": 7
+    },
+    "rows_by_symbol_interval": {
+      "BTCUSDT|5m": 5,
+      "BTCUSDT|15m": 2,
+      "ETHUSDT|5m": 5,
+      "ETHUSDT|15m": 2,
+      "SOLUSDT|5m": 5,
+      "SOLUSDT|15m": 2,
+      "XRPUSDT|5m": 5,
+      "XRPUSDT|15m": 2
+    },
+    "latest_completed_open_utc": {
+      "5m": "2026-11-14T09:45:00.000Z",
+      "15m": "2026-11-14T09:30:00.000Z"
+    },
+    "next_start_utc": {
+      "5m": "2026-11-14T09:50:00.000Z",
+      "15m": "2026-11-14T09:45:00.000Z"
+    },
+    "quality": {
+      "duplicates": 0,
+      "missing_intervals": 0,
+      "off_grid": 0,
+      "non_monotonic": 0,
+      "ohlc_failures": 0,
+      "non_finite": 0,
+      "non_positive_volume": 0,
+      "close_time_failures": 0,
+      "forming_rows_included": 0,
+      "cross_symbol_alignment": true,
+      "contiguous_from_prior_highwater": true
+    }
+  },
+  "artifacts": {
+    "delta": "research-data/binance-usdm/delta/binance_usdm_delta_20261114T0952Z_5m15m_completed.jsonl",
+    "delta_sha256": "b7236fdd04b9528c0391596047ef87baa73f805d8755ba6dade941235236f00b",
+    "delta_blob_sha": "9f3adfe8417a3cf8822876dbbe0dbd1d66f0a17d",
+    "delta_manifest": "research-data/binance-usdm/delta/manifest-20261114T0952Z-5m15m.json",
+    "delta_manifest_sha256": "86c6eb1beb03bf338a647eb627cb4fbed1ff14a2d69ee44859e2c66e35de1bf6",
+    "delta_manifest_blob_sha": "33db3e84ad9dbe02b7239170adb4af3d1a689a5b",
+    "archive_manifest": "research-data/binance-usdm/manifests/archive_manifest_20261114T095406Z_auto11_run19.json",
+    "archive_manifest_sha256": "c5f74edb21801644884d4447333e2a3b4607faa2d42f0ca5725695f5de4e4e8e",
+    "archive_manifest_blob_sha": "7ac7232b999082414c6231e6528ae662260ead31",
+    "readback_receipt": "research-data/binance-usdm/manifests/readback_receipt_20261114T095406Z_auto11_run19.json"
+  },
+  "interpretation": "The new 5m/15m incremental slice passed bounded integrity checks and exact GitHub readback. The 1h series had no newly completed bar after its 08:00Z highwater; 4h remains held. Historical 5m/15m page-0028 alignment, 1h bridge gaps, 4h raw/canonical lineage and execution-cost calibration remain unresolved. No strategy backtest or OOS evaluation was run.",
+  "strategy_experiment_status": "BLOCKED",
+  "oos_evaluated": false,
+  "evidence_status": "DATA_QUALITY_EXPERIMENT_ONLY"
+}

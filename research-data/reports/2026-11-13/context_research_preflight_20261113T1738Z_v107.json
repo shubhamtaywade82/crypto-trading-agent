@@ -1,0 +1,125 @@
+{
+  "schema_version": "1.0.0",
+  "as_of_utc": "2026-11-13T17:38:53.201Z",
+  "classification": "RESEARCH_BLOCKED",
+  "checks": [
+    {
+      "capability": "Shell/compute",
+      "status": "PASS",
+      "evidence": "cwd=/; Linux 6.18.57 x86_64; Python 3.13.5; Node v22.16.0; npm 10.9.2; 3 CPUs; MemTotal 6,091,004 kB; MemAvailable 4,924,604 kB; 30G free on overlay.",
+      "impact": "Shell/Python analysis is available; Node runtime is below repository requirements.",
+      "next_action": "Provision Node>=24 and npm>=11."
+    },
+    {
+      "capability": "Repository/code",
+      "status": "DEGRADED",
+      "evidence": "No local checkout in /workspace,/workspaces,/app,/repo,/root/project or /home/oai/share. Remote repo shubhamtaywade82/crypto-trading-agent is accessible through GitHub; package.json requires Node>=24/npm>=11; remote scripts/backtest.ts, src/research/ExperimentRunner.ts and src/backtesting/DualEvaluationHarness.ts exist. SDK packages not installed/importable.",
+      "impact": "Remote source can be inspected but no local harness invocation or code-version reproducibility.",
+      "next_action": "Clone exact branch into a compatible Node 24+/npm 11+ runner and install locked dependencies."
+    },
+    {
+      "capability": "Network/Binance endpoints",
+      "status": "DEGRADED",
+      "evidence": "Direct curl to all six required /fapi endpoints failed DNS resolution (curl exit 6, HTTP 000). Binance connector returned market data for all four symbols; HTTP status/headers are hidden. exchangeInfo.serverTime=2026-11-13T06:02:01.702Z, 11h24m08.857s stale versus observed market timestamp 17:26:10.559Z; /fapi/v1/time unavailable.",
+      "impact": "Current market classification is possible through connector data, but contract metadata and direct endpoint freshness are not suitable for execution validation.",
+      "next_action": "Restore direct DNS/HTTPS; probe /time and uncached exchangeInfo; require <=5s drift."
+    },
+    {
+      "capability": "Raw historical archive",
+      "status": "DEGRADED",
+      "evidence": "Remote GitHub raw archive branch updated to abcd9ed51371536371a4cc57e274386a7a4090e1. 172 completed rows appended and SHA/Git-blob/readback verified. 1h base archive spans 2020-09-14 to 2026-11-13 16:00Z. 5m/15m base absent; 4h raw/canonical count and provenance issues remain. No local raw archive mount.",
+      "impact": "1h historical sample is available remotely; multi-year lower-timeframe and reconciled 4h history are not research-ready.",
+      "next_action": "Backfill 5m/15m and reconcile 4h; materialize into a compatible runner."
+    },
+    {
+      "capability": "Data quality/coverage",
+      "status": "DEGRADED",
+      "evidence": "3,200 latest-window klines returned (200 per symbol/interval), 3,184 completed and 16 forming excluded. All 16 symbol/interval windows had zero duplicates, gaps, off-grid timestamps, non-monotonic rows, OHLC failures, non-positive volume, non-finite values and close-time failures. Historical 1h index clean; 4h degraded; 5m/15m base absent.",
+      "impact": "Current-window quality passes; full archive coverage and alignment remain insufficient.",
+      "next_action": "Run complete historical quality and cross-symbol alignment audit after backfill/materialization."
+    },
+    {
+      "capability": "Backtest harness/smoke test",
+      "status": "BLOCKED",
+      "evidence": "Remote source files exist; no local checkout; Node v22.16/npm10.9 below required Node>=24/npm>=11; @nemesis-oss/binance-sdk, binance, @binance/connector and @binance/futures-connector not installed. Deterministic fixture smoke test not run.",
+      "impact": "No experiment, backtest or OOS result can be claimed.",
+      "next_action": "Provision compatible runtime, clone exact commit, run deterministic fixture smoke test and no-lookahead checks."
+    },
+    {
+      "capability": "Disk/storage",
+      "status": "PASS",
+      "evidence": "30G free on overlay; GitHub raw archive branch writes succeeded; current delta/manifests/indexes reopened. /mnt/data contains only context_strategy_v106_bundle.zip (22,102 bytes), not raw candles.",
+      "impact": "Remote GitHub persistence is available; no local archive persistence.",
+      "next_action": "Continue remote versioned persistence and readback checks."
+    },
+    {
+      "capability": "Artifact readback",
+      "status": "PASS",
+      "evidence": "160-row delta SHA-256 6b8c47bb82c8ddf93c9b44530f62ec9ca7c35a3247aeb18070d5467a6fc62aa9 and 12-row delta SHA-256 c17ada2fd4140a187664b4f1693e5299023aa28148883e72e54f907d6300bda5 matched readback; both manifests and all four archive indexes reopened with matching Git blob SHAs.",
+      "impact": "Raw archive update is persistent and verified; context v107 artifacts will be persisted separately.",
+      "next_action": "Commit context snapshot and verify all artifacts by Git blob SHA and SHA-256."
+    }
+  ],
+  "research_executed": false,
+  "oos_evaluated": false,
+  "monitoring_completed": true,
+  "archive_append_completed": true,
+  "binance_endpoint_probes": [
+    {
+      "endpoint": "GET /fapi/v1/time",
+      "status": "UNAVAILABLE_DIRECT_NETWORK",
+      "evidence": "curl exit 6, HTTP 000; no connector time method."
+    },
+    {
+      "endpoint": "GET /fapi/v1/exchangeInfo",
+      "status": "DEGRADED_STALE",
+      "evidence": "Direct DNS failed; connector serverTime 06:02:01.702Z, stale by 11h24m08.857s."
+    },
+    {
+      "endpoint": "GET /fapi/v1/klines",
+      "status": "DATA_RETURNED_VIA_CONNECTOR",
+      "evidence": "200 rows per symbol/interval across 4 symbols × 4 intervals; 3,200 rows total; HTTP status hidden."
+    },
+    {
+      "endpoint": "GET /fapi/v1/premiumIndex",
+      "status": "DATA_RETURNED_VIA_CONNECTOR",
+      "evidence": "Mark/index prices, current indicated funding, next funding time and timestamps returned."
+    },
+    {
+      "endpoint": "GET /fapi/v1/openInterest",
+      "status": "DATA_RETURNED_VIA_CONNECTOR",
+      "evidence": "Current OI returned for all four symbols."
+    },
+    {
+      "endpoint": "GET /fapi/v1/ticker/24hr",
+      "status": "DATA_RETURNED_VIA_CONNECTOR",
+      "evidence": "24h statistics returned for all four symbols."
+    },
+    {
+      "endpoint": "GET /fapi/v1/fundingRate",
+      "status": "DATA_RETURNED_VIA_CONNECTOR",
+      "evidence": "Latest two settlement records per symbol; full history not backfilled."
+    },
+    {
+      "endpoint": "GET /fapi/v1/ticker/bookTicker",
+      "status": "DATA_RETURNED_VIA_CONNECTOR",
+      "evidence": "Top-of-book bid/ask returned; no depth curve."
+    },
+    {
+      "endpoint": "GET /futures/data/takerBuySellVol",
+      "status": "DATA_RETURNED_VIA_CONNECTOR",
+      "evidence": "15m taker buy/sell volume returned; latest completed bucket open 17:15Z."
+    },
+    {
+      "endpoint": "GET /futures/data/openInterestHist",
+      "status": "DATA_RETURNED_VIA_CONNECTOR",
+      "evidence": "Three 1h OI observations returned, 15:00Z through 17:00Z."
+    },
+    {
+      "endpoint": "GET /futures/data/globalLongShortAccountRatio",
+      "status": "DATA_RETURNED_VIA_CONNECTOR",
+      "evidence": "Three 1h global account-ratio observations; latest 17:00Z; descriptive only."
+    }
+  ],
+  "contract_status_note": "Connector exchangeInfo previously reported the four symbols TRADING/PERPETUAL, but its serverTime is stale by more than 11 hours; do not use that metadata for execution validation."
+}

@@ -4,7 +4,7 @@
   "run_id": "context-strategy-20261114T202620Z-run10",
   "created_at_utc": "2026-11-14T20:29:25.342Z",
   "type": "incremental_archive_data_quality_append",
-  "status": "COMPLETED_REPRODUCIBLE_DATA_QUALITY_ONLY",
+  "status": "COMPLETED_DATA_QUALITY_ONLY_CODE_UNVERSIONED",
   "hypothesis": "Newly completed 5m/15m bars strictly after verified per-interval highwaters can be appended without duplicate opens, interval gaps, off-grid timestamps, OHLCV invariant failures, forming-candle inclusion or cross-symbol misalignment.",
   "scope": "DATA_QUALITY_ONLY; NOT a strategy experiment and NOT OOS evaluation",
   "specification": {
@@ -147,12 +147,15 @@
     "start_utc": "2026-11-14T20:24:36.697Z",
     "end_utc": "2026-11-14T20:29:25.342Z",
     "exit_status": "SUCCESS",
-    "reproducibility": "same input rows and deterministic validation rules; no random sampling"
+    "reproducibility": "same input rows and deterministic validation rules; no random sampling",
+    "code_version": "INLINE_UNVERSIONED",
+    "code_hash": "UNAVAILABLE_INLINE_EXECUTION",
+    "script_artifact": "NOT_CREATED"
   },
   "costs": {
     "strategy_cost_model": "NOT_APPLICABLE_TO_DATA_QUALITY_APPEND",
     "trading_costs": "UNAVAILABLE/UNCALIBRATED; no strategy backtest"
   },
-  "interpretation": "The incremental slice passed its integrity gates and is durably persisted. This does not validate historical base coverage, strategy performance, trade expectancy or OOS behavior.",
+  "interpretation": "The incremental slice passed integrity gates and is durably persisted. Inputs, manifests, outputs and hashes are available; the exact inline validator source was not committed and has no code hash, so strict code-level reproducibility is incomplete. This is not strategy evidence, does not validate historical base coverage, and does not establish trading edge or OOS behavior.",
   "next_action": "Continue from 5m 20:25Z and 15m 20:15Z after candle close; keep 1h and 4h constrained by their existing reconciliation blockers."
 }

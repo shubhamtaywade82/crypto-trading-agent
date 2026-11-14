@@ -1,0 +1,114 @@
+{
+  "schema_version": "1.0.0",
+  "created_at_utc": "2026-11-14T15:41:54.838Z",
+  "repository": "shubhamtaywade82/crypto-trading-agent",
+  "branch": "research/umbrella",
+  "source_endpoint": "GET /fapi/v1/klines via Binance USD-M public market-data connector; SDK not used; direct REST DNS unavailable; connector HTTP status/headers not exposed",
+  "request_limit": 200,
+  "symbols": [
+    "BTCUSDT",
+    "ETHUSDT",
+    "SOLUSDT",
+    "XRPUSDT"
+  ],
+  "intervals": [
+    "5m",
+    "15m",
+    "1h"
+  ],
+  "prior_highwaters_utc": {
+    "5m": "2026-11-14T14:30:00.000Z",
+    "15m": "2026-11-14T14:15:00.000Z",
+    "1h": "2026-11-14T13:00:00.000Z",
+    "4h": "2026-11-13T12:00:00.000Z"
+  },
+  "rows_fetched": 2400,
+  "forming_rows_excluded": 12,
+  "pre_highwater_rows_excluded": 2316,
+  "rows_appended_total": 72,
+  "rows_by_interval": {
+    "5m": 52,
+    "15m": 16,
+    "1h": 4,
+    "4h": 0
+  },
+  "rows_by_symbol": {
+    "BTCUSDT": 18,
+    "ETHUSDT": 18,
+    "SOLUSDT": 18,
+    "XRPUSDT": 18
+  },
+  "rows_by_symbol_interval": {
+    "BTCUSDT": {
+      "5m": 13,
+      "15m": 4,
+      "1h": 1
+    },
+    "ETHUSDT": {
+      "5m": 13,
+      "15m": 4,
+      "1h": 1
+    },
+    "SOLUSDT": {
+      "5m": 13,
+      "15m": 4,
+      "1h": 1
+    },
+    "XRPUSDT": {
+      "5m": 13,
+      "15m": 4,
+      "1h": 1
+    }
+  },
+  "first_open_utc": "2026-11-14T14:00:00.000Z",
+  "last_open_utc": "2026-11-14T15:35:00.000Z",
+  "latest_completed_open_utc_by_interval": {
+    "5m": "2026-11-14T15:35:00.000Z",
+    "15m": "2026-11-14T15:15:00.000Z",
+    "1h": "2026-11-14T14:00:00.000Z",
+    "4h": "2026-11-13T12:00:00.000Z"
+  },
+  "next_start_utc_by_interval": {
+    "5m": "2026-11-14T15:40:00.000Z",
+    "15m": "2026-11-14T15:30:00.000Z",
+    "1h": "2026-11-14T15:00:00.000Z",
+    "4h": "2026-11-13T16:00:00.000Z"
+  },
+  "observed_latest_completed_open_utc_by_interval": {
+    "5m": "2026-11-14T15:35:00.000Z",
+    "15m": "2026-11-14T15:15:00.000Z",
+    "1h": "2026-11-14T14:00:00.000Z",
+    "4h": "2026-11-14T08:00:00.000Z"
+  },
+  "quality": {
+    "duplicates": 0,
+    "gaps": 0,
+    "offGrid": 0,
+    "ohlcFailures": 0,
+    "nonFinite": 0,
+    "nonPositiveVolume": 0,
+    "closeTimeFailures": 0,
+    "crossSymbolAlignment": true,
+    "contiguousFromPriorHighwater": true
+  },
+  "delta_path": "research-data/binance-usdm/delta/binance_usdm_delta_20261114T154154Z_auto7_5m15m1h_completed.jsonl",
+  "delta_bytes": 21258,
+  "delta_sha256": "5b0e5d68b0c39586a4e24a0e73ff6e3fd322ff6d07f031626d8dfa1b1c55b5be",
+  "delta_git_blob_sha": "d145ebc1f1b81244baf84b473877cf14ea370fad",
+  "readback_verified": false,
+  "verified_at_utc": null,
+  "held_intervals": {
+    "4h": {
+      "status": "HELD",
+      "archive_highwater_utc": "2026-11-13T12:00:00.000Z",
+      "observed_latest_completed_open_utc": "2026-11-14T08:00:00.000Z",
+      "reason": "4h raw/canonical lineage and page-manifest provenance unresolved"
+    }
+  },
+  "notes": [
+    "Incremental 5m/15m/1h slices only; all four symbols aligned and contiguous from verified prior highwaters.",
+    "The 1h append does not repair the 28-hour historical bridge gap per symbol or the 8-row top-level count discrepancy.",
+    "4h append remains held; latest completed 4h bar is not appended.",
+    "The 5m/15m base archive remains partial; page-0028 is not canonical because cross-symbol windows are not aligned."
+  ]
+}

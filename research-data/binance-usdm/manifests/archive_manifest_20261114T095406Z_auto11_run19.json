@@ -1680,11 +1680,13 @@
   "archive_indexes": {
     "5m": {
       "path": "research-data/binance-usdm/5m/archive-index.json",
-      "status": "UPDATED_PENDING_READBACK"
+      "status": "UPDATED_READBACK_VERIFIED",
+      "readback_verified": true
     },
     "15m": {
       "path": "research-data/binance-usdm/15m/archive-index.json",
-      "status": "UPDATED_PENDING_READBACK"
+      "status": "UPDATED_READBACK_VERIFIED",
+      "readback_verified": true
     },
     "1h": {
       "path": "research-data/binance-usdm/1h/archive-index.json",
@@ -1929,5 +1931,60 @@
     "first_open_utc": "2026-11-14T09:15:00.000Z",
     "last_open_utc": "2026-11-14T09:45:00.000Z",
     "as_of_utc": "2026-11-14T09:52:53.666Z"
+  },
+  "index_reconciliation": {
+    "status": "RECONCILED_TO_ARCHIVE_MANIFEST",
+    "as_of_utc": "2026-11-14T09:54:06.933Z",
+    "prior_index_values": {
+      "5m": {
+        "rows_by_interval": {
+          "5m": 780,
+          "15m": 260,
+          "1h": 64,
+          "4h": 4
+        },
+        "rows_by_symbol": {
+          "BTCUSDT": 277,
+          "ETHUSDT": 277,
+          "SOLUSDT": 277,
+          "XRPUSDT": 277
+        },
+        "canonical_delta_files": 22,
+        "canonical_delta_manifest_files": 13
+      },
+      "15m": {
+        "rows_by_interval": {
+          "5m": 780,
+          "15m": 260,
+          "1h": 64,
+          "4h": 4
+        },
+        "rows_by_symbol": {
+          "BTCUSDT": 277,
+          "ETHUSDT": 277,
+          "SOLUSDT": 277,
+          "XRPUSDT": 277
+        },
+        "canonical_delta_files": 23,
+        "canonical_delta_manifest_files": 14
+      }
+    },
+    "authoritative_manifest_values": {
+      "canonical_rows_by_interval": {
+        "5m": 692,
+        "15m": 228,
+        "1h": 56,
+        "4h": 4
+      },
+      "canonical_rows_by_symbol": {
+        "BTCUSDT": 245,
+        "ETHUSDT": 245,
+        "SOLUSDT": 245,
+        "XRPUSDT": 245
+      },
+      "canonical_delta_files": 17,
+      "canonical_delta_manifest_files": 9
+    },
+    "action": "Replaced duplicated/stale canonical arrays and counters in 5m/15m indexes with the archive manifest's canonical unique-row view. Preserved raw incremental_deltas history and superseded-delta accounting."
   }
 }

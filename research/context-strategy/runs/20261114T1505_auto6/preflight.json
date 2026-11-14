@@ -1,0 +1,92 @@
+{
+  "schema_version": "1.0.0",
+  "run_id": "context-strategy-20261114T150500Z-auto6",
+  "as_of_utc": "2026-11-14T15:05:00.558Z",
+  "status": "MONITORING_ONLY",
+  "oos_evaluated": false,
+  "checks": [
+    {
+      "capability": "shell_compute",
+      "status": "PASS",
+      "evidence": "Linux 6.18.57 x86_64; cwd=/; Python 3.13.5; Node v22.16.0; npm 10.9.2; 3 CPU; 5.8 GiB RAM; 30 GiB free disk.",
+      "impact": "Bounded analysis and connector calls completed; runtime is below repository engine requirements.",
+      "next_action": "Provision Node >=24 and npm >=11 in a persistent workspace."
+    },
+    {
+      "capability": "repo_code",
+      "status": "DEGRADED",
+      "evidence": "Remote GitHub main is readable at a96d536cb06348745fee83d12c73559658a5ad30; package.json v2.4.1 requires Node >=24/npm >=11; scripts/state-study.ts exists; no local checkout under /workspace, /workspaces, /mnt/data or /home.",
+      "impact": "Source and research artifacts were inspected; repository scripts cannot be invoked locally.",
+      "next_action": "Restore a persistent checkout at the recorded commit after runtime provisioning."
+    },
+    {
+      "capability": "binance_sdk",
+      "status": "BLOCKED",
+      "evidence": "Node require.resolve reports @nemesis-oss/binance-sdk and binance NOT_INSTALLED.",
+      "impact": "No SDK execution; public market data was obtained through the Binance USDⓈ-M connector.",
+      "next_action": "Install pinned dependencies only in the compatible Node24/npm11 checkout."
+    },
+    {
+      "capability": "network_binance_endpoints",
+      "status": "DEGRADED",
+      "evidence": "Direct curl to /fapi/v1/time failed DNS (curl exit 6, HTTP 000). Connector calls succeeded for klines, premiumIndex, ticker/24hr, openInterest, fundingRate history, openInterestHist, takerlongshortRatio, globalLongShortAccountRatio and bookTicker. exchangeInfo serverTime 2026-11-13T06:02:01.708Z is 32.99 hours stale; connector HTTP status/headers unavailable.",
+      "impact": "Current prices and rolling klines are usable with timestamp caveats; server-time drift and fresh contract status are BLOCKED.",
+      "next_action": "Restore outbound DNS/HTTPS and require fresh /fapi/v1/time and /fapi/v1/exchangeInfo."
+    },
+    {
+      "capability": "raw_historical_archive",
+      "status": "BLOCKED",
+      "evidence": "Queue v132 references archive branch research/raw-ohlcv-archive-20261108T1026Z; branch search returned only main; fetch_file on the referenced branch returned 404; v124 manifest is also 404 on main.",
+      "impact": "Cannot inspect raw archive files/manifests, verify prior highwaters, append deltas, or confirm historical archive readback.",
+      "next_action": "Restore the exact archive branch/ref or recover the immutable archive commit and manifest before any append; do not rebuild from summaries."
+    },
+    {
+      "capability": "data_quality_coverage",
+      "status": "DEGRADED",
+      "evidence": "Fresh connector window: 1,500 rows per symbol/interval across 4 symbols × 4 intervals; 1,499 completed and 1 forming each; 23,984 completed total. Zero duplicates, gaps, off-grid opens, non-monotonic opens, OHLC failures, non-finite fields or non-positive volume. Windows span 5.2d/15.6d/62.5d/250d.",
+      "impact": "Recent slices are clean and aligned but are not a multi-cycle archive; 1h/4h canonical lineage defects from queue v132 remain unresolved.",
+      "next_action": "Restore and reconcile archive indexes/manifests, then extend the verified history."
+    },
+    {
+      "capability": "backtest_harness_smoke_test",
+      "status": "BLOCKED",
+      "evidence": "scripts/state-study.ts is remotely readable and A1/A2 result artifacts exist in commit a96d536; no local checkout, Node is 22.16.0 (<24), npm is 10.9.2 (<11), dependencies absent; no deterministic fixture smoke test was run in this runtime.",
+      "impact": "No new strategy backtest or untouched OOS evaluation was executed in this run. Same-day A1/A2 research was inspected, not re-executed.",
+      "next_action": "Provision Node24/npm11, restore checkout, run fixture twice and verify no-lookahead before any strategy experiment."
+    },
+    {
+      "capability": "disk_storage",
+      "status": "PASS",
+      "evidence": "30 GiB free on current overlay; GitHub main branch is writable for versioned research artifacts; raw archive branch is not accessible.",
+      "impact": "Registry, queue, snapshot, report and preflight can be persisted to main; raw OHLCV append cannot.",
+      "next_action": "Persist research metadata on main; restore archive branch separately."
+    },
+    {
+      "capability": "artifact_readback",
+      "status": "NOT_CHECKED",
+      "evidence": "New artifacts are prepared for GitHub main; readback verification will be recorded after creation.",
+      "impact": "Persistence is not yet claimed.",
+      "next_action": "Create each artifact, fetch it back, compare exact content and record Git blob SHA-1."
+    }
+  ],
+  "execution": {
+    "shellReconnaissance": "completed",
+    "directBinanceRest": "BLOCKED_DNS",
+    "binanceSdk": "NOT_INSTALLED",
+    "localRepository": "NOT_PRESENT",
+    "remoteRepository": {
+      "name": "shubhamtaywade82/crypto-trading-agent",
+      "branch": "main",
+      "commit": "a96d536cb06348745fee83d12c73559658a5ad30"
+    },
+    "localBacktestExecuted": false,
+    "smokeTestExecuted": false,
+    "experimentExecutedThisRun": false,
+    "oosEvaluatedThisRun": false,
+    "sameDayResearchArtifactsVerified": [
+      "research-runs/state-study-A1-20261114T1144Z.json",
+      "research-runs/state-study-A2-20261114T1303Z.json"
+    ],
+    "classification": "MONITORING_ONLY"
+  }
+}

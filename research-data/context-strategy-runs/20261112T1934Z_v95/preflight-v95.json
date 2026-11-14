@@ -1,0 +1,138 @@
+{
+  "run_id": "context-strategy-2026-11-12T193436Z-v95",
+  "as_of_utc": "2026-11-12T19:34:36.450Z",
+  "overall_status": "RESEARCH_EXECUTED_DATA_QUALITY_ONLY",
+  "environment": {
+    "cwd": "/",
+    "os": "Linux 6.18.57 x86_64",
+    "python": "3.13.5",
+    "node": "v22.16.0",
+    "npm": "10.9.2",
+    "pnpm": "NOT_INSTALLED",
+    "cpu_cores": 3,
+    "memory_available_kb": 4947312,
+    "disk_free": "30G",
+    "local_repo": "ABSENT",
+    "node_modules": "ABSENT",
+    "binance_sdk": "NOT_INSTALLED"
+  },
+  "checks": [
+    {
+      "capability": "shell/compute",
+      "status": "PASS",
+      "evidence": "Linux 6.18.57; Python3.13.5; Node22.16; npm10.9; 3 CPUs; ~4.95GB available RAM; 30GB free."
+    },
+    {
+      "capability": "repo/code",
+      "status": "BLOCKED",
+      "evidence": "No local checkout or node_modules; remote package v2.4.1 requires Node>=24/npm>=11; remote source readable."
+    },
+    {
+      "capability": "network/Binance",
+      "status": "DEGRADED",
+      "evidence": "Connector endpoints returned data; direct curl DNS failed HTTP000; /fapi/v1/time unavailable; exchangeInfo serverTime ~9h49m stale; connector hides HTTP status/headers."
+    },
+    {
+      "capability": "raw historical archive",
+      "status": "DEGRADED",
+      "evidence": "Remote GitHub archive append 128 rows and index/global manifest readback verified; long history remains incomplete and inconsistent."
+    },
+    {
+      "capability": "data quality/coverage",
+      "status": "DEGRADED",
+      "evidence": "Recent 16 series clean; 1h 28 gaps/symbol; 4h raw/aligned/canonical discrepancy; 5m/15m partial uneven base and index/global manifest count mismatch."
+    },
+    {
+      "capability": "backtest harness/smoke test",
+      "status": "BLOCKED",
+      "evidence": "No local compatible harness; source drops closeTime, omits 5m and accepts volume==0; deterministic smoke test not run."
+    },
+    {
+      "capability": "disk/storage",
+      "status": "PASS",
+      "evidence": "30GB free local disk; GitHub write available; Library upload rejected due storage quota."
+    },
+    {
+      "capability": "artifact readback",
+      "status": "PASS",
+      "evidence": "Delta, delta manifest, global manifest and 5m/15m/1h indexes fetched back; exact SHA-256/blob identities verified."
+    }
+  ],
+  "endpoints": [
+    {
+      "endpoint": "GET /fapi/v1/time",
+      "status": "UNAVAILABLE",
+      "evidence": "curl DNS resolution failed; HTTP 000."
+    },
+    {
+      "endpoint": "GET /fapi/v1/exchangeInfo",
+      "status": "DEGRADED",
+      "evidence": "serverTime 2026-11-12T09:45:01.952Z, ~9h49m stale vs 19:34Z market timestamps."
+    },
+    {
+      "endpoint": "GET /fapi/v1/klines",
+      "status": "PASS_CONNECTOR",
+      "symbols": [
+        "BTCUSDT",
+        "ETHUSDT",
+        "SOLUSDT",
+        "XRPUSDT"
+      ],
+      "intervals": [
+        "5m",
+        "15m",
+        "1h",
+        "4h"
+      ],
+      "limit": 100,
+      "rows": 1600,
+      "completed": 1584,
+      "forming_excluded": 16
+    },
+    {
+      "endpoint": "GET /fapi/v1/premiumIndex",
+      "status": "PASS_CONNECTOR"
+    },
+    {
+      "endpoint": "GET /fapi/v1/openInterest",
+      "status": "PASS_CONNECTOR"
+    },
+    {
+      "endpoint": "GET /fapi/v1/ticker/24hr",
+      "status": "PASS_CONNECTOR"
+    },
+    {
+      "endpoint": "GET /fapi/v1/fundingRate",
+      "status": "PASS_CONNECTOR",
+      "latest_two_settlements_per_symbol": true,
+      "observed_spacing_hours": 8
+    },
+    {
+      "endpoint": "GET /fapi/v1/ticker/bookTicker",
+      "status": "PASS_CONNECTOR"
+    },
+    {
+      "endpoint": "GET /futures/data/takerlongshortRatio",
+      "status": "PASS_CONNECTOR",
+      "period": "1h"
+    },
+    {
+      "endpoint": "GET /futures/data/globalLongShortAccountRatio",
+      "status": "PASS_CONNECTOR",
+      "period": "1h"
+    },
+    {
+      "endpoint": "GET /futures/data/openInterestHist",
+      "status": "NOT_CHECKED"
+    }
+  ],
+  "experiment_readiness": {
+    "data_quality_experiment": "COMPLETED_PASS",
+    "strategy_experiment": "BLOCKED",
+    "oos": "NOT_EVALUATED"
+  },
+  "persistence": {
+    "github_archive_and_run_snapshot": "READBACK_VERIFIED",
+    "chatgpt_library": "UPLOAD_BLOCKED_STORAGE_QUOTA"
+  }
+}

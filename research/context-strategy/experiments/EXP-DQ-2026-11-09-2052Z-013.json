@@ -1,0 +1,311 @@
+{
+  "schema_version": "1.0.0",
+  "experiment_id": "EXP-DQ-2026-11-09-2052Z-013",
+  "run_id": "context-strategy-2026-11-09T2052Z-v98",
+  "as_of_utc": "2026-11-09T20:52:20.491Z",
+  "status": "COMPLETED_PASS",
+  "experiment_type": "INCREMENTAL_ARCHIVE_DATA_QUALITY",
+  "hypothesis": "Completed Binance USDⓈ-M klines can be appended strictly after the prior per-interval highwater with no duplicate, gap, timestamp-grid, OHLC, non-positive-volume, non-finite or close-time failures.",
+  "scope": {
+    "symbols": [
+      "BTCUSDT",
+      "ETHUSDT",
+      "SOLUSDT",
+      "XRPUSDT"
+    ],
+    "intervals": [
+      "5m",
+      "15m"
+    ],
+    "tradableSymbols": [
+      "SOLUSDT",
+      "ETHUSDT",
+      "XRPUSDT"
+    ],
+    "referenceSymbols": [
+      "BTCUSDT"
+    ]
+  },
+  "source": {
+    "endpoint": "GET /fapi/v1/klines",
+    "transport": "Binance USDⓈ-M connector wrapper",
+    "sdk_used": false,
+    "direct_rest": "UNAVAILABLE: DNS resolution failed",
+    "retrieved_at_utc": "2026-11-09T20:52:20.491Z"
+  },
+  "specification": {
+    "previousHighwaterOpenUtc": {
+      "5m": "2026-11-09T20:35:00Z",
+      "15m": "2026-11-09T20:15:00Z"
+    },
+    "expectedOpens": {
+      "5m": [
+        "2026-11-09T20:40:00Z",
+        "2026-11-09T20:45:00Z"
+      ],
+      "15m": [
+        "2026-11-09T20:30:00Z"
+      ]
+    },
+    "formingCandlesExcluded": true,
+    "continuityCheck": "each appended openTime equals prior highwater + interval and subsequent bars are exactly one interval apart",
+    "requiredChecks": [
+      "duplicate key",
+      "monotonicity",
+      "bar-grid alignment",
+      "closeTime=openTime+interval-1",
+      "OHLC invariants",
+      "volume>0",
+      "finite numeric fields",
+      "forming-candle exclusion",
+      "cross-symbol alignment"
+    ]
+  },
+  "results": {
+    "rowsFetched": 20,
+    "completedRows": 12,
+    "formingRowsExcluded": 8,
+    "rowsAppended": 12,
+    "rowsByInterval": {
+      "5m": 8,
+      "15m": 4
+    },
+    "rowsBySymbol": {
+      "BTCUSDT": 3,
+      "ETHUSDT": 3,
+      "SOLUSDT": 3,
+      "XRPUSDT": 3
+    },
+    "failures": 0,
+    "qualityStatus": "PASS"
+  },
+  "validator": {
+    "script": "verify_archive_delta.py",
+    "scriptSha256": "ed5bcc6c74878ae098b22e6ac84573ead8afa6a438205485f8409e5f0020788a",
+    "command": "python /tmp/v96/verify_archive_delta.py /tmp/binance_usdm_delta_20261109T2052Z_5m15m_completed.jsonl",
+    "exitStatus": 0,
+    "rows": 12,
+    "bytes": 3494,
+    "sha256": "526bc3525b5bbc546b6f2e1e0f712fd5c1a731f10684c3a060f28c3b3b310ac3",
+    "gitBlobSha": "b01c8faedffef17cac9941eccaf918150606965f",
+    "failures": []
+  },
+  "artifacts": {
+    "deltaPath": "research-data/binance-usdm/delta/binance_usdm_delta_20261109T2052Z_5m15m_completed.jsonl",
+    "deltaSha256": "526bc3525b5bbc546b6f2e1e0f712fd5c1a731f10684c3a060f28c3b3b310ac3",
+    "deltaReadbackVerified": true,
+    "deltaManifestPath": "research-data/binance-usdm/delta/manifest-20261109T2052Z-5m15m.json",
+    "deltaManifestSha256": "61e259fdbffc136176ef394c27cc06eb57eb2b20eba82d09ee4878dcea8ed504",
+    "deltaManifestReadbackVerified": true,
+    "archiveManifestPath": "research-data/binance-usdm/manifests/archive_manifest_20261109T2052Z_v98.json",
+    "archiveManifestSha256": "36c769746aebbe706c50ce91cf9fbde401aa4ae2fbf230d1067f8ac7d0316cb5",
+    "archiveManifestReadbackVerified": true,
+    "indexBlobShas": {
+      "5m": "7fcd3e184eedb33a47cd0e29f2eb874256540af1",
+      "15m": "a6d7066f6e1c87c7f36d590858aeb84231c07abf"
+    },
+    "queueBlobSha": "b5bc2b493b3e367d68a5a6c0ac6c31a1df2f0716",
+    "registryCurrentPath": "research/context-strategy/registry/current.json",
+    "registryCurrentBlobSha": "c008fb7bf96c21083bf1eb9370ef7f8548641bfa",
+    "registryCurrentReadbackVerified": true
+  },
+  "execution": {
+    "backtestHarness": "NOT_RUN",
+    "reason": "No local repository checkout; Node 22.16/npm 10.9.2 below package.json engine requirements Node>=24/npm>=11.",
+    "strategyExperiment": "NOT_RUN",
+    "oosEvaluation": false,
+    "randomSeed": null
+  },
+  "marketSnapshot": {
+    "market_metrics_retrieved_at_utc": "2026-11-09T20:49:02.136Z",
+    "latest_ohlcv_retrieved_at_utc": "2026-11-09T20:52:20.491Z",
+    "latest_completed_open_utc": {
+      "5m": "2026-11-09T20:45:00.000Z",
+      "15m": "2026-11-09T20:30:00.000Z",
+      "1h": "2026-11-09T19:00:00.000Z",
+      "4h": "2026-11-09T16:00:00.000Z"
+    },
+    "symbols": {
+      "BTCUSDT": {
+        "last": 74822.6,
+        "mark": 74823.37617391,
+        "change24hPct": -1.277,
+        "quoteVolume24h": 16432466633.59,
+        "openInterest": 97265.971,
+        "oiChange18to20Pct": -0.0421,
+        "indicatedFundingPct": 0.01,
+        "lastSettledFundingPct": 0.01,
+        "lastSettledAtUtc": "2026-11-09T16:00:00Z",
+        "nextFundingAtUtc": "2026-11-10T00:00:00Z",
+        "fundingIntervalHours": 8,
+        "takerBuySellRatio15m": 0.6228,
+        "globalLongShortAccountRatio1h": 2.7951,
+        "topOfBookSpreadBps": 0.0134,
+        "tf1h": {
+          "closeVsEma20Pct": 0.0137,
+          "ema20VsEma50Pct": -0.4333,
+          "ema50Slope5Pct": -0.1754,
+          "atr14Pct": 0.8749
+        },
+        "tf4h": {
+          "closeVsEma20Pct": -0.9738,
+          "ema20VsEma50Pct": -1.3986,
+          "ema50Slope5Pct": -0.5946,
+          "atr14Pct": 1.0438
+        },
+        "last5mReturnPct": 0.0724,
+        "last15mReturnPct": -0.0871,
+        "classification": "BEARISH_HIGHER_TF; marginal 1h EMA20 reclaim; short-term rebound; transition risk"
+      },
+      "ETHUSDT": {
+        "last": 2130.1,
+        "mark": 2130.11471318,
+        "change24hPct": -4.342,
+        "quoteVolume24h": 12904060037.26,
+        "openInterest": 2241170.052,
+        "oiChange18to20Pct": 0.1427,
+        "indicatedFundingPct": 0.01,
+        "lastSettledFundingPct": 0.00257,
+        "lastSettledAtUtc": "2026-11-09T16:00:00Z",
+        "nextFundingAtUtc": "2026-11-10T00:00:00Z",
+        "fundingIntervalHours": 8,
+        "takerBuySellRatio15m": 0.5523,
+        "globalLongShortAccountRatio1h": 3.8852,
+        "topOfBookSpreadBps": 0.0469,
+        "tf1h": {
+          "closeVsEma20Pct": -0.3993,
+          "ema20VsEma50Pct": -1.5537,
+          "ema50Slope5Pct": -0.544,
+          "atr14Pct": 1.1161
+        },
+        "tf4h": {
+          "closeVsEma20Pct": -3.0415,
+          "ema20VsEma50Pct": -2.1058,
+          "ema50Slope5Pct": -1.1765,
+          "atr14Pct": 1.7179
+        },
+        "last5mReturnPct": 0.1835,
+        "last15mReturnPct": -0.1822,
+        "classification": "BEARISH_1H_4H; short-term rebound; transition risk"
+      },
+      "SOLUSDT": {
+        "last": 86.71,
+        "mark": 86.71,
+        "change24hPct": -2.922,
+        "quoteVolume24h": 2072727182.1391,
+        "openInterest": 9614283.9,
+        "oiChange18to20Pct": 0.6164,
+        "indicatedFundingPct": 0.01,
+        "lastSettledFundingPct": 0.005789,
+        "lastSettledAtUtc": "2026-11-09T16:00:00Z",
+        "nextFundingAtUtc": "2026-11-10T00:00:00Z",
+        "fundingIntervalHours": 8,
+        "takerBuySellRatio15m": 1.1349,
+        "globalLongShortAccountRatio1h": 3.3821,
+        "topOfBookSpreadBps": 1.1533,
+        "tf1h": {
+          "closeVsEma20Pct": -0.5551,
+          "ema20VsEma50Pct": -0.9834,
+          "ema50Slope5Pct": -0.3918,
+          "atr14Pct": 1.1971
+        },
+        "tf4h": {
+          "closeVsEma20Pct": -2.4745,
+          "ema20VsEma50Pct": -2.7973,
+          "ema50Slope5Pct": -1.1568,
+          "atr14Pct": 1.8732
+        },
+        "last5mReturnPct": 0.1733,
+        "last15mReturnPct": -0.3339,
+        "classification": "BEARISH_1H_4H; 5m rebound against negative 15m/4h; transition risk"
+      },
+      "XRPUSDT": {
+        "last": 1.0966,
+        "mark": 1.0966,
+        "change24hPct": -4.751,
+        "quoteVolume24h": 1174482107.2401,
+        "openInterest": 316813634.8,
+        "oiChange18to20Pct": 0.5307,
+        "indicatedFundingPct": 0.008351,
+        "lastSettledFundingPct": 0.006228,
+        "lastSettledAtUtc": "2026-11-09T16:00:00Z",
+        "nextFundingAtUtc": "2026-11-10T00:00:00Z",
+        "fundingIntervalHours": 8,
+        "takerBuySellRatio15m": 1.0041,
+        "globalLongShortAccountRatio1h": 2.9777,
+        "topOfBookSpreadBps": 0.912,
+        "tf1h": {
+          "closeVsEma20Pct": -0.8868,
+          "ema20VsEma50Pct": -2.047,
+          "ema50Slope5Pct": -0.698,
+          "atr14Pct": 1.4378
+        },
+        "tf4h": {
+          "closeVsEma20Pct": -4.5742,
+          "ema20VsEma50Pct": -4.1273,
+          "ema50Slope5Pct": -1.8613,
+          "atr14Pct": 2.0542
+        },
+        "last5mReturnPct": 0.311,
+        "last15mReturnPct": 0.1374,
+        "classification": "BEARISH_1H_4H; 15m/5m rebound; transition risk"
+      }
+    },
+    "notes": [
+      "Funding percentages are reported separately for premiumIndex.lastFundingRate and the latest settled fundingRate history record; none exceeds 0.05%.",
+      "OI changes use 18:00 to 20:00 UTC historical OI snapshots, not current point OI.",
+      "Top-of-book spreads are single-level snapshots, not depth or market-impact estimates.",
+      "EMA/ATR values are descriptive 120-bar local-window estimates, not training-fitted regime thresholds."
+    ]
+  },
+  "historicalCoverage": {
+    "base5m": "ABSENT",
+    "base15m": "ABSENT",
+    "incremental5mRows": 380,
+    "incremental15mRows": 128,
+    "base1hRows": 215484,
+    "base1hCoverageStartUtc": "2020-09-14T08:00:00Z",
+    "base1hEndUtc": "2026-11-06T22:00:00Z",
+    "base4hRawRows": 53960,
+    "base4hAlignedRows": 53816,
+    "base4hCanonicalRows": 53844,
+    "canonical4hEndUtc": "2026-11-05T16:00:00Z",
+    "unresolved4hManifestShaDiscrepancies": 13
+  },
+  "preflight": {
+    "shellCompute": "PASS",
+    "repoCode": "DEGRADED: remote GitHub only; no local checkout",
+    "node": "22.16.0",
+    "npm": "10.9.2",
+    "packageEngineRequirements": {
+      "node": ">=24",
+      "npm": ">=11"
+    },
+    "binanceSdk": "NOT_INSTALLED/NOT_IMPORTABLE",
+    "directBinanceRest": "BLOCKED: DNS/HTTPS failure on six official endpoints",
+    "connectorMarketData": "PASS",
+    "exchangeInfo": "DEGRADED: serverTime 2026-11-09T06:13:33.349Z, 14h34m47.008s stale at retrieval",
+    "historicalArchive": "DEGRADED",
+    "backtestHarness": "BLOCKED: smoke test not run",
+    "storage": "PASS: GitHub branch write/readback",
+    "artifactReadback": "PASS"
+  },
+  "registry": {
+    "oosValidatedCount": 0,
+    "lastStrategyEvaluationUtc": "2026-11-05T09:43:57.448Z",
+    "solBullLowDonchian20": {
+      "status": "OOS_PROMISING",
+      "oosTrades": 12,
+      "notActionable": true
+    },
+    "registryChanged": false
+  },
+  "nextActions": [
+    "Restore fresh Binance time/exchangeInfo route with <=5s drift.",
+    "Provision Node24/npm11 and local checkout at main 669ba233.",
+    "Fix Candle closeTime contract, map kline row[6], reject volume<=0, add 5m path, and enforce BTC reference-only in EXP-001.",
+    "Backfill multi-year 5m/15m; reconcile 4h raw/aligned/canonical and 13 SHA provenance mismatches.",
+    "Complete per-symbol historical fees, spread/depth, slippage, impact, latency and funding cashflows.",
+    "Only then freeze a strategy×context×symbol experiment and run chronological walk-forward/OOS."
+  ]
+}

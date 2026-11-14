@@ -1,0 +1,138 @@
+{
+  "schema_version": "1.0.0",
+  "version": "v107",
+  "run_id": "context-strategy-20261113T163425Z-auto11-v107",
+  "as_of_utc": "2026-11-13T16:34:25.078Z",
+  "repository": "shubhamtaywade82/crypto-trading-agent",
+  "branch": "research/raw-ohlcv-archive-20261108T1026Z",
+  "parent_queue_ref": "research-data/binance-usdm/research-queue-v106.json",
+  "overall_status": "RESEARCH_BLOCKED",
+  "daily_cycle": {
+    "local_calendar_date": "2026-11-13",
+    "first_run_already_attempted_utc": "2026-11-13T02:28:03.722Z",
+    "status": "BLOCKED",
+    "experiment_executed": false,
+    "oos_evaluated": false,
+    "blocker": "No local repository checkout; Node 22.16.0/npm 10.9.2 are below package engines Node >=24/npm >=11; direct REST DNS fails; archive base/index defects remain; replay/conditional-edge code has data-contract, 5m, BTC-universe, 90%-CI and embargo gaps. No deterministic harness smoke test ran.",
+    "next_action": "Provision Node >=24/npm >=11 and clone the exact research branch; reconcile archive provenance/indexes; fix closeTime/zero-volume/5m/BTC-reference-only/95%-CI/embargo issues; run deterministic fixtures before any pre-registered experiment.",
+    "last_attempt_utc": "2026-11-13T16:34:25.078Z",
+    "monitoring_completed": true,
+    "raw_delta_append_completed": true,
+    "raw_delta_rows_appended": 72
+  },
+  "weekly_review": {
+    "status": "OVERDUE_BLOCKED",
+    "due_utc": "2026-11-11T00:00:00Z",
+    "blocker": "Training-only fitted thresholds and transition matrix are unavailable; 5m/15m archive is partial, 1h/4h integrity defects remain, and no compatible local runner is available.",
+    "next_action": "After RQ-003/RQ-005/RQ-012/RQ-029/RQ-030, refit thresholds on training only and calculate context occupancy, duration, transitions, TVD and stability.",
+    "last_attempt_utc": "2026-11-13T16:34:25.078Z"
+  },
+  "items": [
+    {
+      "id": "RQ-002",
+      "priority": "P0",
+      "title": "Fresh Binance server time and exchange metadata",
+      "status": "BLOCKED",
+      "evidence": "Direct fapi.binance.com REST probe failed DNS (curl exit 6, HTTP 000). Binance connector returned current market data, but exchangeInfo serverTime 2026-11-13T06:02:01.702Z was 10h32m23s old at 16:34:25Z; no current /fapi/v1/time action is exposed. Connector hides HTTP status/headers.",
+      "next_action": "Restore direct DNS/HTTPS or expose a server-time action; require <=5s clock drift and fresh exchangeInfo before contract execution validation.",
+      "last_updated_utc": "2026-11-13T16:34:25.078Z"
+    },
+    {
+      "id": "RQ-005",
+      "priority": "P0",
+      "title": "Provision compatible local repository runner",
+      "status": "BLOCKED",
+      "evidence": "Local cwd=/ has no .git, package.json or checkout. Node v22.16.0/npm 10.9.2; remote package.json requires Node >=24/npm >=11; no Binance SDK packages installed. Remote source and harness files are accessible via GitHub connector but cannot be executed locally.",
+      "next_action": "Provision Node >=24/npm >=11; clone exact branch, verify commit, install lockfile dependencies, then run deterministic smoke fixtures.",
+      "last_updated_utc": "2026-11-13T16:34:25.078Z"
+    },
+    {
+      "id": "RQ-003",
+      "priority": "P0",
+      "title": "Backfill 5m/15m and reconcile 1h/4h archive",
+      "status": "PARTIALLY_COMPLETED_BLOCKED",
+      "evidence": "72 completed bars were appended to three GitHub raw-delta files; all three were fetched back and content/SHA-256/blob identities verified. Highwaters now 5m 16:25Z, 15m 16:15Z, 1h 15:00Z, 4h 12:00Z. Indexes remain unchanged. 5m/15m base history is partial; 1h has 28 missing opens per symbol and an 8-row discrepancy; 4h raw/aligned/canonical counts differ and 13 page-manifest SHA mismatches remain.",
+      "next_action": "Reconcile base-page coverage, row keys/counts and provenance; update canonical indexes atomically only after integrity gates; backfill continuous common multi-year 5m/15m history.",
+      "last_updated_utc": "2026-11-13T16:34:25.078Z"
+    },
+    {
+      "id": "RQ-012",
+      "priority": "P0",
+      "title": "Fix candle contract, positive-volume validation, 5m replay and purge/embargo",
+      "status": "BLOCKED",
+      "evidence": "Remote archiveKlines parser retains only openTime/OHLCV and drops closeTime, quote volume, trade count and taker fields; validator accepts zero volume. scripts/backtest.ts uses 15m/1h/4h only. conditional-edge.ts defaults minN=30 and hard-codes confidence=0.9; no embargoDays CLI argument is passed.",
+      "next_action": "Preserve all kline fields including closeTime; reject volume<=0; wire 5m replay; expose 95% CI and embargo; enforce min 100 OOS trades; add zero-volume, closeTime, gap, lookahead and embargo fixtures.",
+      "last_updated_utc": "2026-11-13T16:34:25.078Z"
+    },
+    {
+      "id": "RQ-029",
+      "priority": "P0",
+      "title": "Enforce BTC reference-only universe",
+      "status": "BLOCKED",
+      "evidence": "Remote src/config.ts defaults SYMBOLS to BTCUSDT,ETHUSDT,SOLUSDT,XRPUSDT and scripts/backtest.ts defaults its symbol to BTCUSDT, contrary to BTC reference-only policy.",
+      "next_action": "Default trade symbols to SOLUSDT/ETHUSDT/XRPUSDT only; separate BTC reference features; add tests preventing BTC trade labels, outcomes, sizing or orders.",
+      "last_updated_utc": "2026-11-13T16:34:25.078Z"
+    },
+    {
+      "id": "RQ-004",
+      "priority": "P1",
+      "title": "Calibrate execution costs",
+      "status": "BLOCKED",
+      "evidence": "Current top-20 depth and spread are point-in-time only. Account fee tier, synchronized historical depth/trades, market impact, latency and fill probability are unavailable. Source config defaults TAKER_FEE_RATE=0.0004 (4 bps) and SLIPPAGE_BUFFER_RATE=0.0002 (2 bps); these are not calibrated.",
+      "next_action": "Capture actual account fee tier and synchronized depth/trade history; estimate symbol/size/order-style cost curves and validate fills.",
+      "last_updated_utc": "2026-11-13T16:34:25.078Z"
+    },
+    {
+      "id": "RQ-014",
+      "priority": "P1",
+      "title": "Backfill historical funding cashflows",
+      "status": "BLOCKED",
+      "evidence": "Only three recent settled funding events per symbol were retrieved; full settlement history is not archived. Replay funding is disabled by default and uses a constant fallback if no per-symbol series is supplied.",
+      "next_action": "Backfill full /fapi/v1/fundingRate history; construct per-symbol settlement series and align funding cashflows to each simulated holding interval.",
+      "last_updated_utc": "2026-11-13T16:34:25.078Z"
+    },
+    {
+      "id": "RQ-019",
+      "priority": "P1",
+      "title": "Integrate new completed bars into canonical indexes",
+      "status": "BLOCKED_INDEX_NOT_ADVANCED",
+      "evidence": "Three raw delta files (72 rows) and manifests are persisted/readback-verified, but archive-index pointers remain at the prior 15:31Z state. Legacy 1h/4h gaps and 4h hash/count defects prevent canonical advancement.",
+      "next_action": "Reconcile index schema/provenance and canonical writer; update each interval index atomically, then reopen and verify highwaters, row counts and hashes.",
+      "last_updated_utc": "2026-11-13T16:34:25.078Z"
+    },
+    {
+      "id": "RQ-021",
+      "priority": "P0_AFTER_PREREQUISITES",
+      "title": "Run pre-registered strategy×context×symbol experiment",
+      "status": "BLOCKED",
+      "evidence": "No strategy experiment or OOS run executed. No local compatible runner or fixture smoke test; trusted common history, calibrated costs/funding, and purge/embargo validation remain incomplete.",
+      "next_action": "After RQ-002/003/005/012/029/004/014/030, freeze one candidate and run chronological train/validation/untouched OOS with block bootstrap, 95% CI and multiple-testing correction.",
+      "last_updated_utc": "2026-11-13T16:34:25.078Z"
+    },
+    {
+      "id": "RQ-028",
+      "priority": "P2",
+      "title": "Weekly context taxonomy stability review",
+      "status": "OVERDUE_BLOCKED",
+      "evidence": "No training-only threshold refit or transition matrix; archive integrity and compatible runner prerequisites remain unresolved.",
+      "next_action": "After RQ-003/RQ-005/RQ-012/RQ-029/RQ-030, calculate occupancy, duration, transitions, TVD and stability using training-only thresholds.",
+      "last_updated_utc": "2026-11-13T16:34:25.078Z"
+    },
+    {
+      "id": "RQ-030",
+      "priority": "P0",
+      "title": "Resolve confidence-level, minimum-sample and embargo contract",
+      "status": "BLOCKED",
+      "evidence": "conditional-edge.ts hard-codes confidence=0.9 and prints 90% CI while the prior registry labels its interval ci95; the exact prior command is unavailable. CLI minN defaults to 30 and walkForward is invoked without an embargo argument.",
+      "next_action": "Expose confidence with a 0.95 default; enforce min 100 OOS trades per symbol/context; pass purge/embargo through the CLI; rerun the frozen experiment and persist command, seed, 95% CI and outputs.",
+      "last_updated_utc": "2026-11-13T16:34:25.078Z"
+    }
+  ],
+  "monitoring": {
+    "as_of_utc": "2026-11-13T16:34:25.078Z",
+    "status": "COMPLETED_NO_TRADE",
+    "snapshot_ref": "research-data/binance-usdm/current-market-snapshot-v107.json",
+    "archive_manifest_ref": "research-data/binance-usdm/manifests/archive_manifest_20261113T1634Z_auto11_v107.json",
+    "raw_delta_rows_appended": 72
+  }
+}

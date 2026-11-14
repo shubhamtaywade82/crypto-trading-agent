@@ -1,0 +1,101 @@
+{
+  "schemaVersion": "1.0.0",
+  "runId": "context-strategy-20261112T0101Z-auto35",
+  "experimentId": "DQ-USDMS-INCREMENTAL-APPEND-20261112T0101Z-AUTO35",
+  "type": "INCREMENTAL_ARCHIVE_INTEGRITY",
+  "status": "COMPLETED_PASS",
+  "createdAtUtc": "2026-11-12T01:03:20.872Z",
+  "hypothesis": "Every newly completed 5m and 15m USD-M bar after the verified prior highwater is contiguous, UTC-grid aligned, finite, positive-volume and OHLC-valid across all four symbols.",
+  "source": "Binance USD-M public klines through Binance connector; SDK not used; direct REST DNS unavailable.",
+  "specification": {
+    "endpoint": "GET /fapi/v1/klines",
+    "symbols": [
+      "BTCUSDT",
+      "ETHUSDT",
+      "SOLUSDT",
+      "XRPUSDT"
+    ],
+    "intervals": [
+      "5m",
+      "15m"
+    ],
+    "previousHighwaters": {
+      "5m": "2026-11-12T00:25:00.000Z",
+      "15m": "2026-11-12T00:15:00.000Z"
+    },
+    "retrievedAtUtc": "2026-11-12T01:03:20.872Z",
+    "completedCandleRule": "closeTime < retrieval timestamp",
+    "formingAndFutureExcluded": true
+  },
+  "results": {
+    "rowsFetched": 40,
+    "rowsAppended": 32,
+    "formingRowsExcluded": 8,
+    "futureRowsExcluded": 0,
+    "rowsByInterval": {
+      "5m": 24,
+      "15m": 8
+    },
+    "rowsBySymbol": {
+      "BTCUSDT": 8,
+      "ETHUSDT": 8,
+      "SOLUSDT": 8,
+      "XRPUSDT": 8
+    },
+    "latestCompletedOpenUtcByInterval": {
+      "5m": "2026-11-12T00:55:00.000Z",
+      "15m": "2026-11-12T00:45:00.000Z"
+    },
+    "nextStartUtcByInterval": {
+      "5m": "2026-11-12T01:00:00.000Z",
+      "15m": "2026-11-12T01:00:00.000Z"
+    },
+    "quality": {
+      "duplicates": 0,
+      "missingIntervals": 0,
+      "offGrid": 0,
+      "nonMonotonic": 0,
+      "ohlcFailures": 0,
+      "nonFinite": 0,
+      "nonPositiveVolume": 0,
+      "closeTimeFailures": 0,
+      "crossSymbolAlignment": true,
+      "contiguousFromPriorHighwater": true
+    }
+  },
+  "artifacts": {
+    "deltaPath": "research-data/binance-usdm/delta/binance_usdm_delta_20261112T0101Z_5m15m_completed.jsonl",
+    "deltaSha256": "02ea904ccb19e01ea9dc297cf730a59c286293ca57da7d6ddd29ac5d40921de9",
+    "deltaBlobSha": "d6611724c32fb90782670294b0d77925976a57d6",
+    "deltaReadbackVerified": true,
+    "manifestPath": "research-data/binance-usdm/delta/manifest-20261112T0101Z-5m15m.json",
+    "manifestSha256": "0ea29bf84dd5ffd34cedf953acf9244961c50695b6ccbd46311a80f42ae391f8",
+    "manifestBlobSha": "08a8141a2bb5a44acf430826b3f65cc8b2b4cdbb",
+    "manifestReadbackVerified": true,
+    "indexes": {
+      "5m": {
+        "sha256": "7a1b7e6b31c48ba63d4ab8f1b0a3ec85379c7071fee790f13113c07e0cb96ad1",
+        "blobSha": "db09281e397e4edaefc6c15c06dd32f26abe31b2",
+        "readbackVerified": true
+      },
+      "15m": {
+        "sha256": "6290c928169e8cd2046fafac7a582343a53a82515b4c0cb5ace9a220250123b4",
+        "blobSha": "58e9fa2afb6a672445c631de40b756d4b220b9b0",
+        "readbackVerified": true
+      }
+    },
+    "archiveManifestPath": "research-data/binance-usdm/manifests/archive_manifest_20261112T0101Z_auto35.json"
+  },
+  "reproducibility": {
+    "sdkUsed": false,
+    "codeCommit": "NOT_AVAILABLE",
+    "validator": "in-run deterministic row and continuity checks; SHA-256 implementation self-tested against the abc test vector",
+    "persistence": "GitHub archive branch; exact readback and SHA-256 verified"
+  },
+  "interpretation": "PASS for this incremental append window only. This is a data-quality/archive experiment, not a strategy experiment and produces no OOS evidence.",
+  "limitations": [
+    "5m/15m historical base remains partial and does not provide continuous multi-year coverage.",
+    "1h bridge and 4h provenance remain blocked.",
+    "No strategy backtest, walk-forward or OOS evaluation ran."
+  ]
+}

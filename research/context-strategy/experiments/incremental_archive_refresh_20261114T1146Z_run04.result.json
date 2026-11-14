@@ -1,0 +1,100 @@
+{
+  "schema_version": "1.0.0",
+  "experiment_id": "INCREMENTAL_ARCHIVE_REFRESH_20261114T1146Z_RUN04",
+  "status": "COMPLETED_DATA_QUALITY_ONLY",
+  "classification": "RESEARCH_EXECUTED_DATA_QUALITY_ONLY",
+  "preregistration": {
+    "hypothesis": "Newly completed USD-M bars fetched from verified per-interval highwaters should be timestamp-aligned, contiguous and structurally valid across BTC/ETH/SOL/XRP for the refreshed intervals.",
+    "scope": "Data-quality/archive append only; no strategy return hypothesis tested."
+  },
+  "data": {
+    "source": "Binance USD-M public market-data connector",
+    "endpoint": "GET /fapi/v1/klines",
+    "symbols": [
+      "BTCUSDT",
+      "ETHUSDT",
+      "SOLUSDT",
+      "XRPUSDT"
+    ],
+    "intervals": [
+      "5m",
+      "15m",
+      "1h"
+    ],
+    "asOfUtc": "2026-11-14T11:46:35.001Z",
+    "firstOpenUtc": "2026-11-14T09:00:00.000Z",
+    "lastOpenUtc": "2026-11-14T11:40:00.000Z",
+    "rows": 132,
+    "rowsByInterval": {
+      "5m": 92,
+      "15m": 32,
+      "1h": 8
+    },
+    "rowsBySymbol": {
+      "BTCUSDT": 33,
+      "ETHUSDT": 33,
+      "SOLUSDT": 33,
+      "XRPUSDT": 33
+    },
+    "formingRowsExcluded": 12
+  },
+  "highwaters": {
+    "previous": {
+      "5m": "2026-11-14T09:45:00.000Z",
+      "15m": "2026-11-14T09:30:00.000Z",
+      "1h": "2026-11-14T08:00:00.000Z"
+    },
+    "new": {
+      "5m": "2026-11-14T11:40:00.000Z",
+      "15m": "2026-11-14T11:30:00.000Z",
+      "1h": "2026-11-14T10:00:00.000Z"
+    },
+    "fourHour": "HELD at 2026-11-13T12:00:00Z"
+  },
+  "quality": {
+    "duplicates": 0,
+    "missingIntervals": 0,
+    "offGrid": 0,
+    "nonMonotonic": 0,
+    "ohlcInvariantFailures": 0,
+    "nonFinite": 0,
+    "nonPositiveVolume": 0,
+    "closeTimeFailures": 0,
+    "formingRowsIncluded": 0,
+    "crossSymbolAlignment": true,
+    "contiguousFromPriorHighwater": true,
+    "allCompletedOnly": true,
+    "readbackExact": true
+  },
+  "artifacts": {
+    "delta": {
+      "path": "research-data/binance-usdm/delta/binance_usdm_delta_20261114T1146Z_5m15m1h_completed.jsonl",
+      "sha256": "9461b5b3b75c585739094308eec6a0ac9cc1db873c5395a9689e223a19972193",
+      "blob_sha": "1af578e4b0ec4bda0627fdbf423517a48a14701c",
+      "rows": 132,
+      "bytes": 38490,
+      "readback_exact": true
+    },
+    "deltaManifest": {
+      "path": "research-data/binance-usdm/delta/manifest-20261114T1146Z-5m15m1h.json",
+      "sha256": "b99b3ce871d5dced3d88d01094efa6569e34458e662f7d5b7a6953719576430b",
+      "blob_sha": "e1ec90ff51811c7923a0ef608dc172b41cad3089",
+      "readback_exact": true
+    },
+    "archiveManifest": {
+      "path": "research-data/binance-usdm/manifests/archive_manifest_20261114T1146Z_run04_v125.json",
+      "sha256": "72d8c900d5e91468f105b6a89d208d7ab5fb2a5fdd7a31dbb520369121f7c6ca",
+      "blob_sha": "2277109f9dabb425f45dff1caf79ae6c1a02a26c",
+      "readback_exact": true
+    },
+    "readbackReceiptPath": "research-data/binance-usdm/manifests/readback_receipt_20261114T1146Z_run04_v125.json"
+  },
+  "strategyExperiment": {
+    "status": "BLOCKED",
+    "reason": "No local checkout; project requires Node>=24/npm>=11 while runtime is Node22.16.0/npm10.9.2; no deterministic fixture smoke; direct Binance REST DNS unavailable and exchangeInfo stale; historical 1h/4h lineage and execution-cost calibration remain incomplete."
+  },
+  "oosEvaluated": false,
+  "registryOosValidatedEntries": 0,
+  "contextTaxonomy": "v56 carried forward; no refit this run",
+  "note": "This is a completed archive data-quality experiment, not a strategy backtest and not OOS evidence."
+}

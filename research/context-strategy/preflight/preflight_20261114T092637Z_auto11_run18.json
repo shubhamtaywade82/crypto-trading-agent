@@ -1,0 +1,192 @@
+{
+  "schema_version": "1.0.0",
+  "run_id": "context-strategy-20261114T092637Z-auto11-run18",
+  "as_of_utc": "2026-11-14T09:26:37.003Z",
+  "checks": [
+    {
+      "capability": "shell_compute",
+      "status": "PASS",
+      "evidence": {
+        "pwd": "/",
+        "os": "Linux 6.18.57 x86_64",
+        "cpu_cores": 3,
+        "memory_total_kb": 6091004,
+        "memory_available_kb": 4941648,
+        "disk_free": "30G",
+        "node": "v22.16.0",
+        "npm": "10.9.2",
+        "git": "2.47.3"
+      },
+      "impact": "Shell, bounded data processing and GitHub connector orchestration are available.",
+      "next_action": "Provision Node >=24 and npm >=11 before invoking repository scripts."
+    },
+    {
+      "capability": "repo_code",
+      "status": "DEGRADED",
+      "evidence": {
+        "repository": "shubhamtaywade82/crypto-trading-agent",
+        "branch": "research/umbrella",
+        "local_checkout": "ABSENT",
+        "remote_package_json_sha": "22576968ec662fd7d17dda10069489c69c597bcd",
+        "engines": {
+          "node": ">=24",
+          "npm": ">=11"
+        },
+        "backtest_script_sha": "65bb03853382be1ed0d82aed373f805173aaa6f5",
+        "conditional_edge_script_sha": "29034c61fdd42a5e40272234b221d29cb95fb3ee",
+        "repository_smoke_test_remote": "research/experiments/exp-002-4h-ema-pullback/smoke-test.js"
+      },
+      "impact": "Remote source is inspectable, but no local repository checkout exists and the runtime is below package engines.",
+      "next_action": "Mount/clone the exact research branch in Node24/npm11 and install pinned lockfile dependencies."
+    },
+    {
+      "capability": "binance_sdk",
+      "status": "BLOCKED",
+      "evidence": {
+        "node_packages": {
+          "@binance/connector": "NOT_INSTALLED",
+          "@nemesis-oss/binance-sdk": "NOT_INSTALLED",
+          "binance": "NOT_INSTALLED"
+        },
+        "sdk_used": false
+      },
+      "impact": "No Binance SDK execution; current data came from the public market-data connector.",
+      "next_action": "Use official REST when DNS is restored or install the pinned SDK in the compatible project runtime."
+    },
+    {
+      "capability": "network_binance",
+      "status": "DEGRADED",
+      "evidence": {
+        "direct_time_endpoint": {
+          "url": "https://fapi.binance.com/fapi/v1/time",
+          "curl_exit": 6,
+          "http_status": 0,
+          "error": "Could not resolve host"
+        },
+        "direct_exchange_info": {
+          "url": "https://fapi.binance.com/fapi/v1/exchangeInfo",
+          "curl_exit": 6,
+          "http_status": 0,
+          "error": "Could not resolve host"
+        },
+        "connector_exchange_info_server_time_utc": "2026-11-13T06:02:01.702Z",
+        "connector_exchange_info_staleness_seconds": 98247.298,
+        "connector_market_data_time_utc": "2026-11-14T09:19:29.000Z",
+        "connector_http_status_headers": "NOT_EXPOSED"
+      },
+      "impact": "Market data calls succeeded through the connector, but exchange metadata is stale; contract status and server-time drift are not validated.",
+      "next_action": "Restore direct DNS/HTTPS or obtain an uncached official time/metadata path; require <=60s drift before execution validation."
+    },
+    {
+      "capability": "raw_historical_archive",
+      "status": "DEGRADED",
+      "evidence": {
+        "storage": "GitHub branch research/umbrella",
+        "five_minute": {
+          "rows": 168032,
+          "base_end_utc": "2021-02-07T02:55:00.000Z",
+          "latest_completed_utc": "2026-11-14T09:20:00.000Z",
+          "cross_symbol_alignment": false
+        },
+        "fifteen_minute": {
+          "rows": 168008,
+          "base_end_utc": "2021-11-25T18:45:00.000Z",
+          "latest_completed_utc": "2026-11-14T09:00:00.000Z",
+          "cross_symbol_alignment": false
+        },
+        "one_hour": {
+          "rows": 215508,
+          "start_utc": "2020-09-14T08:00:00.000Z",
+          "latest_completed_utc": "2026-11-14T08:00:00.000Z",
+          "missing_hourly_opens_per_symbol": 28,
+          "rowcount_discrepancy": 8
+        },
+        "four_hour": {
+          "raw_rows": 53960,
+          "aligned_rows": 53816,
+          "canonical_rows": 53844,
+          "canonical_end_utc": "2026-11-05T16:00:00.000Z",
+          "raw_incremental_highwater_utc": "2026-11-13T12:00:00.000Z",
+          "manifest_sha_mismatches": 13
+        }
+      },
+      "impact": "No matched multi-cycle panel exists across all requested intervals; strategy inference remains blocked.",
+      "next_action": "Backfill 5m/15m toward 2020-09-14, reconcile page-0028 alignment, repair 1h gaps and reconcile 4h raw/canonical lineage."
+    },
+    {
+      "capability": "data_quality",
+      "status": "DEGRADED",
+      "evidence": {
+        "incremental_append_rows": 44,
+        "forming_excluded": 12,
+        "duplicates": 0,
+        "missing_intervals": 0,
+        "off_grid": 0,
+        "ohlc_failures": 0,
+        "non_finite": 0,
+        "non_positive_volume": 0,
+        "close_time_failures": 0,
+        "cross_symbol_alignment": true,
+        "contiguous_from_prior_highwater": true,
+        "historical_page28_sha_mismatches_5m": 8,
+        "page28_zero_volume_rows_5m": 6,
+        "page28_zero_volume_rows_15m": 6
+      },
+      "impact": "Today's incremental slice is clean; historical archive remains degraded.",
+      "next_action": "Resolve base archive defects before using the combined series for research."
+    },
+    {
+      "capability": "backtest_harness_smoke_test",
+      "status": "BLOCKED",
+      "evidence": {
+        "remote_harness": "scripts/backtest.ts exists",
+        "supported_timeframes": [
+          "15m",
+          "1h",
+          "4h"
+        ],
+        "five_minute_support": false,
+        "conditional_edge_default_min_n": 30,
+        "conditional_edge_default_confidence": 0.9,
+        "repository_smoke_test_exists": true,
+        "smoke_test_executed": false,
+        "reason": "No local checkout; Node/npm below engines; dependencies absent."
+      },
+      "impact": "No repository backtest or deterministic fixture smoke test was invoked; no strategy experiment or OOS metrics generated.",
+      "next_action": "Run the existing fixture smoke test twice in Node24/npm11, fix 5m support and raise conditional-edge defaults to >=100 and 95% CI."
+    },
+    {
+      "capability": "disk_storage",
+      "status": "PASS",
+      "evidence": {
+        "local_disk_free": "30G",
+        "remote_branch_writable": true,
+        "delta_and_manifests_created": true
+      },
+      "impact": "Remote GitHub persistence is available for small artifacts; local raw archive is not mounted.",
+      "next_action": "Continue bounded atomic writes and exact readback verification."
+    },
+    {
+      "capability": "artifact_readback",
+      "status": "PASS",
+      "evidence": {
+        "delta_path": "research-data/binance-usdm/delta/binance_usdm_delta_20261114T092637Z_5m15m1h_completed.jsonl",
+        "delta_sha256": "50ee2cdc8038d4f823459b0c0745cd4a227b70168b262ac1f32d94bb4076993e",
+        "delta_readback": true,
+        "delta_manifest_readback": true,
+        "archive_manifest_readback": true,
+        "index_readbacks": [
+          "5m",
+          "15m",
+          "1h"
+        ]
+      },
+      "impact": "The new incremental artifacts and index updates are verified in the remote branch.",
+      "next_action": "Keep SHA-256 and Git blob SHA side by side for future updates."
+    }
+  ],
+  "classification": "RESEARCH_EXECUTED",
+  "scope": "DATA_QUALITY_ONLY",
+  "strategy_experiment_status": "RESEARCH_BLOCKED",
+  "oos_evaluated": false
+}

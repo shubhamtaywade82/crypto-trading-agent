@@ -1,0 +1,106 @@
+{
+  "schema_version": "1.0.0",
+  "experiment_id": "ARCHIVE-APPEND-20261114T0756Z",
+  "run_id": "context-strategy-20261114T0804Z-auto11",
+  "type": "INCREMENTAL_ARCHIVE_DATA_QUALITY",
+  "status": "COMPLETED",
+  "hypothesis": "New completed Binance USD-M 5m/15m bars after verified highwaters can be appended without duplicates, gaps, off-grid timestamps, OHLC failures, non-finite values, non-positive volume, forming rows or cross-symbol misalignment.",
+  "source": {
+    "repository": "shubhamtaywade82/crypto-trading-agent",
+    "branch": "research/raw-ohlcv-archive-20261108T1026Z",
+    "endpoint": "GET /fapi/v1/klines",
+    "transport": "Binance public market-data connector",
+    "sdk_used": false,
+    "direct_rest_dns": "FAILED",
+    "connector_http_status_exposed": false
+  },
+  "window": {
+    "as_of_utc": "2026-11-14T07:58:44.812Z",
+    "symbols": [
+      "BTCUSDT",
+      "ETHUSDT",
+      "SOLUSDT",
+      "XRPUSDT"
+    ],
+    "intervals": [
+      "5m",
+      "15m"
+    ],
+    "previous_highwaters_utc": {
+      "5m": "2026-11-14T07:25:00.000Z",
+      "15m": "2026-11-14T07:15:00.000Z"
+    },
+    "latest_completed_open_utc": {
+      "5m": "2026-11-14T07:50:00.000Z",
+      "15m": "2026-11-14T07:30:00.000Z"
+    }
+  },
+  "results": {
+    "rows_fetched": 44,
+    "rows_appended": 24,
+    "rows_by_interval": {
+      "5m": 20,
+      "15m": 4
+    },
+    "rows_by_symbol": {
+      "BTCUSDT": 6,
+      "ETHUSDT": 6,
+      "SOLUSDT": 6,
+      "XRPUSDT": 6
+    },
+    "forming_rows_excluded": 8,
+    "pre_highwater_rows_excluded": 12,
+    "future_rows_excluded": 0,
+    "quality": {
+      "duplicates": 0,
+      "missing_intervals": 0,
+      "off_grid": 0,
+      "non_monotonic": 0,
+      "ohlc_failures": 0,
+      "non_finite": 0,
+      "non_positive_volume": 0,
+      "close_time_failures": 0,
+      "forming_rows_included": 0,
+      "cross_symbol_alignment": true,
+      "contiguous_from_prior_highwater": true
+    }
+  },
+  "artifacts": [
+    {
+      "path": "research-data/binance-usdm/delta/binance_usdm_delta_20261114T0756Z_5m15m_completed.jsonl",
+      "sha256": "779f057e5097c4d56b7a5da5097af72d7d72b6081bf24fb149cf88cd4861c731",
+      "blob_sha": "a0c37a3590735feed7fdf4c7cdf6abe98addc10b",
+      "rows": 24,
+      "bytes": 7022,
+      "readback_verified": true
+    },
+    {
+      "path": "research-data/binance-usdm/delta/manifest-20261114T0756Z-5m15m.json",
+      "sha256": "faed906233ddc4d01fc535901066855a668c3c1d749e22058356c625d7f64775",
+      "blob_sha": "f84bc4f48a2547ef5e85f2cbfcf8be0471543303",
+      "readback_verified": true
+    },
+    {
+      "path": "research-data/binance-usdm/manifests/archive_manifest_20261114T0758Z_auto11_v127.json",
+      "sha256": "071f276ed39c387a07cacf8c08ce05a7f27d6e07442201012a214ca3e94b7b1e",
+      "blob_sha": "503e0ce0e953e0488615d05ab10bc630bbbb8279",
+      "readback_verified": true
+    },
+    {
+      "path": "research-data/binance-usdm/manifests/readback_receipt_20261114T0758Z_auto11_v127.json",
+      "readback_verified": true
+    }
+  ],
+  "validation_code": "Inline deterministic JavaScript in this run; no standalone code hash persisted.",
+  "seed": "NOT_APPLICABLE",
+  "strategy_experiment": "BLOCKED_NOT_RUN",
+  "oos_evaluated": false,
+  "limitations": [
+    "This validates only the incremental 5m/15m slice, not the full historical archive.",
+    "5m/15m historical page-0028 SHA and cross-symbol window defects remain.",
+    "1h retains 28 missing hourly opens per symbol and an 8-row discrepancy.",
+    "4h raw/aligned/canonical counts remain 53960/53816/53844 with 13 page-manifest SHA mismatches; 4h append remains held.",
+    "Direct REST DNS failed and exchangeInfo serverTime is stale; connector HTTP status/headers are not exposed.",
+    "No compatible Node24/npm11 local runner or checkout; no strategy backtest or OOS."
+  ]
+}

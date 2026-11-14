@@ -1,0 +1,76 @@
+{
+  "run_id": "context-strategy-2026-11-12T193436Z-v81",
+  "as_of_utc": "2026-11-12T19:34:36.450Z",
+  "classification": "RESEARCH_BLOCKED",
+  "environment": {
+    "cwd": "/",
+    "os": "Linux 6.18.57 x86_64",
+    "python": "3.13.5",
+    "node": "v22.16.0",
+    "npm": "10.9.2",
+    "pnpm": "NOT_INSTALLED",
+    "cpu": 3,
+    "memory_available_kb": 4947312,
+    "disk_free": "30G",
+    "repo_checkout": "ABSENT",
+    "node_modules": "ABSENT",
+    "binance_sdk": "NOT_INSTALLED"
+  },
+  "checks": [
+    {
+      "capability": "Shell/compute",
+      "status": "PASS",
+      "evidence": "Python 3.13.5; Node 22.16; npm 10.9; 3 CPU; 4.95GB available RAM; 30GB free."
+    },
+    {
+      "capability": "Repo/code",
+      "status": "DEGRADED",
+      "evidence": "No local checkout or node_modules; remote source accessible; package requires Node>=24/npm>=11."
+    },
+    {
+      "capability": "Network/Binance",
+      "status": "DEGRADED",
+      "evidence": "Connector endpoints returned data; direct curl DNS failed HTTP 000; /time unavailable; exchangeInfo serverTime stale ~9h49m; no HTTP status/headers."
+    },
+    {
+      "capability": "Raw archive",
+      "status": "DEGRADED",
+      "evidence": "Remote GitHub archive updated by 128 rows and readback verified; no local archive; long-history gaps and partial intervals remain."
+    },
+    {
+      "capability": "Data quality/coverage",
+      "status": "DEGRADED",
+      "evidence": "Recent 16 series pass; historical 1h gaps, 4h hash/rowcount discrepancies, 5m/15m partial coverage and zero-volume rows remain."
+    },
+    {
+      "capability": "Backtest harness/smoke",
+      "status": "BLOCKED",
+      "evidence": "No compatible local runner; closeTime dropped, 5m omitted, volume==0 accepted; no smoke test."
+    },
+    {
+      "capability": "Disk/storage",
+      "status": "PASS",
+      "evidence": "30GB free local disk; GitHub remote write available; Library upload blocked by storage limit."
+    },
+    {
+      "capability": "Artifact readback",
+      "status": "PASS",
+      "evidence": "Delta, manifest, global manifest and 5m/15m/1h index reads verified; no experiment artifact."
+    }
+  ],
+  "endpoint_status": {
+    "/fapi/v1/time": "UNAVAILABLE",
+    "/fapi/v1/exchangeInfo": "DEGRADED_STALE",
+    "/fapi/v1/klines": "PASS_CONNECTOR",
+    "/fapi/v1/premiumIndex": "PASS_CONNECTOR",
+    "/fapi/v1/openInterest": "PASS_CONNECTOR",
+    "/fapi/v1/ticker/24hr": "PASS_CONNECTOR",
+    "/fapi/v1/fundingRate": "PASS_CONNECTOR",
+    "/fapi/v1/ticker/bookTicker": "PASS_CONNECTOR",
+    "/futures/data/takerlongshortRatio": "PASS_CONNECTOR",
+    "/futures/data/globalLongShortAccountRatio": "PASS_CONNECTOR",
+    "/futures/data/openInterestHist": "NOT_CHECKED"
+  },
+  "experiment_readiness": "BLOCKED - no compatible local checkout/harness, no smoke test, incomplete historical coverage/provenance and uncalibrated costs.",
+  "persistence": "GitHub archive append verified; Library upload failed due storage limit; run/queue/registry snapshots will be persisted to GitHub branch."
+}

@@ -1,0 +1,117 @@
+{
+  "schema_version": "1.0.0",
+  "as_of_utc": "2026-11-13T09:33:48.425Z",
+  "classification": "RESEARCH_BLOCKED",
+  "checks": [
+    {
+      "capability": "Shell/compute",
+      "status": "DEGRADED",
+      "evidence": "Linux 6.18.57 x86_64; Python 3.13.5; Node 22.16.0; npm 10.9.2; 3 CPUs; 6.09GB RAM; 30GB free; cwd=/; no local checkout.",
+      "next_action": "Provision Node>=24/npm>=11."
+    },
+    {
+      "capability": "Repository/code",
+      "status": "BLOCKED",
+      "evidence": "No local checkout; remote scripts visible only; package requires Node>=24/npm>=11.",
+      "next_action": "Clone exact branch into compatible runner."
+    },
+    {
+      "capability": "Network/Binance",
+      "status": "DEGRADED",
+      "evidence": "Direct shell DNS to github.com/fapi.binance.com fails (exit6/HTTP000); connector data returned; HTTP status hidden; /time unavailable; exchangeInfo time 3h31m stale.",
+      "next_action": "Restore direct DNS/HTTPS and fresh time/metadata."
+    },
+    {
+      "capability": "Raw historical archive",
+      "status": "DEGRADED",
+      "evidence": "Remote 1h/4h archive and incremental deltas accessible; 192 rows persisted; 5m/15m base absent; 4h provenance degraded; no local archive.",
+      "next_action": "Materialize archive, backfill 5m/15m and reconcile 4h."
+    },
+    {
+      "capability": "Data quality/coverage",
+      "status": "DEGRADED",
+      "evidence": "Current 3,200 rows: 3,184 complete, 16 forming excluded; current quality checks zero failures; historical 1h clean, 4h degraded.",
+      "next_action": "Complete full historical audit after materialization."
+    },
+    {
+      "capability": "Backtest harness/smoke test",
+      "status": "BLOCKED",
+      "evidence": "Remote scripts exist but cannot be invoked locally; no deterministic fixture smoke test.",
+      "next_action": "Provision compatible runner and smoke test."
+    },
+    {
+      "capability": "Disk/storage",
+      "status": "PASS",
+      "evidence": "30GB free; GitHub remote writes succeeded.",
+      "next_action": "Continue versioned remote persistence."
+    },
+    {
+      "capability": "Artifact readback",
+      "status": "PASS",
+      "evidence": "Both delta files/manifests SHA-256 verified; all four archive indexes reopened.",
+      "next_action": "Read back v106 registry/queue/report after upload."
+    }
+  ],
+  "research_executed": false,
+  "oos_evaluated": false,
+  "monitoring_completed": true,
+  "archive_append_completed": true,
+  "binance_endpoint_probes": [
+    {
+      "endpoint": "GET /fapi/v1/time",
+      "status": "UNAVAILABLE_DIRECT_NETWORK",
+      "evidence": "curl DNS failure (exit 6, HTTP 000); no connector time method."
+    },
+    {
+      "endpoint": "GET /fapi/v1/exchangeInfo",
+      "status": "DEGRADED_STALE",
+      "evidence": "Connector reports four symbols TRADING/PERPETUAL but serverTime=2026-11-13T06:02:01.702Z, 3h31m43s stale versus 09:33:45Z."
+    },
+    {
+      "endpoint": "GET /fapi/v1/klines",
+      "status": "DATA_RETURNED_VIA_CONNECTOR",
+      "evidence": "200 rows per symbol per interval for BTC/ETH/SOL/XRP and 5m/15m/1h/4h; 3,200 rows total; HTTP status hidden."
+    },
+    {
+      "endpoint": "GET /fapi/v1/premiumIndex",
+      "status": "DATA_RETURNED_VIA_CONNECTOR",
+      "evidence": "Mark/index, lastFundingRate, nextFundingTime and time returned."
+    },
+    {
+      "endpoint": "GET /fapi/v1/openInterest",
+      "status": "DATA_RETURNED_VIA_CONNECTOR",
+      "evidence": "Current open interest returned for all four symbols."
+    },
+    {
+      "endpoint": "GET /fapi/v1/ticker/24hr",
+      "status": "DATA_RETURNED_VIA_CONNECTOR",
+      "evidence": "24h ticker statistics returned for all four symbols."
+    },
+    {
+      "endpoint": "GET /fapi/v1/fundingRate",
+      "status": "DATA_RETURNED_VIA_CONNECTOR",
+      "evidence": "Latest two funding settlements per symbol; full history not backfilled."
+    },
+    {
+      "endpoint": "GET /fapi/v1/ticker/bookTicker",
+      "status": "DATA_RETURNED_VIA_CONNECTOR",
+      "evidence": "Top-of-book bid/ask returned; no depth curve."
+    },
+    {
+      "endpoint": "GET /futures/data/takerBuySellVol",
+      "status": "DATA_RETURNED_VIA_CONNECTOR",
+      "evidence": "15m taker buy/sell volume returned."
+    },
+    {
+      "endpoint": "GET /futures/data/openInterestHist",
+      "status": "DATA_RETURNED_VIA_CONNECTOR",
+      "evidence": "Three recent 1h OI observations returned."
+    },
+    {
+      "endpoint": "GET /futures/data/globalLongShortAccountRatio",
+      "status": "DATA_RETURNED_VIA_CONNECTOR",
+      "evidence": "1h global account ratio returned; descriptive only."
+    }
+  ],
+  "contract_status_note": "exchangeInfo reports all four symbols TRADING/PERPETUAL, but metadata is stale; contract status is not freshly verified for execution."
+}

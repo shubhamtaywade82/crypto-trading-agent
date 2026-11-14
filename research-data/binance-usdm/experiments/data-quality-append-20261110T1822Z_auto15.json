@@ -1,0 +1,132 @@
+{
+  "schema_version": "1.0.0",
+  "experiment_id": "EXP-DQ-2026-11-10-1822Z-029",
+  "run_id": "context-strategy-20261110T1822Z-auto15",
+  "as_of_utc": "2026-11-10T18:22:30.000Z",
+  "type": "INCREMENTAL_ARCHIVE_APPEND_AUDIT",
+  "status": "COMPLETED_DATA_QUALITY_AUDIT",
+  "strategy_experiment": false,
+  "oos_evaluation": false,
+  "source": {
+    "endpoint": "GET /fapi/v1/klines",
+    "access": "Binance USD-M public market-data connector",
+    "direct_rest_status": "BLOCKED_DNS",
+    "symbols": [
+      "BTCUSDT",
+      "ETHUSDT",
+      "SOLUSDT",
+      "XRPUSDT"
+    ],
+    "intervals": [
+      "5m",
+      "15m",
+      "1h"
+    ]
+  },
+  "prior_archive_manifest": {
+    "path": "research-data/binance-usdm/manifests/archive_manifest_20261110T1736Z_auto14.json",
+    "blob_sha1": "2372c76992ea879fb3db69c593c02f72f38a4e20",
+    "sha256": "a6a005850979c872e6299f29e94d2d96f511613f2cccd20211dd35dea5f7a863"
+  },
+  "input_highwaters_before_utc": {
+    "5m": "2026-11-10T17:30:00.000Z",
+    "15m": "2026-11-10T17:15:00.000Z",
+    "1h": "2026-11-10T16:00:00.000Z"
+  },
+  "coverage_after_utc": {
+    "5m": "2026-11-10T18:15:00.000Z",
+    "15m": "2026-11-10T18:00:00.000Z",
+    "1h": "2026-11-10T17:00:00.000Z"
+  },
+  "data_ranges_utc": {
+    "5m": {
+      "first_open": "2026-11-10T17:35:00.000Z",
+      "last_open": "2026-11-10T18:15:00.000Z",
+      "bars_per_symbol": 9
+    },
+    "15m": {
+      "first_open": "2026-11-10T17:30:00.000Z",
+      "last_open": "2026-11-10T18:00:00.000Z",
+      "bars_per_symbol": 3
+    },
+    "1h": {
+      "first_open": "2026-11-10T17:00:00.000Z",
+      "last_open": "2026-11-10T17:00:00.000Z",
+      "bars_per_symbol": 1
+    }
+  },
+  "rows_fetched": 52,
+  "completed_rows": 52,
+  "forming_rows_excluded": 0,
+  "pre_highwater_rows_excluded": 0,
+  "rows_appended": 52,
+  "rows_by_interval": {
+    "5m": 36,
+    "15m": 12,
+    "1h": 4
+  },
+  "rows_by_symbol": {
+    "BTCUSDT": 13,
+    "ETHUSDT": 13,
+    "SOLUSDT": 13,
+    "XRPUSDT": 13
+  },
+  "quality": {
+    "series": 12,
+    "duplicates": 0,
+    "missing_intervals": 0,
+    "off_grid_timestamps": 0,
+    "non_monotonic": 0,
+    "ohlc_invariant_failures": 0,
+    "non_positive_volume": 0,
+    "non_finite": 0,
+    "cross_symbol_alignment": true,
+    "highwater_boundary_continuity": true,
+    "forming_rows_appended": 0
+  },
+  "scope_limitations": [
+    "This validates only the newly appended delta and continuity from prior highwaters; it does not certify full historical archive completeness.",
+    "No 4h bars were appended; 4h canonical/provenance reconciliation remains unresolved.",
+    "No strategy backtest, context taxonomy experiment or OOS evaluation was run."
+  ],
+  "delta": {
+    "path": "research-data/binance-usdm/delta/binance_usdm_delta_20261110T1822Z_5m15m1h_completed.jsonl",
+    "bytes": 15249,
+    "sha256": "4db0760d7bba947f798658e62a71e75f5bcd3152d0305ad2499c64a7eb263473",
+    "git_blob_sha1": "4f89ddeae216b71ca959c36d2957c0cc7e1c09c5",
+    "readback_verified": true
+  },
+  "delta_manifest": {
+    "path": "research-data/binance-usdm/delta/manifest-20261110T1822Z-5m15m1h.json",
+    "sha256": "ad320e0dca6750e28b58f56f2eed7242cd3d00643cc43364ed862796111f6576",
+    "git_blob_sha1": "41b69210a99b4a0a6f2b862e2a15cdc4ad1b1afa",
+    "readback_verified": true
+  },
+  "indexes": {
+    "research-data/binance-usdm/5m/archive-index.json": {
+      "blob": "231fcd87797a85c985781a484a4d6a352250762a",
+      "sha256": "002fd4fdb68db66264b772cdccd8dec7ce997b825560956c8f2de38ec4782c50",
+      "bytes": 96887
+    },
+    "research-data/binance-usdm/15m/archive-index.json": {
+      "blob": "43fb7befd72c7f7eb7e05573b0209f29e8ec2bbb",
+      "sha256": "9e898b9324572e10a860b6fa247415058f998aaac09b020c7539200b80e5c5dd",
+      "bytes": 87245
+    },
+    "research-data/binance-usdm/1h/archive-index.json": {
+      "blob": "70d0efc442e4623c0632210700d0a7ffec3c62bf",
+      "sha256": "24514fbe098166652d64aac6ea4f25e373ede14dc106d08f25cf3145d9e5743d",
+      "bytes": 117780
+    },
+    "research-data/binance-usdm/4h/archive-index.json": {
+      "blob": "0acd7b6cb97189b628c1b77bc8be8860a26c2b0e",
+      "sha256": "1e67f43282890fe0a4bd4629dbc29b5645de22ba2fc8fe32ba739611575f3175",
+      "bytes": 102939
+    }
+  },
+  "backtest_harness": {
+    "status": "NOT_RUN",
+    "reason": "No local repository checkout; Node 22.16.0/npm 10.9.2 below project floor Node>=24/npm>=11; SDK import unavailable."
+  },
+  "evidence_status": "DATA_QUALITY_AUDIT_ONLY"
+}

@@ -1,0 +1,189 @@
+{
+  "schema_version": "1.0.0",
+  "as_of_utc": "2026-11-11T19:26:35.000Z",
+  "run_id": "context-strategy-20261111T1926Z-auto32",
+  "branch": "research/raw-ohlcv-archive-20261111T1926Z-auto32",
+  "items": [
+    {
+      "id": "RQ-019",
+      "priority": "P0",
+      "status": "COMPLETED_THIS_RUN",
+      "title": "Append completed multi-symbol/multi-timeframe OHLCV",
+      "prerequisites": [
+        "Fresh connector candles",
+        "Verified prior highwaters",
+        "Writable remote branch"
+      ],
+      "next_action": "Continue next hourly delta from the new verified highwaters",
+      "blocker": null,
+      "result": {
+        "rows": 472,
+        "intervals": {
+          "5m": 332,
+          "15m": 108,
+          "1h": 28,
+          "4h": 4
+        },
+        "forming_excluded": 16,
+        "quality_failures": 0,
+        "readback_verified": true
+      }
+    },
+    {
+      "id": "RQ-030",
+      "priority": "P0",
+      "status": "COMPLETED_THIS_RUN",
+      "title": "Incremental archive integrity experiment",
+      "prerequisites": [
+        "Verified prior manifest",
+        "Bounded fresh candle fetch",
+        "Readback/checksum"
+      ],
+      "next_action": "Repeat on next hourly append; reconcile full archive lineage before strategy research",
+      "blocker": null,
+      "result": {
+        "experiment_id": "EXP-DQ-2026-11-11-1926Z-013",
+        "rows": 472,
+        "sha256": "69de39cd5130f37a0fb007471032d6c980fda0b7b35a3a04b4bee45ce3414036",
+        "status": "EXECUTED_READBACK_VERIFIED"
+      }
+    },
+    {
+      "id": "RQ-002",
+      "priority": "P1",
+      "status": "BLOCKED",
+      "title": "Refresh exchange contract metadata and server time",
+      "prerequisites": [
+        "Direct Binance REST DNS/HTTPS or uncached fresh endpoint"
+      ],
+      "blocker": "Direct /time and /exchangeInfo requests fail DNS; connector exchangeInfo serverTime is 32860.057 seconds stale relative to current mark timestamp; HTTP status/headers unavailable.",
+      "next_action": "Restore direct DNS or uncached metadata path; require exchange-time drift <=60 seconds before execution validation."
+    },
+    {
+      "id": "RQ-003",
+      "priority": "P1",
+      "status": "BLOCKED",
+      "title": "Complete aligned 5m/15m/1h history toward common 2020 start",
+      "prerequisites": [
+        "Paginated historical access",
+        "Archive writer",
+        "Cross-symbol alignment audit"
+      ],
+      "blocker": "Current run verified only incremental deltas and 120-bar snapshots; full common-start 5m/15m/1h history is not verified. 4h common sample is multi-year.",
+      "next_action": "Audit all 1h pages and backfill 5m/15m in bounded pages toward 2020-09-14; compare exact open-time sets."
+    },
+    {
+      "id": "RQ-004",
+      "priority": "P1",
+      "status": "BLOCKED",
+      "title": "Build measured execution-cost model",
+      "prerequisites": [
+        "Account fee tier",
+        "Historical bookTicker/depth/trades",
+        "Funding cashflow history"
+      ],
+      "blocker": "Only current top-of-book, current funding, and proxy 15bp round-trip cost are available; historical spread, slippage, latency, impact, user fee tier and funding cashflows are absent.",
+      "next_action": "Obtain fee tier and historical book/depth/trade/funding data; estimate conservative cost by symbol and time bucket."
+    },
+    {
+      "id": "RQ-005",
+      "priority": "P1",
+      "status": "BLOCKED",
+      "title": "Run repository backtest harness and deterministic smoke test",
+      "prerequisites": [
+        "Local checkout",
+        "Node >=24/npm >=11",
+        "Pinned dependencies"
+      ],
+      "blocker": "No local checkout; runtime Node 22.16.0/npm 10.9.2; Docker and Binance SDK packages absent. Remote harness source is inspectable but not invoked.",
+      "next_action": "Mount exact repository branch/commit in Node >=24/npm >=11; run fixture determinism/no-lookahead tests."
+    },
+    {
+      "id": "RQ-006",
+      "priority": "P2",
+      "status": "BLOCKED",
+      "title": "Run pre-registered strategy x context x symbol experiments",
+      "prerequisites": [
+        "RQ-003",
+        "RQ-004",
+        "RQ-005"
+      ],
+      "blocker": "Intraday history, measured costs and compatible harness are incomplete; EMA20 pullback remains VALIDATION_ONLY and untouched test reserved.",
+      "next_action": "After prerequisites, freeze one strategy/context/symbol experiment; run chronological walk-forward, purge/embargo, block bootstrap and Holm correction; retain >=100 OOS trades per cell gate."
+    },
+    {
+      "id": "RQ-008",
+      "priority": "P1",
+      "status": "PARTIALLY_RESOLVED",
+      "title": "Reconcile 4h page-boundary metadata and BTC lineage",
+      "prerequisites": [
+        "Canonical raw pages on both branches",
+        "Canonical hash procedure"
+      ],
+      "blocker": "Prior comparison matched 10428 common bars with zero mismatches; 44 earliest BTC bars and BTC manifest hash lineage remain unresolved.",
+      "next_action": "Recompute canonical page hashes and independently verify the 44 unmatched earliest BTC rows."
+    },
+    {
+      "id": "RQ-011",
+      "priority": "P2",
+      "status": "BLOCKED",
+      "title": "Align promotion defaults with evidence gates",
+      "prerequisites": [
+        "Local checkout",
+        "Node >=24/npm >=11",
+        "Promotion-gate tests"
+      ],
+      "blocker": "Existing CLI defaults minN=30 and confidence=0.90 remain below required >=100 OOS trades and 95% CI gate.",
+      "next_action": "Raise defaults to minN>=100 and confidence=0.95; test promotion fails if n<100 or lower CI<=0."
+    },
+    {
+      "id": "RQ-013",
+      "priority": "P3",
+      "status": "HYPOTHESIS_BLOCKED",
+      "title": "Range mean reversion and failed-breakout fade conditioned on BTC regime",
+      "prerequisites": [
+        "Aligned intraday history",
+        "Measured costs",
+        "Compatible harness"
+      ],
+      "blocker": "No strategy experiment has tested this mechanism.",
+      "next_action": "Pre-register range detector, failed-breakout definition, entry/stop/target/time-stop and NO_TRADE rules after RQ-003/004/005."
+    },
+    {
+      "id": "RQ-015",
+      "priority": "P0",
+      "status": "BLOCKED",
+      "title": "Reconcile divergent research branches into one canonical lineage",
+      "prerequisites": [
+        "Branch graph",
+        "Immutable raw page/delta hashes",
+        "Registry provenance"
+      ],
+      "blocker": "Raw archive, registry snapshots and context-strategy artifacts remain on divergent branches; no canonical integration or main merge performed.",
+      "next_action": "Create integration branch, preserve original hashes, reconcile queue/registry, run CI and provenance checks; do not merge to main before verification."
+    },
+    {
+      "id": "RQ-020",
+      "priority": "P1",
+      "status": "BLOCKED",
+      "title": "Weekly context taxonomy/stability review",
+      "prerequisites": [
+        "Canonical reconciled 4h archive",
+        "Training-only threshold refit",
+        "Complete new test-window bars"
+      ],
+      "blocker": "Last full taxonomy artifact is 2026-11-03; current run only verified a short incremental append and unresolved archive lineage remains.",
+      "next_action": "After RQ-008, re-fit q33/q67 on the frozen training segment only; extend test window with new completed bars; compare context frequencies, run lengths, transitions and stability."
+    }
+  ],
+  "daily_cycle": {
+    "status": "EXECUTED_DATA_QUALITY_ONLY",
+    "strategy_experiment": "NOT_RUN",
+    "reason": "The highest-priority unblocked work was incremental archive integrity; strategy/OOS prerequisites remain blocked."
+  },
+  "weekly_review": {
+    "status": "BLOCKED",
+    "last_full_taxonomy_utc": "2026-11-03T19:30:46.777Z",
+    "next_action": "RQ-008 then RQ-020"
+  }
+}

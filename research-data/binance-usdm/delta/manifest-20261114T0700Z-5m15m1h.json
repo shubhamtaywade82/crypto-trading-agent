@@ -1,0 +1,102 @@
+{
+  "schema_version": "1.0.0",
+  "run_id": "auto11-20261114T0700Z-v125",
+  "as_of_utc": "2026-11-14T07:02:24.787Z",
+  "repository": "shubhamtaywade82/crypto-trading-agent",
+  "branch": "research/raw-ohlcv-archive-20261108T1026Z",
+  "source": "Binance USD-M public market-data connector; SDK not used; direct REST DNS/HTTPS unavailable; connector HTTP status/headers not exposed.",
+  "source_endpoint": "GET /fapi/v1/klines",
+  "symbols": [
+    "BTCUSDT",
+    "ETHUSDT",
+    "SOLUSDT",
+    "XRPUSDT"
+  ],
+  "intervals": [
+    "5m",
+    "15m",
+    "1h"
+  ],
+  "prior_highwaters_utc": {
+    "5m": "2026-11-14T06:20:00.000Z",
+    "15m": "2026-11-14T06:00:00.000Z",
+    "1h": "2026-11-14T05:00:00.000Z",
+    "4h": "2026-11-13T12:00:00.000Z"
+  },
+  "latest_completed_open_utc_by_interval": {
+    "5m": "2026-11-14T06:55:00.000Z",
+    "15m": "2026-11-14T06:45:00.000Z",
+    "1h": "2026-11-14T06:00:00.000Z",
+    "4h": "2026-11-13T12:00:00.000Z"
+  },
+  "next_start_utc_by_interval": {
+    "5m": "2026-11-14T07:00:00.000Z",
+    "15m": "2026-11-14T07:00:00.000Z",
+    "1h": "2026-11-14T07:00:00.000Z",
+    "4h": "2026-11-13T16:00:00.000Z"
+  },
+  "rows_fetched": 56,
+  "rows_appended": 44,
+  "forming_rows_excluded": 12,
+  "rows_by_interval": {
+    "5m": 28,
+    "15m": 12,
+    "1h": 4,
+    "4h": 0
+  },
+  "rows_by_symbol": {
+    "BTCUSDT": 11,
+    "ETHUSDT": 11,
+    "SOLUSDT": 11,
+    "XRPUSDT": 11
+  },
+  "rows_by_symbol_interval": {
+    "BTCUSDT": {
+      "5m": 7,
+      "15m": 3,
+      "1h": 1
+    },
+    "ETHUSDT": {
+      "5m": 7,
+      "15m": 3,
+      "1h": 1
+    },
+    "SOLUSDT": {
+      "5m": 7,
+      "15m": 3,
+      "1h": 1
+    },
+    "XRPUSDT": {
+      "5m": 7,
+      "15m": 3,
+      "1h": 1
+    }
+  },
+  "quality": {
+    "duplicates": 0,
+    "missingIntervals": 0,
+    "offGrid": 0,
+    "nonMonotonic": 0,
+    "ohlcFailures": 0,
+    "nonFinite": 0,
+    "nonPositiveVolume": 0,
+    "closeTimeFailures": 0,
+    "formingRowsIncluded": 0,
+    "crossSymbolAlignment": true,
+    "contiguousFromPriorHighwater": true
+  },
+  "delta": {
+    "path": "research-data/binance-usdm/delta/binance_usdm_delta_20261114T0700Z_5m15m1h_completed.jsonl",
+    "rows": 44,
+    "bytes": 12854,
+    "sha256": "03971a06d0a9aa10219396231ce2781bb7578c8e8dc4627960ee297263861368",
+    "blob_sha": "c5c333500cc275eea1d97330ed85130585804aa1",
+    "readback_verified": true
+  },
+  "limitations": [
+    "4h completed rows remain held; canonical 4h highwater is unchanged pending 13 page-manifest SHA mismatches and raw/aligned/canonical row-count reconciliation.",
+    "The 1h incremental slice is contiguous from its prior highwater, but 28 historical missing opens per symbol and an 8-row discrepancy remain.",
+    "5m/15m base pages remain partial and page-0028 is not a common cross-symbol panel; recent incremental continuity does not repair historical coverage.",
+    "No strategy backtest or untouched OOS evaluation ran; the local Node24/npm11 project harness and deterministic smoke test remain unavailable."
+  ]
+}

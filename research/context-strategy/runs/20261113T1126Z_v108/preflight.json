@@ -1,0 +1,125 @@
+{
+  "schema_version": "1.0.0",
+  "run_id": "20261113T1126Z-v108",
+  "as_of_utc": "2026-11-13T11:26:21.071Z",
+  "overall": "RESEARCH_BLOCKED",
+  "checks": [
+    {
+      "capability": "Shell/compute",
+      "status": "DEGRADED",
+      "evidence": "cwd=/; Linux 6.18.57 x86_64; Python 3.13.5; Node v22.16.0; npm 10.9.2; pnpm NOT_INSTALLED; 3 CPUs; 5.8 GiB RAM / 4.7 GiB available; 30 GB free of 32 GB disk.",
+      "impact": "Shell and Python compute work, but project engine requirements are not met.",
+      "next_action": "Provision Node >=24 and npm >=11."
+    },
+    {
+      "capability": "Repository/code",
+      "status": "BLOCKED",
+      "evidence": "No local .git checkout or package.json in cwd or /mnt/data. Remote package.json, scripts/backtest.ts and scripts/conditional-edge.ts were fetched via GitHub connector.",
+      "impact": "Remote scripts cannot be executed in this workspace.",
+      "next_action": "Clone exact source branch locally after compatible runtime provisioning."
+    },
+    {
+      "capability": "Binance SDK",
+      "status": "BLOCKED",
+      "evidence": "@nemesis-oss/binance-sdk, binance, binance-api-node, @binance/connector and @binance/futures-connector all NOT_INSTALLED; no SDK used.",
+      "impact": "Market data came from the public Binance connector, not SDK execution.",
+      "next_action": "Install locked dependencies in a compatible project runtime and verify imports."
+    },
+    {
+      "capability": "Network/Binance endpoints",
+      "status": "DEGRADED",
+      "evidence": "Direct curl to fapi.binance.com returned DNS failure exit 6 / HTTP 000 for /fapi/v1/time, /exchangeInfo, /klines, /premiumIndex, /openInterest and /ticker/24hr. Connector data calls succeeded but hide HTTP status/headers. Connector exchangeInfo serverTime=2026-11-13T06:02:01.706Z, about 5h24m stale at run time; mark/ticker/book timestamps near 11:20:57Z.",
+      "impact": "Current market data is usable with connector timestamps; fresh clock and contract metadata checks are blocked.",
+      "next_action": "Restore direct HTTPS/DNS and require fresh server time and exchangeInfo."
+    },
+    {
+      "capability": "Raw historical archive",
+      "status": "DEGRADED",
+      "evidence": "Remote raw archive branch updated; 56 rows persisted and read back. 1h base archive 215,504 rows/53,876 per symbol across 6.14 years. 5m/15m base absent; 4h reconciliation degraded. No local archive mounted.",
+      "impact": "1h research sample exists remotely but is not materialized locally; multi-timeframe archive incomplete.",
+      "next_action": "Backfill 5m/15m, materialize 1h, reconcile 4h."
+    },
+    {
+      "capability": "Data quality/coverage",
+      "status": "DEGRADED",
+      "evidence": "Current 1,920 klines: 1,904 completed and 16 forming excluded. All 16 series had zero duplicates, non-monotonic bars, gaps, off-grid times, close-time mismatches, OHLC failures, nonpositive volume or nonfinite values. Historical 1h audit clean; 4h degraded; 5m/15m base absent.",
+      "impact": "Current context features are descriptive; robust multi-timeframe regime discovery remains blocked.",
+      "next_action": "Complete archive coverage and full multi-symbol alignment audit."
+    },
+    {
+      "capability": "Backtest harness/smoke test",
+      "status": "BLOCKED",
+      "evidence": "No local harness invocation and no deterministic fixture smoke test. Remote package engines require Node>=24/npm>=11; backtest.ts defaults BTCUSDT/30 days and omits 5m; conditional-edge.ts defaults minN=30 and 90% CI, no purge/embargo option.",
+      "impact": "No valid strategy experiment or untouched OOS evaluation ran.",
+      "next_action": "Provision runtime, clone source, harden policy/gates, then run deterministic fixture and lookahead tests."
+    },
+    {
+      "capability": "Disk/storage",
+      "status": "PASS",
+      "evidence": "30 GB free of 32 GB; GitHub remote branch writes succeeded.",
+      "impact": "Remote versioned archive and run artifact persistence available.",
+      "next_action": "Continue bounded writes; avoid materializing large archives until resource plan is set."
+    },
+    {
+      "capability": "Artifact readback",
+      "status": "PASS",
+      "evidence": "5m/15m delta 52 rows and 1h delta 4 rows read back; manifests and updated 5m/15m/1h indexes read back with Git blob SHA-1s.",
+      "impact": "This run's 56-row archive append is remotely persisted and verified.",
+      "next_action": "Read back all v108 context artifacts after commit."
+    }
+  ],
+  "endpoint_probes": {
+    "direct_shell": {
+      "status": "BLOCKED_DNS",
+      "http_status": 0,
+      "exit_code": 6,
+      "host": "fapi.binance.com",
+      "paths": [
+        "/fapi/v1/time",
+        "/fapi/v1/exchangeInfo",
+        "/fapi/v1/klines",
+        "/fapi/v1/premiumIndex",
+        "/fapi/v1/openInterest",
+        "/fapi/v1/ticker/24hr"
+      ]
+    },
+    "connector_successful_paths": [
+      "/fapi/v1/klines",
+      "/fapi/v1/premiumIndex",
+      "/fapi/v1/openInterest",
+      "/fapi/v1/ticker/24hr",
+      "/fapi/v1/fundingRate",
+      "/fapi/v1/ticker/bookTicker",
+      "/fapi/v1/fundingInfo",
+      "/futures/data/takerBuySellVol",
+      "/futures/data/openInterestHist",
+      "/futures/data/globalLongShortAccountRatio"
+    ],
+    "http_status_headers": "NOT_EXPOSED_BY_CONNECTOR",
+    "exchange_info_server_time_utc": "2026-11-13T06:02:01.706Z"
+  },
+  "remote_source_audit": {
+    "package_json_blob_sha": "6dc911871b1f0b671c0535a06e6c23c9c0577eea",
+    "engines": {
+      "node": ">=24",
+      "npm": ">=11"
+    },
+    "backtest_ts_blob_sha": "284a5ffd4e254265da49c76cb792cfdc3b19e094",
+    "conditional_edge_ts_blob_sha": "29034c61fdd42a5e40272234b221d29cb95fb3ee",
+    "findings": [
+      "backtest.ts defaults to BTCUSDT and 30 days",
+      "backtest.ts supports only 15m/1h/4h, not 5m",
+      "conditional-edge.ts defaults minN=30 and bootstrap confidence=0.90",
+      "No purge/embargo parameter exposed by conditional-edge CLI"
+    ]
+  },
+  "execution": {
+    "research_executed": false,
+    "oos_evaluated": false,
+    "monitoring_completed": true,
+    "archive_append_completed": true,
+    "experiment_count": 0,
+    "smoke_test": "NOT_RUN",
+    "reason": "No local checkout and incompatible Node/npm runtime; no valid harness invocation."
+  }
+}

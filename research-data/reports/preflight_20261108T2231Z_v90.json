@@ -1,0 +1,238 @@
+{
+  "schema_version": "1.0.0",
+  "run_id": "context-strategy-2026-11-08T2227Z-v89",
+  "as_of_utc": "2026-11-08T22:32:50.558Z",
+  "classification": "RESEARCH_BLOCKED",
+  "checks": [
+    {
+      "capability": "shell_compute",
+      "status": "DEGRADED",
+      "evidence": {
+        "cwd": "/",
+        "os": "Debian GNU/Linux 13 (trixie)",
+        "kernel": "6.18.57",
+        "cpu_cores": 5,
+        "memory_total": "5.8 GiB",
+        "memory_available": "4.7 GiB",
+        "disk_free": "30 GiB",
+        "python": "3.13.5",
+        "node": "v22.16.0",
+        "npm": "10.9.2"
+      },
+      "impact": "Compute exists, but Node/npm are below repository engine requirements.",
+      "next_action": "Provision Node >=24 and npm >=11."
+    },
+    {
+      "capability": "repo_code",
+      "status": "DEGRADED",
+      "evidence": {
+        "local_checkout": false,
+        "local_package_json": false,
+        "node_modules": false,
+        "remote_repository": "shubhamtaywade82/crypto-trading-agent",
+        "remote_main_commit": "4c12a96fd0e9855caa25673266db5002472ade4f",
+        "package_json_blob": "65606741eeb623d8123d9e58934540d24ca31d92",
+        "required_node": ">=24",
+        "required_npm": ">=11",
+        "remote_scripts": {
+          "backtest": "65bb03853382be1ed0d82aed373f805173aaa6f5",
+          "research_run": "0f8003f4ee11e9e71ef46766bdf0d6daed1c7bba",
+          "conditional_edge": "29034c61fdd42a5e40272234b221d29cb95fb3ee"
+        },
+        "sdk_packages_importable": false
+      },
+      "impact": "Repository scripts are present remotely but cannot be invoked from this runtime.",
+      "next_action": "Clone the inspected commit and install dependencies under supported Node/npm."
+    },
+    {
+      "capability": "network_binance",
+      "status": "DEGRADED",
+      "evidence": {
+        "direct_time_probe": {
+          "endpoint": "GET https://fapi.binance.com/fapi/v1/time",
+          "http_status": 0,
+          "error": "curl: (6) Could not resolve host: fapi.binance.com"
+        },
+        "connector_data_access": true,
+        "http_status_headers_available": false,
+        "exchange_info_server_time_utc": "2026-11-06T11:18:40.885Z",
+        "fresh_mark_time_utc": "2026-11-08T22:27:15.000Z",
+        "exchange_info_drift_seconds": 212914.115,
+        "contract_statuses_observed": {
+          "BTCUSDT": "TRADING",
+          "ETHUSDT": "TRADING",
+          "SOLUSDT": "TRADING",
+          "XRPUSDT": "TRADING"
+        }
+      },
+      "impact": "Live connector snapshot is usable for descriptive monitoring; stale exchange metadata blocks execution validation.",
+      "next_action": "Restore direct DNS and require /fapi/v1/time and exchangeInfo drift <=5 seconds."
+    },
+    {
+      "capability": "raw_historical_archive",
+      "status": "DEGRADED",
+      "evidence": {
+        "repository_branch": "research/raw-ohlcv-archive-20261108T2226Z-run26",
+        "one_hour": {
+          "rows_per_symbol": 53871,
+          "rows_total": 215484,
+          "pages_per_symbol": 36,
+          "coverage_start_utc": "2020-09-14T08:00:00Z",
+          "base_end_utc": "2026-11-06T22:00:00Z",
+          "incremental_highwater_utc": "2026-11-08T21:00:00Z"
+        },
+        "four_hour_canonical": {
+          "rows_per_symbol": 13461,
+          "rows_total": 53844,
+          "start_utc": "2020-09-14T08:00:00Z",
+          "end_utc": "2026-11-05T16:00:00Z",
+          "raw_rows_by_symbol": {
+            "BTCUSDT": 13499,
+            "ETHUSDT": 13499,
+            "SOLUSDT": 13455,
+            "XRPUSDT": 13499
+          },
+          "alternate_replay_reconciliation": "14/14 mismatched page-symbol pairs matched",
+          "status": "DEGRADED_RAW_CANONICAL_ROWCOUNT_DISCREPANCY_AND_LOWER_TIMEFRAME_HISTORY_INCOMPLETE"
+        },
+        "five_minute_base": "ABSENT",
+        "fifteen_minute_base": "ABSENT",
+        "one_minute_history": "ABSENT",
+        "new_delta_rows": 68
+      },
+      "impact": "1h is multi-year; canonical 4h is multi-year but lags raw highwater; 5m/15m/1m are insufficient for robust research.",
+      "next_action": "Reconcile/rebuild canonical 4h and backfill lower intervals from auditable bulk source."
+    },
+    {
+      "capability": "data_quality_coverage",
+      "status": "DEGRADED",
+      "evidence": {
+        "new_delta": {
+          "rows": 68,
+          "by_interval": {
+            "5m": 48,
+            "15m": 16,
+            "1h": 4,
+            "4h": 0
+          },
+          "returned_rows": 84,
+          "forming_excluded": 16,
+          "duplicates": 0,
+          "missing_intervals": 0,
+          "ohlc_failures": 0,
+          "non_positive_volume": 0,
+          "non_finite": 0,
+          "off_grid": 0,
+          "non_monotonic": 0
+        },
+        "current_windows": {
+          "completed_bars": 4783,
+          "forming_excluded": 17,
+          "duplicates": 0,
+          "missing_intervals": 0,
+          "ohlc_failures": 0,
+          "non_positive_volume": 0,
+          "non_finite": 0,
+          "off_grid": 0,
+          "non_monotonic": 0
+        },
+        "five_minute_cross_symbol_window": "XRP has one fewer completed bar in the 100-row descriptive window; latest completed timestamp is aligned across symbols."
+      },
+      "impact": "The incremental delta passes row-level checks; full archive readiness remains degraded.",
+      "next_action": "Complete lower-timeframe backfill, cross-symbol alignment audit, and 4h canonical reconciliation."
+    },
+    {
+      "capability": "backtest_harness_smoke_test",
+      "status": "BLOCKED",
+      "evidence": {
+        "remote_harness_scripts_present": true,
+        "local_harness_invocable": false,
+        "node_engine_mismatch": true,
+        "binance_sdk_importable": false,
+        "fixture_smoke_test_this_run": "NOT_RUN",
+        "experiment_this_run": "NOT_RUN",
+        "oos_this_run": "NOT_EVALUATED"
+      },
+      "impact": "No valid experiment or OOS evaluation can be claimed.",
+      "next_action": "Provision compatible checkout/runtime; run deterministic stop-first, repeatability and no-lookahead fixture before any full experiment."
+    },
+    {
+      "capability": "disk_storage",
+      "status": "PASS",
+      "evidence": {
+        "filesystem": "overlay /",
+        "free_disk": "30 GiB",
+        "persistent_storage": "GitHub repository branch",
+        "branch": "research/raw-ohlcv-archive-20261108T2226Z-run26",
+        "write_access": "verified by commits"
+      },
+      "impact": "Archive and research artifacts can be persisted remotely.",
+      "next_action": "Continue atomic/versioned GitHub commits and verify readback."
+    },
+    {
+      "capability": "artifact_readback",
+      "status": "PASS",
+      "evidence": {
+        "verified_at_utc": "2026-11-08T22:33:36.368Z",
+        "artifacts": [
+          {
+            "path": "research-data/binance-usdm/delta/binance_usdm_delta_20261108T2226Z_5m15m1h_completed.jsonl",
+            "bytes": 26865,
+            "sha256": "8f7b850ce7781bd8af3fb251c700996b081b0593f60ffb44f22e07e7aca2608a"
+          },
+          {
+            "path": "research-data/binance-usdm/delta/manifest-20261108T2226Z-5m15m1h.json",
+            "bytes": 10492,
+            "sha256": "610085dc49a892e4d15c631fd07d7405df90150c264afc3d775daedc003ee26d"
+          },
+          {
+            "path": "research-data/binance-usdm/5m/archive-index.json",
+            "bytes": 9582,
+            "git_blob_sha": "58558341010add9b8502c6b5cda72be38e9fda14"
+          },
+          {
+            "path": "research-data/binance-usdm/15m/archive-index.json",
+            "bytes": 8868,
+            "git_blob_sha": "37d1bfefb725cb4b46974829244f006163e00e75"
+          },
+          {
+            "path": "research-data/binance-usdm/1h/archive-index.json",
+            "bytes": 58518,
+            "git_blob_sha": "6081fe2689928260f2127c4a1f9192a04c7ba531"
+          },
+          {
+            "path": "research-data/registry/research_queue_20261108T2227Z_v89.json",
+            "bytes": 22324,
+            "git_blob_sha": "9a513ce186ca36d0bf297f8c8f8991f786d653c1"
+          },
+          {
+            "path": "research-data/registry/registry_run_snapshot_20261108T2227Z_v89.json",
+            "bytes": 6813,
+            "git_blob_sha": "4a6d06d752e620c424d7043edeb3fab244c7876d"
+          },
+          {
+            "path": "research-data/monitoring/current_market_snapshot_20261108T2227Z_v89.json",
+            "bytes": 9820,
+            "git_blob_sha": "9e252f271f9fb9c4b6493bf32cdb4df5a99e9f40"
+          }
+        ],
+        "all_verified": true,
+        "final_artifact_count": 12,
+        "final_report_preflight_run_manifest_latest_pointer_readback": true,
+        "readback_verification_path": "research-data/reports/readback-verification-20261108T2234Z-v90.json",
+        "readback_verification_sha256": "af205119b5cc225be0c8eaecfc3808cd5dbac87735d5bec574a84787f797081d",
+        "readback_verification_file_readback": true
+      },
+      "impact": "Core archive, index, queue, registry and monitoring artifacts were fetched back and matched.",
+      "next_action": "Continue the next hourly append with exact highwater continuity checks; keep research blocked until runtime, DNS and archive prerequisites are repaired."
+    }
+  ],
+  "execution": {
+    "repository_cli_invoked": false,
+    "binance_sdk_used": false,
+    "experiment_executed": false,
+    "oos_evaluated": false,
+    "monitoring_completed": true,
+    "archive_append_completed": true
+  }
+}

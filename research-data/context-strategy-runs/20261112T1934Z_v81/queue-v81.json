@@ -1,0 +1,136 @@
+{
+  "schema_version": "1.0.0",
+  "run_id": "context-strategy-2026-11-12T193436Z-v81",
+  "as_of_utc": "2026-11-12T19:34:36.450Z",
+  "status": "ACTIVE_WITH_BLOCKED_RESEARCH",
+  "priority_order": [
+    "RQ-002",
+    "RQ-005",
+    "RQ-012",
+    "RQ-003",
+    "RQ-004",
+    "RQ-021"
+  ],
+  "items": [
+    {
+      "id": "RQ-002",
+      "status": "BLOCKED",
+      "title": "Refresh server time and exchange metadata",
+      "blocker": "Direct DNS to fapi.binance.com failed; /fapi/v1/time unavailable; exchangeInfo serverTime 09:45:01Z was about 9h49m stale vs market endpoints.",
+      "next_action": "Restore uncached /time and /exchangeInfo; verify contracts are TRADING before execution checks."
+    },
+    {
+      "id": "RQ-005",
+      "status": "BLOCKED",
+      "title": "Run compatible repository smoke test",
+      "blocker": "No local checkout/node_modules; Node 22.16/npm 10.9 below required Node>=24/npm>=11; SDK packages absent.",
+      "next_action": "Provision compatible runner, checkout exact branch and run deterministic fixture smoke test."
+    },
+    {
+      "id": "RQ-012",
+      "status": "BLOCKED",
+      "title": "Preserve closeTime and reject zero-volume bars",
+      "blocker": "Remote backtest mapping drops closeTime, omits 5m, and validator permits volume==0.",
+      "next_action": "Preserve closeTime, reject volume<=0, add 5m and regression fixtures."
+    },
+    {
+      "id": "RQ-003",
+      "status": "PARTIALLY_COMPLETED",
+      "title": "Backfill multi-year 5m/15m and reconcile 4h canonical",
+      "blocker": "5m/15m partial uneven coverage; 1h 28 bridge gaps per symbol; 4h row-count/hash provenance issues.",
+      "next_action": "Backfill lower intervals oldest-first, reconcile 12,000-row 5m/15m index-vs-global discrepancy, close 1h gaps and reconcile 4h."
+    },
+    {
+      "id": "RQ-004",
+      "status": "BLOCKED",
+      "title": "Calibrate realistic execution costs",
+      "blocker": "Actual fee tier, full funding cashflows, historical spread/depth, slippage, impact and latency unavailable; 15bp proxy uncalibrated.",
+      "next_action": "Archive fee tier and funding; collect synchronized book/trade samples; fit symbol/volatility-conditioned cost model."
+    },
+    {
+      "id": "RQ-025",
+      "status": "PARTIALLY_COMPLETED",
+      "title": "Reconcile 4h canonical merge",
+      "blocker": "4h raw/aligned/canonical counts and hash mismatches remain unresolved.",
+      "next_action": "Reconcile source rows and correction provenance before using canonical 4h in experiments."
+    },
+    {
+      "id": "RQ-019",
+      "status": "COMPLETED_THIS_RUN",
+      "title": "Append latest completed OHLCV bars",
+      "rows_appended": 128,
+      "rows_by_interval": {
+        "5m": 88,
+        "15m": 32,
+        "1h": 8,
+        "4h": 0
+      },
+      "delta_path": "research-data/binance-usdm/delta/binance_usdm_delta_20261112T1930Z_all_intervals_completed.jsonl",
+      "delta_sha256": "e927374e219a1ee46e75698c3638575192e50ede58e95271ca4cadefd93a4cd1",
+      "readback_verified": true,
+      "next_action": "Next opens 5m/15m 19:30Z, 1h 19:00Z, 4h 16:00Z are forming; append after closeTime."
+    },
+    {
+      "id": "RQ-013",
+      "status": "BLOCKED",
+      "title": "Reject zero-volume historical bars",
+      "blocker": "Validator accepts zero volume; no compatible local runner.",
+      "next_action": "Change to volume<=0 and add zero/negative/NaN/missing fixtures."
+    },
+    {
+      "id": "RQ-014",
+      "status": "BLOCKED",
+      "title": "Backfill historical funding cashflows",
+      "blocker": "Only latest two settlements per symbol retrieved; no full funding history aligned to positions.",
+      "next_action": "Backfill fundingRate across research window and align settlement cashflows to holding periods."
+    },
+    {
+      "id": "RQ-021",
+      "status": "BLOCKED",
+      "title": "Execute daily pre-registered context-conditioned experiment",
+      "blocker": "No compatible harness/smoke test, stale metadata, incomplete 5m/15m, 1h/4h data-quality issues and incomplete costs.",
+      "next_action": "Unblock RQ-002/003/004/005/012; freeze one strategy-context-symbol spec; run purged chronological OOS once."
+    },
+    {
+      "id": "RQ-007",
+      "status": "PARTIALLY_COMPLETED",
+      "title": "Test BTC relative strength and lead/lag",
+      "blocker": "No rolling correlation or lead/lag calculation this run.",
+      "next_action": "Compute rolling multi-year 1h/4h correlation and lead/lag with training-only windows."
+    },
+    {
+      "id": "RQ-010",
+      "status": "PARTIALLY_COMPLETED",
+      "title": "Enforce funding field semantics",
+      "blocker": "Semantics documented but no regression fixture or full settlement archive.",
+      "next_action": "Keep premiumIndex indicated funding separate from fundingRate settled cashflows; add UTC timestamp tests."
+    },
+    {
+      "id": "RQ-011",
+      "status": "BLOCKED",
+      "title": "Align evidence gates with requested thresholds",
+      "blocker": "36 cells below 100 OOS trades; nominal block-bootstrap CI includes zero; Holm p=1.0; cost and purge/embargo incomplete.",
+      "next_action": "Retain INSUFFICIENT_EVIDENCE until all predeclared gates pass."
+    },
+    {
+      "id": "RQ-028",
+      "status": "BLOCKED_OVERDUE",
+      "title": "Weekly taxonomy stability review",
+      "blocker": "Due 2026-11-11; no compatible compute runner and 1h/4h archive provenance issues prevent defensible refit.",
+      "next_action": "After RQ-003/RQ-005, refit v56 q33/q67 on train only; measure context frequency, duration, transitions and validation/test TVD."
+    }
+  ],
+  "daily_cycle": {
+    "status": "BLOCKED",
+    "experiment_executed": false,
+    "archive_maintenance_completed": true,
+    "next_action": "Provision compatible runner, repair archive and costs, then execute one frozen experiment with untouched purged OOS."
+  },
+  "weekly_review": {
+    "status": "OVERDUE_BLOCKED",
+    "last_review_reference": "v56 4h taxonomy review 2026-11-04",
+    "next_review_due_utc": "2026-11-11T00:00:00Z",
+    "taxonomy_revision": "NONE",
+    "next_action": "Run train-only taxonomy stability review after archive and runner prerequisites pass."
+  }
+}

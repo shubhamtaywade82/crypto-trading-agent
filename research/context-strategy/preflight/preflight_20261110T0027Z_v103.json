@@ -1,0 +1,101 @@
+{
+  "schema_version": "1.0.0",
+  "run_id": "context-strategy-2026-11-10T0027Z-v103",
+  "as_of_utc": "2026-11-10T00:27:19Z",
+  "environment": {
+    "cwd": "/",
+    "os": "Linux x86_64",
+    "kernel": "6.18.57",
+    "python": "3.13.5",
+    "node": "v22.16.0",
+    "npm": "10.9.2",
+    "cpu_cores": 5,
+    "ram_total_gib": 5.8,
+    "ram_available_gib": 4.7,
+    "disk_free_gib": 30,
+    "repo_checkout": false,
+    "binance_sdk_importable": false
+  },
+  "checks": [
+    {
+      "capability": "shell/compute",
+      "status": "PASS",
+      "evidence": "pwd=/; Linux x86_64; Python 3.13.5; 5 CPUs; 4.7GiB available RAM; 30GiB free disk.",
+      "impact": "Data checks and connector orchestration possible.",
+      "next_action": "Use bounded data batches."
+    },
+    {
+      "capability": "repo/code",
+      "status": "BLOCKED",
+      "evidence": "No local crypto-trading-agent checkout; remote main commit 669ba233538eb1463c0e7e0a435016a643e7adb5.",
+      "impact": "Cannot run repo harness locally.",
+      "next_action": "Provision checkout and Node>=24/npm>=11."
+    },
+    {
+      "capability": "Node/package manager/SDK",
+      "status": "BLOCKED",
+      "evidence": "Node 22.16.0, npm 10.9.2; package.json requires Node>=24/npm>=11; @nemesis-oss/binance-sdk not importable.",
+      "impact": "No SDK or backtest harness execution.",
+      "next_action": "Provision compatible runtime and install lockfile."
+    },
+    {
+      "capability": "direct Binance network",
+      "status": "BLOCKED",
+      "evidence": "Bounded urllib requests to /fapi/v1/time, /exchangeInfo, /klines, /premiumIndex, /openInterest and /ticker/24hr all failed DNS resolution (HTTP unavailable).",
+      "impact": "Cannot independently verify HTTP status or trusted /time.",
+      "next_action": "Restore direct DNS/HTTPS."
+    },
+    {
+      "capability": "Binance connector data",
+      "status": "DEGRADED",
+      "evidence": "Exchange info, 24h tickers, mark/funding, klines, OI, funding history, OI history, taker flow and depth returned data. Connector does not expose HTTP status.",
+      "impact": "Monitoring and archive refresh possible; metadata time is stale.",
+      "next_action": "Require trusted /fapi/v1/time and fresh exchangeInfo before execution validation."
+    },
+    {
+      "capability": "network/time freshness",
+      "status": "DEGRADED",
+      "evidence": "Market endpoints around 00:25:45-00:25:47Z; shell 00:27:19Z (about 91s lag). exchangeInfo.serverTime=2026-11-09T06:13:33.349Z, about 18h12m stale; /fapi/v1/time DNS unavailable.",
+      "impact": "Market data reasonably fresh; contract metadata cannot be trusted for order validation.",
+      "next_action": "Fix time route and refresh metadata."
+    },
+    {
+      "capability": "raw historical archive",
+      "status": "DEGRADED",
+      "evidence": "New 64 rows persisted; 5m/15m base absent; 1h 215484 rows from 2020-09-14; 4h raw/aligned/canonical 53960/53816/53844 with 13 SHA discrepancies.",
+      "impact": "Current deltas pass but multi-year multi-timeframe sample incomplete.",
+      "next_action": "Backfill 5m/15m and reconcile 4h provenance."
+    },
+    {
+      "capability": "data quality/coverage",
+      "status": "PASS_FOR_CURRENT_WINDOW_ONLY",
+      "evidence": "16 series x 100 rows; 1584 completed, 16 forming excluded; duplicates/missing/off-grid/non-monotonic/OHLC/zero-or-negative-volume/nonfinite/closeTime mismatches all 0.",
+      "impact": "Current window reliable; no claim of full archive quality.",
+      "next_action": "Run same checks across full canonical archive after reconciliation."
+    },
+    {
+      "capability": "backtest harness/smoke test",
+      "status": "BLOCKED",
+      "evidence": "No local checkout; package engine mismatch; no fixture smoke test or strategy backtest executed.",
+      "impact": "No strategy experiment or OOS result.",
+      "next_action": "Provision compatible runner, fix Candle schema and test fixture."
+    },
+    {
+      "capability": "disk/storage",
+      "status": "PASS",
+      "evidence": "30GiB free locally; GitHub branch writes succeeded.",
+      "impact": "Small artifacts persisted remotely.",
+      "next_action": "Continue atomic append-only writes."
+    },
+    {
+      "capability": "artifact readback",
+      "status": "PASS",
+      "evidence": "All five new delta files fetched after write and exact content matched.",
+      "impact": "Raw deltas persisted and verified.",
+      "next_action": "Read back manifest/experiment/snapshot/registry/queue after write."
+    }
+  ],
+  "run_status": "RESEARCH_EXECUTED_DATA_QUALITY_ONLY",
+  "strategy_research_status": "RESEARCH_BLOCKED",
+  "oos_status": "NOT_EVALUATED"
+}

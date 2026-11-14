@@ -1,0 +1,206 @@
+{
+  "schema_version": "1.0.0",
+  "run_id": "context-strategy-20261114T1028Z-auto11-run19",
+  "as_of_utc": "2026-11-14T10:40:33.470Z",
+  "market_data_as_of_utc": "2026-11-14T10:28:53.001Z",
+  "checks": [
+    {
+      "capability": "shell_compute",
+      "status": "PASS",
+      "evidence": {
+        "pwd": "/",
+        "os": "Linux 6.18.57 x86_64",
+        "python": "3.13.5",
+        "cpu_cores": 3,
+        "memory_total_kb": 6091004,
+        "memory_available_kb": 4948408,
+        "disk_free": "30G",
+        "node": "v22.16.0",
+        "npm": "10.9.2",
+        "git": "2.47.3"
+      },
+      "impact": "Bounded analysis and connector orchestration ran; compatible repository runtime is not present.",
+      "next_action": "Provision Node>=24 and npm>=11."
+    },
+    {
+      "capability": "repo_code",
+      "status": "DEGRADED",
+      "evidence": {
+        "repository": "shubhamtaywade82/crypto-trading-agent",
+        "branch": "research/umbrella",
+        "local_target_checkout": "ABSENT",
+        "remote_package_json_blob_sha": "22576968ec662fd7d17dda10069489c69c597bcd",
+        "engines": {
+          "node": ">=24",
+          "npm": ">=11"
+        },
+        "backtest_script_blob_sha": "65bb03853382be1ed0d82aed373f805173aaa6f5",
+        "conditional_edge_script_blob_sha": "29034c61fdd42a5e40272234b221d29cb95fb3ee",
+        "smoke_test_blob_sha": "b850845e977b9948e11a2ba925b421c6e21ff41e",
+        "branch_compare": {
+          "ahead_by": 2870,
+          "behind_by": 5
+        }
+      },
+      "impact": "Remote code is inspectable; local target checkout is absent and branch is highly divergent from main.",
+      "next_action": "Provision compatible checkout and reconcile branch lineage before code changes."
+    },
+    {
+      "capability": "binance_sdk",
+      "status": "BLOCKED",
+      "evidence": {
+        "packages": {
+          "@binance/connector": "NOT_INSTALLED",
+          "@nemesis-oss/binance-sdk": "NOT_INSTALLED",
+          "binance": "NOT_INSTALLED",
+          "binance-api-node": "NOT_INSTALLED"
+        },
+        "sdk_used": false
+      },
+      "impact": "No SDK execution; Binance public connector was used.",
+      "next_action": "Install the pinned SDK only inside the compatible project runtime if required."
+    },
+    {
+      "capability": "network_binance",
+      "status": "DEGRADED",
+      "evidence": {
+        "direct_time_endpoint": {
+          "http_status": 0,
+          "curl_exit": 6,
+          "error": "Could not resolve host"
+        },
+        "direct_exchange_info": {
+          "http_status": 0,
+          "curl_exit": 6,
+          "error": "Could not resolve host"
+        },
+        "connector_market_data": "SUCCESS",
+        "connector_http_status_headers": "NOT_EXPOSED",
+        "exchange_info_server_time_utc": "2026-11-13T06:02:01.704Z",
+        "exchange_info_staleness_seconds": 102411,
+        "mark_time_utc": "2026-11-14T10:28:53.001Z"
+      },
+      "impact": "Fresh mark/ticker/OI/funding/klines/depth/positioning snapshots returned, but fresh server-time drift and contract metadata are not validated.",
+      "next_action": "Restore direct DNS/HTTPS and re-probe /fapi/v1/time plus /fapi/v1/exchangeInfo."
+    },
+    {
+      "capability": "raw_historical_archive",
+      "status": "DEGRADED",
+      "evidence": {
+        "storage": "GitHub research/umbrella branch",
+        "local_raw_archive": "ABSENT",
+        "five_minute": {
+          "rows_total": 168032,
+          "rows_per_symbol": 42008,
+          "base_end_utc": "2021-02-07T02:55:00Z",
+          "cross_symbol_alignment": false,
+          "incremental_highwater_utc": "2026-11-14T10:20:00Z"
+        },
+        "fifteen_minute": {
+          "rows_total": 168008,
+          "rows_per_symbol": 42002,
+          "base_end_utc": "2021-11-25T18:45:00Z",
+          "cross_symbol_alignment": false,
+          "incremental_highwater_utc": "2026-11-14T10:00:00Z"
+        },
+        "one_hour": {
+          "rows_total": 215508,
+          "rows_per_symbol": 53877,
+          "start_utc": "2020-09-14T08:00:00Z",
+          "missing_hourly_opens_per_symbol": 28,
+          "rowcount_discrepancy": 8,
+          "incremental_highwater_utc": "2026-11-14T09:00:00Z"
+        },
+        "four_hour": {
+          "raw_rows": 53960,
+          "aligned_rows": 53816,
+          "canonical_rows": 53844,
+          "canonical_end_utc": "2026-11-05T16:00:00Z",
+          "raw_incremental_highwater_utc": "2026-11-13T12:00:00Z",
+          "page_sha_mismatches": 13
+        }
+      },
+      "impact": "No fully reconciled four-symbol, four-timeframe panel is ready for strategy inference.",
+      "next_action": "Backfill page 0023, reconcile page 0028, repair 1h gaps and 4h raw/canonical lineage."
+    },
+    {
+      "capability": "data_quality",
+      "status": "DEGRADED",
+      "evidence": {
+        "incremental_rows_appended": 68,
+        "rows_by_interval": {
+          "5m": 48,
+          "15m": 16,
+          "1h": 4
+        },
+        "forming_excluded_from_recent_fetch": 24,
+        "duplicates": 0,
+        "missing_intervals": 0,
+        "off_grid": 0,
+        "non_monotonic": 0,
+        "ohlc_failures": 0,
+        "non_finite": 0,
+        "non_positive_volume": 0,
+        "cross_symbol_alignment": true,
+        "contiguous_from_prior_highwater": true,
+        "delta_sha256": "32fe9272924ffd03b8459c1274aca4f6e420e5a85a9b416906cb31ba47b194e0",
+        "delta_readback_verified": true
+      },
+      "impact": "Today's incremental slice is clean; base archive defects remain.",
+      "next_action": "Keep the new slice immutable and repair base coverage/lineage separately."
+    },
+    {
+      "capability": "backtest_harness_smoke_test",
+      "status": "BLOCKED",
+      "evidence": {
+        "remote_harness": "scripts/backtest.ts exists",
+        "supported_timeframes": [
+          "15m",
+          "1h",
+          "4h"
+        ],
+        "five_minute_support": false,
+        "conditional_edge_min_n": 30,
+        "conditional_edge_confidence": 0.9,
+        "smoke_test_exists": true,
+        "smoke_test_executed": false,
+        "reason": "No local target checkout; Node/npm below engines; dependencies absent."
+      },
+      "impact": "No repository backtest, fixture smoke test or strategy experiment ran.",
+      "next_action": "Provision Node24/npm11 checkout; add 5m replay; raise min-n to >=100 and confidence to 0.95; run fixture twice and no-lookahead invariance."
+    },
+    {
+      "capability": "disk_storage",
+      "status": "PASS",
+      "evidence": {
+        "local_disk_free": "30G",
+        "remote_branch_writable": true,
+        "remote_files_written": true
+      },
+      "impact": "GitHub branch provides durable storage for this run's artifacts.",
+      "next_action": "Continue atomic file creation and exact readback verification."
+    },
+    {
+      "capability": "artifact_readback",
+      "status": "PASS",
+      "evidence": {
+        "delta_path": "research-data/binance-usdm/delta/binance_usdm_delta_20261114T1028Z_5m15m1h_completed.jsonl",
+        "delta_sha256": "32fe9272924ffd03b8459c1274aca4f6e420e5a85a9b416906cb31ba47b194e0",
+        "delta_rows": 68,
+        "delta_readback_verified": true,
+        "manifest_readback_verified": true,
+        "snapshot_readback_verified": true,
+        "archive_manifest_readback_verified": true,
+        "data_quality_artifact_readback_verified": true,
+        "registry_snapshot_readback_verified": true
+      },
+      "impact": "Core artifacts were reopened from the remote branch and matched their expected identities.",
+      "next_action": "Read back the run report, preflight, run manifest and updated queue before closing this run."
+    }
+  ],
+  "classification": "RESEARCH_EXECUTED",
+  "scope": "INCREMENTAL_ARCHIVE_APPEND_AND_CURRENT_MARKET_MONITORING",
+  "strategy_experiment_status": "RESEARCH_BLOCKED",
+  "oos_evaluated": false,
+  "next_blocker": "Compatible Node24/npm11 target checkout plus historical archive/derivatives/cost reconciliation."
+}

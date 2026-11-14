@@ -1,0 +1,78 @@
+{
+  "schema_version": "2.0.0",
+  "created_at_utc": "2026-11-14T05:10:54.395Z",
+  "repository": "shubhamtaywade82/crypto-trading-agent",
+  "branch": "research/raw-ohlcv-archive-20261108T1026Z",
+  "scope": "page-0028 5m/15m raw files; exact source replay, raw-content checksum reconciliation, and row-quality audit",
+  "source_endpoint": "GET /fapi/v1/klines via Binance USD-M public data connector",
+  "source_replay": {
+    "rows_requested": 12000,
+    "rows_returned": 12000,
+    "exact_row_comparisons": 12000,
+    "mismatches": 0,
+    "exact_match": true,
+    "retrieved_at_utc": "2026-11-14T05:10:54.395Z"
+  },
+  "original_manifest_findings": {
+    "sha256_mismatches": 8,
+    "blob_sha_mismatches": 4,
+    "raw_row_mismatches": 0
+  },
+  "corrected_manifest_findings": {
+    "sha256_mismatches": 0,
+    "blob_sha_mismatches": 0,
+    "raw_row_mismatches": 0
+  },
+  "per_symbol_continuity": {
+    "pass": 8,
+    "total": 8,
+    "from_page27": true
+  },
+  "common_window_alignment": {
+    "pass": false,
+    "reason": "Per-symbol pagination uses distinct page boundaries because symbol histories/listing dates differ; align downstream by symbol+openTime and carry missingness masks."
+  },
+  "row_quality": {
+    "rows": 12000,
+    "duplicates": 0,
+    "missing_intervals": 0,
+    "off_grid": 0,
+    "non_monotonic": 0,
+    "ohlc_failures": 0,
+    "non_finite": 0,
+    "non_positive_volume": 6,
+    "zero_volume_rows": 6,
+    "close_time_failures": 0,
+    "zero_volume_breakdown": {
+      "5m": 0,
+      "15m": 6
+    },
+    "zero_volume_by_symbol": {
+      "BTCUSDT": 3,
+      "ETHUSDT": 3,
+      "SOLUSDT": 0,
+      "XRPUSDT": 0
+    }
+  },
+  "prior_index_zero_volume_exclusions": 4,
+  "corrected_index_zero_volume_exclusions": 6,
+  "zero_volume_count_discrepancy_before": 2,
+  "zero_volume_count_discrepancy_after": 0,
+  "corrected_manifest_paths": {
+    "5m": "research-data/binance-usdm/5m/manifest-page-0028-reconciled-v2.json",
+    "15m": "research-data/binance-usdm/15m/manifest-page-0028-reconciled-v2.json"
+  },
+  "corrected_manifest_sha256": {
+    "5m": "7ba900e96954f6c037962177196e2a5afbcf112a7f4c3686170b46e4d24bd912",
+    "15m": "c707c58180f951cb6704de079768d2521e928b18a96a1c12326bf4f3dc4e36c2"
+  },
+  "corrected_manifest_blob_sha": {
+    "5m": "023e3f6e58cab3dad2aecd08cde0ed5e404d8b99",
+    "15m": "203683522fa2d8120379f788872af2e6db55aeee"
+  },
+  "original_manifest_paths": {
+    "5m": "research-data/binance-usdm/5m/manifest-page-0028.json",
+    "15m": "research-data/binance-usdm/15m/manifest-page-0028.json"
+  },
+  "interpretation": "All eight stored page-0028 files replay exactly against fresh Binance kline responses. Raw candle values are not corrupted. The original manifests contain incorrect SHA-256 values; the 15m manifest also has four stale Git blob SHAs. Corrected v2 manifests record current readback identities. The pages remain non-canonical until page-0027 is independently verified."
+}

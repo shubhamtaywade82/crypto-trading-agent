@@ -499,6 +499,8 @@ footer .legend { display: flex; gap: 12px; flex-wrap: wrap; }
   <div class="price-tick" id="priceEth"><span class="sym">ETH</span><span class="px">$3,500.00</span><span class="chg up">+0.00%</span></div>
   <div class="price-tick" id="priceSol"><span class="sym">SOL</span><span class="px">$130.00</span><span class="chg up">+0.00%</span></div>
   <div class="price-tick" id="priceXrp"><span class="sym">XRP</span><span class="px">$1.5000</span><span class="chg up">+0.00%</span></div>
+  <div class="meta-group" title="Seconds since the last Binance trade"><span class="meta-label">Feed</span><span class="meta-value" id="feedAge">—</span></div>
+  <div class="meta-group" title="Orders sent / filled / rejected this session"><span class="meta-label">Orders</span><span class="meta-value" id="orderStats">0 / 0 / 0</span></div>
   <div style="flex:1"></div>
   <div class="balance-pill" id="profilePill"><span class="lbl">Profile</span><span class="amt" id="profileText">paper_exchange · test-account-1 · sandbox</span></div>
   <div class="balance-pill"><span class="lbl">Equity</span><span class="amt" id="balEquity">$100,000.00</span></div>
@@ -957,6 +959,7 @@ function initialMargin(notional, lev) { return notional / lev; }
 // ============================================================
 // INDICATORS
 // ============================================================
+const EMA_FLIP_BAND_PCT = 0.02;
 function computeIndicators(symbol) {
   const ticks = S.ticks[symbol];
   if (!ticks || ticks.length < 2) return;
@@ -1025,7 +1028,10 @@ function computeIndicators(symbol) {
   // EMA trend direction (for signal context)
   if (n >= 2) {
     ind.prevAbove = ind.above;
-    ind.above = prices[n-1] > ind.ema;
+    // Per-trade price sits within noise of a 50-EMA, so a bare > flips every tick;
+    // hold the previous side until price clears the band.
+    const band = ind.ema * EMA_FLIP_BAND_PCT / 100;
+    if (ind.above === undefined || Math.abs(prices[n-1] - ind.ema) > band) ind.above = prices[n-1] > ind.ema;
     ind.trend = ind.above ? 'up' : 'down';
     ind.crossover = ind.prevAbove !== undefined && ind.prevAbove !== ind.above;
   }
@@ -1362,7 +1368,9 @@ async function syncWithBroker() {
       S.account.current_equity = parseFloat(acc.equity ?? acc.available_balance);
       S.account.realized_pnl = parseFloat(acc.realized_pnl ?? 0);
       S.account.unrealized_pnl = parseFloat(acc.unrealized_pnl ?? 0);
-      S.account.max_equity = parseFloat(acc.max_equity ?? acc.equity ?? acc.available_balance);
+      const reportedMaxEquity = parseFloat(acc.max_equity);
+      // NaN here made DD=NaN%, and NaN <= limit is false, so every order was rejected.
+      S.account.max_equity = Number.isFinite(reportedMaxEquity) ? reportedMaxEquity : S.account.current_equity;
       setComponentState('margin-ledger', 'connected', 'live');
       setComponentDetail('margin-ledger', `available <span class="v">$${fmt(S.account.available_balance, 2)}</span> · locked <span class="v">$${fmt(S.account.locked_margin, 2)}</span>`);
     }
@@ -1437,6 +1445,8 @@ let lastMarkPushTime = 0;
 
 function connectBinanceWs() {
   if (binanceWs) {
+    // Stale onclose would schedule another reconnect that closes this socket: endless 3s flap.
+    binanceWs.onclose = binanceWs.onerror = binanceWs.onmessage = null;
     try { binanceWs.close(); } catch (_) {}
   }
   try {
@@ -1445,7 +1455,6 @@ function connectBinanceWs() {
       S.binanceConnected = true;
       setComponentState('binance-ws', 'connected', 'live');
       setComponentDetail('binance-ws', '🟢 Binance Futures WS live · stream connected');
-      log('agent', 'tick', 'Binance Futures WS connected · live BTC, ETH, SOL & XRP stream active');
     };
     binanceWs.onmessage = (event) => {
       if (S.mode !== 'live' || !S.running) return;
@@ -1472,8 +1481,35 @@ function connectBinanceWs() {
   }
 }
 
+let tradesSinceFeedStat = 0;
+let lastTradeAt = 0;
+const orderStats = { sent: 0, filled: 0, rejected: 0 };
+const change24h = {};
+const FEED_STALE_MS = 5000;
+const CHANGE_24H_REFRESH_MS = 60000;
+function renderHealth() {
+  const feedEl = document.getElementById('feedAge');
+  const ageMs = now() - lastTradeAt;
+  const isLive = S.mode === 'live' && S.running && lastTradeAt > 0;
+  feedEl.textContent = isLive ? (ageMs / 1000).toFixed(1) + 's' : '—';
+  feedEl.style.color = isLive && ageMs > FEED_STALE_MS ? 'var(--red)' : '';
+  document.getElementById('orderStats').textContent = `${orderStats.sent} / ${orderStats.filled} / ${orderStats.rejected}`;
+}
+setInterval(renderHealth, 1000);
+
+async function refresh24hChange() {
+  try {
+    const res = await fetch('https://fapi.binance.com/fapi/v1/ticker/24hr');
+    const rows = await res.json();
+    rows.forEach(r => { if (S.prices[r.symbol] !== undefined) change24h[r.symbol] = parseFloat(r.priceChangePercent); });
+  } catch (_) { /* keep tick-to-tick fallback */ }
+}
+refresh24hChange();
+setInterval(refresh24hChange, CHANGE_24H_REFRESH_MS);
 function handleIncomingTrade(sym, price) {
   S.tickCount++;
+  tradesSinceFeedStat++;
+  lastTradeAt = now();
   S.prevPrices[sym] = S.prices[sym];
   S.prices[sym] = price;
   if (!S.ticks[sym]) S.ticks[sym] = [];
@@ -1590,7 +1626,7 @@ function brokerPipeline(orderId, clientOrderId, signal, risk, qty, price, side, 
 
     // 4. Risk validators
     setTimeout(() => {
-      const dd = ((S.account.max_equity - S.account.current_equity) / S.account.max_equity) * 100;
+      const dd = S.account.max_equity > 0 ? ((S.account.max_equity - S.account.current_equity) / S.account.max_equity) * 100 : 0;
       const vixOk = true; const marginOk = notional <= CFG.maxNotional;
       const ddOk = dd <= CFG.maxDrawdownPct;
       const posCount = Object.values(S.positions).filter(p => p.qty > 0).length;
@@ -1605,6 +1641,7 @@ function brokerPipeline(orderId, clientOrderId, signal, risk, qty, price, side, 
         postLedger('MARGIN_UNLOCKED', 0, requiredMargin, orderId, { reason: 'rejection' });
         log('exchange', 'order', `Order <span class="v">${orderId}</span> · status=<span class="err">rejected</span> · margin released`);
         setComponentState('orders-api', 'rejected', 'err');
+        orderStats.rejected++;
         return;
       }
 
@@ -1628,6 +1665,7 @@ function brokerPipeline(orderId, clientOrderId, signal, risk, qty, price, side, 
 }
 
 function applyFillToPosition(orderId, signal, risk, qty, price, side, leverage, fee, orderMarginLocked) {
+  orderStats.filled++;
   const symbol = signal.symbol;
   const fillSide = side === 'buy' ? 'long' : 'short';
   const existingPos = S.positions[symbol];
@@ -1886,6 +1924,9 @@ function maybeRunLiveAgentCycles(sym) {
   if (S.mode !== 'live' || !S.running) return;
   const currentTime = now();
   if (currentTime - lastLiveAgentCycleAt < CFG.tickIntervalMs) return;
+  const tradesPerSec = tradesSinceFeedStat * 1000 / (currentTime - lastLiveAgentCycleAt);
+  tradesSinceFeedStat = 0;
+  setComponentDetail('binance-ws', `🟢 live · <span class="num">${tradesPerSec.toFixed(0)}</span> trades/s · tick #${S.tickCount}`);
   lastLiveAgentCycleAt = currentTime;
   runSignalCycle(sym);
   runExecutorCycle();
@@ -1930,9 +1971,6 @@ function tick() {
     const activeCount = Object.values(S.positions).filter(p => p.qty > 0).length;
     setComponentState('position-tracker', 'polling', 'live');
     setComponentDetail('position-tracker', `<span class="k">GET</span> /api/positions · tick #${S.tickCount} · ${activeCount} active<br>` + (Object.values(S.positions).filter(p=>p.qty>0).map(p => `<span class="${p.side==='long'?'ok':'err'}">${p.side.toUpperCase()}</span> ${p.symbol} ${fmtAsset(p.qty,4)}`).join(' · ') || '— no positions'));
-    if (S.tickCount % 12 === 0) {
-      log('agent', 'tick', `<span class="k">GET</span> /api/positions · poll · equity=<span class="v">$${fmt(S.account.current_equity,2)}</span> · realized=<span class="${S.account.realized_pnl>=0?'ok':'err'}">${S.account.realized_pnl>=0?'+':''}$${fmt(S.account.realized_pnl,2)}</span> · DD=${((S.account.max_equity - S.account.current_equity) / S.account.max_equity * 100).toFixed(2)}%`);
-    }
 
     if (S.liveApi) {
       fetch(`${CFG.apiBaseUrl}/account`, { headers: { 'X-Account-Id': CFG.liveAccountId, 'X-API-Key': CFG.apiKey } })
@@ -1977,6 +2015,8 @@ function submitOrderWithQty(signal, risk, qty) {
   const price = signal.entry || S.prices[symbol];
   const leverage = risk.leverage;
   S.ordCounter++;
+  orderStats.sent++;
+  orderStats.sent++;
   const orderId = `ord_${String(S.ordCounter).padStart(3,'0')}`;
   const clientOrderId = `${symbol}-${signal.agent}-${now()}-${Math.random().toString(36).slice(2,8)}`;
   log('agent', 'order', `→ <span class="k">POST</span> /api/orders · <span class="k">${side}</span> <span class="sym">${symbol}</span> qty=<span class="num">${fmtAsset(qty,4)}</span> @ <span class="num">$${fmt(price,2)}</span> · ${leverage}× · client_oid=<span class="v">…${clientOrderId.slice(-6)}</span>`);
@@ -2006,7 +2046,7 @@ function renderMeta() {
     if (!el) continue;
     const px = S.prices[sym];
     const prev = S.prevPrices[sym];
-    const chg = prev ? ((px - prev) / prev) * 100 : 0;
+    const chg = change24h[sym] ?? (prev ? ((px - prev) / prev) * 100 : 0);
     const dp = sym === 'XRPUSDT' ? 4 : 2;
     el.querySelector('.px').textContent = '$' + fmt(px, dp);
     const chgEl = el.querySelector('.chg');
@@ -2086,6 +2126,7 @@ function renderPositions() {
           <div class="position-tags">
             <span class="tag-side ${sideCls}">${isFlat ? 'FLAT' : (isLong ? 'LONG' : 'SHORT')}</span>
             <span class="tag-state ${p.lifecycleState || (isFlat ? 'flat' : 'open')}">${(p.lifecycleState || (isFlat ? 'flat' : 'open')).toUpperCase()}</span>
+            ${!isFlat && S.prices[p.symbol] === undefined ? '<span class="tag-state liquidated" title="No live price feed for this symbol: PnL and liq distance use entry price">NO FEED</span>' : ''}
             ${p.leverage > 1 ? `<span class="tag-leverage">${p.leverage}× ${p.marginType}</span>` : ''}
           </div>
         </div>
@@ -2202,7 +2243,7 @@ function renderMarketMatrix() {
   const symbols = ['BTCUSDT', 'ETHUSDT', 'SOLUSDT', 'XRPUSDT'];
   tbody.innerHTML = symbols.map(sym => {
     const px = S.prices[sym], prev = S.prevPrices[sym];
-    const chg = prev ? ((px - prev) / prev) * 100 : 0;
+    const chg = change24h[sym] ?? (prev ? ((px - prev) / prev) * 100 : 0);
     const dp = sym === 'XRPUSDT' ? 4 : 2;
     const ind = S.indicators[sym] || {};
     const pos = S.positions[sym];

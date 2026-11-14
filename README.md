@@ -84,6 +84,16 @@ Setting `COINDCX_API_KEY` or `COINDCX_API_SECRET` with `MODE=live` is refused at
 would take the live path and skip the Binance guards. `src/coindcx/coindcxClient.ts` (an `ExchangeApi` adapter) is
 present, but no `MODE=live` path reaches it. Enabling CoinDCX live needs the guard set ported to that venue first (issue #31).
 
+## Strict PaperExchange runner
+
+For a session that must use the remote PaperExchange account — and must never fall back to the local in-memory PaperEngine — use:
+
+```bash
+npm run dev:paper-exchange
+```
+
+This command refuses startup unless `MODE=paper`, Binance testnet is disabled, and `PAPER_EXCHANGE_URL`, `PAPER_EXCHANGE_ACCOUNT_ID` and `PAPER_EXCHANGE_API_KEY` are valid. It defaults the URL to `http://127.0.0.1:3100`. It does not require Binance trading keys. See [docs/PAPER_EXCHANGE_ONLY.md](docs/PAPER_EXCHANGE_ONLY.md) for the component map, strategy extension steps and current fill-model limitations.
+
 ---
 
 ## Verifying the live path on the Binance testnet

@@ -19,5 +19,19 @@ assertPaperExchangeOnly({
   paperExchange: config.paperExchange,
 });
 
+const healthUrl = `${config.paperExchange!.url.replace(/\\/+$/, '')}/up`;
+let health: Response;
+try {
+  health = await fetch(healthUrl, { signal: AbortSignal.timeout(3_000) });
+} catch (error) {
+  throw new Error(
+    `PaperExchange is unreachable at ${healthUrl}; start the service before starting the agent.`,
+    { cause: error },
+  );
+}
+if (!health.ok) {
+  throw new Error(`PaperExchange health check failed: GET ${healthUrl} returned HTTP ${health.status}.`);
+}
+
 // Reuse the existing cockpit, agents, risk gates, Ollama advisor and PaperExchange broker.
 await import('../src/index.js');

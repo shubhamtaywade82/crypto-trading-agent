@@ -20,6 +20,11 @@ const LOCAL_SIGNATURE = 0x04034b50;
 
 /** Text of the first entry of a zip. Handles stored and deflated entries, which is all the archive uses. */
 export function readFirstZipEntry(zip: Buffer): string {
+  return readFirstZipEntryBytes(zip).toString('utf8');
+}
+
+/** Bytes of the first entry; use this when the text could exceed the 512 MB string limit (busy aggTrades days). */
+export function readFirstZipEntryBytes(zip: Buffer): Buffer {
   let eocd = -1;
   for (let i = zip.length - 22; i >= Math.max(0, zip.length - 22 - 0xffff); i -= 1) {
     if (zip.readUInt32LE(i) === EOCD_SIGNATURE) { eocd = i; break; }
@@ -33,8 +38,8 @@ export function readFirstZipEntry(zip: Buffer): string {
   if (zip.readUInt32LE(localOffset) !== LOCAL_SIGNATURE) throw new Error('corrupt zip local header');
   const dataStart = localOffset + 30 + zip.readUInt16LE(localOffset + 26) + zip.readUInt16LE(localOffset + 28);
   const body = zip.subarray(dataStart, dataStart + compressedSize);
-  if (method === 0) return body.toString('utf8');
-  if (method === 8) return inflateRawSync(body).toString('utf8');
+  if (method === 0) return Buffer.from(body);
+  if (method === 8) return inflateRawSync(body);
   throw new Error(`unsupported zip compression method ${method}`);
 }
 

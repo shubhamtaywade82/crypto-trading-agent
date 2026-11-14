@@ -948,3 +948,87 @@ Frozen, nothing may be changed after the first forward event:
   this is a **monitor, not a usable test**; it is kept because it costs nothing, and no conclusion is drawn before 100 events. Any rule change restarts the count.
 - **Tooling:** `scripts/shadow-listings.ts`, run once per day; journal `data/shadow/listings.jsonl`, state `data/shadow/listings-state.json`.
   No orders are placed; it reads public exchange info and klines only.
+
+## 29. Layer A — do multi-timeframe price, volume and flow features predict the next move? (registered 2026-11-14, before any prediction was computed)
+
+Context: a context-aware engine that enters and manages trades from current data (hold / cut a loser, hold / cut a winner by trend, volume,
+flow and time) can only add value if the state it reads carries information about what price does next. This study measures that
+information on its own, net of costs, before any entry/exit policy is built (Layer B is built only if this gate passes).
+Disclosure: the 2025-01 → 2026-10 window was used to test F9 and the listing short (§26–§27) and cannot be called untouched; it is
+used here as the most recent walk-forward period, with every model fitted only on earlier data.
+
+- **Decision points:** every 15 minutes (a closed 15m bar), per symbol, SOLUSDT/ETHUSDT/XRPUSDT. The label is the log return from the **next 1m open** to the close
+  of minute k + h, for h ∈ {15m, 1h, 4h, 24h}; samples whose minute path has a gap are dropped.
+- **Features (all causal, from closed 1m bars and higher timeframes built from them via `MtfFrame`/`closedBar`):**
+  returns over the last 5, 15, 60, 240, 1440 minutes; 1h and 4h EMA50/EMA200 gap (÷ close) and the 4h EMA50 six-bar slope;
+  (close − 1h EMA50) ÷ ATR(1h); RSI14 on 15m and 1h; ATR14 ÷ close on 15m, 1h, 4h and ATR(15m) ÷ ATR(1h);
+  log(volume of the last 60 min ÷ mean 60-min volume of the prior 24h); taker-buy share over the last 15 and 60 minutes (− 0.5);
+  position in the last 24 1h bars' range (0–1); sin/cos of the UTC hour; last settled funding rate.
+  **Tick set (A2 only, from the 1m reductions of aggTrades/bookDepth, ETH/SOL/XRP, 2025-01 onward):** net aggressor share (buy − sell)/(buy + sell) quote over 15 and 60 minutes;
+  large-trade net share (buys − sells ≥ 50 k USDT, ÷ total quote) over 15 and 60 minutes; log(15-minute trade count ÷ its mean over the prior 24h);
+  book imbalance (bid − ask)/(bid + ask) of resting notional within 1% and within 5%, last snapshot at or before the decision minute.
+- **Model:** one ridge regression per horizon and feature set (fixed λ = 10 on standardised features, winsorised at ±5), pooled across the three symbols.
+  Purged walk-forward: 6-month train, 3-month test, stepping 3 months; training rows whose label window reaches the test start are dropped.
+  A1 (price/volume/taker/funding features): test folds 2021-07 → 2026-10 (SOL/ETH/XRP). A2 (A1 + tick set): test folds 2025-07 → 2026-10.
+  **Eight models** (4 horizons × A1, A2): N = 103 + 8 = **111**.
+- **Trade rule applied to predictions:** in each test fold take the samples whose |prediction| is at or above the 90th percentile of |prediction| on that fold's training
+  rows; go long if the prediction is positive, short if negative; one round trip per sample at 12 bps (stress 1.5×). Overlapping samples are not
+  made independent: the interval is a day-clustered bootstrap.
+- **Gate to build Layer B (every condition, for at least one horizon h ≥ 1h, on A1 or A2):**
+  1. net mean return per selected sample > 0 with a one-sided 90% day-clustered lower bound > 0 (pooled over symbols and folds);
+  2. mean > 0 on at least 2 of 3 symbols;
+  3. mean > 0 in both calendar years 2025 and 2026 (and, for A1, in at least 4 of the 6 calendar years 2021–2026);
+  4. mean > 0 at 1.5× costs;
+  5. Spearman correlation between prediction and realised label on the test folds > 0 with a day-clustered lower bound > 0.
+- **Also reported, not gated:** per-horizon selected-sample count, mean gross move, the share of selected samples with an expected move ≥ 1% (the user's
+  per-trade target), long vs short, ridge coefficient signs per fold (stability), and the same table for a model fed shuffled labels (a null that should print ≈ 0).
+- **If the gate fails:** the engine is not built, the result is recorded as closed, and the feature set may not be re-tuned on this data.
+
+### §29 result — A1, price/volume/taker/funding features (run 2026-11-14, N = 111)
+
+`npx tsx scripts/state-study.ts --set A1` → `research-runs/state-study-A1-20261114T1144Z.json`. 627,381 decision points (every 15 minutes, SOL/ETH/XRP,
+2021-07 → 2026-10, 21 purged walk-forward folds, 22 features, ridge λ = 10). Strongest 10% of predictions per fold, one 12 bps round trip each.
+
+| Horizon | Picks | Gross | Net | 90% LCB | Net at 1.5× | Rank IC (LCB) | Selected with expected move ≥ 1% | Gate |
+|---|---|---|---|---|---|---|---|---|
+| 15m | 57,952 | +0.012% | −0.108% | −0.113% | −0.168% | +0.0150 (+0.0126) | 0% | fail |
+| 1h | 62,408 | +0.037% | −0.083% | −0.098% | −0.143% | −0.0036 (−0.0075) | 0% | fail |
+| 4h | 65,383 | +0.079% | −0.041% | −0.098% | −0.101% | −0.0173 (−0.0247) | 4.8% | fail |
+| 24h | 63,715 | +0.060% | −0.060% | −0.301% | −0.120% | −0.0081 (−0.0181) | 87.9% | fail |
+
+- **The features carry no usable information.** Gross move per selected trade is 0.01–0.08%, a tenth to two thirds of the 0.12% round-trip
+  cost, and the out-of-sample rank IC is ±0.02 at every horizon. Net is negative on every symbol and in nearly every year (2021 is the only
+  period with positive means at 1h–24h, and it does not repeat).
+- **Pipeline check:** the shuffled-label null (`--null`) prints the same picture: gross +0.006% / +0.014% / +0.045% / −0.016%, IC +0.001 / −0.006 / −0.012 / +0.030.
+  The real model is not distinguishable from labels with no information. The null's 24h IC (+0.030, LCB +0.021) also shows
+  that the day-clustered lower bound on a rank IC is too loose for overlapping 24h labels; the IC condition would need a stricter interval before it could be
+  trusted at long horizons, a reason not to read the 15m IC (+0.015) as signal.
+- **Consequence:** per §29 the Layer B engine is **not built on A1**. Entry and hold/exit decisions made from these features cannot beat a
+  random rule, because the features do not predict the next move; the decision layer would only reshuffle noise.
+- **A2 (adds aggressor flow, large trades, trade intensity and book depth) is pending** the throttled tick backfill (`aggTrades`, `bookDepth` for ETH/SOL/XRP,
+  2025-01 → 2026-10). It is the only remaining Layer A run.
+
+### §29 result — A2, adds tick and book features (run 2026-11-14, N = 111)
+
+`npx tsx scripts/state-study.ts --set A2` → `research-runs/state-study-A2-*.json`. 191,220 decision points, ETH/SOL/XRP, 5 purged walk-forward folds
+(2025-07 → 2026-10), 29 features (the 22 above plus net aggressor share, large-trade net share, trade intensity and 1%/5% book imbalance, from
+3,593 reduced aggTrades/bookDepth days; 5 days missing in the archive). Same selection rule and costs.
+
+| Horizon | Picks | Gross | Net | 90% LCB | Rank IC (LCB) | Selected with expected move ≥ 1% | Gate |
+|---|---|---|---|---|---|---|---|
+| 15m | 14,878 | +0.003% | −0.117% | −0.125% | +0.0114 (+0.0067) | 0% | fail |
+| 1h | 15,372 | +0.020% | −0.100% | −0.124% | −0.0111 (−0.0194) | 0% | fail |
+| 4h | 15,690 | −0.016% | −0.136% | −0.223% | −0.0302 (−0.0450) | 1.1% | fail |
+| 24h | 18,951 | −0.094% | −0.214% | −0.526% | −0.0346 (−0.0557) | 88.7% | fail |
+
+The shuffled-label null prints gross −0.001% / −0.017% / −0.030% / −0.420% and IC +0.013 / +0.005 / +0.010 / +0.019, the same
+as the real model: aggressor flow, large trades, trade intensity and book imbalance add no out-of-sample information at 15 minutes to 24 hours, net of costs.
+The IC at 15m (+0.011) equals the null's (+0.013), so it is noise, not signal.
+
+### §29 conclusion — Layer A gate failed on both feature sets; Layer B is not built
+
+Neither the multi-timeframe price/volume/taker/funding set (627 k decision points, 2021-07 → 2026-10) nor the same set plus tick and book features
+(191 k points, 2025-07 → 2026-10) predicts the next 15 minutes to 24 hours better than shuffled labels, and the selected trades earn 0.00–0.08% gross against a 0.12% cost.
+A rule engine that holds, cuts or trails a trade from this state cannot be better than a random rule, because the state does not say what price does next. Per §29 the
+engine (`ContextEngine`) is **not built**, and the feature set may not be re-tuned on this data. Reusable pieces from this work, which carry no edge claim: the per-minute `manage` hook
+in `SignalBacktest`, the tick/book reducers (`archiveTicks`), `StateFeatures`, `Ridge` and the walk-forward study harness.

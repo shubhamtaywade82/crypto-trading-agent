@@ -3,12 +3,13 @@
  * validates each file and writes a manifest. Raw zips are kept so every research number traces to exact source bytes.
  *
  *   npx tsx scripts/archive-backfill.ts [--from 2023-01-01] [--to 2023-01-01] [--symbols SOLUSDT,ETHUSDT,XRPUSDT,BTCUSDT]
- *     [--datasets klines,markPriceKlines,fundingRate,metrics]
+ *     [--datasets klines,markPriceKlines,fundingRate,metrics,aggTrades,bookDepth] [--pause-ms 5000] [--workers 2]
  */
 import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { parseKlineCsv, readFirstZipEntry, validateCandles } from '../src/backtesting/archiveKlines.js';
+import { backfillTicks, type TickDataset } from '../src/backtesting/archiveTicks.js';
 
 const BASE = 'https://data.binance.vision/data/futures/um';
 const ROOT = path.resolve('data/cache/vision');
@@ -167,6 +168,12 @@ async function main(): Promise<void> {
   const untilMs = Math.min(today, Date.parse(`${arg('to', iso(today))}T00:00:00Z`));
   const datasets = new Set(arg('datasets', 'klines,markPriceKlines,fundingRate,metrics').split(','));
   const symbols = arg('symbols', 'SOLUSDT,ETHUSDT,XRPUSDT,BTCUSDT').split(',');
+  const tickSets = [...datasets].filter((d): d is TickDataset => d === 'aggTrades' || d === 'bookDepth');
+  if (tickSets.length > 0) {
+    console.log(`tick backfill ${tickSets.join(',')} for ${symbols.join(',')} from ${iso(fromMs)} until ${iso(untilMs)} (exclusive), reduced to 1m and raw files discarded`);
+    console.log(JSON.stringify(await backfillTicks({ symbols, datasets: tickSets, fromMs, toMs: untilMs, root: 'data/cache', pauseMs: Number(arg('pause-ms', '5000')), workers: Number(arg('workers', '2')) })));
+    if (tickSets.length === datasets.size) return;
+  }
   const files = symbols.flatMap((s) => planFiles(s, fromMs, untilMs, datasets));
   console.log(`planning ${files.length} files for ${symbols.join(',')} from ${iso(fromMs)} until ${iso(untilMs)} (exclusive)`);
   const firstPass = await runPool(files);

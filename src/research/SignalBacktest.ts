@@ -50,9 +50,18 @@ export interface Signal {
    * this many minutes (so queue position never matters). No fill, no trade. The hold still ends at the nominal deadline.
    */
   makerEntryWindowMinutes?: number;
+  /**
+   * Called after every closed 1m bar while the trade is open, with only information up to that bar. EXIT fills at the next 1m
+   * open; MOVE_STOP can only tighten (a looser stop is ignored). Lets a rule engine hold or cut a position from current market data.
+   */
+  manage?: (state: ManageState) => ManageAction;
 }
 
-export type ExitReason = 'STOP' | 'TARGET' | 'INVALIDATED' | 'TIME' | 'LIQUIDATED' | 'END_OF_DATA';
+/** What `Signal.manage` sees about the open trade after minute `minute` closed. */
+export interface ManageState { minute: number; side: 1 | -1; entry: number; stop: number; extreme: number; close: number; unrealizedR: number; ageMinutes: number }
+export type ManageAction = { action: 'HOLD' } | { action: 'EXIT' } | { action: 'MOVE_STOP'; stop: number };
+
+export type ExitReason = 'STOP' | 'TARGET' | 'INVALIDATED' | 'TIME' | 'LIQUIDATED' | 'END_OF_DATA' | 'MANAGED';
 
 export interface Trade {
   label: string; side: 1 | -1; hour: number; stopDistance: number; entryTime: number; exitTime: number; entry: number; exit: number; reason: ExitReason;
@@ -151,6 +160,18 @@ function priceAtOrBefore(series: Float64Array, i: number, pos: Open): number {
   return pos.entry;
 }
 
+/** Runs the signal's `manage` callback for minute i; returns true when it asked to exit at the next open. */
+function applyManage(market: Market, pos: Open, i: number): boolean {
+  const { side, manage, stopDistance } = pos.signal;
+  const { high, low, close } = market.trade;
+  const price = side === 1 ? high[i]! : low[i]!;
+  if (Number.isFinite(price) && side * (price - pos.extreme) > 0) pos.extreme = price;
+  if (!manage || !Number.isFinite(close[i]!)) return false;
+  const decision = manage({ minute: i, side, entry: pos.entry, stop: pos.stop, extreme: pos.extreme, close: close[i]!, unrealizedR: (side * (close[i]! - pos.entry)) / stopDistance, ageMinutes: i - pos.entryIndex + 1 });
+  if (decision.action === 'MOVE_STOP' && side * (decision.stop - pos.stop) > 0) pos.stop = decision.stop;
+  return decision.action === 'EXIT';
+}
+
 /** Walks one position minute by minute until it exits. */
 export function simulateTrade(market: Market, signal: Signal, costs: CostModel = DEFAULT_COSTS): Trade | null {
   const pos = openPosition(market, signal);
@@ -163,6 +184,7 @@ export function simulateTrade(market: Market, signal: Signal, costs: CostModel =
     const hit = intraminuteExit(market, pos, i);
     if (hit) return closeTrade(market, pos, i, hit.price, hit.reason, costs);
     settleFunding(market, pos, i);
+    if (pos.signal.manage && i + 1 < deadline && applyManage(market, pos, i)) exitNextOpen = 'MANAGED';
     if (i + 1 >= deadline) return closeTrade(market, pos, i, priceAtOrBefore(market.trade.close, i, pos), 'TIME', costs);
     const minuteEnd = market.trade.start + (i + 1) * MINUTE_MS;
     if (minuteEnd % HOUR_MS === 0 && onHourClose(market, pos, i, (minuteEnd - market.hourStart) / HOUR_MS - 1)) exitNextOpen = 'INVALIDATED';

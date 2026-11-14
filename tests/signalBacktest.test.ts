@@ -73,3 +73,24 @@ test('a time exit that lands on a missing minute exits at the latest real price,
   assert.equal(t.exit, 103);
   assert.ok(Number.isFinite(t.netR));
 });
+
+test('manage sees each closed minute once, only the past, and EXIT fills at the next open', () => {
+  const seen: number[] = [];
+  const m = market({ 70: { close: 102, high: 102 }, 71: { open: 103, high: 103, low: 103, close: 103 } });
+  const t = simulateTrade(m, long({ manage: (s) => { seen.push(s.minute); return s.minute === 70 ? { action: 'EXIT' } : { action: 'HOLD' }; } }), ZERO)!;
+  assert.equal(t.reason, 'MANAGED');
+  assert.equal(t.exit, 103, 'fills at the open of minute 71, not at the minute-70 close');
+  assert.deepEqual(seen, Array.from({ length: 11 }, (_, k) => 60 + k));
+});
+
+test('manage reports unrealized R and age, and can only tighten the stop', () => {
+  const states: { unrealizedR: number; ageMinutes: number; stop: number }[] = [];
+  const m = market({ 61: { close: 102, high: 102 }, 70: { open: 99, high: 99, low: 99, close: 99 } });
+  const t = simulateTrade(m, long({ manage: (s) => { states.push(s); return s.minute === 60 ? { action: 'MOVE_STOP', stop: 90 } : s.minute === 61 ? { action: 'MOVE_STOP', stop: 101 } : { action: 'HOLD' }; } }), ZERO)!;
+  assert.equal(states[1]!.unrealizedR, 1);
+  assert.equal(states[1]!.ageMinutes, 2);
+  assert.equal(states[1]!.stop, 98, 'the loosening request to 90 was ignored');
+  assert.equal(t.reason, 'STOP');
+  assert.equal(t.exit, 100, 'the tightening to 101 took effect: price is back at 100, so the stop fills at the next open');
+  assert.equal(t.exitTime, 62 * MINUTE_MS);
+});

@@ -53,7 +53,7 @@ Source panel: 13,461 completed 4h bars per symbol from 2020-09-14 08:00Z through
 | BTC | SIDEWAYS_LOW 25.56% (11.5); BULL_LOW 16.05% (12); BEAR_HIGH 11.79% (7) | 0.634% | 93.03% | SIDEWAYS_LOW 97.05% | 0.202 |
 | ETH | SIDEWAYS_LOW 18.58% (9); BULL_NORMAL 16.24% (8); BEAR_HIGH 14.03% (8) | 0.746% | 92.64% | SIDEWAYS_LOW 95.64% | 0.108 |
 | SOL | SIDEWAYS_LOW 24.77% (10); BEAR_LOW 12.86% (7); BULL_NORMAL 11.86% (5.5) | 0.586% | 92.38% | SIDEWAYS_LOW 96.73% | 0.297 |
-| XRP | BEAR_LOW 17.12% (14); SIDEWAYS_LOW 18.86% (9.5); BEAR_NORMAL 14.23% (8) | 0.554% | 92.91% | BEAR_LOW 96.16% | 0.128 |
+| XRP | SIDEWAYS_LOW 18.86% (9.5); BEAR_LOW 17.12% (14); BEAR_NORMAL 14.23% (8) | 0.554% | 92.91% | BEAR_LOW 96.16% | 0.128 |
 
 Shock states had median duration one 4h bar for all symbols. The largest train/test distribution shift diagnostic is SOL (JSD 0.297), followed by BTC (0.202), XRP (0.128) and ETH (0.108); these are distribution diagnostics, not p-values or evidence of a strategy edge.
 
@@ -78,6 +78,19 @@ The accessible registry contains five SOL-specific entries: four INSUFFICIENT_EV
 | BULL_COMPRESS - volatility contraction breakout | INSUFFICIENT_EVIDENCE | 18 | 33.3% | 11.1% | -0.205 [-0.723, +0.295] | 0.687 | 7.43R | -23.27 USDT |
 | BEAR_COMPRESS - volatility contraction breakout | INSUFFICIENT_EVIDENCE | 26 | 34.6% | 19.2% | -0.115 [-0.683, +0.371] | 0.814 | 7.81R | -0.53 USDT |
 
+
+### Additional stored OOS diagnostics
+
+| Strategy | Eligible context observations | Average win / loss R | Exposure | Turnover (USDT) | Baseline comparison |
+|---|---:|---:|---:|---:|---|
+| Donchian BULL_LOW | Not recorded | +1.298 / -0.928 | 10.52% | 16,364 | 125-trade unconditional baseline: mean -0.080R, PF 0.862, DD 21.56R, PnL -76.09 USDT/SOL. |
+| SIDEWAYS_LOW failed-breakout fade | 1,291 | +1.005 / -1.031 | 13.36% | 24,935 | 214-trade baseline: mean -0.011R, PF 1.064, DD 23.01R, PnL +17.39 USDT/SOL. |
+| BEAR_NORMAL pullback recross | Not recorded | +1.078 / -1.033 | 2.61% | 2,054 | BTC-filter ablation mean -0.152R/PF 0.815; buy-and-hold -95.42 USDT/SOL. |
+| BULL_COMPRESS volatility breakout | 320 | Not reported | Not reported | Not reported | Not stored in the registry entry. |
+| BEAR_COMPRESS volatility breakout | 407 | Not reported | Not reported | Not reported | Not stored in the registry entry. |
+
+Percentage net return and Sharpe/Sortino are not present in the stored entries; quote PnL per SOL is shown where available. Eligible observations, average win/loss, exposure and turnover are marked not recorded where the source artifact omits them. The failed-fade OOS used a circular moving-block bootstrap (2,000 reps, block length 5); the registry retains the other interval details and failure modes.
+
 Only the SIDEWAYS_LOW failed-breakout fade is genuinely REJECTED by an OOS test. The other four fail the sample/uncertainty gates and must remain INSUFFICIENT_EVIDENCE. Existing tests use a 15bp round-trip proxy that is not calibrated to account-specific fills. Do not transfer SOL results to ETH or XRP.
 
 ## 4. Key discoveries
@@ -100,6 +113,17 @@ Only the SIDEWAYS_LOW failed-breakout fade is genuinely REJECTED by an OOS test.
 | XRP | Bear; ATR percentile 0.87 | Bear | Bear; z=-2.43; volume 10.4x; downside break | Bear; +0.48% last bar bounce | -2.76% | 0.661 | +1.12pp |
 
 All four symbols have bearish EMA alignment on 5m/15m/1h/4h. 4h remains inside its prior 20-bar range; 15m has a downside break on all four; 5m has a positive last bar after the 15m selloff. BTC/ETH/SOL 15m one-bar z-scores are below -3; XRP has high volume but z=-2.43. This is a shock/transition warning, not a short signal.
+
+### Current price, derivatives and liquidity measurements
+
+| Symbol | Last | Mark | 24h change | 24h high / low | 24h quote volume | OI contracts | OI 1h change | Top spread |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| BTCUSDT (reference) | 67,387.70 | 67,377.58 | -4.30% | 70,454 / 66,850.4 | 19.32B USDT | 97,338.576 | +0.111% | 0.015bp |
+| ETHUSDT | 1,899.15 | 1,899.52 | -4.931% | 1,999.03 / 1,875.00 | 11.81B USDT | 2,303,390.859 | +0.079% | 0.053bp |
+| SOLUSDT | 75.58 | 75.6008 | -6.252% | 82.38 / 74.96 | 2.15B USDT | 9,355,436.01 | +0.193% | 1.323bp |
+| XRPUSDT | 0.9963 | 0.99593 | -2.762% | 1.0433 / 0.9831 | 862.48M USDT | 295,742,998.2 | +0.046% | 1.005bp |
+
+Prices and 24h statistics are from the ticker/mark snapshot; OI is the live open-interest endpoint. OI percentage changes use the latest 1h OI-statistics bucket (02:00Z versus 01:00Z), not a same-instant calculation. Top spread is the full best-bid/ask spread, not estimated round-trip execution cost.
 
 Current premiumIndex lastFundingRate fields are BTC 0.001053%, ETH 0.000461%, SOL 0.004878%, XRP 0.003390%. Latest settled funding at 00:00Z is 0.005972%, 0.001200%, 0.006550%, 0.005028% respectively; all intervals are 8h and next funding is 08:00Z. None exceeds |0.05%|. One-hour OI changes are small positives: BTC +0.111%, ETH +0.079%, SOL +0.193%, XRP +0.046%. Taker buy/sell ratios for the 01:00Z hour are BTC 1.032, ETH 0.669, SOL 0.769, XRP 0.856. Global long/short account ratios at 02:00Z are 3.24-3.74; these are account ratios, not notional positions and not proof of crowding.
 

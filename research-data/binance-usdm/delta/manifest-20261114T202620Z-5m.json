@@ -1,0 +1,94 @@
+{
+  "schema_version": "1.0.0",
+  "run_id": "context-strategy-20261114T202620Z-run10",
+  "created_at_utc": "2026-11-14T20:26:20.208Z",
+  "verified_at_utc": "2026-11-14T20:26:20.208Z",
+  "repository": "shubhamtaywade82/crypto-trading-agent",
+  "branch": "research/raw-ohlcv-archive-20261108T1026Z",
+  "source": "Binance USD-M public market-data connector; no SDK; direct HTTPS DNS unavailable.",
+  "source_endpoint": "GET /fapi/v1/klines",
+  "symbols": [
+    "BTCUSDT",
+    "ETHUSDT",
+    "SOLUSDT",
+    "XRPUSDT"
+  ],
+  "intervals": [
+    "5m"
+  ],
+  "previous_highwater_utc_by_interval": {
+    "5m": "2026-11-14T20:15:00.000Z"
+  },
+  "latest_completed_open_utc_by_interval": {
+    "5m": "2026-11-14T20:20:00.000Z"
+  },
+  "next_start_utc_by_interval": {
+    "5m": "2026-11-14T20:25:00.000Z"
+  },
+  "rows": 4,
+  "bytes": 1169,
+  "sha256": "5b2351cc24605a244dbecd4118a5eaab605fabc512dc2ef517a7c3159dc5b81e",
+  "delta_git_blob_sha": "c0dd587f7b2af4f2c224d62d40b4c523ea371604",
+  "rows_fetched": 4,
+  "completed_rows": 4,
+  "forming_rows_excluded": 0,
+  "pre_highwater_rows_excluded": 0,
+  "rows_by_interval": {
+    "5m": 4
+  },
+  "rows_by_symbol": {
+    "BTCUSDT": 1,
+    "ETHUSDT": 1,
+    "SOLUSDT": 1,
+    "XRPUSDT": 1
+  },
+  "quality": {
+    "duplicates": 0,
+    "missing_intervals": 0,
+    "off_grid": 0,
+    "non_monotonic": 0,
+    "ohlc_failures": 0,
+    "non_finite": 0,
+    "non_positive_volume": 0,
+    "close_time_failures": 0,
+    "forming_rows_included": 0,
+    "cross_symbol_alignment": true,
+    "contiguous_from_prior_highwater": true
+  },
+  "raw_only": true,
+  "delta": {
+    "path": "research-data/binance-usdm/delta/binance_usdm_delta_20261114T202620Z_5m_completed.jsonl",
+    "sha256": "5b2351cc24605a244dbecd4118a5eaab605fabc512dc2ef517a7c3159dc5b81e",
+    "bytes": 1169,
+    "rows": 4,
+    "blob_sha": "c0dd587f7b2af4f2c224d62d40b4c523ea371604",
+    "readback_verified": true
+  },
+  "experiment": {
+    "id": "DQ-20261114T202620Z",
+    "type": "incremental_raw_archive_integrity",
+    "status": "EXECUTED",
+    "scope": "DATA_QUALITY_ONLY; not a strategy experiment",
+    "hypothesis": "The four symbols' completed 5m bars strictly after the verified 20:15Z highwater append without gaps, duplicates, off-grid timestamps, OHLCV failures or cross-symbol misalignment.",
+    "entrypoint": "functions.exec inline deterministic validator",
+    "lookahead": false,
+    "metrics": {
+      "rows_appended": 4,
+      "duplicates": 0,
+      "missing_intervals": 0,
+      "off_grid": 0,
+      "ohlc_failures": 0,
+      "non_finite": 0,
+      "non_positive_volume": 0,
+      "close_time_failures": 0,
+      "forming_rows_included": 0,
+      "cross_symbol_alignment": true,
+      "contiguous_from_prior_highwater": true
+    }
+  },
+  "limitations": [
+    "This is an incremental slice only; it does not repair partial 5m base coverage or page-28 canonical alignment.",
+    "1h bridge and 4h provenance reconciliation remain blocked.",
+    "No strategy experiment or OOS evaluation was run."
+  ]
+}

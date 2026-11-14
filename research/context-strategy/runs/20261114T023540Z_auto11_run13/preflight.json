@@ -1,0 +1,138 @@
+{
+  "schema_version": "1.0.0",
+  "run_id": "auto11-20261114T023540Z-run13",
+  "as_of_utc": "2026-11-14T02:39:35.064Z",
+  "execution_status": "RESEARCH_EXECUTED",
+  "research_scope": "DATA_QUALITY_ONLY",
+  "oos_evaluated": false,
+  "strategy_experiment_status": "BLOCKED",
+  "environment": {
+    "cwd": "/",
+    "os": "Debian 13",
+    "kernel": "6.18.57",
+    "python": "3.13.5",
+    "node": "v22.16.0",
+    "npm": "10.9.2",
+    "pnpm": "NOT_INSTALLED",
+    "yarn": "NOT_INSTALLED",
+    "cpu_count": 3,
+    "memory_total_bytes": 6237188096,
+    "memory_available_bytes": 5068423168,
+    "disk_total_bytes": 33770192896,
+    "disk_available_bytes": 32029958144,
+    "local_repository_checkout": false,
+    "local_package_json": false,
+    "binance_sdk_packages": {
+      "@nemesis-oss/binance-sdk": "NOT_INSTALLED",
+      "@binance/connector": "NOT_INSTALLED",
+      "binance-api-node": "NOT_INSTALLED"
+    }
+  },
+  "checks": [
+    {
+      "capability": "Shell/compute",
+      "status": "DEGRADED",
+      "evidence": "Container shell executed at /; Debian 13, kernel 6.18.57, Python 3.13.5, Node 22.16.0, npm 10.9.2, 3 CPUs, 6.09 GB RAM total, 4.95 GB available, 33.77 GB disk total and 32.03 GB free.",
+      "impact": "Bounded processing and file inspection work; project Node harness cannot run.",
+      "next_action": "Provision Node 24/npm 11."
+    },
+    {
+      "capability": "Repo/code",
+      "status": "DEGRADED",
+      "evidence": "Remote GitHub repository shubhamtaywade82/crypto-trading-agent is accessible; main source commit inspected at 77c32a5f46758253badd3bb38683036c9b66bc32. scripts/research-run.ts and scripts/backtest.ts exist remotely. No local .git checkout or package.json.",
+      "impact": "Source inspection and persistent artifact writes work; local harness invocation does not.",
+      "next_action": "Checkout exact repository commit in compatible runtime and install pinned dependencies."
+    },
+    {
+      "capability": "Network/Binance endpoints",
+      "status": "DEGRADED",
+      "evidence": "Direct curl probes returned HTTP 000: /time exit 6 DNS failure; /exchangeInfo exit 28 DNS timeout; /klines exit 6; /premiumIndex exit 28; /openInterest exit 6; /ticker/24hr exit 28. Binance market-data connector returned current data for all four symbols, but exposes no HTTP status/headers.",
+      "impact": "Fresh connector snapshot and bounded archive appends possible; official REST status/headers and fresh server-time probe unavailable.",
+      "next_action": "Restore outbound DNS/HTTPS and re-probe all official endpoints."
+    },
+    {
+      "capability": "Raw historical archive",
+      "status": "DEGRADED",
+      "evidence": "Persistent GitHub archive branch research/raw-ohlcv-archive-20261108T1026Z. Appended 36 completed rows in two deltas; v116 archive manifest, both delta manifests, both receipts and all four indexes read back. Highwaters 5m 02:30Z, 15m 02:15Z, 1h 01:00Z, 4h 12:00Z.",
+      "impact": "Incremental continuity is verified; multi-year base remains partial and 1h/4h lineage degraded.",
+      "next_action": "Reconcile page-0028 checksums/windows, 1h missing opens and 4h raw/aligned/canonical lineage."
+    },
+    {
+      "capability": "Data quality/coverage",
+      "status": "DEGRADED",
+      "evidence": "Two incremental slices: 36 rows appended, 52 fetched, 16 forming excluded, zero quality failures. Current 16-series sample: 7,984 completed bars and 16 forming excluded; zero sample quality failures. Base archive retains 8/8 page-0028 SHA mismatches, 28 missing 1h opens per symbol, 8-row 1h discrepancy and 13 4h page hash mismatches.",
+      "impact": "Recent monitoring bars pass integrity checks; historical sample is not sufficient for strategy inference.",
+      "next_action": "Repair historical lineage and align all symbols/timeframes before context fitting."
+    },
+    {
+      "capability": "Backtest harness/smoke test",
+      "status": "BLOCKED",
+      "evidence": "Remote TypeScript harness exists, but local checkout absent; Node 22.16/npm 10.9 below project floor Node >=24/npm >=11; SDK dependencies absent; deterministic fixture and no-lookahead smoke test NOT_RUN.",
+      "impact": "No strategy backtest or untouched OOS evaluation can be claimed.",
+      "next_action": "Provision Node 24/npm 11, checkout exact source, install dependencies and run fixture twice."
+    },
+    {
+      "capability": "Disk/storage",
+      "status": "PASS",
+      "evidence": "32.03 GB free local disk; GitHub archive branch accepted commits.",
+      "impact": "Persistent remote archive and run artifacts can be stored.",
+      "next_action": "Continue atomic writes and readback verification."
+    },
+    {
+      "capability": "Artifact readback",
+      "status": "PASS",
+      "evidence": "Delta files, delta manifests, archive manifests v115/v116, all four interval indexes and both readback receipts verified by exact content readback.",
+      "impact": "This run's incremental archive writes are verified and persistent.",
+      "next_action": "Verify each new run artifact after writing."
+    },
+    {
+      "capability": "Exchange metadata/server time",
+      "status": "BLOCKED",
+      "evidence": "Connector exchangeInfo reports all four contracts TRADING PERPETUAL but serverTime 2026-11-13T06:02:01.701Z at retrieval 2026-11-14T02:39:35.064Z, stale by 74,253.363 seconds. Direct /fapi/v1/time and /fapi/v1/exchangeInfo DNS probes fail.",
+      "impact": "Reported status cannot be used for current execution validation; no trading eligibility.",
+      "next_action": "Require fresh exchange server time and exchangeInfo with <=5 seconds drift before any execution check."
+    }
+  ],
+  "direct_rest_probe": {
+    "retrieved_at_utc": "2026-11-14T02:39:35Z",
+    "results": [
+      {
+        "endpoint": "/fapi/v1/time",
+        "http_status": 0,
+        "curl_exit": 6,
+        "result": "DNS resolution failure"
+      },
+      {
+        "endpoint": "/fapi/v1/exchangeInfo",
+        "http_status": 0,
+        "curl_exit": 28,
+        "result": "DNS resolution timeout"
+      },
+      {
+        "endpoint": "/fapi/v1/klines?symbol=BTCUSDT&interval=1h&limit=1",
+        "http_status": 0,
+        "curl_exit": 6,
+        "result": "DNS resolution failure"
+      },
+      {
+        "endpoint": "/fapi/v1/premiumIndex?symbol=BTCUSDT",
+        "http_status": 0,
+        "curl_exit": 28,
+        "result": "DNS resolution timeout"
+      },
+      {
+        "endpoint": "/fapi/v1/openInterest?symbol=BTCUSDT",
+        "http_status": 0,
+        "curl_exit": 6,
+        "result": "DNS resolution failure"
+      },
+      {
+        "endpoint": "/fapi/v1/ticker/24hr?symbol=BTCUSDT",
+        "http_status": 0,
+        "curl_exit": 28,
+        "result": "DNS resolution timeout"
+      }
+    ]
+  },
+  "execution_classification": "RESEARCH_EXECUTED_DATA_QUALITY_ONLY"
+}

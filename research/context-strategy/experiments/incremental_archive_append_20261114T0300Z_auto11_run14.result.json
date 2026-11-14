@@ -1,0 +1,116 @@
+{
+  "schema_version": "1.0.0",
+  "experiment_id": "ARCHIVE-APPEND-20261114T0300Z",
+  "run_id": "auto11-20261114T0302Z-run14",
+  "type": "INCREMENTAL_ARCHIVE_DATA_QUALITY",
+  "status": "COMPLETED",
+  "hypothesis": "Newly completed Binance USD-M bars after verified per-interval highwaters can be appended without duplicates, gaps, off-grid timestamps, OHLC violations, non-finite fields, non-positive volume, forming-candle inclusion or cross-symbol misalignment.",
+  "source": {
+    "repository": "shubhamtaywade82/crypto-trading-agent",
+    "branch": "research/raw-ohlcv-archive-20261108T1026Z",
+    "endpoint": "GET /fapi/v1/klines",
+    "transport": "Binance public market-data connector",
+    "sdk_used": false,
+    "http_status_exposed": false
+  },
+  "window": {
+    "as_of_utc": "2026-11-14T03:01:17.704Z",
+    "symbols": [
+      "BTCUSDT",
+      "ETHUSDT",
+      "SOLUSDT",
+      "XRPUSDT"
+    ],
+    "intervals": [
+      "5m",
+      "15m",
+      "1h"
+    ],
+    "previous_highwater_utc_by_interval": {
+      "5m": "2026-11-14T02:30:00.000Z",
+      "15m": "2026-11-14T02:15:00.000Z",
+      "1h": "2026-11-14T01:00:00.000Z"
+    },
+    "latest_completed_open_utc_by_interval": {
+      "5m": "2026-11-14T02:55:00.000Z",
+      "15m": "2026-11-14T02:45:00.000Z",
+      "1h": "2026-11-14T02:00:00.000Z"
+    }
+  },
+  "results": {
+    "rows_appended": 32,
+    "rows_by_interval": {
+      "5m": 20,
+      "15m": 8,
+      "1h": 4,
+      "4h": 0
+    },
+    "rows_by_symbol": {
+      "BTCUSDT": 8,
+      "ETHUSDT": 8,
+      "SOLUSDT": 8,
+      "XRPUSDT": 8
+    },
+    "rows_fetched": 36,
+    "forming_rows_excluded": 12,
+    "quality": {
+      "duplicates": 0,
+      "missingIntervals": 0,
+      "offGrid": 0,
+      "nonMonotonic": 0,
+      "ohlcFailures": 0,
+      "nonFinite": 0,
+      "nonPositiveVolume": 0,
+      "closeTimeFailures": 0,
+      "formingRowsIncluded": 0,
+      "crossSymbolAlignment": true,
+      "contiguousFromPriorHighwater": true
+    }
+  },
+  "artifacts": [
+    {
+      "path": "research-data/binance-usdm/delta/binance_usdm_delta_20261114T030027Z_5m15m_completed.jsonl",
+      "sha256": "564086ee481847b4deeb2d091f12cd3da8301f172368ff4c3ba4e5fa92842c33",
+      "blob_sha": "9138f9b06a276ca1fedef20fd4c8aa4e94b95edc",
+      "rows": 28,
+      "readback_verified": true
+    },
+    {
+      "path": "research-data/binance-usdm/delta/manifest-20261114T030027Z-5m15m.json",
+      "sha256": "29d55689304bdbf9711e02af6a3a9aa55e6e3d1cf6e6803e75347a28a3af5578",
+      "blob_sha": "68aff8bac3c88e1d1460907ee694bf9e06b9ed10",
+      "readback_verified": true
+    },
+    {
+      "path": "research-data/binance-usdm/delta/binance_usdm_delta_20261114T030117Z_1h_completed.jsonl",
+      "sha256": "3df54137e222354e053f4e2f3d8a1e88a0f40870a064044d8aaad3ba25070873",
+      "blob_sha": "398d8e7462ba805d92a57d396ae4d649584eaeb4",
+      "rows": 4,
+      "readback_verified": true
+    },
+    {
+      "path": "research-data/binance-usdm/delta/manifest-20261114T030117Z-1h.json",
+      "sha256": "4910db58a9ea61c572b496ca75afc7076ddf937c3f07527c1e7def08a4a03e46",
+      "blob_sha": "985ea618ca959e89f6bb2d1becd86d1e062c51f9",
+      "readback_verified": true
+    },
+    {
+      "path": "research-data/binance-usdm/manifests/archive_manifest_20261114T0302Z_auto11_v118.json",
+      "sha256": "04354d3daac165c0e23b4c7ef5e77b8fbc915634ac9ee760680c818d466aae51",
+      "blob_sha": "8b46c1ea7757165dabc5f20368815ceddebb3afd",
+      "readback_verified": true
+    }
+  ],
+  "index_readback_verified": true,
+  "validation_code": "Inline deterministic JavaScript in this run; no standalone runner artifact or code hash persisted.",
+  "seed": "NOT_APPLICABLE",
+  "strategy_experiment": "BLOCKED_NOT_RUN",
+  "oos_evaluated": false,
+  "limitations": [
+    "This experiment validates only the incremental slices, not the full historical archive.",
+    "The 5m/15m base archive remains partial; page-0028 has 8/8 SHA-256 mismatches and cross-symbol windows are not aligned.",
+    "The 1h base archive still has 28 missing hourly opens per symbol and an 8-row discrepancy.",
+    "The 4h archive was not appended because raw/aligned/canonical row-count and 13 page-manifest SHA provenance mismatches remain.",
+    "This is not a strategy backtest and produces no win probability, expectancy, profit factor or OOS evidence."
+  ]
+}

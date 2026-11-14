@@ -1,0 +1,179 @@
+{
+  "schema_version": "1.0.0",
+  "experiment_id": "INCREMENTAL_ARCHIVE_APPEND_20261114T0626Z_AUTO11_RUN15",
+  "type": "DATA_QUALITY_INCREMENTAL_APPEND",
+  "status": "RESEARCH_EXECUTED_DATA_QUALITY_ONLY",
+  "started_at_utc": "2026-11-14T06:26:54.000Z",
+  "completed_at_utc": "2026-11-14T06:32:00.000Z",
+  "as_of_utc": "2026-11-14T06:27:35.897Z",
+  "hypothesis": "Fetching only completed bars after verified per-interval highwaters yields a contiguous, timestamp-aligned incremental slice for BTCUSDT, ETHUSDT, SOLUSDT and XRPUSDT.",
+  "specification": {
+    "endpoint": "GET /fapi/v1/klines",
+    "symbols": [
+      "BTCUSDT",
+      "ETHUSDT",
+      "SOLUSDT",
+      "XRPUSDT"
+    ],
+    "intervals": [
+      "5m",
+      "15m",
+      "1h"
+    ],
+    "previous_highwater_utc_by_interval": {
+      "5m": "2026-11-14T05:25:00.000Z",
+      "15m": "2026-11-14T05:15:00.000Z",
+      "1h": "2026-11-14T04:00:00.000Z",
+      "4h": "2026-11-13T12:00:00.000Z"
+    },
+    "request_start_utc_by_interval": {
+      "5m": "2026-11-14T05:30:00.000Z",
+      "15m": "2026-11-14T05:30:00.000Z",
+      "1h": "2026-11-14T05:00:00.000Z"
+    },
+    "completed_bar_rule": "closeTime < retrieval timestamp; forming rows excluded",
+    "expected_rows_per_symbol_interval": {
+      "5m": 11,
+      "15m": 3,
+      "1h": 1
+    },
+    "quality_gates": [
+      "strict interval continuity after prior highwater",
+      "timestamp grid alignment",
+      "no duplicate or out-of-order openTime",
+      "OHLC invariants",
+      "finite OHLCV/trade fields",
+      "positive base volume",
+      "closeTime=openTime+interval-1",
+      "cross-symbol timestamp alignment"
+    ]
+  },
+  "inputs": {
+    "source": "Binance USD-M public market-data connector; direct REST DNS unavailable; SDK not used; HTTP status/headers not exposed.",
+    "retrieval_utc": "2026-11-14T06:27:35.897Z",
+    "rows_fetched": 72,
+    "forming_rows_excluded": 12,
+    "previous_archive_manifest": "research-data/binance-usdm/manifests/archive_manifest_20261114T053039Z_auto11_v122.json"
+  },
+  "results": {
+    "rows_appended": 60,
+    "rows_by_interval": {
+      "5m": 44,
+      "15m": 12,
+      "1h": 4,
+      "4h": 0
+    },
+    "rows_by_symbol": {
+      "BTCUSDT": 15,
+      "ETHUSDT": 15,
+      "SOLUSDT": 15,
+      "XRPUSDT": 15
+    },
+    "rows_by_symbol_interval": {
+      "BTCUSDT": {
+        "5m": 11,
+        "15m": 3,
+        "1h": 1,
+        "4h": 0
+      },
+      "ETHUSDT": {
+        "5m": 11,
+        "15m": 3,
+        "1h": 1,
+        "4h": 0
+      },
+      "SOLUSDT": {
+        "5m": 11,
+        "15m": 3,
+        "1h": 1,
+        "4h": 0
+      },
+      "XRPUSDT": {
+        "5m": 11,
+        "15m": 3,
+        "1h": 1,
+        "4h": 0
+      }
+    },
+    "latest_completed_open_utc_by_interval": {
+      "5m": "2026-11-14T06:20:00.000Z",
+      "15m": "2026-11-14T06:00:00.000Z",
+      "1h": "2026-11-14T05:00:00.000Z",
+      "4h": "2026-11-13T12:00:00.000Z"
+    },
+    "quality": {
+      "duplicates": 0,
+      "missing_intervals": 0,
+      "off_grid": 0,
+      "non_monotonic": 0,
+      "ohlc_failures": 0,
+      "non_finite": 0,
+      "non_positive_volume": 0,
+      "close_time_failures": 0,
+      "forming_rows_included": 0,
+      "cross_symbol_alignment": true,
+      "contiguous_from_prior_highwater": true
+    }
+  },
+  "artifacts": {
+    "delta": {
+      "path": "research-data/binance-usdm/delta/binance_usdm_delta_20261114T0626Z_5m15m1h_completed.jsonl",
+      "sha256": "66e15bb496752fb8536d07e740df72640d7a913a9478168babaf79cb67e3536e",
+      "blob_sha": "821854470e9189ec6d5a9903708ff6c5ad51e59c",
+      "rows": 60,
+      "bytes": 17545,
+      "readback_verified": true
+    },
+    "delta_manifest": {
+      "path": "research-data/binance-usdm/delta/manifest-20261114T0626Z-5m15m1h.json",
+      "sha256": "20d4fb291ad98e1a3ce63e0cbb4d00b47dbf6198a4379dc2f9e0c682b1a68701",
+      "blob_sha": "f39c46d5b67e6f29b0461229089e07c76b3c0901",
+      "readback_verified": true
+    },
+    "archive_manifest": {
+      "path": "research-data/binance-usdm/manifests/archive_manifest_20261114T0631Z_auto11_v124.json",
+      "sha256": "184a2ad9b01c23e406bc3b73fe3fe63e7ab6628bc849ad37cce3a167941fd33c",
+      "blob_sha": "1cc147d397dc17633f00f49dccb4388455e463fc",
+      "readback_verified": true
+    },
+    "archive_indexes": {
+      "branch": "research/raw-ohlcv-archive-20261108T1026Z",
+      "intervals": [
+        "5m",
+        "15m",
+        "1h",
+        "4h"
+      ],
+      "readback_verified": true
+    },
+    "readback_receipt": {
+      "path": "research-data/binance-usdm/manifests/readback_receipt_20261114T0632Z_auto11_v124.json",
+      "blob_sha": "e8381ff90152e6c1d874dce2d771011561d7eac3",
+      "readback_verified": true
+    },
+    "current_snapshot": {
+      "path": "research-data/binance-usdm/snapshots/current_market_snapshot_20261114T0631Z_auto11.json",
+      "sha256": "ace4c77fe33ad5c78ec940d700880229a69663e2204b7f53460fc0f83f03ecdd",
+      "blob_sha": "de673b9d830fd1841a1d70aa5f68d6b7f658745e",
+      "readback_verified": true
+    }
+  },
+  "runner": {
+    "environment": "functions.exec V8 runtime",
+    "method": "inline deterministic JavaScript transformation and validation",
+    "code_hash": "NOT_AVAILABLE_INLINE_RUNNER_NOT_PERSISTED",
+    "node_sdk_used": false,
+    "seed": "NOT_APPLICABLE"
+  },
+  "limitations": [
+    "This is an archive-quality experiment, not a trading-strategy backtest.",
+    "The 4h slice was intentionally held because 4h provenance reconciliation remains unresolved.",
+    "Historical 5m/15m base coverage remains partial; 1h and 4h lineage defects remain.",
+    "No untouched OOS strategy evaluation was performed."
+  ],
+  "strategy_experiment_status": "BLOCKED",
+  "oos_evaluated": false,
+  "registry_reference": "research-data/binance-usdm/conditional-strategy-registry-snapshot-v131.json",
+  "registry_version": "v114",
+  "oos_validated_entries": 0
+}

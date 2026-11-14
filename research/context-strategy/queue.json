@@ -1,36 +1,43 @@
 {
   "schema_version": "1.0.0",
-  "version": "v128",
-  "updatedAtUtc": "2026-11-14T09:26:37.003Z",
+  "version": "v129",
+  "updatedAtUtc": "2026-11-14T10:40:33.470Z",
   "repository": "shubhamtaywade82/crypto-trading-agent",
-  "branch": "main",
+  "branch": "research/umbrella",
   "supersedes": "research-data/binance-usdm/research-queue-v126.json",
-  "registryReference": "research-data/binance-usdm/conditional-strategy-registry-snapshot-v126.json",
+  "registryReference": "research/context-strategy/runs/20261114T1028Z_auto11_run19/conditional_strategy_registry_snapshot.json",
   "latestRun": {
-    "asOfUtc": "2026-11-14T09:26:37.003Z",
-    "runId": "context-strategy-20261114T092637Z-auto11-run18",
+    "asOfUtc": "2026-11-14T10:28:53.001Z",
+    "runId": "context-strategy-20261114T1028Z-auto11-run19",
     "status": "RESEARCH_EXECUTED",
-    "scope": "INCREMENTAL_5M15M1H_APPEND_AND_CONTEXT_MONITORING",
+    "scope": "INCREMENTAL_5M15M1H_APPEND_AND_CURRENT_CONTEXT_MONITORING",
     "strategyExperiment": "RESEARCH_BLOCKED",
     "strategyExperimentStatus": "RESEARCH_BLOCKED",
     "oosEvaluated": false,
     "historicalRowsBackfilled": 0,
-    "incrementalRowsAppended": 44,
-    "formingExcluded": 12,
+    "incrementalRowsAppended": 68,
+    "formingExcluded": 24,
     "dataQualityExperimentsCompleted": 1,
-    "reportPath": "research/context-strategy/reports/2026-11-14T0926Z_auto11_run18.md",
-    "snapshotPath": "research-data/binance-usdm/current_market_snapshot_20261114T091929Z_auto11.json",
-    "preflightPath": "research/context-strategy/preflight/preflight_20261114T092637Z_auto11_run18.json",
-    "dataQualityArtifactPath": "research/context-strategy/experiments/incremental_archive_append_20261114T092637Z_auto11_run18.result.json",
-    "incrementalDataQualityArtifactPath": "research/context-strategy/experiments/incremental_archive_append_20261114T092637Z_auto11_run18.result.json",
-    "archiveManifestPath": "research-data/binance-usdm/manifests/archive_manifest_20261114T092637Z_auto11_run18.json",
-    "runManifestPath": "research-runs/context-strategy-20261114T092637Z-auto11-run18.json",
+    "reportPath": "research/context-strategy/reports/2026-11-14T1028Z_auto11_run19.md",
+    "snapshotPath": "research-data/binance-usdm/current_market_snapshot_20261114T1028Z_auto11.json",
+    "preflightPath": "research/context-strategy/preflight/preflight_20261114T1028Z_auto11_run19.json",
+    "dataQualityArtifactPath": "research/context-strategy/experiments/incremental_archive_append_20261114T1028Z_auto11_run19.result.json",
+    "incrementalDataQualityArtifactPath": "research/context-strategy/experiments/incremental_archive_append_20261114T1028Z_auto11_run19.result.json",
+    "archiveManifestPath": "research-data/binance-usdm/manifests/archive_manifest_20261114T1028Z_auto11_run19.json",
+    "runManifestPath": "research-runs/context-strategy-20261114T1028Z-auto11-run19.json",
     "queuePath": "research/context-strategy/queue.json",
-    "registrySnapshotPath": "research/context-strategy/runs/20261114T092637Z_auto11_run18/conditional_strategy_registry_snapshot.json",
+    "registrySnapshotPath": "research/context-strategy/runs/20261114T1028Z_auto11_run19/conditional_strategy_registry_snapshot.json",
     "oosValidatedEntryCount": 0,
     "strategyStatusTransitions": 0,
     "artifactReadbackVerified": true,
-    "updatedAtUtc": "2026-11-14T09:26:37.003Z"
+    "marketDataAsOfUtc": "2026-11-14T10:28:53.001Z",
+    "branch": "research/umbrella",
+    "branchCompare": {
+      "aheadBy": 2870,
+      "behindBy": 5,
+      "mergeBase": "eb9ac636fd19285e5bdd2cf442376d4330870624"
+    },
+    "updatedAtUtc": "2026-11-14T10:40:33.470Z"
   },
   "items": [
     {
@@ -475,8 +482,8 @@
         "Outbound DNS/HTTPS",
         "Bounded official REST requests"
       ],
-      "blocker": "Direct /fapi/v1/time and /fapi/v1/exchangeInfo probes fail DNS (curl exit 6, HTTP000). Connector exchangeInfo.serverTime=2026-11-13T06:02:01.702Z is 27h17m stale at the latest mark-price timestamp.",
-      "nextAction": "Restore outbound DNS/HTTPS and require fresh server time plus exchangeInfo before contract execution validation."
+      "blocker": "Direct /fapi/v1/time and /fapi/v1/exchangeInfo probes fail DNS (curl exit 6, HTTP000); connector exchangeInfo.serverTime is 2026-11-13T06:02:01.704Z, 102,411 seconds behind the 10:28:53Z market snapshot. Connector HTTP status/headers are not exposed.",
+      "nextAction": "Restore outbound DNS/HTTPS or provide an uncached official time/metadata path; require server-time drift <=60 seconds before contract execution validation."
     },
     {
       "id": "Q_PIT_DERIVATIVES_AND_COSTS",
@@ -632,14 +639,14 @@
       "status": "BLOCKED_STRATEGY_EXPERIMENT",
       "priority": 3,
       "title": "Run one preregistered strategy × context × symbol experiment",
-      "blocker": "The data-quality append completed, but a valid strategy experiment is blocked by incomplete 5m/15m common history, the 1h bridge gap, 4h raw/canonical provenance, no compatible local Node24/npm11 checkout, and uncalibrated historical execution costs.",
+      "blocker": "A data-quality append completed, but strategy testing remains blocked: 5m/15m base history is partial and cross-symbol unaligned; 1h has 28 missing historical opens per symbol and an 8-row discrepancy; 4h raw/aligned/canonical counts are 53,960/53,816/53,844 with 13 page-hash provenance mismatches; no local target checkout; Node22.16/npm10.9 is below Node>=24/npm>=11; SDK absent; direct Binance REST DNS fails; historical fees, funding cashflows, spread, slippage, impact and latency are not calibrated.",
       "prerequisites": [
         "Aligned multi-cycle OHLCV panel",
         "Node24/npm11 exact checkout",
         "Deterministic harness smoke test",
         "Point-in-time funding/OI and cost model"
       ],
-      "nextAction": "Resolve the P0 archive and runtime blockers, then freeze one SOL trend/pullback or BTC-confirmed experiment with chronological train/validation/untouched-test and >=100 OOS trades per symbol/context."
+      "nextAction": "Provision Node24/npm11 and exact checkout; backfill page 0023 and reconcile page 0028; repair the 1h bridge and 4h lineage; build point-in-time derivatives/cost panels; run deterministic fixture smoke test twice plus no-lookahead invariance; then preregister one SOL trend/pullback or BTC-confirmed experiment with chronological train/validation/untouched-test and >=100 OOS trades per symbol/context."
     },
     {
       "id": "Q_ARCHIVE_INDEX_ALIAS_RECONCILIATION",
@@ -668,14 +675,14 @@
       "id": "Q_RESEARCH_BRANCH_CONSOLIDATION",
       "status": "BLOCKED",
       "priority": 2,
-      "title": "Consolidate divergent research branches into the research umbrella lineage",
-      "blocker": "research/umbrella exists, but research/context-strategy and research/raw-ohlcv-archive branches remain divergent; a blind merge risks duplicate raw pages and broken hash provenance.",
+      "title": "Consolidate research lineage into the research umbrella branch",
+      "blocker": "Current active branch list contains only main and research/umbrella. research/umbrella is 2,870 commits ahead and 5 behind main; archive indexes still reference older raw-archive branch names that are not active. No merge was performed because branch ownership/ancestry and stale index pointers are not reconciled.",
       "prerequisites": [
         "Read-only branch DAG",
         "Artifact inventory",
         "Immutable raw page and manifest hash preservation"
       ],
-      "nextAction": "Build a branch-by-branch merge map, identify common ancestors and artifact ownership, then import in controlled groups with readback and tests; do not merge to main."
+      "nextAction": "Map commit ancestry and artifact ownership for the historical raw-archive/context-strategy branches; verify whether their commits are already represented in research/umbrella; reconcile stale branch pointers; do not merge to main."
     },
     {
       "id": "Q_CONDITIONAL_EDGE_GATE_DEFAULTS",
@@ -700,6 +707,67 @@
         "5m deterministic fixture"
       ],
       "nextAction": "Add 5m replay and candle-integrity tests after the compatible checkout is available."
+    },
+    {
+      "id": "Q_INCREMENTAL_ARCHIVE_APPEND_AUTO11_RUN19",
+      "status": "COMPLETED_THIS_RUN",
+      "priority": 1,
+      "title": "Append completed Binance USD-M 5m/15m/1h bars through 10:20/10:00/09:00 UTC",
+      "blocker": null,
+      "nextAction": "Continue from 5m 10:25Z, 15m 10:15Z and 1h 10:00Z on the next refresh; keep 4h held until lineage reconciliation.",
+      "result": {
+        "rows": 68,
+        "rowsByInterval": {
+          "5m": 48,
+          "15m": 16,
+          "1h": 4
+        },
+        "deltaPath": "research-data/binance-usdm/delta/binance_usdm_delta_20261114T1028Z_5m15m1h_completed.jsonl",
+        "sha256": "32fe9272924ffd03b8459c1274aca4f6e420e5a85a9b416906cb31ba47b194e0",
+        "readbackVerified": true
+      }
+    },
+    {
+      "id": "Q_CURRENT_MARKET_SNAPSHOT_AUTO11_RUN19",
+      "status": "COMPLETED_THIS_RUN",
+      "priority": 2,
+      "title": "Refresh BTC reference and ETH/SOL/XRP current context snapshot",
+      "blocker": null,
+      "nextAction": "Reclassify after the next completed 4h candle; require fresh exchangeInfo before execution validation.",
+      "result": {
+        "snapshotPath": "research-data/binance-usdm/current_market_snapshot_20261114T1028Z_auto11.json",
+        "asOfUtc": "2026-11-14T10:28:53.001Z",
+        "contexts": {
+          "BTCUSDT": "BEAR_NORMAL",
+          "ETHUSDT": "BEAR_NORMAL",
+          "SOLUSDT": "BEAR_LOW",
+          "XRPUSDT": "BEAR_NORMAL"
+        },
+        "decisions": {
+          "SOLUSDT": "NO_TRADE",
+          "ETHUSDT": "NO_TRADE",
+          "XRPUSDT": "NO_TRADE"
+        }
+      }
+    },
+    {
+      "id": "Q_ARTIFACT_READBACK_AUTO11_RUN19",
+      "status": "COMPLETED_THIS_RUN",
+      "priority": 1,
+      "title": "Verify run19 core artifacts from GitHub readback",
+      "blocker": null,
+      "nextAction": "Keep SHA-256 and Git blob SHA-1 side by side on subsequent writes.",
+      "result": {
+        "coreArtifactsVerified": true,
+        "verifiedPaths": [
+          "research-data/binance-usdm/delta/binance_usdm_delta_20261114T1028Z_5m15m1h_completed.jsonl",
+          "research-data/binance-usdm/delta/manifest-20261114T1028Z-5m15m1h.json",
+          "research-data/binance-usdm/current_market_snapshot_20261114T1028Z_auto11.json",
+          "research-data/binance-usdm/manifests/archive_manifest_20261114T1028Z_auto11_run19.json",
+          "research/context-strategy/experiments/incremental_archive_append_20261114T1028Z_auto11_run19.result.json",
+          "research/context-strategy/runs/20261114T1028Z_auto11_run19/conditional_strategy_registry_snapshot.json"
+        ]
+      }
     }
   ],
   "lastRun": {

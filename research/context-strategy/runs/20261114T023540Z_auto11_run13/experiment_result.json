@@ -1,0 +1,72 @@
+{
+  "schema_version": "1.0.0",
+  "run_id": "auto11-20261114T023540Z-run13",
+  "experiment_id": "EXP-DQ-INCREMENTAL-ARCHIVE-20261114T023100Z-AUTO11",
+  "experiment_type": "DATA_QUALITY",
+  "status": "COMPLETED",
+  "hypothesis": "Completed Binance USD-M bars fetched from the verified nextStart should append contiguously for 5m/15m without duplicate, missing, off-grid, OHLC, non-finite, non-positive-volume or close-time failures; forming bars must be excluded.",
+  "preregistration": {
+    "symbols": [
+      "BTCUSDT",
+      "ETHUSDT",
+      "SOLUSDT",
+      "XRPUSDT"
+    ],
+    "intervals": [
+      "5m",
+      "15m",
+      "1h"
+    ],
+    "start_utc": "2026-11-14T02:00:00.000Z",
+    "followup_5m_open_utc": "2026-11-14T02:30:00.000Z",
+    "checks": [
+      "monotonic timestamps",
+      "unique open times",
+      "interval continuity",
+      "UTC grid alignment",
+      "OHLC invariants",
+      "finite fields",
+      "positive volume",
+      "closeTime exactness",
+      "cross-symbol open-time alignment",
+      "forming-candle exclusion"
+    ]
+  },
+  "observed": {
+    "rows_fetched": 52,
+    "rows_appended": 36,
+    "forming_rows_excluded": 16,
+    "rows_by_interval": {
+      "5m": 28,
+      "15m": 8,
+      "1h": 0,
+      "4h": 0
+    },
+    "rows_by_symbol": {
+      "BTCUSDT": 9,
+      "ETHUSDT": 9,
+      "SOLUSDT": 9,
+      "XRPUSDT": 9
+    },
+    "quality_failures": 0,
+    "readback_verified": true
+  },
+  "verdict": "PASS_FOR_INCREMENTAL_SLICES_ONLY",
+  "interpretation": "The two new incremental slices are contiguous from the prior verified highwaters and passed the declared candle-quality checks. This does not repair or validate the historical base archive; page-0028, 1h and 4h provenance defects remain.",
+  "strategy_experiment_executed": false,
+  "oos_evaluated": false,
+  "evidence_status": "NOT_APPLICABLE_DATA_QUALITY_ONLY",
+  "costs": "No trading cost model used; this was not a strategy backtest.",
+  "artifacts": {
+    "delta_paths": [
+      "research-data/binance-usdm/delta/binance_usdm_delta_20261114T023100Z_5m15m_completed.jsonl",
+      "research-data/binance-usdm/delta/binance_usdm_delta_20261114T023600Z_5m_completed.jsonl"
+    ],
+    "archive_manifest_path": "research-data/binance-usdm/manifests/archive_manifest_20261114T023600Z_auto11_v116.json",
+    "readback_receipts": [
+      "research-data/binance-usdm/manifests/readback_receipt_20261114T023100Z_auto11.json",
+      "research-data/binance-usdm/manifests/readback_receipt_20261114T023600Z_auto11.json"
+    ]
+  },
+  "next_action": "Resolve page-0028 checksum/window provenance and 1h/4h historical row-key discrepancies before fitting context thresholds or running strategy experiments."
+}

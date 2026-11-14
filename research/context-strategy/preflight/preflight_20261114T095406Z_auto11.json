@@ -1,0 +1,234 @@
+{
+  "schema_version": "1.0.0",
+  "run_id": "context-strategy-20261114T095406Z-auto11-run19",
+  "as_of_utc": "2026-11-14T09:54:06.933Z",
+  "repository": "shubhamtaywade82/crypto-trading-agent",
+  "branch": "research/umbrella",
+  "checks": [
+    {
+      "capability": "shell_compute",
+      "status": "PASS",
+      "evidence": {
+        "pwd": "/",
+        "os": "Linux 6.18.57 x86_64",
+        "cpu_cores": 3,
+        "memory_total_kb": 6091004,
+        "memory_available_kb": 4954776,
+        "disk_free": "30G",
+        "node": "v22.16.0",
+        "npm": "10.9.2",
+        "git": "2.47.3",
+        "docker": "UNAVAILABLE"
+      },
+      "impact": "Shell and bounded compute are available; local runtime is below the repository engine requirement.",
+      "next_action": "Provision Node>=24 and npm>=11 before running project scripts."
+    },
+    {
+      "capability": "repo_code",
+      "status": "DEGRADED",
+      "evidence": {
+        "repository": "shubhamtaywade82/crypto-trading-agent",
+        "remote_branch": "research/umbrella",
+        "local_checkout": "ABSENT",
+        "package_json_sha": "22576968ec662fd7d17dda10069489c69c597bcd",
+        "engines": {
+          "node": ">=24",
+          "npm": ">=11"
+        },
+        "backtest_script_sha": "65bb03853382be1ed0d82aed373f805173aaa6f5",
+        "conditional_edge_script_sha": "29034c61fdd42a5e40272234b221d29cb95fb3ee",
+        "smoke_test_path": "research/experiments/exp-002-4h-ema-pullback/smoke-test.js",
+        "smoke_test_sha": "b850845e977b9948e11a2ba925b421c6e21ff41e"
+      },
+      "impact": "Remote source is inspectable and the repository branch is persistent, but no local checkout exists.",
+      "next_action": "Mount/clone research/umbrella into a Node24/npm11 workspace and install pinned dependencies."
+    },
+    {
+      "capability": "binance_sdk",
+      "status": "BLOCKED",
+      "evidence": {
+        "node": "v22.16.0",
+        "packages": {
+          "@binance/connector": "NOT_INSTALLED",
+          "@nemesis-oss/binance-sdk": "NOT_INSTALLED",
+          "binance": "NOT_INSTALLED",
+          "binance-api-node": "NOT_INSTALLED"
+        },
+        "sdk_used": false
+      },
+      "impact": "No SDK execution; public data was retrieved through the Binance market-data connector.",
+      "next_action": "Install the pinned SDK only in the compatible project runtime, or use official REST after DNS is restored."
+    },
+    {
+      "capability": "network_binance",
+      "status": "DEGRADED",
+      "evidence": {
+        "direct_time_endpoint": {
+          "url": "https://fapi.binance.com/fapi/v1/time",
+          "curl_error": "Could not resolve host",
+          "exit_code": 6,
+          "http_status": 0
+        },
+        "direct_exchange_info": {
+          "url": "https://fapi.binance.com/fapi/v1/exchangeInfo",
+          "curl_error": "DNS resolution timed out",
+          "exit_code": 28,
+          "http_status": 0
+        },
+        "connector_exchange_info_server_time_utc": "2026-11-13T06:02:01.704Z",
+        "staleness_hours": 27.868,
+        "connector_market_data_latest_utc": "2026-11-14T09:54:06.933Z",
+        "connector_http_status_headers": "NOT_EXPOSED"
+      },
+      "impact": "Current prices, klines and derivatives snapshots were returned by the connector, but exchange server time and fresh contract metadata cannot be validated.",
+      "next_action": "Restore direct DNS/HTTPS or obtain uncached official time and exchangeInfo; require <=60s drift for execution validation."
+    },
+    {
+      "capability": "raw_historical_archive",
+      "status": "DEGRADED",
+      "evidence": {
+        "storage": "GitHub branch research/umbrella",
+        "five_minute": {
+          "rows": 168032,
+          "rows_per_symbol": 42008,
+          "start_utc": "2020-01-01T00:00:00Z",
+          "base_end_utc": "2021-02-07T02:55:00Z",
+          "incremental_highwater_utc": "2026-11-14T09:45:00Z",
+          "cross_symbol_alignment": false
+        },
+        "fifteen_minute": {
+          "rows": 168008,
+          "rows_per_symbol": 42002,
+          "start_utc": "2020-01-01T00:00:00Z",
+          "base_end_utc": "2021-11-25T18:45:00Z",
+          "incremental_highwater_utc": "2026-11-14T09:30:00Z",
+          "cross_symbol_alignment": false
+        },
+        "one_hour": {
+          "rows": 215508,
+          "rows_per_symbol": 53877,
+          "start_utc": "2020-09-14T08:00:00Z",
+          "incremental_highwater_utc": "2026-11-14T08:00:00Z",
+          "missing_hourly_opens_per_symbol": 28,
+          "rowcount_discrepancy": 8
+        },
+        "four_hour": {
+          "raw_rows": 53960,
+          "aligned_rows": 53816,
+          "canonical_rows": 53844,
+          "canonical_rows_per_symbol": 13461,
+          "canonical_start_utc": "2020-09-14T08:00:00Z",
+          "canonical_end_utc": "2026-11-05T16:00:00Z",
+          "raw_incremental_highwater_utc": "2026-11-13T12:00:00Z",
+          "manifest_sha_mismatches": 13
+        }
+      },
+      "impact": "The four-hour canonical sample is multi-year, but lower-timeframe archives are incomplete and 1h/4h lineage defects prevent a valid aligned all-timeframe panel.",
+      "next_action": "Resolve page-0028 alignment and zero-volume exclusions; repair 1h missing-hour bridge and 4h raw/canonical hash/row-key provenance."
+    },
+    {
+      "capability": "data_quality",
+      "status": "DEGRADED",
+      "evidence": {
+        "recent_window": {
+          "series": 16,
+          "rows_fetched": 1920,
+          "completed_rows": 1904,
+          "forming_excluded": 16,
+          "duplicates": 0,
+          "missing_intervals": 0,
+          "off_grid": 0,
+          "non_monotonic": 0,
+          "ohlc_failures": 0,
+          "non_finite": 0,
+          "non_positive_volume": 0
+        },
+        "incremental_append": {
+          "rows_fetched": 36,
+          "completed_rows": 28,
+          "forming_excluded": 8,
+          "rows_by_interval": {
+            "5m": 20,
+            "15m": 8
+          },
+          "rows_by_symbol": {
+            "BTCUSDT": 7,
+            "ETHUSDT": 7,
+            "SOLUSDT": 7,
+            "XRPUSDT": 7
+          },
+          "duplicates": 0,
+          "missing_intervals": 0,
+          "off_grid": 0,
+          "non_monotonic": 0,
+          "ohlc_failures": 0,
+          "non_finite": 0,
+          "non_positive_volume": 0,
+          "close_time_failures": 0,
+          "cross_symbol_alignment": true,
+          "contiguous_from_prior_highwater": true
+        },
+        "historical_archive": "DEGRADED"
+      },
+      "impact": "The new incremental slice and recent snapshot window pass local integrity checks; this does not repair or certify the historical base.",
+      "next_action": "Continue incremental append only after exact highwater checks; keep 4h held and do not use the incomplete combined panel for inference."
+    },
+    {
+      "capability": "backtest_harness_smoke_test",
+      "status": "BLOCKED",
+      "evidence": {
+        "remote_harness": "scripts/backtest.ts exists",
+        "supported_timeframes": [
+          "15m",
+          "1h",
+          "4h"
+        ],
+        "five_minute_support": false,
+        "conditional_edge_script": "scripts/conditional-edge.ts exists",
+        "experiment_fixture_smoke_test": "research/experiments/exp-002-4h-ema-pullback/smoke-test.js exists",
+        "smoke_test_executed": false,
+        "reason": "No local checkout and Node v22.16.0/npm 10.9.2 are below package engines Node>=24/npm>=11."
+      },
+      "impact": "No deterministic harness smoke test, strategy backtest or OOS evaluation was run in this execution.",
+      "next_action": "Provision compatible runtime, checkout exact branch, install lockfile, run fixture smoke test, then run a bounded data-loader smoke test."
+    },
+    {
+      "capability": "disk_storage",
+      "status": "PASS",
+      "evidence": {
+        "disk_free": "30G",
+        "local_repo_checkout": "ABSENT",
+        "durable_storage": "GitHub branch research/umbrella",
+        "new_delta_bytes": 8184,
+        "archive_manifest_readback": true,
+        "index_readback": true
+      },
+      "impact": "GitHub storage is available and exact readback verification succeeded; local archive files were not written.",
+      "next_action": "Continue persisting versioned artifacts on research/umbrella; do not claim local filesystem persistence."
+    },
+    {
+      "capability": "artifact_readback",
+      "status": "PASS",
+      "evidence": {
+        "delta_sha256": "b7236fdd04b9528c0391596047ef87baa73f805d8755ba6dade941235236f00b",
+        "delta_blob_sha": "9f3adfe8417a3cf8822876dbbe0dbd1d66f0a17d",
+        "delta_manifest_sha256": "86c6eb1beb03bf338a647eb627cb4fbed1ff14a2d69ee44859e2c66e35de1bf6",
+        "snapshot_sha256": "fb4af30560c34af34ad4298c8b8f458f31b9a1373c0a1ce9a6f5d98051231d90",
+        "archive_manifest_sha256": "c5f74edb21801644884d4447333e2a3b4607faa2d42f0ca5725695f5de4e4e8e",
+        "five_minute_index_sha256": "b519465d74b2bbdf818ac1ef46459239f0d9540987d57106fd55654ceded5c12",
+        "fifteen_minute_index_sha256": "46fc3dff292ba7b81b5964a7a34d9e927e1f8bf85ccb3aaddd6196d62fbe2570",
+        "readback_receipt_sha256": "ecfbc44e2d89577e50cfc2751f1fa64bc2bd67f44a17f6a679deeb085f3e9481"
+      },
+      "impact": "Delta, delta manifest, snapshot, archive manifest, 5m/15m indexes and readback receipt were fetched after writes and verified by exact content/SHA-256.",
+      "next_action": "Include the remaining run report, preflight, queue and run manifest in the final readback receipt."
+    }
+  ],
+  "execution_classification": {
+    "status": "RESEARCH_EXECUTED",
+    "scope": "INCREMENTAL_ARCHIVE_APPEND_AND_MARKET_CONTEXT_MONITORING",
+    "strategy_experiment_status": "BLOCKED",
+    "oos_evaluated": false,
+    "monitoring_only": false,
+    "notes": "The completed reproducible experiment was an incremental archive data-quality test only; no strategy edge or OOS result was produced."
+  }
+}

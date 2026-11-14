@@ -1,0 +1,136 @@
+{
+  "run_id": "auto11-20261113T2358Z-run11",
+  "as_of_utc": "2026-11-13T23:58:52.843Z",
+  "classification": "RESEARCH_EXECUTED",
+  "environment": {
+    "runtime": "managed container plus V8 tool runtime",
+    "os": "Debian GNU/Linux 13 (trixie)",
+    "kernel": "Linux 6.18.57 x86_64",
+    "python": "3.13.5",
+    "node": "v22.16.0",
+    "npm": "10.9.2",
+    "pnpm": "UNAVAILABLE",
+    "yarn": "UNAVAILABLE",
+    "cpu_cores": 3,
+    "memory_total_bytes": 6091004000,
+    "memory_available_bytes": 4950092000,
+    "disk_free_gb": 30,
+    "local_repository_checkout": false,
+    "node_modules": false,
+    "binance_sdk_importable": false,
+    "python_packages": {
+      "numpy": "2.3.5",
+      "pandas": "2.2.3",
+      "scipy": "1.17.0",
+      "statsmodels": "0.14.6",
+      "pytest": "9.0.2",
+      "pyarrow": "NOT_INSTALLED",
+      "polars": "NOT_INSTALLED"
+    }
+  },
+  "checks": [
+    {
+      "capability": "shell_compute",
+      "status": "PASS",
+      "evidence": "Container shell executed; Python 3.13.5 and V8 data processing ran; 3 CPU cores, 6.09 GB RAM, about 30 GB free.",
+      "impact": "Current-window data-quality audit completed.",
+      "next_action": "Retain this runtime for bounded data checks only."
+    },
+    {
+      "capability": "repository_code",
+      "status": "DEGRADED",
+      "evidence": "Local checkout absent. Remote main commit cc48c0a7c7eab197f9ac0f0ec135a66abdd1613e readable; package.json requires Node >=24 and npm >=11. scripts/backtest.ts, scripts/research-run.ts and scripts/conditional-edge.ts exist remotely. Local Node 22.16.0/npm 10.9.2; no node_modules.",
+      "impact": "Remote harness cannot be invoked here.",
+      "next_action": "Provision Node >=24/npm >=11, checkout that commit and install lockfile dependencies."
+    },
+    {
+      "capability": "network_binance_endpoints",
+      "status": "DEGRADED",
+      "evidence": "Direct HTTPS probes at 2026-11-13T23:54:17Z-23:54:27Z returned HTTP000 DNS resolution failures for /fapi/v1/time, /exchangeInfo, /klines, /premiumIndex, /openInterest and /ticker/24hr. Binance connector market-data calls succeeded but expose no HTTP status/headers. Connector exchangeInfo.serverTime=2026-11-13T06:02:01.706Z vs premiumIndex.time=2026-11-13T23:48:59.003Z; drift 64,017.297 seconds (17h 46m 57.297s).",
+      "impact": "Current public market snapshot usable descriptively; contract status and execution validation blocked.",
+      "next_action": "Restore DNS or obtain uncached official /time and /exchangeInfo; require <=5s drift."
+    },
+    {
+      "capability": "raw_historical_archive",
+      "status": "DEGRADED",
+      "evidence": "Remote GitHub archive branch research/raw-ohlcv-archive-20261108T1026Z and manifest v111 readable. 5m/15m base pages partial; 1h has 28 missing opens per symbol and 8-row discrepancy; 4h raw/aligned/canonical counts 53,960/53,816/53,844 with 13 page-manifest SHA mismatches.",
+      "impact": "Historical inference remains blocked or restricted; no full-cycle lower-timeframe sample.",
+      "next_action": "Backfill 5m/15m multi-year history; reconcile 1h gaps and 4h page hashes/counts."
+    },
+    {
+      "capability": "data_quality_coverage",
+      "status": "DEGRADED",
+      "evidence": "Current 16-series sample: 1,920 returned, 1,904 completed, 16 forming excluded; duplicates/gaps/off-grid/OHLC/nonfinite/nonpositive-volume/close-time failures all zero. Historical archive remains partial/degraded.",
+      "impact": "Current sample integrity passes; sample size is not adequate for regime frequencies or strategy tests.",
+      "next_action": "Continue archive repair; do not extrapolate the current sample."
+    },
+    {
+      "capability": "backtest_harness_smoke_test",
+      "status": "BLOCKED",
+      "evidence": "Remote harness files exist; local checkout and compatible Node/npm are absent; Binance SDK packages not installed; deterministic fixture smoke test NOT_RUN.",
+      "impact": "No strategy experiment or OOS evaluation can run in this environment.",
+      "next_action": "Provision compatible runtime and run the same fixture twice before any backtest."
+    },
+    {
+      "capability": "disk_storage",
+      "status": "PASS",
+      "evidence": "About 30 GB free on 32 GB overlay; GitHub main-branch write/readback succeeded for this run's raw sample and audit.",
+      "impact": "Run artifacts are durably persisted; canonical archive branch not advanced.",
+      "next_action": "Keep run artifacts separate from canonical archive until the append/index workflow is executable."
+    },
+    {
+      "capability": "artifact_readback",
+      "status": "PASS",
+      "evidence": "Raw completed-kline sample and data_quality_audit.json fetched back byte-identically; SHA-256 and Git blob SHA-1 recorded.",
+      "impact": "Current data-quality result is reproducible from the persisted raw sample.",
+      "next_action": "Persist remaining run snapshots and verify each readback."
+    }
+  ],
+  "direct_endpoint_probes": [
+    {
+      "endpoint": "GET /fapi/v1/time",
+      "retrieved_utc": "2026-11-13T23:54:17.044Z",
+      "status": "HTTP000",
+      "error": "Temporary failure in name resolution"
+    },
+    {
+      "endpoint": "GET /fapi/v1/exchangeInfo?symbol=BTCUSDT",
+      "retrieved_utc": "2026-11-13T23:54:17.055Z",
+      "status": "HTTP000",
+      "error": "Temporary failure in name resolution"
+    },
+    {
+      "endpoint": "GET /fapi/v1/klines?symbol=BTCUSDT&interval=1h&limit=2",
+      "retrieved_utc": "2026-11-13T23:54:22.061Z",
+      "status": "HTTP000",
+      "error": "Temporary failure in name resolution"
+    },
+    {
+      "endpoint": "GET /fapi/v1/premiumIndex?symbol=BTCUSDT",
+      "retrieved_utc": "2026-11-13T23:54:22.062Z",
+      "status": "HTTP000",
+      "error": "Temporary failure in name resolution"
+    },
+    {
+      "endpoint": "GET /fapi/v1/openInterest?symbol=BTCUSDT",
+      "retrieved_utc": "2026-11-13T23:54:27.063Z",
+      "status": "HTTP000",
+      "error": "Temporary failure in name resolution"
+    },
+    {
+      "endpoint": "GET /fapi/v1/ticker/24hr?symbol=BTCUSDT",
+      "retrieved_utc": "2026-11-13T23:54:27.064Z",
+      "status": "HTTP000",
+      "error": "Temporary failure in name resolution"
+    }
+  ],
+  "exchange_metadata": {
+    "connector_server_time_utc": "2026-11-13T06:02:01.706Z",
+    "market_time_proxy_utc": "2026-11-13T23:48:59.003Z",
+    "drift_seconds": 64017.297,
+    "execution_status": "BLOCKED_STALE_EXCHANGEINFO"
+  },
+  "smoke_test": "NOT_RUN",
+  "strategy_backtest": "NOT_RUN",
+  "untouched_oos": "NOT_EVALUATED"
+}

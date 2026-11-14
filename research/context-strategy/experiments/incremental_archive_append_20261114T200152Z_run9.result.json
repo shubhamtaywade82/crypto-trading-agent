@@ -1,0 +1,125 @@
+{
+  "schema_version": "1.0.0",
+  "id": "DQ-20261114T200152Z",
+  "run_id": "context-strategy-20261114T200152Z-run9",
+  "type": "incremental_raw_archive_append_integrity",
+  "status": "EXECUTED",
+  "as_of_utc": "2026-11-14T20:04:35.000Z",
+  "hypothesis": "Completed bars after the verified per-interval raw highwaters can be appended without duplicate, gap, timestamp, OHLC, volume or cross-symbol alignment failures.",
+  "source": {
+    "endpoint": "GET /fapi/v1/klines",
+    "transport": "Binance USD-M public market-data connector",
+    "symbols": [
+      "BTCUSDT",
+      "ETHUSDT",
+      "SOLUSDT",
+      "XRPUSDT"
+    ],
+    "intervals": [
+      "5m",
+      "15m",
+      "1h"
+    ],
+    "limit_per_symbol_interval": 120
+  },
+  "window": {
+    "previous_highwater_utc": {
+      "5m": "2026-11-14T18:00:00.000Z",
+      "15m": "2026-11-14T17:45:00.000Z",
+      "1h": "2026-11-14T17:00:00.000Z"
+    },
+    "first_appended_open_utc": {
+      "5m": "2026-11-14T18:05:00.000Z",
+      "15m": "2026-11-14T18:00:00.000Z",
+      "1h": "2026-11-14T18:00:00.000Z"
+    },
+    "last_appended_open_utc": {
+      "5m": "2026-11-14T19:55:00.000Z",
+      "15m": "2026-11-14T19:45:00.000Z",
+      "1h": "2026-11-14T19:00:00.000Z"
+    },
+    "as_of_exchange_time_utc": "2026-11-14T20:01:52.000Z"
+  },
+  "rows": {
+    "fetched": 1440,
+    "completed": 1428,
+    "forming_excluded": 12,
+    "pre_highwater_excluded": 1296,
+    "appended": 132,
+    "by_interval": {
+      "5m": 92,
+      "15m": 32,
+      "1h": 8
+    },
+    "by_symbol": {
+      "BTCUSDT": 33,
+      "ETHUSDT": 33,
+      "SOLUSDT": 33,
+      "XRPUSDT": 33
+    },
+    "by_symbol_interval": {
+      "BTCUSDT": {
+        "5m": 23,
+        "15m": 8,
+        "1h": 2
+      },
+      "ETHUSDT": {
+        "5m": 23,
+        "15m": 8,
+        "1h": 2
+      },
+      "SOLUSDT": {
+        "5m": 23,
+        "15m": 8,
+        "1h": 2
+      },
+      "XRPUSDT": {
+        "5m": 23,
+        "15m": 8,
+        "1h": 2
+      }
+    }
+  },
+  "metrics": {
+    "duplicates": 0,
+    "missing_intervals": 0,
+    "off_grid": 0,
+    "non_monotonic": 0,
+    "ohlc_failures": 0,
+    "non_finite": 0,
+    "non_positive_volume": 0,
+    "close_time_failures": 0,
+    "forming_rows_included": 0,
+    "cross_symbol_alignment": true,
+    "contiguous_from_prior_highwater": true
+  },
+  "artifacts": {
+    "deltaPath": "research-data/binance-usdm/delta/binance_usdm_delta_20261114T200152Z_5m15m1h_completed.jsonl",
+    "deltaSha256": "7b140318546ce175ba0fb599f8be2b7fa0a3e6a60ab02ffda4ac13ca970bc701",
+    "deltaBlobSha1": "0b407c9cf7ff53d5752468ae53ab44007d57270c",
+    "deltaManifestPath": "research-data/binance-usdm/delta/manifest-20261114T200152Z-5m15m1h.json",
+    "deltaManifestSha256": "838ea52220bd1460741fc6edbc5ee1559cfd8e782649e92222f6528fb8f8839c",
+    "archiveManifestPath": "research-data/binance-usdm/manifests/archive_manifest_20261114T200152Z_run9.json",
+    "archiveManifestSha256": "f4a73576c3ea5360e3f18c2b7450705fc3741a500fa0b701f41d92b8f9a9d244",
+    "archiveBranchHeadCommit": "bd0f4a20edcbd6c40ecb62edc9d3f2aaa0fad53e",
+    "readbackVerified": true
+  },
+  "held": {
+    "interval": "4h",
+    "rows": 4,
+    "reason": "4h raw/aligned/canonical lineage and 13 original page-manifest SHA mismatches remain unresolved; 16:00Z completed bars held, not appended."
+  },
+  "limitations": [
+    "This validates only the incremental 5m/15m/1h slice, not full historical coverage.",
+    "No strategy backtest or OOS evaluation was run.",
+    "No 4h rows were appended.",
+    "No local Node24/npm11 harness or deterministic smoke test was available."
+  ],
+  "execution": {
+    "entrypoint": "inline deterministic JavaScript validator in functions.exec",
+    "runtime": "managed V8 Code Mode",
+    "codeHash": "NOT_PERSISTED_AS_STANDALONE_SCRIPT",
+    "seed": null,
+    "lookahead": false
+  }
+}

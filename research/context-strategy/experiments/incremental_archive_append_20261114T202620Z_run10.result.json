@@ -25,7 +25,7 @@
       "5m": "2026-11-14T19:55:00.000Z",
       "15m": "2026-11-14T19:45:00.000Z"
     },
-    "as_of_utc": "2026-11-14T20:26:20.208Z",
+    "as_of_utc": "2026-11-14T20:34:06.221Z",
     "forming_rule": "include only closeTime < asOfUtc",
     "validation_rules": [
       "openTime strictly after previous interval highwater",
@@ -37,48 +37,76 @@
       "finite numeric OHLCV/trade/taker fields",
       "closeTime = openTime + interval - 1",
       "cross-symbol openTime alignment"
+    ],
+    "batches": [
+      {
+        "as_of_utc": "2026-11-14T20:24:36.697Z",
+        "rows": 20,
+        "rows_by_interval": {
+          "5m": 16,
+          "15m": 4
+        },
+        "forming_rows_excluded": 4
+      },
+      {
+        "as_of_utc": "2026-11-14T20:26:20.208Z",
+        "rows": 4,
+        "rows_by_interval": {
+          "5m": 4
+        },
+        "forming_rows_excluded": 0
+      },
+      {
+        "as_of_utc": "2026-11-14T20:34:06.221Z",
+        "rows": 8,
+        "rows_by_interval": {
+          "5m": 4,
+          "15m": 4
+        },
+        "forming_rows_excluded": 0
+      }
     ]
   },
   "result": {
-    "rows_appended_total": 24,
+    "rows_appended_total": 32,
     "rows_by_interval": {
-      "5m": 20,
-      "15m": 4
+      "5m": 24,
+      "15m": 8
     },
     "rows_by_symbol": {
-      "BTCUSDT": 6,
-      "ETHUSDT": 6,
-      "SOLUSDT": 6,
-      "XRPUSDT": 6
+      "BTCUSDT": 8,
+      "ETHUSDT": 8,
+      "SOLUSDT": 8,
+      "XRPUSDT": 8
     },
     "rows_by_symbol_interval": {
       "BTCUSDT": {
-        "5m": 5,
-        "15m": 1
+        "5m": 6,
+        "15m": 2
       },
       "ETHUSDT": {
-        "5m": 5,
-        "15m": 1
+        "5m": 6,
+        "15m": 2
       },
       "SOLUSDT": {
-        "5m": 5,
-        "15m": 1
+        "5m": 6,
+        "15m": 2
       },
       "XRPUSDT": {
-        "5m": 5,
-        "15m": 1
+        "5m": 6,
+        "15m": 2
       }
     },
-    "rows_fetched": 28,
+    "rows_fetched": 36,
     "forming_rows_excluded": 4,
     "pre_highwater_rows_excluded": 0,
     "latest_completed_open_utc_by_interval": {
-      "5m": "2026-11-14T20:20:00.000Z",
-      "15m": "2026-11-14T20:00:00.000Z"
-    },
-    "next_start_utc_by_interval": {
       "5m": "2026-11-14T20:25:00.000Z",
       "15m": "2026-11-14T20:15:00.000Z"
+    },
+    "next_start_utc_by_interval": {
+      "5m": "2026-11-14T20:30:00.000Z",
+      "15m": "2026-11-14T20:30:00.000Z"
     },
     "quality": {
       "duplicates": 0,
@@ -138,6 +166,20 @@
       "sha256": "4e33de16712619d5fc4fc22acdad25b49eceef6b140f24be7b38a29f4af4351c",
       "git_blob_sha": "8bea8ae19b96ad7ce5b7d08a09b32c09d47dc21d",
       "readback_verified": true
+    },
+    {
+      "path": "research-data/binance-usdm/delta/binance_usdm_delta_20261114T203406Z_5m15m_completed.jsonl",
+      "rows": 8,
+      "bytes": 2350,
+      "sha256": "08b293174d6c6a212c0a726419f173acc3e4747ccbc557ae057f177d30913fb8",
+      "git_blob_sha": "cdb1cfe12d058e407bd4bd481743aa8d81672d77",
+      "readback_verified": true
+    },
+    {
+      "path": "research-data/binance-usdm/delta/manifest-20261114T203406Z-5m15m.json",
+      "sha256": "5537a87b6b007b1e62d84b7ea59d3edac6d6de3987786d5316de739201358d47",
+      "git_blob_sha": "7bd67c2722f5a1879d3edc0d4a245bb05357fab1",
+      "readback_verified": true
     }
   ],
   "execution": {
@@ -145,7 +187,7 @@
     "environment": "managed tool runtime; no local project checkout",
     "seed": null,
     "start_utc": "2026-11-14T20:24:36.697Z",
-    "end_utc": "2026-11-14T20:29:25.342Z",
+    "end_utc": "2026-11-14T20:34:06.221Z",
     "exit_status": "SUCCESS",
     "reproducibility": "same input rows and deterministic validation rules; no random sampling",
     "code_version": "INLINE_UNVERSIONED",
@@ -156,6 +198,7 @@
     "strategy_cost_model": "NOT_APPLICABLE_TO_DATA_QUALITY_APPEND",
     "trading_costs": "UNAVAILABLE/UNCALIBRATED; no strategy backtest"
   },
-  "interpretation": "The incremental slice passed integrity gates and is durably persisted. Inputs, manifests, outputs and hashes are available; the exact inline validator source was not committed and has no code hash, so strict code-level reproducibility is incomplete. This is not strategy evidence, does not validate historical base coverage, and does not establish trading edge or OOS behavior.",
-  "next_action": "Continue from 5m 20:25Z and 15m 20:15Z after candle close; keep 1h and 4h constrained by their existing reconciliation blockers."
+  "interpretation": "Thirty-two completed incremental rows passed slice-level integrity gates and are durably persisted. Inputs, manifests, indexes and outputs are hashed and read back. The exact inline validator source was not committed and has no code hash, so strict code-level reproducibility is incomplete. This is not strategy evidence and does not validate historical base coverage or OOS behavior.",
+  "next_action": "Continue from 5m 20:25Z and 15m 20:15Z after candle close; keep 1h and 4h constrained by their existing reconciliation blockers.",
+  "updated_at_utc": "2026-11-14T20:34:06.221Z"
 }

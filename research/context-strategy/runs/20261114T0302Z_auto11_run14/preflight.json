@@ -1,0 +1,69 @@
+{
+  "schema_version": "1.0.0",
+  "run_id": "auto11-20261114T0302Z-run14",
+  "as_of_utc": "2026-11-14T03:05:29.000Z",
+  "checks": [
+    {
+      "capability": "shell/compute",
+      "status": "PASS",
+      "evidence": "Debian GNU/Linux 13.3; kernel 6.18.57; cwd /; Node v22.16.0; npm 10.9.2; Python 3.13.5; 3 CPUs; 5.8 GiB RAM with 4.7 GiB available; /mnt/data 32 GiB total with 30 GiB free; temporary write/read probe PASS.",
+      "impact": "Local shell and bounded data validation are available.",
+      "next_action": "Provision project-compatible Node >=24 and npm >=11 before invoking repo scripts."
+    },
+    {
+      "capability": "repo/code",
+      "status": "DEGRADED",
+      "evidence": "Remote repo shubhamtaywade82/crypto-trading-agent accessible; main commit da84e0c26535c1856fcae7e487ee5751da701d2d dated 2026-11-14T02:47:44Z. No local checkout under /, /mnt/data, /workspace or /home. package.json requires Node >=24/npm >=11. Binance SDK packages @nemesis-oss/binance-sdk, binance, @binance/connector and binance-api-node are NOT_INSTALLED.",
+      "impact": "Source is inspectable remotely, but the actual repo runner cannot execute in this runtime.",
+      "next_action": "Clone exact commit into a persistent workspace and provision Node24/npm11; install lockfile-pinned dependencies."
+    },
+    {
+      "capability": "network/Binance endpoints",
+      "status": "DEGRADED",
+      "evidence": "Direct fapi.binance.com DNS/HTTPS requests failed; /fapi/v1/time unavailable. Binance connector returned fresh klines, premiumIndex, ticker, openInterest, fundingRate, openInterestHist, taker ratio, global account ratio and depth payloads. Connector HTTP status/headers are not exposed. exchangeInfo serverTime 2026-11-13T06:02:01.704Z was stale by about 20.995 hours at 03:01:45Z.",
+      "impact": "Market snapshot is usable as observed data, but fresh contract status and execution validation are blocked.",
+      "next_action": "Restore direct outbound DNS/HTTPS and require fresh /fapi/v1/time plus /fapi/v1/exchangeInfo."
+    },
+    {
+      "capability": "raw historical archive",
+      "status": "PASS_INCREMENTAL_DEGRADED_BASE",
+      "evidence": "GitHub archive branch research/raw-ohlcv-archive-20261108T1026Z. Appended 32 completed rows: 5m=20, 15m=8, 1h=4, 4h=0; excluded 12 forming rows. Delta, per-delta manifests, global manifest v118, current snapshot and four interval indexes were read back and SHA/blob identities verified.",
+      "impact": "Incremental archive continuity is maintained for 5m/15m/1h; 4h remains intentionally held.",
+      "next_action": "Reconcile page-0028 and 1h/4h historical lineage before treating archive as research-ready."
+    },
+    {
+      "capability": "data quality/coverage",
+      "status": "DEGRADED",
+      "evidence": "Incremental slice: duplicates=0, missing intervals=0, off-grid=0, non-monotonic=0, OHLC failures=0, non-finite=0, non-positive volume=0, forming rows included=0, cross-symbol alignment PASS. Historical: 5m/15m page-0028 8/8 SHA mismatches and misaligned symbol windows; 1h 28 missing opens per symbol plus 8-row discrepancy; 4h raw/aligned/canonical counts 53960/53816/53844 with 13 page-manifest SHA mismatches.",
+      "impact": "Current monitoring is possible; full-panel regime/strategy inference remains blocked.",
+      "next_action": "Resolve page-0028 checksums/alignment, then 1h bridge and 4h provenance."
+    },
+    {
+      "capability": "backtest harness/smoke test",
+      "status": "BLOCKED",
+      "evidence": "Remote scripts/backtest.ts and scripts/conditional-edge.ts exist, but local repo checkout and Node24/npm11 are absent; SDK modules are not importable; deterministic fixture smoke test was NOT_RUN. Remote audit 2026-11-07 found 5m omitted from backtest CLI, Candle type missing closeTime, forming-candle exclusion not enforced, zero-volume rows accepted, conditional-edge analyzes DecisionRecord journals rather than generating raw-OHLCV strategies, and required Holm/purge/100-trade gates not wired through CLI.",
+      "impact": "No valid strategy experiment or OOS evaluation can run.",
+      "next_action": "Provision compatible runner, repair the source-audited defects, then run deterministic fixture twice and no-lookahead invariance tests."
+    },
+    {
+      "capability": "disk/storage",
+      "status": "PASS",
+      "evidence": "32 GiB overlay with 30 GiB free; /mnt/data write/read probe PASS. GitHub raw archive branch and main branch are writable and readback verified.",
+      "impact": "Durable GitHub persistence is available; local filesystem is only a transient workspace.",
+      "next_action": "Continue using versioned GitHub archive/registry artifacts; do not assume local state survives."
+    },
+    {
+      "capability": "artifact readback",
+      "status": "PASS",
+      "evidence": "Delta JSONL, per-delta manifests, archive manifest v118, snapshot and all four archive-index pointer updates were fetched back and exact content/SHA-256 verified.",
+      "impact": "This run's archive append artifacts are reproducible and persisted.",
+      "next_action": "Include hashes and exact refs in the run ledger."
+    }
+  ],
+  "overall_status": "RESEARCH_EXECUTED",
+  "research_scope": "Incremental archive data-quality experiment and monitoring snapshot only.",
+  "strategy_experiment_status": "BLOCKED",
+  "oos_status": "NOT_EVALUATED",
+  "blocker": "No local Node>=24/npm>=11 repository checkout; fresh exchange metadata/server time unavailable; historical 5m/15m/1h/4h archive lineage incomplete; execution-cost model uncalibrated.",
+  "next_executable_remediation": "Repair archive lineage and provision compatible runtime, then run the deterministic fixture smoke test before preregistering a strategy experiment."
+}

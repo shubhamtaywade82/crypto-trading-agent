@@ -111,3 +111,74 @@ gives hundreds of cells, and some will look profitable by chance. The tooling th
   240-minute baseline; it refuses to classify across gaps or without OI. `scripts/microstructure-state.ts` prints the current state and
   label frequencies. It is not wired into strategies or `MarketState`: the recording is a week old, and no label has been tested
   for predictive value. Any such test must be pre-registered as a new hypothesis id in `EventStudy.ts` before looking at outcomes.
+
+## 12. Pre-registered hypothesis H5: price x open-interest regime
+
+Committed 2026-11-12, before any H5 outcome was computed in this repository or in the session that wrote this section. The rules and constants below are frozen. Changing one after seeing outcomes invalidates the test: add a new id instead (the §10 convention).
+
+**Scope.** Labels from `microstructureState()` in `src/marketdata/MicrostructureState.ts`, applied to the minute records that `scripts/record-market-data.ts` writes. This is not the live `FlowTracker` quadrant in `src/market/FlowTracker.ts`, which uses different windows and thresholds and is not tested here. Names differ: this section's `SHORT_COVER` is `FlowTracker`'s `SHORT_COVERING`. The log has no H3 entry; this section does not reuse that id.
+
+**Motivation.** "Rising OI with rising price means new longs, which continue" is a common heuristic, and this repository has no evidence for it. The `FlowTracker` thresholds are documented as uncalibrated. §11 requires any label test to be registered before its outcomes are read. This section does that.
+
+**Hypothesis.** When the label at minute t is `LONG_BUILD` (price up, OI up), price keeps rising over the horizon, more than after `SHORT_COVER` (price up, OI down). The mirror holds for `SHORT_BUILD` (price down, OI up) against `LONG_LIQUIDATION` (price down, OI down). A significant result in the opposite direction is a new finding. It needs its own id and confirmation.
+
+**Definitions (frozen)**
+- Label: `classifyPriceOi(priceZ, oiZ, moveZ)` from `microstructureState(records up to and including t, DEFAULT_MICROSTRUCTURE_OPTIONS)`: windowMinutes 15, baselineMinutes 240, moveZ 0.5. No record after t may be used.
+- Event minute: minute t where `openInterest` differs from minute t-1, meaning a new OI poll landed. The window's end OI is then the newest value.
+- Primary groups: `LONG_BUILD` (sign +1) and `SHORT_BUILD` (sign -1). Contrast groups: `SHORT_COVER` (sign +1) and `LONG_LIQUIDATION` (sign -1). `NEUTRAL` is not used.
+- Forward return: r = (mark[t+h] - mark[t]) / mark[t] x 10,000 bps. Both marks must exist, at exactly t and t+h, with no gap.
+- Horizons: h in {5, 15, 30, 60} minutes.
+- Signed return: s = sign x r. Net: s - 16 bps (round-trip cost, as in §10).
+- Drift: d per symbol and horizon = mean r over all eligible minutes of that symbol in the sample.
+- Test A statistic per primary event: x = sign x (r - d). This is `excessBps` in `EventStudy.ts`, per event.
+
+**Tests and decision rule**
+
+The family is 8 tests: Test A and Test B at each of the 4 horizons. Alpha = 0.05 / 8 = 0.00625, one-sided in the predicted direction.
+- Test A (continuation): pooled over symbols, mean x over primary events.
+- Test B (OI isolates the effect): pooled over symbols, mean s over primary groups minus mean s over contrast groups. Positive means OI-consistent moves continue more.
+- Inference: day-clustered percentile bootstrap. Resample UTC days with replacement, 10,000 draws, seed 1 (`mulberry32`, `src/research/Bootstrap.ts`). A statistic passes when its 0.625th percentile is above zero.
+
+A horizon is a **lead** only if all of these hold:
+- P1 sample: at least 30 events in each of the four groups at that horizon, and at least 14 usable UTC days. If not met, the horizon is not evaluable: neither pass nor fail.
+- P2: Test A passes.
+- P3: Test B passes.
+- P4 net: the mean net signed return (s - 16 bps) passes the same bootstrap rule.
+- P5: both `LONG_BUILD` and `SHORT_BUILD` have positive mean x.
+- P6: at least 3 of the 4 symbols have positive pooled mean x.
+
+**Replication** (only after a lead): same definitions and horizon, on data recorded after the lead's analysis commit. Test A and Test B must pass at one-sided 0.05 with the same sign, and P1 and P5 must hold. A replication pass makes H5 a candidate for live-readiness review under §8. It approves no strategy.
+
+**Multiplicity.** This family (8 tests) is separate from the 12 tests in §10. Count both when reading the log. Do not relax one family's alpha to rescue another.
+
+**Data rules (frozen)**
+- Inputs: `data/market/{SYMBOL}-{YYYY-MM-DD}.jsonl` for BTCUSDT, ETHUSDT, SOLUSDT, XRPUSDT, loaded by `loadMinutes`, then `cleanRecords`.
+- Each event needs 255 contiguous minutes ending at t (the `microstructureState` requirement) and contiguous minutes through t+h. Otherwise it is dropped.
+- A UTC day is excluded for all symbols when any symbol has fewer than 90% of its 1,440 minutes that day. Excluded days are listed in the output.
+- Non-overlap: per symbol and horizon, after a primary event at t, skip later primary events until t+h.
+- Funding is not charged. Report the share of events whose horizon crosses a settlement (00, 08, 16 UTC).
+- The output records the data cutoff (last record time) and the git commit of the run.
+
+**Known limits (not corrected here)**
+- Mark-to-mark returns, with no fill model beyond the 16 bps cost.
+- OI resolution is the poll interval (5 minutes by default). A 15-minute window contains about three OI steps.
+- Baseline windows overlap, so the z-scores are descriptive scalings, not independent samples.
+- A failed poll leaves OI carried forward with no flag. A stale run produces `NEUTRAL`, not an error.
+- Four liquid symbols over one recording period. Results do not generalise to other symbols or regimes without a new id.
+
+**Prohibited**
+- Changing any constant in this section after seeing outcomes.
+- Using volatility-phase or regime slices for a pass decision. Slices are descriptive only (§11).
+- Letting any strategy, `MarketState`, gate or sizing read these labels. Nothing here authorises that.
+
+**Not tested here:** the reversal reading of crowding (an OI build at an extreme predicts a reversal). That would be a separate id with its own section.
+
+**Implementation (not yet written).** A function for categorical labels, in `src/marketdata/EventStudy.ts` or a new module, plus a runner script. Do not edit `HYPOTHESES` or `eventStudy()`: they encode H1, H2 and H4 and their threshold rule. The implementation must match the constants above. Its tests must cover an OI gap, a contiguity break, and a day exclusion. The implementation commit comes before the first run.
+
+**Amendment 1 (2026-11-12, before the runner was written and before any H5 outcome was computed).** Four clarifications. None changes a constant.
+1. Non-overlap applies within each population. Primary events share one cursor per symbol and horizon, as written. Contrast events share a second cursor. Without this, the contrast groups in Test B could contain overlapping observations.
+2. Eligible minute (used for drift): a minute with 255 contiguous minutes of history ending at it, contiguous minutes through t+h, marks at both ends, on a usable day. It need not carry a label or an OI change.
+3. Coverage counts distinct minute records per symbol per UTC day, as loaded, before `cleanRecords`.
+4. The lower bound is the sorted bootstrap value at zero-based index floor(alpha x valid draws): index 62 for 10,000 draws at alpha 0.00625. A draw with no primary or no contrast event is dropped. If more than 1% of draws are dropped, the horizon is not evaluable.
+
+**Status (2026-11-12).** The runner is in the commit that adds this line: `src/marketdata/RegimeEventStudy.ts` (rules and constants), `scripts/regime-event-study.ts` (CLI, refuses a dirty tree without `--allow-dirty`), and `tests/regimeEventStudy.test.ts` (25 tests, covering the OI gap, history contiguity, forward-path gap, day exclusion, non-overlap, drift, look-ahead, the judgement rules, and replication). It has been run only on synthetic noise, to check the pipeline end to end. No recorded data has been analysed, and no H5 outcome exists.

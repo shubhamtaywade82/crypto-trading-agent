@@ -1,0 +1,138 @@
+{
+  "schema_version": "1.0.0",
+  "run_id": "context-strategy-20261114T202620Z-run10",
+  "as_of_utc": "2026-11-14T20:29:25.342Z",
+  "environment": {
+    "shell_compute": {
+      "status": "PASS",
+      "cwd": "/",
+      "os": "Debian GNU/Linux 13 (trixie)",
+      "node": "v22.16.0",
+      "npm": "10.9.2",
+      "python": "3.13.5",
+      "cpu_count": 3,
+      "memory_total": "5.8 GiB",
+      "disk_total": "32 GiB",
+      "disk_free": "30 GiB",
+      "note": "Shell and bounded computation available; required Node24/npm11 runtime is not met."
+    },
+    "repository_code": {
+      "status": "DEGRADED",
+      "remote_repository": "shubhamtaywade82/crypto-trading-agent",
+      "remote_access": "PASS via GitHub connector",
+      "local_checkout": "NOT_PRESENT",
+      "package_engines": "Node >=24; npm >=11",
+      "remote_backtest_entrypoint": "scripts/backtest.ts exists remotely",
+      "local_invocation": "NOT_POSSIBLE"
+    },
+    "binance_sdk": {
+      "status": "UNAVAILABLE",
+      "packages_checked": [
+        "@nemesis-oss/binance-sdk",
+        "binance",
+        "@binance/connector"
+      ],
+      "resolution": "NOT_FOUND",
+      "sdk_used": false
+    },
+    "direct_network": {
+      "status": "BLOCKED",
+      "probes": [
+        "https://fapi.binance.com/fapi/v1/time",
+        "https://fapi.binance.com/fapi/v1/exchangeInfo"
+      ],
+      "result": "DNS resolution failed before HTTP; no HTTP status received"
+    },
+    "connector_market_data": {
+      "status": "DEGRADED",
+      "successful_data_families": [
+        "klines",
+        "premiumIndex",
+        "ticker/24hr",
+        "openInterest",
+        "fundingRate history",
+        "openInterestHist",
+        "taker buy/sell volume",
+        "global long/short account ratio",
+        "depth"
+      ],
+      "http_status_headers": "NOT_EXPOSED"
+    },
+    "server_time": {
+      "status": "UNAVAILABLE",
+      "endpoint": "GET /fapi/v1/time",
+      "reason": "Direct DNS failure; connector has no server-time action"
+    },
+    "exchange_info": {
+      "status": "STALE_BLOCKED",
+      "endpoint": "GET /fapi/v1/exchangeInfo",
+      "server_time_utc": "2026-11-13T06:02:01.706Z",
+      "retrieved_against_utc": "2026-11-14T20:29:25.342Z",
+      "staleness_seconds": 138443.636,
+      "contract_status_execution_validation": "BLOCKED"
+    },
+    "raw_archive": {
+      "status": "DEGRADED",
+      "archive_branch": "research/raw-ohlcv-archive-20261108T1026Z",
+      "new_rows_appended": 24,
+      "delta_manifests_readback_verified": true,
+      "indexes_updated": [
+        "5m",
+        "15m"
+      ],
+      "archive_manifest_readback_verified": true,
+      "full_history": "PARTIAL; 1h/4h lineage blockers remain"
+    },
+    "data_quality": {
+      "status": "DEGRADED",
+      "recent_window_rows": 24000,
+      "completed_rows": 23984,
+      "forming_excluded": 16,
+      "duplicates": 0,
+      "missing_intervals": 0,
+      "off_grid": 0,
+      "non_monotonic": 0,
+      "ohlc_failures": 0,
+      "non_finite": 0,
+      "non_positive_volume": 0,
+      "note": "Recent windows pass; historical coverage and canonical lineage are inadequate for robust strategy testing."
+    },
+    "backtest_harness": {
+      "status": "BLOCKED",
+      "remote_entrypoint": "scripts/backtest.ts",
+      "smoke_test": "NOT_RUN",
+      "reason": "No local checkout; Node22.16/npm10.9 below engines; SDK dependencies absent; no compatible execution harness verified."
+    },
+    "disk_storage": {
+      "status": "PASS",
+      "local_disk_free": "30 GiB",
+      "durable_storage": "GitHub raw archive branch writable; commits and readbacks verified"
+    },
+    "artifact_readback": {
+      "status": "PASS",
+      "artifacts": [
+        "5m/15m delta files",
+        "two delta manifests",
+        "5m/15m archive indexes",
+        "archive manifest",
+        "current market snapshot"
+      ],
+      "verification": "Exact content reopened and hashes/blob identities checked"
+    }
+  },
+  "outcome": {
+    "run_status": "RESEARCH_EXECUTED",
+    "scope": "DATA_QUALITY_ONLY",
+    "strategy_experiment": "BLOCKED",
+    "oos_evaluation": "NOT_RUN",
+    "oos_evaluated": false
+  },
+  "blockers": [
+    "Page-0028 common-panel alignment and original manifest hash reconciliation",
+    "1h bridge: 28 missing hourly opens per symbol and 8-row count discrepancy",
+    "4h raw/aligned/canonical counts 53,960/53,816/53,844 and 13 original page-manifest SHA mismatches",
+    "Node24/npm11 local checkout and deterministic backtest smoke test",
+    "Fresh /fapi/v1/time and /fapi/v1/exchangeInfo",
+    "Point-in-time derivatives and calibrated fees/spread/slippage/impact/latency/fills"
+  ]
+}

@@ -1,0 +1,144 @@
+{
+  "schema_version": "1.0.0",
+  "as_of_utc": "2026-11-09T01:14:32.191Z",
+  "universe": {
+    "tradable": [
+      "SOLUSDT",
+      "ETHUSDT",
+      "XRPUSDT"
+    ],
+    "reference_only": [
+      "BTCUSDT"
+    ]
+  },
+  "oos_validated_count": 0,
+  "entries": [
+    {
+      "strategy": "EMA20/EMA50 pullback continuation",
+      "version": "1.0.0",
+      "symbol": "SOLUSDT",
+      "context": "STRONG_TREND_LOW_OR_NORMAL",
+      "status": "INSUFFICIENT_EVIDENCE",
+      "experiment_id": "EXP-002",
+      "timeframe": "4h",
+      "oos_trades": 27,
+      "win_rate_pct": 51.85,
+      "target_before_stop_pct": 7.41,
+      "expectancy_net_R": 0.00981,
+      "profit_factor": 1.029,
+      "max_drawdown_R": 5.77,
+      "bootstrap_ci95_mean_R": [
+        -0.3152,
+        0.4206
+      ],
+      "holm_adjusted_p": 1,
+      "funding_coverage": "1004/1004",
+      "failure_modes": [
+        "OOS trades below 100",
+        "CI includes zero",
+        "2/27 targets; 19/27 time stops",
+        "25bp cost stress negative"
+      ]
+    },
+    {
+      "strategy": "EMA20/EMA50 pullback continuation",
+      "version": "1.0.0",
+      "symbol": "ETHUSDT",
+      "context": "STRONG_TREND_LOW_OR_NORMAL",
+      "status": "INSUFFICIENT_EVIDENCE",
+      "experiment_id": "EXP-002",
+      "timeframe": "4h",
+      "oos_trades": 23,
+      "win_rate_pct": 52.17,
+      "target_before_stop_pct": 4.35,
+      "expectancy_net_R": -0.15758,
+      "profit_factor": 0.653,
+      "max_drawdown_R": 7.22,
+      "bootstrap_ci95_mean_R": [
+        -0.5611,
+        0.2787
+      ],
+      "holm_adjusted_p": 1,
+      "funding_coverage": "1004/1004",
+      "failure_modes": [
+        "Validation expectancy negative",
+        "OOS trades below 100",
+        "1/23 targets; 13/23 time stops",
+        "validation-test context TVD 0.405"
+      ]
+    },
+    {
+      "strategy": "EMA20/EMA50 pullback continuation",
+      "version": "1.0.0",
+      "symbol": "XRPUSDT",
+      "context": "STRONG_TREND_LOW_OR_NORMAL",
+      "status": "INSUFFICIENT_EVIDENCE",
+      "experiment_id": "EXP-002",
+      "timeframe": "4h",
+      "oos_trades": 39,
+      "win_rate_pct": 46.15,
+      "target_before_stop_pct": 5.13,
+      "expectancy_net_R": -0.05351,
+      "profit_factor": 0.85,
+      "max_drawdown_R": 10.24,
+      "bootstrap_ci95_mean_R": [
+        -0.3763,
+        0.2984
+      ],
+      "holm_adjusted_p": 1,
+      "funding_coverage": "1004/1004",
+      "failure_modes": [
+        "Validation expectancy negative",
+        "OOS trades below 100",
+        "2/39 targets; 27/39 time stops",
+        "validation-test context TVD 0.360"
+      ]
+    },
+    {
+      "strategy": "Donchian20 breakout",
+      "version": "prior-reported",
+      "symbol": "SOLUSDT",
+      "context": "BULL_LOW",
+      "status": "OOS_PROMISING",
+      "source": "Prior run report v82; not recalculated in this run",
+      "oos_trades": 12,
+      "win_rate_pct": 66.7,
+      "target_before_stop_pct": 41.7,
+      "expectancy_net_R": 0.606,
+      "profit_factor": 2.72,
+      "max_drawdown_R": 1.3,
+      "bootstrap_ci95_mean_R": [
+        0.086,
+        1.199
+      ],
+      "limitations": [
+        "Only 12 OOS trades",
+        "Not actionable; no OOS_VALIDATED promotion",
+        "Not re-evaluated this cycle"
+      ]
+    }
+  ],
+  "hypotheses": [
+    {
+      "strategy": "Breakout/retest",
+      "status": "HYPOTHESIS"
+    },
+    {
+      "strategy": "Range mean reversion/failed-breakout fade",
+      "status": "HYPOTHESIS"
+    },
+    {
+      "strategy": "Volatility expansion/momentum",
+      "status": "HYPOTHESIS"
+    },
+    {
+      "strategy": "BTC-led relative strength",
+      "status": "HYPOTHESIS"
+    },
+    {
+      "strategy": "Funding/OI filters",
+      "status": "HYPOTHESIS"
+    }
+  ],
+  "promotion_policy": "Require predeclared OOS sample, positive net expectancy, uncertainty, multiple-testing, cost, drawdown and parameter-stability gates. No promotion based on win rate alone."
+}

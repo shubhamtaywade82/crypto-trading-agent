@@ -1,0 +1,354 @@
+{
+  "schema_version": "1.0.0",
+  "snapshot_id": "context-strategy-2026-11-08T2027Z-v88",
+  "as_of_utc": "2026-11-08T20:27:55.000Z",
+  "source_registry_path": "research/context-strategy/registry.json",
+  "source_registry_blob_sha": "5362c0554a3c6bcf1c3f579b14e515787051988c",
+  "source_registry_updated_at_utc": "2026-11-08T07:26:27.336Z",
+  "source_of_truth": {
+    "repository": "shubhamtaywade82/crypto-trading-agent",
+    "branch": "main",
+    "commit": "22b513a671e251415aa34e18946c55d1ae5f8113",
+    "path": "research/context-strategy/registry.json",
+    "blobSha": "5362c0554a3c6bcf1c3f579b14e515787051988c",
+    "commitVerified": true,
+    "resolution": "Use active main registry entries and top-level statusCounts. The legacy nested strategyScorecard contains a conflicting OOS_PROMISING label; it is quarantined and not eligible for selection."
+  },
+  "taxonomy": {
+    "id": "CTX-4H-EMA50xEMA200-ATRQ-v2-FULL-ARCHIVE",
+    "source": "research/context-strategy/context-discovery/context_distribution_20261108T022532Z.json",
+    "sourceBlobSha": "8cb13c2356aeef18fe37dbbf9ca8d08004c429b7",
+    "coverageStartUtc": "2020-09-14T08:00:00.000Z",
+    "coverageEndUtc": "2026-11-05T16:00:00.000Z",
+    "rowsPerSymbol": 13461,
+    "labelledBarsPerSymbol": 12462,
+    "thresholdSource": "V100 training-derived; frozen; no refit this run",
+    "thresholds": {
+      "BTCUSDT": {
+        "flat": 2.5048,
+        "q33": 1.4474,
+        "q67": 2.0674,
+        "shock": 4.8982
+      },
+      "ETHUSDT": {
+        "flat": 2.5106,
+        "q33": 1.755,
+        "q67": 2.5876,
+        "shock": 6.3197
+      },
+      "SOLUSDT": {
+        "flat": 4.0735,
+        "q33": 2.7494,
+        "q67": 4.0357,
+        "shock": 9.7612
+      },
+      "XRPUSDT": {
+        "flat": 2.3359,
+        "q33": 1.9936,
+        "q67": 3.0167,
+        "shock": 9.098
+      }
+    },
+    "split": {
+      "method": "60/20/20 chronological diagnostic split on each 13,461-row series; first 999 bars used for rolling EMA warmup; no threshold fitting or strategy optimization.",
+      "trainBarsPerSymbol": 7077,
+      "validationBarsPerSymbol": 2692,
+      "testBarsPerSymbol": 2693
+    },
+    "jsdTrainTest": {
+      "BTCUSDT": 0.20203,
+      "ETHUSDT": 0.10765,
+      "SOLUSDT": 0.29652,
+      "XRPUSDT": 0.12844
+    }
+  },
+  "evidence_policy": {
+    "minimumProvisionalOosTradesPerSymbolContext": 100,
+    "strongerEvidenceTrades": 200,
+    "requirePositiveNetExpectancyAfterCosts": true,
+    "requireRobustnessAndUncertainty": true
+  },
+  "status_counts": {
+    "OOS_VALIDATED": 0,
+    "OOS_PROMISING": 0,
+    "REJECTED": 1,
+    "INSUFFICIENT_EVIDENCE": 4
+  },
+  "oos_validated_entries": [],
+  "oos_promising_entries": [],
+  "registry_entries": [
+    {
+      "id": "SOL-DONCHIAN20-BULL-LOW-V1-20261105T1825Z",
+      "symbol": "SOLUSDT",
+      "context": "EMA50_GT_EMA200_ATR14_Q33_TRAIN_EX_SHOCK_Q99",
+      "strategy_version": "DONCHIAN_BREAKOUT_BULL_LOW_V1",
+      "evidence_status": "INSUFFICIENT_EVIDENCE",
+      "oos_trades": 55,
+      "mean_net_r": 0.04310725980179393,
+      "profit_factor": 1.082381347767158,
+      "bootstrap_ci_95": [
+        -0.27982083578522227,
+        0.3899637337756116
+      ]
+    },
+    {
+      "id": "SOL-FAILED-BREAKOUT-FADE-SIDEWAYS-LOW-V1-20261105T2225Z",
+      "symbol": "SOLUSDT",
+      "context": "SIDEWAYS_LOW",
+      "strategy_version": "FAILED_BREAKOUT_FADE_V1",
+      "evidence_status": "REJECTED",
+      "oos_trades": 113,
+      "mean_net_r": -0.1479703017321489,
+      "profit_factor": 0.7870525610801595,
+      "bootstrap_ci_95": [
+        -0.31751343217234484,
+        0.019600128600543533
+      ]
+    },
+    {
+      "id": "SOL-4H-TREND-PULLBACK-BTC-CONFIRM-V1_1-20261106T0830Z",
+      "symbol": "SOLUSDT",
+      "context": "BEAR_NORMAL (final untouched test; detector admits BULL_NORMAL/BEAR_NORMAL with same-direction BTC confirmation)",
+      "strategy_version": "EMA20_PULLBACK_RECROSS_BTC_CONFIRM_V1_1",
+      "evidence_status": "INSUFFICIENT_EVIDENCE",
+      "oos_trades": 10,
+      "mean_net_r": -0.18863486733002421,
+      "profit_factor": 0.7329887042875234,
+      "bootstrap_ci_95": null
+    },
+    {
+      "id": "SOL-VOL-CONTRACTION-BREAKOUT-BTC-CONFIRM-BULL_COMPRESS-V1-20261108T0632Z",
+      "symbol": "SOLUSDT",
+      "context": "BULL_COMPRESS",
+      "strategy_version": "VOL_CONTRACTION_BREAKOUT_BTC_CONFIRM_V1",
+      "evidence_status": "INSUFFICIENT_EVIDENCE",
+      "oos_trades": 18,
+      "mean_net_r": -0.20496,
+      "profit_factor": 0.6872,
+      "bootstrap_ci_95": [
+        -0.7233,
+        0.2946
+      ]
+    },
+    {
+      "id": "SOL-VOL-CONTRACTION-BREAKOUT-BTC-CONFIRM-BEAR_COMPRESS-V1-20261108T0632Z",
+      "symbol": "SOLUSDT",
+      "context": "BEAR_COMPRESS",
+      "strategy_version": "VOL_CONTRACTION_BREAKOUT_BTC_CONFIRM_V1",
+      "evidence_status": "INSUFFICIENT_EVIDENCE",
+      "oos_trades": 26,
+      "mean_net_r": -0.11534,
+      "profit_factor": 0.8136,
+      "bootstrap_ci_95": [
+        -0.683,
+        0.3705
+      ]
+    }
+  ],
+  "candidate_hypotheses": [
+    {
+      "family": "TREND_PULLBACK_CONTINUATION",
+      "status": "HYPOTHESIS",
+      "symbols": [
+        "SOLUSDT",
+        "ETHUSDT",
+        "XRPUSDT"
+      ],
+      "contexts": [
+        "UP_LOW",
+        "UP_NORMAL",
+        "DOWN_LOW",
+        "DOWN_NORMAL"
+      ],
+      "blocker": "No strategy backtest executed; repo harness unavailable."
+    },
+    {
+      "family": "BREAKOUT_RETEST_VOLATILITY_CONTRACTION",
+      "status": "HYPOTHESIS",
+      "symbols": [
+        "SOLUSDT",
+        "ETHUSDT",
+        "XRPUSDT"
+      ],
+      "contexts": [
+        "LOW",
+        "NORMAL"
+      ],
+      "blocker": "Longer 5m/15m archive and executable harness required."
+    },
+    {
+      "family": "RANGE_MEAN_REVERSION_FAILED_BREAKOUT",
+      "status": "HYPOTHESIS",
+      "symbols": [
+        "SOLUSDT",
+        "ETHUSDT",
+        "XRPUSDT"
+      ],
+      "contexts": [
+        "SIDEWAYS_LOW",
+        "SIDEWAYS_NORMAL"
+      ],
+      "blocker": "SOLUSDT 4h SIDEWAYS_LOW failed-breakout-fade V1 was tested and REJECTED on untouched OOS. Do not generalize to ETH/XRP or other contexts; remaining variants are untested."
+    },
+    {
+      "family": "VOLATILITY_EXPANSION_MOMENTUM",
+      "status": "HYPOTHESIS",
+      "symbols": [
+        "SOLUSDT",
+        "ETHUSDT",
+        "XRPUSDT"
+      ],
+      "contexts": [
+        "UP_HIGH",
+        "DOWN_HIGH",
+        "SHOCK"
+      ],
+      "blocker": "No strategy backtest executed; current high-vol state is not itself an entry."
+    },
+    {
+      "family": "BTC_LED_RELATIVE_STRENGTH",
+      "status": "HYPOTHESIS",
+      "symbols": [
+        "SOLUSDT",
+        "ETHUSDT",
+        "XRPUSDT"
+      ],
+      "contexts": [
+        "BTC_CONFIRMATION",
+        "BTC_DIVERGENCE"
+      ],
+      "blocker": "Current correlation snapshot only; no historical lead/lag experiment."
+    },
+    {
+      "family": "FUNDING_OI_POSITIONING_FILTER",
+      "status": "HYPOTHESIS",
+      "symbols": [
+        "SOLUSDT",
+        "ETHUSDT",
+        "XRPUSDT"
+      ],
+      "contexts": [
+        "FUNDING_OI_EXTREME"
+      ],
+      "blocker": "No durable historical funding/OI/positioning archive; only current snapshots and 3 funding settlements."
+    },
+    {
+      "family": "DONCHIAN_BREAKOUT_BULL_LOW_V1",
+      "status": "INSUFFICIENT_EVIDENCE",
+      "symbols": [
+        "SOLUSDT"
+      ],
+      "contexts": [
+        "EMA50_GT_EMA200_ATR14_Q33_TRAIN_EX_SHOCK_Q99"
+      ],
+      "experimentId": "SOL-DONCHIAN20-BULL-LOW-V1-20261105T1825Z",
+      "blocker": "OOS n=55<100; 95% block-bootstrap CI crosses zero; total quote PnL per SOL negative; validation parameter grid all negative."
+    }
+  ],
+  "registry_consistency": {
+    "activeEntryCount": 5,
+    "topLevelStatusCounts": {
+      "OOS_VALIDATED": 0,
+      "OOS_PROMISING": 0,
+      "REJECTED": 1,
+      "INSUFFICIENT_EVIDENCE": 4
+    },
+    "legacyNestedStrongestCandidateStatus": "OOS_PROMISING",
+    "legacyNestedStrongestCandidateTrades": 12,
+    "conflict": "Legacy nested scorecard says OOS_PROMISING (n=12), while active entry is INSUFFICIENT_EVIDENCE and top-level OOS_PROMISING count is zero.",
+    "selectionPolicy": "Do not select the legacy nested candidate; require an active OOS_VALIDATED entry."
+  },
+  "current_contexts": {
+    "BTCUSDT": {
+      "context4h": "BEAR_LOW",
+      "trendSpreadPct": -2.9923617287,
+      "atr14ClosePct": 0.8536754269,
+      "absLogReturn4hPct": 0.1898198204,
+      "trendBoundaryDistancePct": 0.4875617287,
+      "volBoundaryDistancePct": 0.5937245731,
+      "shockFlag": false,
+      "context1h": "BEAR_ALIGNED",
+      "ema20_1h": 75872.079814,
+      "ema50_1h": 76024.448853,
+      "ema200_1h": 77248.403695
+    },
+    "ETHUSDT": {
+      "context4h": "BEAR_LOW",
+      "trendSpreadPct": -3.9982145014,
+      "atr14ClosePct": 1.1294401659,
+      "absLogReturn4hPct": 0.4360013793,
+      "trendBoundaryDistancePct": 1.4876145014,
+      "volBoundaryDistancePct": 0.6255598341,
+      "shockFlag": false,
+      "context1h": "BEAR_ALIGNED",
+      "ema20_1h": 2235.650207,
+      "ema50_1h": 2242.715333,
+      "ema200_1h": 2275.733371
+    },
+    "SOLUSDT": {
+      "context4h": "BEAR_LOW",
+      "trendSpreadPct": -7.4991705201,
+      "atr14ClosePct": 1.487245725,
+      "absLogReturn4hPct": 0.1673827317,
+      "trendBoundaryDistancePct": 3.4256705201,
+      "volBoundaryDistancePct": 1.262161275,
+      "shockFlag": false,
+      "context1h": "BEAR_ALIGNED",
+      "ema20_1h": 89.389033,
+      "ema50_1h": 89.781969,
+      "ema200_1h": 92.615453
+    },
+    "XRPUSDT": {
+      "context4h": "BEAR_LOW",
+      "trendSpreadPct": -5.9018342463,
+      "atr14ClosePct": 1.6594371139,
+      "absLogReturn4hPct": 0.3553633209,
+      "trendBoundaryDistancePct": 3.5659342463,
+      "volBoundaryDistancePct": 0.3341678861,
+      "shockFlag": false,
+      "context1h": "BEAR_ALIGNED",
+      "ema20_1h": 1.159632,
+      "ema50_1h": 1.171696,
+      "ema200_1h": 1.223914
+    }
+  },
+  "status_changes_this_run": [],
+  "new_experiments_this_run": [],
+  "run_status": "ARCHIVE_REFRESHED_NO_NEW_EXPERIMENT",
+  "run_classification": "RESEARCH_BLOCKED",
+  "research_run": {
+    "experiment_executed": false,
+    "oos_evaluated": false,
+    "smoke_test": "NOT_RUN",
+    "reason": "No compatible local runner; direct REST DNS unavailable; lower-timeframe history incomplete; 4h provenance unresolved; costs uncalibrated; active registry status conflict unresolved.",
+    "next_action": "Resolve RQ-002/RQ-005/RQ-025/RQ-003/RQ-004/RQ-037, run deterministic smoke test, then execute a frozen purged chronological experiment."
+  },
+  "archive_update": {
+    "delta_path": "research-data/binance-usdm/delta/binance_usdm_delta_20261108T2020Z_5m15m1h4h_completed.jsonl",
+    "rows": 68,
+    "rows_by_interval": {
+      "5m": 44,
+      "15m": 16,
+      "1h": 4,
+      "4h": 4
+    },
+    "rows_per_symbol": 17,
+    "delta_sha256": "cb6f3f60d43aa93ef266ea99848a4b8b3fa24fc6fc245ca7fdb6f19ae69f670a",
+    "manifest_path": "research-data/binance-usdm/delta/manifest-20261108T2020Z-5m15m1h4h.json",
+    "manifest_sha256": "3fe9edecf43d43ced843bcb690d4461e43a9df499ca756a05bd357c17bcb68c0",
+    "readback_verified": true,
+    "indexes_readback_verified": [
+      "5m",
+      "15m",
+      "1h",
+      "4h"
+    ],
+    "highwater": {
+      "5m": "2026-11-08T20:15:00Z",
+      "15m": "2026-11-08T20:00:00Z",
+      "1h": "2026-11-08T19:00:00Z",
+      "4h": "2026-11-08T16:00:00Z"
+    }
+  },
+  "note": "No strategy result was added, promoted, downgraded or rejected. The current market snapshot is a monitoring layer only."
+}

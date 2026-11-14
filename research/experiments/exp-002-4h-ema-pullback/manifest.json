@@ -1,0 +1,135 @@
+{
+  "schema_version": "1.0.0",
+  "experiment_id": "EXP-002",
+  "version": "1.0.0",
+  "run_timestamp_utc": "2026-11-09T01:14:32.191Z",
+  "repository": "shubhamtaywade82/crypto-trading-agent",
+  "branch": "research/exp-002-4h-ema-pullback-20261109T010146Z",
+  "execution": {
+    "runtime": "managed V8 JavaScript runtime",
+    "repository_cli_invoked": false,
+    "node": "v22.16.0",
+    "npm": "10.9.2",
+    "local_checkout": false,
+    "smoke_test": "PASS",
+    "research_executed": true,
+    "oos_evaluated": true
+  },
+  "strategy": {
+    "name": "EMA20/EMA50 pullback continuation",
+    "timeframe": "4h",
+    "tradable_symbols": [
+      "SOLUSDT",
+      "ETHUSDT",
+      "XRPUSDT"
+    ],
+    "reference_only": [
+      "BTCUSDT"
+    ],
+    "entry": "Strong trend by training q67 abs((EMA20-EMA50)/ATR14), volatility <= training q67, completed bar touches EMA20 and closes back on trend side of EMA20 and EMA50; enter next open.",
+    "stop": "1.5 ATR14",
+    "target": "2R",
+    "time_stop": "6 bars/24h",
+    "same_bar": "Stop first",
+    "sizing": "1% of $1,000 reference equity; $10 risk/trade; fixed risk"
+  },
+  "validation": {
+    "train": 0.7,
+    "validation": 0.15,
+    "untouched_test": 0.15,
+    "warmup_bars": 500,
+    "purge_embargo_bars": 6,
+    "test_start_utc": "2025-12-05T04:00:00Z",
+    "test_end_utc": "2026-11-04T19:59:59.999Z",
+    "test_bars_per_symbol": 2008,
+    "bootstrap_replicates": 2000,
+    "block_trades": 5,
+    "seed": 20261109,
+    "holm_tests": 3,
+    "minimum_oos_trades_per_symbol": 100
+  },
+  "costs": {
+    "round_trip_proxy_bps": 15,
+    "components": "4bp fee/side + 2bp slippage/side + 3bp round-trip spread/impact buffer",
+    "sensitivity_bps": [
+      12,
+      15,
+      25
+    ],
+    "oos_funding_included": true,
+    "historical_spread_impact_calibrated": false
+  },
+  "inputs": {
+    "canonical_4h": {
+      "rows_per_symbol": 13461,
+      "first_open_utc": "2020-09-14T08:00:00Z",
+      "last_open_utc": "2026-11-05T16:00:00Z",
+      "BTCUSDT": {
+        "blob_sha1": "a465025b2276a0e9cfbf805ba64be4da6ed08868",
+        "sha256": "7088aa2b2cc48c3895fd77dfc2ece0ae812062f24a70374ec556273a2d8380d7"
+      },
+      "ETHUSDT": {
+        "blob_sha1": "26034cbb638d45295504f8e1a52862adca63eea6",
+        "sha256": "0e1ba53fb3c4c42e89440f2aaabfc7eead44ac84bc67a083c86df96a2f12dce2"
+      },
+      "SOLUSDT": {
+        "blob_sha1": "77af5caa7d5e76c8efc3fd8571c55a20376ac97f",
+        "sha256": "148389f0347fe05307e2a274c579ccc1c495e32eaad2e49cfb19ca211df89156"
+      },
+      "XRPUSDT": {
+        "blob_sha1": "242e2c96a05feb175e869edbdea23ee85a136f69",
+        "sha256": "b1a96c24f0e91aff7368facc428dffa22360093ce74dfe186d259b66d19f8023"
+      }
+    },
+    "funding": {
+      "SOLUSDT": {
+        "rows": 1004,
+        "blob_sha1": "7c01b1d3d30cda740eb91c525d69af57c2060f4d"
+      },
+      "ETHUSDT": {
+        "rows": 1004,
+        "blob_sha1": "fe73406c4c1ab944c406544ba7931703a2515b03"
+      },
+      "XRPUSDT": {
+        "rows": 1004,
+        "blob_sha1": "ae80e7aebe94e35c69bc4403f73405a68aed7958"
+      }
+    },
+    "raw_archive_branch": "research/raw-ohlcv-archive-20261108T1026Z",
+    "raw_archive_latest_commit": "1d3d6e3c8875755d393f51d3a9219b58d9aea217",
+    "raw_rows_appended_this_run": 112
+  },
+  "artifacts": {
+    "core": {
+      "path": "research/experiments/exp-002-4h-ema-pullback/core.js",
+      "git_blob_sha1": "32fb715919095915b59ba73fffac1ca0c52a38b0"
+    },
+    "config": {
+      "path": "research/experiments/exp-002-4h-ema-pullback/config.json",
+      "git_blob_sha1": "2eb7305ab3dfb3b7e7b54c3be6f39e7c25da8633"
+    },
+    "results": {
+      "path": "research/experiments/exp-002-4h-ema-pullback/results.json",
+      "git_blob_sha1": "68aad7a7a29e20d3c33428089270e82ee88b09eb"
+    },
+    "run_script": {
+      "path": "research/experiments/exp-002-4h-ema-pullback/run.js",
+      "git_blob_sha1": "ef1e61d1ccf64af5ee8223254ef7549f6342a30f"
+    },
+    "smoke_test": {
+      "path": "research/experiments/exp-002-4h-ema-pullback/smoke-test.js",
+      "git_blob_sha1": "b850845e977b9948e11a2ba925b421c6e21ff41e"
+    },
+    "funding_paths": [
+      "research/experiments/exp-002-4h-ema-pullback/funding/SOLUSDT.json",
+      "research/experiments/exp-002-4h-ema-pullback/funding/ETHUSDT.json",
+      "research/experiments/exp-002-4h-ema-pullback/funding/XRPUSDT.json"
+    ]
+  },
+  "status": {
+    "SOLUSDT": "INSUFFICIENT_EVIDENCE",
+    "ETHUSDT": "INSUFFICIENT_EVIDENCE",
+    "XRPUSDT": "INSUFFICIENT_EVIDENCE",
+    "oos_validated_count": 0
+  }
+}

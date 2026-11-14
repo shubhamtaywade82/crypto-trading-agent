@@ -645,3 +645,81 @@ in the development window (pump ≥ +30% → 515 events, crash ≤ −25% → 26
 
 No overshoot edge in either direction. Pumps keep running (short side loses in 2021 and 2024); crashes bounce only in
 2021–22 and not after.
+
+## 19. Addendum (pre-registered 2026-11-14, before any spot-hedged carry return was computed) — high-funding basket carry
+
+**Research only; and it needs a spot account, which is outside the current mandate.** If it works, that is a decision for the user.
+
+Why: X4's short leg earned its funding but carried price risk, and price risk is what the cross-section could not
+replicate (§15, §17). Hedging the price away with spot keeps only the part that is paid for taking the other side of
+leveraged longs: funding, plus the spot–perp basis change.
+
+- **Selection:** each Monday, from the §13 top-30 universe (point-in-time), the **Q = 6** contracts with the highest summed
+  settled funding over the prior 7 days (score = the X4 sum, higher first; ties by the seeded key), among those that have a
+  Binance spot market (spot symbol = perp name with a leading `1000…` stripped; returns, not levels, are compared) with a
+  spot open at entry and exit. No spot market → not eligible.
+- **Position:** short the perp and long the same notional of spot, equal weight 1/Q each; entry at the Monday daily open of
+  both, exit at the next Monday's open (last close of both if either stops trading). A name kept across weeks is not re-traded.
+- **Weekly return per unit of notional:** Σ w × [ settled funding in (entry, exit] received by the perp short + (spot return
+  − perp return) ] − costs. Costs per side on traded notional: perp 4 bps taker + 2 bps slippage; spot 10 bps taker + 2 bps
+  slippage (no exchange-token discount assumed). Reported per unit of notional and per capital, with capital = **2× notional**
+  (both legs fully funded; no liquidation to model, no borrow, no spot yield).
+- **Trials:** one variant (Q = 6); Q = 4 and Q = 8 are the neighbour check. N = 72 + 1 = **73**.
+- **Window:** Mondays 2021-03-01 → 2024-12-30; 2025-01 onward sealed.
+- **Acceptance (weekly net returns, all required):** 1) ≥ 100 weeks; 2) mean net > 0 and one-sided 90% LCB > 0
+  (month-clustered); 3) mean net > 0 in both halves; 4) mean net > 0 at 1.5× costs; 5) Q = 4 and Q = 8 > 0;
+  6) mean exceeds the 95th percentile of the cost-free mean of 2,000 random baskets of 6 eligible names (same hedge);
+  7) deflated Sharpe > 0.95 with N = 73 and trial Sharpe variance 0.0115, the value measured across the six §13 signals (this strategy's weekly SD is far smaller than the directional ones, so the bar is attainable).
+- **Reported, not gated:** funding vs basis vs cost split, weeks with a negative net, worst week, share of weeks with fewer
+  than 6 eligible names, per-year net, and the five largest contributors.
+
+### §16 result, positioning signals (run 2026-11-14)
+
+`npx tsx scripts/xsection-backtest.ts --ids X11,X12 --first 2022-01-03 --trials 66`
+
+Data caveat found in the run: the archive's daily positioning files are missing for most 2022 Sundays, so only 111 (X11) and
+108 (X12) of the 156 weeks have usable scores, almost all in 2023–2024. The "both halves" check is therefore not
+informative (7 and 4 weeks in the first half).
+
+| Variant | Weeks | Net %/wk | 90% LCB | Halves | 1.5× cost | Q4 / Q8 | Beats random p95 (0.88) | DSR (N=66) | Checks |
+|---|---|---|---|---|---|---|---|---|---|
+| X11 top-trader crowding fade | 111 | +0.84 | +0.18 | +0.39 (7) / +0.87 (104) | +0.79 | +0.71 / +0.80 | **no** (0.836 vs 0.877) | 0.108 | 5/7 REJECTED |
+| X12 OI-build fade | 108 | −1.56 | −2.60 | +1.78 (4) / −1.69 (104) | −1.66 | −1.65 / −1.22 | no | 0.000 | 1/7 REJECTED |
+
+X11 is positive but only just misses the random-selection bar and has a 2-year effective window. X12's sign is wrong:
+open-interest builds are not followed by underperformance. Its mirror (follow OI build) would show about +1.6%/wk in
+2023–24, but a mirror chosen after seeing the result is not evidence; it would need its own registration and fresh data.
+
+### §19 result (run 2026-11-14)
+
+`npx tsx scripts/xsection-backtest.ts --carry --trials 73` (spot daily klines mirrored to `data/cache/vision-spot`).
+
+| Weeks | Net %/wk | 90% LCB | Halves | 1.5× cost | Q4 / Q8 | Beats random p95 (0.141) | DSR (N=73) | Checks |
+|---|---|---|---|---|---|---|---|---|
+| 200 | +0.101 | +0.021 | +0.177 / +0.030 | **−0.002** | +0.069 / +0.118 | **no** (0.101) | 0.076 | 4/7 **REJECTED** |
+
+- The hedge works: the basis (spot − perp) averages +0.001%/wk. What is left is funding, +0.306%/wk gross, against
+  0.206%/wk of costs (weekly turnover of the basket; spot taker alone is 12 bps per side), so net is +0.10%/wk per unit of
+  notional, about +2.6% a year on 2× capital.
+- By year (net %/wk): 2021 +0.54, 2022 −0.13, 2023 −0.05, 2024 +0.11. All the carry sits in the 2021 bull market; since
+  2022 the highest-funding names pay roughly what trading them costs. 118 of 200 weeks are negative.
+- Random baskets earn about the same cost-free funding (random p95 0.141 vs this net 0.101), so selecting on high funding
+  adds nothing after costs. Funding carry on this universe is closed.
+
+## 20. Consolidated result (2026-11-14)
+
+Variant budget spent: **73 trials** (the 48 of §1–§12 plus 25 here). No variant passed all seven checks; none was
+promoted; the sealed 2025-01 → 2026-10 window is **unread**.
+
+| § | Family | Best result | Why it stops |
+|---|---|---|---|
+| 13 | Cross-sectional weekly L/S (X1–X6) | X4 funding rank +1.52%/wk, X2 momentum 28d +1.06%/wk, 6/7 | DSR; **no replication** on disjoint universes (§15) |
+| 14 | Short new listings, BTC-hedged | D=3,H=21: +7.1% per event, LCB +3.2%, 6/7 | DSR at N=58; no independent window yet; tail −460% |
+| 15 | X4/X2 on ranks 31–60 and 61–90 | +0.60%, +0.24%/wk, LCB < 0 | failed |
+| 16 | Age, attention, top-trader, OI | X7 6/7 (age), X11 5/7 | X7 failed replication (§17); X11 only 2 years of data |
+| 18 | Extreme-day pump fade / crash bounce | none | 1–2/7 |
+| 19 | Spot-hedged high-funding carry | +0.10%/wk | costs; random baskets pay the same |
+
+**The one lead left standing is §14 (short new perp listings against BTC).** Independent evidence for it can only come from
+(a) the sealed 2025-2026 window, once, for one frozen variant, which is the user's decision, or (b) forward paper
+trading of new listings. It needs no new capital class (perps only) but a wider universe than SOL/ETH/XRP.

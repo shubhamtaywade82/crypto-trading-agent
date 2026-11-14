@@ -9,11 +9,12 @@ import path from 'node:path';
 import { parseFundingCsv, parseMetricsCsv } from '../src/backtesting/archiveDerivatives.js';
 import { readFirstZipEntry } from '../src/backtesting/archiveKlines.js';
 import { bootstrapMean, mulberry32, quantileSorted } from '../src/research/Bootstrap.js';
-import { buildWeeks, DAY_MS, listingEvents, moveEvents, listingNet, netReturn, randomBasketMeans, randomPeerMeans, runPortfolio, scoreWeeks, SIGNALS, type FundingSeries, type Panel, type SignalId, type SymbolDays, type WeekResult, type WeekUniverse } from '../src/research/CrossSection.js';
+import { loadPanel as loadPanelFiles } from '../src/research/PanelLoader.js';
+import { listingEvents, listingNet, moveEvents, randomPeerMeans } from '../src/research/ListingEvents.js';
+import { buildWeeks, carryScores, DAY_MS, netReturn, randomBasketMeans, randomCarryMeans, runCarry, runPortfolio, scoreWeeks, SIGNALS, type FundingSeries, type Panel, type SignalId, type SymbolDays, type WeekResult, type WeekUniverse } from '../src/research/CrossSection.js';
 import { computeDeflatedSharpeFromReturns } from '../src/research/DeflatedSharpe.js';
 import { minimumDetectableEffect } from '../src/research/SampleSize.js';
 
-const ROOT = path.resolve('data/cache/vision/monthly');
 const PANEL_START = Date.UTC(2019, 8, 1); // early enough to see every contract's real listing day (age signal)
 const flag = (name: string, fallback: string): string => { const i = process.argv.indexOf(`--${name}`); return i > 0 && process.argv[i + 1] ? process.argv[i + 1]! : fallback; };
 const SKIP_TOP = Number(flag('skip-top', '0'));
@@ -27,63 +28,6 @@ const LAST_MONDAY = sealedId ? Date.UTC(2026, 9, 26) : Date.UTC(2024, 11, 30);
 const HALF_SPLIT = Date.UTC(2023, 0, 1);
 const TRIALS = Number(flag("trials", "54"));
 const RANDOM_RUNS = 2000;
-const EXCLUDED = /^(BTCDOM|DEFI|FOOTBALL|BLUEBIRD|USDC)/;
-
-function readKlineZip(file: string, panelDays: number, data: SymbolDays): void {
-  for (const line of readFirstZipEntry(readFileSync(file)).split('\n')) {
-    const c = line.trim().split(',').map(Number);
-    const day = Math.round((c[0]! - PANEL_START) / DAY_MS);
-    if (c.length < 8 || !Number.isFinite(c[0]!) || day < 0 || day >= panelDays) continue;
-    data.open[day] = c[1]!; data.close[day] = c[4]!; data.quoteVolume[day] = c[7]!;
-  }
-}
-
-function loadSymbol(symbol: string, panelDays: number): { days: SymbolDays; funding: FundingSeries } | null {
-  const klineDir = path.join(ROOT, 'klines', symbol, '1d');
-  if (!existsSync(klineDir)) return null;
-  const days: SymbolDays = { open: new Float64Array(panelDays).fill(NaN), close: new Float64Array(panelDays).fill(NaN), quoteVolume: new Float64Array(panelDays).fill(NaN) };
-  const inRange = (file: string): boolean => { const t = Date.parse(`${file.match(/(\d{4}-\d{2})\.zip$/)?.[1]}-01T00:00:00Z`); return t >= PANEL_START && t < PANEL_END; };
-  for (const f of readdirSync(klineDir).filter(inRange)) readKlineZip(path.join(klineDir, f), panelDays, days);
-  const funding: FundingSeries = { time: [], cum: [] };
-  const fundingDir = path.join(ROOT, 'fundingRate', symbol);
-  const points = existsSync(fundingDir) ? readdirSync(fundingDir).filter(inRange).sort().flatMap((f) => parseFundingCsv(readFirstZipEntry(readFileSync(path.join(fundingDir, f))))) : [];
-  let total = 0;
-  for (const p of points.sort((a, b) => a.time - b.time)) { total += p.rate; funding.time.push(p.time); funding.cum.push(total); }
-  return { days, funding };
-}
-
-const SNAPSHOT_CUTOFF_MS = DAY_MS - 10 * 60_000; // 23:50 UTC: a 5m row stamped t is usable from t + 5m, before the Monday open
-
-/** Sunday end-of-day positioning for the signals that read it; days without a file stay NaN. */
-function loadSundayMetrics(panel: Panel): void {
-  panel.metrics = panel.symbols.map((symbol) => {
-    const topPosition = new Float64Array(panel.days).fill(NaN);
-    const openInterestValue = new Float64Array(panel.days).fill(NaN);
-    for (let t = Date.UTC(2021, 11, 26); t <= Date.UTC(2024, 11, 29); t += 7 * DAY_MS) {
-      const file = path.resolve(`data/cache/vision/daily/metrics/${symbol}/${symbol}-metrics-${new Date(t).toISOString().slice(0, 10)}.zip`);
-      if (!existsSync(file)) continue;
-      const usable = parseMetricsCsv(readFirstZipEntry(readFileSync(file))).filter((p) => p.time <= t + SNAPSHOT_CUTOFF_MS);
-      const last = usable[usable.length - 1];
-      if (!last) continue;
-      const day = (t - PANEL_START) / DAY_MS;
-      topPosition[day] = last.topTraderPositionRatio; openInterestValue[day] = last.openInterestValue;
-    }
-    return { topPosition, openInterestValue };
-  });
-}
-
-function loadPanel(): Panel {
-  const panelDays = (PANEL_END - PANEL_START) / DAY_MS;
-  const symbols = readdirSync(path.join(ROOT, 'klines')).filter((s) => s.endsWith('USDT') && !EXCLUDED.test(s)).sort();
-  const panel: Panel = { start: PANEL_START, days: panelDays, symbols: [], data: [], funding: [] };
-  for (const symbol of symbols) {
-    const loaded = loadSymbol(symbol, panelDays);
-    if (!loaded) continue;
-    panel.symbols.push(symbol); panel.data.push(loaded.days); panel.funding.push(loaded.funding);
-  }
-  if (ONLY.split(',').some((id) => id === 'X11' || id === 'X12')) loadSundayMetrics(panel);
-  return panel;
-}
 
 const mean = (xs: readonly number[]): number => (xs.length ? xs.reduce((s, v) => s + v, 0) / xs.length : NaN);
 const sd = (xs: readonly number[]): number => { const m = mean(xs); return Math.sqrt(xs.reduce((s, v) => s + (v - m) ** 2, 0) / Math.max(1, xs.length - 1)); };
@@ -104,17 +48,16 @@ function topContributors(weeks: readonly WeekResult[], symbols: readonly string[
   return top.map(([s, v]) => `${symbols[s]} ${(v * 100).toFixed(1)}%`).join(', ') + ` (total ${(total * 100).toFixed(1)}%)`;
 }
 
-interface Verdict { id: SignalId; checks: { id: string; pass: boolean; detail: string }[]; report: Record<string, unknown>; weekly: number[] }
+interface Verdict { id: SignalId | 'CARRY'; checks: { id: string; pass: boolean; detail: string }[]; report: Record<string, unknown>; weekly: number[] }
 
-function evaluate(panel: Panel, weeks: WeekUniverse[], id: SignalId, trialVariance: number, random: number[]): Verdict {
-  const scores = scoreWeeks(panel, weeks, id);
-  const base = runPortfolio(weeks, scores, 6);
+function evaluate(panel: Panel, id: SignalId | 'CARRY', run: (q: number) => WeekResult[], trialVariance: number, random: number[]): Verdict {
+  const base = run(6);
   const net = base.map((w) => netReturn(w));
   const boot = bootstrapMean(base.map((w, i) => ({ value: net[i]!, cluster: monthOf(w.time) })), { confidence: 0.8, seed: 7 });
   const early = base.filter((w) => w.time < HALF_SPLIT).map((w) => netReturn(w));
   const late = base.filter((w) => w.time >= HALF_SPLIT).map((w) => netReturn(w));
   const stressed = mean(base.map((w) => netReturn(w, COST_STRESS)));
-  const neighbours = [4, 8].map((q) => mean(runPortfolio(weeks, scores, q).map((w) => netReturn(w))));
+  const neighbours = [4, 8].map((q) => mean(run(q).map((w) => netReturn(w))));
   const p95 = quantileSorted([...random].sort((a, b) => a - b), 0.95);
   const dsr = net.length > 2 ? computeDeflatedSharpeFromReturns({ returns: net, samplingFrequencyMs: 7 * DAY_MS, trialCount: TRIALS, trialSharpeVariance: trialVariance }).dsr : NaN;
   const sorted = [...net].sort((a, b) => a - b);
@@ -189,9 +132,16 @@ function evaluateEvents(runs: EventRun[], trials: number): void {
   for (const r of runs) reportEventRun(r, eventChecks(r, runs, trials, variance));
 }
 
+function printExtremes(panel: Panel, events: ReturnType<typeof listingEvents>): void {
+  const ranked = events.map((e) => ({ name: panel.symbols[e.symbol]!, day: new Date(e.time).toISOString().slice(0, 10), net: listingNet(e), symbolRet: e.ret })).sort((a, b) => a.net - b.net);
+  const show = (xs: typeof ranked): string => xs.map((x) => `${x.name} ${x.day} net ${(x.net * 100).toFixed(0)}% (symbol ${(x.symbolRet * 100).toFixed(0)}%)`).join('; ');
+  console.log(`  worst: ${show(ranked.slice(0, 8))}\n  best: ${show(ranked.slice(-5))}`);
+}
+
 function evaluateListings(panel: Panel): void {
   const btc = panel.symbols.indexOf('BTCUSDT');
   const specs = LISTING_VARIANTS.map((v) => ({ ...v, events: listingEvents(panel, btc, v.delay, v.hold, LISTING_FIRST, LISTING_LAST) }));
+  if (process.argv.includes('--extremes')) printExtremes(panel, specs[1]!.events);
   evaluateEvents(specs.map((r, i) => ({ name: `NL D=${r.delay} H=${r.hold}`, events: r.events, others: specs.map((_, k) => k).filter((k) => k !== i) })), LISTING_TRIALS);
 }
 
@@ -222,13 +172,32 @@ function diagnose(panel: Panel, id: SignalId): void {
   }
 }
 
+const CARRY_TRIALS_SHARPE_VARIANCE = 0.0115; // measured across the six §13 signals, so one carry variant cannot make the bar lenient
+
+function evaluateCarry(panel: Panel, weeks: WeekUniverse[]): void {
+  const scores = carryScores(panel, weeks);
+  const random = randomCarryMeans(panel, weeks, 6, RANDOM_RUNS, mulberry32(13));
+  const v = evaluate(panel, 'CARRY', (q) => runCarry(panel, weeks, scores, q), CARRY_TRIALS_SHARPE_VARIANCE, random);
+  console.log(`\n== CARRY: ${v.checks.every((c) => c.pass) ? 'PASSED_DEV' : 'REJECTED'} (${v.checks.filter((c) => c.pass).length}/7)`);
+  for (const c of v.checks) console.log(`  ${c.pass ? 'PASS' : 'FAIL'} ${c.id}: ${c.detail}`);
+  console.log(`  ${JSON.stringify(v.report)}`);
+  const results = runCarry(panel, weeks, scores, 6);
+  const eligibleShort = results.length < weeks.length ? `${weeks.length - results.length} of ${weeks.length} weeks had fewer than 6 names with spot` : 'every week had 6 names with spot';
+  console.log(`  ${eligibleShort}; weeks with negative net ${results.filter((w) => netReturn(w) < 0).length}/${results.length}; worst week ${(Math.min(...results.map((w) => netReturn(w))) * 100).toFixed(2)}%`);
+  for (const year of [2021, 2022, 2023, 2024]) {
+    const x = results.filter((w) => new Date(w.time).getUTCFullYear() === year);
+    console.log(`  ${year}: net ${(mean(x.map((w) => netReturn(w))) * 100).toFixed(3)}%/wk = funding ${(mean(x.map((w) => w.funding)) * 100).toFixed(3)} + basis ${(mean(x.map((w) => w.gross)) * 100).toFixed(3)} - cost ${(mean(x.map((w) => w.cost)) * 100).toFixed(3)}`);
+  }
+}
+
 function sharpeOf(xs: readonly number[]): number { return mean(xs) / sd(xs); }
 
 function main(): void {
-  const panel = loadPanel();
+  const panel = loadPanelFiles({ start: PANEL_START, end: PANEL_END }, ONLY.split(',').some((id) => id === 'X11' || id === 'X12'), process.argv.includes('--carry'));
   console.log(`panel: ${panel.symbols.length} symbols, ${panel.days} days${sealedId ? ' (SEALED window, one frozen variant)' : ''}`);
   if (process.argv.includes('--listings')) return evaluateListings(panel);
   if (process.argv.includes('--moves')) return evaluateMoves(panel);
+  if (process.argv.includes('--carry')) return evaluateCarry(panel, buildWeeks(panel, FIRST_MONDAY, LAST_MONDAY, SKIP_TOP));
   if (process.argv.includes('--list-universe')) {
     const names = new Set(buildWeeks(panel, FIRST_MONDAY, LAST_MONDAY, SKIP_TOP).flatMap((w) => w.symbols.map((i) => panel.symbols[i]!)));
     return console.log([...names].sort().join('\n'));
@@ -251,7 +220,7 @@ function main(): void {
   const random = randomBasketMeans(weeks, 6, RANDOM_RUNS, mulberry32(13));
   if (process.env.DUMP) writeFileSync(process.env.DUMP, JSON.stringify(weeks.map((w) => [w.time, w.symbols.map((s) => panel.symbols[s]), w.ret, w.funding])));
   if (process.env.DUMP) writeFileSync(process.env.DUMP, JSON.stringify(weeks.map((w) => [w.time, w.symbols.map((s) => panel.symbols[s]), w.ret, w.funding])));
-  const verdicts = ids.map((id) => evaluate(panel, weeks, id, trialVariance, random));
+  const verdicts = ids.map((id) => { const scores = scoreWeeks(panel, weeks, id); return evaluate(panel, id, (q) => runPortfolio(weeks, scores, q), trialVariance, random); });
   for (const v of verdicts) {
     const gated = v.checks.filter((c) => GATE_DSR || !c.id.startsWith('7'));
     console.log(`\n== ${v.id} skip-top ${SKIP_TOP}: ${gated.every((c) => c.pass) ? (GATE_DSR ? 'PASSED_DEV' : 'REPLICATED') : 'REJECTED'} (${gated.filter((c) => c.pass).length}/${gated.length})`);

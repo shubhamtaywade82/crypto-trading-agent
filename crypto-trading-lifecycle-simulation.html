@@ -1173,9 +1173,22 @@ function setStatus(side, status) {
   txt.textContent = status;
 }
 
+const QUIET_STATES = new Set(['scanning', 'idle', 'polling', 'pushing', 'connected']);
+const FLASH_MS = 1500;
+const flashTimers = {};
+// Pipeline stages and agent cards key off .component.active; only orders used to set it,
+// so Observe/Signal/Risk/Fill/Ledger never lit. Any real state change now flashes its component.
+function flashComponent(id) {
+  const comp = document.querySelector(`.component[data-cmp="${id}"]`);
+  if (!comp) return;
+  comp.classList.add('active');
+  clearTimeout(flashTimers[id]);
+  flashTimers[id] = setTimeout(() => comp.classList.remove('active'), FLASH_MS);
+}
 function setComponentState(id, text, kind) {
   const el = document.getElementById('cmp-' + id);
   if (el) { el.textContent = text; el.className = 'component-state' + (kind ? ' ' + kind : ''); }
+  if (!QUIET_STATES.has(text)) flashComponent(id);
 }
 function setComponentDetail(id, html) {
   const el = document.getElementById('detail-' + id);
@@ -1927,6 +1940,7 @@ function maybeRunLiveAgentCycles(sym) {
   const tradesPerSec = tradesSinceFeedStat * 1000 / (currentTime - lastLiveAgentCycleAt);
   tradesSinceFeedStat = 0;
   setComponentDetail('binance-ws', `🟢 live · <span class="num">${tradesPerSec.toFixed(0)}</span> trades/s · tick #${S.tickCount}`);
+  flashComponent('binance-ws');
   lastLiveAgentCycleAt = currentTime;
   runSignalCycle(sym);
   runExecutorCycle();

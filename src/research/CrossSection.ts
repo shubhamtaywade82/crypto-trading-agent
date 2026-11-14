@@ -8,8 +8,8 @@ export const DAY_MS = 86_400_000;
 export const HOLD_DAYS = 7;
 const UNIVERSE_SIZE = 30;
 const MIN_ELIGIBLE = 15;
-const MIN_HISTORY_DAYS = 90;
-const MIN_QUOTE_VOLUME = 10_000_000;
+export const MIN_HISTORY_DAYS = 90;
+export const MIN_QUOTE_VOLUME = 10_000_000;
 const VOLUME_WINDOW = 30;
 export const SIDE_COST_RATE = 0.0006; // 4 bps taker + 2 bps slippage (§3)
 
@@ -19,7 +19,9 @@ export interface SymbolDays { open: Float64Array; close: Float64Array; quoteVolu
 export interface FundingSeries { time: number[]; cum: number[] }
 /** Positioning snapshot at the end of a UTC day, filled only for the Sundays that signals read; NaN elsewhere. */
 export interface SymbolMetrics { topPosition: Float64Array; openInterestValue: Float64Array }
-export interface Panel { start: number; days: number; symbols: string[]; data: SymbolDays[]; funding: FundingSeries[]; metrics?: SymbolMetrics[] }
+/** Spot daily bars per perp symbol (NaN arrays when the contract has no spot market). */
+export type SpotDays = Pick<SymbolDays, 'open' | 'close'>;
+export interface Panel { start: number; days: number; symbols: string[]; data: SymbolDays[]; funding: FundingSeries[]; metrics?: SymbolMetrics[]; spot?: SpotDays[] }
 
 export type SignalId = 'X1' | 'X2' | 'X3' | 'X4' | 'X5' | 'X6' | 'X7' | 'X8' | 'X11' | 'X12';
 export const SIGNALS: readonly SignalId[] = ['X1', 'X2', 'X3', 'X4', 'X5', 'X6'];
@@ -42,7 +44,7 @@ function cumulativeAt(f: FundingSeries, t: number): number {
   return lo === 0 ? 0 : f.cum[lo - 1]!;
 }
 
-function mean30Volume(d: SymbolDays, m: number): number {
+export function mean30Volume(d: SymbolDays, m: number): number {
   let sum = 0;
   let count = 0;
   for (let k = m - VOLUME_WINDOW; k < m; k += 1) if (Number.isFinite(d.quoteVolume[k]!)) { sum += d.quoteVolume[k]!; count += 1; }
@@ -61,7 +63,7 @@ export function universeAt(panel: Panel, m: number, size = UNIVERSE_SIZE): numbe
 }
 
 /** Last finite close in days [m, m + hold): where a symbol that stopped trading mid-hold is exited. */
-function exitPrice(d: SymbolDays, m: number, hold = HOLD_DAYS): number {
+export function exitPrice(d: SpotDays, m: number, hold = HOLD_DAYS): number {
   if (Number.isFinite(d.open[m + hold]!)) return d.open[m + hold]!;
   for (let k = m + hold - 1; k >= m; k -= 1) if (Number.isFinite(d.close[k]!)) return d.close[k]!;
   return NaN;
@@ -198,65 +200,56 @@ export function randomBasketMeans(weeks: readonly WeekUniverse[], q: number, n: 
   return means;
 }
 
-export interface ListingEvent { time: number; dir: 1 | -1; ret: number; funding: number; btcRet: number; btcFunding: number; peers: { ret: number[]; funding: number[] } }
-export const LISTING_ROUND_TRIP_COST = 4 * SIDE_COST_RATE; // short leg and BTC hedge leg, in and out
+/** Perp short + spot long: 6 bps perp + 12 bps spot per side of traded notional (§19). */
+export const CARRY_SIDE_COST_RATE = SIDE_COST_RATE + 0.0012;
 
-/** Hedged short of each new listing: entry at the open of day L+delay, exit `hold` days later (§14). */
-export function listingEvents(panel: Panel, btc: number, delay: number, hold: number, from: number, to: number): ListingEvent[] {
-  const events: ListingEvent[] = [];
-  panel.data.forEach((d, s) => {
-    const listed = d.close.findIndex((v) => Number.isFinite(v));
-    const m = listed + delay;
-    const time = panel.start + m * DAY_MS;
-    if (listed < 60 || time < from || time > to || m + hold >= panel.days || !Number.isFinite(d.open[m]!)) return;
-    const move = (k: number): { ret: number; funding: number } => ({ ret: exitPrice(panel.data[k]!, m, hold) / panel.data[k]!.open[m]! - 1, funding: fundingSum(panel.funding[k]!, time, time + hold * DAY_MS) });
-    const alt = move(s);
-    if (!Number.isFinite(alt.ret)) return;
-    const peers = universeAt(panel, m, Infinity).filter((k) => k !== s && Number.isFinite(move(k).ret)).map(move);
-    events.push({ time, dir: -1, ret: alt.ret, funding: alt.funding, btcRet: move(btc).ret, btcFunding: move(btc).funding, peers: { ret: peers.map((p) => p.ret), funding: peers.map((p) => p.funding) } });
-  });
-  return events.sort((a, b) => a.time - b.time);
-}
-
-/** Excess return of the event trade (`dir` -1 = short the symbol against a BTC long, +1 = long it against a BTC short). */
-export const listingNet = (e: ListingEvent, costScale = 1): number => e.dir * (e.ret - e.btcRet) - e.dir * (e.funding - e.btcFunding) - costScale * LISTING_ROUND_TRIP_COST;
-
-/** Mean cost-free hedged return of shorting one random eligible peer per event instead of the listing. */
-export function randomPeerMeans(events: readonly ListingEvent[], n: number, random: () => number): number[] {
-  const usable = events.filter((e) => e.peers.ret.length > 0);
-  return Array.from({ length: n }, () => {
-    const total = usable.reduce((sum, e) => {
-      const i = Math.floor(random() * e.peers.ret.length);
-      return sum + e.dir * (e.peers.ret[i]! - e.btcRet) - e.dir * (e.peers.funding[i]! - e.btcFunding);
-    }, 0);
-    return total / usable.length;
+/** Spot open-to-open return aligned with `week.symbols`; NaN where the contract has no usable spot market. */
+export function spotReturns(panel: Panel, week: WeekUniverse): number[] {
+  return week.symbols.map((s) => {
+    const spot = panel.spot![s]!;
+    const entry = spot.open[week.day]!;
+    return Number.isFinite(entry) ? exitPrice(spot, week.day) / entry - 1 : NaN;
   });
 }
 
-export interface MoveEventRule { dir: 1 | -1; dayReturn: number; hold: number; from: number; to: number }
-
-/** Symbols that closed a day beyond the threshold (up for dir -1, down for dir +1), entered at the next open; one open trade per symbol. */
-export function moveEvents(panel: Panel, btc: number, rule: MoveEventRule): ListingEvent[] {
-  const events: ListingEvent[] = [];
-  panel.data.forEach((d, s) => {
-    let busyUntil = -1;
-    for (let m = 91; m + rule.hold < panel.days; m += 1) {
-      const time = panel.start + m * DAY_MS;
-      const move = d.close[m - 1]! / d.close[m - 2]! - 1;
-      const triggered = rule.dir === -1 ? move >= rule.dayReturn : move <= -rule.dayReturn;
-      if (m <= busyUntil || time < rule.from || time > rule.to || !triggered || !Number.isFinite(d.open[m]!)) continue;
-      if (!(mean30Volume(d, m) >= MIN_QUOTE_VOLUME) || !Number.isFinite(d.close[m - MIN_HISTORY_DAYS]!)) continue;
-      events.push(buildEvent(panel, btc, s, m, rule));
-      busyUntil = m + rule.hold;
+/** Weekly basket of the `q` highest-score eligible names, each held short perp / long spot at weight 1/q (§19). */
+export function runCarry(panel: Panel, weeks: readonly WeekUniverse[], scores: readonly number[][], q: number, tieSeed = 0): WeekResult[] {
+  const results: WeekResult[] = [];
+  let previous = new Map<number, number>();
+  weeks.forEach((week, i) => {
+    const spot = spotReturns(panel, week);
+    const random = mulberry32(tieSeed * 1_000_003 + i);
+    const keys = scores[i]!.map(() => random());
+    const usable = scores[i]!.map((v, k) => (Number.isFinite(spot[k]!) ? v : NaN));
+    const picks = pickLongShort(usable, q, keys);
+    if (!picks) return;
+    const weights = new Map(picks.longs.map((k) => [week.symbols[k]!, 1 / q] as const));
+    const contributions = new Map<number, number>();
+    let gross = 0;
+    let funding = 0;
+    for (const k of picks.longs) {
+      gross += (spot[k]! - week.ret[k]!) / q;
+      funding += week.funding[k]! / q;
+      contributions.set(week.symbols[k]!, (spot[k]! - week.ret[k]! + week.funding[k]!) / q);
     }
+    const marketReturn = week.ret.reduce((sum, v) => sum + v, 0) / week.ret.length;
+    results.push({ time: week.time, gross, funding, cost: CARRY_SIDE_COST_RATE * turnover(previous, weights), marketReturn, longLeg: 0, shortLeg: 0, contributions });
+    previous = weights;
   });
-  return events.filter((e) => Number.isFinite(e.ret)).sort((a, b) => a.time - b.time);
+  return results;
 }
 
-function buildEvent(panel: Panel, btc: number, s: number, m: number, rule: MoveEventRule): ListingEvent {
-  const time = panel.start + m * DAY_MS;
-  const span = (k: number): { ret: number; funding: number } => ({ ret: exitPrice(panel.data[k]!, m, rule.hold) / panel.data[k]!.open[m]! - 1, funding: fundingSum(panel.funding[k]!, time, time + rule.hold * DAY_MS) });
-  const peers = universeAt(panel, m, Infinity).filter((k) => k !== s && Number.isFinite(span(k).ret)).map(span);
-  const alt = span(s);
-  return { time, dir: rule.dir, ret: alt.ret, funding: alt.funding, btcRet: span(btc).ret, btcFunding: span(btc).funding, peers: { ret: peers.map((p) => p.ret), funding: peers.map((p) => p.funding) } };
+/** Mean cost-free weekly carry of `n` random baskets of `q` eligible names. */
+export function randomCarryMeans(panel: Panel, weeks: readonly WeekUniverse[], q: number, n: number, random: () => number): number[] {
+  const eligible = weeks.map((w) => { const spot = spotReturns(panel, w); return w.symbols.map((_, k) => k).filter((k) => Number.isFinite(spot[k]!)).map((k) => spot[k]! - w.ret[k]! + w.funding[k]!); });
+  const usable = eligible.filter((xs) => xs.length >= q);
+  return Array.from({ length: n }, () => usable.reduce((sum, xs) => {
+    const pool = [...xs];
+    let basket = 0;
+    for (let j = 0; j < q; j += 1) basket += pool.splice(Math.floor(random() * pool.length), 1)[0]! / q;
+    return sum + basket;
+  }, 0) / usable.length);
 }
+
+/** The X4 funding score with the sign flipped: higher funding ranks first. */
+export const carryScores = (panel: Panel, weeks: readonly WeekUniverse[]): number[][] => scoreWeeks(panel, weeks, 'X4').map((row) => row.map((v) => -v));

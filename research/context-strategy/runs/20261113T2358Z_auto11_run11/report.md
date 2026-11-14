@@ -40,7 +40,7 @@ Market quote snapshot: 2026-11-13 23:55:29 UTC. Completed-candle context sample:
 | SOL | -4.499% | MIXED | BEAR | BEAR | BEAR | -4.667% | -1.642% |
 | XRP | -3.023% | MIXED | BEAR | BEAR | BEAR | -2.809% | -0.513% |
 
-The 5m mixed state against 15m/1h/4h bearish alignment is a transition warning, not a reversal signal. No train-derived shock threshold is available. Funding interval is 8h; next settlement 2026-11-14 00:00 UTC. Premium-index latest rate fields were BTC 0.005951%, ETH 0.001206%, SOL 0.006673%, XRP 0.004794%; last settled rates at 16:00 UTC were 0.004045%, 0.004743%, 0.007203%, 0.010000%, respectively. None exceeds 0.05%.
+The 5m mixed state against 15m/1h/4h bearish alignment is a transition warning, not a reversal signal. No train-derived shock threshold is available. Funding interval was 8h; at the 23:55:29 UTC snapshot the next settlement was 2026-11-14 00:00 UTC. That timestamp had passed by final artifact commit at 00:03:33 UTC; latest settled rates and the next funding time were not re-probed after settlement. Premium-index latest rate fields were BTC 0.005951%, ETH 0.001206%, SOL 0.006673%, XRP 0.004794%; last settled rates at 16:00 UTC were 0.004045%, 0.004743%, 0.007203%, 0.010000%, respectively. None exceeds 0.05%.
 
 ## 6. Decisions
 

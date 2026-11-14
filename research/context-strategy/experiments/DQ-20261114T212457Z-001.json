@@ -1,0 +1,127 @@
+{
+  "schema_version": "1.0.0",
+  "experiment_id": "DQ-20261114T212457Z-001",
+  "created_at_utc": "2026-11-14T21:30:39.207Z",
+  "experiment_type": "INCREMENTAL_ARCHIVE_AND_ROLLING_DATA_QUALITY",
+  "status": "COMPLETED_DATA_QUALITY_PASS",
+  "strategy_experiment": false,
+  "oos_evaluated": false,
+  "hypothesis": "Newly retrieved completed USD-M klines can be appended without duplicates, gaps, off-grid timestamps, OHLC violations, invalid volume, non-finite fields, closeTime mismatch or cross-symbol interval misalignment.",
+  "input": {
+    "symbols": [
+      "BTCUSDT",
+      "ETHUSDT",
+      "SOLUSDT",
+      "XRPUSDT"
+    ],
+    "intervals": [
+      "5m",
+      "15m",
+      "1h",
+      "4h"
+    ],
+    "rolling_fetches": 16,
+    "rolling_rows": 1600,
+    "completed_rows": 1584,
+    "forming_rows_excluded": 16,
+    "previous_highwater_open_utc": {
+      "5m": "2026-11-14T20:25:00.000Z",
+      "15m": "2026-11-14T20:15:00.000Z",
+      "1h": "2026-11-14T19:00:00.000Z",
+      "4h": "2026-11-14T12:00:00.000Z"
+    }
+  },
+  "additional_incremental_checks": {
+    "raw_rows_checked": 812,
+    "completed_rows_checked": 796,
+    "forming_rows_excluded": 16,
+    "rows_appended": 12,
+    "intervals": [
+      "5m",
+      "15m"
+    ],
+    "notes": "4-row 5m append and 8-row 5m/15m append independently checked; second manifest corrected to record four excluded forming bars."
+  },
+  "aggregate": {
+    "raw_rows_checked": 2412,
+    "completed_rows_checked": 2384,
+    "forming_rows_excluded": 28,
+    "rows_appended": 72,
+    "rows_by_interval": {
+      "5m": 48,
+      "15m": 16,
+      "1h": 4,
+      "4h": 4
+    },
+    "rows_by_symbol": {
+      "BTCUSDT": 18,
+      "ETHUSDT": 18,
+      "SOLUSDT": 18,
+      "XRPUSDT": 18
+    },
+    "latest_completed_open_utc": {
+      "5m": "2026-11-14T21:25:00.000Z",
+      "15m": "2026-11-14T21:15:00.000Z",
+      "1h": "2026-11-14T20:00:00.000Z",
+      "4h": "2026-11-14T16:00:00.000Z"
+    }
+  },
+  "quality": {
+    "duplicates": 0,
+    "missing_intervals": 0,
+    "off_grid": 0,
+    "non_monotonic": 0,
+    "ohlc_failures": 0,
+    "non_finite": 0,
+    "non_positive_volume": 0,
+    "close_time_failures": 0,
+    "forming_rows_included": 0,
+    "cross_symbol_alignment": true,
+    "contiguous_from_prior_highwater": true
+  },
+  "cost_model": "NOT_APPLICABLE; no strategy backtest",
+  "code_version": "inline JS validation in functions.exec; not a repository harness",
+  "code_hash": "NOT_PERSISTED; validation script not saved as a standalone artifact",
+  "random_seed": null,
+  "artifacts": [
+    {
+      "path": "research-data/binance-usdm/delta/binance_usdm_delta_20261114T212457Z_5m15m1h4h_completed.jsonl",
+      "rows": 60,
+      "sha256": "a0b98932aae03094f54807500efe79a8f549d1c0ddb7cae19d8bc513730e7614",
+      "readback_verified": true
+    },
+    {
+      "path": "research-data/binance-usdm/delta/manifest-20261114T212457Z-5m15m1h4h.json",
+      "sha256": "83a3beec9978b4eb32bc2cc50af4e270d3257aa6bb1bdd50d971ae763eaaaf6e",
+      "readback_verified": true
+    },
+    {
+      "path": "research-data/binance-usdm/delta/binance_usdm_delta_20261114T212958Z_5m_completed.jsonl",
+      "rows": 4,
+      "sha256": "10883cbdcff995acc54167fc0539d1e0d8b77485f79cad1e4a18fb519627598d",
+      "readback_verified": true
+    },
+    {
+      "path": "research-data/binance-usdm/delta/manifest-20261114T212958Z-5m.json",
+      "sha256": "b7ebcdf0e975cba3a94a4c73dd570a4e98ba5d1aa342e95b85fb9fabf144b0ad",
+      "readback_verified": true
+    },
+    {
+      "path": "research-data/binance-usdm/delta/binance_usdm_delta_20261114T213039Z_5m15m_completed.jsonl",
+      "rows": 8,
+      "sha256": "43d34d4c966aa2f41eaa614ce5086ce462fe75ab7a483ef2a18190d1dcfdddae",
+      "readback_verified": true
+    },
+    {
+      "path": "research-data/binance-usdm/delta/manifest-20261114T213039Z-5m15m.json",
+      "sha256": "04300836d2d43957919921352cd8c85cf4a494182507a09c019975f2a154e377",
+      "readback_verified": true
+    }
+  ],
+  "limitations": [
+    "This is a data-quality/archive experiment, not a strategy experiment.",
+    "4h raw delta remains separate; canonical 4h is not rebuilt.",
+    "Multi-year 5m/15m history is still incomplete.",
+    "The inline validator code hash is not available."
+  ]
+}

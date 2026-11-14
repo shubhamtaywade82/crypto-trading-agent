@@ -1,0 +1,90 @@
+{
+  "schema_version": "1.0.0",
+  "run_id": "context-strategy-20261114T0804Z-auto11",
+  "as_of_utc": "2026-11-14T08:04:20.956Z",
+  "repository": "shubhamtaywade82/crypto-trading-agent",
+  "environment": {
+    "cwd": "/",
+    "os": "Debian GNU/Linux 13 (trixie)",
+    "kernel": "6.18.57",
+    "python": "3.13.5",
+    "node": "v22.16.0",
+    "npm": "10.9.2",
+    "git": "2.47.3",
+    "cpu": 3,
+    "memoryTotal": "5.8GiB",
+    "memoryAvailable": "4.7GiB",
+    "diskFree": "30GiB",
+    "localCheckout": false,
+    "binanceSdkInstalled": false,
+    "requiredNode": ">=24",
+    "requiredNpm": ">=11"
+  },
+  "checks": [
+    {
+      "capability": "shell/compute",
+      "status": "PASS",
+      "evidence": "cwd=/; Debian 13; Python 3.13.5; Node22.16.0; npm10.9.2; Git2.47.3; 3 CPUs; 4.7GiB available RAM; 30GiB free.",
+      "impact": "Bounded shell and compute available.",
+      "nextAction": "Provision compatible Node24/npm11 runner."
+    },
+    {
+      "capability": "repo/code",
+      "status": "DEGRADED",
+      "evidence": "GitHub repository accessible remotely; no local crypto-trading-agent checkout or project package.json.",
+      "impact": "No local test or backtest invocation.",
+      "nextAction": "Clone exact research branch in persistent compatible workspace."
+    },
+    {
+      "capability": "network/Binance",
+      "status": "DEGRADED",
+      "evidence": "Direct curl to /fapi/v1/time, /fapi/v1/exchangeInfo and /fapi/v1/klines failed DNS (exit6, HTTP000); connector returned market data but no HTTP status/headers; exchangeInfo serverTime stale by 25h54m.",
+      "impact": "Market observation available; contract metadata freshness blocked.",
+      "nextAction": "Restore direct DNS/HTTPS or fresh server-time and exchange metadata."
+    },
+    {
+      "capability": "raw historical archive",
+      "status": "DEGRADED",
+      "evidence": "5m/15m partial; page28 SHA/window defects; 1h 28 missing opens per symbol plus 8-row discrepancy; 4h raw/aligned/canonical 53960/53816/53844 and 13 SHA mismatches.",
+      "impact": "No fully aligned multi-cycle panel.",
+      "nextAction": "Repair page28, 1h bridge and 4h provenance."
+    },
+    {
+      "capability": "data quality/coverage",
+      "status": "DEGRADED",
+      "evidence": "24-row incremental 5m/15m append passed all slice checks; full historical archive remains degraded.",
+      "impact": "Incremental slice valid, historical strategy inference blocked.",
+      "nextAction": "Continue backfill only after preserving checksums and aligned windows."
+    },
+    {
+      "capability": "backtest harness/smoke test",
+      "status": "BLOCKED",
+      "evidence": "No local checkout; Node22/npm10 below required Node24/npm11; Binance SDK absent; no fixture run.",
+      "impact": "No strategy backtest or OOS.",
+      "nextAction": "Provision runner and run deterministic fixture twice with no-lookahead test."
+    },
+    {
+      "capability": "disk/storage",
+      "status": "PASS",
+      "evidence": "30GiB free; GitHub archive and research branches provide persistent storage.",
+      "impact": "Small artifacts persisted remotely.",
+      "nextAction": "Check space before large backfills."
+    },
+    {
+      "capability": "artifact readback",
+      "status": "PASS",
+      "evidence": "Delta, delta manifest, archive manifest and 5m/15m indexes read back; SHA-256 values matched.",
+      "impact": "Incremental archive persistence verified.",
+      "nextAction": "Read back current snapshot, preflight, report, run, queue and registry after creation."
+    }
+  ],
+  "runStatus": "RESEARCH_EXECUTED",
+  "strategyExperimentStatus": "BLOCKED_NOT_RUN",
+  "oosEvaluated": false,
+  "blockers": [
+    "No compatible Node24/npm11 local runner or checkout.",
+    "Historical 5m/15m alignment, 1h bridge and 4h provenance defects.",
+    "Direct REST DNS failure and stale exchangeInfo metadata.",
+    "No calibrated execution-cost and point-in-time funding model."
+  ]
+}

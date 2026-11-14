@@ -1143,12 +1143,21 @@ function log(source, type, msg) {
   document.getElementById('logCount').textContent = S.logEntries.length;
 }
 
+let highlightIdleTimer = null;
+const HIGHLIGHT_IDLE_MS = 2500;
 function highlightComponents(compIds) {
   document.querySelectorAll('.component').forEach(c => c.classList.remove('active'));
   compIds.forEach(id => {
     const el = document.querySelector(`.component[data-cmp="${id}"]`);
     if (el) el.classList.add('active');
   });
+  // Live-mode ticks never reach the sim loop's idle clear, so the glow would stick forever.
+  clearTimeout(highlightIdleTimer);
+  if (compIds.length) highlightIdleTimer = setTimeout(() => {
+    setStatus('agent', 'idle');
+    setStatus('exchange', 'idle');
+    highlightComponents([]);
+  }, HIGHLIGHT_IDLE_MS);
 }
 
 function setStatus(side, status) {
@@ -1831,6 +1840,12 @@ function runExecutorCycle() {
     if (pos.qty <= 0) continue;
     const action = Agents.EXECUTOR.managePosition(pos);
     if (!action) continue;
+    if (action.action === 'close' || action.action === 'reduce') {
+      // A rejected exit leaves qty > 0, so without this the same exit re-fires every cycle.
+      const exitKey = `${symKey}:EXIT`;
+      if (S.cooldowns[exitKey] && now() < S.cooldowns[exitKey]) continue;
+      S.cooldowns[exitKey] = now() + CFG.cooldownMs;
+    }
     if (action.action === 'trail') {
       // already applied in managePosition; log occasionally
       if (S.tickCount % 3 === 0) {

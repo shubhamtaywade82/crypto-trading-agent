@@ -1,0 +1,209 @@
+{
+  "schema_version": "1.0.0",
+  "run_id": "context-strategy-2026-11-14T213039Z-v111",
+  "as_of_utc": "2026-11-14T21:30:39.207Z",
+  "repository": "shubhamtaywade82/crypto-trading-agent",
+  "archive_branch": "research/raw-ohlcv-archive-20261108T1026Z",
+  "checks": [
+    {
+      "capability": "shell/compute",
+      "status": "PASS",
+      "evidence": {
+        "cwd": "/",
+        "os": "Debian GNU/Linux 13 (trixie)",
+        "kernel": "6.18.57",
+        "node": "v22.16.0",
+        "npm": "10.9.2",
+        "python": "3.13.5",
+        "cpu_count": 3,
+        "memory_total_gib": 5.81,
+        "memory_available_gib": 4.72,
+        "disk_total_gib": 32,
+        "disk_free_gib": 30
+      },
+      "impact": "Bounded compute available; local runtime below repository engine floor.",
+      "next_action": "Provision Node24/npm11 for repository scripts."
+    },
+    {
+      "capability": "repo/code",
+      "status": "BLOCKED",
+      "evidence": {
+        "local_checkout": false,
+        "remote_repository": "shubhamtaywade82/crypto-trading-agent",
+        "remote_branch": "research/raw-ohlcv-archive-20261108T1026Z",
+        "package_version": "2.4.1",
+        "required_node": ">=24",
+        "required_npm": ">=11",
+        "observed_node": "v22.16.0",
+        "observed_npm": "10.9.2",
+        "binance_sdk_packages": {
+          "@nemesis-oss/binance-sdk": "NOT_INSTALLED",
+          "@binance/connector": "NOT_INSTALLED",
+          "binance": "NOT_INSTALLED",
+          "binance-api-node": "NOT_INSTALLED"
+        },
+        "remote_backtest_script_fetched": true,
+        "remote_code_executed": false
+      },
+      "impact": "No local harness can be invoked; no repository code executed.",
+      "next_action": "Provision compatible checkout and run deterministic fixture twice."
+    },
+    {
+      "capability": "network/Binance endpoints",
+      "status": "DEGRADED",
+      "evidence": {
+        "direct_rest_curl": {
+          "/fapi/v1/time": "HTTP 000 DNS failure: Could not resolve host fapi.binance.com",
+          "/fapi/v1/exchangeInfo": "HTTP 000 DNS failure"
+        },
+        "connector_endpoints": [
+          "/fapi/v1/exchangeInfo",
+          "/fapi/v1/klines",
+          "/fapi/v1/premiumIndex",
+          "/fapi/v1/openInterest",
+          "/fapi/v1/ticker/24hr",
+          "/fapi/v1/fundingRate",
+          "/fapi/v1/fundingInfo",
+          "/fapi/v1/depth",
+          "/futures/data/takerlongshortRatio",
+          "/futures/data/openInterestHist",
+          "/futures/data/globalLongShortAccountRatio",
+          "/futures/data/basis"
+        ],
+        "connector_http_status_exposed": false,
+        "exchangeInfo_serverTime_utc": "2026-11-13T06:02:01.705Z",
+        "latest_mark_time_utc": "2026-11-14T21:26:09.000Z",
+        "drift_seconds": 141847.295,
+        "drift_hours": 39.402026,
+        "contract_status_observed": {
+          "BTCUSDT": "TRADING",
+          "ETHUSDT": "TRADING",
+          "SOLUSDT": "TRADING",
+          "XRPUSDT": "TRADING"
+        },
+        "contract_status_execution_valid": false
+      },
+      "impact": "Snapshot available through connector; fresh metadata/server time not verified; execution validation blocked.",
+      "next_action": "Restore uncached official /time and /exchangeInfo; require <=5s drift."
+    },
+    {
+      "capability": "raw historical archive",
+      "status": "DEGRADED",
+      "evidence": {
+        "branch": "research/raw-ohlcv-archive-20261108T1026Z",
+        "rows_appended": 72,
+        "rows_by_interval": {
+          "5m": 48,
+          "15m": 16,
+          "1h": 4,
+          "4h": 4
+        },
+        "delta_files": 3,
+        "delta_manifests": 3,
+        "archive_manifest": "research-data/binance-usdm/manifests/archive_manifest_20261114T213039Z_context_strategy_v115.json",
+        "archive_manifest_sha256": "33355ffb6d76ab295be3875ff650a7fb391b82ccd1bb9fc821227d44696e3d49",
+        "readback_verified": true,
+        "indexes_readback_verified": [
+          "5m",
+          "15m",
+          "1h",
+          "4h"
+        ],
+        "highwater_utc": {
+          "5m": "2026-11-14T21:25:00.000Z",
+          "15m": "2026-11-14T21:15:00.000Z",
+          "1h": "2026-11-14T20:00:00.000Z",
+          "4h": "2026-11-14T16:00:00.000Z"
+        }
+      },
+      "impact": "Raw archive advanced, but base history remains degraded.",
+      "next_action": "Reconcile page coverage and 4h provenance; backfill multi-year 5m/15m."
+    },
+    {
+      "capability": "data quality/coverage",
+      "status": "DEGRADED",
+      "evidence": {
+        "raw_rows_checked": 2412,
+        "completed_rows": 2384,
+        "forming_excluded": 28,
+        "duplicates": 0,
+        "missing_intervals": 0,
+        "off_grid": 0,
+        "non_monotonic": 0,
+        "ohlc_failures": 0,
+        "non_finite": 0,
+        "non_positive_volume": 0,
+        "close_time_failures": 0,
+        "cross_symbol_alignment": true,
+        "forming_rows_included": 0,
+        "base_archive_status": "DEGRADED"
+      },
+      "impact": "New data passed; historical coverage/provenance remains degraded.",
+      "next_action": "Rebuild base coverage from verified manifests and re-read canonical 1h/4h files."
+    },
+    {
+      "capability": "backtest harness/smoke test",
+      "status": "BLOCKED",
+      "evidence": {
+        "local_repository": false,
+        "harness_invoked": false,
+        "deterministic_fixture_available": false,
+        "smoke_test": "NOT_RUN",
+        "strategy_backtest": "NOT_RUN",
+        "oos": "NOT_RUN"
+      },
+      "impact": "No strategy or OOS experiment ran.",
+      "next_action": "Provision compatible runner, locate harness, run deterministic fixture twice and verify no-lookahead."
+    },
+    {
+      "capability": "disk/storage",
+      "status": "PASS",
+      "evidence": {
+        "local_overlay_total_gib": 32,
+        "local_overlay_free_gib": 30,
+        "memory_available_gib": 4.72,
+        "local_storage_persistent": false,
+        "github_branch_persistent": true,
+        "github_branch": "research/raw-ohlcv-archive-20261108T1026Z"
+      },
+      "impact": "Local filesystem is ephemeral; GitHub is durable storage.",
+      "next_action": "Continue GitHub commits with checksums and readback."
+    },
+    {
+      "capability": "artifact readback",
+      "status": "PASS",
+      "evidence": {
+        "delta_files": 3,
+        "delta_manifests": 3,
+        "archive_manifest": true,
+        "snapshot": true,
+        "data_quality_experiment": true,
+        "archive_indexes": [
+          "5m",
+          "15m",
+          "1h",
+          "4h"
+        ],
+        "readback_receipt": "research-data/binance-usdm/manifests/readback_receipt_20261114T213039Z_auto11.json",
+        "readback_receipt_verified": true
+      },
+      "impact": "Raw, manifest, snapshot and index artifacts read back successfully.",
+      "next_action": "Persist registry, queue, report and final run receipt and verify."
+    }
+  ],
+  "run_outcome": {
+    "status": "RESEARCH_EXECUTED",
+    "oos_evaluated": false,
+    "strategy_experiment_status": "BLOCKED",
+    "completed_experiment": "DQ-20261114T212457Z-001",
+    "completed_experiment_type": "DATA_QUALITY_AND_INCREMENTAL_ARCHIVE",
+    "monitoring_refresh": true,
+    "archive_rows_appended": 72
+  },
+  "notes": [
+    "Binance SDK not used; public-data connector used.",
+    "Direct REST DNS unavailable; connector HTTP status/headers not exposed.",
+    "exchangeInfo TRADING statuses are stale and not accepted for execution validation.",
+    "No strategy backtest, OOS or trade selection from an OOS_VALIDATED entry."
+  ]
+}

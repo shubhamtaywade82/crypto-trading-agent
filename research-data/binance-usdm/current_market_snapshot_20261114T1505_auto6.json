@@ -1,0 +1,633 @@
+{
+  "schema_version": "1.0.0",
+  "snapshot_id": "current-market-20261114T1505-auto6",
+  "as_of_utc": "2026-11-14T15:05:00.558Z",
+  "retrieved_at_utc": "2026-11-14T15:01:21.313Z",
+  "source": "Binance USDⓈ-M public market-data connector. Binance SDK not used. Direct REST DNS failed; connector HTTP status/headers are not exposed.",
+  "endpoint_sources": [
+    "GET /fapi/v1/klines",
+    "GET /fapi/v1/premiumIndex",
+    "GET /fapi/v1/ticker/24hr",
+    "GET /fapi/v1/openInterest",
+    "GET /fapi/v1/fundingRate",
+    "GET /futures/data/openInterestHist",
+    "GET /futures/data/takerlongshortRatio",
+    "GET /futures/data/globalLongShortAccountRatio",
+    "GET /fapi/v1/ticker/bookTicker",
+    "GET /fapi/v1/exchangeInfo"
+  ],
+  "server_time": {
+    "endpoint": "GET /fapi/v1/time",
+    "status": "UNAVAILABLE_DIRECT_REST",
+    "reason": "curl to https://fapi.binance.com/fapi/v1/time failed DNS resolution (curl exit 6, HTTP 000). Connector does not expose server-time endpoint or response headers."
+  },
+  "exchange_metadata": {
+    "endpoint": "GET /fapi/v1/exchangeInfo",
+    "serverTimeUtc": "2026-11-13T06:02:01.708Z",
+    "retrievedAtUtc": "2026-11-14T15:01:21.313Z",
+    "stalenessHours": 32.9888,
+    "status": "STALE_BLOCKED",
+    "returnedStatuses": {
+      "BTCUSDT": "TRADING",
+      "ETHUSDT": "TRADING",
+      "SOLUSDT": "TRADING",
+      "XRPUSDT": "TRADING"
+    },
+    "contract_status_execution_validation": "BLOCKED"
+  },
+  "data_quality": {
+    "recent_kline_window": {
+      "symbols": [
+        "BTCUSDT",
+        "ETHUSDT",
+        "SOLUSDT",
+        "XRPUSDT"
+      ],
+      "intervals": [
+        "5m",
+        "15m",
+        "1h",
+        "4h"
+      ],
+      "rows_per_symbol_interval": 1500,
+      "completed_per_symbol_interval": 1499,
+      "forming_excluded_per_symbol_interval": 1,
+      "total_rows": 24000,
+      "total_completed": 23984,
+      "total_forming_excluded": 16,
+      "duplicates": 0,
+      "missing_intervals": 0,
+      "off_grid": 0,
+      "non_monotonic": 0,
+      "ohlc_failures": 0,
+      "non_finite": 0,
+      "non_positive_volume": 0,
+      "cross_symbol_alignment": true,
+      "window_only": true,
+      "not_a_persisted_archive": true,
+      "windows": {
+        "5m": {
+          "firstOpenUtc": "2026-11-09T10:00:00.000Z",
+          "lastReturnedOpenUtc": "2026-11-14T14:55:00.000Z",
+          "latestCompletedOpenUtc": "2026-11-14T14:50:00.000Z"
+        },
+        "15m": {
+          "firstOpenUtc": "2026-10-30T00:00:00.000Z",
+          "lastReturnedOpenUtc": "2026-11-14T14:45:00.000Z",
+          "latestCompletedOpenUtc": "2026-11-14T14:30:00.000Z"
+        },
+        "1h": {
+          "firstOpenUtc": "2026-09-13T03:00:00.000Z",
+          "lastReturnedOpenUtc": "2026-11-14T14:00:00.000Z",
+          "latestCompletedOpenUtc": "2026-11-14T13:00:00.000Z"
+        },
+        "4h": {
+          "firstOpenUtc": "2026-03-09T16:00:00.000Z",
+          "lastReturnedOpenUtc": "2026-11-14T12:00:00.000Z",
+          "latestCompletedOpenUtc": "2026-11-14T08:00:00.000Z"
+        }
+      }
+    },
+    "historical_archive": {
+      "status": "BLOCKED_NOT_ACCESSIBLE",
+      "referencedBranch": "research/raw-ohlcv-archive-20261108T1026Z",
+      "branchSearchResult": "only main returned",
+      "manifestReadback": "404 on archive branch and main",
+      "rowsAppendedThisRun": 0
+    }
+  },
+  "context_taxonomy": {
+    "version": "v56",
+    "timeframe": "4h",
+    "thresholdsTrainingOnly": true,
+    "trend_strength": "(EMA20 - EMA50) / Wilder ATR14",
+    "trend_rule": "TRANSITION when abs(trend_strength) < per-symbol training q67(abs trend strength); otherwise BULL/BEAR by sign",
+    "volatility_rule": "LOW below training q33 ATR14/close; NORMAL from q33 to q67; HIGH at/above q67",
+    "classification_is_not_win_probability": true,
+    "thresholds": {
+      "BTCUSDT": {
+        "trendQ67": 1.0981721850434896,
+        "volQ33": 0.014374031570013613,
+        "volQ67": 0.020593930471821034
+      },
+      "ETHUSDT": {
+        "trendQ67": 1.1495356071018408,
+        "volQ33": 0.017443833232330674,
+        "volQ67": 0.025873446395888434
+      },
+      "SOLUSDT": {
+        "trendQ67": 1.1350479196576662,
+        "volQ33": 0.027301090917959424,
+        "volQ67": 0.039967817717144985
+      },
+      "XRPUSDT": {
+        "trendQ67": 0.9496210457753316,
+        "volQ33": 0.01989429827042195,
+        "volQ67": 0.0301988911135515
+      }
+    },
+    "currentClassifications": {
+      "BTCUSDT": {
+        "context": "BEAR_NORMAL",
+        "trendStrength": -2.0275,
+        "atr14ToClosePct": 1.9319,
+        "confidence": {
+          "trend": "HIGH",
+          "volatility": "MODERATE"
+        },
+        "multiTimeframeTrend": {
+          "5m": "BEARISH",
+          "15m": "BEARISH",
+          "1h": "BEARISH",
+          "4h": "BEARISH"
+        }
+      },
+      "ETHUSDT": {
+        "context": "BEAR_NORMAL",
+        "trendStrength": -2.1389,
+        "atr14ToClosePct": 2.3293,
+        "confidence": {
+          "trend": "HIGH",
+          "volatility": "MODERATE"
+        },
+        "multiTimeframeTrend": {
+          "5m": "BEARISH",
+          "15m": "BEARISH",
+          "1h": "BEARISH",
+          "4h": "BEARISH"
+        }
+      },
+      "SOLUSDT": {
+        "context": "BEAR_LOW",
+        "trendStrength": -1.9945,
+        "atr14ToClosePct": 2.7134,
+        "confidence": {
+          "trend": "HIGH",
+          "volatility": "MODERATE"
+        },
+        "multiTimeframeTrend": {
+          "5m": "BEARISH",
+          "15m": "BEARISH",
+          "1h": "BEARISH",
+          "4h": "BEARISH"
+        }
+      },
+      "XRPUSDT": {
+        "context": "BEAR_NORMAL",
+        "trendStrength": -2.4079,
+        "atr14ToClosePct": 2.3874,
+        "confidence": {
+          "trend": "HIGH",
+          "volatility": "MODERATE"
+        },
+        "multiTimeframeTrend": {
+          "5m": "BEARISH",
+          "15m": "BEARISH",
+          "1h": "BEARISH",
+          "4h": "BEARISH"
+        }
+      }
+    },
+    "unsupportedDimensions": {
+      "structure": "UNKNOWN_NOT_CLASSIFIED",
+      "btcLeadLag": "NOT_COMPUTED_THIS_RUN",
+      "shock": "5m ATR local percentile is elevated, but no new training-derived shock threshold was fitted"
+    }
+  },
+  "symbols": {
+    "BTCUSDT": {
+      "role": "BTC_REFERENCE_ONLY",
+      "price": {
+        "last": 65828.7,
+        "mark": 65861.5,
+        "change24hPct": -4.524,
+        "high24h": 69110.5,
+        "low24h": 65766,
+        "quoteVolume24h": 13018392271.28,
+        "tickerTimeUtc": "2026-11-14T14:58:00.270Z",
+        "markTimeUtc": "2026-11-14T14:57:52.000Z"
+      },
+      "funding": {
+        "premiumIndexLastFundingRate": 0.00003151,
+        "premiumIndexLastFundingRatePct": 0.003151,
+        "lastSettledRate": 0.00004461,
+        "lastSettledRatePct": 0.004461,
+        "lastSettledTimeUtc": "2026-11-14T08:00:00.001Z",
+        "nextFundingTimeUtc": "2026-11-14T16:00:00.000Z",
+        "intervalHours": 8
+      },
+      "openInterest": {
+        "currentBaseUnits": 96775.942,
+        "asOfUtc": "2026-11-14T14:57:50.970Z",
+        "hist1hLatestDeltaPct": 0.547,
+        "historyTimesUtc": [
+          "2026-11-14T11:00:00Z",
+          "2026-11-14T12:00:00Z",
+          "2026-11-14T13:00:00Z"
+        ]
+      },
+      "positioning": {
+        "globalLongShortRatio": 3.1271,
+        "longAccountPct": 75.77,
+        "shortAccountPct": 24.23,
+        "sampleUtc": "2026-11-14T14:00:00Z"
+      },
+      "takerFlow": {
+        "period": "1h",
+        "buySellRatio": 0.9451,
+        "buyVolume": 4683.93,
+        "sellVolume": 4956.024,
+        "sampleUtc": "2026-11-14T13:00:00Z"
+      },
+      "orderBook": {
+        "bestBid": 65839.9,
+        "bestAsk": 65840,
+        "spreadBps": 0.0152,
+        "snapshotUtc": "2026-11-14T14:58:04.189Z"
+      },
+      "timeframes": {
+        "5m": {
+          "latestCompletedOpenUtc": "2026-11-14T14:50:00Z",
+          "close": 65904.7,
+          "ema20": 66373.4509,
+          "ema50": 66714.4328,
+          "ema20Slope5BarsPct": -0.4078,
+          "return20BarsPct": -1.2877,
+          "atr14Pct": 0.4384,
+          "atrPercentileLocal": 96.43,
+          "volumeZ20": -0.334
+        },
+        "15m": {
+          "latestCompletedOpenUtc": "2026-11-14T14:30:00Z",
+          "close": 66003.1,
+          "ema20": 66822.3627,
+          "ema50": 67201.3889,
+          "ema20Slope5BarsPct": -0.4075,
+          "return20BarsPct": -1.686,
+          "atr14Pct": 0.4328,
+          "atrPercentileLocal": 76.95,
+          "volumeZ20": 1.833
+        },
+        "1h": {
+          "latestCompletedOpenUtc": "2026-11-14T13:00:00Z",
+          "close": 66807.2,
+          "ema20": 67681.9549,
+          "ema50": 69139.767,
+          "ema20Slope5BarsPct": -0.5508,
+          "return20BarsPct": -3.0656,
+          "atr14Pct": 0.7953,
+          "atrPercentileLocal": 76.48,
+          "volumeZ20": 0.529
+        },
+        "4h": {
+          "latestCompletedOpenUtc": "2026-11-14T08:00:00Z",
+          "close": 67243.8,
+          "ema20": 70265.4328,
+          "ema50": 72899.2694,
+          "ema20Slope5BarsPct": -2.4103,
+          "return20BarsPct": -8.8097,
+          "atr14Pct": 1.9319,
+          "atrPercentileLocal": 94.47,
+          "volumeZ20": -0.832
+        }
+      }
+    },
+    "ETHUSDT": {
+      "role": "TRADABLE",
+      "price": {
+        "last": 1850.48,
+        "mark": 1850.92313178,
+        "change24hPct": -5.167,
+        "high24h": 1955.78,
+        "low24h": 1842.47,
+        "quoteVolume24h": 8861639978.32,
+        "tickerTimeUtc": "2026-11-14T14:58:00.874Z",
+        "markTimeUtc": "2026-11-14T14:57:54.001Z"
+      },
+      "funding": {
+        "premiumIndexLastFundingRate": 0.0000099,
+        "premiumIndexLastFundingRatePct": 0.00099,
+        "lastSettledRate": 0.00002584,
+        "lastSettledRatePct": 0.002584,
+        "lastSettledTimeUtc": "2026-11-14T08:00:00.001Z",
+        "nextFundingTimeUtc": "2026-11-14T16:00:00.000Z",
+        "intervalHours": 8
+      },
+      "openInterest": {
+        "currentBaseUnits": 2335480.272,
+        "asOfUtc": "2026-11-14T14:57:51.072Z",
+        "hist1hLatestDeltaPct": 0.523,
+        "historyTimesUtc": [
+          "2026-11-14T11:00:00Z",
+          "2026-11-14T12:00:00Z",
+          "2026-11-14T13:00:00Z"
+        ]
+      },
+      "positioning": {
+        "globalLongShortRatio": 3.5683,
+        "longAccountPct": 78.11,
+        "shortAccountPct": 21.89,
+        "sampleUtc": "2026-11-14T14:00:00Z"
+      },
+      "takerFlow": {
+        "period": "1h",
+        "buySellRatio": 0.8983,
+        "buyVolume": 110808.207,
+        "sellVolume": 123356.816,
+        "sampleUtc": "2026-11-14T13:00:00Z"
+      },
+      "orderBook": {
+        "bestBid": 1850.81,
+        "bestAsk": 1850.82,
+        "spreadBps": 0.054,
+        "snapshotUtc": "2026-11-14T14:58:06.397Z"
+      },
+      "timeframes": {
+        "5m": {
+          "latestCompletedOpenUtc": "2026-11-14T14:50:00Z",
+          "close": 1852.28,
+          "ema20": 1870.2189,
+          "ema50": 1885.5286,
+          "ema20Slope5BarsPct": -0.6492,
+          "return20BarsPct": -2.1309,
+          "atr14Pct": 0.691,
+          "atrPercentileLocal": 98.18,
+          "volumeZ20": -0.177
+        },
+        "15m": {
+          "latestCompletedOpenUtc": "2026-11-14T14:30:00Z",
+          "close": 1853.25,
+          "ema20": 1890.1083,
+          "ema50": 1901.4301,
+          "ema20Slope5BarsPct": -0.6567,
+          "return20BarsPct": -2.8649,
+          "atr14Pct": 0.6499,
+          "atrPercentileLocal": 83.56,
+          "volumeZ20": 0.889
+        },
+        "1h": {
+          "latestCompletedOpenUtc": "2026-11-14T13:00:00Z",
+          "close": 1892.78,
+          "ema20": 1914.6124,
+          "ema50": 1949.9152,
+          "ema20Slope5BarsPct": -0.3751,
+          "return20BarsPct": -2.3026,
+          "atr14Pct": 1.0183,
+          "atrPercentileLocal": 64.42,
+          "volumeZ20": 0.682
+        },
+        "4h": {
+          "latestCompletedOpenUtc": "2026-11-14T08:00:00Z",
+          "close": 1909.59,
+          "ema20": 1981.3892,
+          "ema50": 2076.5269,
+          "ema20Slope5BarsPct": -2.2136,
+          "return20BarsPct": -7.3909,
+          "atr14Pct": 2.3293,
+          "atrPercentileLocal": 84.03,
+          "volumeZ20": -0.713
+        }
+      }
+    },
+    "SOLUSDT": {
+      "role": "TRADABLE",
+      "price": {
+        "last": 73.93,
+        "mark": 73.97500992,
+        "change24hPct": -8.514,
+        "high24h": 80.83,
+        "low24h": 73.68,
+        "quoteVolume24h": 1918733941.2924,
+        "tickerTimeUtc": "2026-11-14T14:58:02.216Z",
+        "markTimeUtc": "2026-11-14T14:57:54.001Z"
+      },
+      "funding": {
+        "premiumIndexLastFundingRate": -0.00003697,
+        "premiumIndexLastFundingRatePct": -0.003697,
+        "lastSettledRate": -0.00007941,
+        "lastSettledRatePct": -0.007941,
+        "lastSettledTimeUtc": "2026-11-14T08:00:00.001Z",
+        "nextFundingTimeUtc": "2026-11-14T16:00:00.000Z",
+        "intervalHours": 8
+      },
+      "openInterest": {
+        "currentBaseUnits": 9395443.01,
+        "asOfUtc": "2026-11-14T14:57:52.985Z",
+        "hist1hLatestDeltaPct": 0.208,
+        "historyTimesUtc": [
+          "2026-11-14T11:00:00Z",
+          "2026-11-14T12:00:00Z",
+          "2026-11-14T13:00:00Z"
+        ]
+      },
+      "positioning": {
+        "globalLongShortRatio": 3.6926,
+        "longAccountPct": 78.69,
+        "shortAccountPct": 21.31,
+        "sampleUtc": "2026-11-14T14:00:00Z"
+      },
+      "takerFlow": {
+        "period": "1h",
+        "buySellRatio": 0.8962,
+        "buyVolume": 439214.9,
+        "sellVolume": 490097.42,
+        "sampleUtc": "2026-11-14T13:00:00Z"
+      },
+      "orderBook": {
+        "bestBid": 73.95,
+        "bestAsk": 73.96,
+        "spreadBps": 1.351,
+        "snapshotUtc": "2026-11-14T14:58:08.286Z"
+      },
+      "timeframes": {
+        "5m": {
+          "latestCompletedOpenUtc": "2026-11-14T14:50:00Z",
+          "close": 74.19,
+          "ema20": 74.7298,
+          "ema50": 75.1805,
+          "ema20Slope5BarsPct": -0.6193,
+          "return20BarsPct": -1.8521,
+          "atr14Pct": 0.6325,
+          "atrPercentileLocal": 96.83,
+          "volumeZ20": -0.221
+        },
+        "15m": {
+          "latestCompletedOpenUtc": "2026-11-14T14:30:00Z",
+          "close": 74.03,
+          "ema20": 75.3065,
+          "ema50": 75.904,
+          "ema20Slope5BarsPct": -0.4644,
+          "return20BarsPct": -2.1414,
+          "atr14Pct": 0.6609,
+          "atrPercentileLocal": 73.25,
+          "volumeZ20": 1.778
+        },
+        "1h": {
+          "latestCompletedOpenUtc": "2026-11-14T13:00:00Z",
+          "close": 75.46,
+          "ema20": 76.7238,
+          "ema50": 78.7667,
+          "ema20Slope5BarsPct": -0.8742,
+          "return20BarsPct": -5.616,
+          "atr14Pct": 1.1643,
+          "atrPercentileLocal": 47.17,
+          "volumeZ20": 0.035
+        },
+        "4h": {
+          "latestCompletedOpenUtc": "2026-11-14T08:00:00Z",
+          "close": 75.92,
+          "ema20": 80.2333,
+          "ema50": 84.342,
+          "ema20Slope5BarsPct": -2.7842,
+          "return20BarsPct": -8.8705,
+          "atr14Pct": 2.7134,
+          "atrPercentileLocal": 81,
+          "volumeZ20": -0.524
+        }
+      }
+    },
+    "XRPUSDT": {
+      "role": "TRADABLE",
+      "price": {
+        "last": 0.9802,
+        "mark": 0.98017142,
+        "change24hPct": -5.047,
+        "high24h": 1.0355,
+        "low24h": 0.9767,
+        "quoteVolume24h": 742025012.1108,
+        "tickerTimeUtc": "2026-11-14T14:58:02.699Z",
+        "markTimeUtc": "2026-11-14T14:57:59.000Z"
+      },
+      "funding": {
+        "premiumIndexLastFundingRate": 0.00002424,
+        "premiumIndexLastFundingRatePct": 0.002424,
+        "lastSettledRate": -0.00003523,
+        "lastSettledRatePct": -0.003523,
+        "lastSettledTimeUtc": "2026-11-14T08:00:00.001Z",
+        "nextFundingTimeUtc": "2026-11-14T16:00:00.000Z",
+        "intervalHours": 8
+      },
+      "openInterest": {
+        "currentBaseUnits": 301394401.1,
+        "asOfUtc": "2026-11-14T14:57:52.249Z",
+        "hist1hLatestDeltaPct": 0.206,
+        "historyTimesUtc": [
+          "2026-11-14T11:00:00Z",
+          "2026-11-14T12:00:00Z",
+          "2026-11-14T13:00:00Z"
+        ]
+      },
+      "positioning": {
+        "globalLongShortRatio": 3.0241,
+        "longAccountPct": 75.15,
+        "shortAccountPct": 24.85,
+        "sampleUtc": "2026-11-14T14:00:00Z"
+      },
+      "takerFlow": {
+        "period": "1h",
+        "buySellRatio": 1.0936,
+        "buyVolume": 15290740.2,
+        "sellVolume": 13982180.1,
+        "sampleUtc": "2026-11-14T13:00:00Z"
+      },
+      "orderBook": {
+        "bestBid": 0.9803,
+        "bestAsk": 0.9804,
+        "spreadBps": 1.02,
+        "snapshotUtc": "2026-11-14T14:58:10.669Z"
+      },
+      "timeframes": {
+        "5m": {
+          "latestCompletedOpenUtc": "2026-11-14T14:50:00Z",
+          "close": 0.9821,
+          "ema20": 0.9866151,
+          "ema50": 0.9889562,
+          "ema20Slope5BarsPct": -0.2997,
+          "return20BarsPct": -0.828,
+          "atr14Pct": 0.6051,
+          "atrPercentileLocal": 97.37,
+          "volumeZ20": 0.094
+        },
+        "15m": {
+          "latestCompletedOpenUtc": "2026-11-14T14:30:00Z",
+          "close": 0.9831,
+          "ema20": 0.9896378,
+          "ema50": 0.9935563,
+          "ema20Slope5BarsPct": -0.1467,
+          "return20BarsPct": -0.5463,
+          "atr14Pct": 0.5892,
+          "atrPercentileLocal": 63.95,
+          "volumeZ20": 1.202
+        },
+        "1h": {
+          "latestCompletedOpenUtc": "2026-11-14T13:00:00Z",
+          "close": 0.9949,
+          "ema20": 0.999875,
+          "ema50": 1.015634,
+          "ema20Slope5BarsPct": -0.4685,
+          "return20BarsPct": -2.4895,
+          "atr14Pct": 1.0346,
+          "atrPercentileLocal": 36.32,
+          "volumeZ20": 0.084
+        },
+        "4h": {
+          "latestCompletedOpenUtc": "2026-11-14T08:00:00Z",
+          "close": 0.9945,
+          "ema20": 1.0296984,
+          "ema50": 1.0868679,
+          "ema20Slope5BarsPct": -1.8904,
+          "return20BarsPct": -6.0197,
+          "atr14Pct": 2.3874,
+          "atrPercentileLocal": 65.23,
+          "volumeZ20": -0.795
+        }
+      }
+    }
+  },
+  "historical_context_distribution": {
+    "path": "research/context-strategy/context-discovery/context_distribution_20261108T022532Z.json",
+    "taxonomyId": "CTX-4H-EMA50xEMA200-ATRQ-v2-FULL-ARCHIVE",
+    "periodStartUtc": "2020-09-14T08:00:00Z",
+    "periodEndUtc": "2026-11-05T16:00:00Z",
+    "rowsPerSymbol": 13461,
+    "labelledBarsPerSymbol": 12462,
+    "thresholdsRefitThisRun": false,
+    "jsdTrainTest": {
+      "BTCUSDT": 0.20203,
+      "ETHUSDT": 0.10765,
+      "SOLUSDT": 0.29652,
+      "XRPUSDT": 0.12844
+    },
+    "note": "Historical occupancy/duration diagnostic from a different frozen taxonomy than current v56; descriptive only, not strategy edge or current v56 occupancy."
+  },
+  "registry": {
+    "reference": "research-data/binance-usdm/conditional-strategy-registry-snapshot-v132.json",
+    "entries": 5,
+    "oosValidatedEntries": 0
+  },
+  "decisions": {
+    "BTCUSDT": "REFERENCE_ONLY",
+    "ETHUSDT": {
+      "decision": "NO_TRADE",
+      "reason": "No OOS_VALIDATED strategy entry; bearish context is not an entry trigger."
+    },
+    "SOLUSDT": {
+      "decision": "NO_TRADE",
+      "reason": "No OOS_VALIDATED strategy entry; bearish context is not an entry trigger."
+    },
+    "XRPUSDT": {
+      "decision": "NO_TRADE",
+      "reason": "No OOS_VALIDATED strategy entry; bearish context is not an entry trigger."
+    }
+  },
+  "notes": [
+    "All four symbols are bearish on completed 5m/15m/1h/4h EMA20/EMA50 features.",
+    "5m ATR local percentiles are 96-98% over the short 1500-bar window; these are descriptive, not training-fitted shock labels.",
+    "Current funding is premiumIndex.lastFundingRate; last settled funding is separately taken from fundingRate history.",
+    "All observed funding magnitudes are below 0.05%; none triggers the extreme-funding flag.",
+    "OI and global account long/short ratios are snapshots, not evidence of liquidations or crowding.",
+    "No BTC lead/lag correlation or structure label was computed in this run.",
+    "Current price/ticker/book data are asynchronous by up to about 20 seconds; book spreads are one-level quotes, not executable impact estimates.",
+    "No validated registry setup is eligible; no trade levels are emitted."
+  ]
+}

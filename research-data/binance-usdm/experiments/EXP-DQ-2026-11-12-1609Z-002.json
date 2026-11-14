@@ -1,0 +1,72 @@
+{
+  "schema_version": "1.0.0",
+  "experiment_id": "EXP-DQ-2026-11-12-1609Z-002",
+  "type": "INCREMENTAL_ARCHIVE_INTEGRITY_REFRESH",
+  "status": "COMPLETED_PASS",
+  "as_of_utc": "2026-11-12T16:09:00Z",
+  "hypothesis": "The next completed 5m candle for each symbol can be appended exactly once after the prior highwater with forming rows excluded.",
+  "specification": {
+    "source_endpoint": "GET /fapi/v1/klines",
+    "symbols": [
+      "BTCUSDT",
+      "ETHUSDT",
+      "SOLUSDT",
+      "XRPUSDT"
+    ],
+    "interval": "5m",
+    "previous_highwater_utc": "2026-11-12T15:55:00.000Z",
+    "latest_completed_open_utc": "2026-11-12T16:00:00.000Z",
+    "next_start_utc": "2026-11-12T16:05:00.000Z",
+    "retrieval_timestamp_utc": "2026-11-12T16:09:00Z",
+    "completed_rule": "closeTime < retrieval timestamp"
+  },
+  "results": {
+    "rows_fetched": 40,
+    "rows_appended": 4,
+    "forming_rows_excluded": 4,
+    "pre_highwater_rows_excluded": 32,
+    "rows_by_symbol": {
+      "BTCUSDT": 1,
+      "ETHUSDT": 1,
+      "SOLUSDT": 1,
+      "XRPUSDT": 1
+    },
+    "quality_failures": 0,
+    "duplicates": 0,
+    "gaps": 0,
+    "off_grid": 0,
+    "ohlc_failures": 0,
+    "non_finite": 0,
+    "non_positive_volume": 0,
+    "close_time_failures": 0,
+    "cross_symbol_alignment": true,
+    "contiguous_from_prior_highwater": true
+  },
+  "artifacts": {
+    "delta_path": "research-data/binance-usdm/delta/binance_usdm_delta_20261112T1609Z_5m_completed.jsonl",
+    "delta_sha256": "0a8d7f695714dbab2b692b6bce765b0f2c7aadbb9bb5d36967e011a2f5361513",
+    "delta_blob_sha": "88f12944d297b91e5d84b875598e9fdfc19660d4",
+    "manifest_path": "research-data/binance-usdm/delta/manifest-20261112T1609Z-5m.json",
+    "manifest_sha256": "2dd2971ddb2464fcd3ce012ba36189d09db1d523896e09f2357493978c7d72c6",
+    "manifest_blob_sha": "a8fa05bb8785e1245f3c5188809753fb6d0f61d6",
+    "global_manifest_path": "research-data/binance-usdm/manifests/archive_manifest_20261112T1609Z_auto39_refresh.json",
+    "global_manifest_sha256": "509a3ac3e92f9255ae9670cfb14997f081c7f73680436f9fda8e139def7e238c",
+    "global_manifest_blob_sha": "d8d1c51656eed0ced76d31a58003555e31d348e6",
+    "index_path": "research-data/binance-usdm/5m/archive-index.json",
+    "index_commit": "1d0c338738c48ee94e83bbd0e3e15eb98ab75d73",
+    "index_blob_sha": "5a37a5f216c50db99d9fa93546c932c0f07fb1d9",
+    "readback_verified": true
+  },
+  "reproducibility": {
+    "runner": "functions.exec tool orchestration; no local repo code",
+    "code_hash": "NOT_AVAILABLE",
+    "seed": "NOT_APPLICABLE_DETERMINISTIC_DATA_CHECK",
+    "artifacts_readback_verified": true
+  },
+  "oos_evaluation": {
+    "status": "NOT_APPLICABLE",
+    "strategy_backtest_executed": false,
+    "oos_evaluated": false
+  },
+  "interpretation": "This is an incremental archive-integrity refresh only; no strategy evidence was generated."
+}

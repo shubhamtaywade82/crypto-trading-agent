@@ -1,0 +1,99 @@
+{
+  "schemaVersion": "1.0.0",
+  "runId": "context-strategy-20261110T1427Z-auto11",
+  "asOfUtc": "2026-11-10T14:27:34.000Z",
+  "repository": "shubhamtaywade82/crypto-trading-agent",
+  "branch": "research/raw-ohlcv-archive-20261108T1026Z",
+  "source": {
+    "endpoint": "GET /fapi/v1/klines",
+    "access": "Binance USDⓈ-M connector; direct REST DNS unavailable",
+    "symbols": [
+      "BTCUSDT",
+      "ETHUSDT",
+      "SOLUSDT",
+      "XRPUSDT"
+    ],
+    "intervals": [
+      "5m",
+      "15m",
+      "1h"
+    ],
+    "startTimePolicy": "first open strictly after prior highwater",
+    "completionPolicy": "closeTime <= latest BTC mark response time"
+  },
+  "highwaterBeforeUtc": {
+    "5m": "2026-11-10T13:25:00.000Z",
+    "15m": "2026-11-10T13:15:00.000Z",
+    "1h": "2026-11-10T12:00:00.000Z",
+    "4h": "2026-11-10T08:00:00.000Z"
+  },
+  "highwaterAfterUtc": {
+    "5m": "2026-11-10T14:20:00.000Z",
+    "15m": "2026-11-10T14:00:00.000Z",
+    "1h": "2026-11-10T13:00:00.000Z",
+    "4h": "2026-11-10T08:00:00.000Z"
+  },
+  "nextStartUtc": {
+    "5m": "2026-11-10T14:25:00.000Z",
+    "15m": "2026-11-10T14:15:00.000Z",
+    "1h": "2026-11-10T14:00:00.000Z",
+    "4h": "2026-11-10T12:00:00.000Z"
+  },
+  "dataWindowUtc": {
+    "firstOpenUtc": "2026-11-10T13:30:00.000Z",
+    "latestCompletedByInterval": {
+      "5m": "2026-11-10T14:20:00.000Z",
+      "15m": "2026-11-10T14:00:00.000Z",
+      "1h": "2026-11-10T13:00:00.000Z",
+      "4h": "2026-11-10T08:00:00.000Z"
+    }
+  },
+  "rowsFetched": 72,
+  "completedRows": 60,
+  "formingRowsExcluded": 12,
+  "rowsAppended": 60,
+  "rowsByInterval": {
+    "5m": 44,
+    "15m": 12,
+    "1h": 4
+  },
+  "rowsBySymbol": {
+    "BTCUSDT": 15,
+    "ETHUSDT": 15,
+    "SOLUSDT": 15,
+    "XRPUSDT": 15
+  },
+  "rowsBySymbolInterval": {
+    "BTCUSDT:5m": 11,
+    "BTCUSDT:15m": 3,
+    "BTCUSDT:1h": 1,
+    "ETHUSDT:5m": 11,
+    "ETHUSDT:15m": 3,
+    "ETHUSDT:1h": 1,
+    "SOLUSDT:5m": 11,
+    "SOLUSDT:15m": 3,
+    "SOLUSDT:1h": 1,
+    "XRPUSDT:5m": 11,
+    "XRPUSDT:15m": 3,
+    "XRPUSDT:1h": 1
+  },
+  "quality": {
+    "series": 12,
+    "rows": 60,
+    "duplicates": 0,
+    "missingIntervals": 0,
+    "offGrid": 0,
+    "nonMonotonic": 0,
+    "ohlcInvariantFailures": 0,
+    "nonPositiveVolume": 0,
+    "nonFinite": 0,
+    "crossSymbolAlignment": true,
+    "formingRowsAppended": 0
+  },
+  "deltaPath": "research-data/binance-usdm/delta/binance_usdm_delta_20261110T1427Z_5m15m1h_completed.jsonl",
+  "deltaSha256": "644964361b3a94fff9f54bd08ba3bb24b9d67116e928411458f5b117f384ded3",
+  "deltaBlobSha1": "5be8563c62cbfcc5a8ae139e677bb090906a8b5b",
+  "readbackVerified": true,
+  "hashMethod": "SHA-256 over exact UTF-8 JSONL bytes including final LF; implementation verified against SHA256 abc and quick-brown-fox known vector.",
+  "note": "No 4h bar completed after the existing 08:00Z highwater. 4h remains unchanged; its raw/aligned/canonical discrepancy remains unresolved."
+}

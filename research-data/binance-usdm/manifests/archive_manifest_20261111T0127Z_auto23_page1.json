@@ -1,0 +1,111 @@
+{
+  "schema_version": "1.0.0",
+  "run_id": "context-strategy-20261111T012735Z-auto23",
+  "as_of_utc": "2026-11-11T01:27:35.000Z",
+  "repository": "shubhamtaywade82/crypto-trading-agent",
+  "branch": "research/raw-ohlcv-archive-20261108T1026Z",
+  "source": {
+    "endpoint": "GET /fapi/v1/klines",
+    "access": "Binance USD-M public market-data connector",
+    "http_status": "NOT_EXPOSED_BY_CONNECTOR",
+    "symbols": [
+      "BTCUSDT",
+      "ETHUSDT",
+      "SOLUSDT",
+      "XRPUSDT"
+    ],
+    "intervals": [
+      "5m",
+      "15m",
+      "1h",
+      "4h"
+    ]
+  },
+  "historical_backfill_this_run": {
+    "page_number": 1,
+    "request_start_utc": "2020-01-01T00:00:00.000Z",
+    "limit": 1500,
+    "rows_per_symbol": 1500,
+    "rows_total": 12000,
+    "rows_by_interval": {
+      "5m": 6000,
+      "15m": 6000
+    },
+    "page_manifests": {
+      "5m": "research-data/binance-usdm/5m/manifest-page-0001.json",
+      "15m": "research-data/binance-usdm/15m/manifest-page-0001.json"
+    },
+    "zero_volume_rows": 8,
+    "analysis_excluded_zero_volume_rows": 8,
+    "raw_rows_retained": true
+  },
+  "incremental_append_this_run": {
+    "rows_appended": 68,
+    "rows_by_interval": {
+      "5m": 48,
+      "15m": 16,
+      "1h": 4
+    },
+    "delta_path": "research-data/binance-usdm/delta/binance_usdm_delta_20261111T0125Z_5m15m1h_completed.jsonl",
+    "delta_manifest_path": "research-data/binance-usdm/delta/manifest-20261111T0125Z-5m15m1h.json",
+    "delta_sha256": "174cb54cd9ce1c82124065093f5ef46f1a48fbfc080506289f83fde61fe8dae3",
+    "manifest_sha256": "1a70a6f2cbdd1749e0b2f79ec0f5225a8aaccdd72916b2f0274fd7bd76f4e24c",
+    "readback_verified": true
+  },
+  "quality": {
+    "page_files": 8,
+    "page_rows": 12000,
+    "incremental_rows": 68,
+    "duplicates": 0,
+    "missing_intervals": 0,
+    "off_grid": 0,
+    "non_monotonic": 0,
+    "ohlc_failures": 0,
+    "non_finite": 0,
+    "zero_volume_rows": 8,
+    "cross_symbol_alignment": "different historical onboarding dates; per-symbol continuity verified",
+    "page_file_readback_exact": true
+  },
+  "highwaters": {
+    "5m": "2026-11-11T01:20:00.000Z",
+    "15m": "2026-11-11T01:00:00.000Z",
+    "1h": "2026-11-11T00:00:00.000Z",
+    "4h": "2026-11-10T16:00:00.000Z"
+  },
+  "archive_indexes": {
+    "5m": {
+      "path": "research-data/binance-usdm/5m/archive-index.json",
+      "blobSha1": "ab9b21971f8cfa5a7fffad47eadf2689d8b53c43",
+      "latestCompletedOpenUtc": "2026-11-11T01:20:00.000Z",
+      "baseHistoryRows": 6000,
+      "baseCoverageStart": "2020-01-01T00:00:00.000Z",
+      "baseCoverageEnd": "2020-09-19T11:55:00.000Z",
+      "manifestPath": "research-data/binance-usdm/5m/manifest-page-0001.json",
+      "manifestBlobSha1": "89cf9ebc84d033714010fcfe7c953b261e761a7b"
+    },
+    "15m": {
+      "path": "research-data/binance-usdm/15m/archive-index.json",
+      "blobSha1": "7e98f22b46407e3b9573d28029c184445a24095c",
+      "latestCompletedOpenUtc": "2026-11-11T01:00:00.000Z",
+      "baseHistoryRows": 6000,
+      "baseCoverageStart": "2020-01-01T00:00:00.000Z",
+      "baseCoverageEnd": "2020-09-29T21:45:00.000Z",
+      "manifestPath": "research-data/binance-usdm/15m/manifest-page-0001.json",
+      "manifestBlobSha1": "dccef9a880cf22d6f9dbfcc21a00be8f0e2f6aa8"
+    },
+    "1h": {
+      "path": "research-data/binance-usdm/1h/archive-index.json",
+      "blobSha1": "0795bbb2c00f39d373ca32abf8dd32196cc9a395",
+      "latestCompletedOpenUtc": "2026-11-11T00:00:00.000Z",
+      "baseRows": 215484
+    },
+    "4h": {
+      "path": "research-data/binance-usdm/4h/archive-index.json",
+      "status": "UNCHANGED_BLOCKED_PROVENANCE",
+      "latestCompletedOpenUtc": "2026-11-10T16:00:00.000Z"
+    }
+  },
+  "previous_archive_manifest": "research-data/binance-usdm/manifests/archive_manifest_20261111T0125Z_auto23.json",
+  "readback_verified": true,
+  "readback_verified_at_utc": "2026-11-11T01:27:35.000Z"
+}

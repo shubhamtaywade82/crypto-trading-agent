@@ -1,0 +1,79 @@
+{
+  "schema_version": "1.0.0",
+  "run_id": "context-strategy-20261111T1906Z-auto35",
+  "as_of_utc": "2026-11-11T19:06:18.881Z",
+  "repository": "shubhamtaywade82/crypto-trading-agent",
+  "branch": "research/raw-ohlcv-archive-20261108T1026Z",
+  "source": "Binance USD-M public market-data connector; SDK_NOT_USED; direct REST DNS/HTTPS unavailable; connector HTTP status/headers not exposed.",
+  "source_endpoint": "GET /fapi/v1/klines",
+  "status": "DEGRADED_HISTORICAL_COVERAGE_WITH_5M15M1H_INCREMENTAL_APPEND_PASS",
+  "latest_completed_highwater_utc": {
+    "5m": "2026-11-11T19:00:00.000Z",
+    "15m": "2026-11-11T18:45:00.000Z",
+    "1h": "2026-11-11T18:00:00.000Z",
+    "4h": "2026-11-11T12:00:00.000Z"
+  },
+  "append_this_run": {
+    "rows_appended": 4,
+    "rows_by_interval": {
+      "5m": 4
+    },
+    "rows_by_symbol": {
+      "BTCUSDT": 1,
+      "ETHUSDT": 1,
+      "SOLUSDT": 1,
+      "XRPUSDT": 1
+    },
+    "forming_rows_excluded": 4,
+    "delta_path": "research-data/binance-usdm/delta/binance_usdm_delta_20261111T1906Z_5m_completed.jsonl",
+    "delta_sha256": "0569715a88c6abfded752d0752d46901e952bf5b2d1862f3c84c66d3bdffdaca",
+    "delta_blob_sha1": "4bda5b14c7f2b15e707a1e508cf864634925c2e4",
+    "manifest_path": "research-data/binance-usdm/delta/manifest-20261111T1906Z-5m.json",
+    "manifest_sha256": "d6cccee2e0961d5fb35d20975ac77617e7f2fa043a061af5f3da97a1f25885ff",
+    "manifest_blob_sha1": "24fa00215e4359f0903f59c7634f98c968814780",
+    "readback_verified": true,
+    "quality": {
+      "duplicates": 0,
+      "missing_intervals": 0,
+      "off_grid": 0,
+      "non_monotonic": 0,
+      "ohlc_failures": 0,
+      "non_positive_volume": 0,
+      "non_finite": 0,
+      "close_time_failures": 0,
+      "cross_symbol_alignment": true,
+      "all_series_contiguous_from_prior_highwater": true
+    }
+  },
+  "archive_indexes": {
+    "5m": {
+      "path": "research-data/binance-usdm/5m/archive-index.json",
+      "blob_sha": "eb83cf8c8b836453dc497dc3537983a72a06bd71",
+      "readback_verified": true
+    },
+    "15m": {
+      "path": "research-data/binance-usdm/15m/archive-index.json",
+      "blob_sha": "e0b25f8d055af9387795e8f96c5ea71102362c8c",
+      "readback_verified": true
+    },
+    "1h": {
+      "path": "research-data/binance-usdm/1h/archive-index.json",
+      "blob_sha": "3b3a1116360ca1d4cd281c58e5312f92bd54e84d",
+      "readback_verified": true
+    },
+    "4h": {
+      "path": "research-data/binance-usdm/4h/archive-index.json",
+      "blob_sha": "d489d2fe47ed25d05b584b817eb4929b6b1de86d",
+      "readback_verified": true,
+      "append_prohibited": true
+    }
+  },
+  "next_actions": [
+    "Backfill 5m and 15m historical base page 0011 from per-symbol next_start_utc; retain separate raw and incremental layers.",
+    "Reconcile 1h base/delta bridge gap and 8-row index count discrepancy.",
+    "Reconcile 4h raw/canonical row-key differences and 13 original manifest SHA provenance discrepancies; do not append/rebuild 4h.",
+    "Provision Node 24/npm 11 compatible checkout and run deterministic no-lookahead smoke fixture twice.",
+    "Restore direct REST DNS/HTTPS and fresh /fapi/v1/time plus /fapi/v1/exchangeInfo responses.",
+    "Backfill point-in-time funding/OI/taker/basis/positioning and calibrate execution-cost history."
+  ]
+}

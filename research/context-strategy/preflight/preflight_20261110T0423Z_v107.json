@@ -1,0 +1,276 @@
+{
+  "schema_version": "1.0.0",
+  "run_id": "context-strategy-2026-11-10T0423Z-v107",
+  "as_of_utc": "2026-11-10T04:23:25.463Z",
+  "environment": "Managed container runtime plus connected GitHub and Binance market-data operations",
+  "checks": [
+    {
+      "capability": "shell/compute",
+      "status": "PASS",
+      "evidence": {
+        "pwd": "/",
+        "os": "Linux x86_64 kernel 6.18.57",
+        "python": "3.13.5",
+        "node": "v22.16.0",
+        "npm": "10.9.2",
+        "cpu": 5,
+        "memAvailableGiB": 4.7,
+        "diskFreeGiB": 30
+      },
+      "impact": "Bounded validation and report generation possible; repository engine requirements unmet.",
+      "next_action": "Provision Node >=24 and npm >=11 for project runner."
+    },
+    {
+      "capability": "repository/code",
+      "status": "BLOCKED",
+      "evidence": {
+        "remoteRepository": "shubhamtaywade82/crypto-trading-agent",
+        "defaultBranch": "main",
+        "remoteMainHead": "669ba233538eb1463c0e7e0a435016a643e7adb5",
+        "localCheckout": false,
+        "localCandidateDirs": [],
+        "researchBranch": "research/raw-ohlcv-archive-20261108T1026Z"
+      },
+      "impact": "No local project test or backtest can run.",
+      "next_action": "Restore direct repository checkout in compatible runner."
+    },
+    {
+      "capability": "Binance SDK",
+      "status": "BLOCKED",
+      "evidence": {
+        "packages": {
+          "@binance/connector": "NOT_IMPORTABLE",
+          "@binance/futures-connector": "NOT_IMPORTABLE",
+          "binance-api-node": "NOT_IMPORTABLE",
+          "ccxt": "NOT_IMPORTABLE"
+        }
+      },
+      "impact": "No SDK execution; connected market-data operations used.",
+      "next_action": "Install pinned SDK only after compatible local checkout."
+    },
+    {
+      "capability": "network/Binance endpoints",
+      "status": "DEGRADED",
+      "evidence": {
+        "directCurlEndpoints": [
+          {
+            "endpoint": "/fapi/v1/time",
+            "httpStatus": 0,
+            "error": "DNS resolution failure"
+          },
+          {
+            "endpoint": "/fapi/v1/exchangeInfo",
+            "httpStatus": 0,
+            "error": "DNS resolution failure"
+          },
+          {
+            "endpoint": "/fapi/v1/klines",
+            "httpStatus": 0,
+            "error": "DNS resolution failure"
+          },
+          {
+            "endpoint": "/fapi/v1/premiumIndex",
+            "httpStatus": 0,
+            "error": "DNS resolution failure"
+          },
+          {
+            "endpoint": "/fapi/v1/openInterest",
+            "httpStatus": 0,
+            "error": "DNS resolution failure"
+          },
+          {
+            "endpoint": "/fapi/v1/ticker/24hr",
+            "httpStatus": 0,
+            "error": "DNS resolution failure"
+          }
+        ],
+        "connectedMarketDataCalls": "succeeded",
+        "exchangeInfoServerTimeUtc": "2026-11-10T01:01:01.897Z",
+        "exchangeInfoLagSeconds": 12128.437,
+        "markPriceTimeUtc": "2026-11-10T04:23:09Z",
+        "markPriceAgeSeconds": 1.334
+      },
+      "impact": "Fresh descriptive data available; contract execution validation blocked by stale metadata and no direct server-time check.",
+      "next_action": "Restore DNS/HTTPS and obtain uncached /fapi/v1/time plus current /fapi/v1/exchangeInfo."
+    },
+    {
+      "capability": "raw historical archive",
+      "status": "DEGRADED",
+      "evidence": {
+        "localAccessiblePath": "/mnt/data/context_strategy_v96/",
+        "localFiles": 3,
+        "localBundleContainsRawBase": false,
+        "remoteBranch": "research/raw-ohlcv-archive-20261108T1026Z",
+        "remoteManifestV106Read": true,
+        "newDeltaFilesReadbackExact": 4,
+        "baseCoverage": {
+          "fiveMinuteDays": 20.8,
+          "fifteenMinuteDays": 62.5,
+          "oneHourStart": "2020-09-14T08:00:00Z (reported; not full local readback)",
+          "fourHourRawAlignedCanonical": [
+            53964,
+            53816,
+            53844
+          ],
+          "unresolvedFourHourShaDiscrepancies": 13
+        },
+        "localFilesVerified": [
+          {
+            "path": "/mnt/data/context_strategy_v96/00_context_strategy_report_2026-11-09_1953Z_v96.md",
+            "bytes": 14115,
+            "sha256": "feaa61217ec20afda87cb15862cdbb9e22e25b8450255fa1d7714f2a769587ba"
+          },
+          {
+            "path": "/mnt/data/context_strategy_v96/07_artifact_manifest_2026-11-09_2003Z_v96.json",
+            "bytes": 9227,
+            "sha256": "341425fc074c14830a3d5951ed70cf7c74678123afc34674d1be4fd574bb143f"
+          },
+          {
+            "path": "/mnt/data/context_strategy_v96/08_context_strategy_v96_bundle.zip",
+            "bytes": 44894,
+            "sha256": "e78927e6aed1e6f49c8c62cfece1337b489699c48c5d6c7cf9741eb1f0ae1cd3"
+          }
+        ],
+        "bundleEntryCount": 12,
+        "bundleUncompressedBytes": 162848,
+        "embeddedRawDeltaFiles": [
+          {
+            "path": "binance_usdm_delta_20261109T194931Z_5m15m_completed.jsonl",
+            "rows": 12,
+            "bytes": 3542,
+            "sha256": "95fef7ecb315337b971a8993c1fda30aa91867641df3f687131627868aa7a39f",
+            "validatorStatus": "PASS"
+          },
+          {
+            "path": "binance_usdm_delta_20261109T195425Z_5m_completed.jsonl",
+            "rows": 4,
+            "bytes": 1165,
+            "sha256": "2f6fdcbd4c129d951b3e6a20ebe8c4b8280416ec79c6899a8f4d434223415e7d",
+            "validatorStatus": "PASS"
+          }
+        ],
+        "embeddedBaseArchiveFilesPresent": false,
+        "localManifestBaseCoverage": {
+          "fiveMinute": "ABSENT",
+          "fifteenMinute": "ABSENT",
+          "oneHour": {
+            "rows": 215484,
+            "startUtc": "2020-09-14T08:00:00Z",
+            "rawFilesMounted": false
+          },
+          "fourHour": {
+            "rawRows": 53960,
+            "alignedRows": 53816,
+            "canonicalRows": 53844,
+            "rawFilesMounted": false
+          }
+        },
+        "remoteManifestClaims": {
+          "fiveMinuteDays": 20.8,
+          "fifteenMinuteDays": 62.5,
+          "source": "remote v106/v107 manifest summary only; not local raw-file readback"
+        },
+        "embeddedFilesVerified": [
+          {
+            "path": "archive_manifest_20261109T1955Z_v96.json",
+            "bytes": 4582,
+            "sha256": "9cf0abfea5ed816ad0e85df03180f0a0d009555a0555f0d5a71fd17ea47c29fb"
+          },
+          {
+            "path": "manifest-20261109T194931Z-5m15m.json",
+            "bytes": 2751,
+            "sha256": "4062d8e7da04a0e4b80b17fd565cc20eebef7e43d568c76e8cf0d6178a01ea9f"
+          },
+          {
+            "path": "manifest-20261109T195425Z-5m.json",
+            "bytes": 1829,
+            "sha256": "d8df9292101ebc06b872f1f7c2965364e9d3db610dac15bcc097a262f1d2e20d"
+          },
+          {
+            "path": "verify_archive_delta.py",
+            "bytes": 2516,
+            "sha256": "ed5bcc6c74878ae098b22e6ac84573ead8afa6a438205485f8409e5f0020788a"
+          }
+        ],
+        "embeddedDeltaValidation": {
+          "script": "verify_archive_delta.py",
+          "status": "PASS",
+          "runs": [
+            {
+              "rows": 12,
+              "failures": 0
+            },
+            {
+              "rows": 4,
+              "failures": 0
+            }
+          ]
+        }
+      },
+      "impact": "Recent incremental archive is clean, but multi-cycle base archive remains inadequate/reconciliation incomplete.",
+      "next_action": "Backfill multi-year 5m/15m and reconcile 4h page hashes/counts."
+    },
+    {
+      "capability": "data quality/coverage",
+      "status": "PASS",
+      "evidence": {
+        "series": 16,
+        "rowsFetched": 2560,
+        "completedRows": 2544,
+        "formingRowsExcluded": 16,
+        "duplicates": 0,
+        "missingIntervals": 0,
+        "offGrid": 0,
+        "nonMonotonic": 0,
+        "ohlcViolations": 0,
+        "nonPositiveVolume": 0,
+        "nonFinite": 0,
+        "deltaRowsAppended": 68,
+        "deltaMissingIntervals": 0
+      },
+      "impact": "Latest windows and appended deltas pass; full archive quality not implied.",
+      "next_action": "Run full archive validator after backfill and reconciliation."
+    },
+    {
+      "capability": "backtest harness/smoke test",
+      "status": "BLOCKED",
+      "evidence": {
+        "localCheckout": false,
+        "compatibleNode": false,
+        "smokeTest": "NOT_RUN",
+        "strategyBacktest": "NOT_RUN",
+        "untouchedOOS": "NOT_EVALUATED"
+      },
+      "impact": "No strategy evidence generated this run.",
+      "next_action": "Fix Node runtime, source contracts, BTC role and purge/embargo; then run deterministic fixture before full test."
+    },
+    {
+      "capability": "disk/storage",
+      "status": "PASS",
+      "evidence": {
+        "freeGiB": 30,
+        "remoteGitHubBranchWritable": true,
+        "appendOnlyDeltasCreated": 4
+      },
+      "impact": "Persistent GitHub artifact storage available; canonical indexes were not rebuilt.",
+      "next_action": "Continue atomic writes and readback verification."
+    },
+    {
+      "capability": "artifact readback",
+      "status": "PASS",
+      "evidence": {
+        "deltaFiles": 4,
+        "deltaReadbackExact": true,
+        "manifestRegistryExperimentQueueReadbackExact": true
+      },
+      "impact": "New raw deltas and metadata verified after write.",
+      "next_action": "Verify report, snapshot, preflight and artifact manifest after write."
+    }
+  ],
+  "run_classification": "RESEARCH_EXECUTED",
+  "scope": "Incremental archive integrity experiment only; no strategy backtest or OOS evaluation.",
+  "directServerTime": "BLOCKED",
+  "exchangeMetadataFreshness": "BLOCKED",
+  "oosEvaluated": false,
+  "registryPersistence": "GitHub research branch"
+}

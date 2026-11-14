@@ -1,0 +1,96 @@
+{
+  "schema_version": "1.0.0",
+  "experiment_id": "EXP-DQ-2026-11-12-1602Z-001",
+  "type": "INCREMENTAL_ARCHIVE_INTEGRITY_RUN",
+  "status": "COMPLETED_PASS",
+  "as_of_utc": "2026-11-12T16:02:34.087Z",
+  "hypothesis": "Every completed bar after the verified archive highwater is unique, on-grid, contiguous, OHLC-valid, finite and positive-volume across BTC/ETH/SOL/XRP; forming bars are excluded.",
+  "specification": {
+    "source_endpoint": "GET /fapi/v1/klines",
+    "source": "Binance USD-M public connector wrapper; SDK not used; HTTP status/headers not exposed.",
+    "symbols": [
+      "BTCUSDT",
+      "ETHUSDT",
+      "SOLUSDT",
+      "XRPUSDT"
+    ],
+    "intervals": [
+      "5m",
+      "15m",
+      "1h",
+      "4h"
+    ],
+    "previous_highwaters": {
+      "5m": "2026-11-12T14:50:00.000Z",
+      "15m": "2026-11-12T14:30:00.000Z",
+      "1h": "2026-11-12T13:00:00.000Z",
+      "4h": "2026-11-12T08:00:00.000Z"
+    },
+    "completed_rule": "closeTime < retrieval timestamp; forming candles excluded",
+    "retrieval_timestamp_utc": "2026-11-12T16:02:34.087Z"
+  },
+  "results": {
+    "rows_fetched": 1600,
+    "rows_appended": 84,
+    "forming_rows_excluded": 16,
+    "pre_highwater_rows_excluded": 1500,
+    "rows_by_interval": {
+      "5m": 52,
+      "15m": 20,
+      "1h": 8,
+      "4h": 4
+    },
+    "rows_by_symbol": {
+      "BTCUSDT": 21,
+      "ETHUSDT": 21,
+      "SOLUSDT": 21,
+      "XRPUSDT": 21
+    },
+    "quality_failures": 0,
+    "duplicates": 0,
+    "missing_intervals": 0,
+    "off_grid": 0,
+    "non_monotonic": 0,
+    "ohlc_failures": 0,
+    "non_positive_volume": 0,
+    "non_finite": 0,
+    "close_time_failures": 0,
+    "future_rows": 0,
+    "cross_symbol_alignment": true,
+    "contiguous_from_prior_highwater": true
+  },
+  "artifacts": {
+    "delta_path": "research-data/binance-usdm/delta/binance_usdm_delta_20261112T1602Z_all_intervals_completed.jsonl",
+    "delta_sha256": "0412b0f4eb13be8edf473961f0a7786100867fc1a030db29b221b7f5b36da564",
+    "delta_blob_sha": "fae66aa6ab36b0154b032e72eda05b9a47177f99",
+    "delta_bytes": 24756,
+    "delta_manifest_path": "research-data/binance-usdm/delta/manifest-20261112T1602Z-all-intervals.json",
+    "delta_manifest_sha256": "1a593fe3f65870255356a247dcab74134fcf7658bc87eb9a706096cea56d69cc",
+    "delta_manifest_blob_sha": "46eb074e686b0108021e7387a6fcd9dc275f05ba",
+    "global_manifest_path": "research-data/binance-usdm/manifests/archive_manifest_20261112T1602Z_auto39.json",
+    "global_manifest_sha256": "57490ffbd0602e3b24914e75a4276f143ad96b3525d1f722c8caa0e7a2f94bff",
+    "global_manifest_blob_sha": "41b7dff956be8e8eaf2f6be381aa4fb3a03b450a",
+    "index_commits": {
+      "5m": "fa1ebf2cb48792829762bfa2347def37c757b4cf",
+      "15m": "ae31c46c5c8d3bf27c6d8ec7e3c63fd05e6d9f4c",
+      "1h": "3a113df0794f792a7935b583c0b8b8ea8a52284b",
+      "4h": "4a7df6023e36147ff48bc8cb1a27c7c3cb023274"
+    },
+    "readback_verified": true
+  },
+  "reproducibility": {
+    "runner": "functions.exec tool orchestration; not repository code",
+    "code_commit": "NOT_AVAILABLE",
+    "code_hash": "NOT_AVAILABLE",
+    "seed": "NOT_APPLICABLE_DETERMINISTIC_DATA_CHECK",
+    "local_raw_archive": "ABSENT",
+    "remote_archive_branch": "research/raw-ohlcv-archive-20261108T1026Z",
+    "artifacts_readback_verified": true
+  },
+  "oos_evaluation": {
+    "status": "NOT_APPLICABLE",
+    "strategy_backtest_executed": false,
+    "oos_evaluated": false
+  },
+  "interpretation": "This is an incremental archive-integrity experiment only. It does not test a trading hypothesis, strategy expectancy, win probability or OOS edge."
+}

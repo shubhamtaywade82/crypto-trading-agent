@@ -1,0 +1,107 @@
+{
+  "schema_version": "1.0.0",
+  "id": "EXP-DQ-2026-11-10-0226Z-023",
+  "run_id": "context-strategy-2026-11-10T0227Z-v105",
+  "as_of_utc": "2026-11-10T02:29:15.623Z",
+  "kind": "INCREMENTAL_ARCHIVE_APPEND_AND_DATA_QUALITY_CHECK",
+  "status": "COMPLETED_PASS_DATA_QUALITY_AND_PERSISTENCE_ONLY",
+  "objective": "Append newly completed Binance USDⓈ-M klines after v104 highwaters, exclude forming bars, verify alignment, OHLCV invariants, continuity, and GitHub readback.",
+  "inputs": {
+    "prior_manifest_path": "research-data/binance-usdm/manifests/archive_manifest_20261110T0135Z_v104.json",
+    "prior_manifest_blob_sha": "d6f8bab4698e650a3368c89b025e460faf694ae4",
+    "repository_commit_observed": "669ba233538eb1463c0e7e0a435016a643e7adb5",
+    "local_checkout_present": false,
+    "sdk_used": false,
+    "source_endpoints": [
+      "GET /fapi/v1/klines via connected Binance market-data operation",
+      "GET /fapi/v1/premiumIndex via mark-price operation"
+    ]
+  },
+  "specification": {
+    "symbols": [
+      "BTCUSDT",
+      "ETHUSDT",
+      "SOLUSDT",
+      "XRPUSDT"
+    ],
+    "intervals": [
+      "5m",
+      "15m",
+      "1h",
+      "4h"
+    ],
+    "previous_highwaters": {
+      "5m": "2026-11-10T01:25:00Z",
+      "15m": "2026-11-10T01:15:00Z",
+      "1h": "2026-11-10T00:00:00Z",
+      "4h": "2026-11-09T20:00:00Z"
+    },
+    "exchange_time_cutoff_utc": "2026-11-10T02:26:32.002Z",
+    "forming_rule": "retain only closeTime < fresh premiumIndex time; 4h no new completed candle"
+  },
+  "results": {
+    "rows_appended": 60,
+    "rows_by_interval": {
+      "5m": 44,
+      "15m": 12,
+      "1h": 4,
+      "4h": 0
+    },
+    "rows_by_symbol": {
+      "BTCUSDT": 15,
+      "ETHUSDT": 15,
+      "SOLUSDT": 15,
+      "XRPUSDT": 15
+    },
+    "ranges_utc": {
+      "5m": "2026-11-10T01:30:00Z..2026-11-10T02:20:00Z",
+      "15m": "2026-11-10T01:30:00Z..2026-11-10T02:00:00Z",
+      "1h": "2026-11-10T01:00:00Z",
+      "4h": null
+    },
+    "duplicates": 0,
+    "missing_intervals": 0,
+    "off_grid": 0,
+    "ohlc_violations": 0,
+    "non_positive_volume": 0,
+    "cross_symbol_alignment": true,
+    "readback_verified": true,
+    "canonical_indexes_updated": false
+  },
+  "artifacts": [
+    {
+      "interval": "5m",
+      "path": "research-data/binance-usdm/deltas/20261110T0226Z/klines_5m.jsonl",
+      "rows": 44,
+      "bytes": 17794,
+      "sha256": "2ad7fe80274cb7b8c12079d0dcbc9a4d959e5b59af5a6baeecac0a31b3e291b4",
+      "git_blob_sha": "1e3b3a8f4159e927e973b7fbfe8499449aab28e3",
+      "range_utc": "2026-11-10T01:30:00Z..2026-11-10T02:20:00Z"
+    },
+    {
+      "interval": "15m",
+      "path": "research-data/binance-usdm/deltas/20261110T0226Z/klines_15m.jsonl",
+      "rows": 12,
+      "bytes": 4907,
+      "sha256": "f2c1f65befc9cd219815e1a632384ea02b0adb32f5f3a44ae99733f6d4992fb4",
+      "git_blob_sha": "0bf0ab41342486112f8bee0648369806bf338bf0",
+      "range_utc": "2026-11-10T01:30:00Z..2026-11-10T02:00:00Z"
+    },
+    {
+      "interval": "1h",
+      "path": "research-data/binance-usdm/deltas/20261110T0226Z/klines_1h.jsonl",
+      "rows": 4,
+      "bytes": 1642,
+      "sha256": "3d22f258e6a5873af3e772e72aa652513985bd03a180c053633e234f359772b6",
+      "git_blob_sha": "ade9091427fe549313987648e4eb73b11855329f",
+      "range_utc": "2026-11-10T01:00:00Z..2026-11-10T01:00:00Z"
+    }
+  ],
+  "strategy_experiment_executed": false,
+  "oos_evaluated": false,
+  "oos_validated_count": 0,
+  "random_seed": null,
+  "backtest_entrypoint": null,
+  "blocker": "No local checkout; Node22.16/npm10.9 below package requirement Node>=24/npm>=11; Binance SDK unavailable; direct /fapi/v1/time DNS unavailable; exchangeInfo.serverTime is stale; multi-cycle 5m/15m and reconciled 4h archives plus calibrated costs/funding cashflows remain incomplete.",
+  "next_action": "Resolve clock/metadata and compatible local runner, repair candle schema and BTC reference-only configuration, reconcile long-history archive/cost inputs, then pre-register one strategy×context×symbol experiment."
+}

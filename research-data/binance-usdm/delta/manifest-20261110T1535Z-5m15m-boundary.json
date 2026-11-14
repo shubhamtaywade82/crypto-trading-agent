@@ -1,0 +1,86 @@
+{
+  "schemaVersion": "1.0.0",
+  "runId": "context-strategy-20261110T152928Z-auto12",
+  "asOfUtc": "2026-11-10T15:35:45.107Z",
+  "repository": "shubhamtaywade82/crypto-trading-agent",
+  "branch": "research/raw-ohlcv-archive-20261108T1026Z",
+  "source": {
+    "endpoint": "GET /fapi/v1/klines",
+    "access": "Binance USD-M public market-data connector; direct REST DNS unavailable",
+    "symbols": [
+      "BTCUSDT",
+      "ETHUSDT",
+      "SOLUSDT",
+      "XRPUSDT"
+    ],
+    "intervals": [
+      "5m",
+      "15m"
+    ],
+    "completionPolicy": "closeTime < retrieval timestamp; only rows strictly after verified archive highwater are appended"
+  },
+  "highwaterBeforeUtc": {
+    "5m": "2026-11-10T15:20:00.000Z",
+    "15m": "2026-11-10T15:00:00.000Z"
+  },
+  "highwaterAfterUtc": {
+    "5m": "2026-11-10T15:25:00.000Z",
+    "15m": "2026-11-10T15:15:00.000Z"
+  },
+  "nextStartUtc": {
+    "5m": "2026-11-10T15:30:00.000Z",
+    "15m": "2026-11-10T15:30:00.000Z"
+  },
+  "dataWindowUtc": {
+    "firstOpenUtc": "2026-11-10T15:15:00.000Z",
+    "latestCompletedByInterval": {
+      "5m": "2026-11-10T15:25:00.000Z",
+      "15m": "2026-11-10T15:15:00.000Z"
+    }
+  },
+  "rowsFetched": 8,
+  "completedRows": 8,
+  "formingRowsExcluded": 0,
+  "preHighwaterRowsExcluded": 0,
+  "rowsAppended": 8,
+  "rowsByInterval": {
+    "5m": 4,
+    "15m": 4
+  },
+  "rowsBySymbol": {
+    "BTCUSDT": 2,
+    "ETHUSDT": 2,
+    "SOLUSDT": 2,
+    "XRPUSDT": 2
+  },
+  "rowsBySymbolInterval": {
+    "BTCUSDT:5m": 1,
+    "ETHUSDT:5m": 1,
+    "SOLUSDT:5m": 1,
+    "XRPUSDT:5m": 1,
+    "BTCUSDT:15m": 1,
+    "ETHUSDT:15m": 1,
+    "SOLUSDT:15m": 1,
+    "XRPUSDT:15m": 1
+  },
+  "quality": {
+    "series": 8,
+    "rows": 8,
+    "duplicates": 0,
+    "missingIntervals": 0,
+    "offGrid": 0,
+    "nonMonotonic": 0,
+    "ohlcInvariantFailures": 0,
+    "nonPositiveVolume": 0,
+    "nonFinite": 0,
+    "crossSymbolAlignment": true,
+    "formingRowsAppended": 0,
+    "scope": "boundary-completed 5m/15m bars only; 1h/4h unchanged"
+  },
+  "deltaPath": "research-data/binance-usdm/delta/binance_usdm_delta_20261110T1535Z_5m15m_boundary.jsonl",
+  "deltaSha256": "d05e4aa782e6e721a6871a95c7a80179f013ce58368d60efc6c478599dd695d0",
+  "deltaBlobSha1": "8b96ddc93d4e80da1e860724c8932151321faaed",
+  "readbackVerified": true,
+  "hashMethod": "SHA-256 over exact UTF-8 JSONL bytes including final LF; Git blob SHA-1 recorded separately.",
+  "readbackVerifiedAtUtc": "2026-11-10T15:36:06.120Z"
+}

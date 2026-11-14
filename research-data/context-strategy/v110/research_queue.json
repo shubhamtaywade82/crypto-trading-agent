@@ -1,0 +1,120 @@
+{
+  "schema_version": "1.0.0",
+  "queue_version": "v109",
+  "updated_at_utc": "2026-11-13T18:39:10Z",
+  "status": "ACTIVE",
+  "last_run": {
+    "experiment_id": "EXP-DQ-20261113T183708Z-012",
+    "result": "32-row 5m/15m archive integrity PASS",
+    "strategy_backtest": "BLOCKED",
+    "oos_evaluated": false
+  },
+  "items": [
+    {
+      "priority": 1,
+      "id": "DQ-5M15M-BACKFILL",
+      "status": "BLOCKED",
+      "title": "Backfill 5m/15m historical coverage gaps",
+      "blocker": "5m base ends 2021-01-27 16:55Z; 15m base ends 2021-10-25 12:45Z; multi-year gaps remain. Direct shell DNS to fapi.binance.com fails and connector-only pagination is not a practical full backfill.",
+      "next_action": "Restore direct network or obtain bulk export; backfill in bounded chunks with per-page integrity checks."
+    },
+    {
+      "priority": 2,
+      "id": "DQ-1H-RECONCILE",
+      "status": "BLOCKED",
+      "title": "Repair 1h continuity",
+      "blocker": "28 missing hourly opens per symbol and 8-row discrepancy.",
+      "next_action": "Enumerate missing opens; fetch only missing buckets; reconcile raw/aligned/canonical counts."
+    },
+    {
+      "priority": 3,
+      "id": "DQ-4H-RECONCILE",
+      "status": "BLOCKED",
+      "title": "Reconcile 4h raw/aligned/canonical history",
+      "blocker": "Canonical 4h series passes with 53,844 rows and zero gaps/duplicates, but raw page provenance remains degraded (13 SHA mismatch observations); one malformed XRP original row is preserved with a correction artifact.",
+      "next_action": "Recompute exact-byte page hashes; isolate mismatches; repair alignment without rewriting raw evidence."
+    },
+    {
+      "priority": 4,
+      "id": "ENV-RESTORE",
+      "status": "BLOCKED",
+      "title": "Restore local repo and runtime",
+      "blocker": "Remote repo exists; local checkout absent; runtime Node22.16/npm10.9.2 vs required Node>=24/npm>=11; SDK modules not installed.",
+      "next_action": "Mount/clone repository, provision Node24/npm11, install lockfile dependencies, verify SDK import."
+    },
+    {
+      "priority": 5,
+      "id": "BT-SMOKE",
+      "status": "BLOCKED",
+      "title": "Deterministic backtest smoke test",
+      "blocker": "Remote scripts exist but no local invocation/fixture; history fails readiness.",
+      "next_action": "Run a tiny fixture twice; assert repeatability, completed-candle-only inputs and no lookahead."
+    },
+    {
+      "priority": 6,
+      "id": "COST-CALIBRATION",
+      "status": "BLOCKED",
+      "title": "Calibrate fees/spread/slippage/funding",
+      "blocker": "15bp proxy uncalibrated; top-of-book/depth snapshots are instantaneous; historical funding and fill model not validated.",
+      "next_action": "Use actual fee tier, historical funding, spread/depth by size and conservative fill/latency assumptions."
+    },
+    {
+      "priority": 7,
+      "id": "STRAT-DONCHIAN20",
+      "status": "BLOCKED",
+      "title": "Pre-register strategy x context x symbol experiment",
+      "blocker": "Archive and local harness are not research-ready.",
+      "next_action": "Freeze detector, entry, stop, target, time stop and costs on train; tune validation; run untouched test once with block bootstrap and Holm correction."
+    },
+    {
+      "priority": 8,
+      "id": "TAXONOMY-WEEKLY",
+      "status": "SCHEDULED",
+      "title": "Weekly taxonomy stability review",
+      "due_utc": "2026-11-16T00:00:00Z",
+      "blocker": "Not yet due; last accessible review 2026-11-09.",
+      "next_action": "Re-estimate training-only thresholds after archive reconciliation; measure frequency/duration/transitions and split drift."
+    },
+    {
+      "priority": 9,
+      "id": "HOURLY-MONITOR",
+      "status": "ACTIVE",
+      "title": "Hourly snapshot and validated-rule eligibility",
+      "blocker": "No OOS_VALIDATED entries; exchangeInfo metadata stale.",
+      "next_action": "Refresh completed-candle snapshot; remain NO_TRADE until a validated rule and exact trigger exist.",
+      "latest_snapshot_path": "research-data/binance-usdm/snapshots/current_market_snapshot_20261113T1919Z_auto11_v110.json",
+      "latest_snapshot_sha256": "85c4c0630aac7dbf8ef4ec7acd40b36667edb4168f037194f8698c26d45cd512",
+      "last_run_utc": "2026-11-13T19:19:45.028Z"
+    },
+    {
+      "priority": 4.5,
+      "id": "DQ-DERIVATIVE-FUNDING",
+      "title": "Reconcile historical funding archive and extend derivative history",
+      "status": "BLOCKED",
+      "blocker": "SOL funding archive readback hash mismatch; 3,501 blank mark-price rows; no BTC/ETH/XRP funding or historical OI archives.",
+      "next_action": "Reconcile SOL funding archive bytes/hash and backfill funding/OI history for all four symbols."
+    },
+    {
+      "priority": 0,
+      "id": "DQ-INCREMENTAL-APPEND",
+      "title": "Hourly completed-bar append",
+      "status": "COMPLETED_THIS_RUN",
+      "last_result": "48 rows appended: 32 5m, 12 15m, 4 1h, 0 4h; all sample and delta integrity checks passed; readback verified.",
+      "next_action": "Continue from 5m 19:15Z, 15m 19:15Z, 1h 19:00Z and 4h 16:00Z on the next run."
+    }
+  ],
+  "version": "v110",
+  "as_of_utc": "2026-11-13T19:19:45.028Z",
+  "latest_snapshot_path": "research-data/binance-usdm/snapshots/current_market_snapshot_20261113T1919Z_auto11_v110.json",
+  "latest_archive_manifest_path": "research-data/binance-usdm/manifests/archive_manifest_20261113T1920Z_auto11_v110.json",
+  "latest_delta_path": "research-data/binance-usdm/delta/binance_usdm_delta_20261113T1917Z_5m15m1h_completed.jsonl",
+  "latest_highwaters_utc": {
+    "5m": "2026-11-13T19:10:00Z",
+    "15m": "2026-11-13T19:00:00Z",
+    "1h": "2026-11-13T18:00:00Z",
+    "4h": "2026-11-13T12:00:00Z"
+  },
+  "weekly_review_due_utc": "2026-11-16T00:00:00Z",
+  "last_run_status": "RESEARCH_EXECUTED_DATA_QUALITY_ONLY",
+  "latest_archive_manifest_sha256": "26abb2653460b643025145be7bea1c0cad77c3f90cdc5b5e975255d3beae313c"
+}

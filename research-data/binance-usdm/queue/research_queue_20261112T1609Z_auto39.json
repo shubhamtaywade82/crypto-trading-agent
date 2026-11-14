@@ -1,0 +1,286 @@
+{
+  "schema_version": "1.0.0",
+  "run_id": "context-strategy-2026-11-12T1609Z-auto39",
+  "as_of_utc": "2026-11-12T16:09:00Z",
+  "overall_status": "RESEARCH_EXECUTED_DATA_QUALITY_ONLY",
+  "priority_order": [
+    "RQ-002",
+    "RQ-005",
+    "RQ-012",
+    "RQ-003",
+    "RQ-029",
+    "RQ-004",
+    "RQ-014",
+    "RQ-021",
+    "RQ-007",
+    "RQ-028"
+  ],
+  "items": [
+    {
+      "id": "RQ-002",
+      "priority": "P0",
+      "status": "BLOCKED",
+      "title": "Refresh Binance server time and exchange metadata",
+      "prerequisites": [
+        "Direct DNS/HTTPS or uncached official endpoint route"
+      ],
+      "blocker": "Direct HTTPS to fapi.binance.com fails DNS (HTTP 000). Connector exchangeInfo serverTime 2026-11-12T09:45:01.953Z was 6h20m13.899s behind retrieval at 16:05:15.852Z.",
+      "next_action": "Restore direct DNS/HTTPS or an uncached official server-time/metadata route; require <=5s drift before contract/execution validation.",
+      "evidence": "Direct curl probes for /time, /exchangeInfo, /klines, /premiumIndex, /openInterest and /ticker/24hr failed DNS; connector market endpoints were fresh but exchangeInfo metadata was stale.",
+      "updated_at_utc": "2026-11-12T16:09:00Z"
+    },
+    {
+      "id": "RQ-005",
+      "priority": "P0",
+      "status": "BLOCKED",
+      "title": "Provision compatible local repository runner",
+      "prerequisites": [
+        "Local checkout",
+        "Node >=24",
+        "npm >=11",
+        "Pinned dependencies"
+      ],
+      "blocker": "Node v22.16.0/npm 10.9.2 only; nvm shows no Node24; local checkout and node_modules absent.",
+      "next_action": "Provision Node24/npm11, clone and verify the current repository HEAD, install lockfile dependencies and run deterministic fixtures twice.",
+      "evidence": "Debian13 x86_64, Python3.13.5, Node22.16.0, npm10.9.2, git2.47.3; no /mnt/data/crypto-trading-agent/.git or node_modules. Last known package v2.4.1 floor Node>=24/npm>=11.",
+      "updated_at_utc": "2026-11-12T16:09:00Z"
+    },
+    {
+      "id": "RQ-012",
+      "priority": "P0",
+      "status": "BLOCKED",
+      "title": "Fix candle contract, positive-volume validation and 5m research path",
+      "prerequisites": [
+        "Compatible checkout",
+        "Candle fixture tests"
+      ],
+      "blocker": "Local repository absent; previous source audit at main 669ba233 found closeTime dropped, zero volume accepted, 5m omitted and BTC defaulted as tradable; current main not re-audited.",
+      "next_action": "Clone exact current main HEAD, re-audit source, then propagate closeTime, reject volume<=0, add 5m, separate BTC reference-only and test forming/gap/duplicate/off-grid/OHLC/no-lookahead.",
+      "evidence": "No local code/harness available this run; historical source findings remain unverified against current HEAD.",
+      "updated_at_utc": "2026-11-12T16:09:00Z"
+    },
+    {
+      "id": "RQ-003",
+      "priority": "P1",
+      "status": "PARTIALLY_COMPLETED",
+      "title": "Backfill multi-year 5m/15m and reconcile 4h canonical archive",
+      "prerequisites": [
+        "Auditable bulk source",
+        "Persistent storage and SHA-256 readback"
+      ],
+      "blocker": "5m/15m base archives remain partial and end dates differ by symbol; 4h raw/aligned/canonical row counts remain 53,960/53,816/53,844.",
+      "next_action": "Backfill multi-year 5m/15m for all four symbols; reconcile 4h raw/aligned/canonical rows and page-manifest provenance without rewriting expected hashes.",
+      "evidence": "5m base: 126,000 rows, 31,500/symbol, per-symbol coverage ends 2020-04-19 to 2021-01-01; 15m base: 126,000 rows, ends 2020-11-24 to 2021-08-08; 1h: 215,484 rows from 2020-09-14 through 2026-11-06; 4h remains degraded. New 5m/15m/1h/4h deltas appended and verified.",
+      "updated_at_utc": "2026-11-12T16:09:00Z"
+    },
+    {
+      "id": "RQ-029",
+      "priority": "P0",
+      "status": "BLOCKED",
+      "title": "Enforce BTC reference-only in EXP-001",
+      "prerequisites": [
+        "Current main EXP-001 config and runner source inspected"
+      ],
+      "blocker": "Previous source audit found BTCUSDT in EXP-001 tradable symbols; current main source not revalidated because local checkout is absent.",
+      "next_action": "Re-audit current main; restrict tradable symbols to SOL/ETH/XRP and add tests preventing BTC trade labels, outcomes and orders.",
+      "evidence": "BTCUSDT is reference-only in this run's research universe; source-level enforcement has not been verified against current main.",
+      "updated_at_utc": "2026-11-12T16:09:00Z"
+    },
+    {
+      "id": "RQ-004",
+      "priority": "P1",
+      "status": "BLOCKED",
+      "title": "Calibrate realistic execution costs",
+      "prerequisites": [
+        "Actual account fee tier",
+        "Historical funding cashflows",
+        "Historical spread/depth/trades or validated impact model"
+      ],
+      "blocker": "No verified account fee tier or calibrated historical spread/depth/impact/slippage/latency model.",
+      "next_action": "Collect fee-tier evidence and synchronized historical trades/book/funding; fit per-symbol cost curves and fill assumptions.",
+      "evidence": "Top-of-book snapshots are one-level only; current spreads are not historical execution costs. Prior 15bp and 18bp round-trip proxies remain uncalibrated.",
+      "updated_at_utc": "2026-11-12T16:09:00Z"
+    },
+    {
+      "id": "RQ-014",
+      "priority": "P1",
+      "status": "BLOCKED",
+      "title": "Backfill historical funding cashflows",
+      "prerequisites": [
+        "Historical funding archive or PIT database"
+      ],
+      "blocker": "Full historical funding settlement archive and position-period cashflow alignment remain unavailable.",
+      "next_action": "Backfill full funding settlement history for BTC/ETH/SOL/XRP and align payments to trade holding intervals.",
+      "evidence": "Only the latest two settlement records per symbol were fetched; last settlement 16:00Z and next funding 00:00Z indicate an 8h cadence.",
+      "updated_at_utc": "2026-11-12T16:09:00Z"
+    },
+    {
+      "id": "RQ-021",
+      "priority": "P0",
+      "status": "BLOCKED",
+      "title": "Execute pre-registered context-conditioned strategy experiment",
+      "prerequisites": [
+        "RQ-002",
+        "RQ-003",
+        "RQ-004",
+        "RQ-005",
+        "RQ-012",
+        "RQ-029",
+        "deterministic smoke test",
+        "frozen spec and untouched test segment"
+      ],
+      "blocker": "No local checkout or backtest harness; Node/npm below project floor; direct fapi DNS fails; 5m/15m base history partial; 4h reconciliation and calibrated costs/funding incomplete.",
+      "next_action": "Resolve RQ-002/003/004/005/012/014/029; freeze one symbol/context rule set; run deterministic fixture, chronological train/validation/test, purge/embargo and calibrated costs.",
+      "evidence": "No strategy backtest, smoke test, walk-forward or untouched OOS ran. Daily data-quality experiments completed only.",
+      "updated_at_utc": "2026-11-12T16:09:00Z"
+    },
+    {
+      "id": "RQ-019",
+      "priority": "P1",
+      "status": "COMPLETED_THIS_RUN",
+      "title": "Append completed OHLCV bars and verify archive indexes",
+      "prerequisites": [
+        "Fresh Binance connector klines",
+        "GitHub archive branch write/readback"
+      ],
+      "blocker": null,
+      "next_action": "Continue append-only highwater refresh and exact readback; next opens 5m16:05Z,15m16:00Z,1h16:00Z,4h16:00Z.",
+      "evidence": "Appended 84 completed rows across 5m/15m/1h/4h, then 4 additional completed 5m rows. Total 88; all interval indexes, deltas and manifests read back. Highwaters 5m16:00Z,15m15:45Z,1h15:00Z,4h12:00Z.",
+      "last_completed_run_id": "context-strategy-2026-11-09T1440Z-v93",
+      "last_delta_path": "research-data/binance-usdm/delta/binance_usdm_delta_20261109T144035Z_5m15m1h_completed.jsonl",
+      "last_experiment_ids": [
+        "EXP-DQ-2026-11-09-144035Z-006",
+        "EXP-DQ-2026-11-09-144756Z-007"
+      ],
+      "updated_at_utc": "2026-11-12T16:09:00Z",
+      "completed_at_utc": "2026-11-09T19:55:00Z"
+    },
+    {
+      "id": "RQ-030",
+      "priority": "P0",
+      "status": "COMPLETED_THIS_RUN",
+      "title": "Run incremental archive integrity experiment",
+      "prerequisites": [
+        "Completed klines",
+        "Known previous highwaters",
+        "Persistent GitHub branch"
+      ],
+      "blocker": null,
+      "next_action": "Continue archive integrity checks; do not treat these data-quality passes as strategy evidence.",
+      "evidence": "EXP-DQ-2026-11-12-1602Z-001: 1,600 rows fetched, 84 completed appended, 16 forming excluded, 1,500 pre-highwater excluded, zero quality failures, cross-symbol alignment/continuity PASS, delta/manifest/global manifest/four indexes read back. EXP-DQ-2026-11-12-1609Z-002: 40 rows fetched, 4 completed appended, 4 forming excluded, 32 pre-highwater excluded, zero quality failures; corrected manifest/global manifest/index readback PASS. Integrity only, no strategy inference.",
+      "last_completed_run_id": "context-strategy-2026-11-09T1440Z-v93",
+      "last_experiment_id": "EXP-DQ-2026-11-12-1602Z-001",
+      "last_experiment_ids": [
+        "EXP-DQ-2026-11-12-1602Z-001",
+        "EXP-DQ-2026-11-12-1609Z-002"
+      ],
+      "updated_at_utc": "2026-11-12T16:09:00Z",
+      "completed_at_utc": "2026-11-09T19:55:00Z"
+    },
+    {
+      "id": "RQ-007",
+      "priority": "P3",
+      "status": "PARTIALLY_COMPLETED",
+      "title": "Test BTC relative strength and lead/lag",
+      "prerequisites": [
+        "Aligned multi-year 1h/4h arrays"
+      ],
+      "blocker": "Current contemporaneous rolling correlations are not lead/lag evidence; no lagged test ran.",
+      "next_action": "Use aligned multi-year 1h returns; estimate lagged cross-correlation and rolling stability on train only, then untouched OOS with multiplicity control.",
+      "evidence": "20-bar 1h return correlations with BTC: ETH 0.781, SOL 0.652, XRP 0.751. No lead/lag inference made.",
+      "updated_at_utc": "2026-11-12T16:09:00Z"
+    },
+    {
+      "id": "RQ-010",
+      "priority": "P2",
+      "status": "PARTIALLY_COMPLETED",
+      "title": "Enforce funding field semantics",
+      "prerequisites": [
+        "Snapshot writer source",
+        "UTC epoch regression fixtures"
+      ],
+      "blocker": "Indicated premiumIndex.lastFundingRate is separated from settled fundingRate; full funding archive and payment-alignment tests remain absent.",
+      "next_action": "Keep premiumIndex.latest-rate observation separate from settled funding events; persist fundingInfo interval and backfill full settlement history for payment alignment.",
+      "evidence": "premiumIndex.lastFundingRate latest-rate field separated from fundingRate history settlement record. fundingInfo returned fundingIntervalHours=8 for BTCUSDT/ETHUSDT/SOLUSDT/XRPUSDT (disclaimer=true, updateTime=null); observed latest settlement 16:00Z and next 00:00Z. Latest premiumIndex fields: BTC0.008874%, ETH0.004748%, SOL0.000405%, XRP0.004468%; settled: 0.008904%, 0.004733%, 0.000716%, 0.004560%. All below 0.05%.",
+      "updated_at_utc": "2026-11-12T16:09:00Z"
+    },
+    {
+      "id": "RQ-011",
+      "priority": "P2",
+      "status": "BLOCKED",
+      "title": "Meet OOS evidence gates",
+      "prerequisites": [
+        "Valid untouched OOS evaluation",
+        ">=100 OOS trades per symbol/context",
+        "robust costs and uncertainty"
+      ],
+      "blocker": "No OOS_VALIDATED entries. Donchian20 WF v2's 36 symbol/context cells remain below 100 OOS trades and nominal block-bootstrap intervals include zero.",
+      "next_action": "Do not lower gates; require >=100 OOS trades per symbol/context and >=200 across multiple windows with robust positive net expectancy and stable neighborhoods.",
+      "evidence": "Last strategy evaluation (v96, 2026-11-09): Holm-adjusted p=1.0; SOL BULL_LOW is OOS_PROMISING with 12 trades only; no new strategy test or OOS run occurred.",
+      "updated_at_utc": "2026-11-12T16:09:00Z"
+    },
+    {
+      "id": "RQ-028",
+      "priority": "P2",
+      "status": "BLOCKED",
+      "title": "Weekly context taxonomy stability review",
+      "prerequisites": [
+        "Verified raw archive",
+        "Training-only threshold refit"
+      ],
+      "blocker": "Weekly review due 2026-11-11T00:00Z is overdue; 5m/15m base remains partial, 4h counts/provenance degraded, and compatible runner/cost prerequisites are unavailable.",
+      "next_action": "After archive/runner prerequisites pass, refit thresholds on train only; measure frequency, duration, transition matrix and stability; retain v56 if supported.",
+      "evidence": "No taxonomy thresholds, occupancy or transition probabilities were refit this run; v56 retained. Current live EMA classifier is descriptive only.",
+      "updated_at_utc": "2026-11-12T16:09:00Z"
+    }
+  ],
+  "daily_cycle": {
+    "date_utc": "2026-11-12",
+    "status": "DATA_QUALITY_EXPERIMENTS_COMPLETED_STRATEGY_EXPERIMENT_BLOCKED",
+    "completed_experiments": [
+      "EXP-DQ-2026-11-12-1602Z-001",
+      "EXP-DQ-2026-11-12-1609Z-002"
+    ],
+    "strategy_experiment_status": "BLOCKED",
+    "blocker": "No local repository/backtest harness; Node 22.16.0/npm 10.9.2 below package floor Node>=24/npm>=11; direct Binance REST DNS fails; 5m/15m base history remains partial; 4h row-count/provenance reconciliation and calibrated cost/funding models remain incomplete.",
+    "next_action": "Provision compatible runner and checkout; complete archive prerequisites; then freeze one symbol/context experiment and run chronological walk-forward/OOS."
+  },
+  "weekly_review": {
+    "status": "BLOCKED_OVERDUE",
+    "due_utc": "2026-11-11T00:00:00Z",
+    "blocker": "5m/15m base coverage remains partial, 4h raw/aligned/canonical counts disagree, exchange metadata is stale, and the compatible strategy runner/cost model is unavailable.",
+    "next_action": "Retain v56 without forced taxonomy changes; once prerequisites pass, refit thresholds on train only and measure frequency, duration, transitions and stability."
+  },
+  "as_of_local": "2026-11-12T21:39:00+05:30",
+  "report_path": "research-data/binance-usdm/reports/context_strategy_report_20261112T1609Z_auto39.md",
+  "library_artifact_readback": {
+    "status": "VERIFIED",
+    "verified_file_count": 13,
+    "sha256_match": true,
+    "readback_timestamp_utc": "2026-11-09T20:02:29.664Z"
+  },
+  "archive_highwaters": {
+    "5m": "2026-11-12T16:00:00.000Z",
+    "15m": "2026-11-12T15:45:00.000Z",
+    "1h": "2026-11-12T15:00:00.000Z",
+    "4h": "2026-11-12T12:00:00.000Z"
+  },
+  "archive_rows_appended_total": 88,
+  "latest_data_quality_experiments": [
+    "EXP-DQ-2026-11-12-1602Z-001",
+    "EXP-DQ-2026-11-12-1609Z-002"
+  ],
+  "latest_run_status": "RESEARCH_EXECUTED_DATA_QUALITY_ONLY",
+  "strategy_experiment_status": "RESEARCH_BLOCKED",
+  "last_execution": {
+    "as_of_utc": "2026-11-12T16:09:00Z",
+    "run_classification": "RESEARCH_EXECUTED_DATA_QUALITY_ONLY",
+    "strategy_backtest_executed": false,
+    "oos_evaluated": false,
+    "archive_append_pass": true,
+    "rows_appended": 88,
+    "archive_readback_verified": true,
+    "market_snapshot_retrieved": true,
+    "contract_metadata_fresh": false
+  }
+}

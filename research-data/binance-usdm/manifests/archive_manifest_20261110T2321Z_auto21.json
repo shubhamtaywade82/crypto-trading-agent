@@ -1,0 +1,214 @@
+{
+  "schema_version": "1.0.0",
+  "run_id": "context-strategy-20261110T232114Z-auto21",
+  "as_of_utc": "2026-11-10T23:21:16.840Z",
+  "repository": "shubhamtaywade82/crypto-trading-agent",
+  "branch": "research/raw-ohlcv-archive-20261108T1026Z",
+  "source": {
+    "endpoint": "GET /fapi/v1/klines",
+    "access": "Binance USD-M public market-data connector",
+    "symbols": [
+      "BTCUSDT",
+      "ETHUSDT",
+      "SOLUSDT",
+      "XRPUSDT"
+    ],
+    "intervals": [
+      "5m",
+      "15m",
+      "1h",
+      "4h"
+    ]
+  },
+  "highwaters": {
+    "5m": "2026-11-10T23:15:00.000Z",
+    "15m": "2026-11-10T23:00:00.000Z",
+    "1h": "2026-11-10T22:00:00.000Z",
+    "4h": "2026-11-10T16:00:00.000Z"
+  },
+  "append_this_run": {
+    "rows_fetched": 80,
+    "completed_rows": 72,
+    "forming_rows_excluded": 8,
+    "pre_highwater_rows_excluded": 52,
+    "rows_appended": 20,
+    "rows_by_interval": {
+      "5m": 16,
+      "15m": 4,
+      "1h": 0,
+      "4h": 0
+    },
+    "rows_by_symbol": {
+      "BTCUSDT": 5,
+      "ETHUSDT": 5,
+      "SOLUSDT": 5,
+      "XRPUSDT": 5
+    },
+    "rows_by_symbol_interval": {
+      "BTCUSDT": {
+        "5m": 4,
+        "15m": 1
+      },
+      "ETHUSDT": {
+        "5m": 4,
+        "15m": 1
+      },
+      "SOLUSDT": {
+        "5m": 4,
+        "15m": 1
+      },
+      "XRPUSDT": {
+        "5m": 4,
+        "15m": 1
+      }
+    },
+    "batches": [
+      {
+        "intervals": [
+          "5m",
+          "15m"
+        ],
+        "delta": "research-data/binance-usdm/delta/binance_usdm_delta_20261110T2321Z_5m15m_completed.jsonl",
+        "deltaSha256": "38d42fafceffa41a7d951edd4cf0a9f3466ae3f2214afe7b758ac7afa6cb8c4f",
+        "deltaBlobSha1": "e9d23edbb35b5483572c204dbdd5a2e0953ada3c",
+        "manifest": "research-data/binance-usdm/delta/manifest-20261110T2321Z-5m15m.json",
+        "manifestSha256": "b5f7bdff4b37930ae2c70419ed99163156ee48c38890ce3d0b0821ffde1125ef",
+        "manifestBlobSha1": "4aa7a806c1611369f5d8eeb9d4f8ac765480f111",
+        "rows": 20,
+        "bytes": 5835,
+        "countsByInterval": {
+          "5m": 16,
+          "15m": 4
+        },
+        "countsBySymbol": {
+          "BTCUSDT": 5,
+          "ETHUSDT": 5,
+          "SOLUSDT": 5,
+          "XRPUSDT": 5
+        },
+        "firstByInterval": {
+          "5m": "2026-11-10T23:00:00.000Z",
+          "15m": "2026-11-10T23:00:00.000Z"
+        },
+        "lastByInterval": {
+          "5m": "2026-11-10T23:15:00.000Z",
+          "15m": "2026-11-10T23:00:00.000Z"
+        }
+      }
+    ]
+  },
+  "quality": {
+    "series": 8,
+    "rows": 20,
+    "duplicates": 0,
+    "missing_intervals": 0,
+    "off_grid": 0,
+    "non_monotonic": 0,
+    "ohlc_invariant_failures": 0,
+    "non_positive_volume": 0,
+    "non_finite": 0,
+    "cross_symbol_alignment": true,
+    "forming_rows_appended": 0,
+    "scope": "4 symbols x 5m/15m: 5m 23:00-23:15Z, 15m 23:00Z; no new completed 1h or 4h bar."
+  },
+  "base_coverage": {
+    "5m": {
+      "status": "ABSENT_BASE_HISTORY",
+      "base_rows_total": 0,
+      "incremental_rows_total": 1668,
+      "highwater": "2026-11-10T23:15:00.000Z"
+    },
+    "15m": {
+      "status": "ABSENT_BASE_HISTORY",
+      "base_rows_total": 0,
+      "incremental_rows_total": 560,
+      "highwater": "2026-11-10T23:00:00.000Z"
+    },
+    "1h": {
+      "status": "HISTORICAL_PAGES_PLUS_INCREMENTALS",
+      "base_rows_total": 215484,
+      "rows_per_symbol_base": 53871,
+      "coverage_start": "2020-09-14T08:00:00.000Z",
+      "incremental_rows_total": 140,
+      "highwater": "2026-11-10T22:00:00.000Z"
+    },
+    "4h": {
+      "status": "DEGRADED_PROVENANCE",
+      "raw_rows_total": 53960,
+      "aligned_rows_total": 53816,
+      "canonical_rows_total": 53844,
+      "canonical_end_in_latest_index": "2026-11-05T16:00:00.000Z",
+      "canonical_end_in_prior_1942_manifest": "2026-11-05T16:00:00.000Z",
+      "raw_highwater": "2026-11-10T16:00:00.000Z",
+      "manifest_sha_provenance_mismatches": 13,
+      "aligned_analysis_window_end_utc": "2026-11-04T12:00:00Z",
+      "canonical_status": "PASS",
+      "raw_vs_canonical_rows_by_symbol": {
+        "BTCUSDT": {
+          "raw": 13501,
+          "canonical": 13461,
+          "diff": 40
+        },
+        "ETHUSDT": {
+          "raw": 13501,
+          "canonical": 13461,
+          "diff": 40
+        },
+        "SOLUSDT": {
+          "raw": 13457,
+          "canonical": 13461,
+          "diff": -4
+        },
+        "XRPUSDT": {
+          "raw": 13501,
+          "canonical": 13461,
+          "diff": 40
+        }
+      },
+      "provenance_note": "The prior field canonical_end_in_latest_index incorrectly reflected aligned_analysis_window.end_last_completed_open_utc (2026-11-04T12:00Z). The actual canonical_4h.end_last_completed_open_utc is 2026-11-05T16:00Z and agrees with the prior manifest. Remaining degradation is raw-vs-canonical row-key/count reconciliation, 13 original manifest SHA mismatches, and canonical staleness versus raw highwater."
+    }
+  },
+  "exchange_time": {
+    "market_data_retrieved_at_utc": "2026-11-10T23:22:48.631Z",
+    "mark_price_exchange_time_utc": "2026-11-10T23:22:25.000Z",
+    "exchange_info_server_time_utc": "2026-11-10T01:01:01.895Z",
+    "metadata_staleness_seconds": 80483.105,
+    "direct_rest_time_probe": "HTTP 000 DNS resolution failure"
+  },
+  "archive_indexes": {
+    "5m": {
+      "path": "research-data/binance-usdm/5m/archive-index.json",
+      "blobSha1": "714b2fe85ddceb29e7e270f3ca8f365624e26885",
+      "readbackVerified": true,
+      "latestCompletedOpenUtc": "2026-11-10T23:15:00.000Z"
+    },
+    "15m": {
+      "path": "research-data/binance-usdm/15m/archive-index.json",
+      "blobSha1": "6e22f7e11745bb5c00a330e23a442fe56dbec218",
+      "readbackVerified": true,
+      "latestCompletedOpenUtc": "2026-11-10T23:00:00.000Z"
+    },
+    "1h": {
+      "path": "research-data/binance-usdm/1h/archive-index.json",
+      "blobSha1": "df74fa39e7cf2de7d04515d4b327ca0682c41c16",
+      "readbackVerified": true,
+      "latestCompletedOpenUtc": "2026-11-10T22:00:00.000Z"
+    },
+    "4h": {
+      "path": "research-data/binance-usdm/4h/archive-index.json",
+      "status": "UNCHANGED_NO_NEW_COMPLETED_BAR",
+      "latestCompletedOpenUtc": "2026-11-10T16:00:00.000Z"
+    }
+  },
+  "unresolved": [
+    "Multi-year 5m and 15m base history remains absent; incremental samples are not adequate for intraday strategy research.",
+    "4h raw/aligned/canonical row counts remain 53960/53816/53844; per-symbol raw-versus-canonical differences BTC +40, ETH +40, SOL -4, XRP +40.",
+    "13 original 4h manifest SHA provenance mismatches remain unresolved; do not rebuild canonical series until reconciled.",
+    "Direct fapi.binance.com DNS resolution failed in shell; current market data was obtained through Binance USD-M public connector, which does not expose HTTP status.",
+    "exchangeInfo.serverTime is 22h21m stale relative to fresh mark-price exchange time; contract status is not accepted for execution validation.",
+    "Local repository checkout absent; Node 22.16.0/npm 10.9.2 below required Node >=24/npm >=11; Binance SDK dependency unavailable.",
+    "Historical funding/OI/taker/mark-price archives are not yet aligned and complete across all four symbols."
+  ],
+  "readback_verified": true,
+  "readback_verified_at_utc": "2026-11-10T23:23:28.231Z"
+}

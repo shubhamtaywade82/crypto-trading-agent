@@ -1,0 +1,169 @@
+{
+  "schema_version": "1.0.0",
+  "id": "EXP-DQ-2026-11-10-0025Z-020",
+  "run_id": "context-strategy-2026-11-10T0027Z-v103",
+  "as_of_utc": "2026-11-10T00:27:19Z",
+  "kind": "INCREMENTAL_ARCHIVE_INTEGRITY",
+  "status": "COMPLETED_PASS_DATA_QUALITY_ONLY",
+  "objective": "Append newly completed Binance USDⓈ-M klines after prior highwaters and validate current 4-symbol x 4-interval response windows. This is not a strategy backtest.",
+  "source": {
+    "venue": "Binance USDⓈ-M",
+    "transport": "Binance connector wrappers for official public market-data endpoint families",
+    "sdk_used": false,
+    "direct_rest_status": "BLOCKED_DNS",
+    "endpoints": {
+      "klines": "GET /fapi/v1/klines via connector",
+      "exchange_info": "GET /fapi/v1/exchangeInfo via connector",
+      "server_time": "GET /fapi/v1/time direct REST attempted; DNS resolution failed",
+      "premium_index": "GET /fapi/v1/premiumIndex via mark-price connector",
+      "open_interest": "GET /fapi/v1/openInterest via connector",
+      "funding_history": "GET /fapi/v1/fundingRate via connector",
+      "ticker": "GET /fapi/v1/ticker/24hr via connector",
+      "depth": "GET /fapi/v1/depth via connector",
+      "taker_flow": "Taker buy/sell volume connector operation; exact REST path not exposed by wrapper",
+      "oi_history": "Open-interest statistics connector operation; exact REST path not exposed by wrapper"
+    }
+  },
+  "input": {
+    "symbols": [
+      "BTCUSDT",
+      "ETHUSDT",
+      "SOLUSDT",
+      "XRPUSDT"
+    ],
+    "intervals": [
+      "5m",
+      "15m",
+      "1h",
+      "4h"
+    ],
+    "limit_per_series": 100,
+    "series_count": 16,
+    "rows_fetched": 1600,
+    "completed_rows": 1584,
+    "forming_rows_excluded": 16,
+    "completed_rows_per_series": 99,
+    "ranges_utc": {
+      "5m": "2026-11-09T16:10:00Z..2026-11-10T00:20:00Z",
+      "15m": "2026-11-08T23:30:00Z..2026-11-10T00:00:00Z",
+      "1h": "2026-11-05T21:00:00Z..2026-11-09T23:00:00Z",
+      "4h": "2026-10-24T12:00:00Z..2026-11-09T20:00:00Z"
+    }
+  },
+  "quality": {
+    "duplicates": 0,
+    "missing_intervals": 0,
+    "off_grid": 0,
+    "non_monotonic": 0,
+    "ohlc_invariant_failures": 0,
+    "non_positive_volume": 0,
+    "non_finite": 0,
+    "close_time_mismatches": 0,
+    "cross_symbol_alignment": true,
+    "forming_candles_excluded": true,
+    "failures": 0
+  },
+  "append": {
+    "rows_total": 64,
+    "rows_by_interval": {
+      "5m": 44,
+      "15m": 12,
+      "1h": 4,
+      "4h": 4
+    },
+    "rows_by_symbol": {
+      "BTCUSDT": 16,
+      "ETHUSDT": 16,
+      "SOLUSDT": 16,
+      "XRPUSDT": 16
+    },
+    "deltas": [
+      {
+        "interval": "5m",
+        "path": "research-data/binance-usdm/deltas/20261110T0023Z/klines_5m.jsonl",
+        "rows": 40,
+        "sha256": "cf01ddedeb58aea132eb471c73c7da6f3e2d18e0d4999fa4ff5484ce5cba8c2a",
+        "git_blob_sha": "2200f818e7c4447c750dbe6e7adb0bd8063400c0",
+        "first_open_utc": "2026-11-09T23:30:00Z",
+        "last_open_utc": "2026-11-10T00:15:00Z"
+      },
+      {
+        "interval": "15m",
+        "path": "research-data/binance-usdm/deltas/20261110T0023Z/klines_15m.jsonl",
+        "rows": 12,
+        "sha256": "46e245d73b15614fdd1eb4f2363ea1aa04706179f6af34d8e1fbec47fdc1bc22",
+        "git_blob_sha": "24965993823db082072138702004a9e769a43c2b",
+        "first_open_utc": "2026-11-09T23:30:00Z",
+        "last_open_utc": "2026-11-10T00:00:00Z"
+      },
+      {
+        "interval": "1h",
+        "path": "research-data/binance-usdm/deltas/20261110T0023Z/klines_1h.jsonl",
+        "rows": 4,
+        "sha256": "1dec8413e0875860021e6a7670a289aee27b2d8723ab41bea9854840a81842ec",
+        "git_blob_sha": "356c4b247087296f27942333e4ca8a726af163f0",
+        "first_open_utc": "2026-11-09T23:00:00Z",
+        "last_open_utc": "2026-11-09T23:00:00Z"
+      },
+      {
+        "interval": "4h",
+        "path": "research-data/binance-usdm/deltas/20261110T0023Z/klines_4h.jsonl",
+        "rows": 4,
+        "sha256": "4feb1d688f020f7e80de08facd78b00f0996ee4841ee1997827a2ffda06f0b5f",
+        "git_blob_sha": "50394f2eb96a0b43c62a92603f92dfd26db8ca8c",
+        "first_open_utc": "2026-11-09T20:00:00Z",
+        "last_open_utc": "2026-11-09T20:00:00Z"
+      },
+      {
+        "interval": "5m",
+        "path": "research-data/binance-usdm/deltas/20261110T0025Z/klines_5m.jsonl",
+        "rows": 4,
+        "sha256": "b2d2041c5fb51d8a4b4379d42331df17132fb0b4b2085122c87c9c7d861970d1",
+        "git_blob_sha": "158aec50e5f28e8730a14901facb7dc73bce33d9",
+        "first_open_utc": "2026-11-10T00:20:00Z",
+        "last_open_utc": "2026-11-10T00:20:00Z"
+      }
+    ],
+    "readback_verified": true,
+    "canonical_indexes_updated": false
+  },
+  "environment": {
+    "runtime": "managed container",
+    "os": "Linux x86_64",
+    "python": "3.13.5",
+    "node": "22.16.0",
+    "npm": "10.9.2",
+    "cpu_cores": 5,
+    "ram_total_gib": 5.8,
+    "ram_available_gib": 4.7,
+    "disk_free_gib": 30,
+    "repo_checkout": false,
+    "required_engine": "Node >=24 / npm >=11",
+    "binance_sdk_installed": false
+  },
+  "time_quality": {
+    "shell_time_utc": "2026-11-10T00:27:19Z",
+    "latest_market_data_utc": "2026-11-10T00:25:47.743Z",
+    "market_data_lag_seconds_vs_shell": 91.257,
+    "exchange_info_server_time_utc": "2026-11-09T06:13:33.349Z",
+    "exchange_info_lag_seconds_vs_market": 65534.394,
+    "direct_server_time_endpoint": "UNAVAILABLE_DNS",
+    "execution_validation": "BLOCKED"
+  },
+  "strategy_research": {
+    "executed": false,
+    "status": "BLOCKED",
+    "reason": "No local checkout; Node/npm below package engine floor; no SDK import; 5m/15m base archives absent; 4h provenance discrepancies unresolved; calibrated fees/slippage/impact and full funding history incomplete; source defects remain."
+  },
+  "oos": {
+    "evaluated": false,
+    "oos_validated_count": 0
+  },
+  "artifact_refs": {
+    "manifest": "research-data/binance-usdm/manifests/archive_manifest_20261110T0027Z_v103.json",
+    "snapshot": "research/context-strategy/snapshots/2026-11-10T0027Z_v103.json",
+    "preflight": "research/context-strategy/preflight/preflight_20261110T0027Z_v103.json",
+    "registry": "research/context-strategy/registry/registry_20261110T0027Z_v103.json",
+    "report": "research/context-strategy/reports/2026-11-10T0027Z_v103.md"
+  }
+}

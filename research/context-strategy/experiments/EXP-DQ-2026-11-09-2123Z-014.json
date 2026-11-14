@@ -1,0 +1,103 @@
+{
+  "schema_version": "1.0.0",
+  "experiment_id": "EXP-DQ-2026-11-09-2123Z-014",
+  "run_id": "context-strategy-20261109T213011Z-v99",
+  "as_of_utc": "2026-11-09T21:23:46.266Z",
+  "status": "COMPLETED_PASS",
+  "experiment_type": "INCREMENTAL_ARCHIVE_DATA_QUALITY",
+  "hypothesis": "Completed 5m and 15m klines after persisted highwaters can be appended with exact bar-grid continuity and valid OHLCV/taker-flow fields.",
+  "source": {
+    "endpoint": "GET /fapi/v1/klines",
+    "transport": "Binance USDⓈ-M connector wrapper",
+    "sdk_used": false,
+    "direct_rest": "UNAVAILABLE: DNS resolution failed"
+  },
+  "scope": {
+    "symbols": [
+      "BTCUSDT",
+      "ETHUSDT",
+      "SOLUSDT",
+      "XRPUSDT"
+    ],
+    "tradable_symbols": [
+      "SOLUSDT",
+      "ETHUSDT",
+      "XRPUSDT"
+    ],
+    "reference_symbols": [
+      "BTCUSDT"
+    ],
+    "intervals": [
+      "5m",
+      "15m"
+    ]
+  },
+  "specification": {
+    "previous_highwater_open_utc_by_interval": {
+      "5m": "2026-11-09T20:45:00.000Z",
+      "15m": "2026-11-09T20:30:00.000Z"
+    },
+    "latest_completed_open_utc_by_interval": {
+      "5m": "2026-11-09T21:15:00.000Z",
+      "15m": "2026-11-09T21:00:00.000Z"
+    },
+    "forming_candles_excluded": true,
+    "checks": [
+      "expected opens",
+      "duplicates",
+      "monotonicity",
+      "bar-grid alignment",
+      "closeTime consistency",
+      "OHLC invariants",
+      "volume>0",
+      "finite fields",
+      "cross-symbol alignment"
+    ]
+  },
+  "results": {
+    "rows_fetched": 40,
+    "rows_appended": 32,
+    "forming_rows_excluded": 8,
+    "pre_highwater_rows_excluded": 0,
+    "rows_by_interval": {
+      "5m": 24,
+      "15m": 8
+    },
+    "rows_by_symbol": {
+      "BTCUSDT": 8,
+      "ETHUSDT": 8,
+      "SOLUSDT": 8,
+      "XRPUSDT": 8
+    },
+    "rows_by_symbol_interval": {
+      "BTCUSDT:5m": 6,
+      "BTCUSDT:15m": 2,
+      "ETHUSDT:5m": 6,
+      "ETHUSDT:15m": 2,
+      "SOLUSDT:5m": 6,
+      "SOLUSDT:15m": 2,
+      "XRPUSDT:5m": 6,
+      "XRPUSDT:15m": 2
+    },
+    "failures": 0,
+    "quality_status": "PASS"
+  },
+  "validator": {
+    "implementation": "inline deterministic JavaScript validator in managed tool runtime",
+    "exit_status": 0,
+    "checks_passed": 256
+  },
+  "artifacts": {
+    "delta_path": "research-data/binance-usdm/delta/binance_usdm_delta_20261109T212346Z_5m15m_completed.jsonl",
+    "delta_sha256": "2270e61492ca48069d7a1b577868b35878b70b5ce5d3eab718745dfa9e288c70",
+    "delta_bytes": 9334,
+    "delta_blob_sha": "a7c91cf2046cf6547c7daa6ba587834d204111ec",
+    "manifest_path": "research-data/binance-usdm/delta/manifest-20261109T212346Z-5m15m.json",
+    "manifest_sha256": "f6ab7dc718abb922097d9a346ff297a81d66f2e8f00c53069529066e8101954b",
+    "manifest_blob_sha": "eb12bbc4a3864f464cb1262a4329446719de31e6",
+    "readback_verified": true
+  },
+  "strategy_experiment_executed": false,
+  "oos_evaluated": false,
+  "evidence_status": "NOT_APPLICABLE_DATA_QUALITY_ONLY"
+}

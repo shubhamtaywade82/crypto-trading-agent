@@ -1,0 +1,92 @@
+{
+  "schema_version": "1.0.0",
+  "run_id": "context-strategy-20261111T204004Z-run12",
+  "as_of_utc": "2026-11-11T20:40:04.531Z",
+  "repository": "shubhamtaywade82/crypto-trading-agent",
+  "branch": "research/raw-ohlcv-archive-20261108T1026Z",
+  "source": "Binance USD-M public-data connector and persistent GitHub archive",
+  "source_endpoint": "GET /fapi/v1/klines",
+  "status": "RESEARCH_EXECUTED_DATA_QUALITY_ONLY",
+  "latest_completed_highwater_utc": {
+    "5m": "2026-11-11T20:25:00.000Z",
+    "15m": "2026-11-11T20:15:00.000Z",
+    "1h": "2026-11-11T19:00:00.000Z",
+    "4h": "2026-11-11T16:00:00.000Z"
+  },
+  "persisted_index_highwater_utc": {
+    "5m": "2026-11-11T20:25:00.000Z",
+    "15m": "2026-11-11T20:15:00.000Z",
+    "1h": "2026-11-11T19:00:00.000Z",
+    "4h": "2026-11-11T08:00:00.000Z"
+  },
+  "archive_indexes": {
+    "5m": {
+      "path": "research-data/binance-usdm/5m/archive-index.json",
+      "blob_sha": "007cce96dea3388ed8a409d0dfc32f9a3b8821da",
+      "readback_verified": true,
+      "base_rows_per_symbol": 16500,
+      "base_rows_total": 66000,
+      "coverage_end_by_symbol": {
+        "BTCUSDT": "2020-02-27T06:55:00Z",
+        "ETHUSDT": "2020-02-27T06:55:00Z",
+        "SOLUSDT": "2020-11-10T13:55:00Z",
+        "XRPUSDT": "2020-03-03T15:15:00Z"
+      },
+      "zero_volume_rows": 9
+    },
+    "15m": {
+      "path": "research-data/binance-usdm/15m/archive-index.json",
+      "blob_sha": "5ccf1d4f4d8bb1f7d34e604f65cd569d87656a9a",
+      "readback_verified": true,
+      "base_rows_per_symbol": 16500,
+      "base_rows_total": 66000,
+      "coverage_end_by_symbol": {
+        "BTCUSDT": "2020-06-20T20:45:00Z",
+        "ETHUSDT": "2020-06-20T20:45:00Z",
+        "SOLUSDT": "2021-03-05T03:45:00Z",
+        "XRPUSDT": "2020-06-26T05:00:00Z"
+      },
+      "zero_volume_rows": 4
+    },
+    "1h": {
+      "path": "research-data/binance-usdm/1h/archive-index.json",
+      "blob_sha": "64e3a329f1df171ad25ec5ed3c7229032a9e4113",
+      "readback_verified": true,
+      "base_rows_per_symbol": 53871,
+      "base_rows_total": 215484,
+      "base_last_completed_open_utc": "2026-11-06T22:00:00Z",
+      "base_next_start_utc": "2026-11-06T23:00:00Z",
+      "incremental_highwater_utc": "2026-11-11T19:00:00Z",
+      "continuity_status": "DEGRADED_BRIDGE_UNRECONCILED"
+    },
+    "4h": {
+      "path": "research-data/binance-usdm/4h/archive-index.json",
+      "blob_sha": "d489d2fe47ed25d05b584b817eb4929b6b1de86d",
+      "readback_verified": true,
+      "append_prohibited": true,
+      "index_highwater_utc": "2026-11-11T08:00:00Z",
+      "prior_global_manifest_highwater_utc": "2026-11-11T12:00:00Z",
+      "live_latest_completed_open_utc": "2026-11-11T16:00:00Z",
+      "raw_rows": 53960,
+      "aligned_rows": 53816,
+      "canonical_rows": 53844,
+      "original_manifest_sha_mismatches": 13
+    }
+  },
+  "page0011_experiment_path": "research-data/binance-usdm/experiments/dq_page0011_and_incremental_append_20261111T2040Z_run12.json",
+  "page0011_experiment_sha256": "08d1077e917c5cbb84c3eac643f1d824e074783abb60b48c892e45d79c32ef38",
+  "incremental_delta_path": "research-data/binance-usdm/delta/binance_usdm_delta_20261111T2032Z_5m15m1h_completed.jsonl",
+  "incremental_manifest_path": "research-data/binance-usdm/delta/manifest-20261111T2032Z-5m15m1h.json",
+  "incremental_delta_sha256": "426920e39f6fbffc3815ae1608cd1dba3197e822600f62906c38ef702f20e7c1",
+  "incremental_manifest_sha256": "f52c01367e28cd6c1172f010f2d637a7d61781d547530ec307ffb57d5b6b2c0a",
+  "snapshot_path": "research-data/binance-usdm/current_market_snapshot_20261111T2040Z_run12.json",
+  "snapshot_sha256": "8a27f49cfc84c1a3720bb35f84277a77e1462ccfaf007bd8b5bbb808f2968d88",
+  "next_actions": [
+    "Backfill 5m/15m page 0012 from per-symbol nextStartUtc.",
+    "Reconcile 1h base/delta openTime keys and the 8-row count discrepancy; bridge highwaters conflict.",
+    "Reconcile 4h raw/aligned/canonical keys, 13 original manifest SHA mismatches and malformed highwater fields; keep append blocked.",
+    "Provision Node 24/npm 11 and a local checkout at observed main HEAD; run the actual deterministic harness.",
+    "Restore direct Binance REST DNS/HTTPS and fresh /fapi/v1/time plus /fapi/v1/exchangeInfo.",
+    "Backfill historical funding/OI/taker/basis/positioning and calibrate fees, spread, slippage, latency and fill assumptions."
+  ]
+}

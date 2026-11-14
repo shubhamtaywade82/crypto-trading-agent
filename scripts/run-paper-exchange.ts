@@ -19,7 +19,7 @@ assertPaperExchangeOnly({
   paperExchange: config.paperExchange,
 });
 
-const healthUrl = `${config.paperExchange!.url.replace(/\\/+$/, '')}/up`;
+const healthUrl = `${config.paperExchange!.url.replace(/\/+$/, '')}/up`;
 let health: Response;
 try {
   health = await fetch(healthUrl, { signal: AbortSignal.timeout(3_000) });

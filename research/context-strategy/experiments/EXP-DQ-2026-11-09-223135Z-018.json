@@ -1,0 +1,130 @@
+{
+  "experiment_id": "EXP-DQ-2026-11-09-223135Z-018",
+  "type": "data_quality_archive_append",
+  "status": "COMPLETED_PASS",
+  "as_of_utc": "2026-11-09T22:31:35.000Z",
+  "hypothesis": "Extend 5m and 15m archives from the v100 highwaters using completed candles only, excluding bars whose closeTime is not strictly before the runtime cutoff.",
+  "source": {
+    "transport": "Binance USDⓈ-M connector wrappers",
+    "endpoints": [
+      "GET /fapi/v1/klines"
+    ],
+    "sdk_used": false,
+    "direct_rest": "DNS unavailable; HTTP 000"
+  },
+  "symbols": [
+    "BTCUSDT",
+    "ETHUSDT",
+    "SOLUSDT",
+    "XRPUSDT"
+  ],
+  "reference_only": [
+    "BTCUSDT"
+  ],
+  "tradable": [
+    "ETHUSDT",
+    "SOLUSDT",
+    "XRPUSDT"
+  ],
+  "intervals": {
+    "5m": {
+      "previous_highwater_open_utc": "2026-11-09T22:10:00Z",
+      "latest_completed_open_utc": "2026-11-09T22:25:00Z",
+      "next_start_utc": "2026-11-09T22:30:00Z",
+      "rows_fetched": 16,
+      "rows_appended": 12,
+      "forming_rows_excluded": 4,
+      "rows_by_symbol": {
+        "BTCUSDT": 3,
+        "ETHUSDT": 3,
+        "SOLUSDT": 3,
+        "XRPUSDT": 3
+      },
+      "delta_path": "research-data/binance-usdm/delta/binance_usdm_delta_20261109T223135Z_5m_completed.jsonl",
+      "delta_sha256": "fa08b9aa4bcec8e8ea3256def34627da7ca6a6a09037cfae093c66636ee81c5f",
+      "manifest_path": "research-data/binance-usdm/delta/manifest-20261109T223135Z-5m.json",
+      "manifest_sha256": "17707d8416e2cbee5aeb005a88cb484812353460b91b8d089a9057da7950b2f0",
+      "index_blob_sha_after_append": "be5b21c53f02b099b32cf19b136dbe0f214aa0aa",
+      "index_sha256_after_append": "af8e62df7d4c97b0206b044cb38ca8136d0edf4935b93b51617cf223b3e625ad"
+    },
+    "15m": {
+      "previous_highwater_open_utc": "2026-11-09T22:00:00Z",
+      "latest_completed_open_utc": "2026-11-09T22:15:00Z",
+      "next_start_utc": "2026-11-09T22:30:00Z",
+      "rows_fetched": 8,
+      "rows_appended": 4,
+      "forming_rows_excluded": 4,
+      "rows_by_symbol": {
+        "BTCUSDT": 1,
+        "ETHUSDT": 1,
+        "SOLUSDT": 1,
+        "XRPUSDT": 1
+      },
+      "delta_path": "research-data/binance-usdm/delta/binance_usdm_delta_20261109T223135Z_15m_completed.jsonl",
+      "delta_sha256": "88666ed1808a52d32888aec808881d4adaaf7c442d2b6b2e334716daab14c304",
+      "manifest_path": "research-data/binance-usdm/delta/manifest-20261109T223135Z-15m.json",
+      "manifest_sha256": "ff65d985eece5b13874db1d9297347c5e5f08f511f3cbfe91a0dbeb465eef546",
+      "index_blob_sha_after_append": "bac65f7a13b7c5832583b4b62efc17b9bf4e59f9",
+      "index_sha256_after_append": "3c035221a14f7f3e13d966edb7a262898205f6313ecc60133a65ab4f0b73b809"
+    }
+  },
+  "totals": {
+    "rows_fetched": 24,
+    "rows_appended": 16,
+    "forming_rows_excluded": 8,
+    "pre_highwater_rows_excluded": 0
+  },
+  "validation": {
+    "duplicates": 0,
+    "missing_intervals": 0,
+    "off_grid": 0,
+    "non_monotonic": 0,
+    "ohlc_violations": 0,
+    "non_positive_volume": 0,
+    "non_finite": 0,
+    "close_time_failures": 0,
+    "cross_symbol_alignment": true,
+    "all_appended_rows_completed": true
+  },
+  "reproducibility": {
+    "method": "Deterministic inline JavaScript validator in managed tool runtime; not repository backtest harness",
+    "cutoff_utc": "2026-11-09T22:31:35.000Z",
+    "row_schema": [
+      "symbol",
+      "interval",
+      "openTime",
+      "open",
+      "high",
+      "low",
+      "close",
+      "volume",
+      "closeTime",
+      "quoteVolume",
+      "trades",
+      "takerBuyBaseVolume",
+      "takerBuyQuoteVolume"
+    ],
+    "random_seed": null,
+    "repo_commit": "669ba233538eb1463c0e7e0a435016a643e7adb5"
+  },
+  "artifacts": {
+    "global_manifest": "research-data/binance-usdm/manifests/archive_manifest_20261109T223135Z_v101.json",
+    "global_manifest_sha256": "10477ed493aa7fd5c4aa661b266b69a3364d0bf5ac645d1e0f24974d77872b04",
+    "github_readback_verified": true,
+    "sha256_test_vector": "PASS"
+  },
+  "result": {
+    "archive_append": "PASS",
+    "strategy_backtest": "NOT_RUN",
+    "oos_evaluation": "NOT_RUN",
+    "evidence_status": "NOT_APPLICABLE_DATA_QUALITY_EXPERIMENT"
+  },
+  "blockers": [
+    "5m/15m multi-year base archives absent",
+    "Node 22.16.0/npm 10.9.2 below package requirement Node>=24/npm>=11",
+    "No local checkout",
+    "Direct Binance REST DNS failure",
+    "Exchange metadata stale",
+    "Historical cost/funding inputs incomplete"
+  ]
+}

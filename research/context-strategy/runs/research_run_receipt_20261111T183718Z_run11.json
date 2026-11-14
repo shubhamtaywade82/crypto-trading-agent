@@ -1,0 +1,75 @@
+{
+  "schema_version": "1.0.0",
+  "run_id": "context-strategy-20261111T183406Z-run11",
+  "as_of_utc": "2026-11-11T18:37:18.942Z",
+  "repository": "shubhamtaywade82/crypto-trading-agent",
+  "branch": "research/raw-ohlcv-archive-20261108T1026Z",
+  "status": "RESEARCH_EXECUTED",
+  "oos_evaluated": false,
+  "monitoring_only": false,
+  "strategy_experiment_status": "BLOCKED",
+  "completed_experiments": [
+    {
+      "id": "DQ-20261111-PAGE0010",
+      "type": "DATA_QUALITY_AND_ARCHIVE_BACKFILL",
+      "status": "COMPLETED_DATA_QUALITY_PASS",
+      "rows": 12000,
+      "artifact_ref": "research-data/binance-usdm/experiments/data_quality_backfill_page0010_20261111T183718Z.json"
+    }
+  ],
+  "archive_delta": {
+    "path": "research-data/binance-usdm/delta/binance_usdm_delta_20261111T183214Z_5m15m1h_completed.jsonl",
+    "rows": 68,
+    "rows_by_interval": {
+      "5m": 48,
+      "15m": 16,
+      "1h": 4
+    },
+    "forming_rows_excluded": 12,
+    "sha256": "e25e204d3d905833de36891df7136e3953072b234f349238e11aa6f9dcdec614",
+    "readback_verified": true
+  },
+  "historical_backfill": {
+    "page": 10,
+    "rows": 12000,
+    "intervals": [
+      "5m",
+      "15m"
+    ],
+    "symbols": [
+      "BTCUSDT",
+      "ETHUSDT",
+      "SOLUSDT",
+      "XRPUSDT"
+    ],
+    "quality_failures": 0,
+    "readback_verified": true
+  },
+  "current_decision": {
+    "SOLUSDT": "NO_TRADE",
+    "ETHUSDT": "NO_TRADE",
+    "XRPUSDT": "NO_TRADE",
+    "reason": "No OOS_VALIDATED registry entries."
+  },
+  "registry": {
+    "parent": "research-data/binance-usdm/conditional-strategy-registry-snapshot-v104.json",
+    "next_version": "v105",
+    "status_changes": "NONE"
+  },
+  "artifacts": {
+    "preflight": "research/context-strategy/preflight/preflight_20261111T183718Z_run11.json",
+    "report": "research/context-strategy/reports/2026-11-11T183718Z_run11.md",
+    "artifact_manifest": "research/context-strategy/manifests/artifact_manifest_20261111T183718Z_run11.json",
+    "artifact_manifest_sha256": "72f1e2388faa97a31c48f09c57b01cb9f6ab859ec160f0fce2f20fdf8b542146",
+    "artifact_manifest_blob_sha1": "5a98fefe933791d1708adfd85e246fa3a9c2ec89",
+    "queue": "research-data/binance-usdm/research-queue-v105.json"
+  },
+  "limitations": [
+    "No local repository or backtest harness.",
+    "No strategy backtest or OOS evaluation.",
+    "Direct REST DNS unavailable; Binance connector does not expose HTTP status/headers.",
+    "5m/15m historical base remains partial and discontinuous to 2026 incrementals.",
+    "1h and 4h archive reconciliation remains outstanding.",
+    "Historical fees, funding cashflows, spread/depth and calibrated execution costs unavailable."
+  ]
+}

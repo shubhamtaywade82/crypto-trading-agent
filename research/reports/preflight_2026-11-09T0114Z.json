@@ -1,0 +1,78 @@
+{
+  "as_of_utc": "2026-11-09T01:14:32.191Z",
+  "environment": {
+    "runtime": "managed V8 JavaScript runtime plus Linux container",
+    "os": "Linux",
+    "cpu_count": 5,
+    "memory_available_gb": 4.93,
+    "disk_free_gb": 30,
+    "node": "v22.16.0",
+    "npm": "10.9.2",
+    "local_repository_checkout": false,
+    "remote_repository_access": true
+  },
+  "checks": [
+    {
+      "capability": "shell/compute",
+      "status": "PASS",
+      "evidence": "Linux shell; 5 CPUs; ~4.93GB available RAM; ~30GB free disk.",
+      "impact": "Bounded historical parsing and JS research feasible.",
+      "next_action": "Continue bounded computations."
+    },
+    {
+      "capability": "repo/code",
+      "status": "DEGRADED",
+      "evidence": "Remote repository accessible; no local checkout; Node22.16/npm10.9.2; repository requires Node>=24/npm>=11.",
+      "impact": "Repository CLI not invoked; standalone core ran in managed V8.",
+      "next_action": "Provision Node24/npm11 and local checkout."
+    },
+    {
+      "capability": "network/Binance endpoints",
+      "status": "DEGRADED",
+      "evidence": "Direct DNS to official fapi endpoints failed; Binance connector returned data. exchangeInfo serverTime 00:30:01.887Z, ~43m45s stale at 01:13:46Z; HTTP status/headers not exposed.",
+      "impact": "Monitoring possible; execution metadata validation blocked.",
+      "next_action": "Restore DNS or obtain fresh server time and exchange metadata."
+    },
+    {
+      "capability": "raw historical archive",
+      "status": "DEGRADED",
+      "evidence": "4h canonical files read back and audited; 112 new raw rows persisted; 4h canonical ends Nov5 16:00 while raw incremental ends Nov8 20:00.",
+      "impact": "4h research usable; canonical rebuild and lower-TF history incomplete.",
+      "next_action": "Reconcile raw row keys and rebuild canonical 4h."
+    },
+    {
+      "capability": "data quality/coverage",
+      "status": "DEGRADED",
+      "evidence": "4h canonical 13,461 rows/symbol, zero audited defects; 16 current series each 199 completed plus one forming, zero defects; 5m/15m base history absent.",
+      "impact": "4h OOS experiment feasible; multi-TF research blocked.",
+      "next_action": "Backfill multi-year 5m/15m and stage 1m."
+    },
+    {
+      "capability": "backtest harness/smoke test",
+      "status": "DEGRADED",
+      "evidence": "Standalone core executed in managed V8; stop/target and no-lookahead prefix fixture PASS; Node CLI not invoked.",
+      "impact": "EXP-002 train/validation/untouched OOS completed; repository runner unverified.",
+      "next_action": "Run persisted smoke-test.js and run.js after Node24/npm11 checkout."
+    },
+    {
+      "capability": "disk/storage",
+      "status": "PASS",
+      "evidence": "~30GB free disk; GitHub archive and experiment branches accepted writes.",
+      "impact": "Raw deltas and experiment artifacts persisted remotely.",
+      "next_action": "Continue atomic writes."
+    },
+    {
+      "capability": "artifact readback",
+      "status": "PASS",
+      "evidence": "Canonical 4h blobs, raw delta/manifest/index, core/config/results and three funding files fetched back and verified.",
+      "impact": "Experiment reproducible from persisted inputs.",
+      "next_action": "Read back final report/registry/queue after write."
+    }
+  ],
+  "classification": {
+    "run_status": "RESEARCH_EXECUTED + OOS_EVALUATED",
+    "untouched_oos_completed": true,
+    "oos_validated_candidates": 0,
+    "repository_cli_invoked": false
+  }
+}

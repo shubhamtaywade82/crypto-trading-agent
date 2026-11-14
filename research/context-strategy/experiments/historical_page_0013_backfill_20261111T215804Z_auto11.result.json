@@ -1,0 +1,139 @@
+{
+  "schema_version": "1.0.0",
+  "run_id": "context-strategy-20261111T220916Z-auto11",
+  "experiment_id": "HISTORICAL_PAGE_0013_BACKFILL_5M_15M",
+  "type": "DATA_QUALITY_ARCHIVE_BACKFILL",
+  "status": "COMPLETED_DATA_QUALITY",
+  "oos_evaluated": false,
+  "strategy_evidence_status": "NOT_APPLICABLE",
+  "hypothesis": "Fetching the next 1,500 rows per symbol for 5m and 15m produces contiguous, well-formed raw pages that can be independently read back and hashed.",
+  "specification": {
+    "source_endpoint": "GET /fapi/v1/klines",
+    "source": "Binance USD-M public market-data connector; SDK not used; direct REST DNS unavailable; HTTP status/headers not exposed.",
+    "symbols": [
+      "BTCUSDT",
+      "ETHUSDT",
+      "SOLUSDT",
+      "XRPUSDT"
+    ],
+    "intervals": [
+      "5m",
+      "15m"
+    ],
+    "limit_per_symbol_interval": 1500,
+    "validation": [
+      "exact row count",
+      "open-time grid alignment",
+      "strict monotonicity",
+      "no duplicates",
+      "no missing interval",
+      "OHLC invariants",
+      "finite numeric fields",
+      "closeTime=openTime+interval-1",
+      "positive volume counted and retained raw",
+      "SHA-256 after GitHub readback"
+    ],
+    "acceptance": "All eight files contain 1,500 rows; no continuity/OHLC/non-finite/time failures; manifest and indexes read back."
+  },
+  "data_window_by_series": {
+    "5m": {
+      "BTCUSDT": {
+        "first": "2020-03-03T12:00:00.000Z",
+        "last": "2020-03-08T16:55:00.000Z",
+        "next": "2020-03-08T17:00:00.000Z"
+      },
+      "ETHUSDT": {
+        "first": "2020-03-03T12:00:00.000Z",
+        "last": "2020-03-08T16:55:00.000Z",
+        "next": "2020-03-08T17:00:00.000Z"
+      },
+      "SOLUSDT": {
+        "first": "2020-11-15T19:00:00.000Z",
+        "last": "2020-11-20T23:55:00.000Z",
+        "next": "2020-11-21T00:00:00.000Z"
+      },
+      "XRPUSDT": {
+        "first": "2020-03-08T20:20:00.000Z",
+        "last": "2020-03-14T01:15:00.000Z",
+        "next": "2020-03-14T01:20:00.000Z"
+      }
+    },
+    "15m": {
+      "BTCUSDT": {
+        "first": "2020-07-06T12:00:00.000Z",
+        "last": "2020-07-22T02:45:00.000Z",
+        "next": "2020-07-22T03:00:00.000Z"
+      },
+      "ETHUSDT": {
+        "first": "2020-07-06T12:00:00.000Z",
+        "last": "2020-07-22T02:45:00.000Z",
+        "next": "2020-07-22T03:00:00.000Z"
+      },
+      "SOLUSDT": {
+        "first": "2021-03-20T19:00:00.000Z",
+        "last": "2021-04-05T09:45:00.000Z",
+        "next": "2021-04-05T10:00:00.000Z"
+      },
+      "XRPUSDT": {
+        "first": "2020-07-11T20:15:00.000Z",
+        "last": "2020-07-27T11:00:00.000Z",
+        "next": "2020-07-27T11:15:00.000Z"
+      }
+    }
+  },
+  "results": {
+    "rows_total": 12000,
+    "rows_per_interval": {
+      "5m": 6000,
+      "15m": 6000
+    },
+    "rows_per_symbol_per_interval": 1500,
+    "files": 8,
+    "zero_volume_rows": 0,
+    "quality": {
+      "duplicates": 0,
+      "missing_intervals": 0,
+      "off_grid": 0,
+      "non_monotonic": 0,
+      "ohlc_failures": 0,
+      "non_finite": 0,
+      "close_time_failures": 0,
+      "non_positive_volume": 0
+    },
+    "readback_exact_files": 8,
+    "manifest_readback_exact": 2,
+    "index_readback_verified": 2
+  },
+  "artifacts": {
+    "archive_branch": "research/raw-ohlcv-archive-20261108T1026Z",
+    "manifests": {
+      "5m": {
+        "path": "research-data/binance-usdm/5m/manifest-page-0013.json",
+        "blob_sha": "d47cf1d0a4071816017a0a859edee03e8ed2643c"
+      },
+      "15m": {
+        "path": "research-data/binance-usdm/15m/manifest-page-0013.json",
+        "blob_sha": "0941fe35d960a03fa21a7386d794f4b49bc526a2"
+      }
+    },
+    "index_blobs": {
+      "5m": "854109882f7c0af5c1f7f4ca009d8bbbbeb82c32",
+      "15m": "d84c114c4f6c352bbe4ebf75f2d692d03b523646"
+    },
+    "next_page_0014_start_utc": {
+      "5m": {
+        "BTCUSDT": "2020-03-08T17:00:00.000Z",
+        "ETHUSDT": "2020-03-08T17:00:00.000Z",
+        "SOLUSDT": "2020-11-21T00:00:00.000Z",
+        "XRPUSDT": "2020-03-14T01:20:00.000Z"
+      },
+      "15m": {
+        "BTCUSDT": "2020-07-22T03:00:00.000Z",
+        "ETHUSDT": "2020-07-22T03:00:00.000Z",
+        "SOLUSDT": "2021-04-05T10:00:00.000Z",
+        "XRPUSDT": "2020-07-27T11:15:00.000Z"
+      }
+    },
+    "archive_manifest_path": "research-data/binance-usdm/manifests/archive_manifest_20261111T220957Z_auto11.json"
+  }
+}

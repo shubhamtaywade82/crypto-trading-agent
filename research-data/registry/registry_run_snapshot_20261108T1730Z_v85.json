@@ -1,0 +1,167 @@
+{
+  "schema_version": "1.0.0",
+  "snapshot_id": "context-strategy-2026-11-08T1730Z-v85",
+  "as_of_utc": "2026-11-08T17:30:18.711Z",
+  "source_registry_path": "research-data/registry/context_strategy_registry_20261108T1625Z_v84.json",
+  "source_registry_blob_sha": "adaec45dc5747b055e2161f119e0e218df6bafba",
+  "source_registry_run_id": "context-strategy-2026-11-08T1625Z-v84",
+  "source_of_truth": {
+    "repository": "shubhamtaywade82/crypto-trading-agent",
+    "branch": "main",
+    "commit": "0595de35adc419fa78a1780bbfa9f0e13256bf0d",
+    "path": "research/context-strategy/registry.json",
+    "sourceUpdatedAtUtc": "2026-11-08T07:26:27.336Z",
+    "resolution": "Merge distinct strategy definitions from main and v83. Preserve the 4h Donchian20/BULL_LOW 12-trade OOS_PROMISING candidate separately from the main-branch 15-bar Donchian candidate (55 OOS trades, INSUFFICIENT_EVIDENCE). No strategy equivalence or cross-taxonomy transfer is assumed.",
+    "additionalRegistry": {
+      "branch": "research/raw-ohlcv-archive-20261108T1026Z",
+      "path": "research-data/registry/context_strategy_registry_20261108T1529Z_v83.json",
+      "updatedAtUtc": "2026-11-08T15:29:14.871Z"
+    }
+  },
+  "taxonomy": {
+    "id": "CTX-4H-EMA50xEMA200-ATRQ-v2-FULL-ARCHIVE",
+    "source": "research/context-strategy/context-discovery/context_discovery_20261107T0133Z_full_4h.json",
+    "coverageStartUtc": "2020-09-14T08:00:00Z",
+    "coverageEndUtc": "2026-11-06T20:00:00Z",
+    "rowsPerSymbol": 13468,
+    "classifiedBarsPerSymbol": 13269,
+    "thresholdSource": "V100/V102 training-only; frozen",
+    "thresholds": {
+      "BTCUSDT": {
+        "flatSpreadPct": 2.5048262259,
+        "atrQ33Pct": 1.4474484729,
+        "atrQ67Pct": 2.0674450299,
+        "absReturnQ99Pct": 4.8982315271
+      },
+      "ETHUSDT": {
+        "flatSpreadPct": 2.5106475931,
+        "atrQ33Pct": 1.7549854873,
+        "atrQ67Pct": 2.5876150427,
+        "absReturnQ99Pct": 6.3197419283
+      },
+      "SOLUSDT": {
+        "flatSpreadPct": 4.0735303635,
+        "atrQ33Pct": 2.7494077104,
+        "atrQ67Pct": 4.0357264283,
+        "absReturnQ99Pct": 9.7612032075
+      },
+      "XRPUSDT": {
+        "flatSpreadPct": 2.3358684921,
+        "atrQ33Pct": 1.9936041468,
+        "atrQ67Pct": 3.0167265805,
+        "absReturnQ99Pct": 9.0979653978
+      }
+    }
+  },
+  "evidence_policy": {
+    "minimumProvisionalOosTradesPerSymbolContext": 100,
+    "strongerEvidenceTrades": 200,
+    "requirePositiveNetExpectancyAfterCosts": true,
+    "requireRobustnessAndUncertainty": true
+  },
+  "status_counts": {
+    "OOS_VALIDATED": 0,
+    "OOS_PROMISING": 1,
+    "INSUFFICIENT_EVIDENCE": 5,
+    "REJECTED": 1,
+    "HYPOTHESIS": 6
+  },
+  "oos_validated_entries": [],
+  "registry_entries": [
+    {
+      "id": "SOL-DONCHIAN20-BULL-LOW-V1-20261105T1825Z",
+      "symbol": "SOLUSDT",
+      "context": "EMA50_GT_EMA200_ATR14_Q33_TRAIN_EX_SHOCK_Q99",
+      "strategy": null,
+      "status": "SEE_SOURCE_ENTRY"
+    },
+    {
+      "id": "SOL-FAILED-BREAKOUT-FADE-SIDEWAYS-LOW-V1-20261105T2225Z",
+      "symbol": "SOLUSDT",
+      "context": "SIDEWAYS_LOW",
+      "strategy": null,
+      "status": "SEE_SOURCE_ENTRY"
+    },
+    {
+      "id": "SOL-4H-TREND-PULLBACK-BTC-CONFIRM-V1_1-20261106T0830Z",
+      "symbol": "SOLUSDT",
+      "context": "BEAR_NORMAL (final untouched test; detector admits BULL_NORMAL/BEAR_NORMAL with same-direction BTC confirmation)",
+      "strategy": null,
+      "status": "SEE_SOURCE_ENTRY"
+    },
+    {
+      "id": "SOL-VOL-CONTRACTION-BREAKOUT-BTC-CONFIRM-BULL_COMPRESS-V1-20261108T0632Z",
+      "symbol": "SOLUSDT",
+      "context": "BULL_COMPRESS",
+      "strategy": null,
+      "status": "SEE_SOURCE_ENTRY"
+    },
+    {
+      "id": "SOL-VOL-CONTRACTION-BREAKOUT-BTC-CONFIRM-BEAR_COMPRESS-V1-20261108T0632Z",
+      "symbol": "SOLUSDT",
+      "context": "BEAR_COMPRESS",
+      "strategy": null,
+      "status": "SEE_SOURCE_ENTRY"
+    },
+    {
+      "id": "DONCHIAN20-SOL-BULL_LOW",
+      "symbol": "SOLUSDT",
+      "context": "BULL_LOW",
+      "strategy": "4h Donchian20 breakout",
+      "status": "OOS_PROMISING"
+    },
+    {
+      "id": "DONCHIAN20-CONTEXT-WF-V2",
+      "symbol": null,
+      "context": null,
+      "strategy": "Context-aligned Donchian20 walk-forward",
+      "status": "INSUFFICIENT_EVIDENCE"
+    },
+    {
+      "id": "TREND-PULLBACK",
+      "symbol": null,
+      "context": null,
+      "strategy": null,
+      "status": "HYPOTHESIS"
+    },
+    {
+      "id": "BREAKOUT-RETEST",
+      "symbol": null,
+      "context": null,
+      "strategy": null,
+      "status": "HYPOTHESIS"
+    },
+    {
+      "id": "RANGE-MEAN-REVERSION-FAILED-BREAKOUT",
+      "symbol": null,
+      "context": null,
+      "strategy": null,
+      "status": "HYPOTHESIS"
+    },
+    {
+      "id": "VOLATILITY-EXPANSION-MOMENTUM",
+      "symbol": null,
+      "context": null,
+      "strategy": null,
+      "status": "HYPOTHESIS"
+    },
+    {
+      "id": "BTC-RELATIVE-STRENGTH-CONFIRMATION",
+      "symbol": null,
+      "context": null,
+      "strategy": null,
+      "status": "HYPOTHESIS"
+    },
+    {
+      "id": "FUNDING-OI-FILTERS",
+      "symbol": null,
+      "context": null,
+      "strategy": null,
+      "status": "HYPOTHESIS"
+    }
+  ],
+  "status_changes_this_run": [],
+  "new_experiments_this_run": [],
+  "run_status": "UNCHANGED_NO_NEW_EXPERIMENT",
+  "note": "The v84 registry remains the source of evidence. This run appended data and refreshed monitoring only; no strategy result was added, promoted, downgraded or rejected."
+}

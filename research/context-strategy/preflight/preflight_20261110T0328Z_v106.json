@@ -1,0 +1,74 @@
+{
+  "schema_version": "1.0.0",
+  "run_id": "context-strategy-2026-11-10T0328Z-v106",
+  "as_of_utc": "2026-11-10T03:28:31.047Z",
+  "checks": [
+    {
+      "capability": "shell/compute",
+      "status": "PASS",
+      "evidence": "pwd=/; Linux x86_64; Python 3.13.5; 5 CPUs; ~4.7 GiB available RAM; ~30 GiB free disk.",
+      "impact": "Sufficient for bounded audits and artifact generation.",
+      "next_action": "Use for deterministic data checks only."
+    },
+    {
+      "capability": "repository/code",
+      "status": "DEGRADED",
+      "evidence": "GitHub repository/branch readable and writable; no local checkout. package.json confirms Node >=24/npm >=11; runtime Node 22.16.0/npm 10.9.2.",
+      "impact": "Project harness and tests cannot be invoked.",
+      "next_action": "Provision compatible Node/npm and clone the branch/main baseline."
+    },
+    {
+      "capability": "Binance SDK",
+      "status": "BLOCKED",
+      "evidence": "Python binance and ccxt modules absent; Node package dependencies not installed/importable.",
+      "impact": "No SDK execution.",
+      "next_action": "Use connected public-data operations until compatible local runner exists."
+    },
+    {
+      "capability": "network/Binance endpoints",
+      "status": "DEGRADED",
+      "evidence": "Connected operations succeeded for exchangeInfo, klines, premiumIndex, ticker24hr, openInterest, fundingRate, fundingInfo, taker flow, OI history, global L/S and depth. Direct curl GET /fapi/v1/time failed DNS (HTTP 000). premiumIndex time 03:28:21Z; exchangeInfo.serverTime 01:01:01.895Z, lag 8,839.105s. Connector does not expose HTTP status codes.",
+      "impact": "Descriptive live snapshot usable; exchange metadata not fresh enough for execution validation.",
+      "next_action": "Restore uncached official server-time route and refresh exchangeInfo."
+    },
+    {
+      "capability": "raw historical archive",
+      "status": "DEGRADED",
+      "evidence": "Remote branch v105 manifest read back. 5m base 20.8d; 15m 62.5d; 1h base reported from 2020 but not locally read back; 4h raw/aligned/canonical counts disagree and 13 SHA provenance discrepancies remain. New 68-row deltas persisted.",
+      "impact": "No sufficient multi-cycle aligned sample for robust multi-timeframe strategy experiments.",
+      "next_action": "Backfill 5m/15m and reconcile 4h provenance; verify 1h/4h raw files."
+    },
+    {
+      "capability": "data quality/coverage",
+      "status": "PASS",
+      "evidence": "16 series ×150 rows; 149 completed and one forming candle per series. Zero duplicates, gaps, off-grid, non-monotonic, OHLC, volume, non-finite or close-time failures. New deltas 68 rows; 17 per symbol.",
+      "impact": "Incremental archive append is accepted.",
+      "next_action": "Continue append-only deltas; rebuild canonical indexes only after schema/provenance repairs."
+    },
+    {
+      "capability": "backtest harness/smoke test",
+      "status": "BLOCKED",
+      "evidence": "Remote package.json has backtest and research:conditional scripts, but no local checkout and engine requirement Node >=24/npm >=11 not met. No deterministic project fixture smoke test run.",
+      "impact": "No strategy experiment or untouched OOS evaluation.",
+      "next_action": "Provision Node24/npm11, clone repo, run archiveKlines fixture twice, then freeze a strategy experiment."
+    },
+    {
+      "capability": "disk/storage",
+      "status": "PASS",
+      "evidence": "~30 GiB free; GitHub branch write permission confirmed; delta files committed remotely.",
+      "impact": "Remote durable storage is available.",
+      "next_action": "Continue atomic per-run delta/manifests."
+    },
+    {
+      "capability": "artifact readback",
+      "status": "PASS",
+      "evidence": "All three delta files fetched back; row counts, ranges, symbols and Git blob SHAs match. SHA-256 values recorded in the manifest.",
+      "impact": "New raw deltas are persisted and verified.",
+      "next_action": "Read back all run artifacts after commit."
+    }
+  ],
+  "run_classification": "RESEARCH_EXECUTED_DATA_QUALITY_APPEND_ONLY",
+  "strategy_research_status": "RESEARCH_BLOCKED",
+  "oos_evaluated": false,
+  "oos_validated_count": 0
+}

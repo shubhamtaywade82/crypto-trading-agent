@@ -1,0 +1,163 @@
+{
+  "schema_version": "1.0.0",
+  "version": "v100",
+  "as_of_utc": "2026-11-10T11:02:18Z",
+  "repository": "shubhamtaywade82/crypto-trading-agent",
+  "branch": "research/raw-ohlcv-archive-20261108T1026Z",
+  "policy": "Prioritize prerequisites and data integrity; do not execute strategy experiments until the harness and required history/cost model are valid.",
+  "items": [
+    {
+      "id": "Q-001",
+      "priority": "P0",
+      "title": "Provision compatible local execution environment and checkout",
+      "status": "BLOCKED",
+      "prerequisites": [
+        "Node.js >=24",
+        "npm >=11",
+        "local crypto-trading-agent checkout at main commit d57b970546df4264801565158e9462c7ba5e2b3f"
+      ],
+      "evidence": "Current runtime: Debian 13 x86_64; Node v22.16.0; npm 10.9.2; 5 CPU; 5.8GiB RAM / 4.7GiB available; 32G disk / 30G free; cwd=/; no local checkout or node_modules; Binance SDK packages NOT_FOUND. Remote main HEAD d57b970546df4264801565158e9462c7ba5e2b3f; package floor Node>=24/npm>=11.",
+      "next_action": "Provision Node 24/npm 11 and clone crypto-trading-agent at main d57b970546df4264801565158e9462c7ba5e2b3f; then run non-destructive preflight and fixture smoke test.",
+      "blocker": "Local runtime below declared engine floor and no checkout; no executable local harness."
+    },
+    {
+      "id": "Q-002",
+      "priority": "P0",
+      "title": "Repair candle integrity and universe contracts",
+      "status": "BLOCKED_PENDING_CHECKOUT",
+      "prerequisites": [
+        "Q-001"
+      ],
+      "evidence": "Remote main source audit: Candle omits closeTime; klineLoader drops closeTime/quote volume/trade count/taker flow; candleIntegrity permits volume=0. scripts/backtest.ts defaults BTCUSDT and only 15m/1h/4h. scripts/conditional-edge.ts defaults minN=30 and confidence=0.90; walkForward called without embargoDays (default 0). No local fixture smoke test ran.",
+      "next_action": "After Q-001, add closeTime/taker fields, strict positive-volume and close-time checks, 5m support, tradable/reference universe separation, minN>=100 policy and explicit embargo; run deterministic fixtures.",
+      "blocker": "No compatible local checkout/runtime; source-contract gaps require code changes and tests."
+    },
+    {
+      "id": "Q-003",
+      "priority": "P1",
+      "title": "Backfill multi-year 5m and 15m base history",
+      "status": "BLOCKED_NETWORK",
+      "prerequisites": [
+        "Network-enabled acquisition runner or verified Binance Vision access",
+        "Durable storage"
+      ],
+      "evidence": "5m/15m base history still ABSENT. Incremental totals now 1,060 (5m) and 356 (15m) across four symbols; highwaters 2026-11-10T10:55Z and 10:45Z. This run appended 24 completed rows (5m=16, 15m=8), excluded 8 forming and 16 pre-highwater rows; zero integrity failures. Direct fapi DNS remains unavailable.",
+      "next_action": "Use an egress-enabled runner or verified Binance Vision source to backfill paginated 5m/15m history from contract onboarding dates; validate coverage, continuity, OHLC/volume and SHA-256.",
+      "blocker": "No outbound DNS/HTTPS from local runtime and no multi-year 5m/15m base archive."
+    },
+    {
+      "id": "Q-004",
+      "priority": "P1",
+      "title": "Reconcile 4h raw, aligned and canonical archive provenance",
+      "status": "DEGRADED",
+      "prerequisites": [
+        "Accessible raw pages and manifests"
+      ],
+      "evidence": "4h archive counts remain raw 53,960; aligned 53,816 (13,454/symbol); canonical 53,844 (13,461/symbol). Raw highwater 04:00Z; canonical end 2026-11-05 16:00Z. 13 manifest SHA provenance mismatches remain. Current-run raw spot checks: BTC 1h page-0001 1,500 rows, BTC 4h page-0001 1,499, SOL 4h page-0009 1,456; sampled pages had zero duplicates/gaps/OHLC-volume failures.",
+      "next_action": "Reconcile all raw page manifests against canonical openTime keys and per-symbol exclusions; rebuild canonical 4h only after explaining row-count differences.",
+      "blocker": "Raw/canonical row counts and canonical freshness are still unreconciled."
+    },
+    {
+      "id": "Q-005",
+      "priority": "P1",
+      "title": "Complete historical derivatives and realistic execution-cost data",
+      "status": "BLOCKED_INCOMPLETE_DATA",
+      "prerequisites": [
+        "Funding history archive",
+        "Historical bid/ask or calibrated spread/slippage model",
+        "Fee schedule"
+      ],
+      "evidence": "Current premiumIndex/funding, settled funding through 08:00Z, current OI, completed 09:00Z OI/taker/global-LS buckets and top-20 depth refreshed. Historical funding cashflows, account fee tier, historical spread/depth, calibrated slippage/latency/fill model remain unavailable.",
+      "next_action": "Archive full fundingRate history and funding interval metadata; obtain account fee tier; collect historical bid/ask/depth or pre-register conservative execution-cost assumptions.",
+      "blocker": "Historical execution-cost and funding cashflow inputs are insufficient for defensible net expectancy."
+    },
+    {
+      "id": "Q-006",
+      "priority": "P2",
+      "title": "Recompute context taxonomy stability on reconciled multi-year data",
+      "status": "WAITING_FOR_Q003_Q004",
+      "prerequisites": [
+        "5m/15m base history",
+        "4h provenance reconciliation",
+        "Raw archive accessible to analysis runtime"
+      ],
+      "evidence": "Taxonomy v56 carried forward; last recomputed 2026-11-05 using 70/15/15 split and training-only q33/q67 thresholds. No occupancy/duration/transition/stability refit this run; 5m/15m base and 4h provenance remain blocked.",
+      "next_action": "After Q-003/Q-004, re-estimate thresholds on training only and report occupancy, duration, transition matrix, validation/test drift and cross-symbol stability.",
+      "blocker": "Q-003 and Q-004 prevent a reconciled multi-timeframe training sample."
+    },
+    {
+      "id": "Q-007",
+      "priority": "P2",
+      "title": "Run frozen conditional strategy experiment and walk-forward/OOS",
+      "status": "BLOCKED",
+      "prerequisites": [
+        "Q-001",
+        "Q-002",
+        "Q-003",
+        "Q-004",
+        "Q-005",
+        "Q-006",
+        "Deterministic smoke test passes"
+      ],
+      "evidence": "0 OOS_VALIDATED entries. SOLUSDT BULL_LOW Donchian20 remains OOS_PROMISING on 12 OOS trades (66.7% win; 41.7% target-before-stop; mean net +0.606R; PF 2.72; max DD 1.3R; block-bootstrap 95% CI [+0.086,+1.199]); below 100-trade gate and costs/robustness incomplete. Other 36 cells remain INSUFFICIENT_EVIDENCE. No experiment/OOS ran this run.",
+      "next_action": "After Q-001–Q-006, freeze one symbol×context×strategy experiment with chronological train/validation/untouched-test, purge/embargo, calibrated costs, block bootstrap and Holm correction.",
+      "blocker": "Compatible harness, deterministic smoke test, 5m/15m base history, 4h reconciliation and realistic costs incomplete."
+    },
+    {
+      "id": "Q-008",
+      "priority": "P2",
+      "title": "Weekly context taxonomy and multiple-testing review",
+      "status": "NOT_DUE",
+      "prerequisites": [
+        "Q-006"
+      ],
+      "evidence": "Last weekly taxonomy/multiple-testing review recorded 2026-11-09; no evidence-based taxonomy change is justified today.",
+      "next_action": "Next weekly review due 2026-11-16, subject to Q-006 prerequisites.",
+      "blocker": "Wait for the weekly review window and reconciled data."
+    }
+  ],
+  "last_run": {
+    "run_id": "context-strategy-2026-11-10T1102Z-auto11",
+    "status": "RESEARCH_EXECUTED",
+    "status_detail": "A reproducible incremental archive-integrity experiment completed and its delta, manifest, indexes, snapshot and artifacts were read back. No strategy experiment or untouched OOS evaluation ran.",
+    "monitoring_completed": true,
+    "archive_maintenance_completed": true,
+    "research_experiment": {
+      "status": "COMPLETED_DATA_QUALITY_ONLY",
+      "experiment_id": "DQ-2026-11-10T1102Z-APPEND",
+      "artifact": "research-data/binance-usdm/experiments/data-quality-append-20261110T1102Z.json",
+      "rows": 24,
+      "quality_failures": 0
+    },
+    "strategy_experiment": {
+      "status": "NOT_RUN",
+      "reason": "Node v22.16.0/npm 10.9.2 below required Node>=24/npm>=11; no local checkout/harness; 5m/15m base history absent; 4h provenance mismatches and realistic execution costs unresolved."
+    },
+    "oos_evaluations": 0,
+    "archive_updates": [
+      {
+        "path": "research-data/binance-usdm/delta/binance_usdm_delta_20261110T1102_5m15m_completed.jsonl",
+        "manifest_path": "research-data/binance-usdm/delta/manifest-20261110T1102-5m15m.json",
+        "rows": 24,
+        "rows_by_interval": {
+          "5m": 16,
+          "15m": 8
+        },
+        "sha256": "9c87aedd59984ee12b249cb358d307f9a2fe6b612490f4d24b1fce7bb100aa87",
+        "manifest_sha256": "1b3977f24b99b407a70ee3130d2605299616010b6bf48855ab1b99ad5f810ead",
+        "readback_verified": true
+      }
+    ],
+    "archive_highwaters_utc": {
+      "5m": "2026-11-10T10:55:00Z",
+      "15m": "2026-11-10T10:45:00Z",
+      "1h": "2026-11-10T09:00:00Z",
+      "4h": "2026-11-10T04:00:00Z"
+    },
+    "current_snapshot_ref": "research-data/binance-usdm/current_market_snapshot_20261110T1102Z.json",
+    "registry_ref": "research-data/binance-usdm/conditional-strategy-registry-snapshot-v100.json",
+    "archive_manifest_ref": "research-data/binance-usdm/manifests/archive_manifest_20261110T1102Z_auto11.json",
+    "data_quality_experiment_ref": "research-data/binance-usdm/experiments/data-quality-append-20261110T1102Z.json",
+    "next_executable_action": "Provision Node 24/npm 11 and clone the current code baseline; in parallel backfill 5m/15m base history, reconcile 4h provenance, and archive historical funding/cost inputs. Then run deterministic fixture smoke tests before any strategy experiment."
+  }
+}

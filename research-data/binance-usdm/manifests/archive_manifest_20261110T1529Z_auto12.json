@@ -1,0 +1,131 @@
+{
+  "schema_version": "1.0.0",
+  "run_id": "context-strategy-20261110T152928Z-auto12",
+  "as_of_utc": "2026-11-10T15:29:28.475Z",
+  "repository": "shubhamtaywade82/crypto-trading-agent",
+  "branch": "research/raw-ohlcv-archive-20261108T1026Z",
+  "source": {
+    "endpoint": "GET /fapi/v1/klines",
+    "access": "Binance USD-M public market-data connector; direct REST DNS unavailable",
+    "symbols": [
+      "BTCUSDT",
+      "ETHUSDT",
+      "SOLUSDT",
+      "XRPUSDT"
+    ],
+    "intervals": [
+      "5m",
+      "15m",
+      "1h",
+      "4h"
+    ]
+  },
+  "highwaters": {
+    "5m": "2026-11-10T15:20:00.000Z",
+    "15m": "2026-11-10T15:00:00.000Z",
+    "1h": "2026-11-10T14:00:00.000Z",
+    "4h": "2026-11-10T08:00:00.000Z"
+  },
+  "append_this_run": {
+    "rows_fetched": 20,
+    "completed_rows": 20,
+    "forming_rows_excluded": 0,
+    "pre_highwater_rows_excluded": 0,
+    "rows_appended": 20,
+    "rows_by_interval": {
+      "5m": 16,
+      "15m": 4
+    },
+    "rows_by_symbol": {
+      "BTCUSDT": 5,
+      "ETHUSDT": 5,
+      "SOLUSDT": 5,
+      "XRPUSDT": 5
+    },
+    "rows_by_symbol_interval": {
+      "BTCUSDT:5m": 4,
+      "ETHUSDT:5m": 4,
+      "SOLUSDT:5m": 4,
+      "XRPUSDT:5m": 4,
+      "BTCUSDT:15m": 1,
+      "ETHUSDT:15m": 1,
+      "SOLUSDT:15m": 1,
+      "XRPUSDT:15m": 1
+    },
+    "delta_path": "research-data/binance-usdm/delta/binance_usdm_delta_20261110T1529Z_5m15m_completed.jsonl",
+    "delta_sha256": "62a4abd3b0bac5dfcb969685c98b98ed76539e9015e68ae2b193ed0841feca8f",
+    "delta_blob_sha1": "a8168a5e5b8ac32d62eef938963c229a7064119a",
+    "delta_manifest_path": "research-data/binance-usdm/delta/manifest-20261110T1529Z-5m15m.json",
+    "delta_manifest_sha256": "27184971490e15399272ea469eac3727d2e523bc0281dc63501f143d530f1ae2",
+    "delta_manifest_blob_sha1": "3f42fd9f8fa7e77806a24db1d141af835e503632",
+    "readback_verified": true,
+    "quality_failures": 0,
+    "market_data_time_utc": "2026-11-10T15:29:28.475Z"
+  },
+  "base_coverage": {
+    "5m": {
+      "status": "ABSENT",
+      "base_rows_total": 0,
+      "incremental_rows_total": 1288,
+      "highwater": "2026-11-10T15:20:00.000Z"
+    },
+    "15m": {
+      "status": "ABSENT",
+      "base_rows_total": 0,
+      "incremental_rows_total": 432,
+      "highwater": "2026-11-10T15:00:00.000Z"
+    },
+    "1h": {
+      "status": "HISTORICAL_PAGES_PLUS_INCREMENTALS",
+      "rows_total_base": 215484,
+      "rows_per_symbol": 53871,
+      "coverage_start": "2020-09-14T08:00:00Z",
+      "last_previous_manifest_highwater": "2026-11-10T14:00:00Z",
+      "note": "1h archive index and latest manifest have differing highwater fields; no 1h append this run pending reconciliation."
+    },
+    "4h": {
+      "status": "DEGRADED_PROVENANCE",
+      "raw_rows_total": 53960,
+      "aligned_rows_total": 53816,
+      "canonical_rows_total": 53844,
+      "raw_highwater": "2026-11-10T08:00:00Z",
+      "canonical_end": "2026-11-05T16:00:00Z",
+      "manifest_sha_provenance_mismatches": 13,
+      "row_level_reconciliation": "14 page/symbol pairs and 21,000 rows independently compared exact in a prior artifact; no row-level mismatches reported."
+    }
+  },
+  "quality": {
+    "series": 8,
+    "rows": 20,
+    "duplicates": 0,
+    "missing_intervals": 0,
+    "off_grid": 0,
+    "non_monotonic": 0,
+    "ohlc_invariant_failures": 0,
+    "non_positive_volume": 0,
+    "non_finite": 0,
+    "cross_symbol_alignment": true,
+    "forming_rows_appended": 0,
+    "scope": "new 5m/15m delta only; does not prove full archive completeness"
+  },
+  "indexes": {
+    "5m": {
+      "path": "research-data/binance-usdm/5m/archive-index.json",
+      "blob_sha1": "aa4d1b2fcd781f8407d40a235ff05734aab764b5",
+      "readback_verified": true
+    },
+    "15m": {
+      "path": "research-data/binance-usdm/15m/archive-index.json",
+      "blob_sha1": "3e910e11dba4a9d99b4f44a76e65312cca5744f6",
+      "readback_verified": true
+    }
+  },
+  "unresolved": [
+    "5m/15m multi-year base history absent",
+    "1h index/manifest highwater inconsistency",
+    "4h raw/aligned/canonical count discrepancy and 13 manifest SHA provenance mismatches",
+    "direct Binance REST DNS failure and stale exchangeInfo serverTime",
+    "Node24/npm11 local runtime and checkout unavailable",
+    "historical derivatives and calibrated execution-cost archives incomplete"
+  ]
+}

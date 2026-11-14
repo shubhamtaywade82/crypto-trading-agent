@@ -1,0 +1,201 @@
+{
+  "schema_version": "1.0.0",
+  "run_id": "context-strategy-2026-11-13T2245Z-v112",
+  "as_of_utc": "2026-11-13T22:45:44.000Z",
+  "execution_environment": {
+    "cwd": "/",
+    "os": "Debian GNU/Linux 13 (trixie)",
+    "kernel": "6.18.57",
+    "python": "3.13.5",
+    "node": "v22.16.0",
+    "npm": "10.9.2",
+    "cpu_count": 3,
+    "mem_available_gib": 4.73,
+    "disk_free_gib": 30,
+    "repository_present": false,
+    "package_json_present": false
+  },
+  "checks": [
+    {
+      "capability": "shell/compute",
+      "status": "PASS",
+      "evidence": "cwd=/; Debian GNU/Linux 13 (trixie), kernel 6.18.57; Python 3.13.5; Node v22.16.0; npm 10.9.2; 3 CPUs; 4.73 GiB MemAvailable; 30 GiB free disk.",
+      "impact": "Bounded Python/JS analysis and data-quality audit possible; repo scripts cannot run under declared requirements.",
+      "next_action": "Provision Node >=24/npm >=11."
+    },
+    {
+      "capability": "repo/code",
+      "status": "BLOCKED",
+      "evidence": "No .git or package.json in cwd=/; remote GitHub source files accessible through connector only. Remote package.json requires Node >=24/npm >=11.",
+      "impact": "Cannot invoke repository scripts or record a local code commit.",
+      "next_action": "Clone exact research branch and lockfile into a compatible workspace."
+    },
+    {
+      "capability": "network/Binance endpoints",
+      "status": "DEGRADED",
+      "evidence": "Direct DNS/HTTPS to fapi.binance.com fails (Temporary failure in name resolution); GET /fapi/v1/time not obtained. Connector returned current mark/ticker/klines/OI/funding/depth/taker/positioning data but hides HTTP status/headers. exchangeInfo serverTime=2026-11-13T06:02:01.706Z, 16h40m28s behind 22:42:30Z.",
+      "impact": "Current monitoring data usable; fresh contract/execution validation blocked.",
+      "next_action": "Restore direct DNS/HTTPS; obtain fresh /fapi/v1/time and uncached exchangeInfo."
+    },
+    {
+      "capability": "raw historical archive",
+      "status": "DEGRADED",
+      "evidence": "Remote GitHub archive branch persisted; 5m/15m base partial (162,000 rows each through page27); 1h 215,504 rows with 28 missing opens per symbol and 8-row discrepancy; 4h raw 53,960 vs aligned 53,816 vs canonical 53,844 with 13 manifest SHA mismatches. v112 appended 32 rows.",
+      "impact": "Recent bars are archived; full multi-cycle cross-timeframe research remains blocked.",
+      "next_action": "Backfill 5m/15m base and reconcile 1h/4h."
+    },
+    {
+      "capability": "data quality/coverage",
+      "status": "DEGRADED",
+      "evidence": "Rolling 3,200-row sample: 3,184 completed, 16 forming excluded; zero duplicates, missing intervals, off-grid, non-monotonic, OHLC, non-finite, non-positive-volume or closeTime failures. Historical coverage remains incomplete.",
+      "impact": "Recent sample integrity passes; this does not validate the full archive.",
+      "next_action": "Extend checks to all historical pages after backfill/reconciliation."
+    },
+    {
+      "capability": "backtest harness/smoke test",
+      "status": "BLOCKED",
+      "evidence": "Remote scripts exist, but local checkout absent and Node/npm below required versions. No deterministic fixture smoke test or backtest ran. Source audit: BTC default, no 5m replay, Candle drops closeTime, zero volume accepted, minN=30/90% CI default and no explicit purge/embargo CLI.",
+      "impact": "No strategy experiment or OOS result can be claimed.",
+      "next_action": "Fix source defects, provision compatible runner, then run deterministic fixture tests."
+    },
+    {
+      "capability": "disk/storage",
+      "status": "PASS",
+      "evidence": "About 30 GiB free local disk; local filesystem is ephemeral. GitHub remote branch writes are available.",
+      "impact": "Remote persistence is usable; no local durable archive exists.",
+      "next_action": "Continue versioned remote persistence and readback verification."
+    },
+    {
+      "capability": "artifact readback",
+      "status": "PASS",
+      "evidence": "Raw delta, delta manifest, archive manifest and four archive indexes reopened; registry, queue, market snapshot, data-quality audit, preflight, archive update manifest, report and run receipt reopened. Final artifact manifest reopened after its final hash update; exact SHA-256 and Git blob SHA checks passed for all 15 manifest entries.",
+      "impact": "Remote raw archive, registry, queue and research artifacts are persisted and readback-verified.",
+      "next_action": "On the next run, repeat capability probes and continue the highest-priority unblocked research-queue item."
+    }
+  ],
+  "endpoints": [
+    {
+      "endpoint": "GET /fapi/v1/time",
+      "status": "BLOCKED",
+      "evidence": "Direct DNS resolution failed; no server timestamp obtained."
+    },
+    {
+      "endpoint": "GET /fapi/v1/exchangeInfo",
+      "status": "DEGRADED",
+      "evidence": "serverTime 2026-11-13T06:02:01.706Z; symbols reported TRADING/PERPETUAL but metadata stale by 16h40m."
+    },
+    {
+      "endpoint": "GET /fapi/v1/klines",
+      "status": "DEGRADED",
+      "evidence": "200 rows per symbol/interval across 4 symbols x 4 intervals via connector; 3,200 rows, 3,184 completed; HTTP status hidden."
+    },
+    {
+      "endpoint": "GET /fapi/v1/premiumIndex",
+      "status": "PASS",
+      "evidence": "Mark price, current indicated funding and nextFundingTime returned at 22:42:30Z."
+    },
+    {
+      "endpoint": "GET /fapi/v1/openInterest",
+      "status": "PASS",
+      "evidence": "Current OI returned for all four symbols at 22:42:38-22:42:44Z."
+    },
+    {
+      "endpoint": "GET /fapi/v1/ticker/24hr",
+      "status": "PASS",
+      "evidence": "24h price change, high/low, last price and quote volume returned at 22:42:29-22:42:32Z."
+    },
+    {
+      "endpoint": "GET /fapi/v1/fundingRate",
+      "status": "DEGRADED",
+      "evidence": "Latest two settled records per symbol retrieved; 8h cadence observed; full history not backfilled."
+    },
+    {
+      "endpoint": "GET /fapi/v1/depth",
+      "status": "PASS",
+      "evidence": "20 bid/ask levels per symbol at 22:42:28-22:42:30Z; one snapshot only."
+    },
+    {
+      "endpoint": "GET /futures/data/takerBuySellVol",
+      "status": "PASS",
+      "evidence": "Latest completed 15m taker-volume bar through 22:15Z."
+    },
+    {
+      "endpoint": "GET /futures/data/openInterestHist",
+      "status": "PASS",
+      "evidence": "Three 1h OI observations per symbol through 22:00Z."
+    },
+    {
+      "endpoint": "GET /futures/data/globalLongShortAccountRatio",
+      "status": "PASS",
+      "evidence": "Latest 1h account ratios at 22:00Z."
+    }
+  ],
+  "sdk": {
+    "used": false,
+    "installed": false,
+    "packages_absent": [
+      "binance",
+      "binance-api-node",
+      "@binance/connector"
+    ],
+    "transport_used": "Binance public-data connector"
+  },
+  "experiment": {
+    "executed": true,
+    "type": "DATA_QUALITY_WINDOW_AUDIT",
+    "strategy_experiment_executed": false,
+    "oos_evaluated": false,
+    "artifact_path": "research-data/reports/2026-11-14/data_quality_audit_20261113T2245Z_v112.json"
+  },
+  "final_status": "RESEARCH_EXECUTED",
+  "status_note": "Research executed means the rolling data-quality audit and archive append completed with reproducible artifacts. No strategy experiment, untouched OOS evaluation or taxonomy refit ran; strategy research remains blocked.",
+  "context_artifact_readback": [
+    {
+      "path": "research-data/registry/context_strategy_registry_20261113T2245Z_v112.json",
+      "bytes": 14152,
+      "sha256": "762b837384fb7d3740fc50c680b507b8a00d1dfc757ac9a0c16ea372afd5d0be",
+      "git_blob_sha": "726d621c18f0473c6d1d3ef643f34f3fdb42939e"
+    },
+    {
+      "path": "research-data/reports/2026-11-14/current_market_snapshot_20261113T2245Z_v112.json",
+      "bytes": 10891,
+      "sha256": "c02225c4bd22611279b9aa543205a3610f10f8735c92569b8d45e64782c8aa86",
+      "git_blob_sha": "e535d639c56e76b66e84ce89c9c5eb2338d89eea"
+    },
+    {
+      "path": "research-data/reports/2026-11-14/data_quality_audit_20261113T2245Z_v112.json",
+      "bytes": 11267,
+      "sha256": "228c6035601a0b46c50c77a5386840cd5d25ec24530dfe35e84d66b08329c98b",
+      "git_blob_sha": "1aab13eba59cd0cbb197ffba006eb80ad0999fdc"
+    },
+    {
+      "path": "research-data/reports/2026-11-14/archive_update_manifest_20261113T2245Z_v112.json",
+      "bytes": 3518,
+      "sha256": "b1401b0ae8f9bbbfd9fcd9f876950b8373cd56a79b7640adb2c936a5c20a6a30",
+      "git_blob_sha": "a2ed75042d241651034f8d3439c8a34bec508d6f"
+    },
+    {
+      "path": "research-data/reports/2026-11-14/context_strategy_report_20261113T2245Z_v112.md",
+      "bytes": 8773,
+      "sha256": "bf230e4d1c7c35b999f0608ffbf9de88f6816ba1c89f09fbe3b7c18b5a8df396",
+      "git_blob_sha": "a68756949ee20aa443dd80b411ddf475e305118c"
+    },
+    {
+      "path": "research-data/registry/research_queue_20261113T2245Z_v112.json",
+      "bytes": 8595,
+      "sha256": "a986700abacf69f25560f19e58e8f134fa9e414908908bc3c26e684f31e0e025",
+      "git_blob_sha": "c3e452c2230be40b7f7c2f963a94426144e3c173"
+    },
+    {
+      "path": "research/context-strategy/runs/20261113T2245Z_v112.json",
+      "bytes": 3631,
+      "sha256": "e0ef2f50ab479b6a04660880d3af297b875416388bacf4b78d5dd5f71f7525ad",
+      "git_blob_sha": "91be9d6dfc3bacf1ef5315ac8e1399eecf549f83"
+    }
+  ],
+  "artifact_manifest_readback": {
+    "path": "research/context-strategy/runs/20261113T2245Z_v112_artifact_manifest.json",
+    "readback_verified": true,
+    "verification_note": "The final artifact manifest was reopened after its final hash-index update; exact-content SHA-256 and Git blob SHA checks passed."
+  }
+}

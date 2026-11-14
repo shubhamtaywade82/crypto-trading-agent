@@ -1,0 +1,150 @@
+{
+  "schema_version": "1.0.0",
+  "run_id": "context-strategy-2026-11-10T1002Z-auto11",
+  "as_of_utc": "2026-11-10T10:02:35.002Z",
+  "overall_status": "RESEARCH_BLOCKED",
+  "monitoring_and_archive_maintenance": "COMPLETED",
+  "experiment": {
+    "status": "NOT_RUN",
+    "blockers": [
+      "Node v22.16.0/npm10.9.2 below required Node>=24/npm>=11",
+      "No local repository checkout or importable Binance SDK",
+      "Direct fapi.binance.com DNS resolution failed",
+      "5m/15m base history absent",
+      "4h raw/canonical provenance discrepancy",
+      "Historical fee/spread/slippage/funding inputs incomplete"
+    ]
+  },
+  "preflight": {
+    "shell_compute": {
+      "status": "PASS",
+      "os": "Debian 13 x86_64",
+      "kernel": "Linux 6.18.57",
+      "node": "v22.16.0",
+      "npm": "10.9.2",
+      "python": "3.13.5",
+      "cpu_cores": 5,
+      "available_ram_bytes": 4934948864,
+      "free_disk_gb": 30
+    },
+    "repository_code": {
+      "status": "DEGRADED",
+      "main_commit": "02804ef68c683e1940023ec19fc43a9ff2c51aa2",
+      "local_checkout": false,
+      "package_engine_floor": "Node>=24, npm>=11",
+      "sdk_packages_importable": false
+    },
+    "network_binance": {
+      "status": "DEGRADED",
+      "direct_rest": "DNS failure; HTTP 000 for /fapi/v1/time",
+      "connector_data": "fresh but HTTP status/headers unavailable",
+      "exchange_info_server_time_utc": "2026-11-10T01:01:01.897Z",
+      "exchange_info_age_seconds": 32493.105
+    },
+    "raw_archive": {
+      "status": "DEGRADED",
+      "five_minute_incremental_rows": 1012,
+      "fifteen_minute_incremental_rows": 340,
+      "one_hour_rows": 215484,
+      "four_hour_raw_rows": 53960,
+      "four_hour_aligned_rows": 53816,
+      "four_hour_canonical_rows": 53844
+    },
+    "data_quality": {
+      "status": "DEGRADED",
+      "current_window_rows": 1920,
+      "completed_rows": 1904,
+      "forming_excluded": 16,
+      "duplicates": 0,
+      "missing": 0,
+      "off_grid": 0,
+      "ohlc_failures": 0,
+      "non_positive_volume": 0,
+      "non_finite": 0,
+      "non_monotonic": 0,
+      "close_time_failures": 0
+    },
+    "backtest": {
+      "status": "BLOCKED",
+      "entrypoint_exists_remote": true,
+      "entrypoint_executed": false,
+      "fixture_smoke_test": "NOT_RUN",
+      "oos_evaluated": false
+    },
+    "storage": {
+      "status": "PASS",
+      "local_free_disk_gb": 30,
+      "remote_github_branch_writable": true,
+      "artifact_readback": "VERIFIED"
+    }
+  },
+  "archive_updates": {
+    "rows_appended": {
+      "5m": 20,
+      "15m": 8,
+      "1h": 4,
+      "4h": 0,
+      "total": 32
+    },
+    "highwaters_utc": {
+      "5m": "2026-11-10T09:55:00.000Z",
+      "15m": "2026-11-10T09:45:00.000Z",
+      "1h": "2026-11-10T09:00:00.000Z",
+      "4h": "2026-11-10T04:00:00.000Z"
+    },
+    "deltas": [
+      {
+        "path": "research-data/binance-usdm/delta/binance_usdm_delta_20261110T0956Z_5m15m_completed.jsonl",
+        "sha256": "eb14e7e50fd873eff6a6393097f1f487b159338bc1463470ce484f616977c103",
+        "rows": 20
+      },
+      {
+        "path": "research-data/binance-usdm/delta/binance_usdm_delta_20261110T1001Z_5m15m1h_completed.jsonl",
+        "sha256": "15bcb9b33199cd60a4d9121693d791ddc9f97a329d1ab9e088082288fc41cf1d",
+        "rows": 12
+      }
+    ],
+    "all_delta_manifest_readbacks_verified": true
+  },
+  "context_taxonomy": {
+    "source": "v56",
+    "status": "CARRIED_FORWARD_NOT_RECOMPUTED",
+    "split": "70/15/15",
+    "thresholds": "training-only q33/q67",
+    "frequency_duration_transitions": "NOT_RECOMPUTED"
+  },
+  "registry": {
+    "path": "research-data/binance-usdm/conditional-strategy-registry-snapshot-v97.json",
+    "counts": {
+      "oos_validated": 0,
+      "oos_promising": 1,
+      "insufficient_evidence_cells": 36,
+      "rejected": 0,
+      "hypothesis_families": 7
+    },
+    "no_status_change": true
+  },
+  "current_snapshot": {
+    "path": "research-data/binance-usdm/current_market_snapshot_20261110T100235Z.json",
+    "sha256": "b01e06376008cf2d1aa180632055416240846a77925ae6598125f33fef870d36",
+    "contexts": {
+      "BTCUSDT": "15m/1h/4h bearish; 5m mixed",
+      "ETHUSDT": "bearish all timeframes",
+      "SOLUSDT": "15m/1h/4h bearish; 5m mixed",
+      "XRPUSDT": "15m/1h/4h bearish; 5m mixed"
+    }
+  },
+  "decisions": {
+    "SOLUSDT": "NO_TRADE",
+    "ETHUSDT": "NO_TRADE",
+    "XRPUSDT": "NO_TRADE",
+    "reason": "No OOS_VALIDATED entries; the one OOS_PROMISING SOL BULL_LOW Donchian entry has only 12 OOS trades and is not actionable."
+  },
+  "next_actions": [
+    "Provision Node24/npm11 and clone exact main commit.",
+    "Backfill multi-year 5m/15m on an egress-enabled runner.",
+    "Reconcile 4h raw/canonical row counts and freshness.",
+    "Archive historical funding and calibrate fees/spread/slippage/fills.",
+    "Run deterministic smoke test, then pre-registered chronological experiment with untouched OOS."
+  ]
+}

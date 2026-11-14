@@ -1,0 +1,146 @@
+{
+  "schemaVersion": "1.0.0",
+  "runId": "context-strategy-20261114T053039Z-auto11-run16",
+  "asOfUtc": "2026-11-14T05:30:39.002Z",
+  "environment": {
+    "workspace": "managed container + GitHub/Binance connectors",
+    "cwd": "/",
+    "os": "Linux 6.18.57 x86_64",
+    "node": "v22.16.0",
+    "npm": "10.9.2",
+    "python": "3.13.5",
+    "git": "2.47.3",
+    "cpuCount": 3,
+    "memoryTotalGiB": 5.8,
+    "memoryAvailableGiB": 4.7,
+    "diskAvailableGiB": 30,
+    "localRepositoryCheckout": false,
+    "projectDirectoryFound": false,
+    "binanceSdkPackages": {
+      "@binance/connector": "NOT_INSTALLED",
+      "binance-api-node": "NOT_INSTALLED",
+      "@nemesis-oss/binance-sdk": "NOT_INSTALLED"
+    }
+  },
+  "checks": [
+    {
+      "capability": "shell/compute",
+      "status": "PASS",
+      "evidence": "Shell executed; Linux 6.18.57 x86_64; Node 22.16.0; npm 10.9.2; Python 3.13.5; Git 2.47.3; 3 CPUs; 5.8 GiB RAM (4.7 GiB available); 30 GiB free disk.",
+      "impact": "Bounded data validation and GitHub connector operations possible; project CLI cannot run at required engine version.",
+      "nextAction": "Provision Node 24/npm 11 in a persistent workspace."
+    },
+    {
+      "capability": "repo/code",
+      "status": "DEGRADED",
+      "evidence": "GitHub repo shubhamtaywade82/crypto-trading-agent accessible; main HEAD 7b4be7c90777d865e9f82de86159070098a54933; scripts/backtest.ts, scripts/research-run.ts and scripts/conditional-edge.ts fetched; no local checkout under /mnt/data, /workspace, /workspaces or /root.",
+      "impact": "Code can be inspected remotely but not executed or smoke-tested locally.",
+      "nextAction": "Clone exact commit into a persistent workspace and install pinned dependencies under Node 24/npm 11."
+    },
+    {
+      "capability": "network/Binance endpoints",
+      "status": "DEGRADED",
+      "evidence": "Direct curl to fapi.binance.com and data.binance.vision failed DNS resolution (HTTP 000). Binance connector returned klines, premiumIndex, ticker24hr, openInterest, funding history, OI history, taker flow, global long/short ratio and 20-level depth. Connector does not expose HTTP status/headers. exchangeInfo embedded serverTime 2026-11-13T06:02:01.708Z, 23.477 hours older than mark time 2026-11-14T05:30:39.002Z; /fapi/v1/time unavailable.",
+      "impact": "Fresh market data usable for monitoring, but contract metadata freshness and execution validation are blocked.",
+      "nextAction": "Restore direct DNS/HTTPS and require fresh /fapi/v1/time plus /fapi/v1/exchangeInfo before execution validation."
+    },
+    {
+      "capability": "raw historical archive",
+      "status": "DEGRADED",
+      "evidence": "Persistent GitHub archive branch research/raw-ohlcv-archive-20261108T1026Z accessible. 32 new completed 5m/15m rows appended; page-0026 and page-0027 independently verified (8 files and 12,000 rows each). Archive manifest v122 and four interval indexes read back.",
+      "impact": "Recent incremental slice is reliable; full archive still has page-0028 alignment, 1h bridge and 4h provenance defects.",
+      "nextAction": "Build aligned multi-symbol panel and reconcile 1h/4h historical lineage before strategy inference."
+    },
+    {
+      "capability": "data quality/coverage",
+      "status": "DEGRADED",
+      "evidence": "Recent samples: 5m/15m/1h 199 completed of 200 fetched per symbol; 4h 249 of 250. All recent samples had zero gaps, duplicates, off-grid timestamps, OHLC failures, non-positive volume, non-finite values and closeTime failures. Page-0026 and page-0027: 8/8 SHA and Git blob matches each; page-0027 has 3 zero-volume XRP 15m rows excluded. Page-0028 source replay exact with corrected v2 manifests but remains non-canonical. 1h has 28 missing hourly opens per symbol and 8-row discrepancy. 4h raw/aligned/canonical counts 53,960/53,816/53,844 and 13 page-manifest SHA mismatches.",
+      "impact": "Current context classification is usable; historical strategy/OOS tests remain blocked.",
+      "nextAction": "Resolve page-0028 aligned panel and 1h/4h provenance; preserve zero-volume exclusions."
+    },
+    {
+      "capability": "backtest harness/smoke test",
+      "status": "BLOCKED",
+      "evidence": "Harness source exists remotely; package engines require Node >=24 and npm >=11. Actual runtime is Node 22.16.0/npm 10.9.2; SDK packages absent; no local checkout; deterministic fixture smoke test not run.",
+      "impact": "No backtest or strategy experiment can be claimed; no untouched OOS evaluation.",
+      "nextAction": "Provision Node24/npm11 workspace, install dependencies, run deterministic fixture twice and verify no-lookahead invariance."
+    },
+    {
+      "capability": "disk/storage",
+      "status": "PASS",
+      "evidence": "Local overlay has 30 GiB available. GitHub branch writes succeeded for delta, manifests, results, snapshot and indexes.",
+      "impact": "Persistent GitHub storage is available; local repository persistence is not.",
+      "nextAction": "Continue using verified GitHub artifacts until a persistent local workspace is provisioned."
+    },
+    {
+      "capability": "artifact readback",
+      "status": "PASS",
+      "evidence": "New delta, delta manifest, incremental DQ result, page26/page27 audits, current snapshot, archive manifest v122 and all four archive indexes were fetched after writes and matched expected content.",
+      "impact": "This run's data-quality artifacts are persisted and verified on GitHub.",
+      "nextAction": "Retain artifact paths and hashes in run manifest and queue."
+    }
+  ],
+  "endpointProbes": [
+    {
+      "endpoint": "GET /fapi/v1/time",
+      "status": "UNAVAILABLE_DIRECT_NETWORK",
+      "evidence": "curl DNS resolution failed; HTTP 000."
+    },
+    {
+      "endpoint": "GET /fapi/v1/exchangeInfo",
+      "status": "DEGRADED_STALE",
+      "evidence": "Binance connector response serverTime 2026-11-13T06:02:01.708Z; all four symbols last observed TRADING, PERPETUAL, USDT-quoted; metadata is stale."
+    },
+    {
+      "endpoint": "GET /fapi/v1/klines",
+      "status": "PASS_VIA_CONNECTOR",
+      "evidence": "200 rows requested for 5m/15m/1h and 250 for 4h for BTCUSDT, ETHUSDT, SOLUSDT, XRPUSDT; latest completed opens 05:25Z, 05:15Z, 04:00Z, 00:00Z respectively; forming candles excluded. Incremental 05:00Z onward request fetched 40 rows, retained 32 completed, excluded 8 forming."
+    },
+    {
+      "endpoint": "GET /fapi/v1/premiumIndex",
+      "status": "PASS_VIA_CONNECTOR",
+      "evidence": "Mark/index/current indicated funding returned for all four symbols at 2026-11-14T05:30:36Z–05:30:39Z; next funding 08:00Z."
+    },
+    {
+      "endpoint": "GET /fapi/v1/ticker/24hr",
+      "status": "PASS_VIA_CONNECTOR",
+      "evidence": "24h last price/change/quote volume returned for all four symbols at 05:30:31Z–05:30:36Z."
+    },
+    {
+      "endpoint": "GET /fapi/v1/openInterest",
+      "status": "PASS_VIA_CONNECTOR",
+      "evidence": "Current open interest returned for all four symbols at 05:30:29Z–05:30:36Z."
+    },
+    {
+      "endpoint": "GET /fapi/v1/fundingRate",
+      "status": "PASS_VIA_CONNECTOR",
+      "evidence": "Three settled funding observations returned per symbol; latest settlement 2026-11-14T00:00Z; next funding 08:00Z; 8-hour interval."
+    },
+    {
+      "endpoint": "GET /futures/data/openInterestHist",
+      "status": "PASS_VIA_CONNECTOR",
+      "evidence": "25 hourly observations per symbol from 2026-11-13T05:00Z to 2026-11-14T05:00Z."
+    },
+    {
+      "endpoint": "GET /futures/data/takerlongshortRatio",
+      "status": "PASS_VIA_CONNECTOR",
+      "evidence": "15m taker buy/sell volume and 1h global long/short ratios returned; latest sample 05:00Z for most symbols, XRP taker flow 05:15Z."
+    },
+    {
+      "endpoint": "GET /fapi/v1/depth",
+      "status": "PASS_VIA_CONNECTOR",
+      "evidence": "20 bid/ask levels returned for all four symbols; RPI orders excluded; no exchange timestamp field exposed."
+    },
+    {
+      "endpoint": "Top-trader accounts/positions",
+      "status": "UNAVAILABLE",
+      "evidence": "No matching USD-M connector functions exposed in this run."
+    }
+  ],
+  "outcome": {
+    "status": "RESEARCH_EXECUTED",
+    "scope": "incremental archive data-quality and page-26/page-27 integrity verification only",
+    "strategyExperiment": "BLOCKED",
+    "oosEvaluated": false
+  }
+}

@@ -1,0 +1,107 @@
+{
+  "schema_version": "1.0.0",
+  "version": "v106",
+  "run_id": "context-strategy-20261113T022803Z-auto11-v106",
+  "as_of_utc": "2026-11-13T02:28:03.722Z",
+  "repository": "shubhamtaywade82/crypto-trading-agent",
+  "branch": "research/raw-ohlcv-archive-20261108T1026Z",
+  "parent_queue_ref": "research-data/binance-usdm/research-queue-v104.json",
+  "overall_status": "RESEARCH_BLOCKED",
+  "daily_cycle": {
+    "local_calendar_date": "2026-11-13",
+    "first_run_already_attempted_utc": "2026-11-12T23:34:00.605Z",
+    "status": "BLOCKED",
+    "experiment_executed": false,
+    "oos_evaluated": false,
+    "blocker": "Trusted canonical history remains incomplete/degraded; local runner is absent and Node/npm are below the package engine; direct Binance REST DNS fails; code defects and execution-cost calibration remain unresolved.",
+    "next_action": "Reconcile archive indexes/provenance and install Node >=24/npm >=11; run deterministic fixture tests before freezing a strategy×context×symbol experiment."
+  },
+  "weekly_review": {
+    "status": "OVERDUE_BLOCKED",
+    "due_utc": "2026-11-11T00:00:00Z",
+    "blocker": "Historical archive integrity and compatible runner remain unresolved.",
+    "next_action": "After RQ-003/RQ-005, refit v56 thresholds on training only and compute occupancy, duration, transition matrix, TVD and stability."
+  },
+  "items": [
+    {
+      "id": "RQ-002",
+      "priority": "P0",
+      "title": "Fresh Binance server time and exchange metadata",
+      "status": "BLOCKED",
+      "evidence": "Direct /fapi/v1/time, /exchangeInfo, /klines, /premiumIndex, /openInterest and /ticker/24hr probes returned HTTP 000/curl exit 6 DNS failure. Connector exchangeInfo serverTime 2026-11-13T01:01:01.661Z was 5,222s old at this run; wrapper hides HTTP status/headers.",
+      "next_action": "Restore direct DNS/HTTPS; retrieve fresh /fapi/v1/time and uncached /fapi/v1/exchangeInfo; require <=5s drift and verify all four perpetual contracts."
+    },
+    {
+      "id": "RQ-005",
+      "priority": "P0",
+      "title": "Provision compatible local repository runner",
+      "status": "BLOCKED",
+      "evidence": "No local crypto-trading-agent checkout; Node 22.16.0/npm 10.9.2; NVM only contains v22.16.0; package.json requires Node >=24/npm >=11; @nemesis-oss/binance-sdk, binance, @binance/connector and binance-api-node are not installed. Remote branch HEAD 05b7dfe60dd8991696674bbe5b9113d92cb68d07.",
+      "next_action": "Provision Node >=24/npm >=11; clone exact branch and verify commit; install lockfile dependencies."
+    },
+    {
+      "id": "RQ-003",
+      "priority": "P0",
+      "title": "Backfill 5m/15m and reconcile 1h/4h archive",
+      "status": "PARTIALLY_COMPLETED_BLOCKED",
+      "evidence": "232 completed raw rows were written to GitHub and readback/SHA-256 verified. Canonical indexes remain unchanged. Base 5m/15m coverage is partial; 1h has 28 missing opens per symbol and 8-row discrepancy; 4h raw/aligned/canonical counts differ and 13 page-manifest SHA mismatches remain.",
+      "next_action": "Reconcile row-key/count/provenance defects; integrate the new delta only after index validation; then backfill common multi-year 5m/15m history."
+    },
+    {
+      "id": "RQ-012",
+      "priority": "P0",
+      "title": "Fix candle contract, positive-volume validation, 5m replay and purge/embargo",
+      "status": "BLOCKED",
+      "evidence": "Remote scripts/backtest.ts still defines TIMEFRAMES=['15m','1h','4h'] and maps candles without closeTime; archiveKlines.ts checks volume<0 and accepts zero; conditional-edge defaults minN=30 and 90% CI and exposes no embargoDays CLI.",
+      "next_action": "Preserve closeTime; reject volume<=0; add 5m replay; wire purge/embargo and 95% CI/sample gates; add deterministic zero-volume, closeTime, gap, lookahead and embargo fixtures."
+    },
+    {
+      "id": "RQ-029",
+      "priority": "P0",
+      "title": "Enforce BTC reference-only universe",
+      "status": "BLOCKED",
+      "evidence": "Remote src/config.ts still defaults SYMBOLS to BTCUSDT,ETHUSDT,SOLUSDT,XRPUSDT.",
+      "next_action": "Default tradables to SOLUSDT/ETHUSDT/XRPUSDT; keep BTC as context only; add tests preventing BTC trade labels/outcomes/sizing/orders."
+    },
+    {
+      "id": "RQ-004",
+      "priority": "P1",
+      "title": "Calibrate execution costs",
+      "status": "BLOCKED",
+      "evidence": "Only point-in-time best bid/ask spread snapshots are available. Account fee tier, synchronized historical book/depth, market impact, slippage, latency and fill model are unavailable.",
+      "next_action": "Capture account fee tier and synchronized depth/trade history; estimate order-size and execution-style cost curves by symbol."
+    },
+    {
+      "id": "RQ-014",
+      "priority": "P1",
+      "title": "Backfill historical funding cashflows",
+      "status": "BLOCKED",
+      "evidence": "Only eight recent settled funding records per symbol were retrieved; full holding-period settlement history is not archived.",
+      "next_action": "Backfill full funding settlement history and align payments to simulated holding intervals."
+    },
+    {
+      "id": "RQ-019",
+      "priority": "P1",
+      "title": "Integrate new completed bars into canonical indexes",
+      "status": "BLOCKED_INDEX_NOT_ADVANCED",
+      "evidence": "232 raw bars and manifest are persisted/readback verified, but interval archive-index files were not updated and canonical highwaters were not advanced due legacy index aliases and unresolved provenance/count defects.",
+      "next_action": "Reconcile index schema and canonical writer, update indexes atomically, then reopen and verify SHA-256/highwaters."
+    },
+    {
+      "id": "RQ-021",
+      "priority": "P0_AFTER_PREREQUISITES",
+      "title": "Run pre-registered strategy×context×symbol experiment",
+      "status": "BLOCKED",
+      "evidence": "No trusted canonical dataset, compatible runner, deterministic smoke test, calibrated costs/funding or purge/embargo validation.",
+      "next_action": "After RQ-002/003/005/012/029/004/014, freeze one candidate and run chronological train/validation/untouched OOS with block bootstrap and multiple-testing correction."
+    },
+    {
+      "id": "RQ-028",
+      "priority": "P2",
+      "title": "Weekly context taxonomy stability review",
+      "status": "OVERDUE_BLOCKED",
+      "evidence": "Fitted v56 thresholds and transition matrix unavailable; historical archive remains degraded.",
+      "next_action": "After RQ-003/RQ-005, refit thresholds on training only and compute occupancy, duration, transitions, TVD and stability."
+    }
+  ]
+}

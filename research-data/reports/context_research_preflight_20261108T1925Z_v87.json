@@ -1,0 +1,124 @@
+{
+  "schema_version": "1.0.0",
+  "run_id": "context-strategy-2026-11-08T1925Z-v87",
+  "as_of_utc": "2026-11-08T19:28:57.035Z",
+  "classification": "RESEARCH_BLOCKED",
+  "environment": {
+    "cwd": "/",
+    "os": "Debian GNU/Linux 13; Linux 6.18.57 x86_64",
+    "node": "v22.16.0",
+    "npm": "10.9.2",
+    "python": "3.13.5",
+    "cpu_cores": 5,
+    "mem_total_kb": 6090668,
+    "mem_available_kb": 4891664,
+    "disk_free_gib": 30,
+    "repo_checkout_present": false,
+    "package_json_present": false,
+    "node_modules_present": false,
+    "binance_sdk_installed": false
+  },
+  "repository": {
+    "name": "shubhamtaywade82/crypto-trading-agent",
+    "main_branch": "main",
+    "main_commit": "22b513a671e251415aa34e18946c55d1ae5f8113",
+    "archive_branch": "research/raw-ohlcv-archive-20261108T1026Z",
+    "archive_branch_head": "623db0de3961e9b5d724d6312c7968eddad1da50",
+    "remote_backtest_entrypoint": "scripts/backtest.ts",
+    "remote_backtest_script_present": true,
+    "local_execution_possible": false,
+    "package_engines": {
+      "node": ">=24",
+      "npm": ">=11"
+    }
+  },
+  "checks": [
+    {
+      "capability": "shell_compute",
+      "status": "PASS",
+      "evidence": "Debian 13; Python 3.13.5; Node 22.16.0/npm 10.9.2; 5 CPU; MemAvailable 4,891,664 kB; 30 GiB free.",
+      "impact": "Bounded inspection and archive verification possible; local project execution not compatible.",
+      "next_action": "Provision Node 24/npm 11."
+    },
+    {
+      "capability": "repository_code",
+      "status": "BLOCKED",
+      "evidence": "No local checkout/package.json/node_modules. Current main package.json requires Node >=24/npm >=11; remote scripts/backtest.ts exists but was not invoked.",
+      "impact": "No local research CLI, test suite or deterministic smoke test.",
+      "next_action": "Clone current main commit 22b513a671e251415aa34e18946c55d1ae5f8113 into a Node 24/npm 11 workspace."
+    },
+    {
+      "capability": "network_binance",
+      "status": "DEGRADED",
+      "evidence": "Direct curl at 2026-11-08T19:28:34Z: fapi.binance.com /fapi/v1/time and /exchangeInfo HTTP 000 DNS failure; data.binance.vision DNS failure. Binance connector supplied fresh klines, mark, ticker, OI, funding history, depth and long/short data without HTTP status/headers.",
+      "impact": "Monitoring/archive refresh possible via connector; direct REST freshness/status and bulk archive download unavailable.",
+      "next_action": "Restore DNS and probe the six official REST endpoints with bounded timeouts."
+    },
+    {
+      "capability": "exchange_metadata",
+      "status": "BLOCKED",
+      "evidence": "Connector exchangeInfo.serverTime=2026-11-06T11:18:40.896Z; fresh mark timestamp=2026-11-08T19:26:31Z; drift=202216.139 seconds (56.17 hours).",
+      "impact": "Stale contract status cannot authorize execution.",
+      "next_action": "Obtain direct /fapi/v1/time and fresh /fapi/v1/exchangeInfo; require <=5 seconds drift."
+    },
+    {
+      "capability": "raw_historical_archive",
+      "status": "DEGRADED",
+      "evidence": "1h base 53,871 rows/symbol from 2020-09-14 through 2026-11-06 22:00 plus deltas to 2026-11-08 18:00; 4h canonical 13,461 rows/symbol through 2026-11-05 16:00 and raw increments through 2026-11-08 12:00; 5m/15m incremental-only; 1m absent.",
+      "impact": "1h broad but delta-chain merge/readback required; 4h provenance unresolved; intraday/barrier research lacks sufficient history.",
+      "next_action": "Reconcile 4h canonical provenance and backfill multi-year 5m/15m plus 1m."
+    },
+    {
+      "capability": "data_quality_coverage",
+      "status": "PASS",
+      "evidence": "68 new rows across 12 symbol/interval series (48 5m,16 15m,4 1h); 12 forming rows and 280 pre-highwater rows excluded; zero duplicates, missing intervals, OHLC failures, non-positive volume, non-finite, off-grid or non-monotonic rows.",
+      "impact": "This incremental delta is structurally clean; does not make lower-timeframe archive historically adequate.",
+      "next_action": "Continue full-archive and cross-symbol continuity validation."
+    },
+    {
+      "capability": "backtest_harness_smoke_test",
+      "status": "BLOCKED",
+      "evidence": "Remote scripts/backtest.ts exists; local repo/runtime/dependencies absent; Node/npm below required floor; deterministic fixture smoke test NOT_RUN.",
+      "impact": "No experiment or OOS evaluation can be claimed.",
+      "next_action": "Provision compatible checkout and run fixture before EXP-001."
+    },
+    {
+      "capability": "disk_storage",
+      "status": "PASS",
+      "evidence": "30 GiB free in managed container; GitHub archive branch accepted delta, manifest and index writes.",
+      "impact": "Remote GitHub persistence available; local raw archive not mounted.",
+      "next_action": "Continue atomic versioned GitHub writes and readback."
+    },
+    {
+      "capability": "artifact_readback",
+      "status": "PASS",
+      "evidence": "Corrected delta SHA-256 f3046c2731bde784bbbc07752681ac452a99634574ab84b0dcfe8961b3221803 (26,549 bytes/68 rows) and manifest SHA-256 608d5f125366f4286d0f11766dd17ce9d2da84df8275081d021743d0b2648774 verified by fetch-back; 5m/15m/1h indexes fetched back with matching hashes/highwaters and readback=true.",
+      "impact": "Incremental archive artifacts durable and readback verified.",
+      "next_action": "Read back the final run manifest and readback-verification artifact."
+    }
+  ],
+  "direct_rest_probes": {
+    "retrieved_at_utc": "2026-11-08T19:28:34Z",
+    "endpoints": [
+      "/fapi/v1/time",
+      "/fapi/v1/exchangeInfo",
+      "/fapi/v1/klines",
+      "/fapi/v1/premiumIndex",
+      "/fapi/v1/openInterest",
+      "/fapi/v1/ticker/24hr"
+    ],
+    "outcome": "Direct DNS resolution failure; curl HTTP 000. data.binance.vision DNS also failed."
+  },
+  "connector_exchange_info": {
+    "serverTime": 1793963920896,
+    "serverTimeUtc": "2026-11-06T11:18:40.896Z",
+    "freshMarkTimeUtc": "2026-11-08T19:26:31Z",
+    "driftSeconds": 202216.139,
+    "executionStatus": "BLOCKED_STALE_METADATA"
+  },
+  "experiment": {
+    "executed": false,
+    "oos_evaluated": false,
+    "reason": "No compatible local repository/runtime, no smoke test, incomplete multi-year 5m/15m/1m data, unresolved 4h provenance, and uncalibrated execution costs."
+  }
+}

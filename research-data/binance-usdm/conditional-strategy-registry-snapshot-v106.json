@@ -1,0 +1,170 @@
+{
+  "schema_version": "1.0.0",
+  "version": "v106",
+  "run_id": "context-strategy-20261113T022803Z-auto11-v106",
+  "as_of_utc": "2026-11-13T02:28:03.722Z",
+  "parent_registry": "research-data/binance-usdm/conditional-strategy-registry-snapshot-v104.json",
+  "repository": "shubhamtaywade82/crypto-trading-agent",
+  "branch": "research/raw-ohlcv-archive-20261108T1026Z",
+  "universe": {
+    "tradable": [
+      "SOLUSDT",
+      "ETHUSDT",
+      "XRPUSDT"
+    ],
+    "reference_only": [
+      "BTCUSDT"
+    ]
+  },
+  "evidence_policy": {
+    "provisional_oos_min_trades_per_symbol_context": 100,
+    "stronger_evidence_trades": 200,
+    "require_positive_net_expectancy_after_costs": true,
+    "block_bootstrap": true,
+    "multiple_testing_correction": "Holm",
+    "purge_embargo": true
+  },
+  "counts": {
+    "oos_validated": 0,
+    "oos_promising": 1,
+    "insufficient_evidence_cells": 36,
+    "rejected": 0,
+    "hypothesis_families": 6
+  },
+  "entries": [
+    {
+      "key": "SOLUSDT|BULL_LOW|DONCHIAN20_4H_v1",
+      "symbol": "SOLUSDT",
+      "context": "BULL_LOW",
+      "strategy": "4h Donchian20 breakout",
+      "version": "v1",
+      "status": "OOS_PROMISING",
+      "last_evaluation_utc": "2026-11-05T09:43:57.448Z",
+      "oos_trades": 12,
+      "win_rate_pct": 66.7,
+      "target_before_stop_pct": 41.7,
+      "mean_net_R": 0.606,
+      "profit_factor": 2.72,
+      "max_drawdown_R": 1.3,
+      "block_bootstrap_ci95_mean_R": [
+        0.086,
+        1.199
+      ],
+      "promotion_blocker": "12 OOS trades <100 per symbol/context; costs and robustness incomplete; trade-level artifacts/spec unavailable for independent recomputation.",
+      "actionable": false,
+      "recomputed_this_run": false
+    },
+    {
+      "key": "ALL_SYMBOLS|MULTI_CONTEXT|DONCHIAN20_WF_V2",
+      "symbol_scope": [
+        "SOLUSDT",
+        "ETHUSDT",
+        "XRPUSDT"
+      ],
+      "context": "36 strategy-context cells",
+      "strategy": "Context-aligned Donchian20 walk-forward v2",
+      "version": "v2",
+      "status": "INSUFFICIENT_EVIDENCE",
+      "cells": 36,
+      "reason": "All cells below 100 OOS trades; nominal block-bootstrap CI includes zero; Holm-adjusted p=1.0; 15bp round-trip proxy is not a calibrated execution model.",
+      "actionable": false,
+      "recomputed_this_run": false
+    },
+    {
+      "key": "trend_pullback",
+      "symbol_scope": [
+        "SOLUSDT",
+        "ETHUSDT",
+        "XRPUSDT"
+      ],
+      "context": "ALL",
+      "status": "HYPOTHESIS",
+      "tested": false
+    },
+    {
+      "key": "breakout_retest_volatility_contraction",
+      "symbol_scope": [
+        "SOLUSDT",
+        "ETHUSDT",
+        "XRPUSDT"
+      ],
+      "context": "ALL",
+      "status": "HYPOTHESIS",
+      "tested": false
+    },
+    {
+      "key": "range_mean_reversion_failed_breakout_fade",
+      "symbol_scope": [
+        "SOLUSDT",
+        "ETHUSDT",
+        "XRPUSDT"
+      ],
+      "context": "ALL",
+      "status": "HYPOTHESIS",
+      "tested": false
+    },
+    {
+      "key": "volatility_expansion_momentum",
+      "symbol_scope": [
+        "SOLUSDT",
+        "ETHUSDT",
+        "XRPUSDT"
+      ],
+      "context": "ALL",
+      "status": "HYPOTHESIS",
+      "tested": false
+    },
+    {
+      "key": "btc_led_confirmation_relative_strength",
+      "symbol_scope": [
+        "SOLUSDT",
+        "ETHUSDT",
+        "XRPUSDT"
+      ],
+      "context": "ALL",
+      "status": "HYPOTHESIS",
+      "tested": false
+    },
+    {
+      "key": "funding_oi_filters",
+      "symbol_scope": [
+        "SOLUSDT",
+        "ETHUSDT",
+        "XRPUSDT"
+      ],
+      "context": "ALL",
+      "status": "HYPOTHESIS",
+      "tested": false
+    }
+  ],
+  "context_taxonomy": {
+    "source": "v56",
+    "status": "CARRIED_FORWARD_NOT_REFIT",
+    "definition": {
+      "trend_strength": "(EMA20-EMA50)/Wilder ATR14",
+      "transition": "training-only q67 threshold",
+      "volatility": "ATR14/close training-only q33/q67",
+      "warmup_bars": 500,
+      "split": "70% train / 15% validation / 15% untouched test"
+    },
+    "fitted_threshold_values_available": false,
+    "transition_matrix_available": false
+  },
+  "status_change_this_run": "NONE. No strategy evidence, OOS status or context taxonomy change.",
+  "strategy_experiment_status": "NOT_RUN: current monitoring and raw delta append only; strategy backtest blocked by archive integrity, runner, code and cost prerequisites.",
+  "oos_evaluation_status": "NOT_RUN",
+  "new_experiments_this_run": 0,
+  "new_oos_evaluations_this_run": 0,
+  "oos_validated_count": 0,
+  "registry_persistence": "Persisted on GitHub research branch and readback-verified in this run.",
+  "current_market_snapshot_ref": "research-data/binance-usdm/current-market-snapshot-v106.json",
+  "archive_manifest_ref": "research-data/binance-usdm/manifests/archive_manifest_20261113T0228Z_auto11_v106.json",
+  "archive_delta_ref": "research-data/binance-usdm/delta/binance_usdm_delta_20261113T022803Z_5m15m1h4h_completed.jsonl",
+  "archive_delta_sha256": "93fb878cbf2095212c18a686dd2f589fbc91615759fd0be44cd20420cd94b2bd",
+  "archive_delta_rows": 232,
+  "archive_delta_readback_verified": true,
+  "current_applicability": "None. No OOS_VALIDATED entry exists; SOLUSDT, ETHUSDT and XRPUSDT remain NO_TRADE.",
+  "artifact_readback_verified": true,
+  "archive_delta_manifest_sha256": "d14d6f2f48a4fd0ae69c148d84e3f9f9b126246aef2031f33dc6eaf0ac348d76",
+  "archive_delta_manifest_blob_sha": "cd709b81a3bf316ba9aafa6a74f27c2e4cdec661"
+}

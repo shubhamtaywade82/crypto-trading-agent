@@ -1,0 +1,351 @@
+{
+  "schema_version": "1.0.0",
+  "run_id": "context-strategy-20261110T123016Z-auto11",
+  "as_of_utc": "2026-11-10T12:33:36.266Z",
+  "exchange_server_time_utc": "2026-11-10T12:33:07.000Z",
+  "source": "Binance USDⓈ-M public market-data connector; endpoint-equivalent public REST data; direct REST from this runtime is DNS-blocked.",
+  "retrieval_times_utc": {
+    "mark_price": "2026-11-10T12:33:07Z",
+    "ticker_24h": "2026-11-10T12:33:20Z",
+    "open_interest": "2026-11-10T12:33:36Z",
+    "order_book": "2026-11-10T12:33:36Z",
+    "klines_and_technical_features": "2026-11-10T12:33:09Z",
+    "funding_history": "2026-11-10T12:25:11Z",
+    "oi_lsr_taker_buckets": "2026-11-10T12:25:11Z"
+  },
+  "source_endpoints": {
+    "server_time": "GET /fapi/v1/time (direct REST unavailable; exchange time inferred from premium-index response)",
+    "exchange_info": "GET /fapi/v1/exchangeInfo (connector response stale)",
+    "klines": "GET /fapi/v1/klines",
+    "premium_index": "GET /fapi/v1/premiumIndex",
+    "open_interest": "GET /fapi/v1/openInterest",
+    "ticker_24h": "GET /fapi/v1/ticker/24hr",
+    "funding_history": "GET /fapi/v1/fundingRate",
+    "depth": "GET /fapi/v1/depth",
+    "oi_statistics": "connector open-interest statistics; endpoint mapping not exposed",
+    "long_short_ratio": "connector long/short ratio; endpoint mapping not exposed",
+    "taker_volume": "connector taker buy/sell volume; endpoint mapping not exposed"
+  },
+  "contract_status": {
+    "status": "UNVERIFIED",
+    "reason": "exchangeInfo serverTime was 2026-11-10T01:01:01.895Z, 11h32m05s older than the 12:33:07Z market snapshot; not used for execution validation."
+  },
+  "funding_policy": {
+    "interval_hours": 8,
+    "next_funding_time_utc": "2026-11-10T16:00:00Z",
+    "extreme_threshold_abs": 0.0005,
+    "extreme_threshold_percent": 0.05,
+    "extreme_observed": false
+  },
+  "symbols": {
+    "BTCUSDT": {
+      "role": "REFERENCE_ONLY",
+      "last_price": 74148,
+      "mark_price": 74141.9,
+      "change_24h_pct": -0.978,
+      "high_24h": 75547.7,
+      "low_24h": 74079.1,
+      "open_interest": 100002.716,
+      "open_interest_23h_change_pct": 3.6113,
+      "open_interest_stats_window_utc": [
+        "2026-11-09T13:00:00Z",
+        "2026-11-10T12:00:00Z"
+      ],
+      "current_indicated_funding_rate": 0.00007929,
+      "last_settled_funding_rate": 0.0001,
+      "last_settled_funding_time_utc": "2026-11-10T08:00:00Z",
+      "next_funding_time_utc": "2026-11-10T16:00:00Z",
+      "long_short_ratio_1h": 2.9651,
+      "long_short_ratio_time_utc": "2026-11-10T12:00:00Z",
+      "taker_buy_share_last_1h": 0.55616,
+      "taker_bucket_time_utc": "2026-11-10T11:00:00Z",
+      "book": {
+        "best_bid": 74215.7,
+        "best_ask": 74215.8,
+        "spread_bps": 0.01347,
+        "top20_bid_qty": 10.621,
+        "top20_ask_qty": 3.807,
+        "top20_imbalance": 0.47228,
+        "as_of_utc": "2026-11-10T12:33:36Z"
+      },
+      "technical": {
+        "trend_15m_1h_4h": "BEARISH",
+        "short_5m_return20_pct": 0.01954,
+        "return20_pct": {
+          "5m": 0.01954,
+          "15m": -0.72737,
+          "1h": -1.4706,
+          "4h": -1.94335
+        },
+        "ema20_below_ema50": {
+          "5m": true,
+          "15m": true,
+          "1h": true,
+          "4h": true
+        },
+        "atr14_pct": {
+          "5m": 0.11856,
+          "15m": 0.28125,
+          "1h": 0.51443,
+          "4h": 1.21825
+        },
+        "volume20_vs_prior80": {
+          "5m": 0.6373,
+          "15m": 0.8611,
+          "1h": 0.897,
+          "4h": 0.6747
+        },
+        "latest_completed_open_utc": {
+          "5m": "2026-11-10T12:25:00Z",
+          "15m": "2026-11-10T12:15:00Z",
+          "1h": "2026-11-10T11:00:00Z",
+          "4h": "2026-11-10T08:00:00Z"
+        }
+      }
+    },
+    "ETHUSDT": {
+      "role": "TRADABLE",
+      "last_price": 2087.73,
+      "mark_price": 2087.02,
+      "change_24h_pct": -1.772,
+      "high_24h": 2151.25,
+      "low_24h": 2083.06,
+      "open_interest": 2278407.285,
+      "open_interest_23h_change_pct": 0.3164,
+      "open_interest_stats_window_utc": [
+        "2026-11-09T13:00:00Z",
+        "2026-11-10T12:00:00Z"
+      ],
+      "current_indicated_funding_rate": 0.00004398,
+      "last_settled_funding_rate": 0.00003035,
+      "last_settled_funding_time_utc": "2026-11-10T08:00:00Z",
+      "next_funding_time_utc": "2026-11-10T16:00:00Z",
+      "long_short_ratio_1h": 3.9751,
+      "long_short_ratio_time_utc": "2026-11-10T12:00:00Z",
+      "taker_buy_share_last_1h": 0.54243,
+      "taker_bucket_time_utc": "2026-11-10T11:00:00Z",
+      "book": {
+        "best_bid": 2089.79,
+        "best_ask": 2089.8,
+        "spread_bps": 0.04785,
+        "top20_bid_qty": 154.698,
+        "top20_ask_qty": 118.622,
+        "top20_imbalance": 0.13199,
+        "as_of_utc": "2026-11-10T12:33:36Z"
+      },
+      "technical": {
+        "trend_15m_1h_4h": "BEARISH",
+        "short_5m_return20_pct": 0.02631,
+        "return20_pct": {
+          "5m": 0.02631,
+          "15m": -1.42056,
+          "1h": -2.46665,
+          "4h": -6.70413
+        },
+        "ema20_below_ema50": {
+          "5m": true,
+          "15m": true,
+          "1h": true,
+          "4h": true
+        },
+        "atr14_pct": {
+          "5m": 0.16924,
+          "15m": 0.50089,
+          "1h": 0.67257,
+          "4h": 1.88256
+        },
+        "volume20_vs_prior80": {
+          "5m": 0.7164,
+          "15m": 1.5014,
+          "1h": 0.8957,
+          "4h": 0.7911
+        },
+        "latest_completed_open_utc": {
+          "5m": "2026-11-10T12:25:00Z",
+          "15m": "2026-11-10T12:15:00Z",
+          "1h": "2026-11-10T11:00:00Z",
+          "4h": "2026-11-10T08:00:00Z"
+        }
+      }
+    },
+    "SOLUSDT": {
+      "role": "TRADABLE",
+      "last_price": 84.62,
+      "mark_price": 84.61,
+      "change_24h_pct": -2.534,
+      "high_24h": 88.04,
+      "low_24h": 84.12,
+      "open_interest": 9835960.07,
+      "open_interest_23h_change_pct": 4.8895,
+      "open_interest_stats_window_utc": [
+        "2026-11-09T13:00:00Z",
+        "2026-11-10T12:00:00Z"
+      ],
+      "current_indicated_funding_rate": 0.0001,
+      "last_settled_funding_rate": 0.00008631,
+      "last_settled_funding_time_utc": "2026-11-10T08:00:00Z",
+      "next_funding_time_utc": "2026-11-10T16:00:00Z",
+      "long_short_ratio_1h": 3.6555,
+      "long_short_ratio_time_utc": "2026-11-10T12:00:00Z",
+      "taker_buy_share_last_1h": 0.47077,
+      "taker_bucket_time_utc": "2026-11-10T11:00:00Z",
+      "book": {
+        "best_bid": 84.68,
+        "best_ask": 84.69,
+        "spread_bps": 1.18085,
+        "top20_bid_qty": 59496.46,
+        "top20_ask_qty": 66788.46,
+        "top20_imbalance": -0.05774,
+        "as_of_utc": "2026-11-10T12:33:36Z"
+      },
+      "technical": {
+        "trend_15m_1h_4h": "BEARISH",
+        "short_5m_return20_pct": 0.10635,
+        "return20_pct": {
+          "5m": 0.10635,
+          "15m": -1.86494,
+          "1h": -3.66367,
+          "4h": -5.94312
+        },
+        "ema20_below_ema50": {
+          "5m": true,
+          "15m": true,
+          "1h": true,
+          "4h": true
+        },
+        "atr14_pct": {
+          "5m": 0.18886,
+          "15m": 0.53791,
+          "1h": 0.78709,
+          "4h": 2.0331
+        },
+        "volume20_vs_prior80": {
+          "5m": 0.7973,
+          "15m": 1.5592,
+          "1h": 1.0579,
+          "4h": 0.8137
+        },
+        "latest_completed_open_utc": {
+          "5m": "2026-11-10T12:25:00Z",
+          "15m": "2026-11-10T12:15:00Z",
+          "1h": "2026-11-10T11:00:00Z",
+          "4h": "2026-11-10T08:00:00Z"
+        }
+      }
+    },
+    "XRPUSDT": {
+      "role": "TRADABLE",
+      "last_price": 1.0795,
+      "mark_price": 1.0782,
+      "change_24h_pct": -1.81,
+      "high_24h": 1.1165,
+      "low_24h": 1.074,
+      "open_interest": 317512007.3,
+      "open_interest_23h_change_pct": 2.6116,
+      "open_interest_stats_window_utc": [
+        "2026-11-09T13:00:00Z",
+        "2026-11-10T12:00:00Z"
+      ],
+      "current_indicated_funding_rate": 0.0001,
+      "last_settled_funding_rate": 0.00009253,
+      "last_settled_funding_time_utc": "2026-11-10T08:00:00Z",
+      "next_funding_time_utc": "2026-11-10T16:00:00Z",
+      "long_short_ratio_1h": 2.8521,
+      "long_short_ratio_time_utc": "2026-11-10T12:00:00Z",
+      "taker_buy_share_last_1h": 0.40213,
+      "taker_bucket_time_utc": "2026-11-10T11:00:00Z",
+      "book": {
+        "best_bid": 1.0797,
+        "best_ask": 1.0798,
+        "spread_bps": 0.92614,
+        "top20_bid_qty": 2047105.5,
+        "top20_ask_qty": 3216055,
+        "top20_imbalance": -0.2221,
+        "as_of_utc": "2026-11-10T12:33:36Z"
+      },
+      "technical": {
+        "trend_15m_1h_4h": "BEARISH",
+        "short_5m_return20_pct": 0.07416,
+        "return20_pct": {
+          "5m": 0.07416,
+          "15m": -2.01507,
+          "1h": -3.16876,
+          "4h": -6.98456
+        },
+        "ema20_below_ema50": {
+          "5m": true,
+          "15m": true,
+          "1h": true,
+          "4h": true
+        },
+        "atr14_pct": {
+          "5m": 0.22828,
+          "15m": 0.55052,
+          "1h": 0.99922,
+          "4h": 2.21166
+        },
+        "volume20_vs_prior80": {
+          "5m": 0.8386,
+          "15m": 1.0891,
+          "1h": 1.0337,
+          "4h": 1.1752
+        },
+        "latest_completed_open_utc": {
+          "5m": "2026-11-10T12:25:00Z",
+          "15m": "2026-11-10T12:15:00Z",
+          "1h": "2026-11-10T11:00:00Z",
+          "4h": "2026-11-10T08:00:00Z"
+        }
+      }
+    }
+  },
+  "aggregate_observations": {
+    "market_state": "BEARISH_15M_1H_4H_WITH_WEAK_5M_COUNTERTREND_BOUNCE",
+    "feature_agreement": "All four symbols have EMA20 below EMA50 on 5m/15m/1h/4h; 5m 20-bar returns are slightly positive while 15m/1h/4h returns are negative.",
+    "btc_relative_state": "All three alts underperform BTC on 24h and 4h 20-bar returns; cross-asset correlation and lead-lag were not estimated.",
+    "funding": "All current indicated and last-settled rates are positive and below the 0.05% absolute threshold.",
+    "oi": "Open interest increased over the prior 23h window in all four symbols; this alone does not establish directional positioning or crowding.",
+    "shock_state": "NOT_CLASSIFIED; no training-derived shock threshold applied.",
+    "context_classifier_confidence": "Directional feature agreement is high; calibrated context probability and future trade-win probability are unavailable.",
+    "formal_taxonomy": "v56 carried forward; no threshold refit or weekly stability review in this run."
+  },
+  "data_quality": {
+    "rolling_series": 16,
+    "rows_fetched": 4000,
+    "completed_rows": 3984,
+    "forming_rows_excluded": 16,
+    "duplicates": 0,
+    "missing_intervals": 0,
+    "off_grid": 0,
+    "ohlc_invariant_failures": 0,
+    "non_positive_volume": 0,
+    "non_finite": 0,
+    "non_monotonic": 0,
+    "cross_symbol_alignment": true,
+    "rolling_window": "250 latest bars per symbol/interval",
+    "completed_only": true
+  },
+  "decisions": {
+    "SOLUSDT": "NO_TRADE",
+    "ETHUSDT": "NO_TRADE",
+    "XRPUSDT": "NO_TRADE",
+    "BTCUSDT": "REFERENCE_ONLY"
+  },
+  "no_trade_reasons": [
+    "Conditional registry has zero OOS_VALIDATED entries; the only OOS_PROMISING cell has 12 trades and is not actionable.",
+    "No symbol-specific validated setup trigger can be evaluated.",
+    "1h/4h context is bearish while the 5m move is only a weak countertrend bounce; no training-calibrated context transition or trigger.",
+    "Fresh exchangeInfo unavailable; contract status is unverified.",
+    "Historical funding cashflows, fee tier, spread/slippage calibration and execution assumptions remain incomplete."
+  ],
+  "unavailable": [
+    "fresh exchangeInfo contract status",
+    "liquidation feed",
+    "historical funding cashflow archive",
+    "historical spread/depth archive",
+    "fee schedule and calibrated slippage/latency/fill model",
+    "multi-year 5m and 15m base history",
+    "formal shock/transition probabilities"
+  ],
+  "registry_version": "v103"
+}

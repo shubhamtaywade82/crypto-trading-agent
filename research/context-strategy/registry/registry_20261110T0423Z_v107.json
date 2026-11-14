@@ -1,0 +1,168 @@
+{
+  "schema_version": "1.0.0",
+  "version": "v107",
+  "as_of_utc": "2026-11-10T04:23:25.463Z",
+  "run_id": "context-strategy-2026-11-10T0423Z-v107",
+  "research_status": "RESEARCH_EXECUTED_DATA_QUALITY_APPEND_ONLY",
+  "strategy_research_status": "RESEARCH_BLOCKED",
+  "oos_validated_count": 0,
+  "last_strategy_evaluation_utc": "2026-11-05T09:43:57.448Z",
+  "context_taxonomy": {
+    "version": "v56",
+    "status": "CARRIED_FORWARD_NOT_REFIT_THIS_RUN",
+    "timeframe": "4h",
+    "trend_strength": "(EMA20-EMA50)/Wilder ATR14",
+    "transition_threshold": "training-only q67 of absolute trend strength",
+    "volatility_buckets": "training-only q33/q67 of ATR14/close",
+    "chronological_split": "70/15/15",
+    "warmup_bars": 500,
+    "occupancy_pct": {
+      "BTCUSDT": {
+        "BEAR_LOW": 6.53,
+        "TRANSITION_LOW": 50.66,
+        "BULL_LOW": 9.85
+      },
+      "ETHUSDT": {
+        "BEAR_LOW": 6.42,
+        "TRANSITION_LOW": 46.24,
+        "BULL_LOW": 6.64
+      },
+      "SOLUSDT": {
+        "BEAR_LOW": 10.9,
+        "TRANSITION_LOW": 67.56,
+        "BULL_LOW": 10.7
+      },
+      "XRPUSDT": {
+        "BEAR_LOW": 15.2,
+        "TRANSITION_LOW": 43.63,
+        "BULL_LOW": 3.22
+      }
+    },
+    "validation_test_tvd": {
+      "BTCUSDT": 0.175,
+      "ETHUSDT": 0.338,
+      "SOLUSDT": 0.245,
+      "XRPUSDT": 0.293
+    },
+    "median_transition_hours": {
+      "BTCUSDT": 38,
+      "ETHUSDT": 42,
+      "SOLUSDT": 120,
+      "XRPUSDT": 68
+    },
+    "interpretation": "v56 carried forward; no threshold refit, occupancy/duration/transition update or stability review this run."
+  },
+  "entries": [
+    {
+      "strategy": "Context-aligned Donchian20 WF v2",
+      "symbol_context_scope": "36 symbol/context cells",
+      "evidence_status": "INSUFFICIENT_EVIDENCE",
+      "oos_trade_gate": "Every cell below 100 OOS trades",
+      "uncertainty": "Nominal block-bootstrap CIs include zero",
+      "multiplicity": "Holm-adjusted p=1.0",
+      "costs": "15bp round-trip proxy uncalibrated",
+      "promotion": "Not promoted."
+    },
+    {
+      "strategy": "4h Donchian20 breakout v1",
+      "symbol": "SOLUSDT",
+      "context": "BULL_LOW",
+      "evidence_status": "OOS_PROMISING",
+      "oos_trades": 12,
+      "win_rate_pct": 66.7,
+      "target_before_stop_pct": 41.7,
+      "mean_net_R": 0.606,
+      "profit_factor": 2.72,
+      "max_drawdown_R": 1.3,
+      "block_bootstrap_95_ci_mean_net_R": [
+        0.086,
+        1.199
+      ],
+      "failure_modes": [
+        "Sample far below 100 OOS trades",
+        "Cost model not calibrated",
+        "Robustness and multiple-testing gates incomplete"
+      ],
+      "promotion": "Research-only; not actionable."
+    },
+    {
+      "strategy_family": "Trend/pullback continuation; breakout/retest; range mean reversion; failed-breakout fade; volatility expansion; BTC relative strength; funding/OI filters",
+      "symbol_context_scope": "SOL/ETH/XRP, context-specific",
+      "evidence_status": "HYPOTHESIS",
+      "experiment_status": "No new strategy experiment in this run."
+    }
+  ],
+  "status_policy": "Only OOS_VALIDATED entries may drive trade selection. OOS_PROMISING remains research-only.",
+  "this_run": {
+    "type": "DATA_QUALITY_APPEND_ONLY",
+    "experiment_id": "EXP-DQ-2026-11-10-0423Z-025",
+    "rows_appended": 68,
+    "rows_by_interval": {
+      "5m": 44,
+      "15m": 16,
+      "1h": 4,
+      "4h": 4
+    },
+    "quality_failures": 0,
+    "readback_verified": true,
+    "canonical_indexes_updated": false,
+    "strategy_backtest_executed": false,
+    "oos_evaluated": false,
+    "registry_promotions": 0,
+    "registry_downgrades": 0,
+    "observed_at_utc": "2026-11-10T04:23:25.463Z"
+  },
+  "data_readiness": {
+    "five_minute": {
+      "rows": 24000,
+      "per_symbol": 6000,
+      "range_utc": "2026-10-20T04:20:00Z..2026-11-10T00:15:00Z",
+      "status": "PARTIAL"
+    },
+    "fifteen_minute": {
+      "rows": 24000,
+      "per_symbol": 6000,
+      "range_utc": "2026-09-08T11:30:00Z..2026-11-09T23:15:00Z",
+      "status": "PARTIAL"
+    },
+    "one_hour": {
+      "rows_reported_in_prior_manifest": 215484,
+      "coverage_start_utc": "2020-09-14T08:00:00Z",
+      "status": "BASE_REPORTED_NOT_RE_READ"
+    },
+    "four_hour": {
+      "raw_rows_reported": 53960,
+      "aligned_rows_reported": 53816,
+      "canonical_rows_reported": 53844,
+      "unresolved_sha_discrepancies": 13,
+      "status": "DEGRADED"
+    },
+    "archive_manifest": "research-data/binance-usdm/manifests/archive_manifest_20261110T0423Z_v107.json",
+    "latest_completed_highwater_utc": {
+      "5m": "2026-11-10T04:15:00.000Z",
+      "15m": "2026-11-10T04:00:00.000Z",
+      "1h": "2026-11-10T03:00:00.000Z",
+      "4h": "2026-11-10T00:00:00.000Z"
+    },
+    "base_coverage_status": "DEGRADED",
+    "strategy_experiment_blocker": "Direct /fapi/v1/time DNS failure and stale exchangeInfo, no compatible local runner, incomplete multi-cycle 5m/15m history, unresolved 4h provenance, source schema defects, uncalibrated costs/funding.",
+    "latest_incremental_rows": {
+      "5m": 44,
+      "15m": 16,
+      "1h": 4,
+      "4h": 4
+    }
+  },
+  "artifact_refs": {
+    "manifest": "research-data/binance-usdm/manifests/archive_manifest_20261110T0227Z_v105.json",
+    "experiment": "research/context-strategy/experiments/EXP-DQ-2026-11-10-0226Z-023.json",
+    "snapshot": "research/context-strategy/snapshots/2026-11-10T0227Z_v105.json",
+    "preflight": "research/context-strategy/preflight/preflight_20261110T0227Z_v105.json",
+    "report": "research/context-strategy/reports/2026-11-10T0227Z_v105.md",
+    "queue": "research/context-strategy/queue/current.json"
+  },
+  "latest_snapshot_ref": "research/context-strategy/snapshots/2026-11-10T0423Z_v107.json",
+  "latest_report_ref": "research/context-strategy/reports/2026-11-10T0423Z_v107.md",
+  "latest_preflight_ref": "research/context-strategy/preflight/preflight_20261110T0423Z_v107.json",
+  "latest_artifact_manifest_ref": "research/context-strategy/manifests/artifact_manifest_20261110T0423Z_v107.json"
+}

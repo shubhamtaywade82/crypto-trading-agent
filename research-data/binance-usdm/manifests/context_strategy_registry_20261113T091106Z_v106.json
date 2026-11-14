@@ -1,0 +1,97 @@
+{
+  "schema_version": "1.0.0",
+  "run_id": "context-strategy-2026-11-13T091106Z-v106",
+  "as_of_utc": "2026-11-13T09:11:06.872Z",
+  "version": "v106",
+  "recomputed_this_run": false,
+  "new_experiments_this_run": 0,
+  "new_oos_evaluations_this_run": 0,
+  "oos_validated_count": 0,
+  "policy": "Only OOS_VALIDATED entries may drive trade selection. OOS_PROMISING remains research-only. BTCUSDT is reference-only.",
+  "current_applicability": "None. No OOS_VALIDATED entry exists; SOLUSDT, ETHUSDT and XRPUSDT are NO_TRADE.",
+  "taxonomy_baseline": {
+    "version": "v56",
+    "detector": "4h trend strength=(EMA20-EMA50)/Wilder ATR14; training-only q67 trend-transition threshold; training-only q33/q67 ATR/close volatility buckets; 70/15/15 chronological split; 500-bar warmup.",
+    "status": "CARRIED_FORWARD_NOT_REFIT",
+    "fitted_threshold_values_available": false,
+    "transition_matrix_available": false
+  },
+  "entries": [
+    {
+      "symbol": "ALL",
+      "context": "36 symbol/context cells",
+      "strategy": "Donchian20 4h breakout walk-forward v2",
+      "status": "INSUFFICIENT_EVIDENCE",
+      "evidence": "All cells below 100 OOS trades; nominal block-bootstrap intervals include zero; Holm-adjusted p=1.0; 15bp round-trip proxy uncalibrated.",
+      "last_evaluation_utc": "2026-11-05T09:43:57.448Z",
+      "recomputed_this_run": false
+    },
+    {
+      "symbol": "SOLUSDT",
+      "context": "BULL_LOW",
+      "strategy": "Donchian20 4h breakout",
+      "status": "OOS_PROMISING",
+      "oos_trades": 12,
+      "win_rate_pct": 66.7,
+      "target_before_stop_pct": 41.7,
+      "mean_net_R": 0.606,
+      "block_bootstrap_ci95_mean_R": [
+        0.086,
+        1.199
+      ],
+      "profit_factor": 2.72,
+      "max_drawdown_R": 1.3,
+      "last_evaluation_utc": "2026-11-05T09:43:57.448Z",
+      "recomputed_this_run": false,
+      "promotion_blocker": "12 OOS trades <100 per symbol/context; cost and parameter robustness incomplete; trade-level artifacts/spec unavailable for independent recomputation."
+    },
+    {
+      "symbol": "ALL",
+      "context": "ALL",
+      "strategy": "Trend/pullback continuation",
+      "status": "HYPOTHESIS",
+      "tested": false
+    },
+    {
+      "symbol": "ALL",
+      "context": "ALL",
+      "strategy": "Breakout/retest and volatility contraction",
+      "status": "HYPOTHESIS",
+      "tested": false
+    },
+    {
+      "symbol": "ALL",
+      "context": "ALL",
+      "strategy": "Range mean reversion and failed-breakout fade",
+      "status": "HYPOTHESIS",
+      "tested": false
+    },
+    {
+      "symbol": "ALL",
+      "context": "ALL",
+      "strategy": "Volatility expansion/momentum",
+      "status": "HYPOTHESIS",
+      "tested": false
+    },
+    {
+      "symbol": "ALL",
+      "context": "ALL",
+      "strategy": "BTC-led confirmation / relative strength",
+      "status": "HYPOTHESIS",
+      "tested": false
+    },
+    {
+      "symbol": "ALL",
+      "context": "ALL",
+      "strategy": "Funding/OI filters",
+      "status": "HYPOTHESIS",
+      "tested": false
+    }
+  ],
+  "status_transitions": [],
+  "notes": [
+    "No strategy experiment or OOS evaluation ran in this cycle.",
+    "The SOLUSDT/BULL_LOW Donchian20 candidate remains research-only and does not match current SOL context.",
+    "Current EMA/ATR classification is descriptive only; no context thresholds were refit."
+  ]
+}

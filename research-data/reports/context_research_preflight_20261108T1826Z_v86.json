@@ -1,0 +1,88 @@
+{
+  "schema_version": "1.0.0",
+  "run_id": "context-strategy-2026-11-08T1826Z-v86",
+  "as_of_utc": "2026-11-08T18:26:27.000Z",
+  "classification": "RESEARCH_BLOCKED",
+  "checks": [
+    {
+      "capability": "shell_compute",
+      "status": "PASS",
+      "evidence": "Managed container: Debian 13; Python 3.13.5; 5 CPUs; MemAvailable 4,898,840 kB; 30 GiB free disk.",
+      "impact": "Enough capacity for bounded inspection, but not a local project run.",
+      "next_action": "Use a compatible Node 24 workspace for research execution."
+    },
+    {
+      "capability": "repository_code",
+      "status": "BLOCKED",
+      "evidence": "No local crypto-trading-agent checkout; Node v22.16.0/npm 10.9.2; Binance SDK packages not installed. Latest verified main commit 0595de35adc419fa78a1780bbfa9f0e13256bf0d.",
+      "impact": "Cannot run repo CLI, package tests or deterministic smoke test.",
+      "next_action": "Provision Node >=24/npm >=11 and clone at verified commit."
+    },
+    {
+      "capability": "network_binance",
+      "status": "DEGRADED",
+      "evidence": "Direct DNS failed at 18:23:57Z for /fapi/v1/time, /exchangeInfo, /klines, /premiumIndex, /openInterest, /ticker/24hr. Binance public connector returned fresh market data at 18:26:27Z.",
+      "impact": "Monitoring can use connector data; direct REST freshness and contract verification unavailable.",
+      "next_action": "Restore DNS and probe all required endpoints with bounded timeouts."
+    },
+    {
+      "capability": "exchange_metadata",
+      "status": "BLOCKED",
+      "evidence": "Connector exchangeInfo.serverTime=2026-11-06T11:18:40.886Z; fresh mark timestamp=2026-11-08T18:26:27Z; drift=198466.114 seconds.",
+      "impact": "TRADING statuses in stale metadata cannot authorize execution.",
+      "next_action": "Require /fapi/v1/time and exchangeInfo drift <=5 seconds."
+    },
+    {
+      "capability": "raw_historical_archive",
+      "status": "DEGRADED",
+      "evidence": "1h base 53,871 rows/symbol from 2020-09-14 through 2026-11-06 22:00; 4h canonical 13,461 rows/symbol through 2026-11-05 16:00; 4h raw incrementals through 2026-11-08 12:00; 5m/15m incremental-only; 1m absent.",
+      "impact": "Intraday and barrier research cannot meet sample/coverage requirements.",
+      "next_action": "Rebuild canonical 4h separately and backfill multi-year 5m/15m plus 1m."
+    },
+    {
+      "capability": "data_quality_coverage",
+      "status": "PASS",
+      "evidence": "New 64 rows across 16 symbol/interval series; 80 fetched, 16 forming/future excluded; zero duplicates, gaps, OHLC failures, non-positive volumes, non-finite values, off-grid or non-monotonic rows.",
+      "impact": "Incremental delta is structurally clean; does not establish long-history adequacy.",
+      "next_action": "Keep full-archive validator and cross-symbol continuity audit."
+    },
+    {
+      "capability": "backtest_harness_smoke_test",
+      "status": "BLOCKED",
+      "evidence": "No local checkout/compatible Node runtime; deterministic fixture smoke test not run.",
+      "impact": "No experiment or OOS can be claimed.",
+      "next_action": "Resolve repository/runtime blockers, then smoke test before EXP-001."
+    },
+    {
+      "capability": "disk_storage",
+      "status": "PASS",
+      "evidence": "30 GiB free in managed container; GitHub archive branch accepted writes.",
+      "impact": "Durable GitHub persistence available for data and metadata.",
+      "next_action": "Continue versioned writes and readback verification."
+    },
+    {
+      "capability": "artifact_readback",
+      "status": "PASS",
+      "evidence": "Delta and manifest size/hash metadata verified; 5m, 15m and 1h indexes fetched back and reference the new delta SHA/highwaters; queue, registry snapshot, current market snapshot, preflight and report files fetched back.",
+      "impact": "All current-run archive and metadata artifacts are durably persisted and readback verified.",
+      "next_action": "Continue per-run readback and hash verification."
+    }
+  ],
+  "direct_rest_probes": {
+    "retrieved_at_utc": "2026-11-08T18:23:57Z",
+    "endpoints": [
+      "/fapi/v1/time",
+      "/fapi/v1/exchangeInfo",
+      "/fapi/v1/klines",
+      "/fapi/v1/premiumIndex",
+      "/fapi/v1/openInterest",
+      "/fapi/v1/ticker/24hr"
+    ],
+    "outcome": "DNS resolution failure; HTTP 000; URLError temporary failure in name resolution."
+  },
+  "experiment": {
+    "executed": false,
+    "oos_evaluated": false,
+    "reason": "No compatible local repository/runtime and no sufficient 1m/lower-timeframe historical archive or calibrated execution-cost inputs."
+  }
+}

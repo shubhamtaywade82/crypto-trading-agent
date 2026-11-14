@@ -1,0 +1,66 @@
+{
+  "schema_version": "1.0.0",
+  "as_of_utc": "2026-11-14T00:36:22.902Z",
+  "checks": [
+    {
+      "capability": "shell/compute",
+      "status": "PASS",
+      "evidence": "Debian13; Python3.13.5; Node22.16.0; npm10.9.2; 3 CPUs; 4.95GB available RAM; 30GB free disk."
+    },
+    {
+      "capability": "repo/code",
+      "status": "DEGRADED",
+      "evidence": "Remote repo/scripts accessible; no local checkout or project node_modules; package requires Node>=24/npm>=11; Binance SDK packages absent."
+    },
+    {
+      "capability": "network/Binance endpoints",
+      "status": "DEGRADED",
+      "evidence": "Direct /fapi/v1/time and /exchangeInfo DNS failure (HTTP000); connector wrappers returned fresh market data but no HTTP statuses. exchangeInfo serverTime stale by 18h34m21.194s."
+    },
+    {
+      "capability": "raw historical archive",
+      "status": "PASS",
+      "evidence": "120 completed rows appended; 16 forming excluded; two deltas/manifests, global manifest and four indexes readback/hash verified."
+    },
+    {
+      "capability": "data quality/coverage",
+      "status": "DEGRADED",
+      "evidence": "Incremental window clean; 5m/15m base incomplete; 1h missing 28 opens per symbol plus 8-row discrepancy; 4h 13 page SHA mismatches and row-count discrepancy."
+    },
+    {
+      "capability": "backtest harness/smoke test",
+      "status": "BLOCKED",
+      "evidence": "Remote scripts exist but no compatible local runner; no deterministic fixture smoke test, strategy backtest or OOS run."
+    },
+    {
+      "capability": "disk/storage",
+      "status": "PASS",
+      "evidence": "30GB free; GitHub branch writable; Library upload rejected due storage quota; local container not treated as durable."
+    },
+    {
+      "capability": "artifact readback",
+      "status": "PASS",
+      "evidence": "Raw deltas, delta manifests, global archive manifest, indexes, registry, queue and run snapshot verified by readback."
+    }
+  ],
+  "direct_rest": {
+    "time": "BLOCKED_DNS_HTTP000",
+    "exchangeInfo": "BLOCKED_DNS_HTTP000"
+  },
+  "connector_endpoint_families": [
+    "/fapi/v1/klines",
+    "/fapi/v1/premiumIndex",
+    "/fapi/v1/openInterest",
+    "/fapi/v1/ticker/24hr",
+    "/fapi/v1/fundingRate",
+    "/fapi/v1/fundingInfo",
+    "/futures/data/openInterestHist",
+    "/futures/data/takerlongshortRatio",
+    "/futures/data/globalLongShortAccountRatio",
+    "/fapi/v1/depth?limit=20",
+    "/fapi/v1/ticker/bookTicker"
+  ],
+  "run_classification": "RESEARCH_EXECUTED",
+  "research_scope": "DATA_QUALITY_ONLY",
+  "oos_evaluated": false
+}

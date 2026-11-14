@@ -1,0 +1,137 @@
+{
+  "schema_version": "1.0.0",
+  "queue_version": "v113",
+  "run_id": "context-strategy-2026-11-14T0036Z-auto11-v113",
+  "as_of_utc": "2026-11-14T00:36:22.902Z",
+  "parent_queue_version": "v96",
+  "overall_status": "RESEARCH_EXECUTED_DATA_QUALITY_ONLY_STRATEGY_RESEARCH_BLOCKED",
+  "items": [
+    {
+      "id": "RQ-002",
+      "priority": "P0",
+      "status": "BLOCKED",
+      "title": "Fresh Binance server time and exchange metadata",
+      "blocker": "Direct /fapi/v1/time and /exchangeInfo DNS failed (HTTP000); connector exchangeInfo serverTime 2026-11-13T06:02:01.708Z is 18h34m21.194s stale.",
+      "next_action": "Restore uncached official time+metadata; require <=5s drift."
+    },
+    {
+      "id": "RQ-005",
+      "priority": "P0",
+      "status": "BLOCKED",
+      "title": "Compatible local runner",
+      "blocker": "No local checkout/node_modules; Node22.16.0/npm10.9.2 below package requirement Node>=24/npm>=11.",
+      "next_action": "Provision Node24/npm11, clone exact main commit, install lockfile dependencies and run deterministic fixtures twice."
+    },
+    {
+      "id": "RQ-012",
+      "priority": "P0",
+      "status": "BLOCKED",
+      "title": "Candle contract and 5m path fixes",
+      "blocker": "Last source audit found closeTime discarded, zero volume accepted, 5m absent; no fresh patch verified this run.",
+      "next_action": "Propagate closeTime; reject volume<=0; add 5m; enforce completed bars, BTC reference-only, gap/duplicate/OHLC/no-lookahead fixtures."
+    },
+    {
+      "id": "RQ-003",
+      "priority": "P1",
+      "status": "PARTIALLY_COMPLETED",
+      "title": "Multi-year archive completion",
+      "blocker": "5m base ends 2021-02-01; 15m base ends 2021-11-10; 1h has 28 missing opens/symbol and 8-row discrepancy; 4h has 13 page hash mismatches and raw/aligned/canonical count mismatch.",
+      "next_action": "Backfill 5m/15m; reconcile 1h gaps and 4h provenance."
+    },
+    {
+      "id": "RQ-029",
+      "priority": "P0",
+      "status": "BLOCKED",
+      "title": "BTC reference-only enforcement",
+      "blocker": "Prior source audit found BTCUSDT in EXP-001 tradable list; not re-audited locally this run.",
+      "next_action": "Restrict tradable to SOL/ETH/XRP; add referenceOnly tests."
+    },
+    {
+      "id": "RQ-004",
+      "priority": "P1",
+      "status": "BLOCKED",
+      "title": "Execution-cost calibration",
+      "blocker": "No verified fee tier or calibrated historical spread/depth/trade/impact/slippage/latency; current depth20 is one snapshot.",
+      "next_action": "Collect account fee evidence and synchronized historical trades/book/funding; fit per-symbol costs."
+    },
+    {
+      "id": "RQ-014",
+      "priority": "P1",
+      "status": "BLOCKED",
+      "title": "Historical funding cashflows",
+      "blocker": "Only current indicated funding and 00:00Z settlement per symbol retrieved; full history/payment alignment missing.",
+      "next_action": "Backfill funding settlement history and align payments to holding intervals."
+    },
+    {
+      "id": "RQ-021",
+      "priority": "P0",
+      "status": "BLOCKED",
+      "title": "Pre-registered strategy x context x symbol experiment",
+      "blocker": "No compatible runner, fresh metadata, complete 5m/15m base, clean 1h/4h provenance, calibrated costs/funding or repaired source.",
+      "next_action": "Resolve P0 prerequisites; freeze rules; smoke-test fixture; then chronological walk-forward/OOS with purge/embargo."
+    },
+    {
+      "id": "RQ-019",
+      "priority": "P1",
+      "status": "COMPLETED_THIS_RUN",
+      "title": "Append completed OHLCV and verify indexes",
+      "evidence": "120 rows appended: 5m80,15m24,1h8,4h8; 16 forming excluded; all delta/manifests/indexes readback and hash verified.",
+      "next_action": "Continue from next opens 5m00:25Z,15m00:15Z,1h00:00Z,4h00:00Z."
+    },
+    {
+      "id": "RQ-030",
+      "priority": "P0",
+      "status": "COMPLETED_THIS_RUN",
+      "title": "Incremental archive integrity experiment",
+      "experiment_id": "EXP-DQ-2026-11-14-002922Z-013",
+      "evidence": "136 fetched;120 completed;16 forming excluded; all structural checks zero; cross-symbol alignment passed; artifacts read back.",
+      "next_action": "Do not infer strategy edge from data-quality pass."
+    },
+    {
+      "id": "RQ-007",
+      "priority": "P3",
+      "status": "PARTIALLY_COMPLETED",
+      "title": "BTC relative strength and lead/lag",
+      "blocker": "No rolling correlation/lag test; current relative returns are short-window only.",
+      "next_action": "Test aligned multi-year 1h returns on train, then untouched OOS with multiplicity control."
+    },
+    {
+      "id": "RQ-010",
+      "priority": "P2",
+      "status": "PARTIALLY_COMPLETED",
+      "title": "Funding field semantics",
+      "evidence": "Indicated premiumIndex rate separated from settled fundingRate; 8h interval; next settlement 08:00Z.",
+      "next_action": "Add payment-alignment tests and full funding archive."
+    },
+    {
+      "id": "RQ-011",
+      "priority": "P2",
+      "status": "BLOCKED",
+      "title": "OOS evidence gates",
+      "blocker": "Zero OOS_VALIDATED entries; Donchian20 WF v2 36 cells below 100 trades and nominal CI includes zero; SOL BULL_LOW OOS_PROMISING has 12 trades.",
+      "next_action": "Do not lower gates; accumulate >=100 OOS trades per symbol/context and >=200 across multiple windows."
+    },
+    {
+      "id": "RQ-028",
+      "priority": "P2",
+      "status": "BLOCKED_OVERDUE",
+      "title": "Weekly taxonomy stability review",
+      "due_at_utc": "2026-11-11T00:00:00Z",
+      "blocker": "Archive and runner prerequisites incomplete.",
+      "next_action": "Refit train-only thresholds and measure frequency/duration/transitions/stability after prerequisites."
+    }
+  ],
+  "daily_cycle": {
+    "status": "COMPLETED_DATA_QUALITY_ONLY_STRATEGY_EXPERIMENT_BLOCKED",
+    "experiment_executed": true,
+    "experiment_id": "EXP-DQ-2026-11-14-002922Z-013",
+    "strategy_backtest_executed": false,
+    "oos_evaluated": false
+  },
+  "weekly_review": {
+    "status": "BLOCKED_OVERDUE",
+    "due_at_utc": "2026-11-11T00:00:00Z",
+    "taxonomy_recomputed": false
+  },
+  "next_executable_action": "Restore uncached Binance server time/metadata and provision Node24/npm11 local checkout; then repair candle contract and archive coverage before strategy backtesting."
+}

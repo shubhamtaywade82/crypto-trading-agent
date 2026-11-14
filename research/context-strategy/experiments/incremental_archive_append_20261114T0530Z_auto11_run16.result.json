@@ -1,0 +1,94 @@
+{
+  "schemaVersion": "1.0.0",
+  "runId": "context-strategy-20261114T053039Z-auto11-run16",
+  "createdAtUtc": "2026-11-14T05:30:39.002Z",
+  "experimentType": "incremental_archive_data_quality",
+  "status": "PASS_INCREMENTAL_SLICE_BASE_ARCHIVE_DEGRADED",
+  "source": {
+    "repository": "shubhamtaywade82/crypto-trading-agent",
+    "branch": "research/raw-ohlcv-archive-20261108T1026Z",
+    "endpoint": "GET /fapi/v1/klines",
+    "sdkUsed": false,
+    "network": "Binance connector; direct REST DNS unavailable"
+  },
+  "input": {
+    "symbols": [
+      "BTCUSDT",
+      "ETHUSDT",
+      "SOLUSDT",
+      "XRPUSDT"
+    ],
+    "intervals": [
+      "5m",
+      "15m"
+    ],
+    "previousHighwaterUtc": {
+      "5m": "2026-11-14T04:55:00.000Z",
+      "15m": "2026-11-14T04:45:00.000Z",
+      "1h": "2026-11-14T04:00:00.000Z",
+      "4h": "2026-11-13T12:00:00.000Z"
+    },
+    "requestStartUtc": "2026-11-14T05:00:00.000Z",
+    "asOfUtc": "2026-11-14T05:30:39.002Z"
+  },
+  "counts": {
+    "rowsFetched": 40,
+    "rowsCompleted": 32,
+    "formingRowsExcluded": 8,
+    "rowsByInterval": {
+      "5m": 24,
+      "15m": 8
+    },
+    "rowsBySymbol": {
+      "BTCUSDT": 8,
+      "ETHUSDT": 8,
+      "SOLUSDT": 8,
+      "XRPUSDT": 8
+    }
+  },
+  "quality": {
+    "issues": [],
+    "duplicates": 0,
+    "missingIntervals": 0,
+    "offGrid": 0,
+    "nonMonotonic": 0,
+    "ohlcFailures": 0,
+    "nonFinite": 0,
+    "nonPositiveVolume": 0,
+    "closeTimeFailures": 0,
+    "formingRowsIncluded": 0,
+    "crossSymbolAlignment": true,
+    "contiguousFromPriorHighwater": true
+  },
+  "latestCompletedOpenUtcByInterval": {
+    "5m": "2026-11-14T05:25:00.000Z",
+    "15m": "2026-11-14T05:15:00.000Z",
+    "1h": "2026-11-14T04:00:00.000Z",
+    "4h": "2026-11-13T12:00:00.000Z"
+  },
+  "nextStartUtcByInterval": {
+    "5m": "2026-11-14T05:30:00.000Z",
+    "15m": "2026-11-14T05:30:00.000Z",
+    "1h": "2026-11-14T05:00:00.000Z",
+    "4h": "2026-11-13T16:00:00.000Z"
+  },
+  "artifacts": {
+    "delta": {
+      "path": "research-data/binance-usdm/delta/binance_usdm_delta_20261114T053039Z_5m15m_completed.jsonl",
+      "sha256": "4fbd3c88854ce5d375e2487e80a1d836aa85f96586f88894d5c7a26b4b1cbc33",
+      "blobSha": "fdab0b75672e06a36bd95f081b550664066a7771",
+      "bytes": 9355,
+      "readbackVerified": true
+    },
+    "manifest": {
+      "path": "research-data/binance-usdm/delta/manifest-20261114T053039Z-5m15m.json",
+      "sha256": "293e29699274c0e5ca29a11d9bc33336e4ef0299dc3b4d2461daa8cc2e1d9439",
+      "blobSha": "6fe1a910851458fe3eb27a0046982c7630c030bb",
+      "bytes": 4945,
+      "readbackVerified": true
+    }
+  },
+  "interpretation": "Incremental slice integrity only. This does not repair historical page-0028 alignment/provenance, 1h gaps, 4h provenance, or establish strategy evidence.",
+  "strategyExperiment": "BLOCKED",
+  "oosEvaluated": false
+}

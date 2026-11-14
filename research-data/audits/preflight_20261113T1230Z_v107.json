@@ -1,0 +1,142 @@
+{
+  "schema_version": "1.0.0",
+  "as_of_utc": "2026-11-13T12:30:33.495Z",
+  "overall": "RESEARCH_BLOCKED",
+  "research_executed": false,
+  "oos_evaluated": false,
+  "monitoring_completed": true,
+  "archive_append_completed": true,
+  "checks": [
+    {
+      "capability": "Shell/compute",
+      "status": "PASS",
+      "evidence": "Debian GNU/Linux 13; Linux 6.18.57 x86_64; Python 3.13.5; Node v22.16.0; npm 10.9.2; 3 CPUs; 5.8GiB RAM (4.7GiB available); 30GB free overlay; cwd=/.",
+      "impact": "Compute exists but Node runtime is below project requirement.",
+      "next_action": "Provision Node>=24/npm>=11."
+    },
+    {
+      "capability": "Repository/code",
+      "status": "BLOCKED",
+      "evidence": "No local .git checkout or package.json; remote GitHub repo only.",
+      "impact": "Actual backtest code cannot be invoked locally.",
+      "next_action": "Clone exact branch into compatible runner and reconcile code/lockfile hashes."
+    },
+    {
+      "capability": "Binance SDK",
+      "status": "BLOCKED",
+      "evidence": "@binance/connector, binance-api-node, @binance/futures-connector NOT_INSTALLED; Python binance and ccxt not importable.",
+      "impact": "No SDK use; connector market-data tools only.",
+      "next_action": "Install from repository lockfile after runner provisioning."
+    },
+    {
+      "capability": "Network/Binance endpoints",
+      "status": "DEGRADED",
+      "evidence": "Direct /fapi/v1/time failed DNS resolution; connector returned current market data but hides HTTP status/headers; exchangeInfo serverTime 06:02:01.709Z is 23,052.291s stale at 12:26:14Z.",
+      "impact": "Descriptive snapshot only; contract metadata not execution-valid.",
+      "next_action": "Restore direct HTTPS and fetch uncached server time/metadata."
+    },
+    {
+      "capability": "Raw historical archive",
+      "status": "DEGRADED",
+      "evidence": "Remote 200-row delta, manifest and four interval indexes persisted and verified; 5m/15m base absent; 4h provenance degraded.",
+      "impact": "Incremental monitoring data persisted; full local sample not ready.",
+      "next_action": "Materialize/reconcile 1h/4h and backfill multi-year 5m/15m."
+    },
+    {
+      "capability": "Data quality/coverage",
+      "status": "DEGRADED",
+      "evidence": "3,200 current rows; 3,184 completed; 16 forming excluded; all current checks pass. Historical coverage incomplete.",
+      "impact": "Current classification can run; multi-cycle taxonomy and strategy tests blocked.",
+      "next_action": "Complete historical coverage and 4h provenance reconciliation."
+    },
+    {
+      "capability": "Backtest harness/smoke test",
+      "status": "BLOCKED",
+      "evidence": "No local harness invoked; no deterministic fixture smoke/no-lookahead/purge/embargo test.",
+      "impact": "No experiment or OOS metrics.",
+      "next_action": "Provision checkout; run tiny fixture twice and leakage/embargo tests."
+    },
+    {
+      "capability": "Disk/storage",
+      "status": "PASS",
+      "evidence": "30GB free; GitHub writes succeeded.",
+      "impact": "Remote archive persistence available.",
+      "next_action": "Continue versioned snapshots."
+    },
+    {
+      "capability": "Artifact readback",
+      "status": "PASS",
+      "evidence": "Delta and manifest SHA-256 verified; all four interval indexes reopened and SHA-256 verified.",
+      "impact": "200 new rows durably persisted on raw archive branch.",
+      "next_action": "Continue verified context snapshots."
+    }
+  ],
+  "endpoints": [
+    {
+      "endpoint": "GET /fapi/v1/time",
+      "transport": "direct REST",
+      "status": "UNAVAILABLE_DNS",
+      "evidence": "Name resolution failure for fapi.binance.com; HTTP status unavailable."
+    },
+    {
+      "endpoint": "GET /fapi/v1/exchangeInfo",
+      "transport": "connector",
+      "status": "DEGRADED_STALE",
+      "evidence": "serverTime 2026-11-13T06:02:01.709Z; 23,052.291s stale."
+    },
+    {
+      "endpoint": "GET /fapi/v1/klines",
+      "transport": "connector",
+      "status": "DATA_RETURNED",
+      "evidence": "200 rows per symbol/interval; 3,200 total; 199 completed per series; 1 forming excluded."
+    },
+    {
+      "endpoint": "GET /fapi/v1/premiumIndex",
+      "transport": "connector",
+      "status": "DATA_RETURNED",
+      "evidence": "mark/index, indicated funding, nextFundingTime and time for all four symbols."
+    },
+    {
+      "endpoint": "GET /fapi/v1/openInterest",
+      "transport": "connector",
+      "status": "DATA_RETURNED",
+      "evidence": "current OI for all four symbols."
+    },
+    {
+      "endpoint": "GET /fapi/v1/ticker/24hr",
+      "transport": "connector",
+      "status": "DATA_RETURNED",
+      "evidence": "24h last/high/low/change/quote volume for all four symbols."
+    },
+    {
+      "endpoint": "GET /fapi/v1/fundingRate",
+      "transport": "connector",
+      "status": "PARTIAL_HISTORY",
+      "evidence": "latest three settled records per symbol."
+    },
+    {
+      "endpoint": "GET /fapi/v1/ticker/bookTicker",
+      "transport": "connector",
+      "status": "DATA_RETURNED",
+      "evidence": "top bid/ask only; no depth/impact curve."
+    },
+    {
+      "endpoint": "GET /futures/data/takerBuySellVol",
+      "transport": "connector",
+      "status": "DATA_RETURNED",
+      "evidence": "15m taker buy/sell volumes."
+    },
+    {
+      "endpoint": "GET /futures/data/openInterestHist",
+      "transport": "connector",
+      "status": "LIMITED_HISTORY",
+      "evidence": "four 1h observations per symbol."
+    },
+    {
+      "endpoint": "GET /futures/data/globalLongShortAccountRatio",
+      "transport": "connector",
+      "status": "DATA_RETURNED",
+      "evidence": "four 1h observations per symbol; descriptive only."
+    }
+  ]
+}

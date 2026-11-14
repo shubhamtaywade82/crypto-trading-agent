@@ -1,0 +1,156 @@
+{
+  "schema_version": "1.0.0",
+  "registry_version": "v107",
+  "as_of_utc": "2026-11-13T10:38:24.778Z",
+  "provenance": {
+    "previous_snapshot": "v106",
+    "previous_registry_blob_sha": "d05b329d480d0823e97e2e564fbb3a9f5f1394b5",
+    "previous_report_blob_sha": "ef5be27d7eef23aee29232f640bbba29ac859223",
+    "carried_forward_not_recomputed": true
+  },
+  "summary": {
+    "new_experiments": 0,
+    "new_oos_evaluations": 0,
+    "oos_validated_entries": 0,
+    "status_transitions": 0,
+    "actionable_setups": 0
+  },
+  "taxonomy": {
+    "version": "v56_baseline",
+    "status": "NOT_REFIT_THIS_RUN",
+    "features": [
+      "4h trend strength (EMA20-EMA50)/ATR14",
+      "ATR/close volatility buckets using training quantiles"
+    ],
+    "threshold_details": "Prior numeric thresholds and full context-cell artifacts are not present in the current run bundle; no new thresholds, occupancy, duration or transition statistics are asserted."
+  },
+  "entries": [
+    {
+      "id": "donchian20-4h-breakout-v2-aggregate",
+      "strategy": "Donchian20 4h breakout v2",
+      "symbols": [
+        "SOLUSDT",
+        "ETHUSDT",
+        "XRPUSDT"
+      ],
+      "context_cells": 36,
+      "evidence_status": "INSUFFICIENT_EVIDENCE",
+      "source_run": "v106",
+      "oos_trade_count": "All 36 cells below 100",
+      "oos_metrics": "Nominal block-bootstrap intervals include zero; Holm-adjusted p=1.0; 15bp round-trip cost proxy uncalibrated.",
+      "confidence_intervals": "Cell-level intervals unavailable in accessible registry snapshot.",
+      "last_evaluated_utc": null,
+      "actionable": false,
+      "reason": "Fails predeclared sample and uncertainty gates."
+    },
+    {
+      "id": "donchian20-4h-breakout-v2-SOL-BULL_LOW",
+      "strategy": "Donchian20 4h breakout v2",
+      "symbol": "SOLUSDT",
+      "context": "BULL_LOW",
+      "evidence_status": "OOS_PROMISING",
+      "source_run": "v105 carried through v106",
+      "oos_trades": 12,
+      "win_rate_pct": 66.7,
+      "target_before_stop_pct": 41.7,
+      "mean_net_expectancy_R": 0.606,
+      "profit_factor": 2.72,
+      "max_drawdown_R": 1.3,
+      "block_bootstrap_95ci_mean_R": [
+        0.086,
+        1.199
+      ],
+      "cost_assumption": "15bp round-trip proxy, not calibrated",
+      "parameter_robustness": "Incomplete",
+      "last_evaluated_utc": null,
+      "actionable": false,
+      "reason": "12 OOS trades are far below the >=100 per symbol/context provisional floor; costs and robustness remain incomplete."
+    },
+    {
+      "id": "trend-pullback-continuation",
+      "strategy": "Trend following / pullback continuation",
+      "symbols": [
+        "SOLUSDT",
+        "ETHUSDT",
+        "XRPUSDT"
+      ],
+      "evidence_status": "HYPOTHESIS",
+      "tested": false,
+      "actionable": false
+    },
+    {
+      "id": "breakout-retest-volatility-contraction",
+      "strategy": "Breakout/retest / volatility contraction breakout",
+      "symbols": [
+        "SOLUSDT",
+        "ETHUSDT",
+        "XRPUSDT"
+      ],
+      "evidence_status": "HYPOTHESIS",
+      "tested": false,
+      "actionable": false
+    },
+    {
+      "id": "range-mean-reversion-failed-breakout",
+      "strategy": "Range mean reversion / failed-breakout fade",
+      "symbols": [
+        "SOLUSDT",
+        "ETHUSDT",
+        "XRPUSDT"
+      ],
+      "evidence_status": "HYPOTHESIS",
+      "tested": false,
+      "actionable": false
+    },
+    {
+      "id": "volatility-expansion-momentum",
+      "strategy": "Volatility expansion / momentum",
+      "symbols": [
+        "SOLUSDT",
+        "ETHUSDT",
+        "XRPUSDT"
+      ],
+      "evidence_status": "HYPOTHESIS",
+      "tested": false,
+      "actionable": false
+    },
+    {
+      "id": "btc-led-relative-strength",
+      "strategy": "BTC-led confirmation / relative strength",
+      "symbols": [
+        "SOLUSDT",
+        "ETHUSDT",
+        "XRPUSDT"
+      ],
+      "evidence_status": "HYPOTHESIS",
+      "tested": false,
+      "actionable": false
+    },
+    {
+      "id": "funding-oi-filters",
+      "strategy": "Funding/OI-informed filters",
+      "symbols": [
+        "SOLUSDT",
+        "ETHUSDT",
+        "XRPUSDT"
+      ],
+      "evidence_status": "HYPOTHESIS",
+      "tested": false,
+      "actionable": false
+    }
+  ],
+  "promotion_policy": {
+    "provisional_oos_trade_floor_per_symbol_context": 100,
+    "stronger_evidence_floor": 200,
+    "confidence_level": 0.95,
+    "require_positive_net_expectancy_after_costs": true,
+    "require_parameter_neighborhood_stability": true,
+    "require_multiple_walk_forward_windows": true,
+    "require_serial_dependence_aware_uncertainty": true,
+    "require_multiple_testing_control": true
+  },
+  "notes": [
+    "No REJECTED label added because no new valid OOS test ran.",
+    "No OOS_VALIDATED entry exists; current market applicability cannot create evidence."
+  ]
+}

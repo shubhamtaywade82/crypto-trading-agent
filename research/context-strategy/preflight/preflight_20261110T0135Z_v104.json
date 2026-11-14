@@ -1,0 +1,66 @@
+{
+  "schema_version": "1.0.0",
+  "run_id": "context-strategy-2026-11-10T0135Z-v104",
+  "as_of_utc": "2026-11-10T01:35:21Z",
+  "checks": [
+    {
+      "name": "shell/compute",
+      "status": "PASS",
+      "evidence": "Linux x86_64; Python3.13.5; Node22.16.0; npm10.9.2; 5 CPUs; 4.7GiB available RAM; 30GiB free disk."
+    },
+    {
+      "name": "local repo",
+      "status": "BLOCKED",
+      "evidence": "No local checkout; remote main commit 669ba233538eb1463c0e7e0a435016a643e7adb5."
+    },
+    {
+      "name": "Node SDK",
+      "status": "BLOCKED",
+      "evidence": "Runtime below Node>=24/npm>=11; @nemesis-oss/binance-sdk import unavailable; no SDK used."
+    },
+    {
+      "name": "direct network",
+      "status": "BLOCKED",
+      "evidence": "curl /fapi/v1/time and data.binance.vision archive HEAD both HTTP000 DNS error6."
+    },
+    {
+      "name": "Binance connector",
+      "status": "PASS",
+      "evidence": "Klines, mark/funding, ticker, OI, funding history, depth and positioning calls returned data; HTTP status not exposed."
+    },
+    {
+      "name": "exchange metadata",
+      "status": "DEGRADED",
+      "evidence": "exchangeInfo.serverTime=2026-11-10T01:01:01.891Z, 34m21s behind local shell 01:35:23Z; returned statuses TRADING but stale."
+    },
+    {
+      "name": "historical archive",
+      "status": "DEGRADED",
+      "evidence": "5m 24,000 and 15m 24,000 backfill rows; 1h/4h base not locally read; 4h 13 SHA discrepancies."
+    },
+    {
+      "name": "data quality",
+      "status": "PASS_FOR_NEW_WINDOWS",
+      "evidence": "48,000 backfill rows +76 incremental; zero duplicates, gaps, grid, OHLC, non-positive volume, non-finite or close-time failures; cross-symbol alignment passed."
+    },
+    {
+      "name": "backtest harness/smoke test",
+      "status": "BLOCKED",
+      "evidence": "Remote scripts/tests exist; no local checkout and runtime floor unmet; deterministic smoke test not run."
+    },
+    {
+      "name": "disk/storage",
+      "status": "PASS",
+      "evidence": "30GiB free; GitHub branch writes succeeded."
+    },
+    {
+      "name": "artifact readback",
+      "status": "PASS",
+      "evidence": "Eight backfill files read through GitHub blob SHA; incremental 5m/15m/1h deltas read back."
+    }
+  ],
+  "overall_status": "RESEARCH_EXECUTED_DATA_QUALITY_AND_BACKFILL_ONLY",
+  "strategy_research_status": "RESEARCH_BLOCKED",
+  "oos_evaluated": false,
+  "oos_validated_count": 0
+}

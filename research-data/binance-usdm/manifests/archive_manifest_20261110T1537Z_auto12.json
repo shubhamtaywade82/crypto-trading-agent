@@ -1,0 +1,146 @@
+{
+  "schema_version": "1.0.0",
+  "run_id": "context-strategy-20261110T152928Z-auto12",
+  "as_of_utc": "2026-11-10T15:37:06.787Z",
+  "repository": "shubhamtaywade82/crypto-trading-agent",
+  "branch": "research/raw-ohlcv-archive-20261108T1026Z",
+  "source": {
+    "endpoint": "GET /fapi/v1/klines",
+    "access": "Binance USD-M public market-data connector; direct REST DNS unavailable",
+    "symbols": [
+      "BTCUSDT",
+      "ETHUSDT",
+      "SOLUSDT",
+      "XRPUSDT"
+    ],
+    "intervals": [
+      "5m",
+      "15m",
+      "1h",
+      "4h"
+    ]
+  },
+  "highwaters": {
+    "5m": "2026-11-10T15:30:00.000Z",
+    "15m": "2026-11-10T15:15:00.000Z",
+    "1h": "2026-11-10T14:00:00.000Z",
+    "4h": "2026-11-10T08:00:00.000Z"
+  },
+  "append_this_run": {
+    "rows_fetched": 32,
+    "completed_rows": 32,
+    "forming_rows_excluded": 0,
+    "pre_highwater_rows_excluded": 0,
+    "rows_appended": 32,
+    "rows_by_interval": {
+      "5m": 24,
+      "15m": 8
+    },
+    "rows_by_symbol": {
+      "BTCUSDT": 8,
+      "ETHUSDT": 8,
+      "SOLUSDT": 8,
+      "XRPUSDT": 8
+    },
+    "batches": [
+      {
+        "delta_path": "research-data/binance-usdm/delta/binance_usdm_delta_20261110T1529Z_5m15m_completed.jsonl",
+        "delta_sha256": "62a4abd3b0bac5dfcb969685c98b98ed76539e9015e68ae2b193ed0841feca8f",
+        "delta_blob_sha1": "a8168a5e5b8ac32d62eef938963c229a7064119a",
+        "manifest_path": "research-data/binance-usdm/delta/manifest-20261110T1529Z-5m15m.json",
+        "manifest_sha256": "27184971490e15399272ea469eac3727d2e523bc0281dc63501f143d530f1ae2",
+        "manifest_blob_sha1": "3f42fd9f8fa7e77806a24db1d141af835e503632",
+        "rows": 20,
+        "readback_verified": true
+      },
+      {
+        "delta_path": "research-data/binance-usdm/delta/binance_usdm_delta_20261110T1535Z_5m15m_boundary.jsonl",
+        "delta_sha256": "d05e4aa782e6e721a6871a95c7a80179f013ce58368d60efc6c478599dd695d0",
+        "delta_blob_sha1": "8b96ddc93d4e80da1e860724c8932151321faaed",
+        "manifest_path": "research-data/binance-usdm/delta/manifest-20261110T1535Z-5m15m-boundary.json",
+        "manifest_sha256": "d667a46df1ceb85f0133c747e80d023690d9d51d81cd0cc240069ca39f25bcb1",
+        "manifest_blob_sha1": "569d91059d644e53e210d3d0022a629d51b8763b",
+        "rows": 8,
+        "readback_verified": true
+      },
+      {
+        "delta_path": "research-data/binance-usdm/delta/binance_usdm_delta_20261110T1537Z_5m_boundary.jsonl",
+        "delta_sha256": "6c6cef359e105a8a69e230267960be2cb29bf42598b0893eba9d0cf24736b214",
+        "delta_blob_sha1": "5a88489af8603753750c11cb53150cc523c397a8",
+        "manifest_path": "research-data/binance-usdm/delta/manifest-20261110T1537Z-5m-boundary.json",
+        "manifest_sha256": "132cbfb35aefe76da07a413a62b0b7b22a7bf5ea3001fa05e9f2c34d6c9264da",
+        "manifest_blob_sha1": "1a892e4f016384c85eac5efe7016da4d61087c45",
+        "rows": 4,
+        "readback_verified": true
+      }
+    ],
+    "readback_verified": true,
+    "quality_failures": 0
+  },
+  "base_coverage": {
+    "5m": {
+      "status": "ABSENT",
+      "base_rows_total": 0,
+      "incremental_rows_total": 1296,
+      "highwater": "2026-11-10T15:30:00.000Z"
+    },
+    "15m": {
+      "status": "ABSENT",
+      "base_rows_total": 0,
+      "incremental_rows_total": 436,
+      "highwater": "2026-11-10T15:15:00.000Z"
+    },
+    "1h": {
+      "status": "HISTORICAL_PAGES_PLUS_INCREMENTALS",
+      "rows_total_base": 215484,
+      "rows_per_symbol": 53871,
+      "coverage_start": "2020-09-14T08:00:00Z",
+      "last_previous_manifest_highwater": "2026-11-10T14:00:00Z",
+      "note": "1h archive index and latest manifest have differing highwater fields; no 1h append this run pending reconciliation."
+    },
+    "4h": {
+      "status": "DEGRADED_PROVENANCE",
+      "raw_rows_total": 53960,
+      "aligned_rows_total": 53816,
+      "canonical_rows_total": 53844,
+      "raw_highwater": "2026-11-10T08:00:00Z",
+      "canonical_end": "2026-11-05T16:00:00Z",
+      "manifest_sha_provenance_mismatches": 13,
+      "row_level_reconciliation": "Prior artifact compared 14 page/symbol pairs and 21,000 rows exactly with zero row-level mismatches."
+    }
+  },
+  "quality": {
+    "series": 16,
+    "rows": 32,
+    "duplicates": 0,
+    "missing_intervals": 0,
+    "off_grid": 0,
+    "non_monotonic": 0,
+    "ohlc_invariant_failures": 0,
+    "non_positive_volume": 0,
+    "non_finite": 0,
+    "cross_symbol_alignment": true,
+    "forming_rows_appended": 0,
+    "scope": "three incremental 5m/15m deltas only; does not prove full archive completeness"
+  },
+  "indexes": {
+    "5m": {
+      "path": "research-data/binance-usdm/5m/archive-index.json",
+      "blob_sha1": "33a9eee8316f59d58a0b661e6abfd6c4b88a49f8",
+      "readback_verified": true
+    },
+    "15m": {
+      "path": "research-data/binance-usdm/15m/archive-index.json",
+      "blob_sha1": "9bebfe574a927b6b22f0f1f01f2f4257c319caf4",
+      "readback_verified": true
+    }
+  },
+  "unresolved": [
+    "5m/15m multi-year base history absent",
+    "1h index/manifest highwater inconsistency",
+    "4h raw/aligned/canonical count discrepancy and 13 index SHA provenance mismatches",
+    "direct Binance REST DNS failure and stale exchangeInfo serverTime",
+    "Node24/npm11 local runtime and checkout unavailable",
+    "historical derivatives and calibrated execution-cost archives incomplete"
+  ]
+}

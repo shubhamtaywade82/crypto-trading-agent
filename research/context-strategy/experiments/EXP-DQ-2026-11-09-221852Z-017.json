@@ -1,0 +1,157 @@
+{
+  "experiment_id": "EXP-DQ-2026-11-09-221852Z-017",
+  "type": "data_quality_archive_append",
+  "status": "COMPLETED_PASS",
+  "as_of_utc": "2026-11-09T22:18:52.000Z",
+  "hypothesis": "Append every newly completed 5m/15m/1h bar after the recorded archive highwater for BTCUSDT, ETHUSDT, SOLUSDT and XRPUSDT; exclude forming bars and reject any duplicate, gap, off-grid timestamp, OHLC violation, non-positive volume, non-finite value, close-time mismatch or cross-symbol misalignment.",
+  "source": {
+    "transport": "Binance USDⓈ-M connector wrappers",
+    "endpoints": [
+      "GET /fapi/v1/klines"
+    ],
+    "sdk_used": false,
+    "direct_rest": "DNS unavailable; HTTP 000"
+  },
+  "universe": {
+    "reference_only": [
+      "BTCUSDT"
+    ],
+    "tradable": [
+      "ETHUSDT",
+      "SOLUSDT",
+      "XRPUSDT"
+    ],
+    "symbols": [
+      "BTCUSDT",
+      "ETHUSDT",
+      "SOLUSDT",
+      "XRPUSDT"
+    ]
+  },
+  "intervals": {
+    "5m": {
+      "previous_highwater_open_utc": "2026-11-09T21:20:00Z",
+      "latest_completed_open_utc": "2026-11-09T22:10:00Z",
+      "next_start_utc": "2026-11-09T22:15:00Z",
+      "rows_fetched": 48,
+      "rows_appended": 40,
+      "forming_rows_excluded": 8,
+      "rows_by_symbol": {
+        "BTCUSDT": 10,
+        "ETHUSDT": 10,
+        "SOLUSDT": 10,
+        "XRPUSDT": 10
+      },
+      "delta_path": "research-data/binance-usdm/delta/binance_usdm_delta_20261109T221852Z_5m_completed.jsonl",
+      "delta_sha256": "6cac30c1b2275895814a779ae89c41be65664a41ecf532e7b6ce10bff9ac5543",
+      "manifest_path": "research-data/binance-usdm/delta/manifest-20261109T221852Z-5m.json",
+      "manifest_sha256": "e7e9ea0f61f4ae2516db05f0a42c883a1a292509783fc9cafd1efb600562719a",
+      "index_blob_sha_after_append": "906b019dab6b28741576949ab31196bdda52e93a"
+    },
+    "15m": {
+      "previous_highwater_open_utc": "2026-11-09T21:00:00Z",
+      "latest_completed_open_utc": "2026-11-09T22:00:00Z",
+      "next_start_utc": "2026-11-09T22:15:00Z",
+      "rows_fetched": 20,
+      "rows_appended": 16,
+      "forming_rows_excluded": 4,
+      "rows_by_symbol": {
+        "BTCUSDT": 4,
+        "ETHUSDT": 4,
+        "SOLUSDT": 4,
+        "XRPUSDT": 4
+      },
+      "delta_path": "research-data/binance-usdm/delta/binance_usdm_delta_20261109T221852Z_15m_completed.jsonl",
+      "delta_sha256": "df05a750b870600808feb3fb0d9927f0a864a904f4bf20e866edbabefbc96b23",
+      "manifest_path": "research-data/binance-usdm/delta/manifest-20261109T221852Z-15m.json",
+      "manifest_sha256": "7e356542e12b9bc3956340099127dee9c0178020dc99320d194e051e081dd2b1",
+      "index_blob_sha_after_append": "95e50a72a737722e46dd90b8d0e61708dae15438"
+    },
+    "1h": {
+      "previous_highwater_open_utc": "2026-11-09T20:00:00Z",
+      "latest_completed_open_utc": "2026-11-09T21:00:00Z",
+      "next_start_utc": "2026-11-09T22:00:00Z",
+      "rows_fetched": 8,
+      "rows_appended": 4,
+      "forming_rows_excluded": 4,
+      "rows_by_symbol": {
+        "BTCUSDT": 1,
+        "ETHUSDT": 1,
+        "SOLUSDT": 1,
+        "XRPUSDT": 1
+      },
+      "delta_path": "research-data/binance-usdm/delta/binance_usdm_delta_20261109T221852Z_1h_completed.jsonl",
+      "delta_sha256": "1b5ebd887080225c602ff1aa4f3533223c5acc71d693cab8e14d64fe6af437d9",
+      "manifest_path": "research-data/binance-usdm/delta/manifest-20261109T221852Z-1h.json",
+      "manifest_sha256": "68a3c989b09279a084893ca561dcc0e2c202e0296f3f1aa14fe5c2983d0bb173",
+      "index_blob_sha_after_append": "a5374a3ff60aa728a6dbb656b9f9cfbee17c9c54"
+    },
+    "4h": {
+      "new_completed_rows": 0,
+      "latest_completed_open_utc": "2026-11-09T16:00:00Z",
+      "forming_open_utc": "2026-11-09T20:00:00Z"
+    }
+  },
+  "totals": {
+    "rows_fetched": 76,
+    "rows_appended": 60,
+    "forming_rows_excluded": 16,
+    "pre_highwater_rows_excluded": 0
+  },
+  "validation": {
+    "duplicates": 0,
+    "missing_intervals": 0,
+    "off_grid": 0,
+    "non_monotonic": 0,
+    "ohlc_violations": 0,
+    "non_positive_volume": 0,
+    "non_finite": 0,
+    "close_time_failures": 0,
+    "cross_symbol_alignment": true,
+    "all_appended_rows_completed": true
+  },
+  "reproducibility": {
+    "method": "Deterministic inline JavaScript validator in managed tool runtime; not the repository backtest harness",
+    "row_schema": [
+      "symbol",
+      "interval",
+      "openTime",
+      "open",
+      "high",
+      "low",
+      "close",
+      "volume",
+      "closeTime",
+      "quoteVolume",
+      "trades",
+      "takerBuyBaseVolume",
+      "takerBuyQuoteVolume"
+    ],
+    "cutoff_utc": "2026-11-09T22:18:52.000Z",
+    "sort_order": "openTime ascending, then symbol",
+    "random_seed": null,
+    "repo_commit": "669ba233538eb1463c0e7e0a435016a643e7adb5",
+    "repo_commit_role": "source inspection only; no local execution"
+  },
+  "artifacts": {
+    "global_manifest": "research-data/binance-usdm/manifests/archive_manifest_20261109T221852Z_v100.json",
+    "global_manifest_sha256": "325d6896e486ea6dd92a1d2c12cc9da1cb2858c25f1f7ec04da86eb9dc3d8af2",
+    "github_readback_verified": true,
+    "sha256_test_vector": "PASS"
+  },
+  "result": {
+    "archive_append": "PASS",
+    "strategy_backtest": "NOT_RUN",
+    "oos_evaluation": "NOT_RUN",
+    "evidence_status": "NOT_APPLICABLE_DATA_QUALITY_EXPERIMENT"
+  },
+  "blockers": [
+    "5m/15m multi-year base archives absent",
+    "4h archive reconciliation unresolved",
+    "Node 22.16.0/npm 10.9.2 below package requirement Node>=24/npm>=11",
+    "No local checkout",
+    "Direct Binance REST DNS failure",
+    "Exchange metadata stale",
+    "Execution cost and historical funding inputs incomplete"
+  ]
+}

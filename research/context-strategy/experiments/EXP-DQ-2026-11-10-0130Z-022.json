@@ -1,0 +1,176 @@
+{
+  "schema_version": "1.0.0",
+  "id": "EXP-DQ-2026-11-10-0130Z-022",
+  "run_id": "context-strategy-2026-11-10T0135Z-v104",
+  "as_of_utc": "2026-11-10T01:35:21Z",
+  "status": "COMPLETED_PASS_DATA_QUALITY_AND_BACKFILL_ONLY",
+  "experiment_type": "historical_archive_backfill_integrity",
+  "hypothesis": "Chunked Binance USDⓈ-M kline retrieval can create gap-free, cross-symbol aligned 5m/15m windows with preserved closeTime and readback-verifiable artifacts.",
+  "source": {
+    "venue": "Binance USDⓈ-M",
+    "transport": "Connected Binance public market-data operations",
+    "sdk_used": false,
+    "endpoint": "GET /fapi/v1/klines",
+    "symbols": [
+      "BTCUSDT",
+      "ETHUSDT",
+      "SOLUSDT",
+      "XRPUSDT"
+    ]
+  },
+  "requests": {
+    "interval_5m": {
+      "requests": 16,
+      "chunk_limit": 1500,
+      "rows_per_symbol": 6000,
+      "range_utc": "2026-10-20T04:20:00Z..2026-11-10T00:15:00Z"
+    },
+    "interval_15m": {
+      "requests": 16,
+      "chunk_limit": 1500,
+      "rows_per_symbol": 6000,
+      "range_utc": "2026-09-08T11:30:00Z..2026-11-09T23:15:00Z"
+    }
+  },
+  "results": {
+    "backfill_rows": 48000,
+    "incremental_rows": 76,
+    "total_persisted_rows": 48076,
+    "backfill_5m_rows": 24000,
+    "backfill_15m_rows": 24000,
+    "incremental_by_interval": {
+      "5m": 52,
+      "15m": 20,
+      "1h": 4,
+      "4h": 0
+    }
+  },
+  "quality": {
+    "duplicates": 0,
+    "missing_intervals": 0,
+    "off_grid": 0,
+    "non_monotonic": 0,
+    "ohlc_violations": 0,
+    "non_positive_volume": 0,
+    "non_finite": 0,
+    "close_time_mismatches": 0,
+    "cross_symbol_alignment_5m": true,
+    "cross_symbol_alignment_15m": true,
+    "readback_verified": true
+  },
+  "backfill_files": [
+    {
+      "interval": "5m",
+      "symbol": "BTCUSDT",
+      "path": "research-data/binance-usdm/backfills/20261110T0130Z/5m_BTCUSDT_20261020T0420Z_20261110T0015Z.jsonl",
+      "rows": 6000,
+      "bytes": 2419147,
+      "sha256": "ef7899895029d0acf5b324adb1ccc5b1ac803112f8a05530195edffc4ecb42fe",
+      "git_blob_sha": "0bf8379c6bcdb0eb7931b81848c6ba42733f0fba"
+    },
+    {
+      "interval": "5m",
+      "symbol": "ETHUSDT",
+      "path": "research-data/binance-usdm/backfills/20261110T0130Z/5m_ETHUSDT_20261020T0420Z_20261110T0015Z.jsonl",
+      "rows": 6000,
+      "bytes": 2449529,
+      "sha256": "49b66e9b884f302616b5147c8f5ff80df2d5a554402e567071842d1e50e20d16",
+      "git_blob_sha": "4583eb9a3c2d891ab63bc198204c8025c57103ec"
+    },
+    {
+      "interval": "5m",
+      "symbol": "SOLUSDT",
+      "path": "research-data/binance-usdm/backfills/20261110T0130Z/5m_SOLUSDT_20261020T0420Z_20261110T0015Z.jsonl",
+      "rows": 6000,
+      "bytes": 2390770,
+      "sha256": "e4d8c56a45e7e0bb37d8f6095e0ed5b0a1ba2d23bdc7b3403c910808f94cf32a",
+      "git_blob_sha": "6c637541ab58e073cc0a50525aba9add4bc27423"
+    },
+    {
+      "interval": "5m",
+      "symbol": "XRPUSDT",
+      "path": "research-data/binance-usdm/backfills/20261110T0130Z/5m_XRPUSDT_20261020T0420Z_20261110T0015Z.jsonl",
+      "rows": 6000,
+      "bytes": 2416845,
+      "sha256": "020835916572e35f5f2c2645da3ef268194ad31f9e61b9a17e0f1e997a9fa38b",
+      "git_blob_sha": "d5d176da75dc4b96feed39f7df156fdb068dd025"
+    },
+    {
+      "interval": "15m",
+      "symbol": "BTCUSDT",
+      "path": "research-data/binance-usdm/backfills/20261110T0132Z/15m_BTCUSDT_20260908T1130Z_20261109T2315Z.jsonl",
+      "rows": 6000,
+      "bytes": 2441409,
+      "sha256": "983ab341c5df820227dc9443d959eb5a8522a1edd1db43832f704394807c4be5",
+      "git_blob_sha": "f3c4227862e2ca51f05ad91c51a0752f78245c85"
+    },
+    {
+      "interval": "15m",
+      "symbol": "ETHUSDT",
+      "path": "research-data/binance-usdm/backfills/20261110T0132Z/15m_ETHUSDT_20260908T1130Z_20261109T2315Z.jsonl",
+      "rows": 6000,
+      "bytes": 2472352,
+      "sha256": "78d5c5af0dd2cc34c6f72ac9603b26024ba10ef7da4cb048836c4152a688229d",
+      "git_blob_sha": "b050cb58a12f21bfd43500a0db576f0b6e186160"
+    },
+    {
+      "interval": "15m",
+      "symbol": "SOLUSDT",
+      "path": "research-data/binance-usdm/backfills/20261110T0132Z/15m_SOLUSDT_20260908T1130Z_20261109T2315Z.jsonl",
+      "rows": 6000,
+      "bytes": 2421952,
+      "sha256": "276e1f72b2091dbde72a09d538ae9fbe3acd3e455da36f447cc4ef7599250c54",
+      "git_blob_sha": "7b8e4229a0cd85124766d5e03fa419d542a49616"
+    },
+    {
+      "interval": "15m",
+      "symbol": "XRPUSDT",
+      "path": "research-data/binance-usdm/backfills/20261110T0132Z/15m_XRPUSDT_20260908T1130Z_20261109T2315Z.jsonl",
+      "rows": 6000,
+      "bytes": 2442149,
+      "sha256": "9348f50d16e59b0184fe02bc553796000459d332354244dcc91df01d6344bd19",
+      "git_blob_sha": "a9a6a57d633d8ed50fd6ed4751516b9096d717c6"
+    }
+  ],
+  "delta_files": [
+    {
+      "interval": "5m",
+      "path": "research-data/binance-usdm/deltas/20261110T0121Z/klines_5m.jsonl",
+      "rows": 52,
+      "bytes": 20920,
+      "sha256": "20680858a696f4e8ff7c6882d54c0c9d467d02a04b39e6d28dd379b08127ffcc",
+      "git_blob_sha": "33f14b6ca9bbb2a493a31467ed97308c2220797f"
+    },
+    {
+      "interval": "15m",
+      "path": "research-data/binance-usdm/deltas/20261110T0121Z/klines_15m.jsonl",
+      "rows": 20,
+      "bytes": 8105,
+      "sha256": "c7eaa3758547eb929beba1c852b8ceb7a63ab040abfdc0b2068cf8fb3cc50715",
+      "git_blob_sha": "c72e84155167bfcd7ee00ea56cfdfd743d16fe23"
+    },
+    {
+      "interval": "1h",
+      "path": "research-data/binance-usdm/deltas/20261110T0121Z/klines_1h.jsonl",
+      "rows": 4,
+      "bytes": 1619,
+      "sha256": "b9760aeefa47cfb011914b2e5fc85b1570754e55643b71deca280a59af47cb23",
+      "git_blob_sha": "94e6991b314a39958f2542b69b4d19c71dd4abeb"
+    }
+  ],
+  "evaluation": {
+    "strategy_backtest_executed": false,
+    "oos_evaluated": false,
+    "oos_validated_count": 0,
+    "reason": "Only 20.8 days of 5m and 62.5 days of 15m are backfilled; insufficient for multi-cycle conditional validation. No compatible local runner or calibrated execution costs."
+  },
+  "reproducibility": {
+    "repository": "shubhamtaywade82/crypto-trading-agent",
+    "branch": "research/raw-ohlcv-archive-20261108T1026Z",
+    "main_code_commit": "669ba233538eb1463c0e7e0a435016a643e7adb5",
+    "branch_head_after_delta_updates": "03284f5056d9500e43629a4f0892371e0f0bbe0d",
+    "random_seed": null,
+    "environment": "Linux x86_64; Python3.13.5; Node22.16.0/npm10.9.2; no local checkout",
+    "retrieved_at_utc": "2026-11-10T01:33:19.085Z"
+  }
+}

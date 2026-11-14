@@ -1,0 +1,89 @@
+{
+  "schema_version": "1.0.0",
+  "experiment_id": "EXP-DQ-2026-11-09-2124Z-015",
+  "run_id": "context-strategy-20261109T213011Z-v99",
+  "as_of_utc": "2026-11-09T21:24:09.887Z",
+  "status": "COMPLETED_PASS",
+  "experiment_type": "INCREMENTAL_ARCHIVE_DATA_QUALITY",
+  "hypothesis": "One newly completed 1h candle per symbol is contiguous after the prior 1h highwater and passes OHLCV integrity checks.",
+  "source": {
+    "endpoint": "GET /fapi/v1/klines",
+    "transport": "Binance USDⓈ-M connector wrapper",
+    "sdk_used": false,
+    "direct_rest": "UNAVAILABLE: DNS resolution failed"
+  },
+  "scope": {
+    "symbols": [
+      "BTCUSDT",
+      "ETHUSDT",
+      "SOLUSDT",
+      "XRPUSDT"
+    ],
+    "tradable_symbols": [
+      "SOLUSDT",
+      "ETHUSDT",
+      "XRPUSDT"
+    ],
+    "reference_symbols": [
+      "BTCUSDT"
+    ],
+    "intervals": [
+      "1h"
+    ]
+  },
+  "specification": {
+    "previous_highwater_open_utc_by_interval": {
+      "1h": "2026-11-09T19:00:00.000Z"
+    },
+    "latest_completed_open_utc_by_interval": {
+      "1h": "2026-11-09T20:00:00.000Z"
+    },
+    "forming_candles_excluded": true,
+    "checks": [
+      "expected opens",
+      "duplicates",
+      "monotonicity",
+      "bar-grid alignment",
+      "closeTime consistency",
+      "OHLC invariants",
+      "volume>0",
+      "finite fields",
+      "cross-symbol alignment"
+    ]
+  },
+  "results": {
+    "rows_fetched": 8,
+    "rows_appended": 4,
+    "forming_rows_excluded": 4,
+    "pre_highwater_rows_excluded": 0,
+    "rows_by_interval": {
+      "1h": 4
+    },
+    "rows_by_symbol": {
+      "BTCUSDT": 1,
+      "ETHUSDT": 1,
+      "SOLUSDT": 1,
+      "XRPUSDT": 1
+    },
+    "failures": 0,
+    "quality_status": "PASS"
+  },
+  "validator": {
+    "implementation": "inline deterministic JavaScript validator in managed tool runtime",
+    "exit_status": 0,
+    "checks_passed": 32
+  },
+  "artifacts": {
+    "delta_path": "research-data/binance-usdm/delta/binance_usdm_delta_20261109T212409Z_1h_completed.jsonl",
+    "delta_sha256": "f93e6ada0b260ca4f1c053046537a609b9483ceed52202d11fe5dc711845ad34",
+    "delta_bytes": 1186,
+    "delta_blob_sha": "3782b3ce0976f15ce7d528a9173e4e470566144f",
+    "manifest_path": "research-data/binance-usdm/delta/manifest-20261109T212409Z-1h.json",
+    "manifest_sha256": "6006455d74708da5305e75c68a393b4223e3f3719b8825920b93aed6497c7d18",
+    "manifest_blob_sha": "8b65249ef400d45933b326b47143d854ef68d91c",
+    "readback_verified": true
+  },
+  "strategy_experiment_executed": false,
+  "oos_evaluated": false,
+  "evidence_status": "NOT_APPLICABLE_DATA_QUALITY_ONLY"
+}

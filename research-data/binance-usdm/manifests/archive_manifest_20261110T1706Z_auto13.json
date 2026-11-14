@@ -1,0 +1,151 @@
+{
+  "schema_version": "1.0.0",
+  "run_id": "context-strategy-20261110T1706Z-auto13",
+  "as_of_utc": "2026-11-10T17:06:14.000Z",
+  "repository": "shubhamtaywade82/crypto-trading-agent",
+  "branch": "research/raw-ohlcv-archive-20261108T1026Z",
+  "source": {
+    "endpoint": "GET /fapi/v1/klines",
+    "access": "Binance USD-M public market-data connector; direct REST DNS unavailable",
+    "symbols": [
+      "BTCUSDT",
+      "ETHUSDT",
+      "SOLUSDT",
+      "XRPUSDT"
+    ],
+    "intervals": [
+      "5m",
+      "15m",
+      "1h",
+      "4h"
+    ]
+  },
+  "highwaters": {
+    "5m": "2026-11-10T17:00:00.000Z",
+    "15m": "2026-11-10T16:45:00.000Z",
+    "1h": "2026-11-10T16:00:00.000Z",
+    "4h": "2026-11-10T12:00:00.000Z"
+  },
+  "append_this_run": {
+    "rows_fetched": 144,
+    "completed_rows": 108,
+    "forming_rows_excluded": 28,
+    "pre_highwater_rows_excluded": 0,
+    "rows_appended": 108,
+    "rows_by_interval": {
+      "5m": 72,
+      "15m": 24,
+      "1h": 8,
+      "4h": 4
+    },
+    "rows_by_symbol": {
+      "BTCUSDT": 27,
+      "ETHUSDT": 27,
+      "SOLUSDT": 27,
+      "XRPUSDT": 27
+    },
+    "batches": [
+      {
+        "delta_path": "research-data/binance-usdm/delta/binance_usdm_delta_20261110T1655Z_all_intervals_completed.jsonl",
+        "delta_sha256": "90797fd6c135e295c1db1eacf231468f082f6dbc76caf6a9bb446644d2d31330",
+        "delta_blob_sha1": "290e270abbd7099e7bb6a92375ff73f45c954b75",
+        "manifest_path": "research-data/binance-usdm/delta/manifest-20261110T1655Z-all-intervals.json",
+        "manifest_sha256": "fb0d23b3eb25db8ae68c25a1baaea1409b4516e94b7ce329a327ecd09e992407",
+        "manifest_blob_sha1": "4d703f202746033c7e8b2564829358890652551f",
+        "rows": 92,
+        "readback_verified": true
+      },
+      {
+        "delta_path": "research-data/binance-usdm/delta/binance_usdm_delta_20261110T1706Z_5m15m1h_completed.jsonl",
+        "delta_sha256": "5412fe27b2c8687fac15c7c72c6af255ad6c5be9426521f66a8759754b3cc041",
+        "delta_blob_sha1": "e8bf69a73af912366e699951409fad5ff673a097",
+        "manifest_path": "research-data/binance-usdm/delta/manifest-20261110T1706Z-5m15m1h.json",
+        "manifest_sha256": "59daf0af38f2d67a92829d9e8ba473477006ca3f22757eea72c1f7ab7af7a8f7",
+        "manifest_blob_sha1": "90c3849909d4d4ae4af2a67ad148d3aad44863a7",
+        "rows": 16,
+        "readback_verified": true
+      }
+    ],
+    "readback_verified": true,
+    "quality_failures": 0
+  },
+  "base_coverage": {
+    "5m": {
+      "status": "ABSENT",
+      "base_rows_total": 0,
+      "incremental_rows_total": 1368,
+      "highwater": "2026-11-10T17:00:00.000Z"
+    },
+    "15m": {
+      "status": "ABSENT",
+      "base_rows_total": 0,
+      "incremental_rows_total": 460,
+      "highwater": "2026-11-10T16:45:00.000Z"
+    },
+    "1h": {
+      "status": "HISTORICAL_PAGES_PLUS_INCREMENTALS",
+      "rows_total_base": 215484,
+      "rows_per_symbol": 53871,
+      "coverage_start": "2020-09-14T08:00:00Z",
+      "last_previous_manifest_highwater": "2026-11-10T14:00:00Z",
+      "note": "The 1h index and previous archive manifest were read back and both agreed at 2026-11-10T14:00:00Z; the 15:00Z candle was appended in this run.",
+      "highwater": "2026-11-10T16:00:00.000Z"
+    },
+    "4h": {
+      "status": "DEGRADED_PROVENANCE",
+      "raw_rows_total": 53960,
+      "aligned_rows_total": 53816,
+      "canonical_rows_total": 53844,
+      "raw_highwater": "2026-11-10T12:00:00.000Z",
+      "canonical_end": "2026-11-05T16:00:00Z",
+      "manifest_sha_provenance_mismatches": 13,
+      "row_level_reconciliation": "Prior artifact compared 14 page/symbol pairs and 21,000 rows exactly with zero row-level mismatches.",
+      "note": "4h raw incremental archive advanced to 12:00Z; canonical 4h series remains separately bounded at 2026-11-05T16:00Z until canonical rebuild.",
+      "highwater": "2026-11-10T12:00:00.000Z"
+    }
+  },
+  "quality": {
+    "series": 16,
+    "rows": 32,
+    "duplicates": 0,
+    "missing_intervals": 0,
+    "off_grid": 0,
+    "non_monotonic": 0,
+    "ohlc_invariant_failures": 0,
+    "non_positive_volume": 0,
+    "non_finite": 0,
+    "cross_symbol_alignment": true,
+    "forming_rows_appended": 0,
+    "scope": "three incremental 5m/15m deltas only; does not prove full archive completeness"
+  },
+  "indexes": {
+    "5m": {
+      "path": "research-data/binance-usdm/5m/archive-index.json",
+      "blob_sha1": "3d626e4bdf7d9508b3e5756de10dca556538451d",
+      "readback_verified": true
+    },
+    "15m": {
+      "path": "research-data/binance-usdm/15m/archive-index.json",
+      "blob_sha1": "d7f02d273f89da04f7b242c8735a29d4c06661cc",
+      "readback_verified": true
+    },
+    "1h": {
+      "path": "research-data/binance-usdm/1h/archive-index.json",
+      "blob_sha1": "a243cba8ab1138c440e4f3ca369c15e184ea4f31",
+      "readback_verified": true
+    },
+    "4h": {
+      "path": "research-data/binance-usdm/4h/archive-index.json",
+      "blob_sha1": "0acd7b6cb97189b628c1b77bc8be8860a26c2b0e",
+      "readback_verified": true
+    }
+  },
+  "unresolved": [
+    "5m/15m multi-year base history absent; incremental-only windows are not sufficient for strategy research.",
+    "4h raw/aligned/canonical row-count discrepancy and 13 original manifest SHA provenance mismatches remain; canonical 4h was not rebuilt by this incremental append.",
+    "Direct Binance REST DNS failed for fapi.binance.com; market data was retrieved through the Binance USD-M public connector.",
+    "exchangeInfo.serverTime was stale relative to premiumIndex.time; direct /fapi/v1/time probe unavailable, so metadata freshness remains DEGRADED.",
+    "Local checkout absent; Node 22.16.0/npm 10.9.2 below project Node >=24/npm >=11; Binance SDK not installed/importable.",
+    "Historical derivatives and calibrated execution-cost archives remain incomplete."
+  ]
+}

@@ -1,0 +1,149 @@
+{
+  "schema_version": "1.0.0",
+  "run_id": "context-strategy-20261114T084943Z-auto11-run15",
+  "experiment_type": "DATA_QUALITY_INCREMENTAL_APPEND",
+  "status": "PASS_INCREMENTAL_SLICE_BASE_ARCHIVE_DEGRADED",
+  "as_of_utc": "2026-11-14T08:49:43.143Z",
+  "verified_at_utc": "2026-11-14T08:59:53.533Z",
+  "source_endpoint": "GET /fapi/v1/klines",
+  "source": "Binance USD-M public market-data connector; SDK not used; direct REST DNS unavailable.",
+  "code_version": {
+    "repository": "shubhamtaywade82/crypto-trading-agent",
+    "branch": "research/umbrella",
+    "repo_commit_at_run_start": "1a3dc858174865cc1a45c8b8a2bd97cc0b4823b1",
+    "runner": "managed V8 in-memory JS; repository Node CLI not invoked",
+    "harness_invoked": false
+  },
+  "delta": {
+    "path": "research-data/binance-usdm/delta/binance_usdm_delta_20261114T0849Z_5m15m_completed.jsonl",
+    "manifest_path": "research-data/binance-usdm/delta/manifest-20261114T0849Z-5m15m.json",
+    "rows": 32,
+    "bytes": 9344,
+    "sha256": "4e8248b0ce7fa0eafc06e4f69f6e4ea36a438f7f5803a2fd06ca269407488ed9",
+    "blob_sha": "ca669b5c868a99e80329e0e46c7e2c4951f3dca0",
+    "readback_verified": true,
+    "rows_by_interval": {
+      "5m": 24,
+      "15m": 8
+    },
+    "rows_by_symbol": {
+      "BTCUSDT": 8,
+      "ETHUSDT": 8,
+      "SOLUSDT": 8,
+      "XRPUSDT": 8
+    },
+    "rows_by_symbol_interval": {
+      "BTCUSDT|5m": 6,
+      "BTCUSDT|15m": 2,
+      "ETHUSDT|5m": 6,
+      "ETHUSDT|15m": 2,
+      "SOLUSDT|5m": 6,
+      "SOLUSDT|15m": 2,
+      "XRPUSDT|5m": 6,
+      "XRPUSDT|15m": 2
+    },
+    "per_symbol_interval": {
+      "BTCUSDT|5m": {
+        "fetched": 7,
+        "completed": 6,
+        "forming": 1,
+        "first": "2026-11-14T08:15:00.000Z",
+        "last": "2026-11-14T08:40:00.000Z"
+      },
+      "BTCUSDT|15m": {
+        "fetched": 3,
+        "completed": 2,
+        "forming": 1,
+        "first": "2026-11-14T08:15:00.000Z",
+        "last": "2026-11-14T08:30:00.000Z"
+      },
+      "ETHUSDT|5m": {
+        "fetched": 7,
+        "completed": 6,
+        "forming": 1,
+        "first": "2026-11-14T08:15:00.000Z",
+        "last": "2026-11-14T08:40:00.000Z"
+      },
+      "ETHUSDT|15m": {
+        "fetched": 3,
+        "completed": 2,
+        "forming": 1,
+        "first": "2026-11-14T08:15:00.000Z",
+        "last": "2026-11-14T08:30:00.000Z"
+      },
+      "SOLUSDT|5m": {
+        "fetched": 7,
+        "completed": 6,
+        "forming": 1,
+        "first": "2026-11-14T08:15:00.000Z",
+        "last": "2026-11-14T08:40:00.000Z"
+      },
+      "SOLUSDT|15m": {
+        "fetched": 3,
+        "completed": 2,
+        "forming": 1,
+        "first": "2026-11-14T08:15:00.000Z",
+        "last": "2026-11-14T08:30:00.000Z"
+      },
+      "XRPUSDT|5m": {
+        "fetched": 7,
+        "completed": 6,
+        "forming": 1,
+        "first": "2026-11-14T08:15:00.000Z",
+        "last": "2026-11-14T08:40:00.000Z"
+      },
+      "XRPUSDT|15m": {
+        "fetched": 3,
+        "completed": 2,
+        "forming": 1,
+        "first": "2026-11-14T08:15:00.000Z",
+        "last": "2026-11-14T08:30:00.000Z"
+      }
+    },
+    "rows_fetched": 40,
+    "forming_rows_excluded": 8
+  },
+  "prior_highwater_utc_by_interval": {
+    "5m": "2026-11-14T08:10:00.000Z",
+    "15m": "2026-11-14T08:00:00.000Z",
+    "1h": "2026-11-14T07:00:00.000Z",
+    "4h": "2026-11-13T12:00:00.000Z"
+  },
+  "latest_completed_open_utc_by_interval": {
+    "5m": "2026-11-14T08:40:00.000Z",
+    "15m": "2026-11-14T08:30:00.000Z",
+    "1h": "2026-11-14T07:00:00.000Z",
+    "4h": "2026-11-13T12:00:00.000Z"
+  },
+  "quality": {
+    "duplicates": 0,
+    "missing_intervals": 0,
+    "off_grid": 0,
+    "non_monotonic": 0,
+    "ohlc_failures": 0,
+    "non_finite": 0,
+    "non_positive_volume": 0,
+    "close_time_failures": 0,
+    "forming_rows_included": 0,
+    "cross_symbol_alignment": true,
+    "contiguous_from_prior_highwater": true,
+    "sha256_self_test": "PASS"
+  },
+  "experiment_spec": {
+    "hypothesis": "All completed 5m/15m bars after the verified prior highwaters are contiguous, aligned across the four symbols, and satisfy OHLCV invariants.",
+    "method": "Fetch klines from exact nextStart for each symbol/interval; exclude rows whose closeTime is not strictly before fixed cutoff; validate unique monotonic aligned openTime, interval grid, OHLC, finite values, positive volume and closeTime."
+  },
+  "outcome": "PASS for this incremental slice only; does not repair or validate the full historical archive.",
+  "strategy_experiment": "BLOCKED",
+  "oos_evaluated": false,
+  "registry_changed": false,
+  "blockers": [
+    "No local repository checkout; Node v22.16.0/npm 10.9.2 are below package engines Node>=24/npm>=11; Binance SDK packages absent; no deterministic harness smoke test.",
+    "Page-0028 5m/15m canonical eligibility remains false: 8 manifest SHA mismatches and no common four-symbol panel.",
+    "1h bridge still has 28 missing hourly opens per symbol and an 8-row discrepancy.",
+    "4h raw/aligned/canonical row counts remain 53,960/53,816/53,844; 13 page-manifest SHA mismatches; canonical 4h remains stale.",
+    "Direct Binance REST DNS failed; exchangeInfo serverTime is 26.79h stale; XRP OI history returned 403.",
+    "Execution-cost model remains a 15bp round-trip proxy, not calibrated."
+  ],
+  "next_executable_action": "Resolve page-0028 per-symbol source hashes and cross-symbol panel definition; then reconcile 1h/4h row keys and provenance, provision Node>=24/npm>=11, run the deterministic fixture twice, and only then preregister a SOL/ETH/XRP strategy×context experiment."
+}

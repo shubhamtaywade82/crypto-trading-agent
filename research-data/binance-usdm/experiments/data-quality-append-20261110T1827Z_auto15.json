@@ -1,0 +1,63 @@
+{
+  "schema_version": "1.0.0",
+  "experiment_id": "EXP-DQ-2026-11-10-1827Z-030",
+  "run_id": "context-strategy-20261110T1822Z-auto15",
+  "as_of_utc": "2026-11-10T18:27:25.000Z",
+  "type": "INCREMENTAL_ARCHIVE_APPEND_AUDIT",
+  "status": "COMPLETED_DATA_QUALITY_AUDIT",
+  "strategy_experiment": false,
+  "oos_evaluation": false,
+  "source": {
+    "endpoint": "GET /fapi/v1/klines",
+    "access": "Binance USD-M public connector",
+    "symbols": [
+      "BTCUSDT",
+      "ETHUSDT",
+      "SOLUSDT",
+      "XRPUSDT"
+    ],
+    "interval": "5m"
+  },
+  "highwater_before_utc": "2026-11-10T18:15:00.000Z",
+  "highwater_after_utc": "2026-11-10T18:20:00.000Z",
+  "next_start_utc": "2026-11-10T18:25:00.000Z",
+  "rows_fetched": 4,
+  "completed_rows": 4,
+  "forming_rows_excluded": 0,
+  "pre_highwater_rows_excluded": 0,
+  "rows_appended": 4,
+  "rows_by_symbol": {
+    "BTCUSDT": 1,
+    "ETHUSDT": 1,
+    "SOLUSDT": 1,
+    "XRPUSDT": 1
+  },
+  "quality": {
+    "duplicates": 0,
+    "missing_intervals": 0,
+    "off_grid": 0,
+    "non_monotonic": 0,
+    "ohlc_invariant_failures": 0,
+    "non_positive_volume": 0,
+    "non_finite": 0,
+    "cross_symbol_alignment": true
+  },
+  "delta": {
+    "path": "research-data/binance-usdm/delta/binance_usdm_delta_20261110T1827Z_5m_completed.jsonl",
+    "sha256": "0376b3ac4b87901ed42e32ecd64185807420286a96b66749ac8ecd49c61ebb0c",
+    "git_blob_sha1": "4e20c2680a08819f854d66a85c73dcc5172ce013",
+    "bytes": 1170,
+    "readback_verified": true
+  },
+  "delta_manifest": {
+    "path": "research-data/binance-usdm/delta/manifest-20261110T1827Z-5m.json",
+    "sha256": "8d1259eca80ae78a19e750fd361d8f4d8475275aa862b6f84c997e7bc024e2c3",
+    "git_blob_sha1": "2a28166c8bcad61711f4574f677a0a47a51323cd",
+    "readback_verified": true
+  },
+  "scope_limitations": [
+    "Only the new 5m delta is validated; no full-history completeness or strategy inference.",
+    "No strategy backtest or OOS evaluation."
+  ],
+  "evidence_status": "DATA_QUALITY_AUDIT_ONLY"
+}

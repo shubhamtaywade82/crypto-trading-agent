@@ -1,0 +1,175 @@
+{
+  "schema_version": "1.0.0",
+  "run_id": "context-strategy-2026-11-12T193436Z-v95",
+  "as_of_utc": "2026-11-12T19:34:36.450Z",
+  "overall_status": "RESEARCH_EXECUTED_DATA_QUALITY_ONLY",
+  "priority_order": [
+    "RQ-002",
+    "RQ-005",
+    "RQ-012",
+    "RQ-003",
+    "RQ-029",
+    "RQ-004",
+    "RQ-014",
+    "RQ-021",
+    "RQ-007",
+    "RQ-028"
+  ],
+  "items": [
+    {
+      "id": "RQ-002",
+      "priority": "P0",
+      "status": "BLOCKED",
+      "title": "Refresh Binance server time and exchange metadata",
+      "blocker": "Direct fapi DNS failed HTTP 000; /fapi/v1/time unavailable. exchangeInfo serverTime 2026-11-12T09:45:01.952Z is about 9h49m stale versus 19:34Z market data; connector hides HTTP status.",
+      "next_action": "Restore uncached /time and /exchangeInfo; require <=5s drift and fresh TRADING metadata."
+    },
+    {
+      "id": "RQ-005",
+      "priority": "P0",
+      "status": "BLOCKED",
+      "title": "Provision compatible local repository runner",
+      "blocker": "No local checkout or node_modules; Node22.16/npm10.9 below Node>=24/npm>=11; SDK packages absent.",
+      "next_action": "Provision Node24/npm11, clone exact main commit 67e1507452f03592d6afd527e03df267bcef787e, install lockfile and run deterministic fixture twice."
+    },
+    {
+      "id": "RQ-012",
+      "priority": "P0",
+      "status": "BLOCKED",
+      "title": "Fix candle contract, positive-volume validation and 5m research path",
+      "blocker": "Remote klineLoader drops closeTime row[6]; candleIntegrity accepts volume=0; backtest timeframes are 15m/1h/4h and CLI defaults to BTCUSDT.",
+      "next_action": "Propagate closeTime, reject volume<=0, add 5m and BTC reference-only handling; test forming/gap/duplicate/off-grid/OHLC/zero-volume/no-lookahead fixtures."
+    },
+    {
+      "id": "RQ-003",
+      "priority": "P1",
+      "status": "PARTIALLY_COMPLETED",
+      "title": "Backfill multi-year 5m/15m and reconcile 4h canonical archive",
+      "blocker": "5m/15m now found partial uneven base pages, not multi-year; index/global manifest differ by 12,000 rows each. 1h bridge gaps 28 opens/symbol and 8-row count discrepancy. 4h raw/aligned/canonical 53960/53816/53844 with 13 hash mismatches and malformed XRP original.",
+      "next_action": "Backfill lower intervals oldest-first; reconcile index/global manifests, close 1h gaps, and complete 4h provenance reconciliation."
+    },
+    {
+      "id": "RQ-029",
+      "priority": "P0",
+      "status": "BLOCKED",
+      "title": "Enforce BTC reference-only in EXP-001",
+      "blocker": "Remote main EXP-001 config previously listed BTCUSDT in tradable symbols and lacks referenceSymbols/referenceOnly split; local runner absent.",
+      "next_action": "Restrict tradable symbols to SOL/ETH/XRP, add referenceSymbols:[BTCUSDT], and test BTC cannot generate trade labels/outcomes/orders."
+    },
+    {
+      "id": "RQ-004",
+      "priority": "P1",
+      "status": "BLOCKED",
+      "title": "Calibrate realistic execution costs",
+      "blocker": "Actual fee tier, historical funding cashflows, spread/depth, slippage, impact and latency unavailable; 15bp proxy uncalibrated.",
+      "next_action": "Collect fee-tier evidence and synchronized historical book/trades/funding; fit per-symbol execution-cost curves."
+    },
+    {
+      "id": "RQ-014",
+      "priority": "P1",
+      "status": "BLOCKED",
+      "title": "Backfill historical funding cashflows",
+      "blocker": "Only latest two settled records per symbol retrieved in this run; historical funding archive incomplete/unverified.",
+      "next_action": "Backfill fundingRate across research window and align settlement cashflows to holding periods."
+    },
+    {
+      "id": "RQ-021",
+      "priority": "P0",
+      "status": "BLOCKED",
+      "title": "Execute pre-registered context-conditioned strategy experiment",
+      "blocker": "No compatible Node24/npm11 runner; stale metadata; 5m/15m incomplete; 1h/4h provenance issues; cost/funding model incomplete; candle-contract defects remain.",
+      "next_action": "Resolve RQ-002/003/004/005/012/014/029, then freeze one tradable-only strategy×context×symbol experiment and run purged chronological OOS."
+    },
+    {
+      "id": "RQ-019",
+      "priority": "P1",
+      "status": "COMPLETED_THIS_RUN",
+      "title": "Append completed OHLCV bars and verify archive indexes",
+      "rows_appended": 128,
+      "rows_by_interval": {
+        "5m": 88,
+        "15m": 32,
+        "1h": 8,
+        "4h": 0
+      },
+      "delta_path": "research-data/binance-usdm/delta/binance_usdm_delta_20261112T1930Z_all_intervals_completed.jsonl",
+      "delta_sha256": "e927374e219a1ee46e75698c3638575192e50ede58e95271ca4cadefd93a4cd1",
+      "readback_verified": true,
+      "next_action": "Next 5m/15m open 19:30Z, 1h 19:00Z and 4h 16:00Z are forming; append after closeTime."
+    },
+    {
+      "id": "RQ-030",
+      "priority": "P0",
+      "status": "COMPLETED_THIS_RUN",
+      "title": "Run incremental archive integrity experiment",
+      "experiment_id": "EXP-DQ-2026-11-12-193048Z-010",
+      "rows_fetched": 1200,
+      "forming_excluded": 12,
+      "rows_appended": 128,
+      "quality_failures": 0,
+      "readback_verified": true,
+      "next_action": "No strategy inference from integrity-only test; strategy experiment remains blocked."
+    },
+    {
+      "id": "RQ-007",
+      "priority": "P3",
+      "status": "PARTIALLY_COMPLETED",
+      "title": "Test BTC relative strength and lead/lag",
+      "blocker": "Prior 98-observation correlations are contemporaneous only; no lagged lead/lag OOS test. Current run did not recompute.",
+      "next_action": "Use aligned multi-year 1h/4h returns; estimate lagged cross-correlation and rolling stability on train only."
+    },
+    {
+      "id": "RQ-010",
+      "priority": "P2",
+      "status": "PARTIALLY_COMPLETED",
+      "title": "Enforce funding field semantics",
+      "blocker": "Indicated premiumIndex funding and settled fundingRate are distinct; only latest two settlements per symbol fetched; full cashflow archive absent.",
+      "next_action": "Keep fields separate and add timestamp/payment alignment regression tests."
+    },
+    {
+      "id": "RQ-011",
+      "priority": "P2",
+      "status": "BLOCKED",
+      "title": "Meet OOS evidence gates",
+      "blocker": "36 cells below 100 OOS trades; nominal block-bootstrap CI includes zero; Holm-adjusted p=1.0; robust costs/purging incomplete.",
+      "next_action": "Do not lower gates; require >=100 OOS trades per symbol/context and >=200 across multiple windows with positive net expectancy and robust uncertainty."
+    },
+    {
+      "id": "RQ-028",
+      "priority": "P2",
+      "status": "BLOCKED_OVERDUE",
+      "title": "Weekly context taxonomy stability review",
+      "blocker": "Due 2026-11-11T00:00Z; compatible runner absent and 1h/4h provenance issues unresolved.",
+      "next_action": "After RQ-003/RQ-005, refit v56 thresholds on train only and measure frequencies, durations, transitions and validation/test TVD."
+    }
+  ],
+  "daily_cycle": {
+    "status": "COMPLETED_DATA_QUALITY_ONLY_STRATEGY_EXPERIMENT_BLOCKED",
+    "experiment_executed": true,
+    "strategy_backtest_executed": false,
+    "oos_evaluated": false,
+    "experiment_ids": [
+      "EXP-DQ-2026-11-12-193048Z-010"
+    ],
+    "last_executed_utc": "2026-11-12T19:34:36.450Z",
+    "blocker": "Strategy experiment remains blocked by RQ-002/003/004/005/012/014/029."
+  },
+  "weekly_review": {
+    "status": "OVERDUE_BLOCKED",
+    "next_due_utc": "2026-11-11T00:00:00Z",
+    "last_review_reference": "v56 review 2026-11-09T02:36:32.618Z",
+    "blocker": "Archive/runner prerequisites prevent defensible train-only refit.",
+    "next_action": "Run v56 stability review after archive reconciliation and compatible runner provisioning."
+  },
+  "archive_highwaters": {
+    "5m": "2026-11-12T19:25:00Z",
+    "15m": "2026-11-12T19:15:00Z",
+    "1h": "2026-11-12T18:00:00Z",
+    "4h": "2026-11-12T12:00:00Z"
+  },
+  "archive_rows_appended_total": 128,
+  "latest_data_quality_experiments": [
+    "EXP-DQ-2026-11-12-193048Z-010"
+  ],
+  "latest_run_status": "RESEARCH_EXECUTED_DATA_QUALITY_ONLY"
+}

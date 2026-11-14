@@ -1,0 +1,77 @@
+{
+  "schema_version": "1.0.0",
+  "run_id": "context-strategy-2026-11-10T0227Z-v105",
+  "as_of_utc": "2026-11-10T02:29:15.623Z",
+  "environment": {
+    "runtime": "managed Linux x86_64 container",
+    "kernel": "6.18.57",
+    "python": "3.13.5",
+    "node": "v22.16.0",
+    "npm": "10.9.2",
+    "cpu_cores": 5,
+    "mem_available_kib": 4925016,
+    "disk_free_gib": 30,
+    "pwd": "/",
+    "local_repository_checkout": false,
+    "binance_sdk_packages_importable": false
+  },
+  "checks": [
+    {
+      "capability": "shell/compute",
+      "status": "PASS",
+      "evidence": "Linux x86_64; Python 3.13.5; 5 CPUs; ~4.7 GiB available RAM; ~30 GiB free disk.",
+      "impact": "Enough for bounded data checks; no local strategy runner."
+    },
+    {
+      "capability": "repository/code",
+      "status": "DEGRADED",
+      "evidence": "GitHub branch readable; local checkout absent; main commit observed 669ba233538eb1463c0e7e0a435016a643e7adb5; package requires Node>=24/npm>=11 but runtime Node22.16/npm10.9.",
+      "impact": "Cannot execute project harness or source tests."
+    },
+    {
+      "capability": "Binance SDK",
+      "status": "BLOCKED",
+      "evidence": "binance, @binance/connector and @binance/futures-connector not importable.",
+      "impact": "Used connected Binance market-data operations, not SDK."
+    },
+    {
+      "capability": "network/Binance endpoints",
+      "status": "DEGRADED",
+      "evidence": "Connected operations for klines, premiumIndex, exchangeInfo, ticker24hr, openInterest, fundingRate, taker flow, long/short ratio and depth succeeded. Direct curl to /fapi/v1/time failed DNS (HTTP 000). PremiumIndex time 02:26:57Z vs shell 02:26:58Z (~1.9s). exchangeInfo.serverTime 01:01:01.891Z, ~5155s stale.",
+      "impact": "Current snapshot usable descriptively; current contract metadata not valid for execution."
+    },
+    {
+      "capability": "raw historical archive",
+      "status": "DEGRADED",
+      "evidence": "v104 5m/15m backfills persisted; 1h base reported but not mounted/read; 4h 13 unresolved SHA discrepancies. New 60-row delta set persisted to research branch.",
+      "impact": "Multi-cycle 5m/15m coverage remains insufficient; 4h provenance unresolved."
+    },
+    {
+      "capability": "data quality/coverage",
+      "status": "PASS",
+      "evidence": "16 current series ×120 rows; 119 completed per series, 1 forming excluded; zero duplicate, gap, off-grid or OHLC/positive-volume failures. New delta 60 rows; aligned across symbols.",
+      "impact": "Hourly archive append accepted; does not validate strategy edge."
+    },
+    {
+      "capability": "backtest harness/smoke test",
+      "status": "BLOCKED",
+      "evidence": "package.json defines research:conditional and backtest scripts, but no local checkout and incompatible Node/npm; no deterministic project fixture smoke test run.",
+      "impact": "No strategy experiment or OOS evaluation."
+    },
+    {
+      "capability": "disk/storage",
+      "status": "PASS",
+      "evidence": "~30 GiB free; remote GitHub branch writes succeeded.",
+      "impact": "Remote durable persistence available."
+    },
+    {
+      "capability": "artifact readback",
+      "status": "PASS",
+      "evidence": "All three delta files fetched back from GitHub; rows, ranges, Git blob SHA and SHA-256 verified.",
+      "impact": "Incremental archive artifacts persisted."
+    }
+  ],
+  "outcome": "RESEARCH_EXECUTED",
+  "scope": "DATA_QUALITY_AND_ARCHIVE_APPEND_ONLY",
+  "oos_evaluated": false
+}

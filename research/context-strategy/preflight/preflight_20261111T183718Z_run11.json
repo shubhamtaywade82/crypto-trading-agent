@@ -1,0 +1,194 @@
+{
+  "schema_version": "1.0.0",
+  "run_id": "context-strategy-20261111T183406Z-run11",
+  "as_of_utc": "2026-11-11T18:37:18.942Z",
+  "repository": "shubhamtaywade82/crypto-trading-agent",
+  "archive_branch": "research/raw-ohlcv-archive-20261108T1026Z",
+  "checks": [
+    {
+      "capability": "shell/compute",
+      "status": "PASS",
+      "evidence": {
+        "cwd": "/",
+        "os": "Debian GNU/Linux 13 (trixie)",
+        "kernel": "6.18.57",
+        "node": "v22.16.0",
+        "npm": "10.9.2",
+        "python": "3.13.5",
+        "cpu_count": 3,
+        "memory_total_gib": 5.8,
+        "memory_available_gib": 4.7,
+        "disk_total_gib": 32,
+        "disk_free_gib": 30
+      },
+      "impact": "Shell and bounded compute available; local runtime is below the previously declared project engine floor.",
+      "next_action": "Provision Node 24/npm 11 before running repository scripts."
+    },
+    {
+      "capability": "repo/code",
+      "status": "BLOCKED",
+      "evidence": {
+        "cwd": "/",
+        "local_checkout": false,
+        "package_json_found": false,
+        "git_directory_found": false,
+        "binance_sdk_packages": {
+          "@nemesis-oss/binance-sdk": "NOT_INSTALLED",
+          "@binance/connector": "NOT_INSTALLED",
+          "binance": "NOT_INSTALLED",
+          "binance-api-node": "NOT_INSTALLED"
+        },
+        "remote_main_head": "a45415053c6cf4d645057c8b2301d4729316e64d",
+        "remote_code_executed": false
+      },
+      "impact": "No local backtest harness or code version can be invoked; current main source contracts were not re-audited in this run.",
+      "next_action": "Clone the exact observed main HEAD into a compatible Node 24/npm 11 workspace and inspect the harness."
+    },
+    {
+      "capability": "network/Binance endpoints",
+      "status": "DEGRADED",
+      "evidence": {
+        "direct_rest_curl": {
+          "/fapi/v1/time": "HTTP 000 DNS failure",
+          "/fapi/v1/exchangeInfo": "HTTP 000 DNS failure",
+          "/fapi/v1/premiumIndex": "HTTP 000 DNS failure",
+          "/fapi/v1/openInterest": "HTTP 000 DNS failure",
+          "/fapi/v1/ticker/24hr": "HTTP 000 DNS failure"
+        },
+        "connector_success": [
+          "/fapi/v1/klines",
+          "/fapi/v1/premiumIndex",
+          "/fapi/v1/ticker/24hr",
+          "/fapi/v1/openInterest",
+          "/fapi/v1/fundingRate",
+          "/futures/data/openInterestHist",
+          "/futures/data/takerlongshortRatio",
+          "/futures/data/globalLongShortAccountRatio",
+          "/fapi/v1/depth"
+        ],
+        "connector_http_status_exposed": false,
+        "exchangeInfo_server_time_utc": "2026-11-11T10:18:31.943Z",
+        "exchangeInfo_staleness_seconds": 29735.034,
+        "server_time_endpoint": "UNAVAILABLE_DIRECT_REST_DNS"
+      },
+      "impact": "Market snapshot available through Binance public-data connector, but HTTP status, server time and fresh contract metadata are not independently verified.",
+      "next_action": "Restore direct DNS/HTTPS and require fresh /time and /exchangeInfo before execution validation."
+    },
+    {
+      "capability": "raw historical archive",
+      "status": "PASS",
+      "evidence": {
+        "branch": "research/raw-ohlcv-archive-20261108T1026Z",
+        "incremental_delta": "research-data/binance-usdm/delta/binance_usdm_delta_20261111T183214Z_5m15m1h_completed.jsonl",
+        "incremental_rows": 68,
+        "delta_sha256": "e25e204d3d905833de36891df7136e3953072b234f349238e11aa6f9dcdec614",
+        "page10_backfill_rows": 12000,
+        "page10_files": 8,
+        "page10_manifests": [
+          "research-data/binance-usdm/5m/manifest-page-0010.json",
+          "research-data/binance-usdm/15m/manifest-page-0010.json"
+        ],
+        "archive_manifest": "research-data/binance-usdm/manifests/archive_manifest_20261111T183214Z_run11.json",
+        "all_readback_verified": true
+      },
+      "impact": "Durable GitHub archive writes and exact readbacks completed for 5m/15m/1h incrementals and 5m/15m page 0010.",
+      "next_action": "Continue page 0011 from the per-symbol nextStartUtc values; keep raw and incremental layers separate."
+    },
+    {
+      "capability": "data quality/coverage",
+      "status": "DEGRADED",
+      "evidence": {
+        "current_rolling_sample": {
+          "series": 16,
+          "raw_rows": 1600,
+          "completed_rows": 1584,
+          "forming_excluded": 16,
+          "duplicates": 0,
+          "missing_intervals": 0,
+          "off_grid": 0,
+          "ohlc_failures": 0,
+          "non_positive_volume": 0,
+          "non_finite": 0,
+          "cross_symbol_alignment": true
+        },
+        "page10_backfill": {
+          "rows": 12000,
+          "duplicates": 0,
+          "missing_intervals": 0,
+          "off_grid": 0,
+          "ohlc_failures": 0,
+          "non_finite": 0,
+          "zero_volume_rows": 0,
+          "readback_exact": true
+        },
+        "base_pages_5m": 10,
+        "base_pages_15m": 10,
+        "base_rows_per_symbol_per_interval": 15000,
+        "one_hour_bridge_gap_hours": 28,
+        "one_hour_index_discrepancy_rows": 8,
+        "four_hour_original_manifest_sha_mismatches": 13
+      },
+      "impact": "New data passed checks, but historical base coverage is fragmented and 4h provenance remains unresolved; no strategy inference is safe.",
+      "next_action": "Complete page 0011 and reconcile 1h/4h histories before context or strategy fitting."
+    },
+    {
+      "capability": "backtest harness/smoke test",
+      "status": "BLOCKED",
+      "evidence": {
+        "local_repository": false,
+        "harness_invoked": false,
+        "deterministic_fixture_available": false,
+        "smoke_test": "NOT_RUN",
+        "backtest": "NOT_RUN",
+        "oos": "NOT_RUN"
+      },
+      "impact": "No strategy experiment or OOS evaluation ran; data-quality backfill is the only completed research experiment.",
+      "next_action": "Provision compatible checkout, locate harness, build a deterministic fixture and run it twice before full experiments."
+    },
+    {
+      "capability": "disk/storage",
+      "status": "PASS",
+      "evidence": {
+        "local_overlay_total_gib": 32,
+        "local_overlay_free_gib": 30,
+        "local_storage_persistent": false,
+        "github_branch_persistent": true,
+        "github_branch": "research/raw-ohlcv-archive-20261108T1026Z"
+      },
+      "impact": "Local filesystem is ephemeral; GitHub branch is the durable archive and registry location.",
+      "next_action": "Continue verified GitHub commits; do not treat local /mnt/data as cross-run persistence."
+    },
+    {
+      "capability": "artifact readback",
+      "status": "PASS",
+      "evidence": {
+        "incremental_delta": true,
+        "incremental_manifest": true,
+        "archive_manifest": true,
+        "archive_indexes": [
+          "5m",
+          "15m",
+          "1h"
+        ],
+        "page10_files": 8,
+        "page10_manifests": 2,
+        "current_market_snapshot": true,
+        "data_quality_experiment": true
+      },
+      "impact": "Created artifacts were fetched back from GitHub and checked against their expected content or recorded checksums.",
+      "next_action": "Persist the run receipt, queue, registry snapshot and report with readback verification."
+    }
+  ],
+  "run_outcome": {
+    "status": "RESEARCH_EXECUTED",
+    "oos_evaluated": false,
+    "strategy_experiment_status": "BLOCKED",
+    "completed_experiment": "DQ-20261111-PAGE0010",
+    "monitoring_refresh": true
+  },
+  "notes": [
+    "Binance SDK not used; connector only.",
+    "ExchangeInfo reported TRADING for the four symbols but is stale and is not accepted for execution validation.",
+    "4h append intentionally prohibited because raw/aligned/canonical provenance is unresolved."
+  ]
+}

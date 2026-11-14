@@ -1,0 +1,105 @@
+{
+  "schema_version": "1.0.0",
+  "run_id": "auto11-20261114T0756Z-incremental-archive",
+  "created_at_utc": "2026-11-14T07:58:44.812Z",
+  "repository": "shubhamtaywade82/crypto-trading-agent",
+  "branch": "research/raw-ohlcv-archive-20261108T1026Z",
+  "source": "Binance USD-M public market-data connector; SDK not used; direct REST DNS/HTTPS unavailable; connector HTTP status/headers not exposed.",
+  "source_endpoint": "GET /fapi/v1/klines",
+  "symbols": [
+    "BTCUSDT",
+    "ETHUSDT",
+    "SOLUSDT",
+    "XRPUSDT"
+  ],
+  "intervals": [
+    "5m",
+    "15m"
+  ],
+  "as_of_utc": "2026-11-14T07:58:44.812Z",
+  "request_start_utc_by_interval": {
+    "5m": "2026-11-14T07:25:00.000Z",
+    "15m": "2026-11-14T07:15:00.000Z"
+  },
+  "rows": 24,
+  "bytes": 7022,
+  "rows_fetched": 44,
+  "forming_rows_excluded": 8,
+  "pre_highwater_rows_excluded": 12,
+  "future_rows_excluded": 0,
+  "rows_by_interval": {
+    "5m": 20,
+    "15m": 4
+  },
+  "rows_by_symbol": {
+    "BTCUSDT": 6,
+    "ETHUSDT": 6,
+    "SOLUSDT": 6,
+    "XRPUSDT": 6
+  },
+  "rows_by_symbol_interval": {
+    "BTCUSDT": {
+      "5m": 5,
+      "15m": 1
+    },
+    "ETHUSDT": {
+      "5m": 5,
+      "15m": 1
+    },
+    "SOLUSDT": {
+      "5m": 5,
+      "15m": 1
+    },
+    "XRPUSDT": {
+      "5m": 5,
+      "15m": 1
+    }
+  },
+  "previous_highwaters_utc": {
+    "5m": "2026-11-14T07:25:00.000Z",
+    "15m": "2026-11-14T07:15:00.000Z",
+    "1h": "2026-11-14T06:00:00.000Z",
+    "4h": "2026-11-13T12:00:00.000Z"
+  },
+  "latest_completed_open_utc_by_interval": {
+    "5m": "2026-11-14T07:50:00.000Z",
+    "15m": "2026-11-14T07:30:00.000Z",
+    "1h": "2026-11-14T06:00:00.000Z",
+    "4h": "2026-11-13T12:00:00.000Z"
+  },
+  "next_start_utc_by_interval": {
+    "5m": "2026-11-14T07:55:00.000Z",
+    "15m": "2026-11-14T07:45:00.000Z",
+    "1h": "2026-11-14T07:00:00.000Z",
+    "4h": "2026-11-13T16:00:00.000Z"
+  },
+  "quality": {
+    "duplicates": 0,
+    "missing_intervals": 0,
+    "off_grid": 0,
+    "non_monotonic": 0,
+    "ohlc_failures": 0,
+    "non_finite": 0,
+    "non_positive_volume": 0,
+    "close_time_failures": 0,
+    "forming_rows_included": 0,
+    "cross_symbol_alignment": true,
+    "contiguous_from_prior_highwater": true
+  },
+  "delta": {
+    "path": "research-data/binance-usdm/delta/binance_usdm_delta_20261114T0756Z_5m15m_completed.jsonl",
+    "sha256": "779f057e5097c4d56b7a5da5097af72d7d72b6081bf24fb149cf88cd4861c731",
+    "bytes": 7022,
+    "readback_verified": false
+  },
+  "previous_archive_manifest": "research-data/binance-usdm/manifests/archive_manifest_20261114T0730Z_auto11_v126.json",
+  "previous_archive_manifest_sha256": "e56720ad78f5bb92be5d19a84c67f59aecde890b",
+  "limitations": [
+    "This append validates only the incremental 5m/15m slice, not the historical base archive.",
+    "5m/15m page-0028 SHA-256 mismatches and per-symbol window misalignment remain; no common four-symbol page-0028 intersection.",
+    "1h historical archive retains 28 missing hourly opens per symbol and an 8-row discrepancy.",
+    "4h raw/aligned/canonical counts remain 53960/53816/53844 with 13 page-manifest SHA mismatches; no 4h append.",
+    "Direct REST DNS/HTTPS and fresh /fapi/v1/time are unavailable; exchangeInfo serverTime is stale; connector HTTP status/headers are not exposed.",
+    "No local repository checkout or compatible Node>=24/npm>=11 runner; no strategy backtest or OOS evaluation."
+  ]
+}

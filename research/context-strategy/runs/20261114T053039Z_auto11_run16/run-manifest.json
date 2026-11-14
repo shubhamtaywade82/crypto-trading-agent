@@ -1,0 +1,231 @@
+{
+  "schemaVersion": "1.0.0",
+  "runId": "context-strategy-20261114T053039Z-auto11-run16",
+  "completedAtUtc": "2026-11-14T05:30:39.002Z",
+  "status": "RESEARCH_EXECUTED",
+  "scope": "historical archive data-quality and market monitoring only",
+  "strategyExperiment": "BLOCKED",
+  "oosEvaluated": false,
+  "repository": "shubhamtaywade82/crypto-trading-agent",
+  "researchBranch": "research/umbrella",
+  "archiveBranch": "research/raw-ohlcv-archive-20261108T1026Z",
+  "archiveBranchHeadSha": "616d72244b65a8e791cb4bfa1bf5412a16fe3e69",
+  "codeCommitMain": "7b4be7c90777d865e9f82de86159070098a54933",
+  "environment": {
+    "os": "Linux 6.18.57 x86_64",
+    "node": "v22.16.0",
+    "npm": "10.9.2",
+    "python": "3.13.5",
+    "git": "2.47.3",
+    "cpu": 3,
+    "memoryAvailableGiB": 4.7,
+    "diskAvailableGiB": 30,
+    "localCheckout": false,
+    "binanceSdkInstalled": false,
+    "directNetworkDns": false
+  },
+  "sources": {
+    "marketData": "Binance USD-M connector; SDK not used; direct REST DNS blocked; connector HTTP status/headers unavailable.",
+    "historicalStorage": "GitHub raw archive branch; all listed artifacts were fetched after write."
+  },
+  "experiment": {
+    "kind": "archive_integrity",
+    "hypotheses": [
+      "Page-0026 and page-0027 per-symbol files match their recorded SHA-256 and Git blob identities and satisfy row integrity checks.",
+      "The newly fetched 5m/15m slice is contiguous from prior highwater and contains only completed candles."
+    ],
+    "specification": {
+      "page26": {
+        "intervals": [
+          "5m",
+          "15m"
+        ],
+        "symbols": [
+          "BTCUSDT",
+          "ETHUSDT",
+          "SOLUSDT",
+          "XRPUSDT"
+        ],
+        "rows": 12000
+      },
+      "page27": {
+        "intervals": [
+          "5m",
+          "15m"
+        ],
+        "symbols": [
+          "BTCUSDT",
+          "ETHUSDT",
+          "SOLUSDT",
+          "XRPUSDT"
+        ],
+        "rows": 12000
+      },
+      "incremental": {
+        "intervals": [
+          "5m",
+          "15m"
+        ],
+        "symbols": [
+          "BTCUSDT",
+          "ETHUSDT",
+          "SOLUSDT",
+          "XRPUSDT"
+        ],
+        "rowsFetched": 40,
+        "completedRows": 32,
+        "formingExcluded": 8
+      }
+    },
+    "results": {
+      "page26Files": 8,
+      "page26Rows": 12000,
+      "page26ShaMatches": 8,
+      "page26BlobMatches": 8,
+      "page26IntegrityFailures": 0,
+      "page27Files": 8,
+      "page27Rows": 12000,
+      "page27ShaMatches": 8,
+      "page27BlobMatches": 8,
+      "page27IntegrityFailures": 0,
+      "page27ZeroVolumeRows": 3,
+      "page27ZeroVolumeAnalysisExclusions": 3,
+      "incrementalRows": 32,
+      "incrementalShaReadbackVerified": true,
+      "incrementalQualityFailures": 0,
+      "page28CanonicalEligible": false
+    },
+    "uncertainty": "No strategy outcome distribution or OOS trade metrics produced."
+  },
+  "registry": {
+    "version": 114,
+    "snapshotVersion": 132,
+    "canonicalEntries": 5,
+    "statuses": {
+      "INSUFFICIENT_EVIDENCE": 4,
+      "REJECTED": 1
+    },
+    "oosValidatedEntries": 0,
+    "unchanged": true
+  },
+  "reproducibility": {
+    "seed": null,
+    "commandExecuted": null,
+    "backtestHarnessInvoked": false,
+    "smokeTestRun": false,
+    "readbackVerified": true,
+    "artifacts": [
+      {
+        "path": "research-data/binance-usdm/delta/binance_usdm_delta_20261114T053039Z_5m15m_completed.jsonl",
+        "sha256": "4fbd3c88854ce5d375e2487e80a1d836aa85f96586f88894d5c7a26b4b1cbc33",
+        "blobSha": "fdab0b75672e06a36bd95f081b550664066a7771",
+        "bytes": 9355
+      },
+      {
+        "path": "research-data/binance-usdm/delta/manifest-20261114T053039Z-5m15m.json",
+        "sha256": "293e29699274c0e5ca29a11d9bc33336e4ef0299dc3b4d2461daa8cc2e1d9439",
+        "blobSha": "6fe1a910851458fe3eb27a0046982c7630c030bb",
+        "bytes": 4945
+      },
+      {
+        "path": "research/context-strategy/experiments/incremental_archive_append_20261114T0530Z_auto11_run16.result.json",
+        "sha256": "2b7fde95a7ea36e9d83d948f337446f5583653d58234082976a9e7df12368eb3",
+        "blobSha": "e813b3d6ddaafd51bccbea9bbff5f57b5a5b8854",
+        "bytes": 2840
+      },
+      {
+        "path": "research/context-strategy/experiments/page26_integrity_verification_20261114T0530Z_auto11.result.json",
+        "sha256": "060afd35751f7cd06ad0c75578680cfc52bb168db5c5cb0bc535ceaff638ec3e",
+        "blobSha": "f0db97d5541a346e3ee4cc029047f6d09e20f4f2",
+        "bytes": 5256
+      },
+      {
+        "path": "research/context-strategy/experiments/page27_integrity_verification_20261114T0530Z_auto11.result.json",
+        "sha256": "b60d214c75a6f0285555cf0c0b3a905c5acf65181479f09e01663801a7999ddd",
+        "blobSha": "d50e307f280e334e139cffe359aa0efb9d17a307",
+        "bytes": 5880
+      },
+      {
+        "path": "research-data/binance-usdm/snapshots/current_market_snapshot_20261114T0530Z_auto11.json",
+        "sha256": "e643b4efba9fa20c6ce3f93b383481b8fd310a99e24afdbe75f6771ae2c05e75",
+        "blobSha": "a4f761f4ac7840285a213cf3b67b6a3b7c3b28c8",
+        "bytes": 19666
+      },
+      {
+        "path": "research-data/binance-usdm/manifests/archive_manifest_20261114T053039Z_auto11_v122.json",
+        "sha256": "b1065700c579a4da5f9066e3d6c23982f6626397b75fe37b2f25587aef981aa5",
+        "blobSha": "105fee18a7baeb2d7451434cb3cae6f8e295f675",
+        "bytes": 60156
+      },
+      {
+        "path": "research-data/binance-usdm/5m/archive-index.json",
+        "sha256": "441c7c1653c2d6d2d772ae89177b9d742201cdc8d9c04a36c573b7331e4e18f0",
+        "blobSha": "035cf19dbcc9b0b5abaaed365ff1ce0a88ab8231",
+        "bytes": 582313
+      },
+      {
+        "path": "research-data/binance-usdm/15m/archive-index.json",
+        "sha256": "6c62c53aeb8c2ec475994d017a69de82afc94077b55127fcb7f478c15d42dc17",
+        "blobSha": "d44a2dd4337fcb1efde7d41ce61326c1a414d29f",
+        "bytes": 528429
+      },
+      {
+        "path": "research-data/binance-usdm/1h/archive-index.json",
+        "sha256": "3f2cbdb6b09c46ae0bd69732f98084a947167b8a50d2762a62d72e35cde39d8a",
+        "blobSha": "bf2d3ab9bd83e476771018e33b88042afb876de8",
+        "bytes": 372636
+      },
+      {
+        "path": "research-data/binance-usdm/4h/archive-index.json",
+        "sha256": "c4531f7337d5b7b6f926990ef21730a2c5e30e2cf6920fe0fb1dff92eab5586e",
+        "blobSha": "a8fe2112e1eb60e37dc3e6b66bc9b966da27a781",
+        "bytes": 263416
+      },
+      {
+        "path": "research/context-strategy/runs/20261114T053039Z_auto11_run16/preflight.json",
+        "sha256": "0292e43d4a4388b8295723ce22fbcbc667aa39690b186b2f22bfcb9d7f58c806",
+        "blobSha": "c93009933865e118907acafaba7f754179f2cf82",
+        "bytes": 8365
+      },
+      {
+        "path": "research/context-strategy/reports/context_strategy_20261114T053039Z_auto11_run16.md",
+        "sha256": "dcac64881947ff65dbb28cda80be4dab44c2199d78027d4a18623a092f4e1b8e",
+        "blobSha": "5fc8c92f11a11f6f17e788ed19b944d905a335af",
+        "bytes": 13288
+      },
+      {
+        "path": "research-data/binance-usdm/conditional-strategy-registry-snapshot-v132.json",
+        "sha256": "6cdcd9cf921602f156c73043faf15eec1391a6b7d4bc1d1cc9c2fb70cba6b356",
+        "blobSha": "d237ea6e6922350e7794d34f9929ebb254552cf2",
+        "bytes": 49108
+      },
+      {
+        "path": "research-data/binance-usdm/research-queue-v132.json",
+        "sha256": "6e6002fcd8a9d27d272a2e02ba224e67f48fe84295a0202162823744c890e35d",
+        "blobSha": "6e2427e5de2e67e966291546081cf1585ff73b5c",
+        "bytes": 29022
+      },
+      {
+        "path": "research/BRANCH_CONSOLIDATION_PLAN.md",
+        "sha256": "b234b89c2491eafa55f75b3c8dd33756b49feba161ad954e9fc351643e53186c",
+        "blobSha": "0a988c43d9bb72e1c0a95d7f5c412df77ca37d2c",
+        "bytes": 3381
+      }
+    ]
+  },
+  "nextAction": "Provision Node24/npm11 workspace and run deterministic smoke test; then align full multi-symbol 5m/15m history and reconcile 1h/4h lineage before strategy OOS.",
+  "registrySnapshotPath": "research-data/binance-usdm/conditional-strategy-registry-snapshot-v132.json",
+  "queueSnapshotPath": "research-data/binance-usdm/research-queue-v132.json",
+  "branchConsolidation": {
+    "targetBranch": "research/umbrella",
+    "targetCreatedFrom": "main@7b4be7c90777d865e9f82de86159070098a54933",
+    "sourceBranchInventoryReviewed": true,
+    "mergesExecuted": 0,
+    "sourceBranchesDeleted": 0,
+    "reason": "Research branches are highly divergent and many are successive snapshot runs with overlapping history; bulk merging all branches would create unnecessary conflicts and duplicate/superseded artifacts.",
+    "nextAction": "Select the latest non-ancestor tip per research family, review file-level diffs and merge one family at a time with source refs preserved.",
+    "planPath": "research/BRANCH_CONSOLIDATION_PLAN.md",
+    "planSha256": "b234b89c2491eafa55f75b3c8dd33756b49feba161ad954e9fc351643e53186c",
+    "planBlobSha": "0a988c43d9bb72e1c0a95d7f5c412df77ca37d2c"
+  }
+}

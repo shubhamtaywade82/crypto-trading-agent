@@ -1,0 +1,167 @@
+{
+  "schema_version": "1.0.0",
+  "run_id": "context-strategy-20261110T1632Z-auto13",
+  "as_of_utc": "2026-11-10T16:33:41.833Z",
+  "repository": "shubhamtaywade82/crypto-trading-agent",
+  "branch": "research/raw-ohlcv-archive-20261108T1026Z",
+  "source": {
+    "endpoint": "GET /fapi/v1/klines",
+    "access": "Binance USD-M public market-data connector; direct REST DNS unavailable",
+    "symbols": [
+      "BTCUSDT",
+      "ETHUSDT",
+      "SOLUSDT",
+      "XRPUSDT"
+    ],
+    "intervals": [
+      "5m",
+      "15m",
+      "1h",
+      "4h"
+    ]
+  },
+  "highwaters": {
+    "5m": "2026-11-10T16:25:00.000Z",
+    "15m": "2026-11-10T16:15:00.000Z",
+    "1h": "2026-11-10T14:00:00.000Z",
+    "4h": "2026-11-10T12:00:00.000Z"
+  },
+  "append_this_run": {
+    "rows_fetched": 76,
+    "completed_rows": 64,
+    "forming_rows_excluded": 12,
+    "pre_highwater_rows_excluded": 0,
+    "rows_appended": 64,
+    "rows_by_interval": {
+      "5m": 44,
+      "15m": 16,
+      "4h": 4
+    },
+    "rows_by_symbol": {
+      "BTCUSDT": 16,
+      "ETHUSDT": 16,
+      "SOLUSDT": 16,
+      "XRPUSDT": 16
+    },
+    "rows_by_symbol_interval": {
+      "BTCUSDT:5m": 11,
+      "BTCUSDT:15m": 4,
+      "BTCUSDT:4h": 1,
+      "ETHUSDT:5m": 11,
+      "ETHUSDT:15m": 4,
+      "ETHUSDT:4h": 1,
+      "SOLUSDT:5m": 11,
+      "SOLUSDT:15m": 4,
+      "SOLUSDT:4h": 1,
+      "XRPUSDT:5m": 11,
+      "XRPUSDT:15m": 4,
+      "XRPUSDT:4h": 1
+    },
+    "delta_path": "research-data/binance-usdm/delta/binance_usdm_delta_20261110T1629Z_5m15m4h_completed.jsonl",
+    "delta_sha256": "ca89ae338db55b330bff57d1172cc7aac1a45b146e5261c307e6e2a185c3dd96",
+    "delta_blob_sha": "5a0b8f6045c5629a43ab44e696e6be9c51db27b9",
+    "delta_manifest_path": "research-data/binance-usdm/delta/manifest-20261110T1629Z-5m15m4h.json",
+    "delta_manifest_sha256": "9a924861560dd98bbe68526da12a9bf8e8adb2879d8bc2618d45acd7935f314f",
+    "delta_manifest_blob_sha": "af3090695fd54b61727693ec530099eda0008d19",
+    "readback_verified": true,
+    "quality": {
+      "series": 12,
+      "rows": 64,
+      "duplicates": 0,
+      "missingIntervals": 0,
+      "offGrid": 0,
+      "nonMonotonic": 0,
+      "ohlcInvariantFailures": 0,
+      "nonPositiveVolume": 0,
+      "nonFinite": 0,
+      "crossSymbolAlignment": true,
+      "formingRowsAppended": 0
+    }
+  },
+  "base_coverage": {
+    "5m": {
+      "status": "ABSENT",
+      "base_rows_total": 0,
+      "incremental_rows_total": 1340,
+      "highwater": "2026-11-10T16:25:00.000Z",
+      "next_start": "2026-11-10T16:30:00.000Z"
+    },
+    "15m": {
+      "status": "ABSENT",
+      "base_rows_total": 0,
+      "incremental_rows_total": 452,
+      "highwater": "2026-11-10T16:15:00.000Z",
+      "next_start": "2026-11-10T16:30:00.000Z"
+    },
+    "1h": {
+      "status": "HIGHWATER_ALIAS_CONFLICT_NO_APPEND",
+      "rows_total_base": 215484,
+      "rows_per_symbol": 53871,
+      "coverage_start": "2020-09-14T08:00:00Z",
+      "last_previous_manifest_highwater": "2026-11-10T14:00:00Z",
+      "note": "1h archive index and latest manifest have differing highwater fields; no 1h append this run pending reconciliation.",
+      "highwater": "2026-11-10T14:00:00.000Z",
+      "next_start": "2026-11-10T15:00:00.000Z"
+    },
+    "4h": {
+      "status": "RAW_INCREMENTAL_UPDATED_CANONICAL_NOT_MERGED",
+      "raw_rows_total": 53960,
+      "aligned_rows_total": 53816,
+      "canonical_rows_total": 53844,
+      "raw_highwater": "2026-11-10T12:00:00.000Z",
+      "canonical_end": "2026-11-05T16:00:00.000Z",
+      "manifest_sha_provenance_mismatches": 13,
+      "row_level_reconciliation": "Prior artifact compared 14 page/symbol pairs and 21,000 rows exactly with zero row-level mismatches.",
+      "latest_raw_delta_path": "research-data/binance-usdm/delta/binance_usdm_delta_20261110T1629Z_5m15m4h_completed.jsonl",
+      "latest_raw_delta_rows": 4
+    }
+  },
+  "quality": {
+    "series": 16,
+    "rows": 32,
+    "duplicates": 0,
+    "missing_intervals": 0,
+    "off_grid": 0,
+    "non_monotonic": 0,
+    "ohlc_invariant_failures": 0,
+    "non_positive_volume": 0,
+    "non_finite": 0,
+    "cross_symbol_alignment": true,
+    "forming_rows_appended": 0,
+    "scope": "three incremental 5m/15m deltas only; does not prove full archive completeness"
+  },
+  "indexes": {
+    "5m": {
+      "path": "research-data/binance-usdm/5m/archive-index.json",
+      "blob_sha1": "33a9eee8316f59d58a0b661e6abfd6c4b88a49f8",
+      "readback_verified": true
+    },
+    "15m": {
+      "path": "research-data/binance-usdm/15m/archive-index.json",
+      "blob_sha1": "9bebfe574a927b6b22f0f1f01f2f4257c319caf4",
+      "readback_verified": true
+    }
+  },
+  "unresolved": [
+    "5m/15m multi-year base history absent",
+    "1h index highwater aliases conflict (incremental_coverage says 14:00Z; currentHighwater says 13:00Z); 1h append blocked",
+    "4h raw/aligned/canonical row-count discrepancy and historical provenance issues remain; new 12:00Z raw delta is not merged into canonical 4h dataset",
+    "legacy index aliases are stale; use this archive manifest as the current incremental highwater authority",
+    "direct Binance REST DNS unavailable; public market-data connector used",
+    "exchangeInfo serverTime returned 2026-11-10T01:01:01.898Z, stale by approximately 15h26m at retrieval",
+    "Node24/npm11 local runtime and repository checkout unavailable",
+    "historical derivatives and calibrated execution-cost archives incomplete"
+  ],
+  "next_start_utc": {
+    "5m": "2026-11-10T16:30:00.000Z",
+    "15m": "2026-11-10T16:30:00.000Z",
+    "1h": "2026-11-10T15:00:00.000Z",
+    "4h": "2026-11-10T16:00:00.000Z"
+  },
+  "index_state": {
+    "5m": "Not rewritten: existing index contains stale legacy aliases; authoritative highwater recorded in this archive manifest.",
+    "15m": "Not rewritten: existing index contains stale legacy aliases; authoritative highwater recorded in this archive manifest.",
+    "1h": "Not rewritten: incremental_coverage and currentHighwater aliases disagree; no append made.",
+    "4h": "Not rewritten: legacy cross-interval aliases conflict and canonical 4h dataset remains behind raw incremental deltas."
+  }
+}

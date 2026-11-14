@@ -1,0 +1,68 @@
+{
+  "schema_version": "1.0.0",
+  "experiment_id": "EXP-DQ-2026-11-11-1926Z-013",
+  "title": "Incremental Binance USD-M archive integrity check",
+  "type": "DATA_QUALITY_RECONCILIATION",
+  "hypothesis": "A bounded append after the verified 2026-11-11T12:30Z highwaters should contain exactly the next completed bars for all four symbols and intervals, with no continuity or OHLCV defects.",
+  "data": {
+    "venue": "Binance USD-M",
+    "symbols": [
+      "BTCUSDT",
+      "ETHUSDT",
+      "SOLUSDT",
+      "XRPUSDT"
+    ],
+    "intervals": [
+      "5m",
+      "15m",
+      "1h",
+      "4h"
+    ],
+    "source_endpoint": "GET /fapi/v1/klines",
+    "transport": "Binance public market-data connector",
+    "exchange_reference_time_utc": "2026-11-11T19:26:12Z"
+  },
+  "previous_highwaters": {
+    "5m": "2026-11-11T12:25:00Z",
+    "15m": "2026-11-11T12:15:00Z",
+    "1h": "2026-11-11T11:00:00Z",
+    "4h": "2026-11-11T08:00:00Z"
+  },
+  "expected_completed_rows_per_symbol": {
+    "5m": 83,
+    "15m": 27,
+    "1h": 7,
+    "4h": 1
+  },
+  "checks": [
+    "open-time continuity",
+    "no duplicates",
+    "monotonic timestamps",
+    "interval-grid alignment",
+    "low<=open/close<=high",
+    "positive volume",
+    "finite OHLCV",
+    "cross-symbol open-time alignment",
+    "exclude forming candles"
+  ],
+  "execution": {
+    "runtime": "managed V8 Code Mode",
+    "seed": null,
+    "code_commit": null,
+    "code_hash": null,
+    "code_status": "inline script; not committed as a standalone harness"
+  },
+  "costs": "Not applicable; no trading simulation",
+  "acceptance": {
+    "all_series_expected_rows": true,
+    "all_quality_defects_zero": true,
+    "cross_symbol_alignment": true,
+    "forming_candles_excluded": true,
+    "remote_readback_sha256_match": true
+  },
+  "limitations": [
+    "Exchange metadata stale; contract status remains blocked",
+    "No strategy or OOS evaluation",
+    "Direct REST DNS unavailable; connector HTTP status/headers unavailable"
+  ]
+}

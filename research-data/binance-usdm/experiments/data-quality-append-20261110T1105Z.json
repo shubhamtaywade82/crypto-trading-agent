@@ -1,0 +1,89 @@
+{
+  "schema_version": "1.0.0",
+  "experiment_id": "DQ-2026-11-10T1105Z-APPEND",
+  "kind": "incremental_archive_integrity",
+  "status": "COMPLETED_PASS",
+  "hypothesis": "Completed candles beyond prior highwaters append exactly once; forming candles are excluded; interval alignment and OHLCV invariants hold.",
+  "append_batches": [
+    {
+      "delta_path": "research-data/binance-usdm/delta/binance_usdm_delta_20261110T1102_5m15m_completed.jsonl",
+      "manifest_path": "research-data/binance-usdm/delta/manifest-20261110T1102-5m15m.json",
+      "rows": 24,
+      "rows_by_interval": {
+        "5m": 16,
+        "15m": 8
+      },
+      "sha256": "9c87aedd59984ee12b249cb358d307f9a2fe6b612490f4d24b1fce7bb100aa87",
+      "manifest_sha256": "1b3977f24b99b407a70ee3130d2605299616010b6bf48855ab1b99ad5f810ead",
+      "rows_fetched": 48,
+      "forming_rows_excluded": 8,
+      "pre_highwater_rows_excluded": 16
+    },
+    {
+      "delta_path": "research-data/binance-usdm/delta/binance_usdm_delta_20261110T1105_1h_completed.jsonl",
+      "manifest_path": "research-data/binance-usdm/delta/manifest-20261110T1105-1h.json",
+      "rows": 4,
+      "rows_by_interval": {
+        "1h": 4
+      },
+      "sha256": "2756dae0422ac8fc058bcd9de8a0610bc64829f26996c270f9a53044d7961c18",
+      "manifest_sha256": "bc04ff89b49ce8415ad3813ab049a268142e550f4cefdf3a538e165c44bdd6ae",
+      "rows_fetched": 480,
+      "forming_rows_excluded": 4,
+      "pre_highwater_rows_excluded": 472
+    }
+  ],
+  "totals": {
+    "rows_appended": 28,
+    "rows_by_interval": {
+      "5m": 16,
+      "15m": 8,
+      "1h": 4
+    },
+    "rows_by_symbol": {
+      "BTCUSDT": 7,
+      "ETHUSDT": 7,
+      "SOLUSDT": 7,
+      "XRPUSDT": 7
+    },
+    "forming_rows_excluded": 12,
+    "pre_highwater_rows_excluded": 488,
+    "rows_fetched": 528
+  },
+  "checks": {
+    "duplicates": 0,
+    "missing_intervals": 0,
+    "off_grid": 0,
+    "close_time_failures": 0,
+    "ohlc_failures": 0,
+    "non_finite": 0,
+    "non_positive_volume": 0,
+    "cross_symbol_alignment": true
+  },
+  "rolling_sample": {
+    "series": 16,
+    "rows_fetched": 1920,
+    "completed_rows": 1904,
+    "forming_rows_excluded": 16,
+    "all_quality_failures": 0
+  },
+  "refreshed_1h4h_sample": {
+    "series": 8,
+    "rows_fetched": 960,
+    "completed_rows": 952,
+    "forming_rows_excluded": 8,
+    "all_quality_failures": 0
+  },
+  "highwaters_utc": {
+    "5m": "2026-11-10T10:55:00Z",
+    "15m": "2026-11-10T10:45:00Z",
+    "1h": "2026-11-10T10:00:00Z",
+    "4h": "2026-11-10T04:00:00Z"
+  },
+  "limitations": [
+    "Data-quality experiment only; no strategy/backtest experiment.",
+    "5m/15m multi-year base history absent.",
+    "4h canonical provenance mismatch unresolved."
+  ],
+  "correction": "1h append request fetched 120 rows per symbol (480 total), not a 6-row window; 4 completed rows appended, 4 forming excluded, 472 pre-highwater excluded. Combined append batches fetched 528 rows, appended 28, excluded 12 forming and 488 pre-highwater rows."
+}

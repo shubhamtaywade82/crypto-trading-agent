@@ -1,0 +1,99 @@
+{
+  "schema_version": "1.0.0",
+  "as_of_utc": "2026-11-13T19:35:25Z",
+  "execution_status": "RESEARCH_EXECUTED",
+  "oos_evaluated": false,
+  "strategy_backtest_status": "BLOCKED",
+  "checks": [
+    {
+      "capability": "shell/compute",
+      "status": "PASS",
+      "evidence": "pwd=/; Debian GNU/Linux 13 (trixie); Python 3.13.5; Node v22.16.0; npm 10.9.2; 3 CPUs; MemTotal 6,091,004 kB; MemAvailable 4,938,724 kB; overlay filesystem 32G total / 30G available (1% used).",
+      "impact": "Python/JS data checks possible; project runtime requirement not met.",
+      "next_action": "Provision Node 24/npm 11 and mount local checkout."
+    },
+    {
+      "capability": "repository/code",
+      "status": "DEGRADED",
+      "evidence": "Remote shubhamtaywade82/crypto-trading-agent exists; package.json requires node>=24/npm>=11 and declares backtest/research scripts; local checkout absent.",
+      "impact": "Remote code inspected but not invokable locally.",
+      "next_action": "Mount or clone repository."
+    },
+    {
+      "capability": "Binance SDK",
+      "status": "BLOCKED",
+      "evidence": "Node require.resolve returned MODULE_NOT_FOUND for binance-api-node, @binance/connector and binance. No Binance SDK dependency is importable.",
+      "impact": "No SDK execution; direct REST DNS path unavailable.",
+      "next_action": "Install SDK after network/runtime restoration."
+    },
+    {
+      "capability": "network/Binance",
+      "status": "DEGRADED",
+      "evidence": "Connector market calls succeeded; direct DNS probes to /fapi/v1/time and /fapi/v1/exchangeInfo failed; exchangeInfo serverTime 06:02:01.705Z, 755.8 minutes old.",
+      "impact": "Fresh connector snapshot available; contract execution validation blocked.",
+      "next_action": "Restore DNS; probe time and exchangeInfo with bounded timeouts."
+    },
+    {
+      "capability": "raw historical archive",
+      "status": "PASS",
+      "evidence": "48-row delta, manifest, snapshot, archive manifest, four indexes and index receipt persisted and read back on GitHub.",
+      "impact": "Incremental highwaters advanced; Library upload still blocked by quota.",
+      "next_action": "Continue append from highwaters."
+    },
+    {
+      "capability": "data quality/coverage",
+      "status": "DEGRADED",
+      "evidence": "Current 48 rows pass all integrity checks. Historical 5m/15m gaps remain; 1h has 28 missing opens/symbol and an 8-row discrepancy; canonical 4h passes but raw page provenance is degraded; SOL funding archive has a readback hash mismatch and 3,501 blank mark-price rows.",
+      "impact": "No strategy OOS inference until archive and derivative repair.",
+      "next_action": "Backfill/repair queues before strategy OOS."
+    },
+    {
+      "capability": "backtest harness/smoke",
+      "status": "BLOCKED",
+      "evidence": "Remote scripts exist; local checkout absent; no fixture smoke test or harness invocation.",
+      "impact": "No backtest/OOS.",
+      "next_action": "Restore repo/runtime, smoke-test deterministic fixture."
+    },
+    {
+      "capability": "disk/storage",
+      "status": "DEGRADED",
+      "evidence": "df -h /: overlay 32G total, 5.3M used, 30G available; GitHub branch writable; Library upload failed with library_storage_limit_exceeded.",
+      "impact": "GitHub persists artifacts; Library copy unavailable.",
+      "next_action": "Continue GitHub persistence; retry Library only after quota remediation."
+    },
+    {
+      "capability": "artifact readback",
+      "status": "PASS",
+      "evidence": "Current delta, delta manifest, snapshot, archive manifest, receipt, four indexes and v110 context artifacts read back after writes.",
+      "impact": "Persistence verified on GitHub.",
+      "next_action": "Keep SHA/blob receipt per run."
+    },
+    {
+      "capability": "repo/code",
+      "status": "DEGRADED",
+      "evidence": "pwd=/; git rev-parse --show-toplevel reports not a git repository; /workspace/crypto-trading-agent/package.json not found. Only unrelated runtime repositories under /opt/novnc and /opt/nvm were found.",
+      "impact": "Remote scripts cannot be invoked in this runtime.",
+      "next_action": "Restore local checkout and compatible runtime."
+    },
+    {
+      "capability": "network/Binance endpoints",
+      "status": "DEGRADED",
+      "evidence": "Connector-backed kline/mark/ticker/OI/funding/depth/taker/basis/ratio calls succeeded. Direct curl probes used --connect-timeout 3s and --max-time 7s: /fapi/v1/time HTTP 000 DNS failure (0.0015s); /fapi/v1/exchangeInfo HTTP 000 DNS failure (4.755s); /fapi/v1/klines HTTP 000 DNS failure (0.0003s); /fapi/v1/premiumIndex HTTP 000 DNS failure (4.755s); /fapi/v1/openInterest HTTP 000 DNS failure (0.0001s); /fapi/v1/ticker/24hr HTTP 000 DNS failure (4.755s). Connector exchangeInfo serverTime 2026-11-13T06:02:01.705Z is stale by 13h22m at 19:24:17Z.",
+      "impact": "Live descriptive snapshot available via connector; direct REST and current contract-status verification blocked.",
+      "next_action": "Restore DNS/direct REST, then verify /fapi/v1/time, /fapi/v1/exchangeInfo and all required endpoints with HTTP status and freshness."
+    },
+    {
+      "capability": "backtest harness/smoke test",
+      "status": "BLOCKED",
+      "evidence": "Remote scripts exist but no local checkout or compatible Node/npm; no deterministic fixture smoke test executed.",
+      "impact": "No strategy experiment or OOS evaluation.",
+      "next_action": "Restore repo/runtime, then run fixture determinism and no-lookahead smoke."
+    }
+  ],
+  "version": "v110",
+  "current_market_snapshot_path": "research-data/binance-usdm/snapshots/current_market_snapshot_20261113T1919Z_auto11_v110.json",
+  "current_market_snapshot_sha256": "85c4c0630aac7dbf8ef4ec7acd40b36667edb4168f037194f8698c26d45cd512",
+  "raw_delta_path": "research-data/binance-usdm/delta/binance_usdm_delta_20261113T1917Z_5m15m1h_completed.jsonl",
+  "raw_delta_sha256": "c5109989f2e4285549b36af1e09f5148b3610ea7f9ae51c12672c1be7800b812",
+  "preflight_completed_at_utc": "2026-11-13T19:35:25Z"
+}

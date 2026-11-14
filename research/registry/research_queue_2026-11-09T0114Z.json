@@ -1,0 +1,86 @@
+{
+  "schema_version": "1.0.0",
+  "as_of_utc": "2026-11-09T01:14:32.191Z",
+  "items": [
+    {
+      "id": "RQ-001",
+      "title": "Reconcile raw and canonical 4h row keys; rebuild through raw highwater",
+      "status": "IN_PROGRESS",
+      "priority": 1,
+      "next_action": "Compare every raw page/delta key against canonical rows; rebuild canonical through 2026-11-08T20:00Z and re-read/hash all four outputs.",
+      "blocker": "Canonical ends 2026-11-05T16:00Z. Index reports 14/14 alternate replay matches and 44 leading page-0009 rows trimmed for BTC/ETH/XRP, but full current row-key reconciliation has not been rerun."
+    },
+    {
+      "id": "RQ-002",
+      "title": "Restore fresh Binance server-time and exchange metadata validation",
+      "status": "BLOCKED",
+      "priority": 2,
+      "next_action": "Probe /fapi/v1/time and /fapi/v1/exchangeInfo; require <=5s drift before execution validation.",
+      "blocker": "Direct REST DNS fails; exchangeInfo serverTime is ~43m45s stale."
+    },
+    {
+      "id": "RQ-003",
+      "title": "Backfill multi-year 5m/15m history for all four symbols",
+      "status": "BLOCKED",
+      "priority": 3,
+      "next_action": "Fetch official monthly/daily klines when outbound network works; validate continuity and contract history.",
+      "blocker": "5m/15m archive is incremental-only; direct DNS unavailable."
+    },
+    {
+      "id": "RQ-004",
+      "title": "Stage 1m history and flow data for EXP-001",
+      "status": "BLOCKED",
+      "priority": 4,
+      "next_action": "Backfill 1m and align flow features before reopening EXP-001.",
+      "blocker": "1m archive not staged."
+    },
+    {
+      "id": "RQ-005",
+      "title": "Provision compatible local repository runner",
+      "status": "BLOCKED",
+      "priority": 5,
+      "next_action": "Provision Node24/npm11, checkout experiment branch, run smoke-test.js and run.js.",
+      "blocker": "Current Node22.16/npm10.9.2 and no local checkout."
+    },
+    {
+      "id": "RQ-006",
+      "title": "Persist and validate OOS funding data for EXP-002",
+      "status": "COMPLETED",
+      "priority": 6,
+      "next_action": "Extend funding archive on future test windows.",
+      "blocker": null
+    },
+    {
+      "id": "RQ-007",
+      "title": "Calibrate execution costs with historical spread/depth/impact",
+      "status": "BLOCKED",
+      "priority": 7,
+      "next_action": "Archive historical quotes/depth/trades and fit conservative per-symbol cost curves.",
+      "blocker": "Only current depth20 snapshots; historical spread/impact and account fee tier unavailable."
+    },
+    {
+      "id": "RQ-008",
+      "title": "EXP-002 4h EMA pullback continuation",
+      "status": "COMPLETED_OOS_EVALUATED",
+      "priority": 8,
+      "next_action": "Preserve INSUFFICIENT_EVIDENCE; do not tune final test; add independent windows after archive/cost remediation.",
+      "blocker": "All symbol OOS counts <100 and block-bootstrap CIs include zero."
+    },
+    {
+      "id": "RQ-009",
+      "title": "Weekly context taxonomy/stability review",
+      "status": "DUE_2026-11-11",
+      "priority": 9,
+      "next_action": "Re-estimate training-only thresholds and measure context duration/transitions/TVD.",
+      "blocker": "Aligned lower-timeframe base archive incomplete."
+    },
+    {
+      "id": "RQ-010",
+      "title": "Hourly raw archive append",
+      "status": "COMPLETED",
+      "priority": 10,
+      "next_action": "Continue appending completed bars and verify delta/index readback.",
+      "blocker": null
+    }
+  ]
+}

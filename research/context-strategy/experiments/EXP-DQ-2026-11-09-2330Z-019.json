@@ -1,0 +1,115 @@
+{
+  "id": "EXP-DQ-2026-11-09-2330Z-019",
+  "run_id": "context-strategy-2026-11-09T2332Z-v102",
+  "as_of_utc": "2026-11-09T23:32:30Z",
+  "type": "incremental_archive_integrity_and_alignment",
+  "status": "COMPLETED_PASS",
+  "hypothesis": "Append only completed, contiguous, aligned Binance USD-M bars beyond the prior highwater and verify candle integrity.",
+  "source_endpoint": "/fapi/v1/klines",
+  "symbols": [
+    "BTCUSDT",
+    "ETHUSDT",
+    "SOLUSDT",
+    "XRPUSDT"
+  ],
+  "intervals": [
+    "5m",
+    "15m",
+    "1h",
+    "4h"
+  ],
+  "previous_highwaters_utc": {
+    "5m": "2026-11-09T22:25:00Z",
+    "15m": "2026-11-09T22:15:00Z",
+    "1h": "2026-11-09T21:00:00Z",
+    "4h": "2026-11-09T16:00:00Z"
+  },
+  "new_highwaters_utc": {
+    "5m": "2026-11-09T23:25:00Z",
+    "15m": "2026-11-09T23:15:00Z",
+    "1h": "2026-11-09T22:00:00Z",
+    "4h": "2026-11-09T16:00:00Z"
+  },
+  "appended_rows": {
+    "total": 68,
+    "by_interval": {
+      "5m": 48,
+      "15m": 16,
+      "1h": 4,
+      "4h": 0
+    },
+    "by_symbol": {
+      "BTCUSDT": 17,
+      "ETHUSDT": 17,
+      "SOLUSDT": 17,
+      "XRPUSDT": 17
+    }
+  },
+  "current_window_validation": {
+    "series": 16,
+    "rows_fetched": 1600,
+    "completed": 1584,
+    "forming_excluded": 16,
+    "completed_per_series": 99,
+    "duplicates": 0,
+    "gaps": 0,
+    "off_grid": 0,
+    "non_monotonic": 0,
+    "ohlc_violations": 0,
+    "non_positive_volume": 0,
+    "non_finite": 0,
+    "close_time_mismatches": 0,
+    "cross_symbol_alignment": true
+  },
+  "appended_delta_validation": {
+    "files": 5,
+    "rows": 68,
+    "duplicates": 0,
+    "gaps": 0,
+    "off_grid": 0,
+    "non_monotonic": 0,
+    "ohlc_violations": 0,
+    "non_positive_volume": 0,
+    "non_finite": 0,
+    "close_time_mismatches": 0,
+    "cross_symbol_alignment": true
+  },
+  "artifact_hashes": [
+    {
+      "path": "research-data/binance-usdm/deltas/20261109T2328Z/klines_5m.jsonl",
+      "sha256": "73ef9f8b8afb8967cbff0c17d88fff89689e2fc94cd2e9d392bfdf9cdbccefdd",
+      "git_blob_sha": "462950b9a2e169022287dfde1564935725b0826d",
+      "readback_verified": true
+    },
+    {
+      "path": "research-data/binance-usdm/deltas/20261109T2328Z/klines_15m.jsonl",
+      "sha256": "dd782b4726d8d01829bdfb00550201ba028c2b99b86f4cb77ee1ea4273af7e6d",
+      "git_blob_sha": "d2624ce00aa00610adffddd034e5651ad46f4161",
+      "readback_verified": true
+    },
+    {
+      "path": "research-data/binance-usdm/deltas/20261109T2328Z/klines_1h.jsonl",
+      "sha256": "f3ad78ca9f3277c9b85600f24032dd7b949aa502c8ec30b37814ede7f2f7b8c1",
+      "git_blob_sha": "3882a45f1b85a489b790db46e1a0109bf33854a6",
+      "readback_verified": true
+    },
+    {
+      "path": "research-data/binance-usdm/deltas/20261109T2330Z/klines_5m.jsonl",
+      "sha256": "ff3670a725cf061b5073e0e8eb6d2359bc00790ac75e22a05c90f90e8068332f",
+      "git_blob_sha": "17aebec6e811757b089a9a800a1574f972689e0e",
+      "readback_verified": true
+    },
+    {
+      "path": "research-data/binance-usdm/deltas/20261109T2330Z/klines_15m.jsonl",
+      "sha256": "a1be71a1a66ba7d1c00c67c4fbe02c7db447e114529e23dfd66f4696fe5d860b",
+      "git_blob_sha": "a3c19b33d9a40a248d7a2a8f39248dd6e6604ed2",
+      "readback_verified": true
+    }
+  ],
+  "limitations": [
+    "Data-quality only; not a strategy experiment.",
+    "5m/15m base history absent and 4h provenance unresolved.",
+    "Canonical indexes not rebuilt.",
+    "No backtest harness, smoke test, OOS or strategy metrics."
+  ]
+}

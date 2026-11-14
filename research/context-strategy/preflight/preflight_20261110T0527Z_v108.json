@@ -1,0 +1,87 @@
+{
+  "schema_version": "1.0.0",
+  "run_id": "context-strategy-2026-11-10T0527Z-v108",
+  "as_of_utc": "2026-11-10T05:27:00.000Z",
+  "environment": {
+    "cwd": "/",
+    "os": "Linux x86_64",
+    "python": "3.13.5",
+    "node": "v22.16.0",
+    "npm": "10.9.2",
+    "cpu": 5,
+    "availableMemoryGiB": 4.7,
+    "diskFreeGiB": 30,
+    "localCheckout": false,
+    "packageEngines": {
+      "node": ">=24",
+      "npm": ">=11"
+    },
+    "remotePackageJsonReadback": true,
+    "binanceSdkPackagesImportable": false
+  },
+  "directNetwork": {
+    "fapiDns": "RESOLUTION_TIMEOUT_5S",
+    "apiDns": "RESOLUTION_TIMEOUT_5S",
+    "httpStatus": 0,
+    "serverTimeEndpoint": "UNAVAILABLE"
+  },
+  "marketDataConnector": {
+    "klines": "SUCCESS_PAYLOAD_16_SERIES",
+    "premiumIndex": "SUCCESS_PAYLOAD",
+    "ticker24h": "SUCCESS_PAYLOAD",
+    "openInterest": "SUCCESS_PAYLOAD",
+    "fundingHistory": "SUCCESS_PAYLOAD",
+    "orderBook": "SUCCESS_PAYLOAD",
+    "takerFlow": "SUCCESS_PAYLOAD",
+    "exchangeInfo": "PAYLOAD_STALE"
+  },
+  "exchangeInfo": {
+    "serverTimeUtc": "2026-11-10T01:01:01.892Z",
+    "markProxyUtc": "2026-11-10T05:27:00.000Z",
+    "lagSeconds": 15958.108,
+    "executionValidation": "BLOCKED"
+  },
+  "checks": [
+    {
+      "capability": "shell/compute",
+      "status": "PASS",
+      "evidence": "Linux x86_64; Python 3.13.5; 5 CPUs; 4.7 GiB available RAM; 30 GiB free."
+    },
+    {
+      "capability": "repo/code",
+      "status": "DEGRADED",
+      "evidence": "GitHub branch/main readable; no local checkout. package.json engine Node>=24/npm>=11; runtime Node22.16/npm10.9."
+    },
+    {
+      "capability": "network/Binance",
+      "status": "DEGRADED",
+      "evidence": "Connector returned fresh market payloads; direct official REST DNS timeout HTTP000; exchangeInfo stale 15,958.108s."
+    },
+    {
+      "capability": "raw archive",
+      "status": "DEGRADED",
+      "evidence": "72 new rows persisted as append-only deltas; 5m/15m base coverage partial; 4h provenance discrepancies unresolved."
+    },
+    {
+      "capability": "data quality",
+      "status": "PASS_FOR_INCREMENTAL_WINDOW",
+      "evidence": "2,560 fetched/2,544 complete/16 forming excluded; zero continuity, OHLC, volume, finite or timestamp failures."
+    },
+    {
+      "capability": "backtest harness/smoke test",
+      "status": "BLOCKED",
+      "evidence": "Remote backtest/conditional scripts exist; no local runner or dependencies; smoke test not run."
+    },
+    {
+      "capability": "disk/storage",
+      "status": "PASS",
+      "evidence": "~30 GiB free; GitHub branch writes succeeded."
+    },
+    {
+      "capability": "artifact readback",
+      "status": "PASS_FOR_DELTAS",
+      "evidence": "5m/15m/1h deltas fetched back; exact content matched; GitHub blob SHAs recorded."
+    }
+  ],
+  "run_status": "RESEARCH_EXECUTED_DATA_QUALITY_APPEND_ONLY; STRATEGY_RESEARCH_BLOCKED; OOS_NOT_EVALUATED"
+}

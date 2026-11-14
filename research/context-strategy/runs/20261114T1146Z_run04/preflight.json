@@ -1,0 +1,86 @@
+{
+  "schema_version": "1.0.0",
+  "run_id": "context-strategy-20261114T1146Z-run04",
+  "as_of_utc": "2026-11-14T11:46:35.001Z",
+  "outcome": "RESEARCH_EXECUTED_DATA_QUALITY_ONLY",
+  "oos_evaluated": false,
+  "checks": [
+    {
+      "capability": "shell/compute",
+      "status": "PASS",
+      "evidence": "container shell executed; Linux x86_64; Python 3.13.5; Node v22.16.0; npm 10.9.2; 3 CPUs; 5.8 GiB memory; 30 GiB free disk.",
+      "impact": "Compute available for inspection; runtime below repository requirement.",
+      "nextAction": "Provision Node>=24/npm>=11 for project execution."
+    },
+    {
+      "capability": "repo/code",
+      "status": "DEGRADED",
+      "evidence": "GitHub repo shubhamtaywade82/crypto-trading-agent and branch research/umbrella readable/writable; local checkout absent. package.json requires Node>=24/npm>=11. scripts/backtest.ts exists; blob 65bb03853382be1ed0d82aed373f805173aaa6f5. Package lists @nemesis-oss/binance-sdk and binance, but neither is installed in this runtime.",
+      "impact": "Source audit and remote artifact persistence possible; local harness cannot be invoked.",
+      "nextAction": "Provision compatible workspace, clone exact branch/commit and install pinned dependencies."
+    },
+    {
+      "capability": "network/Binance endpoints",
+      "status": "DEGRADED",
+      "evidence": "Binance connector returned mark/last, 24h ticker, premiumIndex, OI, klines, funding history, depth, taker flow and global long/short data for all four symbols. Direct curl to fapi.binance.com failed DNS (HTTP 000); /fapi/v1/time unavailable; connector HTTP status/headers not exposed. exchangeInfo serverTime 2026-11-13T06:02:01.705Z, about 29.74h stale at snapshot.",
+      "impact": "Current market data available, but contract-status validation and exchange-clock drift cannot be certified.",
+      "nextAction": "Restore direct DNS/HTTPS and require fresh /fapi/v1/time plus /fapi/v1/exchangeInfo."
+    },
+    {
+      "capability": "raw historical archive",
+      "status": "DEGRADED",
+      "evidence": "GitHub branch research/umbrella contains raw page/delta files, manifests and four interval indexes. New 132-row delta, manifest, snapshot and four index updates were committed and read back exactly. Full archive remains partial/degraded.",
+      "impact": "Incremental slice persisted; historical sample cannot yet be treated as a clean aligned research panel.",
+      "nextAction": "Reconcile page-0028 alignment, 1h bridge and 4h raw/canonical provenance before strategy inference."
+    },
+    {
+      "capability": "data quality/coverage",
+      "status": "DEGRADED",
+      "evidence": "New 5m/15m/1h delta: 132 completed rows; 92/32/8 by interval; 33 per symbol; 12 forming rows excluded; zero duplicates, missing steps, off-grid, OHLC, non-finite, non-positive-volume or close-time failures. Historical base: 5m/15m 168000 rows each but partial/misaligned; 1h 215504 rows with 28 missing hourly opens per symbol and 8-row discrepancy; 4h raw/aligned/canonical 53960/53816/53844 with 13 page-manifest SHA mismatches.",
+      "impact": "Incremental data quality passes; historical inference blocked by lineage/coverage defects.",
+      "nextAction": "Build timestamp-aligned panels with explicit missingness; reconcile the 1h bridge and 4h row/hash differences."
+    },
+    {
+      "capability": "backtest harness/smoke test",
+      "status": "BLOCKED",
+      "evidence": "scripts/backtest.ts and npm run backtest exist in source, but no local checkout or compatible Node24/npm11 runtime. No deterministic fixture smoke was run. Prior source audit found the CLI only uses 15m/1h/4h and lacks explicit closeTime forming-candle exclusion; conditional-edge script is outcome analysis, not a raw-OHLCV strategy generator.",
+      "impact": "No strategy experiment or OOS evaluation can be claimed.",
+      "nextAction": "Provision Node24/npm11 checkout; fix 5m coverage and closeTime contract; add deterministic fixture/no-lookahead smoke."
+    },
+    {
+      "capability": "disk/storage",
+      "status": "PASS",
+      "evidence": "Local runtime reports 30 GiB free. Persistent GitHub branch research/umbrella accepted commits for delta, manifests, snapshot and indexes.",
+      "impact": "Remote durable storage available; no local archive copy created.",
+      "nextAction": "Continue remote atomic artifact writes and readback verification."
+    },
+    {
+      "capability": "artifact readback",
+      "status": "PASS",
+      "evidence": "Exact content readback verified for 132-row delta, delta manifest, current snapshot, archive manifest and all four interval indexes; Git blob SHAs recorded.",
+      "impact": "This run's data-quality artifacts are persisted and verifiable.",
+      "nextAction": "Create run-level receipt/report/queue/registry snapshot and verify their readback."
+    }
+  ],
+  "environment": {
+    "os": "Linux x86_64",
+    "python": "3.13.5",
+    "node": "v22.16.0",
+    "npm": "10.9.2",
+    "cpu": 3,
+    "memory": "5.8 GiB",
+    "freeDisk": "30 GiB",
+    "localCheckout": false,
+    "binanceSdkInstalled": false,
+    "repoBranch": "research/umbrella"
+  },
+  "marketData": {
+    "connector": "Binance USD-M public market-data connector",
+    "directRest": "DNS unavailable",
+    "exchangeInfoAgeHours": 29.74,
+    "serverTimeEndpoint": "UNAVAILABLE_DIRECT_REST"
+  },
+  "strategyExperiment": "BLOCKED",
+  "oosEvaluation": "NOT_RUN",
+  "persistence": "REMOTE_GITHUB_READBACK_VERIFIED"
+}

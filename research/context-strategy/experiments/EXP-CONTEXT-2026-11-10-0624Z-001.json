@@ -1,0 +1,190 @@
+{
+  "schema_version": "1.0.0",
+  "experiment_id": "EXP-CONTEXT-2026-11-10-0624Z-001",
+  "created_at_utc": "2026-11-10T06:24:14.476Z",
+  "hypothesis": "A compact per-symbol trend-strength x realized-volatility taxonomy fitted only on the first 70% of recent 4h bars retains similar occupancy in subsequent chronological windows.",
+  "spec": {
+    "source": "Binance USDⓈ-M GET /fapi/v1/klines via connected Binance market-data operation",
+    "symbols": [
+      "BTCUSDT",
+      "ETHUSDT",
+      "SOLUSDT",
+      "XRPUSDT"
+    ],
+    "interval": "4h",
+    "requested_rows_per_symbol": 500,
+    "completed_rows_per_symbol": 499,
+    "coverage": "2026-08-19T00:00:00Z..2026-11-10T03:59:59.999Z",
+    "features": [
+      "EMA20",
+      "EMA50",
+      "Wilder ATR14",
+      "trend_strength=(EMA20-EMA50)/ATR14",
+      "ATR14/close"
+    ],
+    "trend_threshold": "Training q67 of absolute trend strength; BULL/BEAR if absolute strength >= q67, else TRANSITION.",
+    "volatility_thresholds": "Training q33/q67 of ATR14/close; LOW/NORMAL/HIGH.",
+    "split": "70/15/15 after 50-bar warmup; 315 train, 67 validation, 68 test per symbol.",
+    "no_lookahead": "Indicators use current and prior completed bars; thresholds fitted only on training; test occupancy evaluated once after freeze.",
+    "seed": null
+  },
+  "thresholds": {
+    "BTCUSDT": {
+      "trend_abs_strength_q67": 0.9008157874579461,
+      "atr_pct_q33": 0.9746938892327824,
+      "atr_pct_q67": 1.1290372552921042
+    },
+    "ETHUSDT": {
+      "trend_abs_strength_q67": 1.015921284508919,
+      "atr_pct_q33": 1.3320464313314289,
+      "atr_pct_q67": 1.5570499217182814
+    },
+    "SOLUSDT": {
+      "trend_abs_strength_q67": 1.3611060835714222,
+      "atr_pct_q33": 1.7699031612339808,
+      "atr_pct_q67": 1.9597861775885894
+    },
+    "XRPUSDT": {
+      "trend_abs_strength_q67": 0.9916946896998418,
+      "atr_pct_q33": 1.803735819179465,
+      "atr_pct_q67": 2.2549176638961113
+    }
+  },
+  "results": {
+    "BTCUSDT": {
+      "validation_occupancy_pct": {
+        "TRANSITION_LOW": 44.7761,
+        "TRANSITION_NORMAL": 43.2836,
+        "BEAR_LOW": 10.4478,
+        "TRANSITION_HIGH": 1.4925
+      },
+      "test_occupancy_pct": {
+        "TRANSITION_HIGH": 32.3529,
+        "BEAR_HIGH": 23.5294,
+        "BEAR_NORMAL": 19.1176,
+        "BEAR_LOW": 23.5294,
+        "TRANSITION_NORMAL": 1.4706
+      },
+      "validation_median_duration_bars": {
+        "TRANSITION_LOW": 3,
+        "TRANSITION_NORMAL": 3,
+        "BEAR_LOW": 3
+      },
+      "test_median_duration_bars": {
+        "TRANSITION_HIGH": 6,
+        "BEAR_HIGH": 3,
+        "BEAR_NORMAL": 2,
+        "BEAR_LOW": 2
+      },
+      "top_test_transitions": [
+        "TRANSITION_HIGH->TRANSITION_HIGH:20",
+        "BEAR_HIGH->BEAR_HIGH:12",
+        "BEAR_LOW->BEAR_LOW:12"
+      ],
+      "occupancy_tvd": 0.8658911
+    },
+    "ETHUSDT": {
+      "validation_occupancy_pct": {
+        "BEAR_HIGH": 2.9851,
+        "TRANSITION_HIGH": 22.3881,
+        "TRANSITION_NORMAL": 55.2239,
+        "BEAR_NORMAL": 14.9254,
+        "TRANSITION_LOW": 4.4776
+      },
+      "test_occupancy_pct": {
+        "TRANSITION_HIGH": 35.2941,
+        "BEAR_HIGH": 14.7059,
+        "BEAR_NORMAL": 5.8824,
+        "BEAR_LOW": 8.8235,
+        "TRANSITION_LOW": 22.0588,
+        "TRANSITION_NORMAL": 13.2353
+      },
+      "validation_median_duration_bars": {
+        "TRANSITION_HIGH": 2,
+        "TRANSITION_NORMAL": 3,
+        "BEAR_NORMAL": 10
+      },
+      "test_median_duration_bars": {
+        "TRANSITION_HIGH": 5,
+        "BEAR_HIGH": 4,
+        "BEAR_NORMAL": 4,
+        "BEAR_LOW": 6,
+        "TRANSITION_LOW": 5
+      },
+      "top_test_transitions": [
+        "TRANSITION_HIGH->TRANSITION_HIGH:20",
+        "TRANSITION_LOW->TRANSITION_LOW:12",
+        "BEAR_HIGH->BEAR_HIGH:8"
+      ],
+      "occupancy_tvd": 0.5103161
+    },
+    "SOLUSDT": {
+      "validation_occupancy_pct": {
+        "TRANSITION_NORMAL": 20.8955,
+        "TRANSITION_LOW": 79.1045
+      },
+      "test_occupancy_pct": {
+        "TRANSITION_HIGH": 36.7647,
+        "TRANSITION_NORMAL": 5.8824,
+        "BEAR_LOW": 39.7059,
+        "BEAR_NORMAL": 11.7647,
+        "BEAR_HIGH": 5.8824
+      },
+      "validation_median_duration_bars": {
+        "TRANSITION_NORMAL": 2,
+        "TRANSITION_LOW": 7
+      },
+      "test_median_duration_bars": {
+        "TRANSITION_HIGH": 10,
+        "BEAR_LOW": 7,
+        "BEAR_NORMAL": 2,
+        "BEAR_HIGH": 4
+      },
+      "top_test_transitions": [
+        "BEAR_LOW->BEAR_LOW:23",
+        "TRANSITION_HIGH->TRANSITION_HIGH:22",
+        "BEAR_NORMAL->BEAR_LOW:3"
+      ],
+      "occupancy_tvd": 0.9411765
+    },
+    "XRPUSDT": {
+      "validation_occupancy_pct": {
+        "BEAR_LOW": 19.403,
+        "TRANSITION_LOW": 80.597
+      },
+      "test_occupancy_pct": {
+        "TRANSITION_NORMAL": 26.4706,
+        "TRANSITION_LOW": 20.5882,
+        "BEAR_LOW": 30.8824,
+        "BEAR_NORMAL": 20.5882,
+        "BEAR_HIGH": 1.4706
+      },
+      "validation_median_duration_bars": {
+        "BEAR_LOW": 13,
+        "TRANSITION_LOW": 54
+      },
+      "test_median_duration_bars": {
+        "TRANSITION_NORMAL": 9,
+        "TRANSITION_LOW": 2,
+        "BEAR_LOW": 4,
+        "BEAR_NORMAL": 5,
+        "BEAR_HIGH": 1
+      },
+      "top_test_transitions": [
+        "BEAR_LOW->BEAR_LOW:19",
+        "TRANSITION_NORMAL->TRANSITION_NORMAL:16",
+        "TRANSITION_LOW->TRANSITION_LOW:12"
+      ],
+      "occupancy_tvd": 0.6000878
+    }
+  },
+  "interpretation": "Validation-to-test context occupancy drift is high in all four symbols (TVD 0.51-0.94). This measures distribution shift, not proof of a defective classifier. SOL/XRP validation was mostly TRANSITION_LOW, while test shifts materially into bearish/high-volatility contexts.",
+  "limitations": [
+    "~83 days of 4h history only; not multiple market cycles.",
+    "Single 70/15/15 split; no rolling multi-cycle stability review.",
+    "Per-symbol thresholds; cross-symbol transfer is not established.",
+    "No strategy entries or outcomes tested; no win probability or expectancy produced."
+  ],
+  "status": "INSUFFICIENT_EVIDENCE",
+  "promotion": "Do not replace production taxonomy v56; retain as exploratory v57 candidate pending multi-year rolling validation."
+}

@@ -1,0 +1,45 @@
+{
+  "schema_version": "1.0.0",
+  "run_id": "context-strategy-2026-11-09T1953Z-v96",
+  "as_of_utc": "2026-11-09T19:55:00Z",
+  "repository": "shubhamtaywade82/crypto-trading-agent",
+  "branch": "research/raw-ohlcv-archive-20261108T1026Z",
+  "status": "DEGRADED_HISTORICAL_COVERAGE_WITH_INCREMENTAL_APPEND_PASS",
+  "source": "Binance USDⓈ-M connector wrappers for official endpoint families; direct HTTPS DNS/timeout blocked; Binance SDK not used.",
+  "latest_completed_highwater_utc": {
+    "5m": "2026-11-09T19:45:00.000Z",
+    "15m": "2026-11-09T19:30:00.000Z",
+    "1h": "2026-11-09T18:00:00.000Z",
+    "4h": "2026-11-09T12:00:00.000Z"
+  },
+  "next_open_utc": {
+    "5m": "2026-11-09T19:50:00.000Z",
+    "15m": "2026-11-09T19:45:00.000Z",
+    "1h": "2026-11-09T19:00:00.000Z",
+    "4h": "2026-11-09T16:00:00.000Z"
+  },
+  "base_coverage": {
+    "5m": {"status":"ABSENT","rows_total":0,"coverage_start_utc":null,"coverage_end_utc":null},
+    "15m": {"status":"ABSENT","rows_total":0,"coverage_start_utc":null,"coverage_end_utc":null},
+    "1h": {"status":"COMPLETE_HISTORICAL_1H_PAGES_WITH_INCREMENTAL_DELTA","rows_total":215484,"rows_per_symbol":53871,"coverage_start_utc":"2020-09-14T08:00:00Z","base_end_utc":"2026-11-06T22:00:00Z","incremental_highwater_utc":"2026-11-09T18:00:00Z"},
+    "4h": {"status":"DEGRADED_RAW_CANONICAL_ROWCOUNT_DISCREPANCY","raw_rows_total":53960,"aligned_rows_total":53816,"canonical_rows_total":53844,"canonical_rows_per_symbol":13461,"coverage_start_utc":"2020-09-14T08:00:00Z","canonical_end_utc":"2026-11-05T16:00:00Z","raw_highwater_utc":"2026-11-09T12:00:00Z","gaps":0,"duplicates":0}
+  },
+  "new_deltas_this_run": [
+    {"delta_path":"research-data/binance-usdm/delta/binance_usdm_delta_20261109T194931Z_5m15m_completed.jsonl","manifest_path":"research-data/binance-usdm/delta/manifest-20261109T194931Z-5m15m.json","rows":12,"rows_by_interval":{"5m":8,"15m":4},"rows_by_symbol":{"BTCUSDT":3,"ETHUSDT":3,"SOLUSDT":3,"XRPUSDT":3},"delta_sha256":"95fef7ecb315337b971a8993c1fda30aa91867641df3f687131627868aa7a39f","manifest_sha256":"4062d8e7da04a0e4b80b17fd565cc20eebef7e43d568c76e8cf0d6178a01ea9f","delta_git_blob_sha":"0d4dcd68822b1623d3d0810e4b00370f63e9b49c","readback_verified":true,"forming_rows_excluded":8},
+    {"delta_path":"research-data/binance-usdm/delta/binance_usdm_delta_20261109T195425Z_5m_completed.jsonl","manifest_path":"research-data/binance-usdm/delta/manifest-20261109T195425Z-5m.json","rows":4,"rows_by_interval":{"5m":4},"rows_by_symbol":{"BTCUSDT":1,"ETHUSDT":1,"SOLUSDT":1,"XRPUSDT":1},"delta_sha256":"2f6fdcbd4c129d951b3e6a20ebe8c4b8280416ec79c6899a8f4d434223415e7d","manifest_sha256":"d8df9292101ebc06b872f1f7c2965364e9d3db610dac15bcc097a262f1d2e20d","delta_git_blob_sha":"0d0e72314a81cc8c8ba1ada282ab6facb91ad0bb","readback_verified":true,"forming_rows_excluded":4}
+  ],
+  "index_updates": {
+    "5m":{"commit":"ddfd0ad9fe0b04afcf330e1d95bf6fd3d4cb0166","blob_sha":"78bc6b5d1927c4fc9b9f608849fb0387088aaf2e","readback_verified":true,"highwater_utc":"2026-11-09T19:45:00.000Z"},
+    "15m":{"commit":"e2b0fb1f8b460c1f81a8677a4460f63bdd94f522","blob_sha":"06a2276a0eea61a5b6312fb9ad5696d2fdf6b059","readback_verified":true,"highwater_utc":"2026-11-09T19:30:00.000Z"},
+    "1h":{"commit":"18963b20a4e642f7f3cce5f26f1084bbed31f80b","blob_sha":"2a1ea6c28e54a5efe71f3d104df4346097cf3e3d","readback_verified":true,"highwater_utc":"2026-11-09T18:00:00.000Z"},
+    "4h":{"commit":"23ba5321062edb3363d8b3532a4977edb040b2e7","blob_sha":"30bf1569bba6c294ad1c8eccd8179fe90180e281","readback_verified":true,"highwater_utc":"2026-11-09T12:00:00.000Z"}
+  },
+  "quality_this_run": {"series":16,"rows_fetched":2720,"completed_rows":2704,"forming_rows_excluded":16,"duplicates":0,"missing_intervals":0,"off_grid":0,"non_monotonic":0,"ohlc_violations":0,"non_positive_volume":0,"non_finite":0,"close_time_failures":0},
+  "remaining_issues": [
+    "Multi-year 5m/15m base history absent; incremental-only data is not enough for robust multi-timeframe strategy research.",
+    "4h raw/aligned/canonical counts remain 53960/53816/53844; 13 prior page-manifest SHA provenance discrepancies from v95 remain unresolved; canonical files are stale through 2026-11-05T16:00Z.",
+    "Direct /fapi/v1/time and /fapi/v1/exchangeInfo probes unavailable from this runtime; connector exchangeInfo serverTime is stale by 49,220.516s at 19:53:53.860Z.",
+    "No compatible local Node24/npm11 checkout; backtest harness cannot be run.",
+    "Historical funding cashflows and calibrated per-symbol fees/spread/slippage/impact/latency are incomplete."
+  ]
+}

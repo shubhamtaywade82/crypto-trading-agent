@@ -1,0 +1,80 @@
+{
+  "schema_version": "1.0.0",
+  "run_id": "context-strategy-20261114T063139Z-auto11-run15",
+  "as_of_utc": "2026-11-14T06:40:42.042Z",
+  "status": "RESEARCH_EXECUTED",
+  "oos_evaluated": false,
+  "checks": [
+    {
+      "capability": "shell_compute",
+      "status": "PASS",
+      "evidence": "Linux 6.18.57 x86_64; cwd=/; Node v22.16.0; npm 10.9.2; 3 CPU; 5.8 GiB RAM; 30 GiB free disk.",
+      "impact": "Bounded inline analysis ran; the repository's Node24/npm11 backtest runtime is not satisfied.",
+      "next_action": "Provision Node >=24 and npm >=11 in a persistent workspace."
+    },
+    {
+      "capability": "repo_code",
+      "status": "DEGRADED",
+      "evidence": "GitHub main source is readable; no crypto-trading-agent checkout found under /workspace, /workspaces, /mnt/data or /home. package.json engines require Node >=24 and npm >=11.",
+      "impact": "Source audit possible; local project scripts cannot be invoked.",
+      "next_action": "Clone the exact current main commit into a persistent workspace after runtime provisioning."
+    },
+    {
+      "capability": "binance_sdk",
+      "status": "BLOCKED",
+      "evidence": "Node require.resolve reports @nemesis-oss/binance-sdk NOT_INSTALLED and binance NOT_INSTALLED.",
+      "impact": "No SDK execution; connector-based public market data only.",
+      "next_action": "Install pinned dependencies only in the compatible Node24/npm11 checkout."
+    },
+    {
+      "capability": "network_binance_endpoints",
+      "status": "DEGRADED",
+      "evidence": "curl https://fapi.binance.com/fapi/v1/time failed with curl error 6 (Could not resolve host), HTTP 000. Binance connector calls succeeded for klines, premiumIndex, ticker/24hr, openInterest, fundingRate history, openInterestHist, takerlongshortRatio, globalLongShortAccountRatio and depth. exchangeInfo embedded serverTime 2026-11-13T06:02:01.704Z, approximately 24.49 hours stale at snapshot time; connector HTTP status/headers are not exposed.",
+      "impact": "Market snapshot and incremental bars are usable with timestamp caveats; fresh contract-status validation and server-time drift check are BLOCKED.",
+      "next_action": "Restore outbound DNS/HTTPS and require fresh /fapi/v1/time and /fapi/v1/exchangeInfo."
+    },
+    {
+      "capability": "raw_historical_archive",
+      "status": "DEGRADED",
+      "evidence": "Persistent archive branch and v124 manifest are readable. New 60-row delta and manifest, four interval indexes, snapshot and receipts all passed exact readback. 5m/15m base archives remain partial; 1h has 28 missing hourly opens per symbol and 8-row discrepancy; 4h raw/aligned/canonical counts differ and 13 manifest SHA mismatches remain.",
+      "impact": "Incremental slice is valid; full multi-cycle strategy inference is blocked.",
+      "next_action": "Resolve page28 aligned panel, 1h bridge and 4h provenance before further backfill or strategy testing."
+    },
+    {
+      "capability": "data_quality_coverage",
+      "status": "DEGRADED",
+      "evidence": "Recent 1500-bar window per symbol/interval: 24,000 fetched, 23,984 completed, 16 forming excluded; no duplicates, gaps, off-grid times, OHLC violations, non-finite rows or non-positive volume. Long archive still has the defects above.",
+      "impact": "Current context classification is descriptive and usable; historical strategy sample is not research-ready.",
+      "next_action": "Reconcile base history and verify aligned multi-symbol coverage."
+    },
+    {
+      "capability": "backtest_harness_smoke_test",
+      "status": "BLOCKED",
+      "evidence": "No local checkout; Node22.16/npm10.9 below project engines; no SDK dependencies installed; deterministic fixture smoke test not run. Source inspection: scripts/backtest.ts uses 15m/1h/4h only (5m omitted); candleIntegrity accepts volume >=0 (zero-volume bars pass); conditional-edge CLI defaults minN=30 and calls walkForward without embargoDays (library default 0), although the library supports optional embargo.",
+      "impact": "No strategy experiment, no valid untouched OOS and no promotion.",
+      "next_action": "Provision Node24/npm11, persist checkout, enforce positive volume and 5m coverage, wire predeclared 100/200 trade gates and embargo/purge, then run deterministic fixture twice."
+    },
+    {
+      "capability": "disk_storage",
+      "status": "PASS",
+      "evidence": "30 GiB free in the current container; GitHub raw archive branch is writable and versioned; artifacts were reopened and verified.",
+      "impact": "Durable GitHub artifact storage is available; local repo workspace is absent.",
+      "next_action": "Continue append-only writes from verified highwaters; keep 4h held."
+    },
+    {
+      "capability": "artifact_readback",
+      "status": "PASS",
+      "evidence": "Delta SHA-256 66e15bb4...; delta manifest SHA-256 20d4fb29...; archive manifest v124 SHA-256 184a2ad9...; snapshot SHA-256 ace4c77f...; four indexes and v124 receipt reopened successfully.",
+      "impact": "This run's data-quality artifacts are persistent and verified.",
+      "next_action": "Use these exact paths and hashes in the run ledger."
+    }
+  ],
+  "execution": {
+    "classification": "RESEARCH_EXECUTED_DATA_QUALITY_ONLY",
+    "data_quality_experiment_completed": true,
+    "strategy_experiment": "BLOCKED",
+    "oos_evaluated": false,
+    "registry_changed": false,
+    "oos_validated_entries": 0
+  }
+}

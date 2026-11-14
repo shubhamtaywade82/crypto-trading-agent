@@ -417,3 +417,76 @@ symbol flipping between windows (e.g. LTC +0.470R then −0.388R; TRX −0.217R 
 Interpretation: L3's positive SOL/XRP results in §10–§11 do not generalise to the rule. They are consistent with
 symbol-specific luck in a small sample (SOL's 2021 rally in particular), not with a breakout edge. A forward paper test of
 L3 is **not** justified by this evidence. The sealed 2025–2026 window remains unopened.
+
+## 13. Addendum (pre-registered 2026-11-14, before any cross-sectional return was computed) — weekly long/short across perps
+
+**Research only. Nothing here changes what NEMESIS may trade** (SOL/ETH/XRP; BTC context-only). A pass would be a case for
+widening the mandate, which is the user's decision, not this document's.
+
+Why this family: every single-symbol rule in §7–§12 is flat or negative, and §11 showed that long-biased rules are
+flattered by market direction (matched random +0.207R). A dollar-neutral rank portfolio removes market direction by
+construction, adds breadth (30 symbols, not 3), and holds 7 days so 12 bps is small. Cross-sectional momentum, short-term
+reversal, funding/positioning and low-risk effects are the documented crypto anomalies; none has been tested here.
+
+- **Data:** daily klines and settled funding for every USDⓈ-M USDT perpetual in the archive (923 symbols, including
+  delisted ones such as LUNAUSDT, so the universe is point-in-time and survivorship is removed). Excluded by name:
+  BTCDOM*, DEFI*, FOOTBALL*, BLUEBIRD* (index contracts), USDC*. Mirror: `data/cache/vision/monthly/{klines/*/1d,fundingRate}`.
+- **Universe at each rebalance:** ≥ 90 daily bars of history, mean daily quote volume over the prior 30 days ≥ 10 M USDT,
+  then the top **K = 30** by that volume. Fewer than 15 eligible → the week is skipped.
+- **Rebalance:** every Monday 00:00 UTC. Signals use daily bars closed by Sunday 24:00; trades fill at Monday's daily open
+  (the first trade of the day) with the §3 costs; exit at the next Monday's open. A symbol that stops trading mid-hold
+  exits at its last close. Long the top Q = **6**, short the bottom Q = 6 of the ranked universe, equal weight, one unit of
+  notional per leg. Weekly return = mean(long) − mean(short) − costs ± funding, per unit of one leg's notional.
+- **Costs:** 6 bps (4 taker + 2 slippage) per side on the traded notional only (|Δweight|, so a symbol kept across weeks
+  does not pay again). Funding: actual settlements in (entry, exit] on each position (long pays positive, short
+  receives). No leverage assumed; liquidation is not modelled (unlevered legs of 1/6 notional per symbol).
+- **Signals (6 variants, directions fixed here, no mirrors):**
+  - X1 momentum 14d: long highest 14-day return. X2 momentum 28d.
+  - X3 reversal 7d: long lowest 7-day return.
+  - X4 funding 7d: long lowest **sum** of settled funding rates over the prior 7 days (settlements in [Monday−7d, Monday 00:00); the weekly carry, comparable across 8h/4h/1h funding intervals), short highest.
+  - X5 low volatility 30d: long lowest stdev of daily log returns, short highest.
+  - X6 lottery 30d: long lowest max daily return over 30 days, short highest.
+- **Trial count:** N = 48 + 6 = **54** for the deflated Sharpe, sampled weekly, trial Sharpe variance measured over these six.
+- **Window:** development only, Mondays 2021-03-01 → 2024-12-30. 2025-01 → 2026-10 stays sealed; it is read once, for at most
+  one frozen variant, and only if that variant passes all seven checks below.
+- **Acceptance (weekly net returns, every check required):**
+  1. ≥ 100 weekly observations.
+  2. Mean net > 0 and one-sided 90% lower bound > 0 (month-clustered bootstrap, `Bootstrap.ts`).
+  3. Mean net > 0 in both halves: 2021-03 → 2022-12 and 2023-01 → 2024-12 (replaces "2 of 3 symbols").
+  4. Mean net > 0 at 1.5× costs.
+  5. Basket sizes Q = 4 and Q = 8 both have mean net > 0.
+  6. Observed net mean exceeds the 95th percentile of the **cost-free** mean (gross price return + funding) of 2,000 random-selection portfolios (same universe, Q). The random side pays no costs, which is conservative against the signal.
+  7. Deflated Sharpe probability > 0.95 with N = 54.
+- **Reported, not gated:** market beta of the weekly return against the equal-weight universe return; gross vs cost vs
+  funding split; mean net with the best 5% of weeks removed; per-symbol contribution of the five largest contributors.
+- **Power, stated before results:** the smallest weekly mean this sample can separate from zero is computed from the
+  realised weekly volatility and printed with every report; an effect below it is "untestable at this sample", not a fail
+  of the bars.
+
+## 14. Addendum (pre-registered 2026-11-14, before any new-listing return was computed) — short new perp listings
+
+**Research only** (same mandate note as §13).
+
+- **Edge:** newly listed perpetuals are bought on listing hype and underperform the market over the following weeks, as
+  new equity issues do. The other side: late retail buyers of the listing pump.
+- **Events:** every USDⓈ-M USDT perp whose first daily bar is at least 60 days after the panel start (so the listing is
+  observed, not assumed), from the full archive including delisted contracts. Listing day L = first daily bar.
+- **Trade:** short the new perp at the daily open of day L+D, hold H days, exit at the daily open of day L+D+H (last close
+  if it stops trading earlier; a delisted contract exits at its last close). Hedge: long BTCUSDT for the same notional over
+  the same open-to-open span, so the result is the alt's return in excess of BTC, not market direction.
+- **Costs:** 6 bps per side on both legs (24 bps per event). Funding: actual settlements in (entry, exit]; the short
+  receives positive funding on the alt, the BTC long pays it. Stress: 3× costs, because new-listing spreads are wider.
+- **Variants (4):** D ∈ {3, 7} × H ∈ {7, 21}. N = 54 + 4 = **58**.
+- **Window:** events with entry in 2021-03-01 → 2024-12-30 (development). 2025-01 onward stays sealed.
+- **Acceptance (net excess return per event, every check required):**
+  1. ≥ 100 events.
+  2. Mean net > 0 and one-sided 90% lower bound > 0 (month-clustered bootstrap: same-month listings share market risk).
+  3. Mean net > 0 in both halves (entries before / from 2023-01-01).
+  4. Mean net > 0 at 3× costs.
+  5. All three other (D, H) variants have mean net > 0.
+  6. Mean exceeds the 95th percentile of 2,000 random draws that short one existing contract (≥ 90 bars of history, 30-day
+     volume ≥ 10 M USDT) on each event's entry day for the same H, hedged the same way, cost-free.
+  7. Deflated Sharpe probability > 0.95 with N = 58 (per-event Sharpe, `sampleLength` = events; approximate because events
+     overlap in time). The trial Sharpe variance is the larger of the one measured across the four variants and 9.29e-3 (the §10 value), so four similar variants cannot make the bar lenient.
+- **Reported, not gated:** worst single event, 1st/99th percentile of event returns (an unhedged short has unlimited
+  loss; no stop is modelled), events per year, share of events from the 10 largest-volume symbols.

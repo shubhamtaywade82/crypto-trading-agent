@@ -1,0 +1,122 @@
+{
+  "schema_version": "1.0.0",
+  "experiment_id": "INCREMENTAL-ARCHIVE-APPEND-20261114T222245Z",
+  "run_id": "context-strategy-20261114T222245Z-auto11-run11",
+  "status": "COMPLETED_DATA_QUALITY_ONLY",
+  "experiment_type": "incremental_archive_append_and_integrity_check",
+  "hypothesis": "Append only completed 5m/15m USD-M klines after verified prior highwaters; exclude forming candles; preserve the append as raw-only until historical archive reconciliation is complete.",
+  "source": {
+    "endpoint": "GET /fapi/v1/klines",
+    "transport": "Binance USD-M public market-data connector",
+    "sdk_used": false,
+    "direct_rest": "BLOCKED_DNS",
+    "http_status": "NOT_EXPOSED"
+  },
+  "specification": {
+    "symbols": [
+      "BTCUSDT",
+      "ETHUSDT",
+      "SOLUSDT",
+      "XRPUSDT"
+    ],
+    "intervals": [
+      "5m",
+      "15m"
+    ],
+    "start_open_utc": "2026-11-14T21:30:00.000Z",
+    "end_observation_utc": "2026-11-14T22:22:45.000Z",
+    "previous_highwater_open_utc_by_interval": {
+      "5m": "2026-11-14T21:25:00.000Z",
+      "15m": "2026-11-14T21:15:00.000Z"
+    },
+    "forming_exclusion_rule": "Use closeTime < 2026-11-14T22:22:45.000Z.",
+    "expected_completed_per_symbol": {
+      "5m": 10,
+      "15m": 3
+    },
+    "random_seed": "NOT_APPLICABLE_DETERMINISTIC"
+  },
+  "results": {
+    "rows_appended": 52,
+    "rows_by_interval": {
+      "5m": 40,
+      "15m": 12
+    },
+    "rows_by_symbol": {
+      "BTCUSDT": 13,
+      "ETHUSDT": 13,
+      "SOLUSDT": 13,
+      "XRPUSDT": 13
+    },
+    "rows_by_symbol_interval": {
+      "BTCUSDT": {
+        "5m": 10,
+        "15m": 3
+      },
+      "ETHUSDT": {
+        "5m": 10,
+        "15m": 3
+      },
+      "SOLUSDT": {
+        "5m": 10,
+        "15m": 3
+      },
+      "XRPUSDT": {
+        "5m": 10,
+        "15m": 3
+      }
+    },
+    "forming_rows_excluded": 8,
+    "first_open_utc": "2026-11-14T21:30:00.000Z",
+    "last_open_utc": "2026-11-14T22:15:00.000Z",
+    "latest_completed_open_utc_by_interval": {
+      "5m": "2026-11-14T22:15:00.000Z",
+      "15m": "2026-11-14T22:00:00.000Z"
+    },
+    "next_start_open_utc_by_interval": {
+      "5m": "2026-11-14T22:20:00.000Z",
+      "15m": "2026-11-14T22:15:00.000Z"
+    },
+    "quality": {
+      "duplicates": 0,
+      "gaps": 0,
+      "off_grid": 0,
+      "non_monotonic": 0,
+      "ohlc_failures": 0,
+      "non_finite": 0,
+      "non_positive_volume": 0,
+      "close_time_failures": 0,
+      "forming_rows_included": 0,
+      "cross_symbol_alignment": true,
+      "contiguous_from_prior_highwater": true
+    }
+  },
+  "artifacts": {
+    "delta_path": "research-data/binance-usdm/delta/binance_usdm_delta_20261114T222245Z_5m15m_completed.jsonl",
+    "delta_sha256": "c416fa3d37a859666eab49fceb552b86f11b225f04eefd86e6c5de65f09adcfe",
+    "delta_git_blob_sha": "74c448814ff1a2cb738d75d51d6c825ac78124a0",
+    "delta_manifest_path": "research-data/binance-usdm/delta/manifest-20261114T222245Z-5m15m.json",
+    "delta_manifest_sha256": "a0a7b52c8d1857214fb7357b288797700c29e303b751ca37f8ce3d9d927230fb",
+    "delta_manifest_git_blob_sha": "7339bad3bdda8bf5ae8d3e1217ea378f6128faec",
+    "archive_branch": "research/raw-ohlcv-archive-20261108T1026Z",
+    "archive_indexes": [
+      "research-data/binance-usdm/5m/archive-index.json",
+      "research-data/binance-usdm/15m/archive-index.json"
+    ],
+    "archive_index_readback_verified": true
+  },
+  "reproducibility": {
+    "data_and_outputs_hashed": true,
+    "validator_source": "INLINE_CODE_MODE_NOT_COMMITTED",
+    "validator_code_hash": "UNAVAILABLE",
+    "sha256_self_test": "PASS_SHA256_ABC_VECTOR",
+    "repository_backtest_harness_invoked": false
+  },
+  "strategy_experiment_status": "BLOCKED",
+  "oos_evaluation_status": "NOT_RUN",
+  "limitations": [
+    "This append validates only the incremental slice, not the full historical base archive.",
+    "The validator was executed inline and is not committed as a standalone versioned script.",
+    "No strategy entry/exit, costs, trade outcomes or OOS metrics were evaluated."
+  ]
+}

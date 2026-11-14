@@ -490,3 +490,158 @@ reversal, funding/positioning and low-risk effects are the documented crypto ano
      overlap in time). The trial Sharpe variance is the larger of the one measured across the four variants and 9.29e-3 (the §10 value), so four similar variants cannot make the bar lenient.
 - **Reported, not gated:** worst single event, 1st/99th percentile of event returns (an unhedged short has unlimited
   loss; no stop is modelled), events per year, share of events from the 10 largest-volume symbols.
+
+### §13/§14 result (development window, run 2026-11-14)
+
+`npx tsx scripts/xsection-backtest.ts` → `research-runs/xsection-dev-20261114T0943Z.json`; `--listings` for §14; `--diagnose X4`.
+All verdicts by the rules fixed above. Nothing was changed between registration and the run.
+
+| Variant | Net %/wk | 90% LCB | Both halves | 1.5× cost | Q4 / Q8 | Beats random p95 (0.88%) | DSR (N=54) | Checks |
+|---|---|---|---|---|---|---|---|---|
+| X1 momentum 14d | +0.54 | −0.22 | yes | yes | yes | no | 0.003 | 4/7 REJECTED |
+| X2 momentum 28d | +1.06 | +0.30 | yes | yes | yes | yes | 0.020 | 6/7 REJECTED |
+| X3 reversal 7d | −1.35 | −2.10 | no | no | no | no | 0.000 | 1/7 REJECTED |
+| **X4 funding rank 7d** | **+1.52** | **+0.75** | yes | yes (+1.45) | +2.65 / +1.42 | **yes** | 0.112 | **6/7 REJECTED** |
+| X5 low volatility 30d | +0.55 | −0.28 | yes | yes | no | no | 0.005 | 3/7 REJECTED |
+| X6 lottery 30d | +0.18 | −0.56 | no | yes | yes | no | 0.001 | 3/7 REJECTED |
+
+| Listing short (D, H) | Mean net per event | 90% LCB | Events | Both halves | 3× cost | Beats random p95 | DSR (N=58) | Checks |
+|---|---|---|---|---|---|---|---|---|
+| 3, 7 | +2.86% | +0.98% | 294 | yes | yes | yes (0.98%) | 0.035 | 6/7 REJECTED |
+| 3, 21 | +7.11% | +3.17% | 276 | yes | yes | yes (0.11%) | 0.200 | 6/7 REJECTED |
+| 7, 7 | +1.02% | −1.27% | 291 | yes | yes | yes | 0.001 | 5/7 REJECTED |
+| 7, 21 | +4.42% | −0.30% | 275 | yes | yes | yes | 0.043 | 5/7 REJECTED |
+
+- By the pre-registered rule every variant is **REJECTED**; the sealed window stays closed. No rescue inside this addendum.
+- X4 and the D=3 listing shorts are the strongest leads of the project: positive in both halves, positive at stressed
+  costs, beat a random-selection baseline, and fail **only** the deflated Sharpe (N = 54 / 58 with weekly SD ≈ 9%).
+- X4 per year (net %/wk): 2021 +3.29, 2022 +0.21, 2023 +0.70, 2024 +2.13; positive for all 7 rebalance weekdays
+  (+1.25 to +2.07). Funding income is +0.38 to +1.22 %/wk in every year; the leg that earns the price part flips by year
+  (long leg in 2021/2023, short leg in 2022), so it is not a one-sided bet. Max drawdown of cumulative weekly returns is
+  −63% of one leg's notional (needs sizing at a fraction of capital). Mean with the best 5% of weeks removed: +0.29%.
+  X4 returns are concentrated: the five largest symbol contributors (SOL, ETC, TRX, GALA, SAND) sum to ~190% of ~330% total.
+- Listing shorts: the BTC hedge leg itself earned +1.4% to +4.7% on average (listings cluster in bull phases), so the
+  *net* is beta plus alpha; the random-peer baseline carries the same BTC leg and is the fair comparator. Event tails are
+  extreme (worst hedged event −460%, 1st percentile −99% to −179%): an unhedged short has unlimited loss, so sizing must
+  assume the 1% worst case, not the mean.
+- Power: weekly SD ≈ 9% gives a minimum detectable weekly mean ≈ 1.4% at 200 weeks (80% power, one-sided 10%). X4's
+  +1.52% is only just above it, which is why the deflated Sharpe cannot clear 54 trials.
+
+## 15. Addendum (pre-registered 2026-11-14, after §13/§14 results, before any replication-universe return was computed)
+
+The §13 leads (X4 funding rank, X2 momentum 28d) failed only the deflated Sharpe. The sealed window is not spent on
+leads. This addendum looks for **independent evidence in the development period**: the same frozen rules on symbols the
+§13 universe never contained. A pass supports opening the sealed window for one variant; it does not replace that test.
+
+- **Rules:** X4 and X2 exactly as §13 (same signals, Q = 6, costs, funding, weekly Monday rebalance, month-clustered bootstrap).
+- **Universes (disjoint from §13, point-in-time, same filters):**
+  - **B:** ranks 31–60 by 30-day quote volume at each rebalance.
+  - **C:** ranks 61–90 (smaller caps; spreads are wider, so the cost-stress check uses **3×** costs instead of 1.5×).
+- **Tests:** 4 (X4, X2 × B, C). Trial count N = 58 + 4 = **62**; deflated Sharpe is reported but not gated here, because
+  the question is whether the §13 effect replicates, and the DSR bar was already applied to it in §13.
+- **Replication rule (all required):** checks 1–6 of §13 pass (≥ 100 weeks; mean > 0 with 90% LCB > 0; both halves > 0;
+  stressed-cost mean > 0; Q = 4 and Q = 8 > 0; beats the 95th percentile of the cost-free random baseline drawn from the
+  same universe). A variant that passes in both B and C is "replicated"; in one of them only, "partial"; neither, "failed".
+- Nothing about the signals, window or Q changes. Window stays 2021-03-01 → 2024-12-30.
+
+### §15 result (run 2026-11-14)
+
+`npx tsx scripts/xsection-backtest.ts --skip-top {30|60} --ids X4,X2 --gate-dsr false [--cost-stress 3]`
+
+| Variant | Universe | Net %/wk | 90% LCB | Halves (21-22 / 23-24) | Stressed cost | Beats random p95 | Checks 1–6 | Verdict |
+|---|---|---|---|---|---|---|---|---|
+| X4 | B (31–60) | +0.60 | −0.47 | +1.56 / −0.29 | +0.52 (1.5×) | no (0.92) | 3/6 | failed |
+| X2 | B | −0.18 | −0.99 | −0.76 / +0.36 | −0.25 | no | 1/6 | failed |
+| X4 | C (61–90) | +0.24 | −0.48 | −0.10 / +0.56 | −0.07 (3×) | no (0.92) | 2/6 | failed |
+| X2 | C | +0.04 | −1.06 | +0.39 / −0.29 | −0.26 | no | 1/6 | failed |
+
+**Neither §13 lead replicates on disjoint symbols.** X2 disappears. X4 keeps a positive sign in both universes but is
+indistinguishable from zero and fails the halves and baseline checks. Whatever X4 earned in the top-30 is not shown to
+generalise to smaller caps, where it would also pay more cost. X4 is therefore a **lead that did not replicate**, not a
+validated edge. The sealed window is not spent on it.
+
+## 16. Addendum (pre-registered 2026-11-14, before any age, attention or positioning return was computed)
+
+Four more cross-sectional weekly signals on the §13 machinery (top-30 universe, Q = 6, costs and funding as §13). N = 62 + 4 = **66**.
+Each must pass **all seven** §13 checks, with the deflated Sharpe at N = 66.
+
+- **X7 age:** long the oldest contract, short the youngest (§14 suggests recently listed perps underperform; this tests it
+  inside the liquid universe). Score = days since the first daily bar.
+- **X8 attention reversal:** short the highest 7-day surge in quote volume vs the prior 30 days (days m−37…m−8), long the
+  lowest. Score = −(mean quote volume of days m−7…m−1 ÷ mean of days m−37…m−8).
+- **X11 top-trader crowding:** contrarian to Binance's top-trader long/short **position** ratio at the last snapshot at or
+  before Sunday 23:50 UTC (usable from 23:55, before Monday's open). Score = −ratio.
+- **X12 open-interest build:** fade leverage building. Score = −(OI value at Sunday 23:50 ÷ OI value one week earlier − 1).
+- **Windows:** X7, X8: Mondays 2021-03-01 → 2024-12-30 as §13. X11, X12: positioning archive starts 2021-12, so Mondays
+  2022-01-03 → 2024-12-30 (about 156 weeks, still ≥ 100); the halves are 2022 vs 2023-24.
+- Metrics are downloaded only for the Sundays used (Sunday snapshot and the Sunday before), for symbols that ever enter
+  the §13 top-30.
+
+### §16 interim (run 2026-11-14, X7 and X8 only; X11/X12 await the positioning download)
+
+Correction recorded before relying on any number: X4's score has many **exact ties** (most contracts sit on the default
+funding rate), and the first run broke them by floating-point noise. Ties are now ordered by a seeded pseudo-random key
+(`runPortfolio(..., tieSeed)`) and funding sums are rounded to 1e-10 so identical rates tie exactly. X4 over 25 seeds:
+mean net +1.47% / +1.56% / +1.63% (min / median / max) per week, so the tie rule does not drive the result. The panel now
+starts 2019-09 so every contract's true listing day is visible (age); this changed no universe or return.
+
+`npx tsx scripts/xsection-backtest.ts --ids X4,X7,X8 --trials 66`:
+
+| Variant | Net %/wk | 90% LCB | Halves (21-22 / 23-24) | 1.5× cost | Q4 / Q8 | Beats random p95 (0.88) | DSR (N=66) | Checks |
+|---|---|---|---|---|---|---|---|---|
+| X7 age (long old, short young) | +1.20 | +0.37 | +0.79 / +1.58 | +1.19 | +1.46 / +0.58 | yes | 0.037 | 6/7 REJECTED |
+| X8 attention reversal | −0.62 | −1.51 | −0.03 / −1.17 | −0.69 | no | no | 0.000 | 1/7 REJECTED |
+
+X7 matches the §14 listing result (young contracts underperform) from a second angle and is positive in both halves,
+but its deflated Sharpe fails like the others. By the §15 logic it gets the same independent-universe test, registered here
+before it is run.
+
+## 17. Addendum (pre-registered 2026-11-14, before any X7 return on universes B or C was computed)
+
+X7 on the disjoint universes of §15: **B** (ranks 31–60) and **C** (ranks 61–90), rules unchanged, replication rule of §15
+(checks 1–6; stressed cost 1.5× for B and 3× for C; deflated Sharpe reported, not gated). Trial count N = 66 + 2 = **68**.
+
+### §17 result (run 2026-11-14)
+
+`npx tsx scripts/xsection-backtest.ts --skip-top {30|60} --ids X7 --gate-dsr false [--cost-stress 3] --trials 68`
+
+| Variant | Universe | Net %/wk | 90% LCB | Halves (21-22 / 23-24) | Stressed | Beats random p95 | Checks 1–6 | Verdict |
+|---|---|---|---|---|---|---|---|---|
+| X7 | B (31–60) | −0.66 | −1.65 | +0.58 / −1.81 | −0.69 | no | 1/6 | failed |
+| X7 | C (61–90) | +0.35 | −0.55 | +0.12 / +0.57 | +0.20 (3×) | no (0.92) | 4/6 | failed (no LCB, no baseline) |
+
+**X7 does not replicate.** Together with §15, every cross-sectional lead found in the top-30 universe failed on
+non-overlapping symbols from the same period. The most likely reading is a sample-specific result in 30 liquid names,
+not a general effect. Cross-sectional weekly rank portfolios are closed unless the positioning signals (X11, X12) differ.
+
+## 18. Addendum (pre-registered 2026-11-14, after counting events but before computing any event return) — extreme-day moves
+
+Event counts only were looked at to pick thresholds: the rule is the smallest round threshold giving at least 250 events
+in the development window (pump ≥ +30% → 515 events, crash ≤ −25% → 265 events; at hold 7d, one open trade per symbol).
+
+- **Edge:** a one-day extreme move in a liquid perp overshoots. Pumps fade; crashes bounce, because forced flow and
+  attention, not information, drive the largest single-day moves.
+- **Universe:** the §13 filters (≥ 90 bars, 30-day mean quote volume ≥ 10 M USDT), all contracts including delisted.
+- **Events:** the day's close-to-close return ≥ +30% (PF, **short**) or ≤ −25% (CB, **long**), entered at the next daily
+  open (00:00 UTC), exit D days later; a symbol with an open trade is not re-entered. BTC-hedged, costs 24 bps, funding,
+  stress 3×, exits and exclusions exactly as §14.
+- **Variants (4):** PF and CB × hold ∈ {3, 7} days. N = 68 + 4 = **72**.
+- **Window:** entries 2021-03-01 → 2024-12-30; 2025-01 onward sealed.
+- **Acceptance:** the seven checks of §14 with these changes: check 5 is "the other hold of the same direction has mean
+  net > 0"; check 6 draws the random peer with the same direction; deflated Sharpe uses N = 72.
+- **Reported, not gated:** per year, worst and 1st/99th percentile events, share of events on a market-wide move day
+  (BTC's own day return beyond ±5%).
+
+### §18 result (run 2026-11-14)
+
+`npx tsx scripts/xsection-backtest.ts --moves`
+
+| Variant | Events | Mean net | 90% LCB | Halves | 3× cost | Beats random p95 | DSR (N=72) | Checks |
+|---|---|---|---|---|---|---|---|---|
+| PF +30% short, H=3 | 556 | −0.50% | −2.10% | −2.36 / +1.38 | no | no | 0.000 | 1/7 REJECTED |
+| PF +30% short, H=7 | 515 | −2.07% | −4.49% | −3.81 / −0.29 | no | no | 0.000 | 1/7 REJECTED |
+| CB −25% long, H=3 | 273 | −1.12% | −3.89% | −0.14 / −6.22 | no | no | 0.000 | 2/7 REJECTED |
+| CB −25% long, H=7 | 265 | +2.28% | −1.52% | +3.95 / −6.11 | yes | no (4.85) | 0.046 | 2/7 REJECTED |
+
+No overshoot edge in either direction. Pumps keep running (short side loses in 2021 and 2024); crashes bounce only in
+2021–22 and not after.

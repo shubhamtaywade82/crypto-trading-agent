@@ -1,0 +1,236 @@
+{
+  "schema_version": "1.0.0",
+  "registry_version": "v113",
+  "run_id": "context-strategy-2026-11-14T0036Z-auto11-v113",
+  "as_of_utc": "2026-11-14T00:36:22.902Z",
+  "parent_registry_version": "v96",
+  "universe": {
+    "tradable": [
+      "SOLUSDT",
+      "ETHUSDT",
+      "XRPUSDT"
+    ],
+    "reference_only": [
+      "BTCUSDT"
+    ]
+  },
+  "evidence_gates": {
+    "provisional_min_oos_trades_per_symbol_context": 100,
+    "stronger_min_oos_trades_multiple_windows": 200,
+    "require_positive_net_expectancy_after_costs": true,
+    "require_dependence_aware_ci": true,
+    "require_parameter_neighborhood_stability": true,
+    "require_multiple_testing_correction": true
+  },
+  "taxonomy": {
+    "version": "v56",
+    "status": "CARRIED_FORWARD_NOT_RECOMPUTED",
+    "timeframe": "4h",
+    "trend_strength": "(EMA20-EMA50)/Wilder ATR14",
+    "transition": "abs(trend_strength) below training q67 of abs trend strength; else BULL/BEAR by sign",
+    "volatility": "ATR14/close buckets using train-only q33/q67",
+    "split": "70/15/15 chronological",
+    "warmup_bars": 500,
+    "last_reviewed_utc": "2026-11-09T02:36:32.618Z",
+    "test_summary": {
+      "BTCUSDT": {
+        "rows": 2345,
+        "BEAR_LOW_pct": 6.53,
+        "TRANSITION_LOW_pct": 50.66,
+        "BULL_LOW_pct": 9.85,
+        "TVD": 0.175,
+        "median_transition_hours": 38
+      },
+      "ETHUSDT": {
+        "rows": 2273,
+        "BEAR_LOW_pct": 6.42,
+        "TRANSITION_LOW_pct": 46.24,
+        "BULL_LOW_pct": 6.64,
+        "TVD": 0.338,
+        "median_transition_hours": 42
+      },
+      "SOLUSDT": {
+        "rows": 2010,
+        "BEAR_LOW_pct": 10.9,
+        "TRANSITION_LOW_pct": 67.56,
+        "BULL_LOW_pct": 10.7,
+        "TVD": 0.245,
+        "median_transition_hours": 120
+      },
+      "XRPUSDT": {
+        "rows": 2237,
+        "BEAR_LOW_pct": 15.2,
+        "TRANSITION_LOW_pct": 43.63,
+        "BULL_LOW_pct": 3.22,
+        "TVD": 0.293,
+        "median_transition_hours": 68
+      }
+    },
+    "notable_transitions": {
+      "SOL_BULL_LOW_to_TRANSITION_LOW_pct": 83.3,
+      "SOL_transitions": 12,
+      "XRP_TRANSITION_NORMAL_to_TRANSITION_LOW_pct": 69.4,
+      "XRP_transitions": 25
+    },
+    "sample_adequacy": "Descriptive 4h taxonomy only; insufficient for strategy edge or multi-timeframe generalization."
+  },
+  "entries": [
+    {
+      "key": {
+        "symbol": "ALL_TRADABLE",
+        "context": "36 symbol-context cells",
+        "strategy_version": "context_aligned_donchian20_wf_v2"
+      },
+      "status": "INSUFFICIENT_EVIDENCE",
+      "sample": {
+        "cells": 36,
+        "all_cells_oos_trades_below": 100
+      },
+      "oos": {
+        "nominal_block_bootstrap_ci": "includes zero",
+        "holm_adjusted_p": 1
+      },
+      "costs": "15bp round-trip proxy, not calibrated",
+      "failure_modes": [
+        "underpowered per cell",
+        "no robust positive cell after multiplicity correction",
+        "execution cost model incomplete"
+      ],
+      "last_evaluation_utc": "2026-11-05T09:43:57.448Z"
+    },
+    {
+      "key": {
+        "symbol": "SOLUSDT",
+        "context": "BULL_LOW",
+        "strategy_version": "4h_Donchian20_breakout_inherited"
+      },
+      "status": "OOS_PROMISING",
+      "sample": {
+        "oos_trades": 12
+      },
+      "oos": {
+        "win_rate_pct": 66.7,
+        "target_before_stop_pct": 41.7,
+        "mean_net_R": 0.606,
+        "profit_factor": 2.72,
+        "max_drawdown_R": 1.3,
+        "block_bootstrap_ci95_mean_R": [
+          0.086,
+          1.199
+        ]
+      },
+      "detector": "4h Donchian20 breakout; exact rules for this 12-trade cell not present in latest v96 summary. An older distinct v32 variant used prior-20 channel, next-4h-open entry, 1.5 ATR stop, 2R target and 12-bar time stop; identity unverified.",
+      "costs": "Not fully calibrated",
+      "failure_modes": [
+        "12 trades below 100-trade gate",
+        "current SOL context is bearish, not BULL_LOW",
+        "cost/parameter robustness incomplete"
+      ],
+      "last_evaluation_utc": "2026-11-05T09:43:57.448Z",
+      "current_applicability": "RESEARCH_ONLY_NOT_ACTIONABLE"
+    },
+    {
+      "key": {
+        "symbol": "ALL_TRADABLE",
+        "context": "ALL",
+        "strategy_version": "trend_pullback"
+      },
+      "status": "HYPOTHESIS",
+      "detector": "Not tested in accessible registry."
+    },
+    {
+      "key": {
+        "symbol": "ALL_TRADABLE",
+        "context": "ALL",
+        "strategy_version": "breakout_retest"
+      },
+      "status": "HYPOTHESIS",
+      "detector": "Not tested in accessible registry."
+    },
+    {
+      "key": {
+        "symbol": "ALL_TRADABLE",
+        "context": "ALL",
+        "strategy_version": "range_mean_reversion"
+      },
+      "status": "HYPOTHESIS",
+      "detector": "Not tested in accessible registry."
+    },
+    {
+      "key": {
+        "symbol": "ALL_TRADABLE",
+        "context": "ALL",
+        "strategy_version": "failed_breakout_fade"
+      },
+      "status": "HYPOTHESIS",
+      "detector": "Not tested in accessible registry."
+    },
+    {
+      "key": {
+        "symbol": "ALL_TRADABLE",
+        "context": "ALL",
+        "strategy_version": "volatility_expansion"
+      },
+      "status": "HYPOTHESIS",
+      "detector": "Not tested in accessible registry."
+    },
+    {
+      "key": {
+        "symbol": "ALL_TRADABLE",
+        "context": "ALL",
+        "strategy_version": "btc_relative_strength"
+      },
+      "status": "HYPOTHESIS",
+      "detector": "Not tested in accessible registry."
+    },
+    {
+      "key": {
+        "symbol": "ALL_TRADABLE",
+        "context": "ALL",
+        "strategy_version": "funding_oi_filters"
+      },
+      "status": "HYPOTHESIS",
+      "detector": "Not tested in accessible registry."
+    }
+  ],
+  "aggregate_prior_donchian20": {
+    "BTCUSDT": {
+      "trades": 200,
+      "win_rate_pct": 36.5,
+      "target_before_stop_pct": 21.5,
+      "mean_net_R": -0.100817
+    },
+    "ETHUSDT": {
+      "trades": 182,
+      "win_rate_pct": 38.46,
+      "target_before_stop_pct": 28.02,
+      "mean_net_R": 0.047803
+    },
+    "SOLUSDT": {
+      "trades": 208,
+      "win_rate_pct": 37.02,
+      "target_before_stop_pct": 24.52,
+      "mean_net_R": -0.017655
+    },
+    "XRPUSDT": {
+      "trades": 188,
+      "win_rate_pct": 37.77,
+      "target_before_stop_pct": 29.79,
+      "mean_net_R": 0.048855
+    },
+    "interpretation": "Aggregate diagnostics are not symbol-context proof."
+  },
+  "counts": {
+    "oos_validated": 0,
+    "rejected": 0
+  },
+  "new_strategy_experiments_this_run": 0,
+  "new_oos_evaluations_this_run": 0,
+  "status_transitions_this_run": [],
+  "current_applicability": {
+    "SOLUSDT": "NO_TRADE",
+    "ETHUSDT": "NO_TRADE",
+    "XRPUSDT": "NO_TRADE"
+  },
+  "note": "Only OOS_VALIDATED entries can drive trade selection. OOS_PROMISING remains research-only. No strategy status changed this run."
+}

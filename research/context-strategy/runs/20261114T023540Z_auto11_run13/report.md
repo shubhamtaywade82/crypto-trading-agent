@@ -105,6 +105,8 @@ Only the SIDEWAYS_LOW failed-breakout fade is genuinely REJECTED by an OOS test.
 
 **Kline features:** 2026-11-14 02:35:09Z. **Mark/ticker/book:** 02:35:25Z. **OI/positioning:** 02:35:40Z.
 
+**Completed candle opens/closes:** 5m 02:30Z / 02:34:59.999Z; 15m 02:15Z / 02:29:59.999Z; 1h 01:00Z / 01:59:59.999Z; 4h Nov 13 20:00Z / 23:59:59.999Z. One forming candle per symbol/interval was excluded. The current 4h monitoring close at 20:00Z is newer than the canonical 4h archive highwater at 12:00Z; eight 4h rows (two per symbol) remain held pending provenance reconciliation.
+
 | Symbol | 4h | 1h | 15m | 5m | 24h | 72h corr. to BTC | Relative 24h vs BTC |
 |---|---|---|---|---|---:|---:|---:|
 | BTC reference | Bear; ATR percentile 0.97 | Bear | Bear; z=-4.33; volume 13.8x; downside break | Bear; +0.23% last bar bounce | -4.30% | 1.00 | -- |

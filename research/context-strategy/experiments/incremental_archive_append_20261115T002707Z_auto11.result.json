@@ -1,0 +1,122 @@
+{
+  "schema_version": "1.0.0",
+  "experiment_id": "INCREMENTAL-ARCHIVE-APPEND-20261115T002707Z",
+  "run_id": "context-strategy-20261115T002707Z-auto11",
+  "status": "COMPLETED_DATA_QUALITY_ONLY",
+  "specification_path": "research/context-strategy/experiments/incremental_archive_append_20261115T002707Z_auto11.spec.json",
+  "result": {
+    "rows_appended": 56,
+    "rows_by_interval": {
+      "5m": 44,
+      "15m": 12
+    },
+    "rows_by_symbol": {
+      "BTCUSDT": 14,
+      "ETHUSDT": 14,
+      "SOLUSDT": 14,
+      "XRPUSDT": 14
+    },
+    "rows_by_symbol_interval": {
+      "BTCUSDT": {
+        "5m": 11,
+        "15m": 3
+      },
+      "ETHUSDT": {
+        "5m": 11,
+        "15m": 3
+      },
+      "SOLUSDT": {
+        "5m": 11,
+        "15m": 3
+      },
+      "XRPUSDT": {
+        "5m": 11,
+        "15m": 3
+      }
+    },
+    "forming_rows_excluded": 12,
+    "latest_raw_completed_open_utc_by_interval": {
+      "5m": "2026-11-15T00:20:00.000Z",
+      "15m": "2026-11-15T00:00:00.000Z"
+    },
+    "next_start_open_utc_by_interval": {
+      "5m": "2026-11-15T00:25:00.000Z",
+      "15m": "2026-11-15T00:15:00.000Z"
+    },
+    "quality": {
+      "duplicates": 0,
+      "gaps": 0,
+      "off_grid": 0,
+      "non_monotonic": 0,
+      "ohlc_failures": 0,
+      "non_finite": 0,
+      "non_positive_volume": 0,
+      "close_time_failures": 0,
+      "forming_rows_included": 0,
+      "cross_symbol_alignment": true,
+      "contiguous_from_prior_highwater": true
+    }
+  },
+  "artifacts": [
+    {
+      "path": "research-data/binance-usdm/delta/binance_usdm_delta_20261115T002015Z_auto11_5m15m_completed.jsonl",
+      "sha256": "68a1cf9009a8f9718be476f2be2185fa16f3e12194fc3a062fe31c2feb31b030",
+      "git_blob_sha": "cf88a104c597f94ea968de9bd9d57737158002d5",
+      "rows": 52,
+      "readback_verified": true
+    },
+    {
+      "path": "research-data/binance-usdm/delta/binance_usdm_delta_20261115T002707Z_auto11_5m_completed.jsonl",
+      "sha256": "108e4179313294bdeb0e671bdc049d2619e07104d97eeaaf845a759b281f3d50",
+      "git_blob_sha": "6f25aacc0b06714d18c59daa7c05cf351a93ff0b",
+      "rows": 4,
+      "readback_verified": true
+    },
+    {
+      "path": "research-data/binance-usdm/delta/manifest-20261115T002015Z-auto11-5m15m.json",
+      "sha256": "449ef906de3fa4b2cad415a9592c44699eb05bb515f3224433ffc0266cd278ee",
+      "git_blob_sha": "bc3ec1ca8ef864794770dd815bd3d188c818b87e",
+      "readback_verified": true
+    },
+    {
+      "path": "research-data/binance-usdm/delta/manifest-20261115T002707Z-auto11-5m.json",
+      "sha256": "6210ed1979f0d06aa35e139d5f5a13dae73c08a5300c497f71f935a97f1dbe0e",
+      "git_blob_sha": "3bee891de07d5b7c5a3fb0019fa4337d23ab63a9",
+      "readback_verified": true
+    },
+    {
+      "path": "research-data/binance-usdm/manifests/archive_manifest_20261115T002015Z_auto11.json",
+      "git_blob_sha": "d6361f29737d540feea5db0d88fabed64d8d1dbf",
+      "readback_verified": true
+    },
+    {
+      "path": "research-data/binance-usdm/manifests/archive_manifest_20261115T002707Z_auto11.json",
+      "sha256": "d6f0d6b3b139a74b3881ddf8cd20141cefe17b5b9b16f943f225e694221a16fa",
+      "git_blob_sha": "b0e24f3a410317d9a5e57a2da102a50babd56a93",
+      "readback_verified": true
+    }
+  ],
+  "archive_indexes": {
+    "branch": "research/raw-ohlcv-archive-20261108T1026Z",
+    "five_minute_index_blob_sha": "5a4c45fa015c064d16e2f537468193ffacd8e9f3",
+    "fifteen_minute_index_blob_sha": "c8719809549606b7d439e85678f1ef5e5da448c6",
+    "readback_verified": true,
+    "canonical_highwaters_unchanged": true
+  },
+  "reproducibility": {
+    "input_sha256_recorded": true,
+    "output_sha256_recorded": true,
+    "git_blob_identities_recorded": true,
+    "inline_validator_versioned": false,
+    "backtest_harness_invoked": false
+  },
+  "strategy_experiment_status": "BLOCKED",
+  "oos_evaluation_status": "NOT_RUN",
+  "limitations": [
+    "The result validates only the incremental 56-row slice, not the full historical archive.",
+    "The 5m/15m base archive is partial; page28 cross-symbol alignment is false and original page-manifest SHA mismatches remain.",
+    "The 1h bridge and 4h raw/aligned/canonical provenance remain unresolved.",
+    "No strategy entries/exits, fees, spread/slippage, funding PnL, trade outcomes, block bootstrap, multiple-testing correction or OOS metrics were evaluated.",
+    "The inline validator source is not committed as a standalone versioned script."
+  ]
+}

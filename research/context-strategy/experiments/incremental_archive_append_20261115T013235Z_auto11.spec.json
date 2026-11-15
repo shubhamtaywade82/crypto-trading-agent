@@ -1,0 +1,66 @@
+{
+  "schema_version": "1.0.0",
+  "experiment_id": "INCREMENTAL-ARCHIVE-APPEND-20261115T013235Z-AUTO11",
+  "experiment_type": "DATA_QUALITY_ARCHIVE_APPEND",
+  "status": "COMPLETED_DATA_QUALITY_ONLY",
+  "created_at_utc": "2026-11-15T01:32:35.846Z",
+  "hypothesis": "Completed Binance USDⓈ-M 5m/15m candles can be appended contiguously from the persisted raw highwaters for BTC/ETH/SOL/XRP without integrity defects.",
+  "source": {
+    "endpoint": "GET /fapi/v1/klines",
+    "connector": "Binance public market-data connector",
+    "sdk_used": false,
+    "intervals": [
+      "5m",
+      "15m"
+    ],
+    "symbols": [
+      "BTCUSDT",
+      "ETHUSDT",
+      "SOLUSDT",
+      "XRPUSDT"
+    ],
+    "limit": 100
+  },
+  "prior_highwater_open_utc": {
+    "5m": "2026-11-15T00:20:00.000Z",
+    "15m": "2026-11-15T00:00:00.000Z"
+  },
+  "expected_next_start_open_utc": {
+    "5m": "2026-11-15T00:25:00.000Z",
+    "15m": "2026-11-15T00:15:00.000Z"
+  },
+  "inclusion_rule": "Include only rows with closeTime <= retrieval timestamp and openTime > the corresponding persisted raw highwater.",
+  "validation_rules": [
+    "unique openTime per symbol/interval",
+    "strictly increasing openTime",
+    "exact interval continuity from prior highwater",
+    "openTime aligned to interval grid",
+    "low <= min(open,close) <= max(open,close) <= high",
+    "finite OHLCV/quoteVolume/trade fields",
+    "positive base volume",
+    "closeTime = openTime + interval_ms - 1",
+    "identical openTime sets across all four symbols per interval",
+    "no forming candle included"
+  ],
+  "exclusions": [
+    "Rows at/below prior raw highwater",
+    "Forming candles"
+  ],
+  "output_paths": [
+    "research-data/binance-usdm/delta/binance_usdm_delta_20261115T013235_auto11_5m15m_completed.jsonl",
+    "research-data/binance-usdm/delta/manifest-20261115T013235-auto11-5m15m.json",
+    "research-data/binance-usdm/manifests/archive_manifest_20261115T013235Z_auto11.json"
+  ],
+  "persistence": {
+    "archive_branch": "research/raw-ohlcv-archive-20261108T1026Z",
+    "indexes_updated": [
+      "research-data/binance-usdm/5m/archive-index.json",
+      "research-data/binance-usdm/15m/archive-index.json"
+    ],
+    "readback_required": true
+  },
+  "strategy_metrics": "NOT_APPLICABLE",
+  "oos": "NOT_APPLICABLE",
+  "seed": "N/A",
+  "validator": "Inline deterministic JavaScript in managed V8 Code Mode; SHA-256 helper known-vector check passed; validator source not committed as a script."
+}

@@ -5,6 +5,8 @@ import { CoinDcxExchangeApi, type CoinDcxOrderClient } from '../coindcx/coindcxC
 import { config } from '../config.js';
 import { PaperEngine } from './paperEngine.js';
 import { PaperExchangeClient, VenueUnavailableError } from './paperExchangeClient.js';
+import { PaperExchangeLeaseAdapter } from '../core/adapters/paper-exchange/PaperExchangeLeaseAdapter.js';
+import { DEFAULT_LEASE_TTL_SECONDS, PaperExchangeLeaseKeeper } from '../core/adapters/paper-exchange/PaperExchangeLeaseKeeper.js';
 import { RemoteBroker, type VenueStatus } from './remoteBroker.js';
 import type { FundingLine, FundingObservation } from './remoteFunding.js';
 import { RemoteStore } from './remoteState.js';
@@ -102,11 +104,28 @@ function coinDcxBrokerFromConfig(): RemoteBroker | null {
   });
 }
 
+/** The paper account's lease keeper. Null unless this process trades on paper_exchange. */
+let legacyPaperLease: PaperExchangeLeaseKeeper | null = null;
+/** Where the lease's own warnings go (a failed renewal, a lost lease). The orchestrator sets it when it starts. */
+let legacyPaperLeaseLog: (message: string) => void = () => undefined;
+
 function remoteBrokerFromConfig(): RemoteBroker | null {
   const remote = config.paperExchange;
   if (config.mode !== 'paper' || !remote) return null;
+  const lease = new PaperExchangeLeaseKeeper({
+    lease: new PaperExchangeLeaseAdapter({
+      baseUrl: remote.url,
+      ...(remote.apiKey ? { apiKey: remote.apiKey } : {}),
+      ttlSeconds: DEFAULT_LEASE_TTL_SECONDS,
+    }),
+    accountId: remote.accountId,
+    label: `agent pid ${process.pid}`,
+    ttlSeconds: DEFAULT_LEASE_TTL_SECONDS,
+    log: (message) => legacyPaperLeaseLog(message),
+  });
+  legacyPaperLease = lease;
   return new RemoteBroker({
-    api: new PaperExchangeClient(remote.url, remote.accountId, { apiKey: remote.apiKey }),
+    api: new PaperExchangeClient(remote.url, remote.accountId, { apiKey: remote.apiKey, lease }),
     store: new RemoteStore(REMOTE_STATE_FILE, remote.accountId),
     accountId: remote.accountId,
     symbols: config.symbols,
@@ -120,6 +139,25 @@ function brokerFromConfig(): RemoteBroker | null {
 }
 
 export class BinanceService {
+  /**
+   * Takes the paper account's lease in the background. Until it is held, every paper write is refused locally, so a lease
+   * another process holds means this process places no paper orders.
+   */
+  startPaperExchangeLease(log: (message: string, level: 'info' | 'warn' | 'error') => void): void {
+    legacyPaperLeaseLog = (message) => log(message, 'warn');
+    const keeper = legacyPaperLease;
+    if (!keeper) return;
+    keeper.start().then(
+      (handle) => log(`paper_exchange lease held for ${handle.accountId} (fence ${handle.fence})`, 'info'),
+      (error: unknown) => log(`paper_exchange lease refused: ${error instanceof Error ? error.message : String(error)}; this process places no paper orders`, 'error'),
+    );
+  }
+
+  /** Stops renewing and gives the paper lease back. */
+  stopPaperExchangeLease(): void {
+    void legacyPaperLease?.stop();
+  }
+
   private futures: USDMClient;
   private ws: WebsocketClient | null = null;
   private wsStatus: WsStatus = 'down';

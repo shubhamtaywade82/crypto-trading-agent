@@ -5,6 +5,8 @@ import { OptionsBuyingEngine, type HaltSwitch, type LogLevel, type OptionVetoer,
 import { OptionsJournal, OptionsStateStore } from './stateStore.js';
 import { SdkUnderlyingContextSource, sdkKlineReader } from './UnderlyingContext.js';
 import { LocalOptionsPaperVenue, MonitorOnlyVenue, PaperExchangeOptionsVenue, type OptionsVenue } from './venues.js';
+import { PaperExchangeLeaseAdapter } from '../core/adapters/paper-exchange/PaperExchangeLeaseAdapter.js';
+import { DEFAULT_LEASE_TTL_SECONDS, PaperExchangeLeaseKeeper } from '../core/adapters/paper-exchange/PaperExchangeLeaseKeeper.js';
 
 /** What the cockpit shows for the options book. */
 export interface OptionsDeskView {
@@ -22,11 +24,14 @@ export interface OptionsDeskDeps {
   killSwitch: HaltSwitch;
   vetoer: OptionVetoer | null;
   log: (level: LogLevel, message: string) => void;
-  /** Builds the engine and its venue; overridden in tests. The default reads Binance through a read-only binance-sdk client. */
-  build?: (config: OptionsConfig, deps: Pick<OptionsDeskDeps, 'killSwitch' | 'vetoer' | 'log'>) => Promise<{ engine: OptionsBuyingEngine; venue: OptionsVenue }>;
+  /**
+   * Builds the engine and its venue; overridden in tests. The default reads Binance through a read-only binance-sdk client.
+   * A build that takes the paper_exchange lease returns it, so the desk can give it back.
+   */
+  build?: (config: OptionsConfig, deps: Pick<OptionsDeskDeps, 'killSwitch' | 'vetoer' | 'log'>) => Promise<{ engine: OptionsBuyingEngine; venue: OptionsVenue; lease?: PaperExchangeLeaseKeeper }>;
 }
 
-async function defaultBuild(cfg: OptionsConfig, deps: Pick<OptionsDeskDeps, 'killSwitch' | 'vetoer' | 'log'>): Promise<{ engine: OptionsBuyingEngine; venue: OptionsVenue }> {
+async function defaultBuild(cfg: OptionsConfig, deps: Pick<OptionsDeskDeps, 'killSwitch' | 'vetoer' | 'log'>): Promise<{ engine: OptionsBuyingEngine; venue: OptionsVenue; lease?: PaperExchangeLeaseKeeper }> {
   const client = new BinanceClient({ safety: { readOnly: true } });
   await client.syncTime();
   const refused = new Set<string>();
@@ -38,14 +43,29 @@ async function defaultBuild(cfg: OptionsConfig, deps: Pick<OptionsDeskDeps, 'kil
     },
   });
   let venue: OptionsVenue;
+  let lease: PaperExchangeLeaseKeeper | undefined;
   switch (cfg.venue) {
     case 'local':
       venue = new LocalOptionsPaperVenue(cfg.localEquity, cfg.fees);
       break;
     case 'paper_exchange': {
       const pe = cfg.paperExchange!;
-      const remote = new PaperExchangeOptionsVenue(pe.url, pe.accountId, cfg.fees, { apiKey: pe.apiKey });
-      await remote.ensureAccount(cfg.localEquity);
+      // The options wallet is a paper_exchange account of its own. The desk takes its lease before any write, ensureAccount included.
+      lease = new PaperExchangeLeaseKeeper({
+        lease: new PaperExchangeLeaseAdapter({ baseUrl: pe.url, apiKey: pe.apiKey, ttlSeconds: DEFAULT_LEASE_TTL_SECONDS }),
+        accountId: pe.accountId,
+        label: `options desk pid ${process.pid}`,
+        ttlSeconds: DEFAULT_LEASE_TTL_SECONDS,
+        log: (message) => deps.log('warn', message),
+      });
+      await lease.start();
+      const remote = new PaperExchangeOptionsVenue(pe.url, pe.accountId, cfg.fees, { apiKey: pe.apiKey, lease });
+      try {
+        await remote.ensureAccount(cfg.localEquity);
+      } catch (err) {
+        await lease.stop();
+        throw err;
+      }
       venue = remote;
       break;
     }
@@ -64,18 +84,19 @@ async function defaultBuild(cfg: OptionsConfig, deps: Pick<OptionsDeskDeps, 'kil
     journal: new OptionsJournal(cfg.journalPath),
     log: deps.log,
   });
-  return { engine, venue };
+  return { engine, venue, ...(lease ? { lease } : {}) };
 }
 
 /**
  * The options book inside the cockpit: one engine on its own cadence beside the futures loop. Options run in their own
  * wallet (the local book, or a separate paper_exchange account), like Binance's Options wallet. The kill switch and the
- * Ollama advisor are shared with futures. A failed start (Binance unreachable, paper_exchange down) is retried each
- * tick; nothing here can throw into the futures loop.
+ * Ollama advisor are shared with futures. A failed start (Binance unreachable, paper_exchange down, its lease held elsewhere)
+ * is retried each tick; nothing here can throw into the futures loop.
  */
 export class OptionsDesk {
   private engine: OptionsBuyingEngine | null = null;
   private venue: OptionsVenue | null = null;
+  private lease: PaperExchangeLeaseKeeper | null = null;
   private equity: number | null = null;
   private lastError: string | null = null;
   private starting: Promise<void> | null = null;
@@ -114,13 +135,26 @@ export class OptionsDesk {
     };
   }
 
+  /** Gives the options wallet's paper_exchange lease back. The runner and the cockpit call it when they stop. */
+  async dispose(): Promise<void> {
+    const held = this.lease;
+    this.lease = null;
+    await held?.stop();
+  }
+
   private async start(): Promise<void> {
     this.starting ??= (async () => {
       const build = this.deps.build ?? defaultBuild;
-      const { engine, venue } = await build(this.deps.config, this.deps);
-      await engine.start();
+      const { engine, venue, lease } = await build(this.deps.config, this.deps);
+      try {
+        await engine.start();
+      } catch (err) {
+        await lease?.stop();
+        throw err;
+      }
       this.engine = engine;
       this.venue = venue;
+      this.lease = lease ?? null;
       this.equity = await venue.equity().catch(() => null);
     })().finally(() => { this.starting = null; });
     await this.starting;

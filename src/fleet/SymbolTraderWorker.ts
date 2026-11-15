@@ -1,4 +1,4 @@
-import { PaperExchangeClient, type PaperExchangePosition, type PaperExchangeAccountSnapshot } from '../binance/paperExchangeClient.js';
+import { PaperExchangeClient, type PaperExchangeLease, type PaperExchangePosition, type PaperExchangeAccountSnapshot } from '../binance/paperExchangeClient.js';
 import { wilderAtr } from '../binance/indicators.js';
 import { FleetLlmService } from './FleetLlmService.js';
 import type { LlmTradeRecommendation, PromptInput } from './FleetPrompt.js';
@@ -22,6 +22,11 @@ export interface SymbolWorkerConfig {
   modelTag: string;
   /** Optional trade-event sink: called on every entry fill, exit fill and break-even lock. Synchronous by design — async delivery (e.g. Telegram) is the sink's job, never the trading loop's. */
   onTradeEvent?: (event: FleetTradeEvent) => void;
+  /**
+   * The account's lease, taken by the caller before the worker first writes. Without one, writes go out unfenced and the
+   * paper_exchange decides. The fleet always passes one.
+   */
+  lease?: PaperExchangeLease;
 }
 
 export interface WorkerStatus {
@@ -65,6 +70,7 @@ export class SymbolTraderWorker {
     this.llm = llm;
     this.client = new PaperExchangeClient(config.paperExchangeUrl, config.accountId, {
       apiKey: config.apiKey,
+      ...(config.lease ? { lease: config.lease } : {}),
     });
     this.status = {
       symbol: config.symbol,

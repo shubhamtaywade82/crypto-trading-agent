@@ -4,6 +4,8 @@ import { MarketDataService, DEFAULT_MARKET_DATA_OPTIONS } from '../market/Market
 import { MarketStateBuilder } from '../market/MarketStateBuilder.js';
 import { FleetLlmService } from './FleetLlmService.js';
 import { SymbolTraderWorker, type WorkerStatus } from './SymbolTraderWorker.js';
+import { PaperExchangeLeaseAdapter } from '../core/adapters/paper-exchange/PaperExchangeLeaseAdapter.js';
+import { DEFAULT_LEASE_TTL_SECONDS, PaperExchangeLeaseKeeper } from '../core/adapters/paper-exchange/PaperExchangeLeaseKeeper.js';
 import { resolveFleetPaperExchange } from './fleetPaperExchange.js';
 import {
   DEFAULT_LLM_TIMEOUT_MS,
@@ -91,6 +93,8 @@ interface FleetWebSocket {
 export class FleetSupervisor extends EventEmitter {
   private readonly env: NodeJS.ProcessEnv;
   private workers = new Map<string, SymbolTraderWorker>();
+  /** One lease keeper per worker account; released on stop. */
+  private readonly leases: PaperExchangeLeaseKeeper[] = [];
   private futuresClient: USDMClient | null = null;
   private marketData: MarketDataService | null = null;
   private marketStateBuilder = new MarketStateBuilder();
@@ -207,10 +211,23 @@ export class FleetSupervisor extends EventEmitter {
       const symKey = symbol.replace('USDT', '').toLowerCase();
       const modelTag = fleetConfig.assignment[symbol];
       const llm = new FleetLlmService({ host: fleetConfig.llmHost, model: modelTag, timeoutMs: fleetConfig.timeoutMs, apiKeys: config.ollama.apiKeys });
+      const accountId = `crypto-fleet-${symKey}`;
+      // The worker's account lease is taken in the background, and the worker writes only once it is held. A lease another
+      // process holds (a standalone fleet on the same account) keeps this worker from trading: two writers on one account is
+      // the failure the lease prevents.
+      const keeper = new PaperExchangeLeaseKeeper({
+        lease: new PaperExchangeLeaseAdapter({ baseUrl: fleetConfig.paperExchange.url, apiKey: fleetConfig.paperExchange.apiKey, ttlSeconds: DEFAULT_LEASE_TTL_SECONDS }),
+        accountId,
+        label: `embedded fleet pid ${process.pid} ${symKey}`,
+        ttlSeconds: DEFAULT_LEASE_TTL_SECONDS,
+        log: (message) => this.log(message, 'warn'),
+      });
+      this.leases.push(keeper);
+      void this.holdLease(symbol, keeper);
       const worker = new SymbolTraderWorker(
         {
           symbol,
-          accountId: `crypto-fleet-${symKey}`,
+          accountId,
           paperExchangeUrl: fleetConfig.paperExchange.url,
           apiKey: fleetConfig.paperExchange.apiKey,
           marginPerPosition: 1000,
@@ -218,6 +235,7 @@ export class FleetSupervisor extends EventEmitter {
           riskPerTradePct: config.risk.riskPerTradePct,
           entriesEnabled: fleetConfig.entriesEnabled,
           modelTag,
+          lease: keeper,
           // [FLEET] Telegram cards on the shared bot config. Fire-and-forget by design: a
           // Telegram outage resolves false and the evaluation loop continues unaffected.
           onTradeEvent: (event) => {
@@ -226,12 +244,12 @@ export class FleetSupervisor extends EventEmitter {
         },
         llm,
       );
-      // The embedded fleet must never break dev startup: a downed paper exchange parks the
-      // worker's account sync (same as the standalone runner) instead of throwing.
+      // The embedded fleet must never break dev startup: a downed paper exchange, or a lease not yet held, defers the
+      // worker's account sync instead of throwing. The sync runs again on the next start.
       try {
         await worker.syncAccount();
       } catch {
-        this.log(`${symbol}: paper exchange unreachable at boot; worker continues without account sync`, 'warn');
+        this.log(`${symbol}: account sync deferred (paper exchange unreachable or account lease not held yet)`, 'warn');
       }
       this.workers.set(symbol, worker);
     }
@@ -302,10 +320,37 @@ export class FleetSupervisor extends EventEmitter {
     }
   }
 
+  /**
+   * Takes one worker's account lease, retrying until it is held or the fleet stops. A worker writes only once its lease is held,
+   * so a fleet that stays parked on a lease places no orders.
+   */
+  private async holdLease(symbol: string, keeper: PaperExchangeLeaseKeeper): Promise<void> {
+    const retryMs = 15_000;
+    let lastReason = '';
+    while (!this.stopped) {
+      try {
+        await keeper.start();
+        if (this.stopped) {
+          // The fleet stopped while the lease was being taken: give it straight back.
+          await keeper.stop();
+          return;
+        }
+        this.log(`${symbol}: paper exchange account lease held; the worker may trade`);
+        return;
+      } catch (error) {
+        const reason = error instanceof Error ? error.message : String(error);
+        if (reason !== lastReason) this.log(`${symbol}: waiting for the paper exchange account lease: ${reason}`, 'warn');
+        lastReason = reason;
+        await new Promise<void>((resolve) => setTimeout(resolve, retryMs));
+      }
+    }
+  }
+
   stop(): void {
     if (this.stopped) return;
     this.stopped = true;
     this.running = false;
+    void Promise.allSettled(this.leases.map((lease) => lease.stop()));
     if (this.evalTimer) clearInterval(this.evalTimer);
     if (this.stateTimer) clearInterval(this.stateTimer);
     try {

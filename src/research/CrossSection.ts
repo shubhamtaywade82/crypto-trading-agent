@@ -70,15 +70,15 @@ export function exitPrice(d: SpotDays, m: number, hold = HOLD_DAYS): number {
 }
 
 /** Realised open-to-open return and funding for every universe member, independent of any signal. */
-export function buildWeeks(panel: Panel, firstMonday: number, lastMonday: number, skipTop = 0): WeekUniverse[] {
+export function buildWeeks(panel: Panel, firstMonday: number, lastMonday: number, skipTop = 0, hold = HOLD_DAYS): WeekUniverse[] {
   const weeks: WeekUniverse[] = [];
-  for (let time = firstMonday; time <= lastMonday; time += HOLD_DAYS * DAY_MS) {
+  for (let time = firstMonday; time <= lastMonday; time += hold * DAY_MS) {
     const m = (time - panel.start) / DAY_MS;
-    if (m + HOLD_DAYS >= panel.days) break;
-    const symbols = universeAt(panel, m, UNIVERSE_SIZE + skipTop).slice(skipTop).filter((s) => Number.isFinite(exitPrice(panel.data[s]!, m)));
+    if (m + hold >= panel.days) break;
+    const symbols = universeAt(panel, m, UNIVERSE_SIZE + skipTop).slice(skipTop).filter((s) => Number.isFinite(exitPrice(panel.data[s]!, m, hold)));
     if (symbols.length < MIN_ELIGIBLE) continue;
-    const ret = symbols.map((s) => exitPrice(panel.data[s]!, m) / panel.data[s]!.open[m]! - 1);
-    const funding = symbols.map((s) => fundingSum(panel.funding[s]!, time, time + HOLD_DAYS * DAY_MS));
+    const ret = symbols.map((s) => exitPrice(panel.data[s]!, m, hold) / panel.data[s]!.open[m]! - 1);
+    const funding = symbols.map((s) => fundingSum(panel.funding[s]!, time, time + hold * DAY_MS));
     weeks.push({ day: m, time, symbols, ret, funding });
   }
   return weeks;
@@ -250,6 +250,20 @@ export function randomCarryMeans(panel: Panel, weeks: readonly WeekUniverse[], q
     return sum + basket;
   }, 0) / usable.length);
 }
+
+/** §35: mean perp-over-spot basis over the `lookback` completed days before day m (higher = long side); NaN without spot. */
+export function basisScore(panel: Panel, s: number, m: number, lookback: number): number {
+  const perp = panel.data[s]!; const spot = panel.spot![s]!;
+  let sum = 0;
+  for (let k = m - lookback; k < m; k += 1) {
+    const basis = perp.close[k]! / spot.close[k]! - 1;
+    if (!Number.isFinite(basis)) return NaN;
+    sum += basis;
+  }
+  return sum / lookback;
+}
+
+export const basisScores = (panel: Panel, weeks: readonly WeekUniverse[], lookback: number): number[][] => weeks.map((w) => w.symbols.map((s) => basisScore(panel, s, w.day, lookback)));
 
 /** The X4 funding score with the sign flipped: higher funding ranks first. */
 export const carryScores = (panel: Panel, weeks: readonly WeekUniverse[]): number[][] => scoreWeeks(panel, weeks, 'X4').map((row) => row.map((v) => -v));

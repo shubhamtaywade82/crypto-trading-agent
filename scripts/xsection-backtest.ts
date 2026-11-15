@@ -11,7 +11,7 @@ import { readFirstZipEntry } from '../src/backtesting/archiveKlines.js';
 import { bootstrapMean, mulberry32, quantileSorted } from '../src/research/Bootstrap.js';
 import { loadPanel as loadPanelFiles } from '../src/research/PanelLoader.js';
 import { listingEvents, listingNet, moveEvents, randomPeerMeans } from '../src/research/ListingEvents.js';
-import { buildWeeks, carryScores, DAY_MS, netReturn, randomBasketMeans, randomCarryMeans, runCarry, runPortfolio, scoreWeeks, SIGNALS, type FundingSeries, type Panel, type SignalId, type SymbolDays, type WeekResult, type WeekUniverse } from '../src/research/CrossSection.js';
+import { basisScores, buildWeeks, carryScores, DAY_MS, netReturn, randomBasketMeans, randomCarryMeans, runCarry, runPortfolio, scoreWeeks, SIGNALS, type FundingSeries, type Panel, type SignalId, type SymbolDays, type WeekResult, type WeekUniverse } from '../src/research/CrossSection.js';
 import { computeDeflatedSharpeFromReturns } from '../src/research/DeflatedSharpe.js';
 import { minimumDetectableEffect } from '../src/research/SampleSize.js';
 
@@ -23,11 +23,13 @@ const GATE_DSR = flag('gate-dsr', 'true') === 'true';
 const ONLY = flag('ids', '');
 const sealedId = process.argv.includes('--sealed') ? (process.argv[process.argv.indexOf('--sealed') + 1] as SignalId) : null;
 const LISTINGS_SEALED = process.argv.includes('--listings-sealed');
-const PANEL_END = sealedId || LISTINGS_SEALED ? Date.UTC(2026, 10, 1) : Date.UTC(2025, 0, 1);
-const FIRST_MONDAY = sealedId ? Date.UTC(2025, 0, 6) : Date.parse(`${flag('first', '2021-03-01')}T00:00:00Z`);
-const LAST_MONDAY = sealedId ? Date.UTC(2026, 9, 26) : Date.UTC(2024, 11, 30);
-const HALF_SPLIT = LISTINGS_SEALED ? Date.UTC(2026, 0, 1) : Date.UTC(2023, 0, 1);
+const BASIS_HOLDOUT = process.argv.includes('--basis-holdout');
+const PANEL_END = sealedId || LISTINGS_SEALED || BASIS_HOLDOUT ? Date.UTC(2026, 10, 1) : Date.UTC(2025, 0, 1);
+const FIRST_MONDAY = BASIS_HOLDOUT ? Date.UTC(2025, 0, 1) : sealedId ? Date.UTC(2025, 0, 6) : Date.parse(`${flag('first', '2021-03-01')}T00:00:00Z`);
+const LAST_MONDAY = BASIS_HOLDOUT ? Date.UTC(2026, 9, 29) : sealedId ? Date.UTC(2026, 9, 26) : Date.UTC(2024, 11, 30);
+const HALF_SPLIT = LISTINGS_SEALED || BASIS_HOLDOUT ? Date.UTC(2026, 0, 1) : Date.UTC(2023, 0, 1);
 const TRIALS = Number(flag("trials", "54"));
+const PERIOD_DAYS = Number(flag('hold', '7'));
 const RANDOM_RUNS = 2000;
 
 const mean = (xs: readonly number[]): number => (xs.length ? xs.reduce((s, v) => s + v, 0) / xs.length : NaN);
@@ -60,7 +62,7 @@ function evaluate(panel: Panel, id: SignalId | 'CARRY', run: (q: number) => Week
   const stressed = mean(base.map((w) => netReturn(w, COST_STRESS)));
   const neighbours = [4, 8].map((q) => mean(run(q).map((w) => netReturn(w))));
   const p95 = quantileSorted([...random].sort((a, b) => a - b), 0.95);
-  const dsr = net.length > 2 ? computeDeflatedSharpeFromReturns({ returns: net, samplingFrequencyMs: 7 * DAY_MS, trialCount: TRIALS, trialSharpeVariance: trialVariance }).dsr : NaN;
+  const dsr = net.length > 2 ? computeDeflatedSharpeFromReturns({ returns: net, samplingFrequencyMs: PERIOD_DAYS * DAY_MS, trialCount: TRIALS, trialSharpeVariance: trialVariance }).dsr : NaN;
   const sorted = [...net].sort((a, b) => a - b);
   const trimmed = sorted.slice(0, Math.floor(sorted.length * 0.95));
   const mde = minimumDetectableEffect({ n: net.length, sigmaR: sd(net), alpha: 0.2, power: 0.8 }).mdeR;
@@ -173,6 +175,24 @@ function diagnose(panel: Panel, id: SignalId): void {
   }
 }
 
+const BASIS_SIGN = Number(flag('basis-sign', '1'));
+const BASIS_GAP = Number(flag('basis-gap', '0'));
+const BASIS_VARIANTS = BASIS_HOLDOUT ? [{ lookback: 5, hold: 1 }] : [{ lookback: 5, hold: 1 }, { lookback: 3, hold: 1 }, { lookback: 10, hold: 1 }, { lookback: 5, hold: 3 }];
+
+/** §35: perp-spot basis rank portfolios; the first variant is the registered primary, the rest are its neighbours. */
+function evaluateBasis(panel: Panel): void {
+  const runs = BASIS_VARIANTS.map((v) => { const weeks = buildWeeks(panel, FIRST_MONDAY, LAST_MONDAY, SKIP_TOP, v.hold); const scores = basisScores(panel, weeks.map((w) => ({ ...w, day: w.day - BASIS_GAP })), v.lookback).map((row) => row.map((x) => BASIS_SIGN * x)); return { ...v, weeks, run: (q: number) => runPortfolio(weeks, scores, q) }; });
+  const variance = Math.max(sd(runs.map((r) => sharpeOf(r.run(6).map((w) => netReturn(w))))) ** 2, 0.0115);
+  for (const [i, r] of runs.entries()) {
+    const v = evaluate(panel, 'X4', r.run, variance, randomBasketMeans(r.weeks, 6, RANDOM_RUNS, mulberry32(13)));
+    const n = r.run(6).length;
+    console.log(`\n== basis sign ${BASIS_SIGN} gap ${BASIS_GAP} skip-top ${SKIP_TOP} L=${r.lookback} hold=${r.hold}d${i === 0 ? ' (PRIMARY)' : ''}: ${n} rebalances (${n >= 300 ? 'PASS' : 'FAIL'} >= 300)`);
+    for (const c of v.checks.slice(1)) console.log(`  ${c.pass ? 'PASS' : 'FAIL'} ${c.id}: ${c.detail}`);
+    console.log(`  at 2x costs: ${(mean(r.run(6).map((w) => netReturn(w, 2))) * 100).toFixed(3)}%`);
+    console.log(`  ${JSON.stringify(v.report)}`);
+  }
+}
+
 const CARRY_TRIALS_SHARPE_VARIANCE = 0.0115; // measured across the six §13 signals, so one carry variant cannot make the bar lenient
 
 function evaluateCarry(panel: Panel, weeks: WeekUniverse[]): void {
@@ -194,10 +214,11 @@ function evaluateCarry(panel: Panel, weeks: WeekUniverse[]): void {
 function sharpeOf(xs: readonly number[]): number { return mean(xs) / sd(xs); }
 
 function main(): void {
-  const panel = loadPanelFiles({ start: PANEL_START, end: PANEL_END }, ONLY.split(',').some((id) => id === 'X11' || id === 'X12'), process.argv.includes('--carry'));
+  const panel = loadPanelFiles({ start: PANEL_START, end: PANEL_END }, ONLY.split(',').some((id) => id === 'X11' || id === 'X12'), process.argv.includes('--carry') || process.argv.includes('--basis'));
   console.log(`panel: ${panel.symbols.length} symbols, ${panel.days} days${sealedId ? ' (SEALED window, one frozen variant)' : ''}`);
   if (process.argv.includes('--listings')) return evaluateListings(panel);
   if (process.argv.includes('--moves')) return evaluateMoves(panel);
+  if (process.argv.includes('--basis')) return evaluateBasis(panel);
   if (process.argv.includes('--carry')) return evaluateCarry(panel, buildWeeks(panel, FIRST_MONDAY, LAST_MONDAY, SKIP_TOP));
   if (process.argv.includes('--list-universe')) {
     const names = new Set(buildWeeks(panel, FIRST_MONDAY, LAST_MONDAY, SKIP_TOP).flatMap((w) => w.symbols.map((i) => panel.symbols[i]!)));

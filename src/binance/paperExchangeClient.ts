@@ -57,6 +57,8 @@ export interface SubmitOrderResult {
   status: string;
   /** Present when the broker reports it; the journal prefers it over the requested quantity. */
   filledQuantity?: number;
+  /** The broker echoes the client_order_id it knows; absent means the broker build does not report it. */
+  clientOrderId?: string;
 }
 
 export interface ExchangeRiskEvent {
@@ -147,8 +149,15 @@ function toPosition(p: Raw): PaperExchangePosition {
 }
 
 function toOrderResult(raw: Raw): SubmitOrderResult {
-  const filled = raw.filled_quantity === null || raw.filled_quantity === undefined ? NaN : Number(raw.filled_quantity);
-  return { orderId: Number(raw.id), status: String(raw.status), ...(Number.isFinite(filled) ? { filledQuantity: filled } : {}) };
+  // Only a genuine number counts: a numeric string would be coercion of an anomaly, not a reported fill
+  const filled = typeof raw.filled_quantity === 'number' && Number.isFinite(raw.filled_quantity) ? raw.filled_quantity : NaN;
+  const clientOrderId = typeof raw.client_order_id === 'string' && raw.client_order_id !== '' ? raw.client_order_id : undefined;
+  return {
+    orderId: Number(raw.id),
+    status: String(raw.status),
+    ...(Number.isFinite(filled) ? { filledQuantity: filled } : {}),
+    ...(clientOrderId ? { clientOrderId } : {}),
+  };
 }
 
 export class PaperExchangeClient implements ExchangeApi {

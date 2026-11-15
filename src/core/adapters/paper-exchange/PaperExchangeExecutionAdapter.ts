@@ -6,11 +6,35 @@ import { translating, type PaperExchangeApi } from './PaperExchangeApi.js';
 
 const sideOf = (command: PlaceOrderCommand): 'buy' | 'sell' => (command.side === 'BUY' ? 'buy' : 'sell');
 
+/**
+ * A filled or partially-filled ack must state how much actually filled: the journal records this number as the fill, so
+ * a missing or non-positive quantity is an unknowable outcome (reconcile via findOrder) — never the requested quantity
+ * as a guess, which would book a fill the venue never confirmed. An over-fill is equally unknowable bookkeeping drift.
+ */
+function reportedFill(result: SubmitOrderResult, atMost?: number): number {
+  const filled = result.filledQuantity;
+  if (filled === undefined || !Number.isFinite(filled) || filled <= 0) {
+    throw new VenueUnavailableError(`paper_exchange order ${result.orderId} is ${result.status} without a usable filled_quantity`);
+  }
+  if (atMost !== undefined && filled > atMost) {
+    throw new VenueUnavailableError(`paper_exchange order ${result.orderId} reports fill ${filled} against a request of ${atMost}`);
+  }
+  return filled;
+}
+
+/** The venue must be talking about this submission: a client_order_id echo that disagrees means an unknown outcome. */
+function assertEcho(command: PlaceOrderCommand, result: SubmitOrderResult): void {
+  if (result.clientOrderId !== undefined && result.clientOrderId !== command.idempotencyKey) {
+    throw new VenueUnavailableError(`paper_exchange order ${result.orderId} carries client_order_id ${result.clientOrderId}, not ${command.idempotencyKey}`);
+  }
+}
+
 function toAck(command: PlaceOrderCommand, result: SubmitOrderResult): VenueOrderAck {
+  assertEcho(command, result);
   const base = { venueOrderId: String(result.orderId), averagePrice: null, protectionCarried: false };
   switch (result.status) {
-    case 'filled': return { ...base, status: 'FILLED', filledQuantity: result.filledQuantity ?? command.quantity };
-    case 'partially_filled': return { ...base, status: 'PARTIALLY_FILLED', filledQuantity: result.filledQuantity ?? 0 };
+    case 'filled': return { ...base, status: 'FILLED', filledQuantity: reportedFill(result, command.quantity) };
+    case 'partially_filled': return { ...base, status: 'PARTIALLY_FILLED', filledQuantity: reportedFill(result, command.quantity) };
     case 'rejected':
     case 'cancelled': throw new VenueRejectedError(`paper_exchange order ${result.orderId} came back ${result.status}`);
     // A market order that is neither filled nor refused is in a state this adapter cannot vouch for
@@ -39,9 +63,8 @@ export class PaperExchangeExecutionAdapter implements PaperExecutionPort, MarkSi
     return translating(async () => {
       const found = await this.api.findOrder(idempotencyKey);
       if (!found) return null;
-      const filled = found.filledQuantity ?? 0;
-      if (found.status === 'filled') return { venueOrderId: String(found.orderId), status: 'FILLED', filledQuantity: filled, averagePrice: null, protectionCarried: false };
-      if (found.status === 'partially_filled') return { venueOrderId: String(found.orderId), status: 'PARTIALLY_FILLED', filledQuantity: filled, averagePrice: null, protectionCarried: false };
+      if (found.status === 'filled') return { venueOrderId: String(found.orderId), status: 'FILLED', filledQuantity: reportedFill(found), averagePrice: null, protectionCarried: false };
+      if (found.status === 'partially_filled') return { venueOrderId: String(found.orderId), status: 'PARTIALLY_FILLED', filledQuantity: reportedFill(found), averagePrice: null, protectionCarried: false };
       if (found.status === 'rejected' || found.status === 'cancelled') throw new VenueRejectedError(`paper_exchange order ${found.orderId} is ${found.status}`);
       throw new VenueUnavailableError(`paper_exchange order ${found.orderId} is ${found.status}`);
     });

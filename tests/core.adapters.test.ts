@@ -172,6 +172,60 @@ test('paper_exchange: findOrder recovers a submission whose answer was lost', as
   await assert.rejects(() => execution.findOrder('pc-abc'), VenueUnavailableError);
 });
 
+/** Reshapes the fake venue's JSON replies for requests matching `method path`, simulating broker responses the real one must never send. */
+function reshapedFetch(inner: typeof fetch, match: RegExp, rewrite: (body: any) => unknown): typeof fetch {
+  return async (input, init) => {
+    const res = await inner(input, init);
+    if (!match.test(`${init?.method ?? 'GET'} ${new URL(String(input)).pathname}`)) return res;
+    return new Response(JSON.stringify(rewrite(await res.json())), { status: res.status });
+  };
+}
+
+const executionOver = (fetchImpl: typeof fetch) =>
+  new PaperExchangeExecutionAdapter(new PaperExchangeApi('http://paper.test', 'acct', { fetchImpl, apiKey: 'op-key', retries: 0, backoffMs: 1 }));
+
+test('paper_exchange: a filled ack without a usable filled_quantity is an unknown outcome, never the requested quantity', async () => {
+  const { server } = paper();
+  const execution = executionOver(reshapedFetch(server.fetch, /^POST \/api\/orders$/, ({ filled_quantity, ...row }) => row));
+  await assert.rejects(() => execution.submitOrder(COMMAND), (e: Error) => e instanceof VenueUnavailableError && /without a usable filled_quantity/.test(e.message));
+  // The order landed anyway: only reconciliation through findOrder can resolve what filled
+  assert.equal(server.live.positions.length, 1);
+  // A zero or non-numeric fill is equally unusable
+  const zero = executionOver(reshapedFetch(server.fetch, /^POST \/api\/orders$/, (row) => ({ ...row, filled_quantity: 0 })));
+  const cmd = { ...COMMAND, idempotencyKey: 'pc-zero' };
+  await assert.rejects(() => zero.submitOrder(cmd), /without a usable filled_quantity/);
+  const asString = executionOver(reshapedFetch(server.fetch, /^POST \/api\/orders$/, (row) => ({ ...row, filled_quantity: '0.5' })));
+  await assert.rejects(() => asString.submitOrder({ ...COMMAND, idempotencyKey: 'pc-str' }), /without a usable filled_quantity/);
+});
+
+test('paper_exchange: an over-filling ack is an unknown outcome, not an accepted fill', async () => {
+  const { server } = paper();
+  const execution = executionOver(reshapedFetch(server.fetch, /^POST \/api\/orders$/, (row) => ({ ...row, filled_quantity: 9 })));
+  await assert.rejects(() => execution.submitOrder(COMMAND), (e: Error) => e instanceof VenueUnavailableError && /reports fill 9 against a request of 0\.5/.test(e.message));
+});
+
+test('paper_exchange: an ack echoing a different client_order_id is an unknown outcome', async () => {
+  const { server } = paper();
+  const execution = executionOver(reshapedFetch(server.fetch, /^POST \/api\/orders$/, (row) => ({ ...row, client_order_id: 'some-other-key' })));
+  await assert.rejects(() => execution.submitOrder(COMMAND), (e: Error) => e instanceof VenueUnavailableError && /carries client_order_id some-other-key, not pc-abc/.test(e.message));
+});
+
+test('paper_exchange: findOrder reports an unusable fill instead of fabricating zero', async () => {
+  const { server, execution } = paper();
+  await execution.submitOrder(COMMAND);
+  const finder = executionOver(reshapedFetch(server.fetch, /^GET \/api\/orders$/, (envelope) => ({
+    ...envelope, data: envelope.data.map(({ filled_quantity, ...row }: { filled_quantity?: number }) => row),
+  })));
+  await assert.rejects(() => finder.findOrder('pc-abc'), (e: Error) => e instanceof VenueUnavailableError && /without a usable filled_quantity/.test(e.message));
+});
+
+test('paper_exchange: a partial fill with a usable quantity maps through unchanged', async () => {
+  const { server } = paper();
+  const execution = executionOver(reshapedFetch(server.fetch, /^POST \/api\/orders$/, (row) => ({ ...row, status: 'partially_filled', filled_quantity: 0.2 })));
+  const ack = await execution.submitOrder(COMMAND);
+  assert.deepEqual([ack.status, ack.filledQuantity], ['PARTIALLY_FILLED', 0.2]);
+});
+
 test('paper_exchange: marks and funding are pushed in the broker format', async () => {
   const { server, execution } = paper();
   await execution.pushMarks({ BTCUSDT: 101, ETHUSDT: 51 });

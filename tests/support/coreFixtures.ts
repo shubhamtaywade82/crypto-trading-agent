@@ -7,7 +7,7 @@ import type { MarketDataPort, SnapshotRequest } from '../../src/core/ports/Marke
 import { MarketDataError } from '../../src/core/ports/MarketDataPort.js';
 import type { OwnedPosition, PaperExecutionPort, SlotView, VenueOrderAck } from '../../src/core/ports/PaperExecutionPort.js';
 import type { AccountView, PortfolioPort } from '../../src/core/ports/PortfolioPort.js';
-import { AccountLeaseHeldError, type AccountLeaseHandle, type AccountLeasePort } from '../../src/core/ports/AccountLeasePort.js';
+import { AccountLeaseHeldError, AccountLeaseLostError, type AccountLeaseHandle, type AccountLeasePort } from '../../src/core/ports/AccountLeasePort.js';
 
 export const T0 = Date.UTC(2026, 0, 5);
 
@@ -204,6 +204,19 @@ export class FakeLease implements AccountLeasePort {
     this.holders.set(accountId, { label, expiresAt: handle.expiresAt });
     this.granted.push(handle);
     return handle;
+  }
+
+  readonly renewals: AccountLeaseHandle[] = [];
+
+  /** Extends the lease only while the presented holder and fence are the latest grant, as the venue does. */
+  async renew(handle: AccountLeaseHandle, ttlSeconds: number): Promise<AccountLeaseHandle> {
+    const latest = [...this.granted].reverse().find((grant) => grant.accountId === handle.accountId);
+    if (!this.holders.has(handle.accountId) || !latest || latest.holderId !== handle.holderId || latest.fence !== handle.fence) {
+      throw new AccountLeaseLostError(`the lease for ${handle.accountId} is not held under fence ${handle.fence}`);
+    }
+    const renewed: AccountLeaseHandle = { ...handle, expiresAt: T0 + ttlSeconds * 1000 };
+    this.renewals.push(renewed);
+    return renewed;
   }
 
   async release(handle: AccountLeaseHandle): Promise<void> {

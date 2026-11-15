@@ -25,5 +25,7 @@ export class AccountLeaseLostError extends Error {
 
 export interface AccountLeasePort {
   acquire(accountId: string, label: string): Promise<AccountLeaseHandle>;
+  /** Extends a live lease under its fence. A lease that is no longer live raises AccountLeaseLostError. */
+  renew(handle: AccountLeaseHandle, ttlSeconds: number): Promise<AccountLeaseHandle>;
   release(handle: AccountLeaseHandle): Promise<void>;
 }

@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { AccountLeaseHeldError, type AccountLeaseHandle, type AccountLeasePort } from '../../ports/AccountLeasePort.js';
+import { AccountLeaseHeldError, AccountLeaseLostError, type AccountLeaseHandle, type AccountLeasePort } from '../../ports/AccountLeasePort.js';
 
 export interface PaperExchangeLeaseOptions {
   readonly baseUrl: string;
@@ -17,10 +17,10 @@ interface LeaseReply {
 }
 
 /**
- * Acquires and releases the paper_exchange lease for one account. The server decides who holds it; this adapter only asks.
+ * Acquires, renews and releases the paper_exchange lease for one account. The server decides who holds it; this adapter only asks.
  * A held lease surfaces as AccountLeaseHeldError, carrying the holder's label and expiry, so startup can say what is blocking.
  *
- * Heartbeats, the local watchdog and per-request fencing belong to the Agent runtime; they are not part of this port.
+ * Timing (when to renew, when writes must stop) belongs to PaperExchangeLeaseKeeper, not to this port.
  */
 export class PaperExchangeLeaseAdapter implements AccountLeasePort {
   private readonly fetchImpl: typeof fetch;
@@ -53,6 +53,23 @@ export class PaperExchangeLeaseAdapter implements AccountLeasePort {
     return { accountId, holderId: String(reply.holder_id), fence: Number(reply.fence), expiresAt: Date.parse(reply.expires_at) };
   }
 
+  /**
+   * Extends the lease under the fence it was granted with. The fence does not change. A lease the venue no longer recognises
+   * (expired, released, or taken over) raises AccountLeaseLostError. Any other failure is a transient error for the caller to retry.
+   */
+  async renew(handle: AccountLeaseHandle, ttlSeconds: number): Promise<AccountLeaseHandle> {
+    const { status, body, text } = await this.send('PUT', handle.accountId, { ttl_seconds: ttlSeconds }, {
+      'X-Lease-Holder': handle.holderId,
+      'X-Lease-Fence': String(handle.fence),
+    });
+    if (status === 409 && (body?.error === 'lease_lost' || body?.error === 'lease_required')) {
+      throw new AccountLeaseLostError(`the lease for ${handle.accountId} is no longer live: ${text}`);
+    }
+    if (status < 200 || status >= 300 || !body) throw new Error(`paper_exchange lease renewal for ${handle.accountId} failed: ${status} ${text}`);
+    const reply = body as unknown as LeaseReply;
+    return { accountId: handle.accountId, holderId: String(reply.holder_id), fence: Number(reply.fence), expiresAt: Date.parse(reply.expires_at) };
+  }
+
   async release(handle: AccountLeaseHandle): Promise<void> {
     const { status, text } = await this.send('DELETE', handle.accountId, undefined, {
       'X-Lease-Holder': handle.holderId,
@@ -63,7 +80,7 @@ export class PaperExchangeLeaseAdapter implements AccountLeasePort {
   }
 
   private async send(
-    method: 'POST' | 'DELETE',
+    method: 'POST' | 'PUT' | 'DELETE',
     accountId: string,
     body?: unknown,
     extraHeaders: Record<string, string> = {},

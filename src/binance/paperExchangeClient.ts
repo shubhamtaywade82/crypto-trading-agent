@@ -97,6 +97,36 @@ export class OrderRejectedError extends Error {
   }
 }
 
+/** No live lease covers this write, so it was not sent. Nothing reached the broker. */
+export class LeaseRequiredError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'LeaseRequiredError';
+  }
+}
+
+/**
+ * The broker refused the presented lease (409 lease_lost or lease_required). The write was not applied, and no retry can
+ * succeed under this lease.
+ */
+export class LeaseRefusedError extends Error {
+  constructor(message: string, readonly code: 'lease_lost' | 'lease_required') {
+    super(message);
+    this.name = 'LeaseRefusedError';
+  }
+}
+
+/**
+ * The single-writer lease behind a client's writes. A write presents the holder and fence it was granted under, and the broker
+ * refuses a write whose fence is no longer live. A client holding a lease never sends a write it cannot back with a live one.
+ */
+export interface PaperExchangeLease {
+  /** The headers a write presents. Throws LeaseRequiredError when no lease is live, including once its local deadline has passed. */
+  writeHeaders(): Readonly<Record<string, string>>;
+  /** The broker refused the lease. No write may follow until a new lease is granted. */
+  refused(reason: string): void;
+}
+
 export interface PaperExchangeClientOptions {
   fetchImpl?: typeof fetch;
   timeoutMs?: number;
@@ -105,6 +135,11 @@ export interface PaperExchangeClientOptions {
   /** First backoff delay; doubles on every further retry. */
   backoffMs?: number;
   apiKey?: string;
+  /**
+   * The account's lease. Without one, writes go out unfenced and the broker decides; with one, every write presents the lease
+   * and is refused locally when no live lease covers it.
+   */
+  lease?: PaperExchangeLease;
 }
 
 type Raw = Record<string, unknown>;
@@ -166,6 +201,7 @@ export class PaperExchangeClient implements ExchangeApi {
   private readonly retries: number;
   private readonly backoffMs: number;
   private readonly apiKey?: string;
+  private readonly lease?: PaperExchangeLease;
 
   constructor(
     private readonly baseUrl: string,
@@ -177,6 +213,7 @@ export class PaperExchangeClient implements ExchangeApi {
     this.retries = opts.retries ?? 2;
     this.backoffMs = opts.backoffMs ?? 250;
     this.apiKey = opts.apiKey ?? process.env.PAPER_EXCHANGE_API_KEY;
+    this.lease = opts.lease;
   }
 
   async getAccount(): Promise<PaperExchangeAccountSnapshot | null> {
@@ -294,12 +331,16 @@ export class PaperExchangeClient implements ExchangeApi {
   }
 
   private async send<T>(method: string, path: string, body?: unknown): Promise<T> {
+    // Writes are fenced and reads are not. The lease endpoints are the lease itself, so they are never fenced.
+    const leaseHeaders: Readonly<Record<string, string>> =
+      this.lease && method !== 'GET' && !path.startsWith('/api/account/lease') ? this.lease.writeHeaders() : {};
     let status: number;
     let text: string;
     try {
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
         'X-Account-Id': this.accountId,
+        ...leaseHeaders,
       };
       if (this.apiKey) headers['X-API-Key'] = this.apiKey;
       const res = await this.fetchImpl(`${this.baseUrl}${path}`, {
@@ -315,8 +356,24 @@ export class PaperExchangeClient implements ExchangeApi {
     }
     if (status >= 200 && status < 300) return (text ? JSON.parse(text) : undefined) as T;
     const message = `paper_exchange ${method} ${path} -> ${status}: ${text}`;
+    const refusal = leaseRefusalCode(status, text);
+    if (refusal) {
+      this.lease?.refused(message);
+      throw new LeaseRefusedError(message, refusal);
+    }
     if (status >= 500) throw new VenueUnavailableError(message);
     throw new OrderRejectedError(message, status, text);
+  }
+}
+
+/** A 409 whose body names a lease refusal. Any other 409 is an ordinary conflict and stays an OrderRejectedError. */
+function leaseRefusalCode(status: number, text: string): 'lease_lost' | 'lease_required' | null {
+  if (status !== 409) return null;
+  try {
+    const code = (JSON.parse(text) as { error?: unknown }).error;
+    return code === 'lease_lost' || code === 'lease_required' ? code : null;
+  } catch {
+    return null;
   }
 }
 

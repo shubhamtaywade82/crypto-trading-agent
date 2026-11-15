@@ -57,6 +57,7 @@ async function main(): Promise<void> {
     }
     await new Promise((resolve) => setTimeout(resolve, Math.max(0, cfg.loopMs - (Date.now() - started))));
   }
+  await desk.dispose();
   log('info', 'stopped; open positions stay on the venue and are reconciled on the next start');
 }
 

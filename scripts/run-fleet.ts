@@ -3,6 +3,8 @@ import { MarketDataService, DEFAULT_MARKET_DATA_OPTIONS } from '../src/market/Ma
 import { MarketStateBuilder } from '../src/market/MarketStateBuilder.js';
 import { FleetLlmService } from '../src/fleet/FleetLlmService.js';
 import { SymbolTraderWorker } from '../src/fleet/SymbolTraderWorker.js';
+import { PaperExchangeLeaseAdapter } from '../src/core/adapters/paper-exchange/PaperExchangeLeaseAdapter.js';
+import { DEFAULT_LEASE_TTL_SECONDS, PaperExchangeLeaseKeeper } from '../src/core/adapters/paper-exchange/PaperExchangeLeaseKeeper.js';
 import { renderDashboard } from '../src/fleet/FleetDashboard.js';
 import { resolveFleetPaperExchange, type FleetPaperExchange } from '../src/fleet/fleetPaperExchange.js';
 import {
@@ -87,14 +89,33 @@ async function main() {
   // model-agnostic: any Ollama tag works, the prompt/validation contract is identical for every model.
 
   const workers = new Map<string, SymbolTraderWorker>();
+  const leases: PaperExchangeLeaseKeeper[] = [];
   for (const symbol of SYMBOLS) {
     const symKey = symbol.replace('USDT', '').toLowerCase();
     const modelTag = assignment.bySymbol[symbol];
     const llm = new FleetLlmService({ host: llmHost, model: modelTag, timeoutMs, apiKeys: config.ollama.apiKeys });
+    const accountId = `crypto-fleet-${symKey}`;
+    // Each worker trades its own account. Its lease is taken before the first write, because syncAccount can create the account.
+    // A lease another process holds stops this fleet at startup: two writers on one account is the failure the lease prevents.
+    const keeper = new PaperExchangeLeaseKeeper({
+      lease: new PaperExchangeLeaseAdapter({ baseUrl: paperExchange.url, apiKey: paperExchange.apiKey, ttlSeconds: DEFAULT_LEASE_TTL_SECONDS }),
+      accountId,
+      label: `standalone fleet pid ${process.pid} ${symKey}`,
+      ttlSeconds: DEFAULT_LEASE_TTL_SECONDS,
+      log: (message) => console.warn(`[fleet lease] ${message}`),
+    });
+    try {
+      await keeper.start();
+    } catch (error) {
+      console.error(`refusing to start: ${accountId}: ${error instanceof Error ? error.message : String(error)}`);
+      await Promise.allSettled(leases.map((held) => held.stop()));
+      process.exit(1);
+    }
+    leases.push(keeper);
     const worker = new SymbolTraderWorker(
       {
         symbol,
-        accountId: `crypto-fleet-${symKey}`,
+        accountId,
         paperExchangeUrl: paperExchange.url,
         apiKey: paperExchange.apiKey,
         marginPerPosition: 1000,
@@ -102,6 +123,7 @@ async function main() {
         riskPerTradePct: config.risk.riskPerTradePct,
         entriesEnabled,
         modelTag,
+        lease: keeper,
         onTradeEvent: (event) => {
           void sendFleetEvent(event).catch(() => undefined);
         },
@@ -173,15 +195,18 @@ async function main() {
   const renderInterval = setInterval(triggerRender, 1000);
 
   let running = true;
+  // The renewal timers keep the process alive, so the leases are released before the loop can end.
   process.on('SIGINT', () => {
     running = false;
     clearInterval(renderInterval);
     ws.closeAll();
+    void Promise.allSettled(leases.map((lease) => lease.stop()));
   });
   process.on('SIGTERM', () => {
     running = false;
     clearInterval(renderInterval);
     ws.closeAll();
+    void Promise.allSettled(leases.map((lease) => lease.stop()));
   });
 
   console.log('Real-time feed active. Starting background LLM evaluation loop...');

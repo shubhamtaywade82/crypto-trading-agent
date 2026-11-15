@@ -6,6 +6,7 @@ import { OllamaAdvisorAdapter, ollamaTextClient } from '../adapters/ollama/Ollam
 import { PaperExchangeApi } from '../adapters/paper-exchange/PaperExchangeApi.js';
 import { PaperExchangeExecutionAdapter } from '../adapters/paper-exchange/PaperExchangeExecutionAdapter.js';
 import { PaperExchangeLeaseAdapter } from '../adapters/paper-exchange/PaperExchangeLeaseAdapter.js';
+import { PaperExchangeLeaseKeeper } from '../adapters/paper-exchange/PaperExchangeLeaseKeeper.js';
 import { PaperExchangePortfolioAdapter } from '../adapters/paper-exchange/PaperExchangePortfolioAdapter.js';
 import { PaperExchangeReplayAdapter } from '../adapters/paper-exchange/PaperExchangeReplayAdapter.js';
 import { InMemoryResearchRepository, JsonlResearchRepository } from '../adapters/persistence/JsonlResearchRepository.js';
@@ -22,7 +23,7 @@ import type { AccountScope } from '../domain/execution.js';
 import type { Timeframe } from '../domain/market.js';
 import { foreignSlots } from '../domain/ownership.js';
 import type { TradingEvent } from '../events/TradingEvent.js';
-import type { AccountLeaseHandle, AccountLeasePort } from '../ports/AccountLeasePort.js';
+import type { AccountLeasePort } from '../ports/AccountLeasePort.js';
 import { systemClock, type Clock } from '../ports/Clock.js';
 import { ExperimentRunner } from '../research/ExperimentRunner.js';
 import { buildPipeline, type Pipeline } from './buildPipeline.js';
@@ -42,6 +43,8 @@ export interface PaperApplicationOverrides {
 export interface PaperApplication extends TradingApplication {
   readonly pipeline: Pipeline;
   readonly ownership: OwnershipLedger;
+  /** Holds the trading account's lease. `start()` takes it and `stop()` gives it back; tests that trade without starting take it here. */
+  readonly leaseKeeper: PaperExchangeLeaseKeeper;
   readonly marketData: BinanceMarketDataAdapter;
   readonly experiments: ExperimentRunner;
   readonly metrics: MeteredMarketData['metrics'];
@@ -64,7 +67,7 @@ export function buildPaperTradingApplication(config: PaperCoreConfig, overrides:
   const clock = overrides.clock ?? systemClock;
   const log = overrides.log ?? ((line: string) => console.log(line));
   const apiKey = config.paperExchange.apiKey;
-  const apiFor = (accountId: string, options: { retries?: number } = {}) =>
+  const apiFor = (accountId: string, options: { retries?: number; lease?: PaperExchangeLeaseKeeper } = {}) =>
     new PaperExchangeApi(config.paperExchange.url, accountId, { ...(apiKey ? { apiKey } : {}), ...(overrides.fetchImpl ? { fetchImpl: overrides.fetchImpl } : {}), ...options });
 
   const strategies = buildStrategies(config.strategyIds, config.strategyParameters);
@@ -74,17 +77,30 @@ export function buildPaperTradingApplication(config: PaperCoreConfig, overrides:
 
   const accountId = config.paperExchange.accountId;
   const scope: AccountScope = { venue: 'paper_exchange', accountId };
-  const api = apiFor(accountId);
-  const venue = new PaperExchangeExecutionAdapter(api, accountId);
-  const execution = withExecutionLogging(venue, (line) => log(`[venue] ${line.op} ${line.symbol} ${line.commandId} ${line.ms.toFixed(0)}ms ${line.outcome}`));
-  const portfolio = new PaperExchangePortfolioAdapter(api);
-  const ownership = new OwnershipLedger(new JsonlOwnershipJournal(config.ownershipPath), accountId);
   const lease: AccountLeasePort = overrides.lease ?? new PaperExchangeLeaseAdapter({
     baseUrl: config.paperExchange.url,
     ...(apiKey ? { apiKey } : {}),
     ttlSeconds: config.leaseTtlSeconds,
     ...(overrides.fetchImpl ? { fetchImpl: overrides.fetchImpl } : {}),
   });
+  // The one keeper for this process: every trading write presents its lease, and it refuses writes once the lease is lost.
+  const leaseKeeper = new PaperExchangeLeaseKeeper({
+    lease,
+    accountId,
+    label: `paper-core pid ${process.pid}`,
+    ttlSeconds: config.leaseTtlSeconds,
+    log,
+    onLost: (reason) => {
+      log(`[paper-core] the lease on ${accountId} was lost (${reason}); trading is halted until this process restarts`);
+      for (const source of sources) source.stop();
+      pump.stop();
+    },
+  });
+  const api = apiFor(accountId, { lease: leaseKeeper });
+  const venue = new PaperExchangeExecutionAdapter(api, accountId);
+  const execution = withExecutionLogging(venue, (line) => log(`[venue] ${line.op} ${line.symbol} ${line.commandId} ${line.ms.toFixed(0)}ms ${line.outcome}`));
+  const portfolio = new PaperExchangePortfolioAdapter(api);
+  const ownership = new OwnershipLedger(new JsonlOwnershipJournal(config.ownershipPath), accountId);
 
   const stateStore = new JsonStateStore<PersistedState>(config.statePath);
   const restored = stateStore.load();
@@ -135,12 +151,12 @@ export function buildPaperTradingApplication(config: PaperCoreConfig, overrides:
     },
   );
 
-  let handle: AccountLeaseHandle | null = null;
   const facade = createTradingApplication({ orchestrator: pipeline.orchestrator, runResearch: (experiment) => experiments.run(experiment) });
   return {
     ...facade,
     start: async () => {
-      handle = await lease.acquire(accountId, `paper-core pid ${process.pid}`);
+      // Another process holding the account refuses startup here, before anything is written.
+      await leaseKeeper.start();
       try {
         const now = clock.now();
         const settled = await resolveOpenIntents({ ledger: ownership, execution, at: now });
@@ -154,14 +170,12 @@ export function buildPaperTradingApplication(config: PaperCoreConfig, overrides:
         if (foreign.length > 0) {
           throw new Error(`refusing to start: account ${accountId} holds positions this process does not own (${foreign.map((s) => s.symbol).join(', ')}); close them or use a dedicated account`);
         }
-        log(`[paper-core] ${EXECUTION_MODE} on ${config.paperExchange.url} account ${accountId}; lease fence ${handle.fence}; symbols ${config.symbols.join(',')}; strategies ${strategies.map((s) => `${s.id}@${s.version}`).join(', ')}; breaker ${pipeline.breaker.snapshot.state}`);
+        log(`[paper-core] ${EXECUTION_MODE} on ${config.paperExchange.url} account ${accountId}; lease fence ${leaseKeeper.fence}; symbols ${config.symbols.join(',')}; strategies ${strategies.map((s) => `${s.id}@${s.version}`).join(', ')}; breaker ${pipeline.breaker.snapshot.state}`);
         await pump.tick();
         pump.start();
         for (const source of sources) source.start();
       } catch (error) {
-        const held = handle;
-        handle = null;
-        if (held) await lease.release(held).catch(() => undefined);
+        await leaseKeeper.stop();
         throw error;
       }
     },
@@ -169,12 +183,11 @@ export function buildPaperTradingApplication(config: PaperCoreConfig, overrides:
       for (const source of sources) source.stop();
       pump.stop();
       await facade.stop();
-      const held = handle;
-      handle = null;
-      if (held) await lease.release(held);
+      await leaseKeeper.stop();
     },
     pipeline,
     ownership,
+    leaseKeeper,
     marketData: binance,
     experiments,
     metrics: metered.metrics,

@@ -167,11 +167,14 @@ test('performance statistics are computed from the venue\'s trades and equity, w
   assert.equal(sharpeRatio([100, 100, 100], '1h'), null);
 });
 
-test('paper trading end to end: a breakout bar becomes a protected PaperExchange position, journalled and persisted', async () => {
+test('paper trading end to end: a breakout bar becomes a protected PaperExchange position, journalled and persisted', async (t) => {
   const closes = [...range(40, 100), 103];
   const series = { BTCUSDT: candlesFromCloses(closes), ETHUSDT: candlesFromCloses(range(41, 50)) };
   const closedAt = series.BTCUSDT.at(-1)!.openTime + FRAME;
   const { app: a, server, config, logs } = app({ series, now: () => closedAt + 1500 });
+  // Trading writes need the account's lease, which production takes at start(). The keeper's renewal loop stops with the test.
+  await a.leaseKeeper.start();
+  t.after(() => a.leaseKeeper.stop());
 
   const outcome = await a.processMarketEvent(barClosedEvent('BTCUSDT', '15m', series.BTCUSDT.at(-1)!));
   assert.equal(outcome.status, 'EXECUTED');

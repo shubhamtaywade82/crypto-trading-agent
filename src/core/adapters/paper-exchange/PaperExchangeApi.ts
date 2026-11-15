@@ -1,4 +1,6 @@
-import { OrderRejectedError, PaperExchangeClient, VenueUnavailableError as ClientUnavailableError } from '../../../binance/paperExchangeClient.js';
+import {
+  LeaseRefusedError, LeaseRequiredError, OrderRejectedError, PaperExchangeClient, VenueUnavailableError as ClientUnavailableError,
+} from '../../../binance/paperExchangeClient.js';
 import { VenueRejectedError, VenueUnavailableError } from '../../ports/PaperExecutionPort.js';
 
 type Raw = Record<string, unknown>;
@@ -135,6 +137,8 @@ export async function translating<T>(action: () => Promise<T>): Promise<T> {
   } catch (error) {
     if (error instanceof OrderRejectedError) throw new VenueRejectedError(error.message, { cause: error });
     if (error instanceof ClientUnavailableError) throw new VenueUnavailableError(error.message, { cause: error });
+    // A write refused under a lease, or one no live lease covered, never reached the broker: a refusal, not an unknown outcome
+    if (error instanceof LeaseRefusedError || error instanceof LeaseRequiredError) throw new VenueRejectedError(error.message, { cause: error });
     throw error;
   }
 }

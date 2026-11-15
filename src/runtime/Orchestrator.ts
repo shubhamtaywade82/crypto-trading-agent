@@ -229,6 +229,8 @@ export class Orchestrator extends EventEmitter {
       || config.structLiq.minimumRewardRisk !== DEFAULT_STRUCTURE_LIQUIDITY_OPTIONS.minimumRewardRisk
     ) this.log('SYSTEM', `${this.structLiq.id} tuned: maxSweepAgeCandles=${config.structLiq.maxSweepAgeCandles}, minimumRewardRisk=${config.structLiq.minimumRewardRisk}`, 'info');
     if (config.mode === 'paper' && config.paperExchange) this.log('SYSTEM', `Paper trading routed through ${config.paperExchange.url} (account ${config.paperExchange.accountId})`, 'info');
+    // Trading writes present the paper_exchange lease. Until it is held they are refused locally, so a lease another process holds places no orders.
+    this.binance.startPaperExchangeLease((message, level) => this.log('SYSTEM', message, level));
     const runLoop = singleFlight(() => this.loop().catch((err: Error) => this.log('SYSTEM', `Loop crashed: ${err.message}`, 'error')));
     this.binance.loadSymbolRules(config.symbols)
       .catch((err: Error) => this.log('SYSTEM', `Symbol precision load failed (${err.message}); using 2dp defaults`, 'warn'))
@@ -240,7 +242,7 @@ export class Orchestrator extends EventEmitter {
     this.startMicrostructure();
     this.startDirectional();
   }
-  stop() { if (this.timer) clearInterval(this.timer); if (this.optionsTimer) clearInterval(this.optionsTimer); this.microFeed?.stop(); if (this.directionalTimer) clearInterval(this.directionalTimer); this.stopWs?.(); this.stopWs = null; this.hooks.stop(); }
+  stop() { if (this.timer) clearInterval(this.timer); if (this.optionsTimer) clearInterval(this.optionsTimer); this.microFeed?.stop(); if (this.directionalTimer) clearInterval(this.directionalTimer); this.stopWs?.(); this.stopWs = null; this.hooks.stop(); this.binance.stopPaperExchangeLease(); void this.optionsDesk?.dispose(); }
 
   /**
    * Directional gate (live-gate.ts). Off unless DIRECTIONAL_GATE is set. Shadow records verdicts and blocks nothing.

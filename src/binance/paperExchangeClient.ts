@@ -154,32 +154,48 @@ const MAX_ORDER_PAGES = 5;
 /** 10,000 events back. Hitting it returns what was read: liquidation lookups keep the newest events, which is what they need. */
 const MAX_RISK_EVENT_PAGES = 20;
 
+/** The risk governors read equity and margin from this snapshot: a missing, blank or malformed number is an unusable
+ *  account, not a zero balance — NaN equity would make the drawdown and daily-loss checks evaluate false and pass,
+ *  and the circuit breaker would never trip. Blank strings must not coerce to 0. */
+function finiteField(row: Raw, field: string, subject: string): number {
+  const source = row[field];
+  const blank = source === null || source === undefined || (typeof source === 'string' && source.trim() === '');
+  const value = blank ? NaN : Number(source);
+  if (!Number.isFinite(value)) throw new VenueUnavailableError(`paper_exchange ${subject} is missing a usable ${field}`);
+  return value;
+}
+
 function toAccount(raw: Raw): PaperExchangeAccountSnapshot {
   return {
     accountId: String(raw.account_id),
     currency: String(raw.currency),
-    margin: Number(raw.margin),
-    availableBalance: Number(raw.available_balance),
-    lockedMargin: Number(raw.locked_margin),
-    equity: Number(raw.equity),
-    unrealizedPnl: Number(raw.unrealized_pnl),
-    realizedPnl: Number(raw.realized_pnl),
-    positionsCount: Number(raw.positions_count),
+    margin: finiteField(raw, 'margin', 'account'),
+    availableBalance: finiteField(raw, 'available_balance', 'account'),
+    lockedMargin: finiteField(raw, 'locked_margin', 'account'),
+    equity: finiteField(raw, 'equity', 'account'),
+    unrealizedPnl: finiteField(raw, 'unrealized_pnl', 'account'),
+    realizedPnl: finiteField(raw, 'realized_pnl', 'account'),
+    positionsCount: finiteField(raw, 'positions_count', 'account'),
   };
 }
 
 function toPosition(p: Raw): PaperExchangePosition {
+  // A position row feeds ownership, sizing and status decisions: netQuantity gates IN_POSITION vs IDLE, so a malformed
+  // number must never become the NaN that makes an open position invisible to its owner.
+  const liquidationPrice = p.liquidation_price === null || p.liquidation_price === undefined
+    ? null
+    : finiteField(p, 'liquidation_price', 'position');
   return {
-    id: Number(p.id),
+    id: finiteField(p, 'id', 'position'),
     symbol: String(p.symbol),
     side: p.side as 'long' | 'short',
-    netQuantity: Number(p.net_quantity),
-    averagePrice: Number(p.average_price),
-    currentPrice: Number(p.current_price),
-    leverage: Number(p.leverage),
+    netQuantity: finiteField(p, 'net_quantity', 'position'),
+    averagePrice: finiteField(p, 'average_price', 'position'),
+    currentPrice: finiteField(p, 'current_price', 'position'),
+    leverage: finiteField(p, 'leverage', 'position'),
     marginType: p.margin_type as 'cross' | 'isolated',
-    liquidationPrice: p.liquidation_price === null || p.liquidation_price === undefined ? null : Number(p.liquidation_price),
-    unrealizedPnl: Number(p.unrealized_pnl),
+    liquidationPrice,
+    unrealizedPnl: finiteField(p, 'unrealized_pnl', 'position'),
   };
 }
 

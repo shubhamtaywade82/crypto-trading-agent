@@ -59,6 +59,19 @@ test('getAccount maps the Rails snake_case payload to camelCase', async () => {
   });
 });
 
+test('getAccount refuses a snapshot whose money fields are missing or malformed, instead of coercing NaN', async () => {
+  const base = { account_id: 'ACC-1', currency: 'USDT', margin: '1000', available_balance: '1000', locked_margin: '0', equity: '1000', unrealized_pnl: '0', realized_pnl: '0', positions_count: 0 };
+  for (const [field, broken] of [
+    ['equity', { ...base, equity: undefined }],
+    ['equity', { ...base, equity: 'garbage' }],
+    ['available_balance', { ...base, available_balance: null }],
+    ['realized_pnl', { ...base, realized_pnl: '' }],
+  ] as const) {
+    const client = clientFor([{ status: 200, json: broken }], []);
+    await assert.rejects(client.getAccount(), (e: Error) => e instanceof VenueUnavailableError && new RegExp(`usable ${field}`).test(e.message));
+  }
+});
+
 test('sends X-API-Key header when apiKey option is provided', async () => {
   const calls: Call[] = [];
   const client = new PaperExchangeClient('http://localhost:3000', 'ACC-1', {
@@ -124,6 +137,22 @@ test('getPositions drops flat rows the broker keeps after a close', async () => 
   const positions = await client.getPositions();
 
   assert.deepEqual(positions.map((p) => p.symbol), ['ETHUSDT']);
+});
+
+test('getPositions refuses a row whose numbers are missing or malformed, instead of coercing NaN', async () => {
+  const row = { id: 2, symbol: 'ETHUSDT', side: 'short', net_quantity: '2.0', average_price: '100', current_price: '99', leverage: 5, margin_type: 'isolated', liquidation_price: null, unrealized_pnl: '0.0' };
+  for (const [field, broken] of [
+    ['net_quantity', { ...row, net_quantity: 'garbage' }],
+    ['average_price', { ...row, average_price: null }],
+    ['current_price', { ...row, current_price: '' }],
+    ['id', { ...row, id: undefined }],
+  ] as const) {
+    const client = clientFor([{ status: 200, json: [broken] }], []);
+    await assert.rejects(client.getPositions(), (e: Error) => e instanceof VenueUnavailableError && new RegExp(`usable ${field}`).test(e.message));
+  }
+  // A present-but-garbage liquidation_price is refused too; a null one stays null (see the mapping test above)
+  const badLiq = clientFor([{ status: 200, json: [{ ...row, liquidation_price: 'garbage' }] }], []);
+  await assert.rejects(badLiq.getPositions(), /usable liquidation_price/);
 });
 
 test('submitOrder maps filled_quantity into filledQuantity when the broker reports it', async () => {

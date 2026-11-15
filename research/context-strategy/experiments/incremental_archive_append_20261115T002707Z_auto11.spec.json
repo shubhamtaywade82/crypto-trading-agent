@@ -1,0 +1,65 @@
+{
+  "schema_version": "1.0.0",
+  "experiment_id": "INCREMENTAL-ARCHIVE-APPEND-20261115T002707Z",
+  "run_id": "context-strategy-20261115T002707Z-auto11",
+  "type": "incremental_archive_append_and_integrity_check",
+  "hypothesis": "Append only completed Binance USDⓈ-M 5m/15m candles after the verified raw highwater; exclude forming candles; retain raw-only deltas until historical base provenance is reconciled.",
+  "source": {
+    "endpoint": "GET /fapi/v1/klines",
+    "transport": "Binance USDⓈ-M public market-data connector",
+    "sdk_used": false,
+    "direct_rest": "BLOCKED_DNS",
+    "http_status_headers": "NOT_EXPOSED"
+  },
+  "symbols": [
+    "BTCUSDT",
+    "ETHUSDT",
+    "SOLUSDT",
+    "XRPUSDT"
+  ],
+  "as_of_utc": "2026-11-15T00:27:07.004Z",
+  "append_slices": [
+    {
+      "interval": "5m",
+      "start_open_utc": "2026-11-14T23:30:00.000Z",
+      "previous_highwater_open_utc": "2026-11-14T23:25:00.000Z",
+      "latest_completed_open_utc": "2026-11-15T00:15:00.000Z",
+      "rows": 40,
+      "forming_rows_excluded": 4
+    },
+    {
+      "interval": "15m",
+      "start_open_utc": "2026-11-14T23:30:00.000Z",
+      "previous_highwater_open_utc": "2026-11-14T23:15:00.000Z",
+      "latest_completed_open_utc": "2026-11-15T00:00:00.000Z",
+      "rows": 12,
+      "forming_rows_excluded": 4
+    },
+    {
+      "interval": "5m",
+      "start_open_utc": "2026-11-15T00:20:00.000Z",
+      "previous_highwater_open_utc": "2026-11-15T00:15:00.000Z",
+      "latest_completed_open_utc": "2026-11-15T00:20:00.000Z",
+      "rows": 4,
+      "forming_rows_excluded": 4
+    }
+  ],
+  "forming_exclusion_rule": "Include only candles where closeTime < retrieval as-of timestamp.",
+  "validator": "Inline deterministic validation in Code Mode; validator source was not committed as a standalone script.",
+  "seed": "NOT_APPLICABLE_DETERMINISTIC",
+  "strategy_entry_exit_test": "NOT_IN_SCOPE",
+  "predeclared_slice_gates": {
+    "duplicates": 0,
+    "gaps": 0,
+    "off_grid": 0,
+    "non_monotonic": 0,
+    "ohlc_failures": 0,
+    "non_finite": 0,
+    "non_positive_volume": 0,
+    "close_time_failures": 0,
+    "forming_rows_included": 0,
+    "cross_symbol_alignment": true,
+    "contiguous_from_prior_highwater": true
+  },
+  "full_history_gate": "NOT_PASSED; base-page alignment, 1h bridge and 4h provenance remain unresolved."
+}

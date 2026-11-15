@@ -2,7 +2,7 @@ import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { RemoteBroker, type OpenParams } from '../src/binance/remoteBroker.js';
-import type { ExchangeApi, PaperExchangePosition, SubmitOrderParams } from '../src/binance/paperExchangeClient.js';
+import { LeaseRefusedError, type ExchangeApi, type PaperExchangePosition, type SubmitOrderParams } from '../src/binance/paperExchangeClient.js';
 import { RemoteStore } from '../src/binance/remoteState.js';
 import type { FakeExchange } from '../tests/support/fakeExchange.js';
 
@@ -47,6 +47,10 @@ export interface Env {
   connect(): Promise<Conn>;
   /** A connection to an account that does not exist yet. */
   blank(): ExchangeApi;
+  /** Gives back what the run holds: the account leases on the real venue, nothing on the fake. */
+  close?(): Promise<void>;
+  /** The reason a lease was lost during the run, if one was. */
+  leaseLost?(): string | null;
 }
 
 export interface Scenario {
@@ -145,9 +149,27 @@ export class World {
     return { symbol: this.symbol(), side: 'BUY', qty: 10, leverage: 5, strategy: MOMENTUM, stopLoss: 95, takeProfit: 110, entryPrice: 100, ...over };
   }
 
+  /**
+   * An unleased writer on the account. On the in-memory fake the order lands. On a leased venue it must be refused: the refusal
+   * is the check, and the position it would have made cannot exist there, so the scenario ends as skipped once the check passes.
+   */
   async external(order: Omit<SubmitOrderParams, 'clientOrderId'>): Promise<void> {
     assertSynthetic(order.symbol);
-    await this.conn.outsider.submitOrder({ ...order, clientOrderId: `e2e-external-${Date.now()}-${this.index}-${this.externalSeq++}` });
+    const clientOrderId = `e2e-external-${Date.now()}-${this.index}-${this.externalSeq++}`;
+    if (this.env.backend === 'fake') {
+      await this.conn.outsider.submitOrder({ ...order, clientOrderId });
+      return;
+    }
+    try {
+      await this.conn.outsider.submitOrder({ ...order, clientOrderId });
+    } catch (err) {
+      if (err instanceof LeaseRefusedError && err.code === 'lease_required') {
+        this.notes.push(`unleased writer refused: ${err.code}`);
+        throw new SkipError('an unleased writer is refused by the leased venue, so an external position needs the in-memory fake');
+      }
+      throw new Error(`the unleased writer was refused for a reason other than the lease: ${errorText(err)}`);
+    }
+    throw new Error('fencing breach: the leased venue accepted a write from a writer that holds no lease');
   }
 
   async pushMark(symbol: string, price: number): Promise<void> {

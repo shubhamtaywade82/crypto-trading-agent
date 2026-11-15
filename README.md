@@ -492,10 +492,14 @@ when down.
 PASS/FAIL/SKIPPED line per scenario with the agent and exchange numbers it compared; non-zero exit on any failure.
 
 - `E2E_BACKEND=fake` (default): in-memory exchange replica, no network.
-- `E2E_BACKEND=real`: needs `PAPER_EXCHANGE_URL`; creates a throwaway account `e2e-<epoch>` (the run refuses any
-  other account id) and trades only synthetic symbols `E2EAUSDT`, `E2EBUSDT`, ... because the exchange's mark
-  prices and liquidation scan are shared across accounts. Scenarios that need a controlled outage or a lost
-  response (S14, S15) are `SKIPPED (fake-only)`; S13 runs against a closed port. The exchange cannot delete
+- `E2E_BACKEND=real`: needs `PAPER_EXCHANGE_URL` and `PAPER_EXCHANGE_API_KEY`. It creates a throwaway account
+  `e2e-<epoch>` plus `e2e-<epoch>-blank`, and refuses any other account id. It takes each account's lease before its
+  first write and releases both when the run ends, so the venue refuses any other writer on them. It trades only
+  synthetic symbols `E2EAUSDT`, `E2EBUSDT`, ... because the exchange's mark prices and liquidation scan are shared
+  across accounts. An unleased writer cannot write to a leased account, so the external-writer scenarios (S17, S18,
+  S23, and the account-adoption half of S1) first check that the venue refuses one with `lease_required`, then report
+  `SKIPPED` with that reason. An accepted write is a `fencing breach` FAIL. Scenarios that need a controlled outage or
+  a lost response (S14, S15) are `SKIPPED (fake-only)`; S13 runs against a closed port. The exchange cannot delete
   accounts, so `e2e-*` accounts stay in its database.
 
 ---

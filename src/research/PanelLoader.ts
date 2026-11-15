@@ -52,18 +52,22 @@ function loadSundayMetrics(panel: Panel): void {
   });
 }
 
-/** Spot daily opens/closes for each perp that has a spot market (leading `1000` stripped); other contracts stay NaN. */
+/**
+ * Spot daily opens/closes for each perp that has a spot market, in the perp's price units: a `1000PEPEUSDT` contract is 1,000 PEPE, so the
+ * PEPEUSDT spot price is multiplied by 1,000. Contracts without spot stay NaN.
+ */
 function loadSpot(panel: Panel): void {
   panel.spot = panel.symbols.map((symbol) => {
     const open = new Float64Array(panel.days).fill(NaN);
     const close = new Float64Array(panel.days).fill(NaN);
-    const dir = path.resolve(`data/cache/vision-spot/monthly/klines/${symbol.replace(/^1000+/, '')}/1d`);
+    const multiplier = 10 ** ((symbol.match(/^10+(?=[A-Z])/)?.[0].length ?? 1) - 1);
+    const dir = path.resolve(`data/cache/vision-spot/monthly/klines/${symbol.replace(/^10+(?=[A-Z])/, '')}/1d`);
     for (const file of existsSync(dir) ? readdirSync(dir) : []) {
       for (const line of readFirstZipEntry(readFileSync(path.join(dir, file))).split('\n')) {
         const c = line.trim().split(',').map(Number);
         const openTime = c[0]! > 1e14 ? c[0]! / 1000 : c[0]!; // spot archives switched to microseconds in 2025
         const day = Math.round((openTime - panel.start) / DAY_MS);
-        if (c.length >= 6 && day >= 0 && day < panel.days) { open[day] = c[1]!; close[day] = c[4]!; }
+        if (c.length >= 6 && day >= 0 && day < panel.days) { open[day] = c[1]! * multiplier; close[day] = c[4]! * multiplier; }
       }
     }
     return { open, close };

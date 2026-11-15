@@ -1,0 +1,103 @@
+{
+  "schema_version": "1.0.0",
+  "experiment_id": "INCREMENTAL_ARCHIVE_APPEND_20261115T0430Z_AUTO11",
+  "run_id": "context-strategy-20261115T0432Z-auto11",
+  "as_of_utc": "2026-11-15T04:31:42.233Z",
+  "type": "DATA_QUALITY_INCREMENTAL_ARCHIVE_APPEND",
+  "status": "COMPLETED",
+  "countsAsStrategyExperiment": false,
+  "oosEvaluation": "NOT_RUN",
+  "source": {
+    "provider": "Binance USD-M public market-data connector",
+    "endpoint": "GET /fapi/v1/klines",
+    "sdk_used": false,
+    "direct_rest_dns": "BLOCKED",
+    "http_status_exposed": false
+  },
+  "symbols": [
+    "BTCUSDT",
+    "ETHUSDT",
+    "SOLUSDT",
+    "XRPUSDT"
+  ],
+  "intervals": [
+    "5m",
+    "15m"
+  ],
+  "rowsFetched": 32,
+  "completedRows": 24,
+  "formingRowsExcluded": 8,
+  "rowsAppended": 24,
+  "rowsByInterval": {
+    "5m": 16,
+    "15m": 8
+  },
+  "rowsBySymbol": {
+    "BTCUSDT": 6,
+    "ETHUSDT": 6,
+    "SOLUSDT": 6,
+    "XRPUSDT": 6
+  },
+  "priorHighwaterOpenUtc": {
+    "5m": "2026-11-15T04:05:00Z",
+    "15m": "2026-11-15T03:45:00Z"
+  },
+  "latestCompletedOpenUtc": {
+    "5m": "2026-11-15T04:25:00Z",
+    "15m": "2026-11-15T04:15:00Z"
+  },
+  "nextStartOpenUtc": {
+    "5m": "2026-11-15T04:30:00Z",
+    "15m": "2026-11-15T04:30:00Z"
+  },
+  "quality": {
+    "duplicates": 0,
+    "gaps": 0,
+    "offGrid": 0,
+    "nonMonotonic": 0,
+    "ohlcFailures": 0,
+    "nonFinite": 0,
+    "nonPositiveVolume": 0,
+    "closeTimeFailures": 0,
+    "formingRowsIncluded": 0,
+    "crossSymbolAlignment": true,
+    "contiguousFromPriorHighwater": true
+  },
+  "rawArchive": {
+    "branch": "research/raw-ohlcv-archive-20261108T1026Z",
+    "deltaPath": "research-data/binance-usdm/delta/binance_usdm_delta_20261115T0430Z_auto11_5m15m_completed.jsonl",
+    "deltaSha256": "164c9b4a955a094b5923fc989d6d3eb6ee3649a894457f948ddd8ae1a1098c02",
+    "deltaGitBlobSha": "992d6d353c8456d665c07978cf503eb8e58192d0",
+    "deltaBytes": 7042,
+    "deltaManifestPath": "research-data/binance-usdm/delta/manifest-20261115T0430Z-auto11-5m15m.json",
+    "deltaManifestSha256": "7060895e20e649a8d1b768aaf6c238db12a62a4cc53aa284d09a00613ad2fcf7",
+    "deltaManifestGitBlobSha": "f59a5f6ac0e627bb46423e191aadc33a0f5769d4",
+    "archiveManifestPath": "research-data/binance-usdm/manifests/archive_manifest_20261115T0430Z_auto11.json",
+    "archiveManifestSha256": "df52baec627671af43248e266cf94c6c58d0607b5215f4efd38efa4e639a8c4e",
+    "archiveManifestGitBlobSha": "5181c00d61a6455083cf380b64dd4755dbbc5a9d",
+    "archiveBranchHead": "90ad6a7f320a1b75491273c1a29284a08a89a693",
+    "readbackVerified": true,
+    "canonicalHighwaterAdvanced": false,
+    "intervalIndexesUpdated": false
+  },
+  "execution": {
+    "validator": "Inline JavaScript in Functions V8 runtime",
+    "validatorSourceCommitted": false,
+    "validatorHash": null,
+    "randomSeed": null,
+    "codeCommit": null,
+    "startedAtUtc": "2026-11-15T04:25:53.631Z",
+    "completedAtUtc": "2026-11-15T04:31:42.233Z"
+  },
+  "strategyExperiment": {
+    "status": "BLOCKED",
+    "reason": "Historical panel alignment/provenance defects, stale exchange metadata, no local checkout, Node/npm below package engines, deterministic smoke test not run, and execution-cost/PIT derivatives inputs incomplete."
+  },
+  "result": "PASS_INCREMENTAL_RAW_APPEND_ONLY",
+  "notes": [
+    "This is an incremental archive/data-quality experiment only; not a strategy backtest.",
+    "No strategy metrics or OOS statistics generated.",
+    "No 1h/4h bars were appended because their next opens remain forming.",
+    "Canonical interval indexes and highwaters remain held pending lineage reconciliation."
+  ]
+}

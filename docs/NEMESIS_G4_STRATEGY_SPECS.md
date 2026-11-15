@@ -1032,3 +1032,194 @@ Neither the multi-timeframe price/volume/taker/funding set (627 k decision point
 A rule engine that holds, cuts or trails a trade from this state cannot be better than a random rule, because the state does not say what price does next. Per §29 the
 engine (`ContextEngine`) is **not built**, and the feature set may not be re-tuned on this data. Reusable pieces from this work, which carry no edge claim: the per-minute `manage` hook
 in `SignalBacktest`, the tick/book reducers (`archiveTicks`), `StateFeatures`, `Ridge` and the walk-forward study harness.
+
+## 30. Layer A, more model classes (registered 2026-11-14, before any non-linear or regime prediction was computed; the user asked to try more)
+
+§29 used one linear model. Linear ridge can miss interactions ("volume surge only when trend and volatility line up") and
+regime effects. Same data, features, folds, labels, costs and gate as §29; only the model class and the selection depth change.
+- **M2 gradient-boosted trees:** squared loss, depth 3, 150 rounds, learning rate 0.05, 50% row subsample, 32 quantile bins per feature
+  (edges from the fold's training rows), minimum 200 rows per leaf, fixed seed. No tuning.
+- **M3 regime ridge:** the §29 ridge (λ = 10) fitted separately in six regimes: 4h EMA50/EMA200 gap sign (up/down) × 1h ATR÷close
+  tercile (terciles from the fold's training rows); a regime with fewer than 1,000 training rows uses the pooled ridge.
+- **Selection:** the strongest 10% (as §29) and the strongest 1% of |prediction| (computed on the training rows), each reported.
+  A concentrated top 1% is the one place a small, real edge could clear 12 bps; it is registered here rather than discovered later.
+- **Sets and horizons:** A1 (2021-07 → 2026-10) and A2 (2025-07 → 2026-10), h ∈ {15m, 1h, 4h, 24h}. Models: M2 and M3 on A1, M2 on A2
+  (M3 on A2 has too few rows per regime) = 3 × 4 horizons = 12 models, each at two selection depths = 24 trials. N = 111 + 24 = **135**.
+- **Gate:** identical to §29 for each (model, set, horizon, depth); a pass needs the real model and not the shuffled-label null to clear it. The null is run for every model.
+- **Close-out:** if none passes, Layer A is closed for linear, tree and regime models on these features, and the decision engine is not built.
+
+### §30 result (run 2026-11-14, N = 135; 24 model trials, every one also run with shuffled labels)
+
+`npx tsx scripts/state-study.ts --set A1|A2 --model gbt|regime --select 0.9|0.99 [--null]`, logs in the run reports under `research-runs/state-study-*`.
+
+| Model, set | Selection | Result against the §29 gate |
+|---|---|---|
+| M2 trees, A1 | top 10% | gross 0.01–0.09% at 15m–4h (cost 0.12%), 24h net +0.141% with LCB −0.070%; fail at every horizon |
+| M2 trees, A1 | top 1% | 15m −0.035%; **1h net +0.172% (LCB +0.091%), 4h +0.477% (LCB +0.205%)**, positive on all 3 symbols and in every year 2021–2025, **2026 negative (−0.095%, −0.991%)**, rank IC ≈ 0: fail |
+| M3 regime ridge, A1 | top 10% / top 1% | fail at every horizon (24h top 1%: +0.654% net, LCB −0.099%, 2021 +7.4% then ≈ 0) |
+| M2 trees, A2 | top 10% | fail at every horizon (24h net −0.137%) |
+| **M2 trees, A2** | **top 1%, 24h** | **gate PASS: 923 picks, net +2.502%, day-clustered LCB +1.431%, all three symbols positive (+2.5%, +1.5%, +3.8%), 2025 +2.82%, 2026 +0.07%, +2.44% at 1.5× costs, rank IC +0.031 (LCB +0.010)**; the shuffled-label null at the same setting is −0.321% |
+| M2 trees, A2 | top 1%, 15m / 1h / 4h | fail (net −0.107% / −0.002% / −0.271%) |
+
+The one pass is 1 of 24 trials. Before treating it as a finding, the picks were examined (a robustness read, not pre-registered, applied to both the pass and the near-miss):
+- **It lives on a few days.** The 923 picks fall on 35 days; the top 5 days carry 78% of the total net and the single day 2025-10-12 (the morning after the 2025-10-10 liquidation
+  crash) carries +805 percentage points of summed net. Without the top 5 days the mean is +0.89%; the median daily mean is +0.48%; only 20 of 35 days are positive.
+  897 of the 923 picks are longs: the model has learned "buy after an extreme flush", and the 2025-10 crash is most of the evidence. That is the same family as the crash-bounce
+  rule that failed in §18.
+- The A1 top-1% trees show the same shape on 2021–2025: 312 distinct days over 5,068 picks, top 10 days = 81% of the net, mean without the best 5% of days −0.03%, 2026 −0.99%.
+- A day-clustered bootstrap treats 35 days as 35 independent draws, but a handful of market-wide days dominate them, so its lower bound (+1.43%) overstates the evidence.
+
+**Status:** formally a gate pass, practically a lead supported by roughly five events. Per §29 a pass would trigger Layer B; given what the picks are, that would build an engine on one crash. §31 registers the one test that can separate a real flush-bounce effect from a 2025-10 coincidence: the same model on earlier, unseen tick data.
+
+## 31. Replication of the §30 pass on earlier data (registered 2026-11-14, before any tick feature from 2023–2024 was used)
+
+- **What is replicated:** M2 (depth-3 trees, 150 rounds, lr 0.05) on the A2 feature set, top-1% selection, h = 24h, exactly as §30. Nothing else changes. N = 135 + 1 = **136**.
+- **Data:** aggTrades and bookDepth reduced to 1m for ETH/SOL/XRP, 2023-01-01 → 2024-12-31 (fetched in throttled batches, raw files discarded), joined with the 2025–2026 data already held.
+  Walk-forward as before (6-month train, 3-month test) with `--set A3`: test folds from 2023-07-01; **the replication is judged only on test samples dated before 2025-01-01** (six folds, 2023-07 → 2024-12),
+  which no earlier A2 fit or result touched; each fold trains only on earlier data (2023-01 onward, plus nothing from the future).
+- **Pass (all required, on the 2023-07 → 2024-12 samples):** net mean per pick > 0 with a one-sided 90% day-clustered lower bound > 0; positive on ≥ 2 of 3 symbols; positive in both 2023 and 2024;
+  positive at 1.5× costs; and the added robustness conditions registered now: **mean net > 0 after removing the five best days**, and **the mean of one value per day (daily mean net) > 0 with a one-sided 90% lower bound > 0** (a day-level bootstrap, so a few market-wide days cannot dominate).
+- **If it passes:** Layer B is built on this signal; the picks are rare (about 2–3 clusters a month), which means the "engine" is a flush-bounce rule, and it still needs forward paper tracking.
+  **If it fails:** the §30 pass is recorded as an artefact of the 2025-10 crash and Layer A is closed.
+
+### §31 result — replication on 2023-07 → 2024-12 (run 2026-11-14, N = 136)
+
+`npx tsx scripts/state-study.ts --set A3 --model gbt --select 0.99` (13 folds from 2023-07, 401,736 decision points; judged on samples before 2025-01).
+
+| Horizon | Picks | Net / pick | 90% LCB | Symbols (SOL/ETH/XRP) | 2023 / 2024 | Without best 5 days | One value per day (LCB) | Day-matched baseline | Long share |
+|---|---|---|---|---|---|---|---|---|---|
+| 1h | 2,424 | +0.176% | +0.072% | +0.11 / +0.24 / +0.28 | +0.20 / +0.16 | +0.052% | +0.334% (+0.240%) | −0.152% | 88% |
+| 4h | 1,811 | +0.803% | +0.545% | +0.70 / +1.87 / +0.75 | +0.34 / +1.11 | +0.435% | +0.685% (+0.488%) | +0.244% | 85% |
+| **24h (registered)** | 816 | +2.860% | +1.555% | +3.29 / +4.73 / **−2.78** | +1.91 / +3.23 | +0.931% | +0.525% (**−0.757%**) | +1.170% | 91% |
+
+- **Verdict by the §31 rule: the registered 24h replication FAILS** — the one-value-per-day lower bound is −0.76% (only 40 distinct days; 25 positive). The §30 pass is therefore not confirmed.
+- **Unregistered but important:** at 1h and 4h the same model clears every §29 condition **and both robustness conditions** on 2023–2024 data it never saw, beats the
+  same-day long/short baseline by +0.33% (1h) and +0.56% (4h) per pick, and is positive on all three symbols. These horizons were not the registered target, so they are a **lead, not a result**.
+- **Same model on every period (`--all-picks`, 2025–2026 already seen in §30, shown for completeness):** 4h net by year 2023 +0.34%, 2024 +1.11%, 2025 +0.70%, **2026 −1.06%**; 1h 2023 +0.20%, 2024 +0.16%, 2025 +0.30%, **2026 −0.11%**.
+- **What the model does:** 85–91% of picks are longs; longs earn (4h: +1.02%), shorts lose (4h: −0.40%). It is a "buy the flush with order-flow confirmation" signal. It worked in 2023–2025 and has not worked in the 2026 bear market.
+
+## 32. Breadth replication of the 1h/4h lead on ten other perps (registered 2026-11-14, before any tick feature for these symbols was fetched)
+
+The lead came from looking at horizons other than the registered one, so it needs data no part of this work has touched.
+- **Frozen rule:** `state-study.ts --set A3 --model gbt --select 0.99`, features as §29 A2 (22 price + 7 tick), depth-3 trees, 150 rounds, lr 0.05, ridge-free; walk-forward 6-month train / 3-month test, test folds 2023-07 → 2026-10.
+  **Primary horizon h = 4h; secondary h = 1h** (both reported, the verdict is on 4h). No change to features, model, selection or costs.
+- **Symbols (new to the tick study):** BTCUSDT, BNBUSDT, ADAUSDT, DOGEUSDT, LINKUSDT, LTCUSDT, DOTUSDT, AVAXUSDT, TRXUSDT, BCHUSDT, pooled in one model as SOL/ETH/XRP were. Survivorship disclosure as §12.
+- **Pass (4h, all required):** net mean per pick > 0 with day-clustered 90% LCB > 0; one-value-per-day mean > 0 with 90% LCB > 0; mean > 0 after removing the five best days; positive on ≥ 7 of 10 symbols;
+  positive in ≥ 3 of the 4 years 2023–2026; positive at 1.5× costs; beats the day-matched same-side baseline. 2026 reported separately (the regime where §31 failed).
+- **Trial count:** N = 137. **If it passes:** Layer B (entry and dynamic management) is built on this signal, long side first, with 2026 behaviour as an explicit regime risk.
+  **If it fails:** the lead is closed as specific to SOL/ETH/XRP in 2023–2025.
+
+## 33. Order-flow-imbalance scalping, step 1 (registered 2026-11-14, before any bookTicker file was read)
+
+The only untested family from the user's research brief: seconds-scale order-flow imbalance (OFI, Cont–Kukanov–Stoikov) from the top of the book.
+- **Data:** Binance `bookTicker` archive (every best bid/ask update; published only 2023-05-16 → 2024-03-30). **SOLUSDT and XRPUSDT, 2024-03-01 → 2024-03-30** (ETH skipped: 360 MB/day zipped).
+  Fetched one file at a time, streamed through inflate, reduced to one record per second (last mid, mean spread in bps, summed OFI in base units, update count), raw file discarded.
+- **OFI per update** (top of book): e = 1[b ≥ b′]·q_b − 1[b ≤ b′]·q′_b − 1[a ≤ a′]·q_a + 1[a ≥ a′]·q′_a (primes = previous update). Summed per second.
+- **Signal:** OFI over the last W = 10 seconds, divided by the standard deviation of 10-second OFI over the previous hour (causal z-score). Evaluated at the end of every second.
+- **Label:** mid-price change from the end of that second to h ∈ {1, 5, 30, 60} seconds later, in basis points, signed in the direction of the OFI.
+- **Step-1 gate (both symbols):** in the top decile of |z| (decile edges from the first 10 days, measured on days 11–30), the mean signed forward mid move is **> 4 bps** at some h —
+  4 bps is the round trip at the VIP0 maker fee (2 bps per side) with zero slippage and zero adverse selection, the most favourable cost this account can get. Also reported: mean spread (bps), the move at every decile, and the share of
+  top-decile seconds whose forward move exceeds 4 bps. A fail stops the family here (no fill simulation); a pass leads to a registered maker/queue simulation (step 2).
+- One study, four horizons, one gate: N = 137 + 1 = **138**.
+
+### §33 result — OFI step 1 (run 2026-11-14): FAIL, family closed
+
+`npx tsx scripts/ofi-study.ts --symbols SOLUSDT,XRPUSDT --from 2024-03-01 --to 2024-03-31` (60 bookTicker days streamed and reduced to per-second records in
+`data/cache/ticks/bookTicker`; SOL ≈ 4–9 M and XRP ≈ 5 M book updates a day; test days 11–30, ≈ 1.73 M seconds per symbol).
+
+| Symbol | Mean spread | Top-decile signed forward mid move (1s / 5s / 30s / 60s) | Gate (> 4 bps) |
+|---|---|---|---|
+| SOLUSDT | 0.12 bps | 0.12 / 0.21 / 0.41 / 0.42 bps | fail |
+| XRPUSDT | 1.59 bps | 0.13 / 0.19 / 0.21 / 0.45 bps | fail |
+
+- **OFI does predict, exactly as the literature says**: the signed move rises almost monotonically from the bottom to the top decile at every horizon, on both symbols.
+- **The effect is ten times too small to trade.** The strongest decile moves price 0.1–0.45 bps in its favour on average; the cheapest round trip this account can get
+  (maker both sides, VIP0) is 4 bps before any adverse selection. A maker-rebate tier would be needed to make this family viable. Step 2 (fill simulation) is not run.
+
+## 34. OFI Stage A, tightened (registered 2026-11-14 after an external review of §33; before any data in this section was read)
+
+Status carried in: §33 already ran a one-month L1 OFI test (SOL, XRP, March 2024) and found monotone predictive information that is about ten times smaller than a
+maker round trip. The reviewer's design is stricter and separates two hypotheses; it is run as written, as a **falsification attempt, not a parameter search**.
+- **H1 (information):** top-of-book OFI predicts the 1–30 s mid-price move. **H2 (economics):** the predicted move is large enough to survive maker fees, adverse selection and missed fills.
+  H1 true with H2 false is an acceptable, recorded outcome.
+- **Data:** `bookTicker` (every best bid/ask update) and `aggTrades`, **ETHUSDT and SOLUSDT, 2024-02-01 → 2024-03-30** (the last two months the archive publishes). Raw archive
+  zips are **kept** (checksummed, immutable, in `data/cache/vision-raw/`); per-second features are derived from them and stored separately.
+- **Features (per second, causal):** OFI over the last 10 s, z-scored by the trailing hour (as §33); trade delta = aggressor buy − sell quote over the last 10 s, same z-scoring;
+  spread (bps) and 60 s realised volatility of mid; **momentum baseline** = mid return over the last 10 s.
+- **Labels:** mid return t → t + h, h ∈ {1, 2, 5, 10, 15, 30} s, in bps, signed in the direction of the predictor.
+- **Evaluation:** deciles of each predictor (edges from the first 15 days of each month, measured on the rest); per decile mean and median forward move; monotonicity (Spearman of decile index vs mean);
+  long vs short separately; by UTC session (00–08, 08–16, 16–24); **confidence intervals by a day-blocked bootstrap** (one block = one UTC day, 2,000 draws), never random splits.
+- **Comparisons (only these three, no other indicators):** OFI alone; OFI + trade delta (top decile of OFI conditioned on same-sign trade delta); OFI conditioned on spread and volatility terciles.
+  Plus the momentum baseline alone, and OFI within momentum terciles, to check OFI is not just short-term momentum.
+- **H1 passes** if, on both symbols, the top-decile signed move is > 0 with a day-blocked 90% lower bound > 0 at ≥ 3 horizons, deciles are monotone (Spearman ≥ 0.8), and OFI keeps a positive top-decile move inside every momentum tercile.
+- **H2 gate (precondition for any Stage B simulation):** the top-decile mean signed move must exceed **4 bps** (VIP0 maker both sides, assumed, not verified) with its 90% lower bound above 4 bps.
+  If H2 fails, Stage B (conservative maker simulation with optimistic and pessimistic fill bounds; no exact queue reconstruction from L1) is not built, and the conclusion is recorded.
+- No parameter in this section is tuned. N = 138 + 1 = **139**.
+
+## 35. Cross-sectional perp–spot basis (registered 2026-11-14, before any basis statistic was computed)
+
+Different source of return from everything single-symbol: rank contracts by how expensive the perpetual is relative to its spot market (prompted by a published
+cross-sectional basis factor in crypto futures, older sample, dated futures, 5 bp costs; it is reproduced here, not assumed).
+- **Basis** of a contract on day d = perp daily close ÷ spot daily close − 1 (both 00:00 UTC closes, local mirrors; spot symbol = perp name with leading `1000…` stripped). Contracts without a spot market are excluded that day.
+- **Score** = mean basis over the last L completed days; **long the highest-basis Q = 6, short the lowest-basis 6**, equal weight, dollar-neutral, universe and execution exactly as §13
+  (point-in-time top-30 by 30-day quote volume, delisted contracts included, entry and exit at daily opens, 6 bps per side on traded notional, real funding).
+- **Primary: L = 5, hold = 1 day, rebalanced daily.** Neighbours: (L 3, hold 1), (L 10, hold 1), (L 5, hold 3); Q = 4 and Q = 8. N = 139 + 4 = **143**.
+- **Development window:** 2021-03-01 → 2024-12-30. **Holdout:** 2025-01-01 → 2026-10-30, never used for this signal; read once, only if the primary passes development.
+- **Acceptance (development, primary):** ≥ 300 rebalances; mean net per rebalance > 0 with month-clustered 90% LCB > 0; positive in both halves (2021-22, 2023-24); positive at 1.5× costs;
+  every neighbour > 0; beats the 95th percentile of the cost-free random-basket baseline; deflated Sharpe > 0.95 with N = 143 (daily cadence, trial Sharpe variance from these four variants or 0.0115, whichever is larger).
+  **Holdout pass:** mean net > 0 with LCB > 0 and positive at 1.5× costs.
+
+### §35 result — development (run 2026-11-14; after fixing a scale bug: `1000PEPE`-style contracts were compared with unscaled spot prices, now ×1,000)
+
+`npx tsx scripts/xsection-backtest.ts --basis --hold 1 --trials 143`. 1,401 daily rebalances 2021-03 → 2024-12.
+
+| Variant | Net per rebalance | 90% LCB | 2021-22 / 2023-24 | Gross / funding / cost | Verdict |
+|---|---|---|---|---|---|
+| **L5, hold 1d (primary)** | **−0.330%** | −0.436% | −0.319 / −0.340 | −0.152 / −0.113 / 0.065 | REJECTED |
+| L3, 1d | −0.321% | −0.409% | −0.207 / −0.426 | | REJECTED |
+| L10, 1d | −0.194% | −0.323% | −0.175 / −0.212 | | REJECTED |
+| L5, hold 3d | −0.953% | −1.293% | −1.170 / −0.753 | | REJECTED |
+
+**The registered direction (long high basis, as in the published factor) fails decisively.** It is not noise: every variant, both halves, Q4/Q8 are negative, and the
+loss comes from both price (high-basis perps underperform low-basis perps by ~0.15% a day) and funding (high-basis perps pay ~0.11% a day). The published premium does not
+hold on Binance perpetuals in 2021–2024; the **opposite** ranking is what the data shows. A sign flipped after seeing the result is not evidence, so it is registered below and tested only on data it has not seen.
+
+## 36. Basis reversal — the mirror of §35, holdout only (registered 2026-11-14 after §35, before any 2025–2026 basis statistic was computed)
+
+- **Rule (frozen, sign chosen from §35 development and disclosed as such):** **long the 6 lowest-basis, short the 6 highest-basis** contracts, score = mean perp/spot basis over 5 days, hold 1 day, rebalanced daily;
+  universe, costs (6 bps/side), funding and fills exactly as §35. Development mirror (arithmetic from §35, not a test): about +0.20% net per day.
+- **Holdout:** 2025-01-01 → 2026-10-29, never used for any cross-sectional basis or funding-rank signal (X4 ran on 2021–2024 only). Read once.
+- **Pass (all required):** ≥ 300 rebalances; mean net > 0 with month-clustered 90% LCB > 0; positive in 2025 and in 2026; positive at 1.5× and 2× costs; Q = 4 and Q = 8 positive;
+  beats the 95th percentile of the cost-free random baseline; **one-day-gap robustness:** the same rule using basis from days m−6 … m−2 (skipping the day before entry, so a stale last trade cannot drive it) is also positive.
+  Deflated Sharpe reported with N = 144.
+- **Context that cuts against it, recorded before the read:** X4 (long low funding, the weekly cousin of this rule) passed 6/7 in 2021–2024 but did not replicate on ranks 31–90 (§15). The holdout also runs the rule on ranks 31–60 as a breadth check.
+
+### §36 result — holdout (run 2026-11-14, read once): FAIL
+
+`npx tsx scripts/xsection-backtest.ts --basis --basis-holdout --basis-sign -1 --hold 1 --trials 144` (648 daily rebalances, 2025-01 → 2026-10; in this mode the two "halves" printed are 2025 and 2026).
+
+| Run | Net per rebalance | 90% LCB | 2025 / 2026 |
+|---|---|---|---|
+| **Mirror, primary** | **−0.163%** | −0.282% | −0.135 / −0.199 |
+| Mirror, one-day gap | −0.006% | −0.109% | +0.085 / −0.124 |
+| Mirror, ranks 31–60 | −0.069% | −0.165% | −0.010 / −0.181 |
+
+The mirror's development profit came from price (low-basis perps outperforming); in 2025–2026 that price effect reversed (gross −0.17% a day), and funding income (+0.07%) did not cover it plus
+costs. **Cross-sectional basis is closed in both directions**: the published long-high-basis factor fails 2021–2024, and its mirror fails the untouched 2025–2026 holdout. Trial count N = 144.
+
+### §34 result (run completed 2026-11-15; ETH and SOL, 2024-02-01 → 2024-03-30, ≈ 5.09 M seconds each; raw zips kept with SHA-256 in `data/cache/vision-raw/manifest-ofi.json`)
+
+`NODE_OPTIONS=--max-old-space-size=14336 npx tsx scripts/ofi-study.ts --symbols ETHUSDT,SOLUSDT --from 2024-02-01 --to 2024-03-31`
+
+| Symbol | Mean spread | Top-decile signed move, bps (1 / 2 / 5 / 10 / 15 / 30 s) | Day-blocked 90% LCB at 30 s | Monotonicity (Spearman) | H1 | H2 (> 4 bps) |
+|---|---|---|---|---|---|---|
+| ETHUSDT | 0.04 bps | 0.08 / 0.10 / 0.10 / 0.07 / 0.03 / 0.09 | +0.02 | 0.95 / 0.94 / 0.92 / 0.90 / 0.16 / 0.79 | **PASS** (4 horizons; positive in every momentum tercile at those horizons) | **FAIL** |
+| SOLUSDT | 0.12 bps | 0.11 / 0.14 / 0.17 / 0.17 / 0.17 / 0.35 | +0.23 | 1.00 / 1.00 / 0.96 / 0.93 / 0.81 / 0.95 | **FAIL by rule** (informative at all 6 horizons, but negative inside the "momentum agrees" tercile at 10 s and 15 s: −0.07, −0.09 bps) | **FAIL** |
+
+- **H1 (information): OFI predicts the next seconds.** Deciles are monotone, lower bounds are above zero, long and short both work, it holds in all three sessions, and on SOL it is *strongest when it
+  disagrees with recent momentum* (top decile against momentum: +0.25 / +0.30 / +0.40 bps at 5 / 10 / 30 s), so it is not short-term momentum in disguise. Trade delta adds little.
+  The pre-registered H1 verdict is PASS for ETH and a technical FAIL for SOL (one sub-condition), so H1 overall is recorded as FAIL by rule while the information effect itself is clear.
+- **H2 (economics): FAIL by an order of magnitude.** The best top-decile move on either symbol is 0.35 bps; the most favourable round trip available (VIP0 maker both sides, assumed) is 4 bps,
+  before any adverse selection or missed fill. Median top-decile move is 0 at 1–5 s on ETH (most seconds the mid does not move at all).
+- **Stage B (maker execution simulation) is not built.** Per the review: "If OFI predicts the next few seconds but cannot overcome VIP0 execution economics, record that as a successful research
+  conclusion." That is the conclusion. Short-horizon top-of-book OFI on Binance perps is information without a tradable margin at this account's fee tier. Trial count stays N = 144 (§34 was one registered trial: N = 139 at registration, counted within 144).

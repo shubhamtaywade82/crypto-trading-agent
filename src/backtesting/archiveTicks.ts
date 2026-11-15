@@ -96,7 +96,8 @@ async function fetchZip(url: string): Promise<Buffer | null> {
     const response = await fetch(url, { signal: AbortSignal.timeout(120_000) }).catch(() => null);
     if (response?.status === 404) return null;
     if (response?.status === 429 || response?.status === 418) throw new RateLimited(`${url}: HTTP ${response.status}`);
-    if (response?.ok) return Buffer.from(await response.arrayBuffer());
+    const body = response?.ok ? await response.arrayBuffer().catch(() => null) : null; // a slow body can time out mid-download: retry it
+    if (body) return Buffer.from(body);
     await sleep(BACKOFF_MS * attempt);
   }
   throw new Error(`${url}: failed ${MAX_ATTEMPTS} times`);

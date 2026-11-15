@@ -1,0 +1,76 @@
+{
+  "schema_version": "1.0.0",
+  "experiment_id": "INCREMENTAL_ARCHIVE_APPEND_20261115T0430Z_AUTO11",
+  "run_id": "context-strategy-20261115T0432Z-auto11",
+  "type": "DATA_QUALITY_INCREMENTAL_ARCHIVE_APPEND",
+  "hypothesis": "Completed Binance USD-M candles can be appended contiguously after verified raw highwaters, with forming bars excluded and no timestamp/OHLCV defects.",
+  "source": {
+    "provider": "Binance USD-M public market-data connector",
+    "endpoint": "GET /fapi/v1/klines",
+    "sdk_used": false,
+    "direct_rest_dns": "BLOCKED",
+    "http_status_exposed": false
+  },
+  "symbols": [
+    "BTCUSDT",
+    "ETHUSDT",
+    "SOLUSDT",
+    "XRPUSDT"
+  ],
+  "intervals": [
+    "5m",
+    "15m"
+  ],
+  "prior_highwater_open_utc": {
+    "5m": "2026-11-15T04:05:00Z",
+    "15m": "2026-11-15T03:45:00Z"
+  },
+  "requested_start_utc": {
+    "5m": "2026-11-15T04:10:00Z",
+    "15m": "2026-11-15T04:00:00Z"
+  },
+  "data_window_completed": {
+    "5m": {
+      "first": "2026-11-15T04:10:00Z",
+      "last": "2026-11-15T04:25:00Z",
+      "rows": 16
+    },
+    "15m": {
+      "first": "2026-11-15T04:00:00Z",
+      "last": "2026-11-15T04:15:00Z",
+      "rows": 8
+    }
+  },
+  "predeclared_checks": [
+    "No duplicate (symbol,interval,openTime) keys",
+    "Open times on interval grid",
+    "No missing interval from prior highwater",
+    "OHLC invariant low<=open/close<=high",
+    "Finite OHLCV and positive base/quote volume",
+    "closeTime matches interval and is completed",
+    "Same openTime set across all four symbols per interval"
+  ],
+  "acceptance": "All predeclared checks pass; append raw-only; do not advance canonical indexes while historical lineage blockers remain.",
+  "exclusions": [
+    "Forming candles",
+    "Any rows at or before prior raw highwater"
+  ],
+  "expected_output": {
+    "rows": 24,
+    "rows_by_interval": {
+      "5m": 16,
+      "15m": 8
+    },
+    "rows_by_symbol": {
+      "BTCUSDT": 6,
+      "ETHUSDT": 6,
+      "SOLUSDT": 6,
+      "XRPUSDT": 6
+    }
+  },
+  "strategy_experiment": false,
+  "oos_evaluation": false,
+  "seed": null,
+  "code_commit": null,
+  "validator": "Inline JavaScript in Functions V8 runtime; source not committed or hashed."
+}

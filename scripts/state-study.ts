@@ -12,22 +12,27 @@ import { bootstrapMean, mulberry32 } from '../src/research/Bootstrap.js';
 import { buildFrame, type MinuteInputs } from '../src/research/MtfFrame.js';
 import { buildStateData, featureRow, PRICE_FEATURES, TICK_FEATURES } from '../src/research/StateFeatures.js';
 import { fitRidge, predictRidge } from '../src/research/Ridge.js';
+import { fitGbt, predictGbt } from '../src/research/Gbt.js';
 
 const flag = (name: string, fallback: string): string => { const i = process.argv.indexOf(`--${name}`); return i > 0 && process.argv[i + 1] ? process.argv[i + 1]! : fallback; };
-const SET = flag('set', 'A1') as 'A1' | 'A2';
+const SET = flag('set', 'A1') as 'A1' | 'A2' | 'A3';
 const NULL_MODEL = process.argv.includes('--null');
-const SYMBOLS = ['SOLUSDT', 'ETHUSDT', 'XRPUSDT'];
+const SYMBOLS = flag('symbols', 'SOLUSDT,ETHUSDT,XRPUSDT').split(',');
 const HORIZONS = [15, 60, 240, 1440];
 const COST = 0.0012;
-const DATA_FROM = Date.UTC(2020, 10, 1);
+const DATA_FROM = Date.parse(`${flag('data-from', '2020-11-01')}T00:00:00Z`);
 const DATA_TO = Date.UTC(2026, 10, 1);
-const TICK_FROM = Date.UTC(2025, 0, 1);
-const FIRST_TEST = SET === 'A1' ? Date.UTC(2021, 6, 1) : Date.UTC(2025, 6, 1);
+const TICK_FROM = SET === 'A3' ? Date.UTC(2023, 0, 1) : Date.UTC(2025, 0, 1);
+const FIRST_TEST = SET === 'A1' ? Date.UTC(2021, 6, 1) : SET === 'A2' ? Date.UTC(2025, 6, 1) : Date.UTC(2023, 6, 1);
+/** A3 replicates a §30 result on samples before this date only (§31). */
+const PICKS_BEFORE = SET === 'A3' && !process.argv.includes('--all-picks') ? Date.UTC(2025, 0, 1) : Infinity;
 const MINUTE_MS = 60_000;
 const DAY_MS = 86_400_000;
-const SELECT_QUANTILE = 0.9;
+const SELECT_QUANTILE = Number(flag('select', '0.9'));
+const MODEL = flag('model', 'ridge') as 'ridge' | 'gbt' | 'regime';
+const MIN_REGIME_ROWS = 1000;
 const RIDGE_LAMBDA = 10;
-const trials = 111;
+const trials = SET === 'A3' ? Number(flag('trials', '136')) : MODEL === 'ridge' && SELECT_QUANTILE === 0.9 ? 111 : 135;
 
 interface Rows { time: number[]; sym: number[]; x: number[][]; ret: Record<number, number[]> }
 
@@ -74,8 +79,8 @@ async function buildRows(): Promise<Rows> {
   for (const [s, symbol] of SYMBOLS.entries()) {
     const m = await loadMinutes(symbol);
     const f = buildFrame(m);
-    const data = buildStateData(f, await fundingByMinute(symbol, f.minutes), SET === 'A2' ? loadTicks(symbol, f.minutes) : undefined);
-    const firstK = SET === 'A2' ? (TICK_FROM - DATA_FROM) / MINUTE_MS + 1500 : 0;
+    const data = buildStateData(f, await fundingByMinute(symbol, f.minutes), SET !== 'A1' ? loadTicks(symbol, f.minutes) : undefined);
+    const firstK = SET !== 'A1' ? (TICK_FROM - DATA_FROM) / MINUTE_MS + 1500 : 0;
     for (let k = Math.max(firstK, 1500); k + Math.max(...HORIZONS) < f.minutes; k += 1) {
       if ((k + 1) % 15 !== 0) continue;
       const row = featureRow(data, k);
@@ -91,6 +96,26 @@ async function buildRows(): Promise<Rows> {
 }
 
 interface Pick { time: number; sym: number; side: 1 | -1; ret: number; pred: number }
+
+type Predictor = (row: number[]) => number;
+
+/** Regime = sign of the 4h EMA gap x tercile of 1h ATR/close (terciles from the training rows); thin regimes fall back to the pooled ridge. */
+function regimeRidge(x: number[][], y: number[]): Predictor {
+  const trend = PRICE_FEATURES.indexOf('gap4h'); const vol = PRICE_FEATURES.indexOf('atr1h');
+  const sortedVol = x.map((r) => r[vol]!).sort((a, b) => a - b);
+  const cuts = [sortedVol[Math.floor(sortedVol.length / 3)]!, sortedVol[Math.floor((2 * sortedVol.length) / 3)]!];
+  const regime = (r: number[]): number => (r[trend]! > 0 ? 3 : 0) + (r[vol]! < cuts[0]! ? 0 : r[vol]! < cuts[1]! ? 1 : 2);
+  const pooled = fitRidge(x, y, RIDGE_LAMBDA);
+  const models = Array.from({ length: 6 }, (_, k) => { const idx = x.map((r, i) => i).filter((i) => regime(x[i]!) === k); return idx.length >= MIN_REGIME_ROWS ? fitRidge(idx.map((i) => x[i]!), idx.map((i) => y[i]!), RIDGE_LAMBDA) : pooled; });
+  return (row) => predictRidge(models[regime(row)]!, row);
+}
+
+function makePredictor(x: number[][], y: number[]): Predictor {
+  if (MODEL === 'gbt') { const model = fitGbt(x, y); return (row) => predictGbt(model, row); }
+  if (MODEL === 'regime') return regimeRidge(x, y);
+  const model = fitRidge(x, y, RIDGE_LAMBDA);
+  return (row) => predictRidge(model, row);
+}
 
 function folds(): { trainFrom: number; testFrom: number; testTo: number }[] {
   const out = [];
@@ -110,11 +135,10 @@ function walkForward(rows: Rows, h: number, shuffleSeed: number | null): { picks
     if (train.length < 1000 || test.length === 0) continue;
     const y = train.map((i) => rows.ret[h]![i]!);
     if (shuffleSeed !== null) { const r = mulberry32(shuffleSeed + fold.testFrom); for (let i = y.length - 1; i > 0; i -= 1) { const j = Math.floor(r() * (i + 1)); [y[i], y[j]] = [y[j]!, y[i]!]; } }
-    const model = fitRidge(train.map((i) => rows.x[i]!), y, RIDGE_LAMBDA);
-    coefSigns.push(model.coefficients.map(Math.sign));
-    const threshold = quantile(train.map((i) => Math.abs(predictRidge(model, rows.x[i]!))), SELECT_QUANTILE);
+    const predict = makePredictor(train.map((i) => rows.x[i]!), y);
+    const threshold = quantile(train.map((i) => Math.abs(predict(rows.x[i]!))), SELECT_QUANTILE);
     for (const i of test) {
-      const pred = predictRidge(model, rows.x[i]!);
+      const pred = predict(rows.x[i]!);
       const day = new Date(rows.time[i]!).toISOString().slice(0, 10);
       const bucket = byDay.get(day) ?? { p: [], y: [] }; bucket.p.push(pred); bucket.y.push(rows.ret[h]![i]!); byDay.set(day, bucket);
       if (Math.abs(pred) >= threshold) picks.push({ time: rows.time[i]!, sym: rows.sym[i]!, side: pred > 0 ? 1 : -1, ret: rows.ret[h]![i]!, pred });
@@ -135,6 +159,17 @@ const mean = (xs: number[]): number => (xs.length ? xs.reduce((s, v) => s + v, 0
 const net = (p: Pick, scale = 1): number => p.side * p.ret - scale * COST;
 const fmt = (x: number | undefined): string => (x === undefined || !Number.isFinite(x) ? 'n/a' : `${(x * 100).toFixed(3)}%`);
 
+/** A few market-wide days can dominate overlapping picks: one value per day, and the mean with the five best days removed. */
+function dayLevelRobustness(picks: Pick[], day: (t: number) => string): { withoutTop5: number; dayMean: number; dayLcb: number | undefined; days: number; positiveDays: number } {
+  const byDay = new Map<string, number[]>();
+  for (const p of picks) byDay.set(day(p.time), [...(byDay.get(day(p.time)) ?? []), net(p)]);
+  const daily = [...byDay].map(([d, v]) => ({ d, mean: mean(v), sum: v.reduce((a, b) => a + b, 0), n: v.length }));
+  const top5 = new Set([...daily].sort((a, b) => b.sum - a.sum).slice(0, 5).map((x) => x.d));
+  const rest = picks.filter((p) => !top5.has(day(p.time))).map((p) => net(p));
+  const boot = bootstrapMean(daily.map((x) => ({ value: x.mean, cluster: x.d })), { confidence: 0.8, seed: 7 });
+  return { withoutTop5: mean(rest), dayMean: mean(daily.map((x) => x.mean)), dayLcb: boot?.ciLow, days: daily.length, positiveDays: daily.filter((x) => x.mean > 0).length };
+}
+
 function report(h: number, wf: ReturnType<typeof walkForward>): { gate: boolean; summary: Record<string, unknown> } {
   const lcb = (values: number[], clusters: string[]): number | undefined => bootstrapMean(values.map((value, i) => ({ value, cluster: clusters[i]! })), { confidence: 0.8, seed: 7 })?.ciLow;
   const day = (t: number): string => new Date(t).toISOString().slice(0, 10);
@@ -148,19 +183,36 @@ function report(h: number, wf: ReturnType<typeof walkForward>): { gate: boolean;
   const meanIc = mean(wf.ic.map((d) => d.value));
   const big = wf.picks.filter((p) => Math.abs(p.pred) >= 0.01).length / Math.max(1, wf.picks.length);
   const positiveYears = Object.values(byYear).filter((v) => v > 0).length;
-  const gate = h >= 60 && meanNet > 0 && (low ?? -1) > 0 && bySymbol.filter((v) => v > 0).length >= 2 && (byYear[2025] ?? -1) > 0 && (byYear[2026] ?? -1) > 0 && positiveYears >= (SET === 'A1' ? 4 : 2) && stressed > 0 && meanIc > 0 && (icLow ?? -1) > 0;
+  const [yearA, yearB] = SET === 'A3' ? [2023, 2024] : [2025, 2026];
+  const gate = h >= 60 && meanNet > 0 && (low ?? -1) > 0 && bySymbol.filter((v) => v > 0).length >= 2 && (byYear[yearA] ?? -1) > 0 && (byYear[yearB] ?? -1) > 0 && positiveYears >= (SET === 'A1' ? 4 : 2) && stressed > 0 && meanIc > 0 && (icLow ?? -1) > 0;
+  const robust = dayLevelRobustness(wf.picks, day);
+  console.log(`      robustness: mean without best 5 days ${fmt(robust.withoutTop5)}, one value per day: mean ${fmt(robust.dayMean)} LCB ${fmt(robust.dayLcb)} over ${robust.days} days, positive days ${robust.positiveDays}`);
   console.log(`h=${String(h).padStart(4)}m picks ${String(wf.picks.length).padStart(6)} gross ${fmt(mean(wf.picks.map((p) => p.side * p.ret)))} net ${fmt(meanNet)} LCB ${fmt(low)} 1.5x ${fmt(stressed)} IC ${meanIc.toFixed(4)} (LCB ${(icLow ?? NaN).toFixed(4)}) share|pred|>=1% ${(big * 100).toFixed(1)}%  symbols ${bySymbol.map(fmt).join('/')}  years ${years.map((y) => `${y}:${fmt(byYear[y])}`).join(' ')}  GATE ${gate ? 'PASS' : 'fail'}`);
   return { gate, summary: { h, picks: wf.picks.length, meanNet, low, bySymbol, byYear, stressed, meanIc, icLow, shareBig: big } };
 }
 
+/** Same symbol, same UTC day, same side, every decision point that day: separates timing within the day from the day's market move. */
+function dayBaseline(rows: Rows): (h: number, picks: Pick[]) => void {
+  const index = new Map<string, number[]>();
+  rows.time.forEach((t, i) => { const key = `${rows.sym[i]}|${new Date(t).toISOString().slice(0, 10)}`; index.set(key, [...(index.get(key) ?? []), i]); });
+  return (h, picks) => {
+    const base = picks.map((p) => mean((index.get(`${p.sym}|${new Date(p.time).toISOString().slice(0, 10)}`) ?? []).map((i) => p.side * rows.ret[h]![i]! - COST)));
+    console.log(`      h=${h}m day-matched baseline (same symbol, day, side, every 15 min): ${fmt(mean(base))} vs picks ${fmt(mean(picks.map((p) => net(p))))}; longs ${picks.filter((p) => p.side === 1).length}/${picks.length}`);
+  };
+}
+
 async function main(): Promise<void> {
-  console.log(`set ${SET}${NULL_MODEL ? ' (shuffled-label null)' : ''}, ${folds().length} folds from ${new Date(FIRST_TEST).toISOString().slice(0, 10)}, features ${PRICE_FEATURES.length + (SET === 'A2' ? TICK_FEATURES.length : 0)}, trials ${trials}`);
+  console.log(`set ${SET} model ${MODEL} select ${SELECT_QUANTILE}${NULL_MODEL ? ' (shuffled-label null)' : ''}, ${folds().length} folds from ${new Date(FIRST_TEST).toISOString().slice(0, 10)}, features ${PRICE_FEATURES.length + (SET !== 'A1' ? TICK_FEATURES.length : 0)}, trials ${trials}`);
   const rows = await buildRows();
   console.log(`rows ${rows.x.length}`);
-  const out = HORIZONS.map((h) => report(h, walkForward(rows, h, NULL_MODEL ? 11 : null)));
+  const dumpPath = flag('dump-picks', '');
+  const dumped: Record<number, Pick[]> = {};
+  const sameDay = dayBaseline(rows);
+  const out = HORIZONS.map((h) => { const wf = walkForward(rows, h, NULL_MODEL ? 11 : null); wf.picks = wf.picks.filter((p) => p.time < PICKS_BEFORE); wf.ic = wf.ic.filter((d) => Date.parse(d.day) < PICKS_BEFORE); dumped[h] = wf.picks; sameDay(h, wf.picks); return report(h, wf); });
+  if (dumpPath) writeFileSync(dumpPath, JSON.stringify(dumped));
   mkdirSync('research-runs', { recursive: true });
-  const file = `research-runs/state-study-${SET}${NULL_MODEL ? '-null' : ''}-${new Date().toISOString().slice(0, 16).replace(/[-:]/g, '')}Z.json`;
-  writeFileSync(file, JSON.stringify({ set: SET, null: NULL_MODEL, trials, results: out.map((o) => ({ gate: o.gate, ...o.summary })) }, null, 1));
+  const file = `research-runs/state-study-${SET}-${MODEL}-q${SELECT_QUANTILE}${NULL_MODEL ? '-null' : ''}-${new Date().toISOString().slice(0, 16).replace(/[-:]/g, '')}Z.json`;
+  writeFileSync(file, JSON.stringify({ set: SET, model: MODEL, select: SELECT_QUANTILE, null: NULL_MODEL, trials, results: out.map((o) => ({ gate: o.gate, ...o.summary })) }, null, 1));
   console.log(`report: ${file}`);
 }
 

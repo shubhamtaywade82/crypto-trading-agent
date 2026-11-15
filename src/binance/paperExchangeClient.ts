@@ -149,8 +149,8 @@ function toPosition(p: Raw): PaperExchangePosition {
 }
 
 function toOrderResult(raw: Raw): SubmitOrderResult {
-  // Only a genuine number counts: a numeric string would be coercion of an anomaly, not a reported fill
-  const filled = typeof raw.filled_quantity === 'number' && Number.isFinite(raw.filled_quantity) ? raw.filled_quantity : NaN;
+  // Rails serializes decimal columns as numeric strings, so Number() coercion is the venue contract, not an anomaly
+  const filled = raw.filled_quantity === null || raw.filled_quantity === undefined ? NaN : Number(raw.filled_quantity);
   const clientOrderId = typeof raw.client_order_id === 'string' && raw.client_order_id !== '' ? raw.client_order_id : undefined;
   return {
     orderId: Number(raw.id),

@@ -194,7 +194,7 @@ test('paper_exchange: a filled ack without a usable filled_quantity is an unknow
   const zero = executionOver(reshapedFetch(server.fetch, /^POST \/api\/orders$/, (row) => ({ ...row, filled_quantity: 0 })));
   const cmd = { ...COMMAND, idempotencyKey: 'pc-zero' };
   await assert.rejects(() => zero.submitOrder(cmd), /without a usable filled_quantity/);
-  const asString = executionOver(reshapedFetch(server.fetch, /^POST \/api\/orders$/, (row) => ({ ...row, filled_quantity: '0.5' })));
+  const asString = executionOver(reshapedFetch(server.fetch, /^POST \/api\/orders$/, (row) => ({ ...row, filled_quantity: 'garbage' })));
   await assert.rejects(() => asString.submitOrder({ ...COMMAND, idempotencyKey: 'pc-str' }), /without a usable filled_quantity/);
 });
 

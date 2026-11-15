@@ -173,7 +173,7 @@ test('findOrder reads the broker\'s { data, next_cursor } envelope', async () =>
   ], next_cursor: null };
   const client = clientFor([{ status: 200, json: page }], calls);
 
-  assert.deepEqual(await client.findOrder('abc-123'), { orderId: 4, status: 'filled', filledQuantity: 0.5 });
+  assert.deepEqual(await client.findOrder('abc-123'), { orderId: 4, status: 'filled', filledQuantity: 0.5, clientOrderId: 'abc-123' });
   assert.equal(await client.findOrder('missing'), null);
   assert.equal(calls[0].url, 'http://localhost:3000/api/orders?limit=500');
   assert.equal(calls.length, 2, 'a null next_cursor ends the walk after one page');
@@ -186,7 +186,7 @@ test('findOrder follows next_cursor (URL-encoded) to an order beyond the first p
     { status: 200, json: { data: [{ id: 2, client_order_id: 'lost-reply', status: 'filled' }], next_cursor: 'c2' } },
   ], calls);
 
-  assert.deepEqual(await client.findOrder('lost-reply'), { orderId: 2, status: 'filled' });
+  assert.deepEqual(await client.findOrder('lost-reply'), { orderId: 2, status: 'filled', clientOrderId: 'lost-reply' });
   assert.deepEqual(calls.map((c) => c.url), [
     'http://localhost:3000/api/orders?limit=500',
     'http://localhost:3000/api/orders?limit=500&cursor=MjAyNi0xMC0yNVQw%2B%2F%3D',
@@ -205,7 +205,7 @@ test('findOrder still reads a bare array from a pre-pagination broker', async ()
   const calls: Call[] = [];
   const client = clientFor([{ status: 200, json: [{ id: 7, client_order_id: 'abc', status: 'filled' }] }], calls);
 
-  assert.deepEqual(await client.findOrder('abc'), { orderId: 7, status: 'filled' });
+  assert.deepEqual(await client.findOrder('abc'), { orderId: 7, status: 'filled', clientOrderId: 'abc' });
   assert.equal(calls.length, 1);
 });
 

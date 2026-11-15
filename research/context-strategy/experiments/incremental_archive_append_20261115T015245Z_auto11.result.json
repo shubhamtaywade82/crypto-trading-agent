@@ -1,0 +1,143 @@
+{
+  "schema_version": "1.0.0",
+  "run_id": "context-strategy-20261115T015245Z-auto11",
+  "experiment_id": "ARCHIVE_APPEND_20261115T015245Z",
+  "experiment_type": "DATA_QUALITY_ARCHIVE_APPEND",
+  "classification": "RESEARCH_EXECUTED_DATA_QUALITY_ONLY",
+  "status": "COMPLETED",
+  "repository": "shubhamtaywade82/crypto-trading-agent",
+  "archive_branch": "research/raw-ohlcv-archive-20261108T1026Z",
+  "source": "Binance USD-M public market-data connector; no SDK; direct REST DNS/HTTPS unavailable; HTTP status/headers not exposed.",
+  "endpoint": "GET /fapi/v1/klines",
+  "symbols": [
+    "BTCUSDT",
+    "ETHUSDT",
+    "SOLUSDT",
+    "XRPUSDT"
+  ],
+  "intervals": [
+    "5m",
+    "15m"
+  ],
+  "input_highwater_open_utc_by_interval": {
+    "5m": "2026-11-15T01:25:00.000Z",
+    "15m": "2026-11-15T01:15:00.000Z"
+  },
+  "request_limit_per_series": 100,
+  "filter": "openTime > prior highwater AND closeTime < exchange-time snapshot timestamp 2026-11-15T01:52:45.373Z",
+  "expected_new_rows_by_symbol_interval": {
+    "BTCUSDT": {
+      "5m": 4,
+      "15m": 1
+    },
+    "ETHUSDT": {
+      "5m": 4,
+      "15m": 1
+    },
+    "SOLUSDT": {
+      "5m": 4,
+      "15m": 1
+    },
+    "XRPUSDT": {
+      "5m": 4,
+      "15m": 1
+    }
+  },
+  "deterministic": true,
+  "random_seed": null,
+  "code_source": "Inline V8 functions.exec helper; not committed as a standalone source file.",
+  "code_commit": null,
+  "code_hash": null,
+  "costs": "NOT_APPLICABLE; no trading strategy or execution simulation.",
+  "oos_evaluation": false,
+  "prior_archive_manifest": {
+    "path": "research-data/binance-usdm/manifests/archive_manifest_20261115T013235Z_auto11.json",
+    "sha256": "f4fdb824d2e2b21d41e5c734eea9817ab88f47922226fc1567b85c7f6ecd19d0"
+  },
+  "output_artifacts": {
+    "delta": {
+      "path": "research-data/binance-usdm/delta/binance_usdm_delta_20261115T015245_auto11_5m15m_completed.jsonl",
+      "rows": 20,
+      "bytes": 5907,
+      "sha256": "56b58d3e5e277c42e7d49838860a96d1debba31b033017c394578dc0cf04e263",
+      "blob_sha": "713c951977f1bc5b71db6ae8ee15cae0aa574872"
+    },
+    "delta_manifest": {
+      "path": "research-data/binance-usdm/delta/manifest-20261115T015245-auto11-5m15m.json",
+      "sha256": "5d43c4aa25509d0b879c529ebd11c5e1be63c6053823e79a517d578682f040a4",
+      "blob_sha": "1da11abade50f9432e72983328f839b05bf97e53"
+    },
+    "archive_manifest": {
+      "path": "research-data/binance-usdm/manifests/archive_manifest_20261115T015245Z_auto11.json",
+      "sha256": "276cfda649c4353b31b7809d5ef224ba446385c1e52cf9ae92d905b73a8e6c61",
+      "blob_sha": "94dc3496ccec07d79f9ae86aa6dd52ee884606af"
+    },
+    "index_5m": {
+      "path": "research-data/binance-usdm/5m/archive-index.json",
+      "blob_sha": "8fba3a906f2ee1117c9e08033efd87a19e327530"
+    },
+    "index_15m": {
+      "path": "research-data/binance-usdm/15m/archive-index.json",
+      "blob_sha": "f0e3e3d57eb08ae1a979ba09c0cea55afb81f3a0"
+    }
+  },
+  "started_at_utc": "2026-11-15T01:52:45.373Z",
+  "completed_at_utc": "2026-11-15T02:00:31.295Z",
+  "observed": {
+    "rows_fetched": 800,
+    "completed_rows_fetched": 792,
+    "forming_rows_excluded": 8,
+    "pre_highwater_rows_excluded": 772,
+    "rows_appended": 20,
+    "rows_by_interval": {
+      "5m": 16,
+      "15m": 4
+    },
+    "rows_by_symbol": {
+      "BTCUSDT": 5,
+      "ETHUSDT": 5,
+      "SOLUSDT": 5,
+      "XRPUSDT": 5
+    },
+    "first_open_utc": "2026-11-15T01:30:00.000Z",
+    "last_open_utc": "2026-11-15T01:45:00.000Z",
+    "latest_completed_open_utc_by_interval": {
+      "5m": "2026-11-15T01:45:00.000Z",
+      "15m": "2026-11-15T01:30:00.000Z"
+    },
+    "next_start_open_utc_by_interval": {
+      "5m": "2026-11-15T01:50:00.000Z",
+      "15m": "2026-11-15T01:45:00.000Z"
+    }
+  },
+  "quality": {
+    "duplicates": 0,
+    "gaps": 0,
+    "off_grid": 0,
+    "non_monotonic": 0,
+    "ohlc_failures": 0,
+    "non_finite": 0,
+    "non_positive_volume": 0,
+    "close_time_failures": 0,
+    "forming_rows_included": 0,
+    "cross_symbol_alignment": true,
+    "contiguous_from_prior_highwater": true
+  },
+  "readback": {
+    "delta": true,
+    "delta_manifest": true,
+    "archive_manifest": true,
+    "index_5m_blob_identity": true,
+    "index_15m_blob_identity": true
+  },
+  "canonical": {
+    "advanced": false,
+    "reason": "Historical base alignment/provenance unresolved; 1h bridge and 4h raw/canonical row-key reconciliation remain open."
+  },
+  "strategy_experiment": {
+    "status": "BLOCKED",
+    "reason": "No local repository checkout; runtime Node 22.16.0/npm 10.9.2 below package engines Node >=24/npm >=11; actual harness smoke test not run."
+  },
+  "oos_evaluated": false,
+  "final_status": "PASS_INCREMENTAL_RAW_APPEND_ONLY"
+}

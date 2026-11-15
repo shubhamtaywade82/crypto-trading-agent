@@ -1,0 +1,143 @@
+{
+  "schema_version": "1.0.0",
+  "experiment_id": "INCREMENTAL_ARCHIVE_APPEND_20261115T0340Z_AUTO11",
+  "run_id": "context-strategy-20261115T0340Z-auto11",
+  "as_of_utc": "2026-11-15T03:40:06.879Z",
+  "type": "DATA_QUALITY_INCREMENTAL_ARCHIVE_APPEND",
+  "status": "COMPLETED",
+  "countsAsStrategyExperiment": false,
+  "oosEvaluation": "NOT_RUN",
+  "hypothesis": "Completed Binance USD-M candles can be appended contiguously after verified raw highwaters, with forming bars excluded and no OHLCV/timestamp defects.",
+  "source": {
+    "provider": "Binance USD-M public market-data connector",
+    "endpoint": "GET /fapi/v1/klines",
+    "sdkUsed": false,
+    "directRestDns": "BLOCKED",
+    "httpStatusExposed": false
+  },
+  "symbols": [
+    "BTCUSDT",
+    "ETHUSDT",
+    "SOLUSDT",
+    "XRPUSDT"
+  ],
+  "intervals": [
+    "5m",
+    "15m",
+    "1h",
+    "4h"
+  ],
+  "requestRowsPerSeries": {
+    "5m": 120,
+    "15m": 120,
+    "1h": 300,
+    "4h": 300
+  },
+  "rowsFetched": 3360,
+  "completedRowsFetched": 3344,
+  "formingRowsExcluded": 16,
+  "preHighwaterRowsExcluded": 3244,
+  "rowsAppended": 100,
+  "rowsByInterval": {
+    "5m": 72,
+    "15m": 24,
+    "1h": 4,
+    "4h": 0
+  },
+  "rowsBySymbol": {
+    "BTCUSDT": 25,
+    "ETHUSDT": 25,
+    "SOLUSDT": 25,
+    "XRPUSDT": 25
+  },
+  "priorHighwaterOpenUtc": {
+    "5m": "2026-11-15T01:55:00Z",
+    "15m": "2026-11-15T01:45:00Z",
+    "1h": "2026-11-15T01:00:00Z",
+    "4h": "2026-11-14T20:00:00Z"
+  },
+  "latestCompletedOpenUtc": {
+    "5m": "2026-11-15T03:25:00Z",
+    "15m": "2026-11-15T03:15:00Z",
+    "1h": "2026-11-15T02:00:00Z",
+    "4h": "2026-11-14T20:00:00Z"
+  },
+  "nextStartOpenUtc": {
+    "5m": "2026-11-15T03:30:00Z",
+    "15m": "2026-11-15T03:30:00Z",
+    "1h": "2026-11-15T03:00:00Z",
+    "4h": "2026-11-15T00:00:00Z"
+  },
+  "quality": {
+    "duplicates": 0,
+    "gaps": 0,
+    "offGrid": 0,
+    "nonMonotonic": 0,
+    "ohlcFailures": 0,
+    "nonFinite": 0,
+    "nonPositiveVolume": 0,
+    "formingRowsIncluded": 0,
+    "crossSymbolAlignment": true,
+    "contiguousFromPriorHighwater": true
+  },
+  "rawArchive": {
+    "branch": "research/raw-ohlcv-archive-20261108T1026Z",
+    "deltaFiles": [
+      {
+        "path": "research-data/binance-usdm/delta/binance_usdm_delta_20261115T0325Z_auto11_5m15m_completed.jsonl",
+        "rows": 96,
+        "bytes": 28351,
+        "sha256": "826cbdc35cc1a1e781193047b250403f3ff338f68fe68fbb3292c2581641941b",
+        "gitBlobSha": "40f697452455871c7b7ac4e05dd3af78994bf1c4"
+      },
+      {
+        "path": "research-data/binance-usdm/delta/binance_usdm_delta_20261115T0332Z_auto11_1h_completed.jsonl",
+        "rows": 4,
+        "bytes": 1202,
+        "sha256": "7873065df0ef6b4ddbcb79f27fa2a23333ef80c1886133910e08d23c417ef59d",
+        "gitBlobSha": "bb8171f4f02f9de558f99af76372b1fd39fd40d9"
+      }
+    ],
+    "deltaManifests": [
+      {
+        "path": "research-data/binance-usdm/delta/manifest-20261115T0325Z-auto11-5m15m.json",
+        "sha256": "fc4e23ebc70f5c151114a1030cd4cd8a4800b120f6a0ef21a8db702272e7ae10",
+        "gitBlobSha": "7b896d9af012be1a48666dac6cba9f1e28446976"
+      },
+      {
+        "path": "research-data/binance-usdm/delta/manifest-20261115T0332Z-auto11-1h.json",
+        "sha256": "a80fecce1989d8c82c591ef1edf57bb89415500fc8310bdd9d90c5a88888cddd",
+        "gitBlobSha": "6085717ecc7ad1ee24f3a6acad7c78a0d3aad066"
+      }
+    ],
+    "archiveManifest": "research-data/binance-usdm/manifests/archive_manifest_20261115T0332Z_auto11.json",
+    "indexBlobShas": {
+      "5m": "153a7e5b302b2459a9f92f8f9f70400c8e6cbedd",
+      "15m": "a48d88dcaa3cfc6d03c4ff69dafb10464afaeda2",
+      "1h": "adf74810fb614d2d9a6ddc891d0d9af46f44aa51",
+      "4h": "e43fb791308beb7d36be7236de851285be90ebce"
+    },
+    "readbackVerified": true,
+    "canonicalHighwaterAdvanced": false
+  },
+  "execution": {
+    "validator": "inline JavaScript in Functions V8 runtime",
+    "validatorSourceCommitted": false,
+    "validatorHash": null,
+    "randomSeed": null,
+    "codeCommit": null,
+    "startedAtUtc": "2026-11-15T03:25:12Z",
+    "completedAtUtc": "2026-11-15T03:40:06.879Z"
+  },
+  "strategyExperiment": {
+    "status": "BLOCKED",
+    "reason": "Local checkout absent; Node22.16/npm10.9.2 below project engines Node>=24/npm>=11; deterministic smoke test not run; historical lineage, metadata and cost gates unresolved."
+  },
+  "result": "PASS_INCREMENTAL_RAW_APPEND_ONLY",
+  "notes": [
+    "Data-quality/archive experiment only; not a strategy experiment.",
+    "No strategy metrics or OOS statistics generated.",
+    "4h bar remains forming at 00:00Z and was not appended.",
+    "Canonical analysis highwaters remain held pending lineage reconciliation."
+  ]
+}

@@ -1,0 +1,153 @@
+{
+  "schema_version": "1.0.0",
+  "run_id": "context-strategy-20261115T002707Z-auto11",
+  "as_of_utc": "2026-11-15T00:27:07.004Z",
+  "environment": {
+    "shell_compute": {
+      "status": "PASS",
+      "cwd": "/",
+      "os": "Debian GNU/Linux 13 (trixie)",
+      "node": "v22.16.0",
+      "npm": "10.9.2",
+      "python": "3.13.5",
+      "cpu_count": 3,
+      "memory_total": "5.8 GiB",
+      "disk_free": "30 GiB"
+    },
+    "remote_repository": {
+      "status": "DEGRADED",
+      "repository": "shubhamtaywade82/crypto-trading-agent",
+      "github_connector": "PASS",
+      "local_checkout": "NOT_PRESENT",
+      "package_engines": {
+        "node": ">=24",
+        "npm": ">=11"
+      },
+      "remote_files": [
+        {
+          "path": "package.json",
+          "blob_sha": "22576968ec662fd7d17dda10069489c69c597bcd"
+        },
+        {
+          "path": "scripts/backtest.ts",
+          "blob_sha": "d0c3fe7f5bb8edaede52265b6adb54e4a4920d0f"
+        },
+        {
+          "path": "scripts/research-run.ts",
+          "blob_sha": "0f8003f4ee11e9e71ef46766bdf0d6daed1c7bba"
+        }
+      ]
+    },
+    "binance_sdk": {
+      "status": "UNAVAILABLE",
+      "packages": [
+        "@nemesis-oss/binance-sdk",
+        "binance",
+        "@binance/connector",
+        "binance-api-node"
+      ],
+      "all_not_installed": true,
+      "sdk_used": false
+    },
+    "direct_network": {
+      "status": "BLOCKED",
+      "dns": "getent ahostsv4 fapi.binance.com returned no address (exit 2)",
+      "https": "curl GET /fapi/v1/time failed with exit 6: Could not resolve host"
+    },
+    "connector_market_data": {
+      "status": "DEGRADED",
+      "families": [
+        "klines",
+        "premiumIndex/markPrice",
+        "ticker24hr",
+        "openInterest",
+        "fundingRateHistory",
+        "openInterestHist",
+        "takerBuySellVolume",
+        "globalLongShortAccountRatio",
+        "depth20",
+        "fundingRateInfo"
+      ],
+      "http_status_headers": "NOT_EXPOSED"
+    },
+    "server_time": {
+      "status": "BLOCKED",
+      "endpoint": "GET /fapi/v1/time",
+      "reason": "Direct DNS failed; no server-time connector method exposed."
+    },
+    "exchange_info": {
+      "status": "BLOCKED_STALE",
+      "endpoint": "GET /fapi/v1/exchangeInfo",
+      "observed_server_time_utc": "2026-11-13T06:02:01.705Z",
+      "staleness_hours": 42.4181,
+      "contract_status_execution_validation": "BLOCKED"
+    }
+  },
+  "checks": {
+    "shell_compute": {
+      "status": "PASS",
+      "evidence": "cwd /; Debian 13; Node 22.16.0/npm 10.9.2/Python 3.13.5; 3 CPUs; 5.8 GiB RAM; 30 GiB free disk.",
+      "impact": "Compute is available, but repo engine requirements are unmet.",
+      "next_action": "Provision Node >=24 and npm >=11."
+    },
+    "repo_code": {
+      "status": "DEGRADED",
+      "evidence": "Remote package.json, scripts/backtest.ts and scripts/research-run.ts fetched; no local checkout.",
+      "impact": "Harness source exists but cannot be invoked in this runtime.",
+      "next_action": "Mount the exact repository commit in a compatible runtime."
+    },
+    "network_binance": {
+      "status": "DEGRADED",
+      "evidence": "Connector market-data calls succeeded; direct fapi DNS failed; HTTP statuses/headers not exposed.",
+      "impact": "Snapshot possible; fresh server time and exchangeInfo validation unavailable.",
+      "next_action": "Restore direct DNS/HTTPS or provide a fresh authoritative metadata response."
+    },
+    "raw_historical_archive": {
+      "status": "DEGRADED",
+      "evidence": "56 completed raw rows appended to GitHub archive branch; both deltas/manifests and index readbacks verified.",
+      "impact": "Incremental slice durable; historical base remains partial and canonical highwaters unchanged.",
+      "next_action": "Reconcile 5m/15m page28, 1h bridge and 4h provenance."
+    },
+    "data_quality_coverage": {
+      "status": "DEGRADED",
+      "evidence": "New 56-row slice has zero duplicates, gaps, off-grid, non-monotonic, OHLC, non-finite, non-positive-volume or close-time failures; 12 forming rows excluded.",
+      "impact": "Only incremental slices validated; full aligned panel not research-ready.",
+      "next_action": "Complete full-history lineage and alignment audit."
+    },
+    "backtest_harness_smoke": {
+      "status": "BLOCKED",
+      "evidence": "Remote scripts/backtest.ts exists; local checkout absent; Node/npm below declared engines; SDK packages absent; deterministic smoke test NOT_RUN.",
+      "impact": "No strategy experiment or OOS evaluation can be claimed.",
+      "next_action": "Restore compatible checkout/dependencies, run fixture twice and no-lookahead test."
+    },
+    "disk_storage": {
+      "status": "PASS",
+      "evidence": "30 GiB local free disk; GitHub raw archive branch writable.",
+      "impact": "Remote persistence available.",
+      "next_action": "Continue atomic writes and readback."
+    },
+    "artifact_readback": {
+      "status": "PASS",
+      "evidence": "Raw delta files, delta manifests, archive manifests and index updates fetched back; exact content compared; Git blob SHAs recorded.",
+      "impact": "Data-quality artifacts persisted and verified.",
+      "next_action": "Carry hashes into run record and queue."
+    }
+  },
+  "endpoint_results": {
+    "server_time": "BLOCKED_DNS",
+    "exchange_info": "STALE_SERVER_TIME_2026-11-13T06:02:01.705Z",
+    "klines": "PASS_VIA_CONNECTOR; BTC/ETH/SOL/XRP × 5m/15m/1h/4h; requested 100/100/100/250; completed 99/99/99/249 per symbol; one forming candle excluded per series.",
+    "premium_index": "PASS_VIA_CONNECTOR; mark timestamps 00:27:05–00:27:07Z",
+    "open_interest": "PASS_VIA_CONNECTOR; timestamps 00:26:59–00:27:04Z",
+    "ticker_24hr": "PASS_VIA_CONNECTOR; close timestamps 00:27:00–00:27:05Z",
+    "funding_rate": "PASS_VIA_CONNECTOR; latest settlement 00:00Z; next funding 08:00Z",
+    "open_interest_hist": "PASS_VIA_CONNECTOR; 24 hourly observations per symbol from 2026-11-14T01:00Z to 2026-11-15T00:00Z",
+    "taker_flow": "PASS_VIA_CONNECTOR; latest 1h bucket ending 23:00Z",
+    "global_long_short_accounts": "PASS_VIA_CONNECTOR; latest 1h bucket ending 00:00Z",
+    "depth": "PASS_VIA_CONNECTOR; top 20; book timestamp not exposed",
+    "funding_info": "PASS_VIA_CONNECTOR; 8h funding interval for all four symbols"
+  },
+  "outcome": "RESEARCH_EXECUTED_DATA_QUALITY_ONLY",
+  "strategy_experiment": "BLOCKED",
+  "oos_evaluation": "NOT_RUN"
+}

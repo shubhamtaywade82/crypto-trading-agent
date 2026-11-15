@@ -24,9 +24,10 @@ import { VenueRejectedError, VenueUnavailableError } from '../src/core/ports/Pap
 import { candlesFromCloses, FakeExecution, FakeMarketData, FakePaperExchange, flat, snapshotOf, T0 } from './support/coreFixtures.js';
 
 const FRAME = 900_000;
+const ACCT = 'acct';
 const COMMAND: PlaceOrderCommand = Object.freeze({
-  commandId: 'cmd_1', idempotencyKey: 'pc-abc', decisionId: 'dec_1', strategyId: 's', strategyVersion: '1.0.0', symbol: 'BTCUSDT', side: 'BUY',
-  quantity: 0.5, orderType: 'MARKET', leverage: 3, referencePrice: 100, stopLoss: 98, takeProfit: 106, createdAt: T0,
+  commandId: 'cmd_1', venue: 'paper_exchange' as const, accountId: ACCT, idempotencyKey: 'pc-abc', decisionId: 'dec_1', strategyId: 's', strategyVersion: '1.0.0',
+  symbol: 'BTCUSDT', side: 'BUY', quantity: 0.5, orderType: 'MARKET', leverage: 3, referencePrice: 100, stopLoss: 98, takeProfit: 106, createdAt: T0,
 });
 
 function binanceSource(candles: Candle[], overrides: Partial<BinancePublicSource> = {}): BinancePublicSource & { klineCalls: unknown[] } {
@@ -96,9 +97,16 @@ test('binance: history is paginated without duplicates, and marks skip symbols t
 
 const paper = (retries = 0) => {
   const server = new FakePaperExchange();
-  const api = new PaperExchangeApi('http://paper.test', 'acct', { fetchImpl: server.fetch, apiKey: 'op-key', retries, backoffMs: 1 });
-  return { server, api, execution: new PaperExchangeExecutionAdapter(api), portfolio: new PaperExchangePortfolioAdapter(api) };
+  const api = new PaperExchangeApi('http://paper.test', ACCT, { fetchImpl: server.fetch, apiKey: 'op-key', retries, backoffMs: 1 });
+  return { server, api, execution: new PaperExchangeExecutionAdapter(api, ACCT), portfolio: new PaperExchangePortfolioAdapter(api) };
 };
+
+/** The open slot the venue shows for a symbol, as the owned position an episode would hold. */
+async function ownedFor(execution: PaperExchangeExecutionAdapter, symbol = 'BTCUSDT') {
+  const slot = await execution.readSlot(symbol);
+  assert.notEqual(slot.slotId, null, `${symbol} should be open`);
+  return { accountId: ACCT, symbol, slotId: slot.slotId!, episodeId: COMMAND.commandId };
+}
 
 test('paper_exchange: an order is a market order at the reference price with the idempotency key as client order id', async () => {
   const { server, execution } = paper();
@@ -119,8 +127,9 @@ test('paper_exchange: an order is a market order at the reference price with the
 test('paper_exchange: protection creates the missing stop and target once', async () => {
   const { server, execution, portfolio } = paper();
   await execution.submitOrder(COMMAND);
-  await execution.protect(COMMAND);
-  await execution.protect(COMMAND);
+  const owned = await ownedFor(execution);
+  await execution.protect(COMMAND, owned);
+  await execution.protect(COMMAND, owned);
   const [position] = server.live.positions;
   assert.deepEqual(server.live.protections.get(position.id)!.map((p) => [p.protection_type, p.trigger_price, p.quantity]), [['stop_loss', 98, 0.5], ['take_profit', 106, 0.5]]);
   const account = await portfolio.getAccount(T0);
@@ -128,22 +137,54 @@ test('paper_exchange: protection creates the missing stop and target once', asyn
   assert.deepEqual([account.equity, account.availableMargin, account.realizedPnl, account.asOf], [10_000, 10_000, 0, T0]);
 });
 
-test('paper_exchange: protecting a position that does not exist is refused, and an unprotected position reports no stop', async () => {
+test('paper_exchange: protecting a slot that is no longer open is refused, and an unprotected position reports no stop', async () => {
   const { execution, portfolio } = paper();
-  await assert.rejects(() => execution.protect(COMMAND), (e: Error) => e instanceof VenueRejectedError && /no open BTCUSDT position/.test(e.message));
+  const gone = { accountId: ACCT, symbol: 'BTCUSDT', slotId: 999, episodeId: COMMAND.commandId };
+  await assert.rejects(() => execution.protect(COMMAND, gone), (e: Error) => e instanceof VenueRejectedError && /no longer open/.test(e.message));
   await execution.submitOrder(COMMAND);
   assert.equal((await portfolio.getAccount(T0)).positions[0].stopLoss, null);
 });
 
-test('paper_exchange: flatten closes the whole position reduce-only, and is a no-op without one', async () => {
+test('paper_exchange: flatten closes the owned position reduce-only, and is a no-op when its slot is already closed', async () => {
   const { server, execution } = paper();
-  await execution.flatten(COMMAND, 'test');
+  await execution.flatten({ accountId: ACCT, symbol: 'BTCUSDT', slotId: 999, episodeId: COMMAND.commandId }, 'test');
   assert.equal(server.count('POST', /\/api\/orders$/), 0);
   await execution.submitOrder(COMMAND);
-  await execution.flatten(COMMAND, 'protection failed');
+  await execution.flatten(await ownedFor(execution), 'protection failed');
   const close = server.requests.filter((r) => r.method === 'POST' && r.path === '/api/orders').at(-1)!;
-  assert.deepEqual([close.body.order.side, close.body.order.quantity, close.body.order.reduce_only, close.body.order.client_order_id], ['sell', 0.5, true, 'pc-abc-flat']);
+  assert.deepEqual([close.body.order.side, close.body.order.quantity, close.body.order.reduce_only, close.body.order.client_order_id], ['sell', 0.5, true, `${COMMAND.commandId}-flat`]);
   assert.equal(server.live.positions.length, 0);
+});
+
+test('paper_exchange: readSlot reports an empty slot, the open slot id, and refuses two open rows for one symbol', async () => {
+  const { server, execution } = paper();
+  assert.deepEqual(await execution.readSlot('BTCUSDT'), { symbol: 'BTCUSDT', slotId: null, quantity: 0 });
+  await execution.submitOrder(COMMAND);
+  const slot = await execution.readSlot('BTCUSDT');
+  assert.deepEqual([slot.quantity, typeof slot.slotId], [0.5, 'number']);
+  // A second order under another client id opens a second row; the venue's invariant is then broken and must be reported
+  await execution.submitOrder({ ...COMMAND, commandId: 'cmd_2', idempotencyKey: 'pc-xyz' });
+  assert.equal(server.live.positions.length, 2);
+  await assert.rejects(() => execution.readSlot('BTCUSDT'), (e: Error) => e instanceof VenueUnavailableError && /must be unique/.test(e.message));
+});
+
+test('paper_exchange: the adapter refuses a command or an owned position for another account, before any request', async () => {
+  const { server, execution } = paper();
+  await assert.rejects(() => execution.submitOrder({ ...COMMAND, accountId: 'someone-else' }), (e: Error) => e instanceof VenueRejectedError && /targets account someone-else/.test(e.message));
+  assert.equal(server.count('POST', /\/api\/orders$/), 0);
+  await execution.submitOrder(COMMAND);
+  const other = { accountId: 'someone-else', symbol: 'BTCUSDT', slotId: 1, episodeId: COMMAND.commandId };
+  await assert.rejects(() => execution.protect(COMMAND, other), VenueRejectedError);
+  await assert.rejects(() => execution.flatten(other, 'test'), VenueRejectedError);
+  assert.equal(server.count('POST', /\/api\/protections|\/protections$/), 0);
+});
+
+test('paper_exchange: an owned position is addressed by slot, and a slot holding another symbol is refused', async () => {
+  const { execution } = paper();
+  await execution.submitOrder(COMMAND);
+  const owned = await ownedFor(execution);
+  await assert.rejects(() => execution.protect(COMMAND, { ...owned, symbol: 'ETHUSDT' }), VenueRejectedError);
+  await assert.rejects(() => execution.protect(COMMAND, { ...owned, slotId: owned.slotId + 1 }), VenueRejectedError);
 });
 
 test('paper_exchange: 4xx is a rejection, 5xx and network errors are an unknown outcome', async () => {
@@ -182,7 +223,25 @@ function reshapedFetch(inner: typeof fetch, match: RegExp, rewrite: (body: any) 
 }
 
 const executionOver = (fetchImpl: typeof fetch) =>
-  new PaperExchangeExecutionAdapter(new PaperExchangeApi('http://paper.test', 'acct', { fetchImpl, apiKey: 'op-key', retries: 0, backoffMs: 1 }));
+  new PaperExchangeExecutionAdapter(new PaperExchangeApi('http://paper.test', ACCT, { fetchImpl, apiKey: 'op-key', retries: 0, backoffMs: 1 }), ACCT);
+
+test('paper_exchange: a flatten ack echoing another client_order_id is an unknown outcome', async () => {
+  const { server, execution } = paper();
+  await execution.submitOrder(COMMAND);
+  const owned = await ownedFor(execution);
+  const flattening = executionOver(reshapedFetch(server.fetch, /^POST \/api\/orders$/, (row) => ({ ...row, client_order_id: 'some-other-key' })));
+  await assert.rejects(() => flattening.flatten(owned, 'test'), (e: Error) => e instanceof VenueUnavailableError && /carries client_order_id some-other-key, not .+-flat/.test(e.message));
+});
+
+test('paper_exchange: findOrder adopts only a row that echoes the requested client_order_id', async () => {
+  const { server, execution } = paper();
+  await execution.submitOrder(COMMAND);
+  const finder = executionOver(reshapedFetch(server.fetch, /^GET \/api\/orders$/, (envelope) => ({
+    ...envelope, data: envelope.data.map((row: Record<string, unknown>) => ({ ...row, client_order_id: 'some-other-key' })),
+  })));
+  // The lookup matches on the echo, so a row that echoes another key is never taken for this submission
+  assert.equal(await finder.findOrder('pc-abc'), null);
+});
 
 test('paper_exchange: a filled ack without a usable filled_quantity is an unknown outcome, never the requested quantity', async () => {
   const { server } = paper();
@@ -368,7 +427,7 @@ test('decorators: retry backs off exponentially and gives up with the last error
 });
 
 test('decorators: execution logging records each call and never retries a failed submission', async () => {
-  const venue = new FakeExecution();
+  const venue = new FakeExecution(ACCT);
   venue.submitScript = [new VenueUnavailableError('timeout')];
   const lines: Array<{ op: string; outcome: string }> = [];
   const logged = withExecutionLogging(venue, (line) => lines.push(line), () => 0);
@@ -376,9 +435,15 @@ test('decorators: execution logging records each call and never retries a failed
   await assert.rejects(() => logged.submitOrder(COMMAND), VenueUnavailableError);
   assert.equal(venue.submitted.length, 1);
   await logged.findOrder('pc-abc');
-  await logged.protect(COMMAND);
-  await logged.flatten(COMMAND, 'why');
-  assert.deepEqual(lines.map((l) => [l.op, l.outcome]), [['submitOrder', 'error: timeout'], ['findOrder', 'not found'], ['protect', 'attached'], ['flatten', 'flattened (why)']]);
+  const owned = { accountId: ACCT, symbol: 'BTCUSDT', slotId: 1, episodeId: COMMAND.commandId };
+  await logged.readSlot('BTCUSDT');
+  await logged.protect(COMMAND, owned);
+  await logged.flatten(owned, 'why');
+  assert.deepEqual(lines.map((l) => [l.op, l.outcome]), [
+    ['submitOrder', 'error: timeout'], ['findOrder', 'not found'], ['readSlot', 'slot none quantity 0'],
+    ['protect', 'attached'], ['flatten', 'flattened (why)'],
+  ]);
+  assert.equal(logged.accountId, ACCT);
 });
 
 // --- Persistence and events ---------------------------------------------------------------------------------------

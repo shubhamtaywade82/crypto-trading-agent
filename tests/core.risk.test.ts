@@ -24,7 +24,8 @@ function evaluate(change: { proposal?: Partial<TradeProposal>; portfolio?: Parti
   const portfolio = portfolioOf(change.portfolio);
   const limits = { ...LIMITS, ...change.limits };
   const proposal = { ...sized(portfolioOf(), LIMITS), ...change.proposal };
-  const verdict = new RiskPipeline(defaultRiskRules(), clock).evaluate(proposal, { market: market(change.market), portfolio, limits, executedDecisionIds: new Set(), haltReason: null, ...change.context });
+  const context = { market: market(change.market), portfolio, limits, executedDecisionIds: new Set<string>(), haltReason: null, foreignPositionSymbols: [], ...change.context } as RiskContext;
+  const verdict = new RiskPipeline(defaultRiskRules(), clock).evaluate(proposal, context);
   return { verdict, codes: verdict.decision.findings.filter((f) => f.severity === 'block').map((f) => f.code) };
 }
 
@@ -85,7 +86,7 @@ test('a warning is reported and does not block', () => {
 
 test('a rule that throws blocks the trade', () => {
   const pipeline = new RiskPipeline([{ id: 'ok', evaluate: () => null }, { id: 'broken', evaluate: () => { throw new Error('boom'); } }], clock);
-  const verdict = pipeline.evaluate(sized(), { market: market(), portfolio: portfolioOf(), limits: LIMITS, executedDecisionIds: new Set(), haltReason: null });
+  const verdict = pipeline.evaluate(sized(), { market: market(), portfolio: portfolioOf(), limits: LIMITS, executedDecisionIds: new Set(), haltReason: null, foreignPositionSymbols: [] });
   assert.equal(verdict.approved, null);
   assert.deepEqual(verdict.decision.findings.map((f) => [f.ruleId, f.code]), [['broken', 'RULE_ERROR']]);
 });

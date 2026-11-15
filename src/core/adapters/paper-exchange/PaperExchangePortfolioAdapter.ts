@@ -16,6 +16,7 @@ export class PaperExchangePortfolioAdapter implements PortfolioPort {
         return {
           symbol: p.symbol, direction: p.side === 'long' ? 'LONG' : 'SHORT', quantity: p.netQuantity, entryPrice: p.averagePrice,
           markPrice: p.currentPrice, leverage: p.leverage, unrealizedPnl: p.unrealizedPnl, stopLoss: stop?.triggerPrice ?? null,
+          slotId: p.id,
         };
       }));
       return { asOf, equity: account.equity, availableMargin: account.availableBalance, realizedPnl: account.realizedPnl, positions: views };

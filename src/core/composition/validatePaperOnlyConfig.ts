@@ -24,8 +24,13 @@ const Schema = z.object({
   PAPER_CORE_STRATEGIES: z.string().default('momentum-ema-cross,range-breakout,mean-reversion-zscore'),
   /** JSON object: strategy id -> parameter overrides. */
   PAPER_CORE_STRATEGY_PARAMS: z.string().default('{}'),
-  PAPER_CORE_JOURNAL: z.string().default('data/paper-core-events.jsonl'),
-  PAPER_CORE_STATE: z.string().default('data/paper-core-state.json'),
+  /** Defaults are per account (data/accounts/<id>/...), so two accounts never share state. Set these only deliberately. */
+  PAPER_CORE_JOURNAL: z.string().optional(),
+  PAPER_CORE_STATE: z.string().optional(),
+  PAPER_CORE_OWNERSHIP: z.string().optional(),
+  /** The simulated account research uses for its replay admin calls. It must never be the trading account. */
+  PAPER_CORE_RESEARCH_ACCOUNT_ID: z.string().trim().default('research-admin'),
+  PAPER_CORE_LEASE_TTL_SECONDS: z.coerce.number().int().min(10).max(600).default(30),
   /** While this file exists every entry is refused. */
   PAPER_CORE_KILL_FILE: z.string().default('data/paper-core.KILL'),
   PAPER_CORE_MARK_PUSH_MS: z.coerce.number().int().min(1000).default(5000),
@@ -64,6 +69,9 @@ export interface PaperCoreConfig {
   readonly limits: RiskLimits;
   readonly journalPath: string;
   readonly statePath: string;
+  readonly ownershipPath: string;
+  readonly researchAccountId: string;
+  readonly leaseTtlSeconds: number;
   readonly killFile: string;
   readonly markPushMs: number;
   readonly barSettleMs: number;
@@ -86,8 +94,19 @@ export function validatePaperOnlyConfig(env: Readonly<Record<string, string | un
     throw new Error(`paper core configuration: ${parsed.error.issues.map((issue) => `${issue.path.join('.')} ${issue.message}`).join('; ')}`);
   }
   const e = parsed.data;
+  const ACCOUNT_ID = /^[A-Za-z0-9_-]{1,64}$/;
+  if (!ACCOUNT_ID.test(e.PAPER_EXCHANGE_ACCOUNT_ID)) {
+    throw new Error('paper core configuration: PAPER_EXCHANGE_ACCOUNT_ID may use letters, digits, "_" and "-" only (1 to 64 characters)');
+  }
+  if (!ACCOUNT_ID.test(e.PAPER_CORE_RESEARCH_ACCOUNT_ID)) {
+    throw new Error('paper core configuration: PAPER_CORE_RESEARCH_ACCOUNT_ID may use letters, digits, "_" and "-" only (1 to 64 characters)');
+  }
+  if (e.PAPER_CORE_RESEARCH_ACCOUNT_ID === e.PAPER_EXCHANGE_ACCOUNT_ID) {
+    throw new Error('paper core configuration: PAPER_CORE_RESEARCH_ACCOUNT_ID must not be the trading account; research runs on a simulated account');
+  }
   const symbols = list(e.SYMBOLS);
   if (symbols.length === 0) throw new Error('paper core configuration: SYMBOLS is empty');
+  const accountDir = `data/accounts/${e.PAPER_EXCHANGE_ACCOUNT_ID}`;
   let strategyParameters: unknown;
   try {
     strategyParameters = JSON.parse(e.PAPER_CORE_STRATEGY_PARAMS);
@@ -119,8 +138,11 @@ export function validatePaperOnlyConfig(env: Readonly<Record<string, string | un
       minNotional: e.PAPER_CORE_MIN_NOTIONAL,
       quantityStep: e.PAPER_CORE_QUANTITY_STEP,
     }),
-    journalPath: e.PAPER_CORE_JOURNAL,
-    statePath: e.PAPER_CORE_STATE,
+    journalPath: e.PAPER_CORE_JOURNAL ?? `${accountDir}/events.jsonl`,
+    statePath: e.PAPER_CORE_STATE ?? `${accountDir}/state.json`,
+    ownershipPath: e.PAPER_CORE_OWNERSHIP ?? `${accountDir}/ownership.jsonl`,
+    researchAccountId: e.PAPER_CORE_RESEARCH_ACCOUNT_ID,
+    leaseTtlSeconds: e.PAPER_CORE_LEASE_TTL_SECONDS,
     killFile: e.PAPER_CORE_KILL_FILE,
     markPushMs: e.PAPER_CORE_MARK_PUSH_MS,
     barSettleMs: e.PAPER_CORE_BAR_SETTLE_MS,

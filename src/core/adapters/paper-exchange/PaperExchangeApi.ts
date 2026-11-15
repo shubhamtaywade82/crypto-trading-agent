@@ -101,13 +101,19 @@ export class PaperExchangeApi extends PaperExchangeClient {
     return reply.data.map((point) => ({ at: Date.parse(point.at), equity: Number(point.equity) }));
   }
 
-  async findReplayIntent(runId: number, clientOrderId: string): Promise<{ id: number; status: string } | null> {
+  async findReplayIntent(runId: number, clientOrderId: string): Promise<{ id: number; status: string; quantity: number; rejectionReason: string | null } | null> {
     let match: Raw | undefined;
     await this.walkPages(`/api/backtest_runs/${runId}/intents`, 20, (rows) => {
       match = rows.find((row) => row.client_order_id === clientOrderId);
       return match !== undefined;
     });
-    return match ? { id: Number(match.id), status: String(match.status) } : null;
+    if (!match) return null;
+    return {
+      id: Number(match.id),
+      status: String(match.status),
+      quantity: Number(match.quantity),
+      rejectionReason: match.rejection_reason === null || match.rejection_reason === undefined ? null : String(match.rejection_reason),
+    };
   }
 
   /** An order on a replay account: no execution price (the replay fills at the next bar's open), stop and target on the order. */

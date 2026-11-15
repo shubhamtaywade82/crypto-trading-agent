@@ -11,7 +11,7 @@ import type { ExperimentConfig } from '../src/core/research/ExperimentRunner.js'
 import { barsDefect } from '../src/core/research/ExperimentRunner.js';
 import { analyzePerformance, maxDrawdownPct, sharpeRatio } from '../src/core/research/PerformanceAnalyzer.js';
 import { RangeBreakoutStrategy } from '../src/core/strategies/index.js';
-import { candlesFromCloses, FakePaperExchange, ramp, T0 } from './support/coreFixtures.js';
+import { candlesFromCloses, FakeLease, FakePaperExchange, ramp, T0 } from './support/coreFixtures.js';
 
 const FRAME = 900_000;
 const range = (n: number, mid: number): number[] => Array.from({ length: n }, (_, i) => mid + (i % 2 === 0 ? 0.3 : -0.3));
@@ -19,9 +19,10 @@ const range = (n: number, mid: number): number[] => Array.from({ length: n }, (_
 const CLOSES = [...range(40, 100), 103, ...ramp(14, 104, 1), ...range(40, 117), 120, 119, 117.5, 116, 115, ...range(10, 115)];
 const BARS = candlesFromCloses(CLOSES);
 
-function app(options: { env?: Record<string, string>; series?: Record<string, Candle[]>; now?: () => number } = {}) {
+function app(options: { env?: Record<string, string>; series?: Record<string, Candle[]>; now?: () => number; lease?: FakeLease } = {}) {
   const dir = mkdtempSync(path.join(tmpdir(), 'paper-core-'));
   const server = new FakePaperExchange();
+  const lease = options.lease ?? new FakeLease();
   const series = options.series ?? {};
   const binanceSource: BinancePublicSource = {
     klines: async (symbol, _interval, o) => (series[symbol] ?? []).filter((c) => (o.endTime === undefined || c.openTime <= o.endTime) && (o.startTime === undefined || c.openTime >= o.startTime)).slice(-(o.limit ?? 500)),
@@ -32,11 +33,14 @@ function app(options: { env?: Record<string, string>; series?: Record<string, Ca
     PAPER_EXCHANGE_URL: 'http://paper.test', PAPER_EXCHANGE_ACCOUNT_ID: 'acct', SYMBOLS: 'BTCUSDT,ETHUSDT',
     PAPER_CORE_STRATEGIES: 'range-breakout', PAPER_CORE_STRATEGY_PARAMS: JSON.stringify({ 'range-breakout': { timeframe: '15m', rangeBars: 10, atrPeriod: 5 } }),
     PAPER_CORE_JOURNAL: path.join(dir, 'events.jsonl'), PAPER_CORE_STATE: path.join(dir, 'state.json'), PAPER_CORE_KILL_FILE: path.join(dir, 'KILL'),
+    PAPER_CORE_OWNERSHIP: path.join(dir, 'ownership.jsonl'),
     ...options.env,
   });
   const logs: string[] = [];
-  const built = buildPaperTradingApplication(config, { fetchImpl: server.fetch, binanceSource, log: (line) => logs.push(line), ...(options.now ? { clock: { now: options.now } } : {}) });
-  return { app: built, server, config, logs, dir };
+  const built = buildPaperTradingApplication(config, {
+    fetchImpl: server.fetch, binanceSource, lease, log: (line) => logs.push(line), ...(options.now ? { clock: { now: options.now } } : {}),
+  });
+  return { app: built, server, config, logs, dir, lease };
 }
 
 const experiment = (overrides: Partial<ExperimentConfig> = {}): ExperimentConfig => ({

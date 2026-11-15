@@ -3,11 +3,13 @@ import { TradingOrchestrator } from '../application/engine/TradingOrchestrator.j
 import { PlacePaperOrderHandler } from '../application/execution/PlacePaperOrderHandler.js';
 import { FeatureEngine } from '../application/features/FeatureEngine.js';
 import { defaultFeatureRegistry } from '../application/features/FeatureRegistry.js';
+import type { OwnershipLedger } from '../application/ownership/OwnershipLedger.js';
 import { CircuitBreaker, type BreakerSnapshot } from '../application/risk/CircuitBreaker.js';
 import { RiskPipeline } from '../application/risk/RiskPipeline.js';
 import { SessionTracker, type SessionState } from '../application/risk/SessionTracker.js';
 import { StrategyRegistry } from '../application/strategies/StrategyRegistry.js';
 import { StrategyRunner } from '../application/strategies/StrategyRunner.js';
+import type { AccountScope } from '../domain/execution.js';
 import type { RiskLimits, RiskRule } from '../domain/risk.js';
 import type { Strategy } from '../domain/strategy.js';
 import { TradingEventBus } from '../events/TradingEventBus.js';
@@ -27,6 +29,9 @@ export interface PipelineInput {
   readonly marketData: MarketDataPort;
   readonly portfolio: PortfolioPort;
   readonly execution: PaperExecutionPort;
+  /** The one account this pipeline trades. The execution port must be bound to it. */
+  readonly scope: AccountScope;
+  readonly ownership: OwnershipLedger;
   readonly clock: Clock;
   readonly repository: ResearchRepository;
   readonly advisor?: DecisionAdvisorPort;
@@ -50,6 +55,9 @@ export interface Pipeline {
  */
 export function buildPipeline(input: PipelineInput): Pipeline {
   if (input.execution.venue !== 'paper_exchange') throw new Error('the pipeline executes on paper_exchange only');
+  if (input.execution.accountId !== input.scope.accountId) {
+    throw new Error(`the execution port is bound to ${input.execution.accountId}, but the pipeline is scoped to ${input.scope.accountId}`);
+  }
   const features = defaultFeatureRegistry();
   const registry = new StrategyRegistry(features);
   for (const strategy of input.strategies) registry.register(strategy);
@@ -69,7 +77,10 @@ export function buildPipeline(input: PipelineInput): Pipeline {
     runner: new StrategyRunner(registry, new FeatureEngine(features)),
     decisions: new DecisionBuilder(),
     risk: new RiskPipeline(input.rules ?? defaultRiskRules(), input.clock),
-    orders: new PlacePaperOrderHandler(input.execution, input.clock),
+    orders: new PlacePaperOrderHandler(input.execution, input.clock, input.ownership, input.scope),
+    execution: input.execution,
+    ownership: input.ownership,
+    scope: input.scope,
     bus,
     clock: input.clock,
     ...(input.advisor ? { advisor: input.advisor } : {}),

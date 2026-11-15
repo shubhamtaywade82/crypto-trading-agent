@@ -5,7 +5,7 @@ import { buildPlaceOrderCommand, canTransition, IllegalOrderTransitionError, isT
 import { barClosedEvent, candleDefect } from '../src/core/domain/market.js';
 import { isApprovedTrade, type ApprovedTrade, type TradeProposal } from '../src/core/domain/risk.js';
 import { signalDefect } from '../src/core/domain/strategy.js';
-import { LIMITS, portfolioOf, signalOf, snapshotOf, candlesFromCloses, T0 } from './support/coreFixtures.js';
+import { LIMITS, portfolioOf, signalOf, snapshotOf, candlesFromCloses, T0, TEST_SCOPE } from './support/coreFixtures.js';
 
 const STATES: OrderState[] = ['CREATED', 'VALIDATED', 'SUBMITTED', 'ACKNOWLEDGED', 'PARTIALLY_FILLED', 'FILLED', 'REJECTED', 'CANCELLED', 'EXPIRED', 'UNKNOWN'];
 
@@ -17,7 +17,7 @@ const proposal = (overrides: Partial<TradeProposal> = {}): TradeProposal => {
 function approved(p = proposal()): ApprovedTrade {
   const pipeline = new RiskPipeline([{ id: 'pass', evaluate: () => null }], { now: () => T0 });
   const market = snapshotOf('BTCUSDT', candlesFromCloses([100, 100]));
-  const verdict = pipeline.evaluate(p, { market, portfolio: portfolioOf(), limits: LIMITS, executedDecisionIds: new Set(), haltReason: null });
+  const verdict = pipeline.evaluate(p, { market, portfolio: portfolioOf(), limits: LIMITS, executedDecisionIds: new Set(), haltReason: null, foreignPositionSymbols: [] });
   assert.ok(verdict.approved);
   return verdict.approved;
 }
@@ -51,33 +51,40 @@ test('illegal transitions throw and leave the state untouched', () => {
 test('an order command can only be built from a risk-pipeline approval', () => {
   const forged = { proposal: proposal(), decision: { decisionId: 'dec_1', approved: true, findings: [], evaluatedRules: [], decidedAt: T0 } } as ApprovedTrade;
   assert.equal(isApprovedTrade(forged), false);
-  assert.throws(() => buildPlaceOrderCommand(forged, T0), /without a risk-pipeline approval/);
+  assert.throws(() => buildPlaceOrderCommand(forged, T0, TEST_SCOPE), /without a risk-pipeline approval/);
   // A structural copy of a real approval is not the approval
-  assert.throws(() => buildPlaceOrderCommand({ ...approved() }, T0), /without a risk-pipeline approval/);
+  assert.throws(() => buildPlaceOrderCommand({ ...approved() }, T0, TEST_SCOPE), /without a risk-pipeline approval/);
 });
 
-test('the command is immutable, carries its lineage and is the same on every build', () => {
+test('the command is immutable, carries its lineage and account, and is the same on every build', () => {
   const token = approved();
-  const command = buildPlaceOrderCommand(token, T0);
+  const command = buildPlaceOrderCommand(token, T0, TEST_SCOPE);
   assert.equal(command.side, 'BUY');
   assert.equal(command.decisionId, 'dec_1');
   assert.equal(command.strategyId, 'test-strategy');
   assert.equal(command.strategyVersion, '1.0.0');
   assert.equal(command.stopLoss, 98);
+  assert.equal(command.venue, 'paper_exchange');
+  assert.equal(command.accountId, TEST_SCOPE.accountId);
   assert.ok(Object.isFrozen(command));
   assert.throws(() => { (command as { quantity: number }).quantity = 99; }, TypeError);
-  const again = buildPlaceOrderCommand(token, T0 + 5);
+  const again = buildPlaceOrderCommand(token, T0 + 5, TEST_SCOPE);
   assert.equal(again.commandId, command.commandId);
   assert.equal(again.idempotencyKey, command.idempotencyKey);
-  assert.notEqual(buildPlaceOrderCommand(approved(proposal({ decisionId: 'dec_2' })), T0).idempotencyKey, command.idempotencyKey);
-  assert.equal(buildPlaceOrderCommand(approved(proposal({ direction: 'SHORT', stopLoss: 102, takeProfit: 94 })), T0).side, 'SELL');
+  assert.notEqual(buildPlaceOrderCommand(approved(proposal({ decisionId: 'dec_2' })), T0, TEST_SCOPE).idempotencyKey, command.idempotencyKey);
+  assert.equal(buildPlaceOrderCommand(approved(proposal({ direction: 'SHORT', stopLoss: 102, takeProfit: 94 })), T0, TEST_SCOPE).side, 'SELL');
+});
+
+test('a command cannot be built without an account scope on paper_exchange', () => {
+  assert.throws(() => buildPlaceOrderCommand(approved(), T0, { venue: 'paper_exchange', accountId: '  ' }), /account scope/);
+  assert.throws(() => buildPlaceOrderCommand(approved(), T0, { venue: 'binance', accountId: 'acct' } as unknown as typeof TEST_SCOPE), /account scope/);
 });
 
 test('the approved proposal is a frozen copy: mutating the original after approval changes nothing', () => {
   const original = proposal();
   const token = approved(original);
   (original as { quantity: number }).quantity = 999;
-  assert.equal(buildPlaceOrderCommand(token, T0).quantity, 0.5);
+  assert.equal(buildPlaceOrderCommand(token, T0, TEST_SCOPE).quantity, 0.5);
 });
 
 test('signal geometry is validated per direction', () => {

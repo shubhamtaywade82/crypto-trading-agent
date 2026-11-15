@@ -1,14 +1,18 @@
-import { buildPlaceOrderCommand, type OrderResult } from '../../domain/execution.js';
+import { buildPlaceOrderCommand, type AccountScope, type OrderResult } from '../../domain/execution.js';
 import { candleDefect, isTimeframe, type BarClosedEvent, type MarketEvent, type MarketSnapshot, type Timeframe } from '../../domain/market.js';
+import { foreignSlots } from '../../domain/ownership.js';
 import type { RiskLimits } from '../../domain/risk.js';
 import type { TradingEventBody } from '../../events/TradingEvent.js';
 import type { TradingEventBus } from '../../events/TradingEventBus.js';
 import type { Clock } from '../../ports/Clock.js';
 import type { DecisionAdvisorPort } from '../../ports/DecisionAdvisorPort.js';
 import type { MarketDataPort } from '../../ports/MarketDataPort.js';
+import type { PaperExecutionPort } from '../../ports/PaperExecutionPort.js';
 import type { PortfolioPort } from '../../ports/PortfolioPort.js';
 import type { DecisionBuilder } from '../decisions/DecisionBuilder.js';
 import type { PlacePaperOrderHandler } from '../execution/PlacePaperOrderHandler.js';
+import type { OwnershipLedger } from '../ownership/OwnershipLedger.js';
+import { closeEmptiedEpisodes, resolveOpenIntents } from '../ownership/resolve.js';
 import type { CircuitBreaker } from '../risk/CircuitBreaker.js';
 import { sizeProposal } from '../risk/PositionSizer.js';
 import type { RiskPipeline } from '../risk/RiskPipeline.js';
@@ -35,6 +39,11 @@ export interface OrchestratorDeps {
   readonly decisions: DecisionBuilder;
   readonly risk: RiskPipeline;
   readonly orders: PlacePaperOrderHandler;
+  /** The venue port the intents are settled against. Bound to the same account as `scope`. */
+  readonly execution: PaperExecutionPort;
+  readonly ownership: OwnershipLedger;
+  /** The one account this engine trades. Every command is built for it. */
+  readonly scope: AccountScope;
   readonly bus: TradingEventBus;
   readonly clock: Clock;
   /** Optional. Absent means the deterministic pipeline decides alone. */
@@ -61,6 +70,8 @@ export class TradingOrchestrator {
   private readonly seenEvents = new Set<string>();
   private readonly lastBarTime = new Map<string, number>();
   private readonly executedDecisionIds = new Set<string>();
+  /** Why ownership is unresolved right now (an intent the venue contradicts). Null when everything is settled. */
+  private ownershipHold: string | null = null;
 
   constructor(private readonly deps: OrchestratorDeps) {
     if (deps.symbols.length === 0) throw new Error('the orchestrator needs at least one symbol');
@@ -102,7 +113,20 @@ export class TradingOrchestrator {
       // The snapshot and the event must describe the same bar, or a strategy would be reading a different market
       if (!market || primary.at(-1)?.openTime !== event.bar.openTime) return skip('the market snapshot does not end at the triggering bar', 'FAILED');
 
-      const portfolio = deps.session.observe(await deps.portfolio.getAccount(event.closedAt));
+      // Ownership is settled before the account is classified: queued fills are confirmed, and slots the venue closed are
+      // recorded as closed, so a reused slot is never attributed to an episode that has ended.
+      const settled = deps.ownership.openIntents().length > 0
+        ? await resolveOpenIntents({ ledger: deps.ownership, execution: deps.execution, at: deps.clock.now() })
+        : null;
+      this.ownershipHold = settled && settled.held.length > 0
+        ? settled.held.map((hold) => `${hold.episodeId}: ${hold.reason}`).join('; ')
+        : null;
+      const account = await deps.portfolio.getAccount(event.closedAt);
+      const slots = account.positions.map((p) => ({ symbol: p.symbol, slotId: p.slotId, quantity: p.quantity }));
+      closeEmptiedEpisodes({ ledger: deps.ownership, slots, at: deps.clock.now() });
+      const foreignPositionSymbols = foreignSlots(slots, deps.ownership.snapshot()).map((slot) => slot.symbol);
+
+      const portfolio = deps.session.observe(account);
       if (deps.breaker.observe(portfolio)) publish({ type: 'engine.halted', reason: deps.breaker.haltReason() ?? 'circuit breaker tripped' });
 
       const { signals, failures, parameters } = deps.runner.run(event, universe, portfolio);
@@ -128,8 +152,10 @@ export class TradingOrchestrator {
         if (opinion.verdict === 'VETO') return none(`advisor veto: ${opinion.reason}`, 'VETOED');
       }
 
-      const haltReason = deps.killSwitch?.() ?? deps.breaker.haltReason();
-      const verdict = deps.risk.evaluate(proposal, { market, portfolio, limits: deps.limits, executedDecisionIds: this.executedDecisionIds, haltReason });
+      const haltReason = deps.killSwitch?.() ?? deps.breaker.haltReason() ?? this.ownershipHold;
+      const verdict = deps.risk.evaluate(proposal, {
+        market, portfolio, limits: deps.limits, executedDecisionIds: this.executedDecisionIds, haltReason, foreignPositionSymbols,
+      });
       if (!verdict.approved) {
         publish({ type: 'risk.trade.rejected', decision: verdict.decision });
         const reasons = verdict.decision.findings.filter((f) => f.severity === 'block').map((f) => f.code).join(', ');
@@ -137,14 +163,16 @@ export class TradingOrchestrator {
       }
       publish({ type: 'risk.trade.approved', decision: verdict.decision });
 
-      const command = buildPlaceOrderCommand(verdict.approved, deps.clock.now());
+      const command = buildPlaceOrderCommand(verdict.approved, deps.clock.now(), deps.scope);
       // Recorded before the submission: whatever happens next, this decision is never sent a second time
       this.executedDecisionIds.add(proposal.decisionId);
       publish({ type: 'order.command.created', command });
       const order = await deps.orders.handle(command);
       publish({ type: 'order.state.changed', commandId: command.commandId, decisionId: command.decisionId, result: order });
 
-      const unsafe = order.state === 'UNKNOWN' ? `order ${command.commandId} outcome is unknown` : order.detail.startsWith('UNPROTECTED POSITION') ? order.detail : null;
+      const unsafe = order.state === 'UNKNOWN'
+        ? `order ${command.commandId} outcome is unknown`
+        : order.detail.startsWith('UNPROTECTED POSITION') || order.detail.startsWith('UNOWNED POSITION') ? order.detail : null;
       if (unsafe && deps.breaker.trip(unsafe, deps.clock.now())) publish({ type: 'engine.halted', reason: unsafe });
       return { eventId: event.eventId, status: 'EXECUTED', detail: `${order.state}: ${order.detail}`, order };
     } catch (error) {

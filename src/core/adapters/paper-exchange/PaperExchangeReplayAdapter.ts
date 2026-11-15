@@ -1,7 +1,7 @@
 import type { PlaceOrderCommand } from '../../domain/execution.js';
 import { TIMEFRAME_MS, type Candle, type MarketSnapshot, type Timeframe } from '../../domain/market.js';
 import { MarketDataError, type MarketDataPort, type SnapshotRequest } from '../../ports/MarketDataPort.js';
-import { VenueRejectedError, type PaperExecutionPort, type VenueOrderAck } from '../../ports/PaperExecutionPort.js';
+import { VenueRejectedError, type OwnedPosition, type PaperExecutionPort, type SlotView, type VenueOrderAck } from '../../ports/PaperExecutionPort.js';
 import type { AccountView, PortfolioPort } from '../../ports/PortfolioPort.js';
 import type { ReplayFill, ReplaySessionPort, ReplaySpec, ReplayStep, ReplaySummary, ReplayTrade } from '../../ports/ReplaySessionPort.js';
 import { translating, type PaperExchangeApi, type ReplayStepReply } from './PaperExchangeApi.js';
@@ -10,6 +10,8 @@ import { translating, type PaperExchangeApi, type ReplayStepReply } from './Pape
 export type PaperExchangeApiFactory = (accountId: string, options: { retries: number }) => PaperExchangeApi;
 
 const FINISHED = /no bar after the replay position/;
+/** A replay account has one slot: the run's single instrument. */
+export const REPLAY_SLOT_ID = 0;
 
 /**
  * Drives one PaperExchange external backtest run. The broker owns the clock and the fills: each `advance` reveals one
@@ -19,7 +21,7 @@ const FINISHED = /no bar after the replay position/;
  */
 export class PaperExchangeReplayAdapter implements ReplaySessionPort, MarketDataPort, PortfolioPort, PaperExecutionPort {
   readonly venue = 'paper_exchange' as const;
-  private run: { id: number; api: PaperExchangeApi; symbol: string; timeframe: Timeframe } | null = null;
+  private run: { id: number; accountId: string; api: PaperExchangeApi; symbol: string; timeframe: Timeframe } | null = null;
   private readonly bars: Candle[] = [];
   private lastStep: ReplayStepReply | null = null;
   private initialCapital = 0;
@@ -27,6 +29,11 @@ export class PaperExchangeReplayAdapter implements ReplaySessionPort, MarketData
   private readonly stops = new Map<string, number>();
 
   constructor(private readonly admin: PaperExchangeApi, private readonly factory: PaperExchangeApiFactory) {}
+
+  /** The replay account this run executes on. Available once `open` has resolved. */
+  get accountId(): string {
+    return this.requireRun().accountId;
+  }
 
   async open(spec: ReplaySpec): Promise<void> {
     if (this.run) throw new Error('this replay adapter already has an open run');
@@ -41,7 +48,7 @@ export class PaperExchangeReplayAdapter implements ReplaySessionPort, MarketData
       });
       this.initialCapital = spec.initialCapital;
       // No retries on the run's own client: `advance` is not idempotent, and a lost answer must stop the run
-      this.run = { id: created.id, api: this.factory(created.account_id, { retries: 0 }), symbol: spec.symbol, timeframe: spec.timeframe };
+      this.run = { id: created.id, accountId: created.account_id, api: this.factory(created.account_id, { retries: 0 }), symbol: spec.symbol, timeframe: spec.timeframe };
     });
   }
 
@@ -109,14 +116,22 @@ export class PaperExchangeReplayAdapter implements ReplaySessionPort, MarketData
         realizedPnl: account.realizedPnl,
         positions: position && position.quantity > 0 ? [{
           symbol: run.symbol, direction: position.side === 'long' ? 'LONG' : 'SHORT', quantity: position.quantity, entryPrice: position.avg_price,
-          markPrice: mark, leverage: 1, unrealizedPnl: position.unrealized_pnl, stopLoss: this.stops.get(run.symbol) ?? null,
+          markPrice: mark, leverage: 1, unrealizedPnl: position.unrealized_pnl, stopLoss: this.stops.get(run.symbol) ?? null, slotId: REPLAY_SLOT_ID,
         }] : [],
       };
     });
   }
 
-  submitOrder(command: PlaceOrderCommand): Promise<VenueOrderAck> {
+  async readSlot(symbol: string): Promise<SlotView> {
     const run = this.requireRun();
+    const position = this.lastStep?.position ?? null;
+    if (symbol !== run.symbol || !position || !(position.quantity > 0)) return { symbol, slotId: null, quantity: 0 };
+    return { symbol, slotId: REPLAY_SLOT_ID, quantity: position.quantity };
+  }
+
+  async submitOrder(command: PlaceOrderCommand): Promise<VenueOrderAck> {
+    const run = this.requireRun();
+    this.assertAccount(run, command.accountId, `command ${command.commandId}`);
     return translating(async () => {
       const intent = await run.api.submitReplayOrder({
         symbol: command.symbol, side: command.side === 'BUY' ? 'buy' : 'sell', quantity: command.quantity, leverage: command.leverage,
@@ -127,23 +142,48 @@ export class PaperExchangeReplayAdapter implements ReplaySessionPort, MarketData
     });
   }
 
+  /**
+   * The state of a replay order. `queued` is still waiting for the next open. `submitted` means the replay filled it at that
+   * open. `rejected` and `cancelled` are refusals, reported as such so recovery can abandon the episode.
+   */
   findOrder(idempotencyKey: string): Promise<VenueOrderAck | null> {
     const run = this.requireRun();
     return translating(async () => {
       const intent = await run.api.findReplayIntent(run.id, idempotencyKey);
-      return intent ? { venueOrderId: `intent-${intent.id}`, status: 'QUEUED', filledQuantity: 0, averagePrice: null, protectionCarried: true } : null;
+      if (!intent) return null;
+      if (intent.status === 'queued') return { venueOrderId: `intent-${intent.id}`, status: 'QUEUED', filledQuantity: 0, averagePrice: null, protectionCarried: true };
+      if (intent.status === 'submitted') return { venueOrderId: `intent-${intent.id}`, status: 'FILLED', filledQuantity: intent.quantity, averagePrice: null, protectionCarried: false };
+      throw new VenueRejectedError(`replay intent ${intent.id} is ${intent.status}${intent.rejectionReason ? `: ${intent.rejectionReason}` : ''}`);
     });
   }
 
-  /** The stop and target travel on the replay order itself. */
-  async protect(): Promise<void> {}
+  /** The stop and target travel on the replay order itself. The owned slot is still validated. */
+  async protect(_command: PlaceOrderCommand, owned: OwnedPosition): Promise<void> {
+    this.assertOwned(this.requireRun(), owned);
+  }
 
-  flatten(command: PlaceOrderCommand): Promise<void> {
+  async flatten(owned: OwnedPosition, _reason: string): Promise<void> {
     const run = this.requireRun();
+    this.assertOwned(run, owned);
     return translating(async () => {
-      const quantity = this.lastStep?.position?.quantity ?? command.quantity;
-      await run.api.submitReplayOrder({ symbol: command.symbol, side: command.side === 'BUY' ? 'sell' : 'buy', quantity, leverage: command.leverage, clientOrderId: `${command.idempotencyKey}-flat`, reduceOnly: true });
+      const position = this.lastStep?.position ?? null;
+      if (!position || !(position.quantity > 0)) return;
+      await run.api.submitReplayOrder({
+        symbol: owned.symbol, side: position.side === 'long' ? 'sell' : 'buy', quantity: position.quantity, leverage: 1,
+        clientOrderId: `${owned.episodeId}-flat`, reduceOnly: true,
+      });
     });
+  }
+
+  private assertAccount(run: { accountId: string }, accountId: string, subject: string): void {
+    if (accountId !== run.accountId) throw new VenueRejectedError(`${subject} targets account ${accountId}; this replay is bound to ${run.accountId}`);
+  }
+
+  private assertOwned(run: { accountId: string; symbol: string }, owned: OwnedPosition): void {
+    this.assertAccount(run, owned.accountId, `position ${owned.episodeId}`);
+    if (owned.slotId !== REPLAY_SLOT_ID || owned.symbol !== run.symbol) {
+      throw new VenueRejectedError(`owned position ${owned.episodeId} is not the replay's ${run.symbol} slot`);
+    }
   }
 
   private requireRun() {

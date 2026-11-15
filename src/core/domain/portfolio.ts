@@ -10,6 +10,8 @@ export interface PositionView {
   readonly unrealizedPnl: number;
   /** Null when the venue reports no protective stop for the position. */
   readonly stopLoss: number | null;
+  /** The venue's id for the (account, symbol) slot this position sits in. Null when the venue did not report one. */
+  readonly slotId: number | null;
 }
 
 /** Account state as the venue reports it, plus the session figures the loss governors need. */

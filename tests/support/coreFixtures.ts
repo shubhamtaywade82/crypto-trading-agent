@@ -5,8 +5,9 @@ import type { RiskLimits } from '../../src/core/domain/risk.js';
 import type { StrategySignal } from '../../src/core/domain/strategy.js';
 import type { MarketDataPort, SnapshotRequest } from '../../src/core/ports/MarketDataPort.js';
 import { MarketDataError } from '../../src/core/ports/MarketDataPort.js';
-import type { PaperExecutionPort, VenueOrderAck } from '../../src/core/ports/PaperExecutionPort.js';
+import type { OwnedPosition, PaperExecutionPort, SlotView, VenueOrderAck } from '../../src/core/ports/PaperExecutionPort.js';
 import type { AccountView, PortfolioPort } from '../../src/core/ports/PortfolioPort.js';
+import { AccountLeaseHeldError, type AccountLeaseHandle, type AccountLeasePort } from '../../src/core/ports/AccountLeasePort.js';
 
 export const T0 = Date.UTC(2026, 0, 5);
 
@@ -48,7 +49,10 @@ export function portfolioOf(overrides: Partial<PortfolioSnapshot> = {}): Portfol
 }
 
 export const positionOf = (symbol: string, overrides: Partial<PositionView> = {}): PositionView =>
-  ({ symbol, direction: 'LONG', quantity: 0.01, entryPrice: 100, markPrice: 100, leverage: 2, unrealizedPnl: 0, stopLoss: 95, ...overrides });
+  ({ symbol, direction: 'LONG', quantity: 0.01, entryPrice: 100, markPrice: 100, leverage: 2, unrealizedPnl: 0, stopLoss: 95, slotId: 1, ...overrides });
+
+export const TEST_ACCOUNT = 'acct-test';
+export const TEST_SCOPE: { venue: 'paper_exchange'; accountId: string } = { venue: 'paper_exchange', accountId: TEST_ACCOUNT };
 
 export const signalOf = (overrides: Partial<StrategySignal> = {}): StrategySignal => ({
   strategyId: 'test-strategy', strategyVersion: '1.0.0', symbol: 'BTCUSDT', direction: 'LONG', entry: 100, stopLoss: 98, takeProfit: 106,
@@ -75,15 +79,24 @@ export class FakeMarketData implements MarketDataPort {
   }
 }
 
+/**
+ * Account view for tests. When bound to a FakeExecution, its open slots are reported as positions, so the portfolio and the
+ * venue agree on what is open. Positions set explicitly on `account` are added for symbols the venue does not hold.
+ */
 export class FakePortfolio implements PortfolioPort {
   account: Omit<AccountView, 'asOf'> = { equity: 10_000, availableMargin: 10_000, realizedPnl: 0, positions: [] };
   calls = 0;
   fail: Error | null = null;
 
+  constructor(private readonly venue?: FakeExecution) {}
+
   async getAccount(asOf: number): Promise<AccountView> {
     this.calls += 1;
     if (this.fail) throw this.fail;
-    return { asOf, ...this.account };
+    const fromVenue = this.venue?.openPositions() ?? [];
+    const venueSymbols = new Set(fromVenue.map((p) => p.symbol));
+    const explicit = this.account.positions.filter((p) => !venueSymbols.has(p.symbol));
+    return { asOf, ...this.account, positions: [...fromVenue, ...explicit] };
   }
 }
 
@@ -94,15 +107,37 @@ export class FakeExecution implements PaperExecutionPort {
   readonly venue = 'paper_exchange' as const;
   readonly calls: string[] = [];
   readonly submitted: PlaceOrderCommand[] = [];
+  readonly protections: Array<{ command: PlaceOrderCommand; owned: OwnedPosition }> = [];
+  readonly flattened: OwnedPosition[] = [];
   submitScript: Scripted<VenueOrderAck>[] = [];
   findScript: Scripted<VenueOrderAck | null>[] = [null];
   protectScript: Scripted<void>[] = [undefined];
   flattenScript: Scripted<void>[] = [undefined];
+  /** Venue slot state per symbol. A filled entry opens its slot unless a test turns this off. */
+  readonly slots = new Map<string, { slotId: number; quantity: number }>();
+  openSlotOnFill = true;
+  private nextSlotId = 1;
   /** When set, every call waits on it; lets a test hold an order in flight. */
   gate: Promise<void> | null = null;
 
+  constructor(readonly accountId: string = TEST_ACCOUNT) {}
+
   static filled(quantity = 1): VenueOrderAck {
     return { venueOrderId: 'v-1', status: 'FILLED', filledQuantity: quantity, averagePrice: null, protectionCarried: false };
+  }
+
+  /** The open positions, in the shape the portfolio reports them. */
+  openPositions(): PositionView[] {
+    return [...this.slots.entries()]
+      .filter(([, slot]) => slot.quantity > 0)
+      .map(([symbol, slot]) => positionOf(symbol, { quantity: slot.quantity, slotId: slot.slotId, stopLoss: null }));
+  }
+
+  /** Puts a position into the venue directly, as if another process or the venue had opened it. */
+  openSlot(symbol: string, quantity = 0.5, slotId?: number): number {
+    const id = slotId ?? this.nextSlotId++;
+    this.slots.set(symbol, { slotId: id, quantity });
+    return id;
   }
 
   private async play<T>(script: Scripted<T>[]): Promise<T> {
@@ -115,8 +150,11 @@ export class FakeExecution implements PaperExecutionPort {
   async submitOrder(command: PlaceOrderCommand): Promise<VenueOrderAck> {
     this.calls.push('submitOrder');
     this.submitted.push(command);
-    if (this.submitScript.length === 0) return FakeExecution.filled(command.quantity);
-    return this.play(this.submitScript);
+    const ack = this.submitScript.length === 0 ? FakeExecution.filled(command.quantity) : await this.play(this.submitScript);
+    if (this.openSlotOnFill && (ack.status === 'FILLED' || ack.status === 'PARTIALLY_FILLED') && !this.slots.get(command.symbol)?.quantity) {
+      this.openSlot(command.symbol, ack.filledQuantity || command.quantity);
+    }
+    return ack;
   }
 
   async findOrder(): Promise<VenueOrderAck | null> {
@@ -124,14 +162,25 @@ export class FakeExecution implements PaperExecutionPort {
     return this.play(this.findScript);
   }
 
-  async protect(): Promise<void> {
+  async readSlot(symbol: string): Promise<SlotView> {
+    this.calls.push('readSlot');
+    const slot = this.slots.get(symbol);
+    if (this.gate) await this.gate;
+    return slot && slot.quantity > 0 ? { symbol, slotId: slot.slotId, quantity: slot.quantity } : { symbol, slotId: null, quantity: 0 };
+  }
+
+  async protect(command: PlaceOrderCommand, owned: OwnedPosition): Promise<void> {
     this.calls.push('protect');
+    this.protections.push({ command, owned });
     return this.play(this.protectScript);
   }
 
-  async flatten(): Promise<void> {
+  async flatten(owned: OwnedPosition, _reason: string): Promise<void> {
     this.calls.push('flatten');
-    return this.play(this.flattenScript);
+    this.flattened.push(owned);
+    await this.play(this.flattenScript);
+    const slot = this.slots.get(owned.symbol);
+    if (slot) this.slots.set(owned.symbol, { ...slot, quantity: 0 });
   }
 }
 
@@ -139,6 +188,29 @@ export class FakeExecution implements PaperExecutionPort {
 // FakePaperExchange: an in-memory stand-in for the paper_exchange HTTP API, speaking the request and response shapes
 // of its controllers (orders, positions, protections, mark prices, funding, backtest datasets and external runs).
 // ---------------------------------------------------------------------------------------------------------------
+
+/** Grants account leases in memory. Seed `holders` to make an account look held by another process. */
+export class FakeLease implements AccountLeasePort {
+  readonly granted: AccountLeaseHandle[] = [];
+  readonly released: AccountLeaseHandle[] = [];
+  readonly holders = new Map<string, { label: string; expiresAt: number }>();
+  private fence = 0;
+
+  async acquire(accountId: string, label: string): Promise<AccountLeaseHandle> {
+    const held = this.holders.get(accountId);
+    if (held) throw new AccountLeaseHeldError(`account ${accountId} is leased by ${held.label}`, held.label, held.expiresAt);
+    this.fence += 1;
+    const handle: AccountLeaseHandle = { accountId, holderId: `holder-${this.fence}`, fence: this.fence, expiresAt: T0 + 30_000 };
+    this.holders.set(accountId, { label, expiresAt: handle.expiresAt });
+    this.granted.push(handle);
+    return handle;
+  }
+
+  async release(handle: AccountLeaseHandle): Promise<void> {
+    this.released.push(handle);
+    this.holders.delete(handle.accountId);
+  }
+}
 
 interface FakePosition {
   id: number; symbol: string; side: 'long' | 'short'; quantity: number; avgPrice: number; leverage: number;

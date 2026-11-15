@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import type { CycleStatus, TradingOrchestrator } from '../application/engine/TradingOrchestrator.js';
 import { barClosedEvent, candleDefect, TIMEFRAME_MS, type Candle, type Timeframe } from '../domain/market.js';
+import type { AccountScope } from '../domain/execution.js';
 import type { RiskLimits } from '../domain/risk.js';
 import type { Strategy } from '../domain/strategy.js';
 import type { TradingEvent } from '../events/TradingEvent.js';
@@ -56,6 +57,8 @@ export type ReplayVenue = ReplaySessionPort & MarketDataPort & PortfolioPort & P
 /** Wires the standard pipeline around a replay venue. Supplied by the composition root. */
 export type ReplayPipelineFactory = (input: {
   venue: ReplayVenue; clock: Clock; symbols: readonly string[]; strategies: readonly Strategy[]; limits: RiskLimits; runId: string;
+  /** The replay account the venue opened. Only available once the replay exists, so the pipeline is built after it. */
+  scope: AccountScope;
 }) => { orchestrator: TradingOrchestrator; events: readonly TradingEvent[] };
 
 const DECISION_EVENTS = new Set(['decision.proposed', 'risk.trade.approved', 'risk.trade.rejected', 'order.command.created']);
@@ -101,14 +104,16 @@ export class ExperimentRunner {
     const venue = this.venueFactory();
     let now = config.bars[0].openTime;
     const clock: Clock = { now: () => now };
-    const { orchestrator, events } = this.pipelineFactory({
-      venue, clock, symbols: [config.symbol], strategies: config.strategies, limits: config.limits, runId: `exp_${manifest.dataHash.slice(0, 12)}`,
-    });
 
     await venue.open({
       name: config.name, symbol: config.symbol, timeframe: config.timeframe, bars: config.bars, initialCapital: config.initialCapital,
       leverage: config.limits.maxLeverage, slippageBps: config.slippageBps, lotSize: config.limits.quantityStep,
       manifest: { ...manifest, limits: { ...manifest.limits } },
+    });
+    // The pipeline is bound to the replay account, which exists only now that the run is open
+    const { orchestrator, events } = this.pipelineFactory({
+      venue, clock, symbols: [config.symbol], strategies: config.strategies, limits: config.limits, runId: `exp_${manifest.dataHash.slice(0, 12)}`,
+      scope: { venue: 'paper_exchange', accountId: venue.accountId },
     });
 
     const cycles: Record<CycleStatus, number> = { SKIPPED: 0, NO_SIGNAL: 0, NO_DECISION: 0, VETOED: 0, REJECTED: 0, EXECUTED: 0, FAILED: 0 };

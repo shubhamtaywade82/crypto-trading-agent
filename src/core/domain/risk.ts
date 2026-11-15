@@ -48,6 +48,8 @@ export interface RiskContext {
   readonly executedDecisionIds: ReadonlySet<string>;
   /** Null while trading is allowed; otherwise why the kill switch or circuit breaker refuses entries. */
   readonly haltReason: string | null;
+  /** Open venue positions this process does not own. Any entry is refused while this is non-empty. */
+  readonly foreignPositionSymbols: readonly string[];
 }
 
 export interface RiskFinding {

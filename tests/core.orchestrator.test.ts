@@ -1,12 +1,14 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
+import { InMemoryOwnershipJournal } from '../src/core/adapters/persistence/OwnershipJournals.js';
 import { InMemoryResearchRepository } from '../src/core/adapters/persistence/JsonlResearchRepository.js';
 import { buildPipeline, type PipelineInput } from '../src/core/composition/buildPipeline.js';
+import { OwnershipLedger } from '../src/core/application/ownership/OwnershipLedger.js';
 import { barClosedEvent, type BarClosedEvent, type Candle } from '../src/core/domain/market.js';
 import type { Strategy, StrategyContext, StrategySignal } from '../src/core/domain/strategy.js';
 import type { AdvisorBrief, AdvisorOpinion, DecisionAdvisorPort } from '../src/core/ports/DecisionAdvisorPort.js';
 import { VenueUnavailableError } from '../src/core/ports/PaperExecutionPort.js';
-import { candlesFromCloses, FakeExecution, FakeMarketData, FakePortfolio, flat, LIMITS, positionOf } from './support/coreFixtures.js';
+import { candlesFromCloses, FakeExecution, FakeMarketData, FakePortfolio, flat, LIMITS, TEST_ACCOUNT, TEST_SCOPE } from './support/coreFixtures.js';
 
 /** Goes long on every bar it is shown, with a 2% stop and a 6% target. */
 class AlwaysLong implements Strategy {
@@ -30,17 +32,21 @@ class AlwaysLong implements Strategy {
 function rig(options: Partial<PipelineInput> & { series?: Record<string, Candle[]> } = {}) {
   const series = options.series ?? { BTCUSDT: candlesFromCloses(flat(30, 100)), ETHUSDT: candlesFromCloses(flat(30, 50)) };
   const marketData = new FakeMarketData(series);
-  const portfolio = new FakePortfolio();
   const execution = new FakeExecution();
+  const portfolio = new FakePortfolio(execution);
+  const ownership = new OwnershipLedger(new InMemoryOwnershipJournal(), TEST_ACCOUNT);
   const repository = new InMemoryResearchRepository();
   let now = 1_000;
   const pipeline = buildPipeline({
     runId: 'test-run', symbols: Object.keys(series), strategies: [new AlwaysLong()], limits: LIMITS, marketData, portfolio, execution,
-    clock: { now: () => (now += 1) }, repository, ...options,
+    scope: TEST_SCOPE, ownership, clock: { now: () => (now += 1) }, repository, ...options,
   });
   const eventFor = (symbol: string, index = -1): BarClosedEvent => barClosedEvent(symbol, '15m', series[symbol].at(index)!);
   const types = () => repository.events.map((e) => e.type);
-  return { pipeline, marketData, portfolio, execution, repository, series, eventFor, types, process: (e: BarClosedEvent) => pipeline.orchestrator.processMarketEvent(e) };
+  return {
+    pipeline, marketData, portfolio, execution, repository, ownership, series, eventFor, types,
+    process: (e: BarClosedEvent) => pipeline.orchestrator.processMarketEvent(e),
+  };
 }
 
 const advisorSaying = (verdict: AdvisorOpinion['verdict'], briefs: AdvisorBrief[] = []): DecisionAdvisorPort => ({
@@ -70,8 +76,10 @@ test('a bar is traceable from market event to order result through one ordered e
   const id = proposed.proposal.decisionId;
   assert.deepEqual([approved.decision.decisionId, created.command.decisionId, changed.decisionId], [id, id, id]);
   assert.equal(created.command.commandId, changed.commandId);
-  assert.equal(approved.decision.evaluatedRules.length, 17);
-  assert.deepEqual(r.execution.submitted.map((c) => [c.symbol, c.side, c.stopLoss, c.takeProfit]), [['BTCUSDT', 'BUY', 98, 106]]);
+  assert.equal(approved.decision.evaluatedRules.length, 19);
+  assert.deepEqual(r.execution.submitted.map((c) => [c.symbol, c.side, c.stopLoss, c.takeProfit, c.accountId]), [['BTCUSDT', 'BUY', 98, 106, TEST_ACCOUNT]]);
+  // The entry is owned by its episode, which is what protection and foreign-position checks rely on
+  assert.equal(r.ownership.get(created.command.commandId)?.state, 'OWNED');
 });
 
 test('a repeated bar, an older bar, an unknown symbol and a malformed bar are skipped without a decision', async () => {
@@ -92,12 +100,11 @@ test('a repeated bar, an older bar, an unknown symbol and a malformed bar are sk
 test('events are decided one at a time against current account state, never concurrently', async () => {
   const r = rig({ limits: { ...LIMITS, maxConcurrentPositions: 1 } });
   let inFlight = 0, maxInFlight = 0;
+  // The venue opens the slot when the fill is returned, and the next cycle reads it through the portfolio
   r.execution.submitScript = [async () => {
     inFlight += 1;
     maxInFlight = Math.max(maxInFlight, inFlight);
     await new Promise((resolve) => setTimeout(resolve, 20));
-    // The fill shows up in the account the next cycle reads
-    r.portfolio.account = { ...r.portfolio.account, positions: [positionOf('BTCUSDT')] };
     inFlight -= 1;
     return FakeExecution.filled();
   }];
@@ -150,7 +157,7 @@ test('the advisor is not consulted when there is nothing to review', async () =>
   assert.equal(briefs.length, 0);
 });
 
-test('an order whose outcome is unknown trips the breaker and every later entry is refused', async () => {
+test('an order whose outcome is unknown trips the breaker, and every later entry is refused without a submission', async () => {
   const r = rig();
   r.execution.submitScript = [new VenueUnavailableError('timeout')];
   const first = await r.process(r.eventFor('BTCUSDT'));
@@ -158,12 +165,11 @@ test('an order whose outcome is unknown trips the breaker and every later entry 
   assert.equal(r.pipeline.breaker.snapshot.state, 'TRIPPED');
   assert.equal(r.types().at(-1), 'engine.halted');
 
-  const callsBefore = r.execution.calls.length;
+  const submittedBefore = r.execution.submitted.length;
   const second = await r.process(r.eventFor('ETHUSDT'));
   assert.equal(second.status, 'REJECTED');
   assert.equal(second.detail, 'TRADING_HALTED');
-  assert.equal(r.execution.calls.length, callsBefore);
-
+  assert.equal(r.execution.submitted.length, submittedBefore);
 });
 
 test('a position left without a stop trips the breaker', async () => {
@@ -266,4 +272,49 @@ test('a journal subscriber that throws cannot stop or alter execution', async ()
 test('the pipeline refuses an execution port that is not the paper venue', () => {
   const impostor = Object.assign(new FakeExecution(), { venue: 'binance' });
   assert.throws(() => rig({ execution: impostor as unknown as FakeExecution }), /paper_exchange only/);
+});
+
+test('a position this process does not own blocks every entry, and nothing is sent', async () => {
+  const r = rig();
+  r.execution.openSlot('ETHUSDT', 0.4, 7);
+  const outcome = await r.process(r.eventFor('BTCUSDT'));
+  assert.equal(outcome.status, 'REJECTED');
+  assert.match(outcome.detail, /FOREIGN_POSITION/);
+  assert.equal(r.execution.submitted.length, 0);
+});
+
+test('a venue-initiated close of an owned position is recorded on the next cycle, and its slot is not inherited', async () => {
+  const series = { BTCUSDT: candlesFromCloses(flat(40, 100)), ETHUSDT: candlesFromCloses(flat(40, 50)) };
+  const r = rig({ series });
+  const btc = (i: number) => barClosedEvent('BTCUSDT', '15m', series.BTCUSDT[i]);
+  const eth = (i: number) => barClosedEvent('ETHUSDT', '15m', series.ETHUSDT[i]);
+  const first = await r.process(btc(30));
+  const commandId = first.order!.commandId;
+  assert.equal(r.ownership.get(commandId)?.state, 'OWNED');
+  // A protection or a liquidation closes the slot without any request from this process
+  r.execution.slots.delete('BTCUSDT');
+  await r.process(eth(31));
+  assert.equal(r.ownership.get(commandId)?.state, 'CLOSED');
+  // Flat ETH, so the next ETH decision reaches the risk pipeline; someone else then opens the BTC slot.
+  // It is foreign, and it is not attributed to the closed episode.
+  r.execution.slots.delete('ETHUSDT');
+  r.execution.openSlot('BTCUSDT', 0.2, 99);
+  const after = await r.process(eth(32));
+  assert.equal(after.status, 'REJECTED');
+  assert.match(after.detail, /FOREIGN_POSITION/);
+  assert.equal(r.ownership.get(commandId)?.state, 'CLOSED');
+});
+
+test('a queued fill is attributed on the next cycle, once the venue reports it', async () => {
+  const r = rig();
+  r.execution.submitScript = [{ venueOrderId: 'intent-1', status: 'QUEUED', filledQuantity: 0, averagePrice: null, protectionCarried: true }];
+  const first = await r.process(r.eventFor('BTCUSDT'));
+  const commandId = first.order!.commandId;
+  assert.equal(r.ownership.get(commandId)?.state, 'INTENT');
+  // The replay fills the order at the next open and reports it; the slot is open when the cycle reads it
+  r.execution.findScript = [{ venueOrderId: 'intent-1', status: 'FILLED', filledQuantity: 0.5, averagePrice: null, protectionCarried: false }];
+  r.execution.openSlot('BTCUSDT', 0.5, 1);
+  const second = await r.process(r.eventFor('ETHUSDT'));
+  assert.equal(r.ownership.get(commandId)?.state, 'OWNED');
+  assert.notEqual(second.detail, 'FOREIGN_POSITION');
 });

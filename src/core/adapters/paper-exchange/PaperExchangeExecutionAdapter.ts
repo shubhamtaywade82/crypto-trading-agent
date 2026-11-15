@@ -1,7 +1,9 @@
-import type { SubmitOrderResult } from '../../../binance/paperExchangeClient.js';
+import type { PaperExchangePosition, SubmitOrderResult } from '../../../binance/paperExchangeClient.js';
 import type { PlaceOrderCommand } from '../../domain/execution.js';
 import type { MarkSinkPort } from '../../ports/MarkFeedPort.js';
-import { VenueRejectedError, VenueUnavailableError, type PaperExecutionPort, type VenueOrderAck } from '../../ports/PaperExecutionPort.js';
+import {
+  VenueRejectedError, VenueUnavailableError, type OwnedPosition, type PaperExecutionPort, type SlotView, type VenueOrderAck,
+} from '../../ports/PaperExecutionPort.js';
 import { translating, type PaperExchangeApi } from './PaperExchangeApi.js';
 
 const sideOf = (command: PlaceOrderCommand): 'buy' | 'sell' => (command.side === 'BUY' ? 'buy' : 'sell');
@@ -23,14 +25,14 @@ function reportedFill(result: SubmitOrderResult, atMost?: number): number {
 }
 
 /** The venue must be talking about this submission: a client_order_id echo that disagrees means an unknown outcome. */
-function assertEcho(command: PlaceOrderCommand, result: SubmitOrderResult): void {
-  if (result.clientOrderId !== undefined && result.clientOrderId !== command.idempotencyKey) {
-    throw new VenueUnavailableError(`paper_exchange order ${result.orderId} carries client_order_id ${result.clientOrderId}, not ${command.idempotencyKey}`);
+function assertEcho(expectedKey: string, result: SubmitOrderResult): void {
+  if (result.clientOrderId !== undefined && result.clientOrderId !== expectedKey) {
+    throw new VenueUnavailableError(`paper_exchange order ${result.orderId} carries client_order_id ${result.clientOrderId}, not ${expectedKey}`);
   }
 }
 
 function toAck(command: PlaceOrderCommand, result: SubmitOrderResult): VenueOrderAck {
-  assertEcho(command, result);
+  assertEcho(command.idempotencyKey, result);
   const base = { venueOrderId: String(result.orderId), averagePrice: null, protectionCarried: false };
   switch (result.status) {
     case 'filled': return { ...base, status: 'FILLED', filledQuantity: reportedFill(result, command.quantity) };
@@ -43,23 +45,29 @@ function toAck(command: PlaceOrderCommand, result: SubmitOrderResult): VenueOrde
 }
 
 /**
- * Agent-driven paper execution: the order carries the reference price the decision was made on and the broker fills it
- * there. That is a mark, not an executable bid or ask, so fills on this path flatter a strategy relative to a real
- * book; use the replay path for research.
+ * Agent-driven paper execution for one account. The order carries the reference price the decision was made on and the
+ * broker fills it there. That is a mark, not an executable bid or ask, so fills on this path flatter a strategy relative to
+ * a real book; use the replay path for research.
+ *
+ * Every position is addressed by its slot id. A symbol is only used to read the slot, and only after the adapter has
+ * checked that the slot belongs to this account.
  */
 export class PaperExchangeExecutionAdapter implements PaperExecutionPort, MarkSinkPort {
   readonly venue = 'paper_exchange' as const;
 
-  constructor(private readonly api: PaperExchangeApi) {}
+  constructor(private readonly api: PaperExchangeApi, readonly accountId: string) {
+    if (!accountId.trim()) throw new Error('the paper_exchange execution adapter needs an account');
+  }
 
-  submitOrder(command: PlaceOrderCommand): Promise<VenueOrderAck> {
+  async submitOrder(command: PlaceOrderCommand): Promise<VenueOrderAck> {
+    this.assertAccount(command.accountId, `command ${command.commandId}`);
     return translating(async () => toAck(command, await this.api.submitOrder({
       symbol: command.symbol, side: sideOf(command), quantity: command.quantity, leverage: command.leverage,
       executionPrice: command.referencePrice, clientOrderId: command.idempotencyKey,
     })));
   }
 
-  findOrder(idempotencyKey: string): Promise<VenueOrderAck | null> {
+  async findOrder(idempotencyKey: string): Promise<VenueOrderAck | null> {
     return translating(async () => {
       const found = await this.api.findOrder(idempotencyKey);
       if (!found) return null;
@@ -70,27 +78,46 @@ export class PaperExchangeExecutionAdapter implements PaperExecutionPort, MarkSi
     });
   }
 
-  /** Creates whichever of the stop and target the position does not already have, so a repeat call adds nothing. */
-  protect(command: PlaceOrderCommand): Promise<void> {
+  async readSlot(symbol: string): Promise<SlotView> {
     return translating(async () => {
-      const position = (await this.api.getPositions()).find((p) => p.symbol === command.symbol);
-      if (!position) throw new VenueRejectedError(`no open ${command.symbol} position to protect`);
+      // A perpetual slot is unique per account and symbol on the venue. Two open rows would mean the venue's invariant broke.
+      const matches = (await this.api.getPositions()).filter((p) => p.symbol === symbol);
+      if (matches.length > 1) throw new VenueUnavailableError(`${symbol} has ${matches.length} open rows in account ${this.accountId}; a perpetual slot must be unique`);
+      const [open] = matches;
+      return open ? { symbol, slotId: open.id, quantity: open.netQuantity } : { symbol, slotId: null, quantity: 0 };
+    });
+  }
+
+  /** Creates whichever of the stop and target the owned position does not already have, so a repeat call adds nothing. */
+  async protect(command: PlaceOrderCommand, owned: OwnedPosition): Promise<void> {
+    this.assertOwned(owned, command.symbol);
+    return translating(async () => {
+      const position = await this.openSlot(owned);
       const active = new Set((await this.api.listProtections(position.id)).filter((p) => p.status === 'active').map((p) => p.type));
       if (!active.has('stop_loss')) await this.api.createProtection(position.id, 'stop_loss', command.stopLoss, position.netQuantity);
       if (!active.has('take_profit')) await this.api.createProtection(position.id, 'take_profit', command.takeProfit, position.netQuantity);
     });
   }
 
-  flatten(command: PlaceOrderCommand, _reason: string): Promise<void> {
+  /**
+   * Reduce-only exit of the owned position. The venue sizes a reduce-only order by account and symbol, which is safe only
+   * because the account's lease keeps this process the sole writer. The slot is re-read afterwards, and a slot that is still
+   * open is reported rather than assumed closed.
+   */
+  async flatten(owned: OwnedPosition, reason: string): Promise<void> {
+    this.assertOwned(owned, owned.symbol);
     return translating(async () => {
-      const position = (await this.api.getPositions()).find((p) => p.symbol === command.symbol);
+      const position = await this.optionalSlot(owned);
       if (!position) return;
       const result = await this.api.submitOrder({
-        symbol: command.symbol, side: position.side === 'long' ? 'sell' : 'buy', quantity: position.netQuantity, leverage: position.leverage,
-        reduceOnly: true, executionPrice: position.currentPrice > 0 ? position.currentPrice : command.referencePrice,
-        clientOrderId: `${command.idempotencyKey}-flat`,
+        symbol: owned.symbol, side: position.side === 'long' ? 'sell' : 'buy', quantity: position.netQuantity, leverage: position.leverage,
+        reduceOnly: true, executionPrice: position.currentPrice > 0 ? position.currentPrice : position.averagePrice,
+        clientOrderId: `${owned.episodeId}-flat`,
       });
-      if (result.status !== 'filled') throw new VenueUnavailableError(`flatten of ${command.symbol} came back ${result.status}`);
+      assertEcho(`${owned.episodeId}-flat`, result);
+      if (result.status !== 'filled') throw new VenueUnavailableError(`flatten of ${owned.symbol} (${reason}) came back ${result.status}`);
+      const left = await this.readSlot(owned.symbol);
+      if (left.quantity > 0) throw new VenueUnavailableError(`flatten of ${owned.symbol} (${reason}) left ${left.quantity} open`);
     });
   }
 
@@ -100,5 +127,28 @@ export class PaperExchangeExecutionAdapter implements PaperExecutionPort, MarkSi
 
   pushFunding(symbol: string, fundingRate: number, markPrice: number, fundingTime: number): Promise<void> {
     return translating(() => this.api.pushFundingEvent(symbol, fundingRate, markPrice, fundingTime));
+  }
+
+  private assertAccount(accountId: string, subject: string): void {
+    if (accountId !== this.accountId) throw new VenueRejectedError(`${subject} targets account ${accountId}; this adapter is bound to ${this.accountId}`);
+  }
+
+  private assertOwned(owned: OwnedPosition, symbol: string): void {
+    this.assertAccount(owned.accountId, `position ${owned.episodeId}`);
+    if (owned.symbol !== symbol) throw new VenueRejectedError(`the owned position is ${owned.symbol}; the operation is for ${symbol}`);
+  }
+
+  /** The owned slot, which must still be open. A slot that is no longer open is refused, never re-targeted by symbol. */
+  private async openSlot(owned: OwnedPosition): Promise<PaperExchangePosition> {
+    const position = await this.optionalSlot(owned);
+    if (!position) throw new VenueRejectedError(`owned slot ${owned.slotId} for ${owned.symbol} is no longer open`);
+    return position;
+  }
+
+  private async optionalSlot(owned: OwnedPosition): Promise<PaperExchangePosition | null> {
+    const position = (await this.api.getPositions()).find((p) => p.id === owned.slotId);
+    if (!position) return null;
+    if (position.symbol !== owned.symbol) throw new VenueRejectedError(`slot ${owned.slotId} holds ${position.symbol}, not ${owned.symbol}`);
+    return position;
   }
 }

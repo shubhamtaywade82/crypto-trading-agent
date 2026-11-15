@@ -1,9 +1,20 @@
 import { createHash } from 'node:crypto';
 import { isApprovedTrade, type ApprovedTrade } from './risk.js';
 
+/**
+ * The account a command may act on. Every execution port is bound to exactly one scope, and a command for any other
+ * account is refused. PaperExchange's account is the only venue identity the core can express.
+ */
+export interface AccountScope {
+  readonly venue: 'paper_exchange';
+  readonly accountId: string;
+}
+
 /** An order request as immutable data. It knows nothing about the venue that will execute it. */
 export interface PlaceOrderCommand {
   readonly commandId: string;
+  readonly venue: 'paper_exchange';
+  readonly accountId: string;
   /** Sent to the venue as the client order id; a retried submission with it replays the original order. */
   readonly idempotencyKey: string;
   readonly decisionId: string;
@@ -105,12 +116,15 @@ const shortHash = (text: string): string => createHash('sha256').update(text).di
  * The only way to obtain a command. It needs the pipeline's approval token, so "every executed command has an accepted
  * risk decision" holds by construction. Ids are derived from the decision: building twice yields the same command.
  */
-export function buildPlaceOrderCommand(approved: ApprovedTrade, createdAt: number): PlaceOrderCommand {
+export function buildPlaceOrderCommand(approved: ApprovedTrade, createdAt: number, scope: AccountScope): PlaceOrderCommand {
   if (!isApprovedTrade(approved)) throw new Error('refusing to build an order command without a risk-pipeline approval');
+  if (scope.venue !== 'paper_exchange' || !scope.accountId.trim()) throw new Error('an order command needs a paper_exchange account scope');
   const { proposal } = approved;
   const commandId = `cmd_${shortHash(proposal.decisionId)}`;
   return Object.freeze({
     commandId,
+    venue: scope.venue,
+    accountId: scope.accountId,
     idempotencyKey: `pc-${shortHash(`order:${proposal.decisionId}`)}`,
     decisionId: proposal.decisionId,
     strategyId: proposal.signal.strategyId,

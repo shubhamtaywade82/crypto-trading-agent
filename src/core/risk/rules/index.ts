@@ -12,6 +12,12 @@ const BUDGET_TOLERANCE = 1.02;
 export const TradingHaltRule = rule('trading-halt', (_p, ctx) =>
   ctx.haltReason ? block('trading-halt', 'TRADING_HALTED', ctx.haltReason) : null);
 
+/** An open position this process did not open is not ours to trade around, so the account is not ours to trade. */
+export const ForeignPositionRule = rule('foreign-position', (_p, ctx) =>
+  ctx.foreignPositionSymbols.length > 0
+    ? block('foreign-position', 'FOREIGN_POSITION', `positions this process does not own are open (${ctx.foreignPositionSymbols.join(', ')}); entries are refused until they are closed`)
+    : null);
+
 export const MarketDataFreshnessRule = rule('market-data-freshness', (_p, { market, limits }) => {
   if (!Number.isFinite(market.markPrice) || market.markPrice <= 0) return block('market-data-freshness', 'MARK_INVALID', `mark price ${market.markPrice} is not usable`);
   // Positive: the mark predates the bar close. Negative: it was read after it, which is normal in real time (the bar
@@ -103,11 +109,18 @@ export const UnprotectedPositionRule = rule('unprotected-position', (_p, { portf
   return bare.length > 0 ? warn('unprotected-position', 'POSITION_WITHOUT_STOP', `the venue reports no stop for: ${bare.join(', ')}`) : null;
 });
 
-/** The standing order. Halt and data checks first so their findings lead the report; the order does not change the verdict. */
+/** The venue keeps one perpetual slot per symbol. Two open rows for one symbol would make protection and exits ambiguous. */
+export const PositionIdentityRule = rule('position-identity', (p, { portfolio }) => {
+  const rows = portfolio.positions.filter((position) => position.symbol === p.symbol).length;
+  return rows > 1 ? block('position-identity', 'AMBIGUOUS_POSITION', `${rows} open rows for ${p.symbol}; one slot per symbol is required`) : null;
+});
+
+/** The standing order. Halt and ownership checks first so their findings lead the report; the order does not change the verdict. */
 export function defaultRiskRules(): RiskRule[] {
   return [
-    TradingHaltRule, MarketDataFreshnessRule, SymbolAllowlistRule, DuplicateDecisionRule, ExistingPositionRule,
-    MaxPositionCountRule, StopLossValidityRule, MinRewardRiskRule, MaxLeverageRule, MinNotionalRule, RiskBudgetRule,
-    MarginRule, MaxGrossExposureRule, DailyLossLimitRule, PortfolioDrawdownRule, LossStreakRule, UnprotectedPositionRule,
+    TradingHaltRule, ForeignPositionRule, MarketDataFreshnessRule, SymbolAllowlistRule, DuplicateDecisionRule, ExistingPositionRule,
+    PositionIdentityRule, MaxPositionCountRule, StopLossValidityRule, MinRewardRiskRule, MaxLeverageRule, MinNotionalRule,
+    RiskBudgetRule, MarginRule, MaxGrossExposureRule, DailyLossLimitRule, PortfolioDrawdownRule, LossStreakRule,
+    UnprotectedPositionRule,
   ];
 }

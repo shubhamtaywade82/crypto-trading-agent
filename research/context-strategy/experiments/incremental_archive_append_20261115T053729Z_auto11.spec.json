@@ -1,0 +1,94 @@
+{
+  "schema_version": "1.0.0",
+  "experiment_id": "INCREMENTAL_ARCHIVE_APPEND_20261115T053729Z_AUTO11",
+  "run_id": "context-strategy-20261115T053729Z-auto11",
+  "type": "DATA_QUALITY_INCREMENTAL_ARCHIVE_APPEND",
+  "hypothesis": "Completed Binance USD-M candles can be appended contiguously after verified raw highwaters, with forming bars excluded and no timestamp/OHLCV defects.",
+  "source": {
+    "provider": "Binance USD-M public market-data connector",
+    "endpoint": "GET /fapi/v1/klines",
+    "sdk_used": false,
+    "direct_rest_dns": "BLOCKED",
+    "http_status_exposed": false
+  },
+  "symbols": [
+    "BTCUSDT",
+    "ETHUSDT",
+    "SOLUSDT",
+    "XRPUSDT"
+  ],
+  "intervals": [
+    "5m",
+    "15m",
+    "1h"
+  ],
+  "prior_highwater_open_utc": {
+    "5m": "2026-11-15T04:25:00Z",
+    "15m": "2026-11-15T04:15:00Z",
+    "1h": "2026-11-15T03:00:00Z"
+  },
+  "data_window_completed": {
+    "5m": {
+      "first": "2026-11-15T04:30:00Z",
+      "last": "2026-11-15T05:30:00Z",
+      "rows": 52
+    },
+    "15m": {
+      "first": "2026-11-15T04:30:00Z",
+      "last": "2026-11-15T05:15:00Z",
+      "rows": 16
+    },
+    "1h": {
+      "first": "2026-11-15T04:00:00Z",
+      "last": "2026-11-15T04:00:00Z",
+      "rows": 4
+    }
+  },
+  "rows_fetched": 84,
+  "completed_rows": 72,
+  "forming_rows_excluded": 12,
+  "rows_by_interval": {
+    "5m": 52,
+    "15m": 16,
+    "1h": 4,
+    "4h": 0
+  },
+  "rows_by_symbol": {
+    "BTCUSDT": 18,
+    "ETHUSDT": 18,
+    "SOLUSDT": 18,
+    "XRPUSDT": 18
+  },
+  "predeclared_checks": [
+    "No duplicate (symbol,interval,openTime) keys",
+    "Open times on interval grid",
+    "No missing interval from prior raw highwater",
+    "OHLC invariant low<=open/close<=high",
+    "Finite OHLCV and positive base/quote volume",
+    "closeTime matches interval and is completed",
+    "Same openTime set across all four symbols per interval"
+  ],
+  "acceptance": "All predeclared checks pass; append raw-only; do not advance canonical indexes while historical lineage blockers remain.",
+  "exclusions": [
+    "Forming candles",
+    "Any rows at or before prior raw highwater"
+  ],
+  "persistence": {
+    "branch": "research/raw-ohlcv-archive-20261108T1026Z",
+    "delta_path": "research-data/binance-usdm/delta/binance_usdm_delta_20261115T053729Z_auto11_5m15m1h_completed.jsonl",
+    "delta_sha256": "53f3732f48a77c80207ab459259c23de55d27239789220435dd526d48bb9f398",
+    "delta_blob_sha": "7f8a5f047b81198eab6da58a741d862e01a19c51",
+    "delta_manifest_path": "research-data/binance-usdm/delta/manifest-20261115T053729Z-auto11-5m15m1h.json",
+    "delta_manifest_sha256": "373ba272c8474fc89c28912c9f7c9534143d9a63e306a955e1ecaa263c9ab98e",
+    "archive_manifest_path": "research-data/binance-usdm/manifests/archive_manifest_20261115T053729Z_auto11.json",
+    "archive_manifest_sha256": "40f3ef82b13696fbf893df05ef35b8bae4d975583a004e0b1d610cddf2a817dd",
+    "archive_manifest_blob_sha": "5487dc3ecc518f503b448536c1a207e7aabd4f4c",
+    "readback_verified": true,
+    "canonical_indexes_updated": false
+  },
+  "strategy_experiment": false,
+  "oos_evaluation": false,
+  "seed": null,
+  "code_commit": null,
+  "validator": "Inline JavaScript in Functions V8 runtime; source not committed or hashed."
+}

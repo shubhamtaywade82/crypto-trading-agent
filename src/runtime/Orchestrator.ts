@@ -64,7 +64,7 @@ import { getSymbolRules } from '../binance/symbolRules.js';
 import { optionsConfigFromEnv, type OptionsConfig } from '../options/config.js';
 import { OptionsDesk } from '../options/OptionsDesk.js';
 import { BinanceClient } from '@nemesis-oss/binance-sdk';
-import { MicrostructureFeed, microConfigFromEnv, sdkMicroSource } from '../microstructure/MicrostructureFeed.js';
+import { MicrostructureFeed, banExpiryMs, microConfigFromEnv, sdkMicroSource } from '../microstructure/MicrostructureFeed.js';
 import { entrySide, frictionVerdict, type FrictionGateMode } from '../microstructure/FrictionGate.js';
 import {
   closedFlowBars, DIRECTIONAL_KLINE_LIMIT, DIRECTIONAL_REFRESH_MS, directionalConflict, directionalGateFromEnv,
@@ -411,12 +411,20 @@ export class Orchestrator extends EventEmitter {
     const entry = await this.advisor.ask(question, { positions, equity: account.equity });
     this.emit('log', entry);
   }
+  // Polling into a live IP ban makes Binance extend it; the websocket feeds keep running meanwhile
+  private restBannedUntil = 0;
   private async loop() {
+    if (Date.now() < this.restBannedUntil) return;
     try {
       this.emit('sync', true);
       if (await this.isVenueReady()) await this.runCycle();
     } catch (err) {
       this.logFailure('Loop error', err);
+      const banExpiry = banExpiryMs(err);
+      if (banExpiry) {
+        this.restBannedUntil = banExpiry;
+        this.log('SYSTEM', `Binance IP ban: REST polling paused until ${new Date(banExpiry).toISOString()}`, 'warn');
+      }
       if (!isRefusal(err)) this.hooks.onLoopCrash(err);
     } finally {
       this.noteVenue();

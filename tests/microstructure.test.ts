@@ -7,7 +7,7 @@ import stringWidth from 'string-width';
 import { LiquidityEventTracker, LiquidationTracker, type BucketSample } from '../src/microstructure/LiquidityEvents.js';
 import { LocalOrderBook, type DepthDiff } from '../src/microstructure/LocalOrderBook.js';
 import { DEFAULT_MICRO_OPTIONS, MicrostructureEngine, niceBucket, slippageBps } from '../src/microstructure/MicrostructureEngine.js';
-import { MicrostructureFeed, microConfigFromEnv, type MicroSource, type StreamHandle } from '../src/microstructure/MicrostructureFeed.js';
+import { MicrostructureFeed, banExpiryMs, microConfigFromEnv, type MicroSource, type StreamHandle } from '../src/microstructure/MicrostructureFeed.js';
 import { TradeFlow } from '../src/microstructure/TradeFlow.js';
 import { gauge, renderCell, renderLiquidityScreen } from '../src/ui/liquidityPanels.js';
 
@@ -429,4 +429,10 @@ test('liquidity screen renders actionable setup alignment, liquidations, and pre
   const text = lines.map(strip).join('\n');
   assert.match(text, /ALIGNMENT/);
   assert.match(text, /Microstructure gates execution friction & confirms HTF setup absorption before entry/);
+});
+
+test('should read the ban expiry from a Binance IP-ban error and ignore other errors', () => {
+  const ban = new Error('Way too many requests; IP(1.2.3.4) banned until 1794901199524. Please use the websocket');
+  assert.equal(banExpiryMs(ban), 1794901199524);
+  assert.equal(banExpiryMs(new Error('timeout')), null);
 });

@@ -60,7 +60,6 @@ interface Notice {
 
 const DAY_MS = 86_400_000;
 const REASON_KEY_CHARS = 80;
-const SETUP_COOLDOWN_MS = 15 * 60_000;
 // A risk block is a standing state, not an event: say it once, then again only if the reason changes or after this long
 const REFUSAL_REANNOUNCE_MS = 4 * 60 * 60_000;
 // An unprotected position is a standing danger: say so when it appears or changes, then remind rarely
@@ -83,6 +82,13 @@ const sumRefusals = (refusals: Record<string, number>): number => Object.values(
 const reasonKey = (reason: string): string => reason.replace(/[\d.]+/g, '#').slice(0, REASON_KEY_CHARS);
 
 // A funding hedge is short the perp
+/** Thrown non-Errors (plain objects) stringify to "[object Object]"; keep their fields. */
+function describeError(err: unknown): string {
+  if (err instanceof Error) return err.message;
+  if (typeof err !== 'object' || err === null) return String(err);
+  try { return JSON.stringify(err); } catch { return Object.prototype.toString.call(err); }
+}
+
 function fillKind(signal: Signal, positions: MarketContext['positions']): 'OPEN' | 'SCALE_IN' | 'FLIP' {
   const held = positions?.find((p) => p.symbol === signal.symbol && p.strategy === signal.agent);
   if (!held) return 'OPEN';
@@ -199,7 +205,7 @@ class Ops implements OpsHooks {
   };
   onLoopCrash = (err: unknown): void => {
     this.safely(() => {
-      const error = err instanceof Error ? err.message : String(err);
+      const error = describeError(err);
       this.audit('crash', { error });
       this.notify(systemNotice({ kind: 'LOOP_CRASH', error, at: this.now() }, 'CRITICAL', `SYSTEM:crash:${reasonKey(error)}`));
     });

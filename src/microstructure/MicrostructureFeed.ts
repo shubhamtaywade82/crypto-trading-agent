@@ -65,6 +65,12 @@ export interface MicroSource {
   depthSnapshot(symbol: string): Promise<DepthSnapshot>;
 }
 
+/** Epoch ms an IP ban lasts until, parsed from Binance's 418/429 text; null when the error is not a ban. */
+export function banExpiryMs(err: unknown): number | null {
+  const match = /banned until (\d{10,})/.exec(err instanceof Error ? err.message : String(err));
+  return match ? Number(match[1]) : null;
+}
+
 /** USD-M streams over binance-sdk's pooled WS platform, snapshots from `/fapi/v1/depth?limit=1000`. */
 export const sdkMicroSource = (client: BinanceClient): MicroSource => ({
   subscribe: (stream) => client.ws.usdm.subscribe(stream) as unknown as Promise<StreamHandle>,
@@ -166,6 +172,11 @@ export class MicrostructureFeed {
     this.deps.onSample?.(this.handle(), events);
   }
 
+  // Retrying into a live ban makes Binance extend it, so every symbol waits the ban out together
+  private bannedUntil = 0;
+  private noteBan(err: unknown): void { this.bannedUntil = Math.max(this.bannedUntil, banExpiryMs(err) ?? 0); }
+  private banRemainingMs(): number { return Math.max(0, this.bannedUntil - Date.now()); }
+
   /** Drops the symbol's book and rebuilds it from a snapshot taken while diffs buffer. Single-flight per symbol. */
   async resync(symbol: string, reason: string): Promise<void> {
     const engine = this.engines.get(symbol);
@@ -174,7 +185,7 @@ export class MicrostructureFeed {
     engine.invalidate(reason);
     try {
       for (let attempt = 1; !this.stopped; attempt += 1) {
-        await new Promise((r) => setTimeout(r, attempt === 1 ? (this.deps.snapshotDelayMs ?? 250) : Math.min(30_000, 250 * 2 ** attempt)));
+        await new Promise((r) => setTimeout(r, Math.max(this.banRemainingMs(), attempt === 1 ? (this.deps.snapshotDelayMs ?? 250) : Math.min(30_000, 250 * 2 ** attempt))));
         try {
           if (engine.onSnapshot(await this.deps.source.depthSnapshot(symbol)) === 'applied' && engine.book.status !== 'RESYNC_REQUIRED') {
             if (this.snapshotErrors.delete(symbol)) this.deps.log('info', `${symbol} order book recovered`);
@@ -183,6 +194,7 @@ export class MicrostructureFeed {
           engine.invalidate('snapshot did not join the diff stream');
         } catch (err) {
           const text = (err as Error).message;
+          this.noteBan(err);
           if (this.snapshotErrors.get(symbol) !== text) this.deps.log('warn', `${symbol} depth snapshot failed, retrying with backoff: ${text}`);
           this.snapshotErrors.set(symbol, text);
           engine.invalidate(`snapshot failed: ${text}`);

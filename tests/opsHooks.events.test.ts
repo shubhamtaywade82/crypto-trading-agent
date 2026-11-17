@@ -249,6 +249,12 @@ test('should raise CRITICAL alerts for a loop crash and for kill-switch changes'
   assert.deepEqual(audits.map((a) => a.type), ['crash', 'killswitch', 'killswitch']);
 });
 
+test('should keep fields of a thrown non-Error in the crash audit', () => {
+  const { ops, audits } = harness();
+  ops.onLoopCrash({ code: -1003, msg: 'rate limited' });
+  assert.match(String(audits[0].payload?.error), /rate limited/);
+});
+
 test('should send every TRADE alert audibly, never silent', async () => {
   const bodies: Array<{ disable_notification: boolean }> = [];
   const fetchImpl = (async (_url: string, init: { body: string }) => {

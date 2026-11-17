@@ -6,6 +6,7 @@ import type { Candle } from '../types.js';
 import type { MarketState } from '../market/types.js';
 import { loadFleetState, saveFleetPosition, removeFleetPosition } from './FleetStateStore.js';
 import type { FleetTradeEvent } from './FleetTelegram.js';
+import { createFleetEntryGate, type EntryGate } from './EntryGate.js';
 
 export interface SymbolWorkerConfig {
   symbol: string;
@@ -62,12 +63,17 @@ export class SymbolTraderWorker {
   private currentSl: number | null = null;
   private currentTp: number | null = null;
   private breakEvenMoved = false;
+  private readonly gate: EntryGate;
+  /** Epoch ms of the last live trade tick the runner delivered. Recorded before any early return, so a flat worker counts as fed. */
+  private lastLiveTickAt = 0;
 
   constructor(
     private readonly config: SymbolWorkerConfig,
     llm: FleetLlmService,
+    gate?: EntryGate,
   ) {
     this.llm = llm;
+    this.gate = gate ?? createFleetEntryGate(config.symbol);
     this.client = new PaperExchangeClient(config.paperExchangeUrl, config.accountId, {
       apiKey: config.apiKey,
       ...(config.lease ? { lease: config.lease } : {}),
@@ -122,6 +128,7 @@ export class SymbolTraderWorker {
       } else {
         this.status.account = acct;
       }
+      if (this.status.account) this.gate.observeEquity(this.status.account.equity, Date.now());
 
       const positions = await this.client.getPositions();
       const pos = positions.find((p) => p.symbol === this.config.symbol && p.netQuantity > 0);
@@ -143,6 +150,7 @@ export class SymbolTraderWorker {
   }
 
   async onLiveTick(price: number): Promise<void> {
+    this.lastLiveTickAt = Date.now();
     const pos = this.status.activePosition;
     if (!pos) return;
 
@@ -197,7 +205,19 @@ export class SymbolTraderWorker {
       return;
     }
 
-    void this.executeEntry(rec, markPrice);
+    // The entry gate: the repo's circuit breaker, the operator kill switch and feed freshness. Exits are never gated.
+    const gate = this.gate.decide({
+      now: Date.now(),
+      equity: this.status.account?.equity ?? null,
+      lastLiveTickAt: this.lastLiveTickAt,
+    });
+    if (!gate.allowed) {
+      this.status.state = 'IDLE';
+      this.status.lastDecision = `GOVERNOR REFUSED: ${gate.reasons.join('; ')}`;
+      return;
+    }
+
+    void this.executeEntry(rec, markPrice, gate.riskMultiplier);
   }
 
   private validateRisk(rec: LlmTradeRecommendation, markPrice: number): { ok: boolean; reason?: string } {
@@ -244,10 +264,15 @@ export class SymbolTraderWorker {
     });
   }
 
-  private async executeEntry(rec: LlmTradeRecommendation, markPrice: number): Promise<void> {
+  private async executeEntry(rec: LlmTradeRecommendation, markPrice: number, riskMultiplier = 1): Promise<void> {
     // The only entry submission: refused while paused, even if evaluate() were ever changed to reach it
     if (!this.config.entriesEnabled) return;
-    const quantity = fleetEntryQuantity(this.config, markPrice, Math.abs(markPrice - rec.stopLoss));
+    // The gate scales the risk budget down in CAUTION and REDUCED; the margin cap is unchanged
+    const quantity = fleetEntryQuantity(
+      { ...this.config, riskPerTradePct: this.config.riskPerTradePct * riskMultiplier },
+      markPrice,
+      Math.abs(markPrice - rec.stopLoss),
+    );
     if (!(quantity > 0)) return;
     const side = rec.action === 'ENTER_LONG' ? 'buy' : 'sell';
     this.status.lastDecision = `${rec.action} @ ${markPrice} | SL: ${rec.stopLoss} | TP: ${rec.takeProfit} (${rec.reason})`;
@@ -421,6 +446,7 @@ export class SymbolTraderWorker {
         entryPrice: pos.averagePrice,
         pnl,
       });
+      this.gate.recordExit(pnl, Date.now());
       this.currentSl = null;
       this.currentTp = null;
       this.breakEvenMoved = false;

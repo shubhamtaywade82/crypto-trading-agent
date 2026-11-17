@@ -434,5 +434,6 @@ test('liquidity screen renders actionable setup alignment, liquidations, and pre
 test('should read the ban expiry from a Binance IP-ban error and ignore other errors', () => {
   const ban = new Error('Way too many requests; IP(1.2.3.4) banned until 1794901199524. Please use the websocket');
   assert.equal(banExpiryMs(ban), 1794901199524);
+  assert.equal(banExpiryMs({ msg: 'IP(1.2.3.4) banned until 1794901199524.' }), 1794901199524); // SDK errors can be plain objects
   assert.equal(banExpiryMs(new Error('timeout')), null);
 });

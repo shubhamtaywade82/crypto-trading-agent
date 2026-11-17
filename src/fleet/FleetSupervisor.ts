@@ -221,6 +221,8 @@ export class FleetSupervisor extends EventEmitter {
         label: `embedded fleet pid ${process.pid} ${symKey}`,
         ttlSeconds: DEFAULT_LEASE_TTL_SECONDS,
         log: (message) => this.log(message, 'warn'),
+        // A lapse (venue stalled past the TTL) is recoverable here: take the lease again rather than parking the worker until restart
+        onLost: () => void this.holdLease(symbol, keeper),
       });
       this.leases.push(keeper);
       void this.holdLease(symbol, keeper);

@@ -2,6 +2,7 @@ import { appendFileSync, mkdirSync } from 'node:fs';
 import path from 'node:path';
 import type { BinanceClient } from '@nemesis-oss/binance-sdk';
 import { z } from 'zod';
+import { errorText } from '../binance/remoteOrders.js';
 import type { LiquidityEvent } from './LiquidityEvents.js';
 import { DEFAULT_MICRO_OPTIONS, MicrostructureEngine, type MicroOptions, type MicroView } from './MicrostructureEngine.js';
 import type { DepthDiff, DepthSnapshot } from './LocalOrderBook.js';
@@ -67,7 +68,7 @@ export interface MicroSource {
 
 /** Epoch ms an IP ban lasts until, parsed from Binance's 418/429 text; null when the error is not a ban. */
 export function banExpiryMs(err: unknown): number | null {
-  const match = /banned until (\d{10,})/.exec(err instanceof Error ? err.message : String(err));
+  const match = /banned until (\d{10,})/.exec(errorText(err));
   return match ? Number(match[1]) : null;
 }
 

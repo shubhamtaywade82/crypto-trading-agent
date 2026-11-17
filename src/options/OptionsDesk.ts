@@ -2,6 +2,7 @@ import { BinanceClient } from '@nemesis-oss/binance-sdk';
 import type { OptionsConfig } from './config.js';
 import { OptionChainService, sdkOptionsSource } from './OptionChainService.js';
 import { OptionsBuyingEngine, type HaltSwitch, type LogLevel, type OptionVetoer, type UnderlyingStatus } from './OptionsBuyingEngine.js';
+import { banExpiryMs } from '../microstructure/MicrostructureFeed.js';
 import { OptionsJournal, OptionsStateStore } from './stateStore.js';
 import { SdkUnderlyingContextSource, sdkKlineReader } from './UnderlyingContext.js';
 import { LocalOptionsPaperVenue, MonitorOnlyVenue, PaperExchangeOptionsVenue, type OptionsVenue } from './venues.js';
@@ -100,6 +101,8 @@ export class OptionsDesk {
   private equity: number | null = null;
   private lastError: string | null = null;
   private starting: Promise<void> | null = null;
+  // Polling into a live IP ban makes Binance extend it
+  private bannedUntil = 0;
 
   constructor(private readonly deps: OptionsDeskDeps) {}
 
@@ -109,6 +112,7 @@ export class OptionsDesk {
 
   /** Starts the engine if it is not running yet, otherwise runs one cycle. Never throws. */
   async tick(): Promise<void> {
+    if (Date.now() < this.bannedUntil) return;
     try {
       if (!this.engine) {
         await this.start();
@@ -161,6 +165,12 @@ export class OptionsDesk {
   }
 
   private fail(err: unknown): void {
+    const banExpiry = banExpiryMs(err);
+    if (banExpiry) {
+      this.bannedUntil = banExpiry;
+      this.deps.log('warn', `Binance IP ban: paused until ${new Date(banExpiry).toISOString()}`);
+      return;
+    }
     const text = err instanceof Error ? err.message : String(err);
     if (text !== this.lastError) this.deps.log('error', `${this.engine ? 'cycle failed' : 'start failed, retrying next tick'}: ${text}`);
     this.lastError = text;

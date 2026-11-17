@@ -117,3 +117,16 @@ test('the positions column shows the options book under futures without changing
     assert.match(text, /HALT daily loss/);
   }
 });
+
+test('desk stops polling Binance while an IP ban is live', async () => {
+  let builds = 0;
+  const banUntil = Date.now() + 600_000;
+  const { desk, logs } = deskWith(async () => {
+    builds += 1;
+    throw new Error(`Way too many requests; IP(1.2.3.4) banned until ${banUntil}.`);
+  });
+  await desk.tick();
+  await desk.tick();
+  assert.equal(builds, 1);
+  assert.match(logs[0]![1], /IP ban: paused until/);
+});

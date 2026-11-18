@@ -6,6 +6,7 @@ import path from 'node:path';
 import { test } from 'node:test';
 import { fleetEntryQuantity, SymbolTraderWorker } from '../src/fleet/SymbolTraderWorker.js';
 import type { FleetLlmService } from '../src/fleet/FleetLlmService.js';
+import type { EntryGate } from '../src/fleet/EntryGate.js';
 import type { FleetTradeEvent } from '../src/fleet/FleetTelegram.js';
 import type { Candle } from '../src/types.js';
 
@@ -148,6 +149,14 @@ const RECOMMENDATION = {
 
 const llmStub = { analyze: async () => RECOMMENDATION } as unknown as FleetLlmService;
 
+// These tests prove the worker's fills and trade events. The gate itself is covered by fleetEntryGate.test.ts, so entries are
+// permitted here and the default gate (which reads the repo's data directory) is never used.
+const permitAll: EntryGate = {
+  decide: () => ({ allowed: true, riskMultiplier: 1, circuit: 'NORMAL', reasons: ['test gate'] }),
+  observeEquity: () => undefined,
+  recordExit: () => undefined,
+};
+
 const waitFor = async (predicate: () => boolean, timeoutMs = 5_000): Promise<void> => {
   const deadline = Date.now() + timeoutMs;
   while (!predicate()) {
@@ -176,6 +185,7 @@ test('a worker emits ENTRY, BREAK_EVEN and EXIT trade events across a full posit
         onTradeEvent: (event) => events.push(event),
       },
       llmStub,
+      permitAll,
     );
 
     await worker.evaluate(EVALUATION);
@@ -261,6 +271,7 @@ test('shadow mode never emits trade events (no order, no notification)', async (
         onTradeEvent: (event) => events.push(event),
       },
       llmStub,
+      permitAll,
     );
     await worker.evaluate(EVALUATION);
     assert.equal(events.length, 0, 'a shadow decision is not a trade event');
@@ -293,6 +304,7 @@ test('a throwing notification sink never breaks trading', async () => {
         },
       },
       llmStub,
+      permitAll,
     );
     await worker.evaluate(EVALUATION);
     await waitFor(() => {
@@ -315,4 +327,80 @@ test('fleet entry size is the smaller of the margin notional and the risk budget
   assert.equal(fleetEntryQuantity(cfg, 100, 5), 2, 'risk cap binds: 10 / 5');
   assert.equal(fleetEntryQuantity(cfg, 100, 0.05), 98, 'margin cap binds on a very tight stop');
   assert.equal(fleetEntryQuantity(cfg, 100, 0), 0, 'no stop distance, no entry');
+});
+
+test('a refused gate sends no entry order, and the decision says why', async () => {
+  const snapshot = snapshotState();
+  clearState();
+  const exchange = await startFakeExchange();
+  const refused: EntryGate = {
+    decide: () => ({ allowed: false, riskMultiplier: 0, circuit: 'HALTED', reasons: ['circuit HALTED: test'] }),
+    observeEquity: () => undefined,
+    recordExit: () => undefined,
+  };
+  try {
+    const worker = new SymbolTraderWorker(
+      {
+        symbol: 'TESTUSDT',
+        accountId: 'crypto-fleet-test',
+        paperExchangeUrl: exchange.url,
+        apiKey: 'test-key',
+        marginPerPosition: 1000,
+        leverage: 10,
+        riskPerTradePct: 1,
+        entriesEnabled: true,
+        modelTag: 'qwen3.5:2b',
+      },
+      llmStub,
+      refused,
+    );
+    await worker.evaluate(EVALUATION);
+    assert.equal(exchange.orders.length, 0, 'no order left the worker');
+    assert.equal(worker.getStatus().state, 'IDLE');
+    assert.equal(worker.getStatus().lastDecision, 'GOVERNOR REFUSED: circuit HALTED: test');
+  } finally {
+    await exchange.close();
+    restoreState(snapshot);
+  }
+});
+
+test('exits are never gated: a position closes at take-profit after the gate starts refusing entries', async () => {
+  const snapshot = snapshotState();
+  clearState();
+  const exchange = await startFakeExchange();
+  let entriesOpen = true;
+  const gate: EntryGate = {
+    decide: () => (entriesOpen
+      ? { allowed: true, riskMultiplier: 1, circuit: 'NORMAL', reasons: ['open'] }
+      : { allowed: false, riskMultiplier: 0, circuit: 'HALTED', reasons: ['closed for the test'] }),
+    observeEquity: () => undefined,
+    recordExit: () => undefined,
+  };
+  try {
+    const worker = new SymbolTraderWorker(
+      {
+        symbol: 'TESTUSDT',
+        accountId: 'crypto-fleet-test',
+        paperExchangeUrl: exchange.url,
+        apiKey: 'test-key',
+        marginPerPosition: 1000,
+        leverage: 10,
+        riskPerTradePct: 1,
+        entriesEnabled: true,
+        modelTag: 'qwen3.5:2b',
+      },
+      llmStub,
+      gate,
+    );
+    await worker.evaluate(EVALUATION);
+    await waitFor(() => worker.getStatus().state === 'IN_POSITION' && worker.getStatus().activePosition !== null);
+    entriesOpen = false;
+    await worker.onLiveTick(111);
+    await waitFor(() => exchange.orders.length === 2);
+    assert.equal(exchange.orders[1]!.reduceOnly, true, 'the take-profit exit still went out');
+    assert.equal(worker.getStatus().state, 'IDLE');
+  } finally {
+    await exchange.close();
+    restoreState(snapshot);
+  }
 });

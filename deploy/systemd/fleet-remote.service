@@ -1,0 +1,22 @@
+# Template for the LLM fleet on the remote paper_exchange broker. Copy it, replace the two /path/to placeholders, then
+# install it with systemctl. paper_exchange must already be running and reachable at PAPER_EXCHANGE_URL in the environment file,
+# and `npm` must be on this unit's PATH.
+#
+# Entries stay OFF after a restart: FLEET_ENTRIES is deliberately not set here. Arm them in the environment file, after checking
+# the operator halt (data/kill-switch.json) and the governor state (data/fleet-governor/). Exits are never gated.
+[Unit]
+Description=LLM trading fleet (remote paper_exchange broker)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/path/to/crypto-trading-agent
+EnvironmentFile=/path/to/crypto-trading-agent/.env
+ExecStart=/usr/bin/env npm run fleet
+Environment=NODE_OPTIONS=--max-old-space-size=512
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

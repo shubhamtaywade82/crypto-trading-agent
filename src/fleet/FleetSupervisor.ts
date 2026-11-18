@@ -1,6 +1,11 @@
 import { EventEmitter } from 'node:events';
 import { USDMClient, WebsocketClient } from 'binance';
 import { MarketDataService, DEFAULT_MARKET_DATA_OPTIONS } from '../market/MarketDataService.js';
+import { KlineStreamCache, DEFAULT_KLINE_MAX_SILENCE_MS } from '../market/KlineStreamCache.js';
+import { KlineStreamFeed } from '../market/KlineStreamFeed.js';
+import { KLINE_INTERVALS } from '../market/klineIntervals.js';
+import { guardUsdmClient } from '../core/adapters/binance/restGuard.js';
+import { usdmWsRouteBases } from '../binance/wsRoutes.js';
 import { MarketStateBuilder } from '../market/MarketStateBuilder.js';
 import { FleetLlmService } from './FleetLlmService.js';
 import { SymbolTraderWorker, type WorkerStatus } from './SymbolTraderWorker.js';
@@ -97,6 +102,7 @@ export class FleetSupervisor extends EventEmitter {
   private readonly leases: PaperExchangeLeaseKeeper[] = [];
   private futuresClient: USDMClient | null = null;
   private marketData: MarketDataService | null = null;
+  private klineFeed: KlineStreamFeed | null = null;
   private marketStateBuilder = new MarketStateBuilder();
   private ws: FleetWebSocket | null = null;
   private evalTimer: NodeJS.Timeout | null = null;
@@ -201,11 +207,23 @@ export class FleetSupervisor extends EventEmitter {
       : 'Telegram trade notifications OFF (FLEET_TELEGRAM=off)';
     this.log(`embedded multi-model fleet online — models: ${notes}; entries ${fleetConfig.entriesEnabled ? 'ARMED (risk-gated)' : 'OFF (shadow, R1)'}; ${telegramNote}`);
 
-    this.futuresClient = new USDMClient({
+    this.futuresClient = guardUsdmClient(new USDMClient({
       api_key: config.binance.apiKey,
       api_secret: config.binance.apiSecret,
+    }));
+    const futuresClient = this.futuresClient;
+    const klineCache = new KlineStreamCache({ limit: DEFAULT_MARKET_DATA_OPTIONS.klineLimit, maxSilenceMs: DEFAULT_KLINE_MAX_SILENCE_MS });
+    this.marketData = new MarketDataService(futuresClient, DEFAULT_MARKET_DATA_OPTIONS, klineCache);
+    this.klineFeed = new KlineStreamFeed({
+      marketBase: usdmWsRouteBases('live').market,
+      symbols: [...ALL_SYMBOLS],
+      intervals: KLINE_INTERVALS,
+      limit: DEFAULT_MARKET_DATA_OPTIONS.klineLimit,
+      cache: klineCache,
+      backfill: (symbol, interval, limit) => futuresClient.getKlines({ symbol, interval, limit }),
+      log: (message, level) => this.log(`[kline feed] ${message}`, level),
     });
-    this.marketData = new MarketDataService(this.futuresClient, DEFAULT_MARKET_DATA_OPTIONS);
+    this.klineFeed.start();
 
     for (const symbol of FLEET_SYMBOLS) {
       const symKey = symbol.replace('USDT', '').toLowerCase();
@@ -355,6 +373,7 @@ export class FleetSupervisor extends EventEmitter {
     void Promise.allSettled(this.leases.map((lease) => lease.stop()));
     if (this.evalTimer) clearInterval(this.evalTimer);
     if (this.stateTimer) clearInterval(this.stateTimer);
+    this.klineFeed?.stop();
     try {
       this.ws?.closeAll();
     } catch {

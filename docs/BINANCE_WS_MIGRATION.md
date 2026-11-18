@@ -33,10 +33,11 @@ Key facts from the notice, all honored by the code:
 
 ## What was broken here
 
-Both WebSocket paths this repository's live mode used were dead after 2026-04-23:
+Both WebSocket paths this repository's live mode used were reported dead after 2026-04-23. Item 1 is contradicted by later measurements (see `docs/WS_ROUTE_MEASUREMENTS.md`). Item 2 has not been re-measured here:
 
-1. **Market data**: the `binance` npm package (v2.15.22) dials `wss://fstream.binance.com/ws/<symbol>@trade`.
-   `trade` is a *market* route channel, so the feed received nothing.
+1. **Market data** (disputed): the `binance` npm package (v2.15.22) dials `wss://fstream.binance.com/ws/<symbol>@trade`.
+   The legacy root still streams `@trade` in the 2026-11-17 measurement. The `@aggTrade` channel is the one that streams on
+   `/market`, and the legacy root is silent for it.
 2. **User data**: the same package's `subscribeUsdFuturesUserDataStream()` dials
    `wss://fstream.binance.com/ws/<listenKey>` — the retired private path, so entry-fill wakeups
    never arrived and the stream silently provided no value (entries fell back to 1-second REST

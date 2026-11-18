@@ -2,6 +2,12 @@ import type { USDMClient } from 'binance';
 import type { Candle } from '../types.js';
 import { config } from '../config.js';
 import type { DerivativesSnapshot, MarketDataSnapshot, NativeTimeframe } from './MarketDataTypes.js';
+import { NATIVE_TIMEFRAME_MS as TIMEFRAME_MS, KLINE_INTERVALS } from './klineIntervals.js';
+
+/** Closed candles from a kline stream, or null when the caller must read REST. */
+export interface KlineSource {
+  candles(symbol: string, timeframe: NativeTimeframe, now: number): Candle[] | null;
+}
 
 type FuturesMarketClient = Pick<
   USDMClient,
@@ -36,16 +42,6 @@ interface Task {
   key: string;
   run: () => Promise<void>;
 }
-
-const TIMEFRAME_MS: Record<NativeTimeframe, number> = {
-  '1m': 60_000,
-  '5m': 5 * 60_000,
-  '15m': 15 * 60_000,
-  '1h': 60 * 60_000,
-  '4h': 4 * 60 * 60_000,
-};
-
-const KLINE_INTERVALS: NativeTimeframe[] = ['1m', '5m', '15m', '1h', '4h'];
 
 export const DEFAULT_MARKET_DATA_OPTIONS: MarketDataServiceOptions = {
   candleTtlMs: { ...config.marketDataV2.candleTtlMs },
@@ -194,7 +190,15 @@ export class MarketDataService {
   private readonly inFlight = new Map<string, Promise<void>>();
   private readonly failureBackoff = new Map<string, number>();
 
-  constructor(client: FuturesMarketClient, options: MarketDataServiceOptions = DEFAULT_MARKET_DATA_OPTIONS) {
+  /**
+   * `klines` is the WebSocket-maintained candle source. A series it serves costs no REST call; a null from it falls back
+   * to the TTL-driven REST path, so the service is correct with or without a live stream.
+   */
+  constructor(
+    client: FuturesMarketClient,
+    options: MarketDataServiceOptions = DEFAULT_MARKET_DATA_OPTIONS,
+    private readonly klines?: KlineSource,
+  ) {
     this.client = client;
     this.options = options;
     this.limiter = new RequestLimiter(options.maxConcurrency);
@@ -206,6 +210,11 @@ export class MarketDataService {
     for (const symbol of symbols) {
       for (const timeframe of KLINE_INTERVALS) {
         const key = this.cacheKey(symbol, timeframe);
+        const streamed = this.klines?.candles(symbol, timeframe, now) ?? null;
+        if (streamed !== null) {
+          this.candles.set(key, { fetchedAt: now, value: streamed });
+          continue;
+        }
         if (this.needsRefresh(key, this.options.candleTtlMs[timeframe], now)) {
           tasks.push({ key, run: () => this.refreshCandle(symbol, timeframe, now) });
         }

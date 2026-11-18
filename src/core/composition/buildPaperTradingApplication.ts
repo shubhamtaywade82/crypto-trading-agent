@@ -1,5 +1,6 @@
 import { existsSync } from 'node:fs';
 import { CachingMarketData, MeteredMarketData, RetryingMarketData } from '../adapters/decorators/marketData.js';
+import { isRestRefusal } from '../adapters/binance/restGuard.js';
 import { withExecutionLogging } from '../adapters/decorators/execution.js';
 import { BinanceMarketDataAdapter, binancePublicSource, createReadOnlyBinanceClient, type BinancePublicSource } from '../adapters/binance/BinanceMarketDataAdapter.js';
 import { OllamaAdvisorAdapter, ollamaTextClient } from '../adapters/ollama/OllamaAdvisorAdapter.js';
@@ -72,7 +73,12 @@ export function buildPaperTradingApplication(config: PaperCoreConfig, overrides:
 
   const strategies = buildStrategies(config.strategyIds, config.strategyParameters);
   const binance = new BinanceMarketDataAdapter(overrides.binanceSource ?? binancePublicSource(createReadOnlyBinanceClient(config.symbols)));
-  const metered = new MeteredMarketData(new RetryingMarketData(binance, { attempts: 3, backoffMs: 250 }));
+  // A rate limit or a local REST backoff is not retried: each retry is a request the venue is already refusing.
+  const metered = new MeteredMarketData(new RetryingMarketData(binance, {
+    attempts: 3,
+    backoffMs: 250,
+    shouldRetry: (error) => !isRestRefusal(error),
+  }));
   const marketData = new CachingMarketData(metered);
 
   const accountId = config.paperExchange.accountId;

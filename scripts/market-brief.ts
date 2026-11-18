@@ -13,6 +13,7 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { USDMClient } from 'binance';
+import { guardUsdmClient } from '../src/core/adapters/binance/restGuard.js';
 import { collectBriefMarketData } from '../src/brief/MarketBriefData.js';
 import { buildMarketBrief, DEFAULT_BRIEF_BUILD_OPTIONS } from '../src/brief/MarketBriefBuilder.js';
 import { renderBriefMarkdown } from '../src/brief/render.js';
@@ -30,7 +31,7 @@ async function main(): Promise<void> {
   const dataDir = arg('data-dir') ?? 'data/market';
   const json = arg('json') !== undefined;
 
-  const client = new USDMClient();
+  const client = guardUsdmClient(new USDMClient());
   const data = await collectBriefMarketData(symbol, client);
   const history = loadMinutes(dataDir, symbol);
 

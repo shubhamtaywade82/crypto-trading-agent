@@ -71,6 +71,7 @@ async function realEnv(): Promise<Env> {
         const response = await fetch(`${url}/api/positions`, { headers: { 'X-Account-Id': accountId, 'X-API-Key': apiKey } });
         if (!response.ok) throw new Error(`GET /api/positions failed: ${response.status}`);
         const rows = (await response.json()) as { symbol: string; net_quantity: string | number }[];
+        if (!Array.isArray(rows)) throw new Error(`GET /api/positions did not return a list: ${JSON.stringify(rows).slice(0, 200)}`);
         return rows.filter((row) => row.symbol === symbol && Number(row.net_quantity) === 0).length;
       },
     };

@@ -25,11 +25,20 @@ export class CachingMarketData implements MarketDataPort {
   }
 }
 
-/** Retries a failed read with exponential backoff. Reads are idempotent; this decorator exists for nothing else. */
+/**
+ * Retries a failed read with exponential backoff. Reads are idempotent; this decorator exists for nothing else.
+ * `shouldRetry` stops the retries on errors that retrying cannot fix: a venue rate limit or a local REST backoff. Retrying
+ * those only extends the ban the venue is enforcing.
+ */
 export class RetryingMarketData implements MarketDataPort {
   constructor(
     private readonly inner: MarketDataPort,
-    private readonly options: { attempts: number; backoffMs: number; sleep?: (ms: number) => Promise<void> },
+    private readonly options: {
+      attempts: number;
+      backoffMs: number;
+      sleep?: (ms: number) => Promise<void>;
+      shouldRetry?: (error: unknown) => boolean;
+    },
   ) {
     if (options.attempts < 1) throw new Error('attempts must be at least 1');
   }
@@ -43,6 +52,7 @@ export class RetryingMarketData implements MarketDataPort {
         return await this.inner.getSnapshot(request);
       } catch (error) {
         lastError = error;
+        if (this.options.shouldRetry && !this.options.shouldRetry(error)) break;
       }
     }
     throw lastError;

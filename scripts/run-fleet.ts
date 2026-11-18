@@ -1,5 +1,10 @@
 import { USDMClient, WebsocketClient } from 'binance';
 import { MarketDataService, DEFAULT_MARKET_DATA_OPTIONS } from '../src/market/MarketDataService.js';
+import { KlineStreamCache, DEFAULT_KLINE_MAX_SILENCE_MS } from '../src/market/KlineStreamCache.js';
+import { KlineStreamFeed } from '../src/market/KlineStreamFeed.js';
+import { KLINE_INTERVALS } from '../src/market/klineIntervals.js';
+import { guardUsdmClient } from '../src/core/adapters/binance/restGuard.js';
+import { usdmWsRouteBases } from '../src/binance/wsRoutes.js';
 import { MarketStateBuilder } from '../src/market/MarketStateBuilder.js';
 import { FleetLlmService } from '../src/fleet/FleetLlmService.js';
 import { SymbolTraderWorker } from '../src/fleet/SymbolTraderWorker.js';
@@ -78,12 +83,23 @@ async function main() {
   // and routed around its alert pipeline. FLEET_TELEGRAM=off is the opt-out.
   console.log(`  Telegram: ${fleetTelegramEnabled(process.env) ? 'trade notifications ON ([FLEET] buy/sell/exit cards per worker)' : 'OFF (FLEET_TELEGRAM=off)'}`);
 
-  const futuresClient = new USDMClient({
+  // Every REST call goes through the process-wide rate guard. Candles come from the kline stream once it has backfilled.
+  const futuresClient = guardUsdmClient(new USDMClient({
     api_key: config.binance.apiKey,
     api_secret: config.binance.apiSecret,
-  });
+  }));
 
-  const marketData = new MarketDataService(futuresClient, DEFAULT_MARKET_DATA_OPTIONS);
+  const klineCache = new KlineStreamCache({ limit: DEFAULT_MARKET_DATA_OPTIONS.klineLimit, maxSilenceMs: DEFAULT_KLINE_MAX_SILENCE_MS });
+  const marketData = new MarketDataService(futuresClient, DEFAULT_MARKET_DATA_OPTIONS, klineCache);
+  const klineFeed = new KlineStreamFeed({
+    marketBase: usdmWsRouteBases('live').market,
+    symbols: ALL_SYMBOLS,
+    intervals: KLINE_INTERVALS,
+    limit: DEFAULT_MARKET_DATA_OPTIONS.klineLimit,
+    cache: klineCache,
+    backfill: (symbol, interval, limit) => futuresClient.getKlines({ symbol, interval, limit }),
+    log: (message, level) => console[level === 'warn' ? 'warn' : 'log'](`[kline feed] ${message}`),
+  });
   const marketStateBuilder = new MarketStateBuilder();
   // One service per worker so per-symbol model routing stays local to its worker. The service is
   // model-agnostic: any Ollama tag works, the prompt/validation contract is identical for every model.
@@ -191,6 +207,7 @@ async function main() {
   for (const sym of ALL_SYMBOLS) {
     ws.subscribeTrades(sym, 'usdm');
   }
+  klineFeed.start();
 
   const renderInterval = setInterval(triggerRender, 1000);
 
@@ -199,12 +216,14 @@ async function main() {
   process.on('SIGINT', () => {
     running = false;
     clearInterval(renderInterval);
+    klineFeed.stop();
     ws.closeAll();
     void Promise.allSettled(leases.map((lease) => lease.stop()));
   });
   process.on('SIGTERM', () => {
     running = false;
     clearInterval(renderInterval);
+    klineFeed.stop();
     ws.closeAll();
     void Promise.allSettled(leases.map((lease) => lease.stop()));
   });

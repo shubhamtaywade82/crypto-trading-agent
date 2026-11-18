@@ -28,6 +28,8 @@ export function probeRoutes(symbol: string): ProbeRoute[] {
     { name: '/market/stream @aggTrade', url: `${ROOT}/market/stream?streams=${s}@aggTrade` },
     { name: '/market/ws @aggTrade', url: `${ROOT}/market/ws/${s}@aggTrade` },
     { name: '/market/stream @markPrice@1s', url: `${ROOT}/market/stream?streams=${s}@markPrice@1s` },
+    { name: '/market/stream @kline_1m', url: `${ROOT}/market/stream?streams=${s}@kline_1m` },
+    { name: 'legacy @kline_1m', url: `${ROOT}/ws/${s}@kline_1m` },
   ];
 }
 

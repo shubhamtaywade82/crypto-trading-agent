@@ -236,7 +236,11 @@ export class Orchestrator extends EventEmitter {
       .catch((err: Error) => this.log('SYSTEM', `Symbol precision load failed (${err.message}); using 2dp defaults`, 'warn'))
       .then(() => this.initVenue()).finally(runLoop);
     this.timer = setInterval(runLoop, LOOP_INTERVAL_MS);
-    this.stopWs = this.binance.startRealtimeStream(config.symbols, (sym, price) => this.handleRealtimeTick(sym, price));
+    this.stopWs = this.binance.startRealtimeStream(
+      config.symbols,
+      (sym, price) => this.handleRealtimeTick(sym, price),
+      (message, level) => this.log('SYSTEM', `[kline feed] ${message}`, level),
+    );
     this.hooks.start(this.binance);
     this.startOptionsDesk();
     this.startMicrostructure();

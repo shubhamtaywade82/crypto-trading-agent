@@ -13,12 +13,16 @@ import { RemoteStore } from './remoteState.js';
 import { roundPrice, roundQty, rulesFromExchangeInfo, setSymbolRules } from './symbolRules.js';
 import type { AgentId, Candle, Position, Side, TradeRecord, WsStatus } from '../types.js';
 import type { OhlcvInput } from '../market/rejection/types.js';
-import { MarketDataService } from '../market/MarketDataService.js';
+import { MarketDataService, DEFAULT_MARKET_DATA_OPTIONS } from '../market/MarketDataService.js';
 import type { MarketDataSnapshot } from '../market/MarketDataTypes.js';
+import { KlineStreamCache, DEFAULT_KLINE_MAX_SILENCE_MS } from '../market/KlineStreamCache.js';
+import { KlineStreamFeed } from '../market/KlineStreamFeed.js';
+import { KLINE_INTERVALS } from '../market/klineIntervals.js';
+import { guardUsdmClient } from '../core/adapters/binance/restGuard.js';
 import { LiveBook, LiveStateStore, type LiveManagerMode, type LiveOrderPort } from './liveBook.js';
 import { LiveEntryTracker, LIVE_ENTRY_POLL_MS, liveEntryClientOrderId, orderSideOf, venueRejected, type LiveEntryPort } from './liveEntry.js';
 import { UserDataStream, type ListenKeyPort } from './userDataStream.js';
-import { usdmTradeWsUrl } from './wsRoutes.js';
+import { usdmTradeWsUrl, usdmWsRouteBases } from './wsRoutes.js';
 import {
   ENTRY_ORDER_PREFIX, isAlreadyIsolated, isEntryOrder, isVenueRejection, parseOrderTradeUpdate, planStartupReconciliation,
   protectionClientOrderId, protectionOf, type OpenOrderView, type PositionProtection, type VenuePositionView,
@@ -162,6 +166,9 @@ export class BinanceService {
   private ws: WebsocketClient | null = null;
   private wsStatus: WsStatus = 'down';
   private readonly marketDataV2: MarketDataService;
+  /** Closed candles kept current from the /market kline stream; the REST path serves whatever it does not cover. */
+  private readonly klineCache: KlineStreamCache;
+  private klineFeed: KlineStreamFeed | null = null;
   private paperEngine?: PaperEngine;
   private liveStartEquity: number | null = null;
   private readonly lastTickAt = new Map<string, number>();
@@ -191,8 +198,9 @@ export class BinanceService {
     futures?: USDMClient,
     private readonly stateDir = 'data',
   ) {
-    this.futures = futures ?? new USDMClient({ api_key: config.binance.apiKey, api_secret: config.binance.apiSecret }, undefined, config.binance.testnet);
-    this.marketDataV2 = new MarketDataService(this.futures);
+    this.futures = guardUsdmClient(futures ?? new USDMClient({ api_key: config.binance.apiKey, api_secret: config.binance.apiSecret }, undefined, config.binance.testnet));
+    this.klineCache = new KlineStreamCache({ limit: DEFAULT_MARKET_DATA_OPTIONS.klineLimit, maxSilenceMs: DEFAULT_KLINE_MAX_SILENCE_MS });
+    this.marketDataV2 = new MarketDataService(this.futures, DEFAULT_MARKET_DATA_OPTIONS, this.klineCache);
   }
 
   private get paper(): PaperEngine {
@@ -207,7 +215,11 @@ export class BinanceService {
     return (this.ownerStore ??= new LiveOwners(path.join(this.stateDir, 'live-owners.json')));
   }
 
-  startRealtimeStream(symbols: string[], onTick: (symbol: string, price: number) => void): () => void {
+  startRealtimeStream(
+    symbols: string[],
+    onTick: (symbol: string, price: number) => void,
+    log: (message: string, level: 'info' | 'warn') => void = () => undefined,
+  ): () => void {
     const silent = { silly: () => {}, verbose: () => {}, info: () => {}, warning: () => {}, error: () => {} };
     // Binance's 2026-04-23 base-URL split is per channel. bookTicker answers on /public, markPrice on
     // /market — but @trade still only streams on the legacy path (probed 2026-11-03): a /market/ws/…
@@ -227,7 +239,27 @@ export class BinanceService {
       }
     });
     for (const sym of symbols) this.ws.subscribeTrades(sym, 'usdm');
-    return () => { this.ws?.closeAll(); this.ws = null; this.wsStatus = 'down'; };
+
+    // Kline candles for the market-data layer, on the /market route the route probe measured for kline_* streams.
+    this.klineFeed?.stop();
+    this.klineFeed = new KlineStreamFeed({
+      marketBase: usdmWsRouteBases(this.wsEnvironment()).market,
+      symbols,
+      intervals: KLINE_INTERVALS,
+      limit: DEFAULT_MARKET_DATA_OPTIONS.klineLimit,
+      cache: this.klineCache,
+      backfill: (symbol, interval, limit) => this.futures.getKlines({ symbol, interval, limit }),
+      log,
+    });
+    this.klineFeed.start();
+
+    return () => {
+      this.klineFeed?.stop();
+      this.klineFeed = null;
+      this.ws?.closeAll();
+      this.ws = null;
+      this.wsStatus = 'down';
+    };
   }
 
   /** Freshness of the feeds the safety gate reads; undefined timestamps mean never seen. */

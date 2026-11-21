@@ -218,12 +218,12 @@ export class ReplayService {
         const adjusted = cfg.learning
           ? raw.map((s) => ({ ...s, confidence: Math.min(1, s.confidence * confidenceMultiplier(s.agent, ledger, s.symbol)) }))
           : raw;
-        const flow = runCandidateFlow(adjusted, ctx.marketState ?? {});
+        const flow = runCandidateFlow(adjusted, ctx.marketState ?? {}, ctx.microstructure);
         reservedThisStep.clear();
         for (const signal of flow.signals) {
           const decisionId = `${signal.id}-${closeTime}`;
           const state = ctx.marketState?.[signal.symbol];
-          const evidence = decisionEvidence(signal, state, flow.intents.get(`${signal.symbol}:${signal.agent}`));
+          const evidence = decisionEvidence(signal, state, flow.intents.get(`${signal.symbol}:${signal.agent}`), ctx.microstructure?.[signal.symbol]);
           const decision = risk.gate(signal, ctx, { evidenceScore: evidence.score });
           const record = buildDecisionRecord({ decisionId, signal, state, decision, evidence, now: closeTime });
           if (!decision.approved) {

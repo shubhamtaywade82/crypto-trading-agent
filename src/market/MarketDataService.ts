@@ -201,11 +201,15 @@ export class MarketDataService {
     client: FuturesMarketClient,
     options: MarketDataServiceOptions = DEFAULT_MARKET_DATA_OPTIONS,
     private readonly klines?: KlineSource,
-    private readonly depthSource?: DepthSource,
+    private depthSource?: DepthSource | null,
   ) {
     this.client = client;
     this.options = options;
     this.limiter = new RequestLimiter(options.maxConcurrency);
+  }
+
+  setDepthSource(depthSource: DepthSource): void {
+    this.depthSource = depthSource;
   }
 
   async snapshot(symbols: string[], now = Date.now()): Promise<Record<string, MarketDataSnapshot>> {

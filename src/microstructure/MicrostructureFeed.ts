@@ -10,6 +10,7 @@ import type { FrictionGateMode } from './FrictionGate.js';
 import { nowNs, nsToMs, type TickSink } from '../marketdata/ticks/types.js';
 import { FileTickSink } from '../marketdata/ticks/FileTickSink.js';
 import { computeParityHash } from '../marketdata/ticks/parity.js';
+import { OrderBookDepthSource } from '../market/OrderBookDepthSource.js';
 
 const onOff = (fallback: 'on' | 'off') => z.enum(['off', 'on']).default(fallback);
 
@@ -27,11 +28,7 @@ export const MicroEnvSchema = z.object({
   MICRO_ENTRY_GATE: z.enum(['off', 'shadow', 'on']).default('on'),
 }).superRefine((env, ctx) => {
   if (env.MICRO_ENTRY_GATE !== 'off' && env.MICROSTRUCTURE === 'off') {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      path: ['MICRO_ENTRY_GATE'],
-      message: `MICRO_ENTRY_GATE=${env.MICRO_ENTRY_GATE} needs the order-book feed: set MICROSTRUCTURE=on, or MICRO_ENTRY_GATE=off to trade without a pre-trade cost check`,
-    });
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['MICRO_ENTRY_GATE'], message: `MICRO_ENTRY_GATE=${env.MICRO_ENTRY_GATE} needs the order-book feed: set MICROSTRUCTURE=on, or MICRO_ENTRY_GATE=off` });
   }
 });
 
@@ -127,10 +124,15 @@ export class MicrostructureFeed {
   private lastError: string | null = null;
   private stopped = false;
   private readonly now: () => number;
+  readonly depthSource = new OrderBookDepthSource();
 
   constructor(private readonly symbols: string[], private readonly deps: FeedDeps) {
     this.now = deps.now ?? Date.now;
-    for (const s of symbols) this.engines.set(s, new MicrostructureEngine(s, deps.config.options));
+    for (const s of symbols) {
+      const e = new MicrostructureEngine(s, deps.config.options);
+      this.engines.set(s, e);
+      this.depthSource.register(s, e.book);
+    }
     if (!deps.tickSink && deps.config.tickRecord) this.fileTickSink = new FileTickSink({ dir: deps.config.tickRecordDir, now: this.now });
   }
 
@@ -150,9 +152,7 @@ export class MicrostructureFeed {
     if (this.fileTickSink) void this.fileTickSink.close();
   }
 
-  engine(symbol: string): MicrostructureEngine | undefined {
-    return this.engines.get(symbol);
-  }
+  engine(symbol: string): MicrostructureEngine | undefined { return this.engines.get(symbol); }
 
   handle(): MicroFeedHandle {
     return {

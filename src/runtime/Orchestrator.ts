@@ -333,6 +333,7 @@ export class Orchestrator extends EventEmitter {
         }
       },
     });
+    this.binance.setDepthSource(this.microFeed.depthSource);
     void this.microFeed.start().catch((err: unknown) => this.log('SYSTEM', `MICRO start failed: ${errorText(err)}`, 'error'));
   }
 
@@ -552,7 +553,7 @@ export class Orchestrator extends EventEmitter {
       this.log(s.agent, `${s.symbol}: ${s.reason} (conf ${(adjusted.confidence * 100).toFixed(0)}%${mult !== 1 ? ` adj×${mult.toFixed(2)}` : ''})`, 'info');
     }
     // The canonical candidate pipeline (routing + fusion) — shared with the replay engine
-    const flow = runCandidateFlow(raw, ctx.marketState ?? {});
+    const flow = runCandidateFlow(raw, ctx.marketState ?? {}, ctx.microstructure);
     for (const g of flow.geometryDropped ?? []) this.log(g.agent as any, `DROPPED ${g.symbol}: degenerate geometry (planned RR ${g.rr === null ? 'n/a' : g.rr.toFixed(2)}${g.breakevenWinRate !== undefined ? `, needs ${(g.breakevenWinRate * 100).toFixed(0)}% win rate to break even after costs > ${(config.candidateMaxBreakevenWinRate * 100).toFixed(0)}%` : ` < ${config.candidateMinRr}`})`, 'info');
     for (const v of flow.routedOut) this.log(v.agent as any, `ROUTED OUT ${v.symbol}: ${v.agent} not allowed in ${v.regime}`, 'info');
     if (flow.fusionFiltered > 0) this.log('SYSTEM', `SignalFusion: ${flow.fusionFiltered} candidate(s) filtered by conflict resolution`, 'info');
@@ -575,7 +576,7 @@ export class Orchestrator extends EventEmitter {
       this.counters.decisions += 1;
       this.hooks.onSignal(signal);
       const decisionId = `${signal.id}-${Date.now()}`;
-      const evidence = decisionEvidence(signal, ctx.marketState?.[signal.symbol], this.fusionIntents.get(`${signal.symbol}:${signal.agent}`));
+      const evidence = decisionEvidence(signal, ctx.marketState?.[signal.symbol], this.fusionIntents.get(`${signal.symbol}:${signal.agent}`), ctx.microstructure?.[signal.symbol]);
       const decision = this.risk.gate(signal, ctx, { evidenceScore: evidence.score });
       this.hooks.onGate(signal, decision);
       // Decision lineage: what the market looked like, what was proposed, and what risk said — persisted before anything else happens

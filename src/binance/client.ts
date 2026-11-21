@@ -207,6 +207,10 @@ export class BinanceService {
     this.marketDataV2 = new MarketDataService(this.sdkMarket, DEFAULT_MARKET_DATA_OPTIONS, this.klineCache);
   }
 
+  setDepthSource(depthSource: import('../market/OrderBookDepthSource.js').DepthSource): void {
+    this.marketDataV2.setDepthSource(depthSource);
+  }
+
   private get paper(): PaperEngine {
     return (this.paperEngine ??= new PaperEngine());
   }

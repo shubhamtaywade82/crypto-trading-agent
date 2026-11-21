@@ -6,7 +6,6 @@ import { errorText } from '../binance/remoteOrders.js';
 import type { LiquidityEvent } from './LiquidityEvents.js';
 import { DEFAULT_MICRO_OPTIONS, MicrostructureEngine, type MicroOptions, type MicroView } from './MicrostructureEngine.js';
 import type { DepthDiff, DepthSnapshot } from './LocalOrderBook.js';
-import type { TickSink } from '../marketdata/ticks/types.js';
 import type { FrictionGateMode } from './FrictionGate.js';
 import { nowNs, nsToMs, type TickSink } from '../marketdata/ticks/types.js';
 import { FileTickSink } from '../marketdata/ticks/FileTickSink.js';

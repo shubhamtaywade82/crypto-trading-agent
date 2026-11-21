@@ -39,9 +39,9 @@ export class TickLogSink implements TickSink {
     this.writer(symbol)?.append('meta', data);
   }
 
-  ws(symbol: string, stream: string, data: unknown): void {
+  ws(symbol: string, stream: string, data: unknown, recvNs?: string): void {
     const writer = this.writer(symbol);
-    writer?.append('ws', data, stream);
+    writer?.append('ws', data, stream, recvNs);
     this.bump(symbol, stream);
   }
 

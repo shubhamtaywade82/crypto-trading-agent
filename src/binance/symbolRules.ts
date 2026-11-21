@@ -1,4 +1,16 @@
-import type { FuturesSymbolExchangeInfo } from 'binance';
+export interface ExchangeFilter {
+  filterType: string;
+  tickSize?: string | number;
+  stepSize?: string | number;
+  notional?: string | number;
+  minNotional?: string | number;
+}
+
+export interface FuturesSymbolExchangeInfo {
+  pricePrecision: number;
+  quantityPrecision: number;
+  filters: ExchangeFilter[];
+}
 
 export interface SymbolRules {
   pricePrecision: number;

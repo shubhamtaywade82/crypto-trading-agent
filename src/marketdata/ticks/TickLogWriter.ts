@@ -3,8 +3,13 @@ import { createReadStream, createWriteStream, existsSync, mkdirSync, readFileSyn
 import { appendFile, stat, unlink } from 'node:fs/promises';
 import path from 'node:path';
 import { pipeline } from 'node:stream/promises';
-import { createZstdCompress } from 'node:zlib';
+import * as zlib from 'node:zlib';
 import { nowNs, type TickEvent, type TickKind, type TickMeta } from './types.js';
+
+function createZstdStream(): import('node:stream').Transform {
+  const z = zlib as unknown as { createZstdCompress?: () => import('node:stream').Transform; createGzip: () => import('node:stream').Transform };
+  return typeof z.createZstdCompress === 'function' ? z.createZstdCompress() : z.createGzip();
+}
 
 export interface TickLogWriterOptions {
   dir: string;
@@ -178,7 +183,7 @@ export class TickLogWriter {
     if (this.options.compress !== false) {
       try {
         const zst = `${file}.zst`;
-        await pipeline(createReadStream(file), createZstdCompress(), createWriteStream(zst));
+        await pipeline(createReadStream(file), createZstdStream(), createWriteStream(zst));
         await unlink(file);
         file = zst;
         compression = 'zstd';

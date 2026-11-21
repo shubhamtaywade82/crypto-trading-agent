@@ -23,7 +23,7 @@ export const MicroEnvSchema = z.object({
   MICRO_SAMPLE_MS: z.coerce.number().int().min(250).max(10_000).default(1_000),
   MICRO_RECORD: onOff('on'),
   MICRO_RECORD_DIR: z.string().trim().default('data/microstructure'),
-  TICK_RECORD: onOff('off'),
+  TICK_RECORD: onOff(process.env.MODE === 'paper' ? 'on' : 'off'),
   TICK_RECORD_DIR: z.string().trim().default('data/ticks'),
   MICRO_ENTRY_GATE: z.enum(['off', 'shadow', 'on']).default('on'),
 }).superRefine((env, ctx) => {

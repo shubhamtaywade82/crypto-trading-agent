@@ -73,8 +73,8 @@ export function banExpiryMs(err: unknown): number | null {
 }
 
 /** USD-M streams over binance-sdk's pooled WS platform, snapshots from `/fapi/v1/depth?limit=1000`. */
-export const sdkMicroSource = (client: BinanceClient): MicroSource => ({
-  subscribe: (stream) => client.ws.usdm.subscribe(stream) as unknown as Promise<StreamHandle>,
+export const sdkMicroSource = (client: BinanceClient, registry?: { acquire(stream: string): Promise<{ handle: StreamHandle; release: () => void }> }): MicroSource => ({
+  subscribe: registry ? async (stream) => (await registry.acquire(stream)).handle : (stream) => client.ws.usdm.subscribe(stream) as unknown as Promise<StreamHandle>,
   depthSnapshot: (symbol) => client.futures.market.depth(symbol, 1000),
 });
 
@@ -136,7 +136,7 @@ export class MicrostructureFeed {
     if (!deps.tickSink && deps.config.tickRecord) this.fileTickSink = new FileTickSink({ dir: deps.config.tickRecordDir, now: this.now });
   }
 
-  private get sink(): TickSink | undefined { return this.deps.tickSink ?? this.fileTickSink ?? undefined; }
+  get sink(): TickSink | undefined { return this.deps.tickSink ?? this.fileTickSink ?? undefined; }
 
   async start(): Promise<void> {
     this.stopped = false;
@@ -231,7 +231,7 @@ export class MicrostructureFeed {
     try {
       for (const symbol of this.symbols) {
         const s = symbol.toLowerCase();
-        this.sink?.meta(symbol, { format: 1, symbol, startedAt: this.now(), streams: [`${s}@depth@100ms`, `${s}@aggTrade`, `${s}@forceOrder`] });
+        this.sink?.meta(symbol, { format: 1, symbol, startedAt: this.now(), streams: [`${s}@depth@100ms`, `${s}@aggTrade`, `${s}@forceOrder`, `${s}@markPrice@1s`] });
         const depth = await this.deps.source.subscribe(`${s}@depth@100ms`);
         const trades = await this.deps.source.subscribe(`${s}@aggTrade`);
         this.handles.push(depth, trades);
@@ -249,15 +249,13 @@ export class MicrostructureFeed {
           this.handles.push(force);
           force.on('message', (p) => {
             this.sink?.ws(symbol, `${s}@forceOrder`, p);
-            const o = p?.o;
-            const price = Number(o?.ap || o?.p || 0), qty = Number(o?.q || o?.l || 0);
-            if (price > 0 && qty > 0) {
-              this.engines.get(symbol)?.onLiquidation({ time: Number(o?.T || p?.E || this.now()), symbol, side: o?.S === 'BUY' ? 'BUY' : 'SELL', price, qty, notional: price * qty });
-            }
+            const price = Number(p?.o?.ap || p?.o?.p || 0), qty = Number(p?.o?.q || p?.o?.l || 0);
+            if (price > 0 && qty > 0) this.engines.get(symbol)?.onLiquidation({ time: Number(p?.o?.T || p?.E || this.now()), symbol, side: p?.o?.S === 'BUY' ? 'BUY' : 'SELL', price, qty, notional: price * qty });
           });
-        } catch {
-          // Optional liquidation stream: mock/unsupported sources continue without error
-        }
+          const mark = await this.deps.source.subscribe(`${s}@markPrice@1s`);
+          this.handles.push(mark);
+          mark.on('message', (p) => this.sink?.ws(symbol, `${s}@markPrice@1s`, p));
+        } catch { /* optional streams */ }
         void this.resync(symbol, 'initial sync');
       }
       this.state = 'live';

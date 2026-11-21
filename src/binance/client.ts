@@ -211,6 +211,10 @@ export class BinanceService {
     this.marketDataV2.setDepthSource(depthSource);
   }
 
+  setPollSink(pollSink: import('../market/MarketDataService.js').PollSink | null): void {
+    this.marketDataV2.setPollSink(pollSink);
+  }
+
   private get paper(): PaperEngine {
     return (this.paperEngine ??= new PaperEngine());
   }

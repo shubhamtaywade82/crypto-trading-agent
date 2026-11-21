@@ -4,6 +4,8 @@ import type { DerivativesSnapshot, MarketDataSnapshot, NativeTimeframe } from '.
 import { NATIVE_TIMEFRAME_MS as TIMEFRAME_MS, KLINE_INTERVALS } from './klineIntervals.js';
 import type { DepthSource } from './OrderBookDepthSource.js';
 
+export type PollSink = { poll(symbol: string, source: string, data: unknown): void };
+
 /** Closed candles from a kline stream, or null when the caller must read REST. */
 export interface KlineSource {
   candles(symbol: string, timeframe: NativeTimeframe, now: number): Candle[] | null;
@@ -208,8 +210,14 @@ export class MarketDataService {
     this.limiter = new RequestLimiter(options.maxConcurrency);
   }
 
+  private pollSink?: PollSink | null = null;
+
   setDepthSource(depthSource: DepthSource): void {
     this.depthSource = depthSource;
+  }
+
+  setPollSink(pollSink: PollSink | null): void {
+    this.pollSink = pollSink;
   }
 
   async snapshot(symbols: string[], now = Date.now()): Promise<Record<string, MarketDataSnapshot>> {
@@ -332,6 +340,14 @@ export class MarketDataService {
             }))
           : Promise.resolve([]),
       ]);
+
+      if (this.pollSink) {
+        if (currentOi.status === 'fulfilled' && currentOi.value) this.pollSink.poll(symbol, 'openInterest', currentOi.value);
+        if (globalHistory.status === 'fulfilled' && globalHistory.value) this.pollSink.poll(symbol, 'globalLongShortAccountRatio', globalHistory.value);
+        if (topAccountHistory.status === 'fulfilled' && topAccountHistory.value) this.pollSink.poll(symbol, 'topLongShortAccountRatio', topAccountHistory.value);
+        if (topPositionHistory.status === 'fulfilled' && topPositionHistory.value) this.pollSink.poll(symbol, 'topLongShortPositionRatio', topPositionHistory.value);
+        if (takerHistory.status === 'fulfilled' && takerHistory.value) this.pollSink.poll(symbol, 'takerlongshortRatio', takerHistory.value);
+      }
 
       const currentOpenInterest = currentOi.status === 'fulfilled'
         ? asNumber((currentOi.value as any)?.openInterest)

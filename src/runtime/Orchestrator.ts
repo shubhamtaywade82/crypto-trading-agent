@@ -65,6 +65,7 @@ import { optionsConfigFromEnv, type OptionsConfig } from '../options/config.js';
 import { OptionsDesk } from '../options/OptionsDesk.js';
 import { BinanceClient } from '@nemesis-oss/binance-sdk';
 import { MicrostructureFeed, banExpiryMs, microConfigFromEnv, sdkMicroSource } from '../microstructure/MicrostructureFeed.js';
+import { sharedStreamRegistry } from '../market/UsdmStreamRegistry.js';
 import { entrySide, frictionVerdict, type FrictionGateMode } from '../microstructure/FrictionGate.js';
 import {
   closedFlowBars, DIRECTIONAL_KLINE_LIMIT, DIRECTIONAL_REFRESH_MS, directionalConflict, directionalGateFromEnv,
@@ -322,7 +323,7 @@ export class Orchestrator extends EventEmitter {
     if (micro.entryGate !== 'off') this.log('SYSTEM', `FRICTION gate ${micro.entryGate}: entries ${micro.entryGate === 'on' ? 'are refused' : 'would be refused (shadow)'} above ${micro.options.maxSpreadBps}bps spread or ${micro.options.maxSlipBps}bps slippage for their size, or while the order book is not live`, 'info');
     if (!micro.enabled) return;
     this.microFeed = new MicrostructureFeed(config.symbols, {
-      source: sdkMicroSource(new BinanceClient({ safety: { readOnly: true } })),
+      source: sdkMicroSource(new BinanceClient({ safety: { readOnly: true } }), sharedStreamRegistry),
       config: micro,
       log: (level, message) => this.log('SYSTEM', `MICRO ${message}`, level),
       onSample: (handle, events) => {
@@ -334,6 +335,7 @@ export class Orchestrator extends EventEmitter {
       },
     });
     this.binance.setDepthSource(this.microFeed.depthSource);
+    if (this.microFeed.sink) this.binance.setPollSink(this.microFeed.sink);
     void this.microFeed.start().catch((err: unknown) => this.log('SYSTEM', `MICRO start failed: ${errorText(err)}`, 'error'));
   }
 

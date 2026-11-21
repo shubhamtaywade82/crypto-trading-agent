@@ -133,3 +133,35 @@ test('runCandidateFlow and decisionEvidence forward microstructure through the p
   assert.equal(evidence.score, intent.evidenceScore);
   assert.ok(evidence.factors.length > 0);
 });
+
+test('MarketDataService passes derivatives polls to pollSink', async () => {
+  const polls: Array<{ symbol: string; source: string; data: unknown }> = [];
+  const fakeClient = {
+    getKlines: async () => [],
+    getOpenInterest: async () => ({ openInterest: '1234.5' }),
+    getOpenInterestStatistics: async () => [{ sumOpenInterest: '1234.5' }],
+    getGlobalLongShortAccountRatio: async () => [{ longShortRatio: '1.25' }],
+    getTopTradersLongShortAccountRatio: async () => [{ longShortRatio: '1.5' }],
+    getTopTradersLongShortPositionRatio: async () => [{ longShortRatio: '1.4' }],
+    getTakerBuySellVolume: async () => [{ buyVol: '100', sellVol: '90' }],
+    getOrderBook: async () => ({ bids: [], asks: [] }),
+    getBasis: async () => [],
+  };
+  const { MarketDataService } = await import('../src/market/MarketDataService.js');
+  const service = new MarketDataService(fakeClient as any, {
+    candleTtlMs: { '1m': 60000, '5m': 60000, '15m': 60000, '1h': 60000, '4h': 60000 },
+    derivativesTtlMs: 0,
+    klineLimit: 10,
+    historyLimit: 5,
+    orderBookDepth: 10,
+    maxConcurrency: 2,
+    derivativesPeriod: '5m',
+    basisEnabled: false,
+  });
+  service.setPollSink({
+    poll: (symbol, source, data) => polls.push({ symbol, source, data }),
+  });
+  await service.snapshot(['BTCUSDT']);
+  assert.ok(polls.some((p) => p.source === 'openInterest'));
+  assert.ok(polls.some((p) => p.source === 'globalLongShortAccountRatio'));
+});

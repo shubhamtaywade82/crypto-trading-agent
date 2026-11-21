@@ -33,10 +33,22 @@ export class UsdmStreamRegistry {
     const entry = await promise;
     entry.refCount += 1;
     let released = false;
+    const listeners: Array<{ event: string; fn: (...args: unknown[]) => void }> = [];
+
+    const proxyHandle: StreamHandle = {
+      on: (event: any, fn: any) => {
+        listeners.push({ event, fn });
+        return (entry.handle as any).on(event, fn);
+      },
+      close: () => release(),
+    };
 
     const release = () => {
       if (released) return;
       released = true;
+      for (const { event, fn } of listeners) {
+        try { (entry.handle as any).off?.(event, fn) ?? (entry.handle as any).removeListener?.(event, fn); } catch { /* ignore */ }
+      }
       entry.refCount -= 1;
       if (entry.refCount <= 0) {
         this.subs.delete(stream);
@@ -44,7 +56,7 @@ export class UsdmStreamRegistry {
       }
     };
 
-    return { handle: entry.handle, release };
+    return { handle: proxyHandle, release };
   }
 
   activeStreamCount(): number {

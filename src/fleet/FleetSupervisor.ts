@@ -1,10 +1,11 @@
 import { EventEmitter } from 'node:events';
-import { USDMClient, WebsocketClient } from 'binance';
+import { WebsocketClient } from 'binance';
+import { BinanceClient } from '@nemesis-oss/binance-sdk';
 import { MarketDataService, DEFAULT_MARKET_DATA_OPTIONS } from '../market/MarketDataService.js';
+import { SdkFuturesMarketClient } from '../market/SdkFuturesMarketClient.js';
 import { KlineStreamCache, DEFAULT_KLINE_MAX_SILENCE_MS } from '../market/KlineStreamCache.js';
 import { KlineStreamFeed } from '../market/KlineStreamFeed.js';
 import { KLINE_INTERVALS } from '../market/klineIntervals.js';
-import { guardUsdmClient } from '../core/adapters/binance/restGuard.js';
 import { usdmWsRouteBases } from '../binance/wsRoutes.js';
 import { MarketStateBuilder } from '../market/MarketStateBuilder.js';
 import { FleetLlmService } from './FleetLlmService.js';
@@ -100,7 +101,6 @@ export class FleetSupervisor extends EventEmitter {
   private workers = new Map<string, SymbolTraderWorker>();
   /** One lease keeper per worker account; released on stop. */
   private readonly leases: PaperExchangeLeaseKeeper[] = [];
-  private futuresClient: USDMClient | null = null;
   private marketData: MarketDataService | null = null;
   private klineFeed: KlineStreamFeed | null = null;
   private marketStateBuilder = new MarketStateBuilder();
@@ -207,20 +207,16 @@ export class FleetSupervisor extends EventEmitter {
       : 'Telegram trade notifications OFF (FLEET_TELEGRAM=off)';
     this.log(`embedded multi-model fleet online — models: ${notes}; entries ${fleetConfig.entriesEnabled ? 'ARMED (risk-gated)' : 'OFF (shadow, R1)'}; ${telegramNote}`);
 
-    this.futuresClient = guardUsdmClient(new USDMClient({
-      api_key: config.binance.apiKey,
-      api_secret: config.binance.apiSecret,
-    }));
-    const futuresClient = this.futuresClient;
+    const sdkMarket = new SdkFuturesMarketClient(new BinanceClient().futures);
     const klineCache = new KlineStreamCache({ limit: DEFAULT_MARKET_DATA_OPTIONS.klineLimit, maxSilenceMs: DEFAULT_KLINE_MAX_SILENCE_MS });
-    this.marketData = new MarketDataService(futuresClient, DEFAULT_MARKET_DATA_OPTIONS, klineCache);
+    this.marketData = new MarketDataService(sdkMarket, DEFAULT_MARKET_DATA_OPTIONS, klineCache);
     this.klineFeed = new KlineStreamFeed({
       marketBase: usdmWsRouteBases('live').market,
       symbols: [...ALL_SYMBOLS],
       intervals: KLINE_INTERVALS,
       limit: DEFAULT_MARKET_DATA_OPTIONS.klineLimit,
       cache: klineCache,
-      backfill: (symbol, interval, limit) => futuresClient.getKlines({ symbol, interval, limit }),
+      backfill: (symbol, interval, limit) => sdkMarket.getKlines({ symbol, interval, limit }),
       log: (message, level) => this.log(`[kline feed] ${message}`, level),
     });
     this.klineFeed.start();

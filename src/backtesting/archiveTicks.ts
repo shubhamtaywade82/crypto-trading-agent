@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { readFirstZipEntry, readFirstZipEntryBytes } from './archiveKlines.js';
@@ -50,7 +51,9 @@ export function reduceAggTrades(csv: string | Buffer, dayStart: number): TradeMi
     let found = 0;
     for (let i = lineStart; i < lineEnd && found < 7; i += 1) if (buf[i] === COMMA) comma[found++] = i;
     if (found === 6) {
-      const minute = Math.floor((parseNumber(buf, comma[4]! + 1, comma[5]!) - dayStart) / MINUTE_MS);
+      const rawTime = parseNumber(buf, comma[4]! + 1, comma[5]!);
+      const timeMs = rawTime > 1e14 ? Math.floor(rawTime / 1000) : rawTime;
+      const minute = Math.floor((timeMs - dayStart) / MINUTE_MS);
       const quote = parseNumber(buf, comma[0]! + 1, comma[1]!) * parseNumber(buf, comma[1]! + 1, comma[2]!);
       if (minute >= 0 && minute < MINUTES_PER_DAY && Number.isFinite(quote)) addTrade(minutes[minute]!, quote, buf[comma[5]! + 1] === LETTER_F);
     }
@@ -72,7 +75,9 @@ export function reduceBookDepth(csv: string, dayStart: number): DepthMinute[] {
   for (const line of csv.split('\n')) {
     const [time, percentage, , notional] = line.split(',');
     const index = slot[String(Number(percentage))];
-    const minute = Math.floor((Date.parse(`${time!.replace(' ', 'T')}Z`) - dayStart) / MINUTE_MS);
+    let timeMs = Date.parse(`${time!.replace(' ', 'T')}Z`);
+    if (timeMs > 1e14) timeMs = Math.floor(timeMs / 1000);
+    const minute = Math.floor((timeMs - dayStart) / MINUTE_MS);
     if (index === undefined || !(minute >= 0 && minute < MINUTES_PER_DAY) || !Number.isFinite(Number(notional))) continue;
     minutes[minute]![index] = Number(notional);
   }
@@ -97,7 +102,16 @@ async function fetchZip(url: string): Promise<Buffer | null> {
     if (response?.status === 404) return null;
     if (response?.status === 429 || response?.status === 418) throw new RateLimited(`${url}: HTTP ${response.status}`);
     const body = response?.ok ? await response.arrayBuffer().catch(() => null) : null; // a slow body can time out mid-download: retry it
-    if (body) return Buffer.from(body);
+    if (body) {
+      const buf = Buffer.from(body);
+      const chkRes = await fetch(`${url}.CHECKSUM`, { signal: AbortSignal.timeout(10_000) }).catch(() => null);
+      if (chkRes?.ok) {
+        const expected = (await chkRes.text()).trim().split(/\s+/)[0];
+        const actual = createHash('sha256').update(buf).digest('hex');
+        if (expected && actual !== expected) throw new Error(`${url}: checksum mismatch: expected ${expected}, got ${actual}`);
+      }
+      return buf;
+    }
     await sleep(BACKOFF_MS * attempt);
   }
   throw new Error(`${url}: failed ${MAX_ATTEMPTS} times`);

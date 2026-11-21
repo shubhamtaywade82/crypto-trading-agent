@@ -303,6 +303,7 @@ export class MicrostructureEngine {
     this.ofi.reset();
     this.liquidations.reset();
     this.resyncNote = reason;
+    this.liveSince = null;
   }
 
   sample(now: number): LiquidityEvent[] {
@@ -386,14 +387,29 @@ export class MicrostructureEngine {
     };
   }
 
+  bookWindowMs(now: number): number {
+    return this.liveSince !== null ? Math.max(0, now - this.liveSince) : 0;
+  }
+
+  cvdAnchorSet(now: number): boolean {
+    return this.bookWindowMs(now) >= this.opts.flowWindowMs;
+  }
+
   /** Grades one order: spread and the slippage of walking `notional` on its side, against the same limits as the view. */
-  entryFriction(side: 'buy' | 'sell', notional: number, now: number): EntryFriction {
+  entryFriction(side: 'buy' | 'sell', notional: number, now: number, minBookWindowMs = 0, minCvdWindowMs = 0): EntryFriction {
     const book = this.bookStatus(now);
     const base = { bookStatus: book.status, bookAgeMs: book.ageMs };
     const bid = book.status === 'LIVE' ? this.book.bestBid() : null;
     const ask = book.status === 'LIVE' ? this.book.bestAsk() : null;
     if (bid === null || ask === null) {
       return { ...base, status: 'BLOCK', reasons: [`book ${book.status.toLowerCase()}${book.reason ? `: ${book.reason}` : ''}`], spreadBps: null, slipBps: null };
+    }
+    const bookWin = this.bookWindowMs(now);
+    if (minBookWindowMs > 0 && bookWin < minBookWindowMs) {
+      return { ...base, status: 'BLOCK', reasons: [`book warm-up incomplete: ${bookWin}ms < ${minBookWindowMs}ms`], spreadBps: null, slipBps: null };
+    }
+    if (minCvdWindowMs > 0 && bookWin < minCvdWindowMs) {
+      return { ...base, status: 'BLOCK', reasons: [`CVD warm-up incomplete: window ${minCvdWindowMs}ms incomplete`], spreadBps: null, slipBps: null };
     }
     const mid = (bid + ask) / 2;
     const spreadBps = bps(ask, bid);

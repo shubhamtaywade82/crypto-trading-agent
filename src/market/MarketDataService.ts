@@ -1,26 +1,29 @@
-import type { USDMClient } from 'binance';
 import type { Candle } from '../types.js';
 import { config } from '../config.js';
 import type { DerivativesSnapshot, MarketDataSnapshot, NativeTimeframe } from './MarketDataTypes.js';
 import { NATIVE_TIMEFRAME_MS as TIMEFRAME_MS, KLINE_INTERVALS } from './klineIntervals.js';
+import type { DepthSource } from './OrderBookDepthSource.js';
 
 /** Closed candles from a kline stream, or null when the caller must read REST. */
 export interface KlineSource {
   candles(symbol: string, timeframe: NativeTimeframe, now: number): Candle[] | null;
 }
 
-type FuturesMarketClient = Pick<
-  USDMClient,
-  | 'getKlines'
-  | 'getOpenInterest'
-  | 'getOpenInterestStatistics'
-  | 'getGlobalLongShortAccountRatio'
-  | 'getTopTradersLongShortAccountRatio'
-  | 'getTopTradersLongShortPositionRatio'
-  | 'getTakerBuySellVolume'
-  | 'getOrderBook'
-  | 'getBasis'
->;
+/**
+ * The public USDⓈ-M reads this service needs, in the shape the parsers below already understand.
+ * `SdkFuturesMarketClient` implements it on the SDK; tests use a small fake.
+ */
+export interface FuturesMarketClient {
+  getKlines(params: { symbol: string; interval: NativeTimeframe; limit: number }): Promise<unknown[]>;
+  getOpenInterest(params: { symbol: string }): Promise<unknown>;
+  getOpenInterestStatistics(params: { symbol: string; period: string; limit: number }): Promise<unknown[]>;
+  getGlobalLongShortAccountRatio(params: { symbol: string; period: string; limit: number }): Promise<unknown[]>;
+  getTopTradersLongShortAccountRatio(params: { symbol: string; period: string; limit: number }): Promise<unknown[]>;
+  getTopTradersLongShortPositionRatio(params: { symbol: string; period: string; limit: number }): Promise<unknown[]>;
+  getTakerBuySellVolume(params: { symbol: string; period: string; limit: number }): Promise<unknown[]>;
+  getOrderBook(params: { symbol: string; limit: number }): Promise<unknown>;
+  getBasis(params: { pair: string; contractType: string; period: string; limit: number }): Promise<unknown[]>;
+}
 
 export interface MarketDataServiceOptions {
   candleTtlMs: Record<NativeTimeframe, number>;
@@ -198,6 +201,7 @@ export class MarketDataService {
     client: FuturesMarketClient,
     options: MarketDataServiceOptions = DEFAULT_MARKET_DATA_OPTIONS,
     private readonly klines?: KlineSource,
+    private readonly depthSource?: DepthSource,
   ) {
     this.client = client;
     this.options = options;
@@ -297,6 +301,7 @@ export class MarketDataService {
 
     const promise = (async () => {
       const period = this.options.derivativesPeriod;
+      const streamedBook = this.depthSource?.depth(symbol, this.options.orderBookDepth, now) ?? null;
       const [
         currentOi,
         oiHistory,
@@ -313,7 +318,7 @@ export class MarketDataService {
         this.limiter.run(() => this.client.getTopTradersLongShortAccountRatio({ symbol, period, limit: this.options.historyLimit })),
         this.limiter.run(() => this.client.getTopTradersLongShortPositionRatio({ symbol, period, limit: this.options.historyLimit })),
         this.limiter.run(() => this.client.getTakerBuySellVolume({ symbol, period, limit: this.options.historyLimit })),
-        this.limiter.run(() => this.client.getOrderBook({ symbol, limit: this.options.orderBookDepth as 5 | 10 | 20 | 50 | 100 | 500 | 1000 | 5000 })),
+        streamedBook ? Promise.resolve(null) : this.limiter.run(() => this.client.getOrderBook({ symbol, limit: this.options.orderBookDepth as 5 | 10 | 20 | 50 | 100 | 500 | 1000 | 5000 })),
         this.options.basisEnabled
           ? this.limiter.run(() => this.client.getBasis({
               pair: symbol.replace(/USDT$/, ''),
@@ -350,9 +355,9 @@ export class MarketDataService {
         ? parseTakerHistory(takerHistory.value as any[])
         : { ratio: null, imbalance: null };
 
-      const bookValues = book.status === 'fulfilled'
+      const bookValues = streamedBook ?? (book.status === 'fulfilled' && book.value !== null
         ? parseBook(book.value, this.options.orderBookDepth)
-        : { imbalance: null, spreadBps: null };
+        : { imbalance: null, spreadBps: null });
 
       const basisPct = basisHistory.status === 'fulfilled'
         ? parseBasis(basisHistory.value as any[])

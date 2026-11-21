@@ -52,6 +52,10 @@ export class LocalOrderBook {
     return this.reasonValue;
   }
 
+  get bufferedCount(): number {
+    return this.buffer.length;
+  }
+
   /** Back to SYNCING with nothing held: the caller must fetch a fresh snapshot. */
   reset(reason: string): void {
     this.bids.clear();

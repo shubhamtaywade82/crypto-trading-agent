@@ -1,6 +1,6 @@
 import { BinanceClient } from '@nemesis-oss/binance-sdk';
 import type { OptionsConfig } from './config.js';
-import { OptionChainService, sdkOptionsSource } from './OptionChainService.js';
+import { OptionChainService, fetchOptionsSource } from './OptionChainService.js';
 import { OptionsBuyingEngine, type HaltSwitch, type LogLevel, type OptionVetoer, type UnderlyingStatus } from './OptionsBuyingEngine.js';
 import { banExpiryMs } from '../microstructure/MicrostructureFeed.js';
 import { OptionsJournal, OptionsStateStore } from './stateStore.js';
@@ -36,7 +36,7 @@ async function defaultBuild(cfg: OptionsConfig, deps: Pick<OptionsDeskDeps, 'kil
   const client = new BinanceClient({ safety: { readOnly: true } });
   await client.syncTime();
   const refused = new Set<string>();
-  const chain = new OptionChainService(sdkOptionsSource(client), {
+  const chain = new OptionChainService(fetchOptionsSource(), {
     onRejectedContract: (symbol, reason) => {
       if (refused.has(symbol)) return;
       refused.add(symbol);

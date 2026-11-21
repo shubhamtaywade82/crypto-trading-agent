@@ -18,7 +18,7 @@ import { MarkPricePump } from '../application/engine/MarkPricePump.js';
 import { createTradingApplication, type TradingApplication } from '../application/engine/TradingApplication.js';
 import { OwnershipLedger } from '../application/ownership/OwnershipLedger.js';
 import { closeEmptiedEpisodes, resolveOpenIntents } from '../application/ownership/resolve.js';
-import type { BreakerSnapshot } from '../application/risk/CircuitBreaker.js';
+import { CircuitBreaker, type BreakerSnapshot } from '../application/risk/CircuitBreaker.js';
 import type { SessionState } from '../application/risk/SessionTracker.js';
 import type { AccountScope } from '../domain/execution.js';
 import type { Timeframe } from '../domain/market.js';
@@ -54,6 +54,21 @@ export interface PaperApplication extends TradingApplication {
 interface PersistedState {
   readonly session: SessionState | null;
   readonly breaker: BreakerSnapshot;
+}
+
+/**
+ * Operator reset of a latched breaker in the persisted state; returns the snapshot it replaced. Run it with the engine
+ * stopped: a running engine rewrites this file every cycle and would undo the reset.
+ */
+export function resetPersistedBreaker(statePath: string, operator: string): BreakerSnapshot {
+  const store = new JsonStateStore<PersistedState>(statePath);
+  const state = store.load();
+  if (!state) throw new Error(`no persisted state at ${statePath}; nothing to reset`);
+  // The drawdown limit only matters to observe(); reset() ignores it
+  const breaker = new CircuitBreaker(0, state.breaker);
+  breaker.reset(operator);
+  store.save({ ...state, breaker: breaker.snapshot });
+  return state.breaker;
 }
 
 /**

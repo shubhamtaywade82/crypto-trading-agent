@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import 'dotenv/config';
 import { isTimeframe, TIMEFRAME_MS } from './domain/market.js';
-import { buildPaperTradingApplication } from './composition/buildPaperTradingApplication.js';
+import { buildPaperTradingApplication, resetPersistedBreaker } from './composition/buildPaperTradingApplication.js';
 import { buildStrategies } from './composition/strategyCatalog.js';
 import { validatePaperOnlyConfig } from './composition/validatePaperOnlyConfig.js';
 
@@ -9,11 +9,19 @@ import { validatePaperOnlyConfig } from './composition/validatePaperOnlyConfig.j
  * Paper-only entry point.
  *   tsx src/core/main.ts                                   run the paper engine
  *   tsx src/core/main.ts research BTCUSDT 15m 30 [folds]   replay the last 30 days on PaperExchange
+ *   tsx src/core/main.ts reset-breaker <operator>          re-arm a tripped breaker (engine must be stopped)
  */
 async function main(): Promise<void> {
   const config = validatePaperOnlyConfig(process.env);
-  const app = buildPaperTradingApplication(config);
   const [command, symbol, timeframe, days, folds] = process.argv.slice(2);
+
+  if (command === 'reset-breaker') {
+    if (!symbol) throw new Error('usage: reset-breaker <operator>');
+    const previous = resetPersistedBreaker(config.statePath, symbol);
+    console.log(`breaker ${previous.state} (${previous.reason ?? 'no reason'}) re-armed by ${symbol} in ${config.statePath}`);
+    return;
+  }
+  const app = buildPaperTradingApplication(config);
 
   if (command === 'research') {
     if (!symbol || !timeframe || !isTimeframe(timeframe) || !(Number(days) > 0)) throw new Error('usage: research <SYMBOL> <1m|5m|15m|1h|4h|1d> <days> [folds]');

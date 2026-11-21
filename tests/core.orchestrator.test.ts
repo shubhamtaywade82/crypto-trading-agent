@@ -1,5 +1,9 @@
 import assert from 'node:assert/strict';
+import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
 import { test } from 'node:test';
+import { resetPersistedBreaker } from '../src/core/composition/buildPaperTradingApplication.js';
 import { InMemoryOwnershipJournal } from '../src/core/adapters/persistence/OwnershipJournals.js';
 import { InMemoryResearchRepository } from '../src/core/adapters/persistence/JsonlResearchRepository.js';
 import { buildPipeline, type PipelineInput } from '../src/core/composition/buildPipeline.js';
@@ -317,4 +321,17 @@ test('a queued fill is attributed on the next cycle, once the venue reports it',
   const second = await r.process(r.eventFor('ETHUSDT'));
   assert.equal(r.ownership.get(commandId)?.state, 'OWNED');
   assert.notEqual(second.detail, 'FOREIGN_POSITION');
+});
+
+test('an operator reset re-arms a persisted tripped breaker and refuses a blank operator', () => {
+  const statePath = path.join(mkdtempSync(path.join(tmpdir(), 'breaker-')), 'state.json');
+  const tripped = { state: 'TRIPPED', reason: 'order cmd_x outcome is unknown', trippedAt: 1 };
+  writeFileSync(statePath, JSON.stringify({ session: null, breaker: tripped }));
+
+  assert.throws(() => resetPersistedBreaker(statePath, '  '), /operator/);
+  assert.equal(JSON.parse(readFileSync(statePath, 'utf8')).breaker.state, 'TRIPPED');
+
+  assert.deepEqual(resetPersistedBreaker(statePath, 'nemesis'), tripped);
+  assert.deepEqual(JSON.parse(readFileSync(statePath, 'utf8')).breaker, { state: 'ARMED', reason: null, trippedAt: null });
+  assert.throws(() => resetPersistedBreaker(`${statePath}.missing`, 'nemesis'), /nothing to reset/);
 });

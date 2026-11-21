@@ -85,7 +85,7 @@ Operator controls:
 - Kill switch: create the file named by `PAPER_CORE_KILL_FILE` (default `data/paper-core.KILL`). Every entry is refused while it exists.
 - Circuit breaker: trips on the drawdown limit, an order with an unknown outcome, or a position left without a stop.
   It is stored in `PAPER_CORE_STATE` and stays tripped across restarts. To re-arm, stop the engine, inspect the
-  account on PaperExchange, then set `breaker.state` back to `ARMED` in that file.
+  account on PaperExchange, then run `tsx src/core/main.ts reset-breaker <operator>`.
 
 ## Two execution paths, and which to trust
 

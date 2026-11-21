@@ -20,7 +20,7 @@ import type { MarketDataSnapshot } from '../market/MarketDataTypes.js';
 import { KlineStreamCache, DEFAULT_KLINE_MAX_SILENCE_MS } from '../market/KlineStreamCache.js';
 import { KlineStreamFeed } from '../market/KlineStreamFeed.js';
 import { KLINE_INTERVALS } from '../market/klineIntervals.js';
-import { guardUsdmClient } from '../core/adapters/binance/restGuard.js';
+import { guardUsdmClient, sharedRestGuard } from '../core/adapters/binance/restGuard.js';
 import { LiveBook, LiveStateStore, type LiveManagerMode, type LiveOrderPort } from './liveBook.js';
 import { LiveEntryTracker, LIVE_ENTRY_POLL_MS, liveEntryClientOrderId, orderSideOf, venueRejected, type LiveEntryPort } from './liveEntry.js';
 import { UserDataStream, type ListenKeyPort } from './userDataStream.js';
@@ -281,6 +281,7 @@ export class BinanceService {
 
   async loadSymbolRules(symbols: string[]): Promise<void> {
     const info = await this.futures.getExchangeInfo();
+    sharedRestGuard.seedFromRateLimits((info as { rateLimits?: Array<{ rateLimitType?: unknown; interval?: unknown; limit?: unknown }> }).rateLimits ?? []);
     for (const entry of info.symbols.filter((e) => symbols.includes(e.symbol))) {
       setSymbolRules(entry.symbol, rulesFromExchangeInfo(entry));
       this.symbolStatus.set(entry.symbol, String((entry as { status?: string }).status ?? 'TRADING'));

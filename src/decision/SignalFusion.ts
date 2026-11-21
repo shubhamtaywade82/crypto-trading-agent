@@ -1,5 +1,6 @@
 import type { AgentId, Signal } from '../types.js';
 import type { MarketState } from '../market/types.js';
+import type { MicrostructureReading } from '../microstructure/MicrostructureEngine.js';
 
 export interface ScoredSignal {
   signal: Signal;
@@ -19,57 +20,83 @@ export interface TradeIntent {
   reasons: string[];
 }
 
-function evaluateFactors(side: 'LONG' | 'SHORT', signal: Signal, state?: MarketState): { bonus: number; factors: string[] } {
-  if (!state) return { bonus: 0, factors: [] };
+function evaluateFactors(side: 'LONG' | 'SHORT', signal: Signal, state?: MarketState, micro?: MicrostructureReading): { bonus: number; factors: string[] } {
   let bonus = 0;
   const factors: string[] = [];
 
-  const isRegimeAligned =
-    (side === 'LONG' && state.regime.regime === 'TREND_UP') ||
-    (side === 'SHORT' && state.regime.regime === 'TREND_DOWN') ||
-    (signal.agent === 'MEAN-REVERT-θ' && state.regime.regime === 'RANGE');
-  if (isRegimeAligned) {
-    bonus += 20;
-    factors.push('regime_aligned:+20');
-  }
+  if (state) {
+    const isRegimeAligned =
+      (side === 'LONG' && state.regime.regime === 'TREND_UP') ||
+      (side === 'SHORT' && state.regime.regime === 'TREND_DOWN') ||
+      (signal.agent === 'MEAN-REVERT-θ' && state.regime.regime === 'RANGE');
+    if (isRegimeAligned) {
+      bonus += 20;
+      factors.push('regime_aligned:+20');
+    }
 
-  const isLocationGood = (side === 'LONG' && state.pricing.discount) || (side === 'SHORT' && state.pricing.premium);
-  if (isLocationGood) {
-    bonus += 20;
-    factors.push('pricing_location:+20');
-  }
+    const isLocationGood = (side === 'LONG' && state.pricing.discount) || (side === 'SHORT' && state.pricing.premium);
+    if (isLocationGood) {
+      bonus += 20;
+      factors.push('pricing_location:+20');
+    }
 
-  const hasSweep = state.liquidity.ltf.latestSweeps.some((s) =>
-    side === 'LONG' ? s.direction === 'SELL_SIDE' : s.direction === 'BUY_SIDE'
-  );
-  if (hasSweep) {
-    bonus += 10;
-    factors.push('liquidity_sweep:+10');
-  }
-
-  if (state.crowding) {
-    const isContrarian =
-      (side === 'LONG' && state.crowding.positioningExtreme === 'SHORT_CROWDED') ||
-      (side === 'SHORT' && state.crowding.positioningExtreme === 'LONG_CROWDED');
-    if (isContrarian) {
+    const hasSweep = state.liquidity.ltf.latestSweeps.some((s) =>
+      side === 'LONG' ? s.direction === 'SELL_SIDE' : s.direction === 'BUY_SIDE'
+    );
+    if (hasSweep) {
       bonus += 10;
-      factors.push('crowding_squeeze:+10');
+      factors.push('liquidity_sweep:+10');
+    }
+
+    if (state.crowding) {
+      const isContrarian =
+        (side === 'LONG' && state.crowding.positioningExtreme === 'SHORT_CROWDED') ||
+        (side === 'SHORT' && state.crowding.positioningExtreme === 'LONG_CROWDED');
+      if (isContrarian) {
+        bonus += 10;
+        factors.push('crowding_squeeze:+10');
+      }
+    }
+  }
+
+  if (micro && micro.book.status === 'LIVE') {
+    const imb = micro.depthImbalance?.bps10 ?? micro.depthImbalance?.bps25;
+    if (imb !== null && imb !== undefined && ((side === 'LONG' && imb >= 0.15) || (side === 'SHORT' && imb <= -0.15))) {
+      bonus += 10;
+      factors.push('orderbook_imbalance:+10');
+    }
+    if (micro.bias.bias !== 'NEUTRAL') {
+      if ((side === 'LONG' && micro.bias.bias === 'LONG') || (side === 'SHORT' && micro.bias.bias === 'SHORT')) {
+        bonus += 10;
+        factors.push('micro_bias_aligned:+10');
+      } else if (micro.bias.bias !== side) {
+        bonus -= 15;
+        factors.push('micro_bias_opposing:-15');
+      }
+    }
+    if (micro.events.some((e) => e.kind === 'ABSORPTION' && e.side === (side === 'LONG' ? 'bid' : 'ask'))) {
+      bonus += 10;
+      factors.push('wall_absorption:+10');
+    }
+    if ((side === 'LONG' && micro.liquidations?.exhaustion === 'LONG_EXHAUSTION') || (side === 'SHORT' && micro.liquidations?.exhaustion === 'SHORT_EXHAUSTION')) {
+      bonus += 10;
+      factors.push('liquidation_exhaustion:+10');
     }
   }
 
   return { bonus, factors };
 }
 
-function scoreSignal(signal: Signal, state?: MarketState): ScoredSignal {
+function scoreSignal(signal: Signal, state?: MarketState, micro?: MicrostructureReading): ScoredSignal {
   const isShort = signal.type === 'OPEN_SHORT' || signal.type === 'OPEN_HEDGE' || signal.type === 'OPEN_FUNDING_SHORT';
   const side: 'LONG' | 'SHORT' = isShort ? 'SHORT' : 'LONG';
   const baseScore = Math.round(signal.confidence * 40);
-  const { bonus, factors } = evaluateFactors(side, signal, state);
+  const { bonus, factors } = evaluateFactors(side, signal, state, micro);
 
   return {
     signal,
     side,
-    evidenceScore: Math.min(100, baseScore + bonus),
+    evidenceScore: Math.min(100, Math.max(0, baseScore + bonus)),
     factors: [`base:${baseScore}`, ...factors],
   };
 }
@@ -106,7 +133,11 @@ function resolveSymbol(scoredList: ScoredSignal[]): TradeIntent | null {
 }
 
 /** Combines multi-strategy candidate signals into a unified, conflict-free TradeIntent per symbol. */
-export function fuseSignals(candidates: Signal[], marketStates?: Record<string, MarketState>): TradeIntent[] {
+export function fuseSignals(
+  candidates: Signal[],
+  marketStates?: Record<string, MarketState>,
+  microstructure?: Record<string, MicrostructureReading>,
+): TradeIntent[] {
   const bySymbol = new Map<string, Signal[]>();
   for (const sig of candidates) {
     if (!sig.type.startsWith('OPEN_')) continue;
@@ -117,7 +148,7 @@ export function fuseSignals(candidates: Signal[], marketStates?: Record<string, 
 
   const intents: TradeIntent[] = [];
   for (const [symbol, sigs] of bySymbol.entries()) {
-    const scored = sigs.map((sig) => scoreSignal(sig, marketStates?.[symbol]));
+    const scored = sigs.map((sig) => scoreSignal(sig, marketStates?.[symbol], microstructure?.[symbol]));
     const intent = resolveSymbol(scored);
     if (intent) intents.push(intent);
   }

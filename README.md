@@ -79,6 +79,32 @@ been established yet; backtesting on historical option prices comes next.
 | `paper` + `PAPER_EXCHANGE_URL` | Remote `paper_exchange` Rails broker via `RemoteBroker` | Agent-side reduce-only market orders (the broker never evaluates resting orders and has no price feed). Liquidation, fees and funding are exchange-side | Yes: one account, a symbol is owned by the strategy that opened it |
 | `live` | Live Binance USD-M (one-way mode) | Entries are GTC LIMIT orders at the signal price, cancelled after `ENTRY_ORDER_TTL_MS` (default 120 s). Protection is exchange-side `closePosition` STOP_MARKET / TAKE_PROFIT_MARKET, placed once the venue shows a position and re-sized to any partial fill. The new stop is placed before an old one is cancelled, and a stop the venue refuses closes the position. Entries wait for startup reconciliation, a trade journal synced from Binance fills within the last 3 minutes, venue leverage brackets loaded within the last hour, and a stop resting on every open position. Hedge mode refuses all entries. A live entry without a stop-loss is refused | Yes: each entry is recorded with its strategy, and closes are attributed to the strategy that opened the symbol |
 
+---
+
+## Local-Only Run Profile & Raw Tick Recorder
+
+For fully sovereign local research and paper execution without external dependencies or cloud costs:
+
+```bash
+MODE=paper
+# PAPER_EXCHANGE_URL unset for in-memory PaperEngine, or set to http://127.0.0.1:3100 for local broker
+OLLAMA_HOST=http://127.0.0.1:11434
+FLEET_ENTRIES=off
+OPTIONS=off
+TELEGRAM_DRY_RUN=1
+```
+
+* **Raw Tick Recorder**: Streams raw depth updates (`@depth@100ms`), trades (`@aggTrade`), mark prices (`@markPrice@1s`), liquidations, and periodic derivatives polls directly into hourly append-only logs with zstd rotation and SHA-256 manifests.
+  ```bash
+  npm run record:ticks -- --symbols BTCUSDT,ETHUSDT
+  npm run record:ticks:self-check
+  ```
+* **Tick Replay & Parity Verification**: Replays raw ticks into the local order book and microstructure engine, verifying zero-drift wall-clock edge sampling via canonical hash assertion:
+  ```bash
+  npm run replay:ticks -- --symbol BTCUSDT --assert-hash
+  ```
+* Documentation: [docs/TICK_RECORDER.md](docs/TICK_RECORDER.md) and [docs/WS_FIRST_MARKET_DATA.md](docs/WS_FIRST_MARKET_DATA.md).
+
 **CoinDCX is not a live venue.** `MODE=live` trades Binance only and needs `BINANCE_API_KEY`/`BINANCE_API_SECRET`.
 Setting `COINDCX_API_KEY` or `COINDCX_API_SECRET` with `MODE=live` is refused at startup, because a CoinDCX broker
 would take the live path and skip the Binance guards. `src/coindcx/coindcxClient.ts` (an `ExchangeApi` adapter) is

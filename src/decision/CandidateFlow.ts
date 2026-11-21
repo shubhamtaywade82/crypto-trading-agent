@@ -1,5 +1,6 @@
 import type { AgentId, RiskDecision, Signal } from '../types.js';
 import type { MarketState } from '../market/types.js';
+import type { MicrostructureReading } from '../microstructure/MicrostructureEngine.js';
 import { fuseSignals, type TradeIntent } from './SignalFusion.js';
 import { applyRouter } from './StrategyRouter.js';
 import { scoreCandidate } from './CandidateScorer.js';
@@ -62,20 +63,28 @@ export function dropDegenerateGeometry(
   return { kept, dropped };
 }
 
-export function runCandidateFlow(rawSignals: Signal[], states: Record<string, MarketState>): DecisionFlowResult {
+export function runCandidateFlow(
+  rawSignals: Signal[],
+  states: Record<string, MarketState>,
+  microstructure?: Record<string, MicrostructureReading>,
+): DecisionFlowResult {
   const { kept: raw, dropped } = dropDegenerateGeometry(rawSignals);
-  const result = routeAndFuse(raw, states);
+  const result = routeAndFuse(raw, states, microstructure);
   return { ...result, geometryDropped: dropped };
 }
 
-function routeAndFuse(raw: Signal[], states: Record<string, MarketState>): DecisionFlowResult {
+function routeAndFuse(
+  raw: Signal[],
+  states: Record<string, MarketState>,
+  microstructure?: Record<string, MicrostructureReading>,
+): DecisionFlowResult {
   const { passed, vetoed } = applyRouter(raw, states);
   const legacy = passed.filter((s) => !FUSION_AGENTS.has(s.agent));
   const candidates = passed.filter((s) => FUSION_AGENTS.has(s.agent));
   if (candidates.length === 0) {
     return { signals: legacy, intents: new Map(), routedOut: vetoed, fusionFiltered: 0 };
   }
-  const intents = fuseSignals(candidates, states);
+  const intents = fuseSignals(candidates, states, microstructure);
   const fused = intents.flatMap(({ symbol, sourceAgent }) => candidates.filter((s) => s.symbol === symbol && s.agent === sourceAgent));
   return {
     signals: [...legacy, ...fused],
@@ -91,13 +100,24 @@ function routeAndFuse(raw: Signal[], states: Record<string, MarketState>): Decis
  * evidence when the signal went through fusion, otherwise the rubric total,
  * otherwise confidence).
  */
-export function decisionEvidence(signal: Signal, state: MarketState | undefined, intent: TradeIntent | undefined): DecisionEvidence {
+export function decisionEvidence(
+  signal: Signal,
+  state: MarketState | undefined,
+  intent: TradeIntent | undefined,
+  micro?: MicrostructureReading,
+): DecisionEvidence {
   const side = signal.type.includes('SHORT') ? 'SHORT' : 'LONG';
   const breakdown = state ? scoreCandidate(side, state) : null;
+  const factors = intent ? [...intent.reasons] : breakdown ? [...breakdown.reasons] : [signal.reason];
+  if (!intent && micro && micro.book.status === 'LIVE') {
+    const imb = micro.depthImbalance?.bps10 ?? micro.depthImbalance?.bps25;
+    if (imb !== null && imb !== undefined) factors.push(`book_imbalance:${imb.toFixed(2)}`);
+    if (micro.bias.bias !== 'NEUTRAL') factors.push(`micro_bias:${micro.bias.bias}`);
+  }
   return {
     breakdown,
     score: intent?.evidenceScore ?? breakdown?.total ?? Math.round(signal.confidence * 100),
-    factors: intent?.reasons ?? breakdown?.reasons ?? [signal.reason],
+    factors,
   };
 }
 

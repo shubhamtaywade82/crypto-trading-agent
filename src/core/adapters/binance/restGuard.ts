@@ -80,12 +80,14 @@ export interface RestGuardOptions {
 
 export class RestGuard {
   private backoffUntil = 0;
+  private venueBackoffUntil = 0;
+  private localCeilingUntil = 0;
   private backoffReason = '';
   /** When the last response (success or error) arrived. Used weight is only trusted from this minute. */
   private lastResponseAt = 0;
   private readonly now: () => number;
   private readonly log: (message: string) => void;
-  private readonly weightLimit: number;
+  private weightLimit: number;
 
   constructor(options: RestGuardOptions = {}) {
     this.now = options.now ?? Date.now;
@@ -93,25 +95,40 @@ export class RestGuard {
     this.weightLimit = options.weightLimit ?? USDM_WEIGHT_LIMIT_PER_MINUTE;
   }
 
+  seedFromRateLimits(rateLimits: Array<{ rateLimitType?: unknown; interval?: unknown; limit?: unknown }>): void {
+    const match = rateLimits.find((r) => r.rateLimitType === 'REQUEST_WEIGHT' && r.interval === 'MINUTE');
+    const limit = Number(match?.limit);
+    if (Number.isFinite(limit) && limit > 0) this.weightLimit = limit;
+  }
+
   /** The time until which calls are refused, and why. Zero when no backoff is set. */
   status(): { backoffUntil: number; reason: string } {
-    return { backoffUntil: this.backoffUntil, reason: this.backoffReason };
+    return { backoffUntil: Math.max(this.venueBackoffUntil, this.localCeilingUntil, this.backoffUntil), reason: this.backoffReason };
   }
 
   /**
    * Throws RestBackoffError while a backoff holds, or when this minute's weight is at its ceiling. The weight reading
    * only counts once a response has arrived in the current minute. Otherwise a stale reading would refuse every call
-   * forever, since refused calls never refresh it.
+   * forever, since refused calls never refresh it. Protective writes can bypass the local ceiling, but not a venue ban.
    */
-  assertOpen(usedWeight: number | undefined): void {
+  assertOpen(usedWeight: number | undefined, isProtective = false): void {
     const now = this.now();
+    if (now < this.venueBackoffUntil) throw new RestBackoffError(this.venueBackoffUntil, this.backoffReason);
     if (now < this.backoffUntil) throw new RestBackoffError(this.backoffUntil, this.backoffReason);
 
     const minuteStart = Math.floor(now / MINUTE_MS) * MINUTE_MS;
     if (usedWeight !== undefined && usedWeight >= this.weightLimit * WEIGHT_CEILING_RATIO && this.lastResponseAt >= minuteStart) {
       const until = minuteStart + MINUTE_MS;
-      this.setBackoff(until, `request weight ${usedWeight}/${this.weightLimit} used this minute`);
-      throw new RestBackoffError(until, this.backoffReason);
+      this.localCeilingUntil = Math.max(this.localCeilingUntil, until);
+      this.backoffReason = `request weight ${usedWeight}/${this.weightLimit} used this minute`;
+    }
+
+    if (now < this.localCeilingUntil) {
+      if (isProtective) {
+        this.log(`[restGuard] protective write bypassed local weight ceiling: ${this.backoffReason}`);
+        return;
+      }
+      throw new RestBackoffError(this.localCeilingUntil, this.backoffReason);
     }
   }
 
@@ -127,6 +144,7 @@ export class RestGuard {
     const banned = bannedUntilMs(shape);
     if (banned !== null) candidates.push(banned);
     const until = candidates.length > 0 ? Math.max(...candidates) : now + DEFAULT_BACKOFF_MS;
+    this.venueBackoffUntil = Math.max(this.venueBackoffUntil, until);
     this.setBackoff(until, `rate limited by Binance (code ${String(shape.code ?? 'none')})`);
   }
 
@@ -134,9 +152,9 @@ export class RestGuard {
    * Runs `fn` under the guard. A refused call returns a rejected promise, since every USDⓈ-M REST method is async.
    * Synchronous methods pass through when no backoff holds.
    */
-  call<T>(fn: () => T, usedWeight: () => number | undefined): T {
+  call<T>(fn: () => T, usedWeight: () => number | undefined, isProtective = false): T {
     try {
-      this.assertOpen(usedWeight());
+      this.assertOpen(usedWeight(), isProtective);
     } catch (err) {
       return Promise.reject(err) as unknown as T;
     }
@@ -169,6 +187,15 @@ export class RestGuard {
 /** Shared by every live client in the process. Warnings go to stderr, which the fleet and orchestrator already read. */
 export const sharedRestGuard = new RestGuard({ log: (message) => console.warn(`[binance] ${message}`) });
 
+function isProtective(property: PropertyKey, args: unknown[]): boolean {
+  if (property === 'cancelOrder' || property === 'cancelAllOpenOrders') return true;
+  const first = args[0] as Record<string, unknown> | undefined;
+  if (first && typeof first === 'object') {
+    return first.reduceOnly === true || first.reduceOnly === 'true' || first.closePosition === true;
+  }
+  return false;
+}
+
 /**
  * Wraps a USDⓈ-M client so each REST method passes through the guard. The wrapper calls the method with the raw client
  * as `this`, so only the outer call is guarded and a method's internal calls are not counted twice.
@@ -186,6 +213,7 @@ export function guardUsdmClient<T extends object>(client: T, guard: RestGuard = 
       return (...args: unknown[]) => guard.call(
         () => (value as (...callArgs: unknown[]) => unknown).apply(target, args),
         usedWeight,
+        isProtective(property, args),
       );
     },
   });

@@ -18,9 +18,9 @@ const MINUTE_MS = 60_000;
 const METRICS_STEP_MS = 5 * MINUTE_MS;
 const CONCURRENCY = 6;
 
-type Dataset = 'klines' | 'markPriceKlines' | 'fundingRate' | 'metrics';
+type Dataset = 'klines' | 'markPriceKlines' | 'fundingRate' | 'metrics' | 'aggTrades' | 'bookDepth';
 interface ArchiveFile { dataset: Dataset; symbol: string; period: string; daily: boolean; relPath: string }
-interface FileReport { relPath: string; status: 'OK' | 'INVALID' | 'MISSING' | 'SUPERSEDED_BY_DAILY'; sha256?: string; bytes?: number; rows?: number; issue?: string }
+interface FileReport { relPath: string; status: 'OK' | 'INVALID' | 'MISSING' | 'SUPERSEDED_BY_DAILY'; sha256?: string; checksum?: string; bytes?: number; rows?: number; issue?: string }
 
 const arg = (name: string, fallback: string): string => {
   const i = process.argv.indexOf(`--${name}`);
@@ -60,16 +60,38 @@ function planFiles(symbol: string, fromMs: number, untilMs: number, datasets: Re
   return files.filter((f) => datasets.has(f.dataset));
 }
 
-async function download(file: ArchiveFile): Promise<Buffer | null> {
+async function download(file: ArchiveFile): Promise<{ zip: Buffer; checksum?: string } | null> {
   const local = path.join(ROOT, file.relPath);
-  if (existsSync(local)) return readFileSync(local);
+  const chkLocal = `${local}.CHECKSUM`;
+  if (existsSync(local)) {
+    const zip = readFileSync(local);
+    const checksum = existsSync(chkLocal) ? readFileSync(chkLocal, 'utf8').trim().split(/\s+/)[0] : undefined;
+    if (checksum) {
+      const actual = createHash('sha256').update(zip).digest('hex');
+      if (actual !== checksum) throw new Error(`${file.relPath}: local zip checksum mismatch; corrupted file`);
+    }
+    return { zip, checksum };
+  }
+
   const response = await fetch(`${BASE}/${file.relPath}`, { signal: AbortSignal.timeout(60_000) });
   if (response.status === 404) return null;
   if (!response.ok) throw new Error(`${file.relPath}: HTTP ${response.status}`);
   const zip = Buffer.from(await response.arrayBuffer());
+
+  let checksum: string | undefined;
+  const chkRes = await fetch(`${BASE}/${file.relPath}.CHECKSUM`, { signal: AbortSignal.timeout(10_000) }).catch(() => null);
+  if (chkRes?.ok) {
+    checksum = (await chkRes.text()).trim().split(/\s+/)[0];
+    const actual = createHash('sha256').update(zip).digest('hex');
+    if (checksum && actual !== checksum) {
+      throw new Error(`${file.relPath}: checksum mismatch: expected ${checksum}, got ${actual}`);
+    }
+  }
+
   mkdirSync(path.dirname(local), { recursive: true });
   writeFileSync(local, zip);
-  return zip;
+  if (checksum) writeFileSync(chkLocal, checksum);
+  return { zip, checksum };
 }
 
 function periodWindow(file: ArchiveFile): [number, number] {
@@ -117,9 +139,15 @@ function validate(file: ArchiveFile, csv: string): number {
 }
 
 async function processFile(file: ArchiveFile): Promise<FileReport> {
-  const zip = await download(file);
-  if (!zip) return { relPath: file.relPath, status: 'MISSING' };
-  const base = { relPath: file.relPath, sha256: createHash('sha256').update(zip).digest('hex'), bytes: zip.length };
+  let downloaded: { zip: Buffer; checksum?: string } | null;
+  try {
+    downloaded = await download(file);
+  } catch (error) {
+    return { relPath: file.relPath, status: 'INVALID', issue: (error as Error).message };
+  }
+  if (!downloaded) return { relPath: file.relPath, status: 'MISSING' };
+  const { zip, checksum } = downloaded;
+  const base = { relPath: file.relPath, sha256: createHash('sha256').update(zip).digest('hex'), checksum, bytes: zip.length };
   try {
     return { ...base, status: 'OK', rows: validate(file, readFirstZipEntry(zip)) };
   } catch (error) {

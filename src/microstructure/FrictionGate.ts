@@ -35,12 +35,18 @@ export function frictionVerdict(params: {
   side: 'buy' | 'sell';
   notional: number;
   now: number;
+  minBookWindowMs?: number;
+  minCvdWindowMs?: number;
 }): FrictionVerdict {
-  const { mode, source, symbol, side, notional, now } = params;
+  const {
+    mode, source, symbol, side, notional, now,
+    minBookWindowMs = Number(process.env.MICRO_MIN_BOOK_WINDOW_MS || 0),
+    minCvdWindowMs = Number(process.env.MICRO_MIN_CVD_WINDOW_MS || 0),
+  } = params;
   if (mode === 'off') return { allowed: true, mode, status: 'UNMEASURED', reason: 'friction gate off', spreadBps: null, slipBps: null };
   const engine = source?.engine(symbol);
   const friction: EntryFriction = engine
-    ? engine.entryFriction(side, notional, now)
+    ? engine.entryFriction(side, notional, now, minBookWindowMs, minCvdWindowMs)
     : { status: 'BLOCK', reasons: [source ? `no order book tracked for ${symbol}` : 'microstructure feed not running'], spreadBps: null, slipBps: null, bookStatus: 'SYNCING', bookAgeMs: null };
   const blocked = friction.status === 'BLOCK';
   return {

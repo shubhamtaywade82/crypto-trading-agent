@@ -61,11 +61,9 @@ Fleet effect (4 symbols, default TTLs): about 57 REST calls per minute before, 3
   429 was not reproduced.
 - Testnet routing for the kline feed is unverified, as for the trade feed.
 
-## Decisions outstanding
+## Decisions resolved
 
-1. Derivatives TTL: 60 s costs 32 calls per minute. A 300 s TTL would cut that to about 6.4 but changes signal freshness.
-2. Protective writes during a backoff: the guard wraps all REST, including stop placement and emergency closes. A
-   refused emergency close is what the venue would have refused anyway, but it is still a failed close. Decide whether
-   reduce-only writes should bypass the backoff.
-3. Duplicate sockets: the orchestrator, the embedded fleet and `run-fleet` each open their own kline stream. A
-   process-wide registry would share one.
+1. **Derivatives TTL**: Increased default to 300 s (`MARKET_DATA_DERIVATIVES_TTL_MS=300000`, env-overridable). The derivatives data arrives in 5-minute granularity on Binance, cutting derivatives REST calls by 80%.
+2. **Protective writes during backoff**: Cancel orders and reduce-only closes bypass the local 90% weight ceiling (audited via `[restGuard] protective write bypassed local weight ceiling`). Venue-imposed bans (`Retry-After` header or 418 code) are strictly enforced and cannot be bypassed.
+3. **Duplicate sockets**: Added `UsdmStreamRegistry` (`src/market/UsdmStreamRegistry.ts`) providing refcounted stream subscriptions so kline and depth sockets are shared across the orchestrator, fleet supervisor, and feeds without duplicate connections.
+4. **Order-book depth via WebSocket**: Added `DepthSource` port (`src/market/OrderBookDepthSource.ts`) for `MarketDataService`. When local order books are live and fresh, REST `getOrderBook` calls are eliminated entirely. Fallback to REST occurs seamlessly if books are syncing or stale.

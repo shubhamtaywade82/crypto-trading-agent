@@ -13,6 +13,42 @@ export interface OptionsMarketSource {
 /** Adapts the binance-sdk Options market resource (eapi) to `OptionsMarketSource`. */
 export const sdkOptionsSource = (client: BinanceClient): OptionsMarketSource => client.options.market as unknown as OptionsMarketSource;
 
+const EAPI = 'https://eapi.binance.com';
+
+/** Direct fetch against eapi without a Content-Type header: Binance rejects GETs that carry one. */
+export const fetchOptionsSource = (): OptionsMarketSource => ({
+  exchangeInfo: async () => {
+    const res = await fetch(`${EAPI}/eapi/v1/exchangeInfo`, { signal: AbortSignal.timeout(15_000) });
+    if (!res.ok) throw new Error(`exchangeInfo ${res.status}`);
+    return (await res.json()) as { optionSymbols: ReadonlyArray<RawOptionSymbol> };
+  },
+  index: async (underlying?: string) => {
+    const url = new URL(`${EAPI}/eapi/v1/index`);
+    if (underlying) url.searchParams.set('underlying', underlying);
+    const res = await fetch(url, { signal: AbortSignal.timeout(15_000) });
+    if (!res.ok) throw new Error(`index ${res.status}`);
+    const body = await res.json();
+    if (Array.isArray(body)) return body as ReadonlyArray<{ underlying: string; indexPrice: number; time: number }>;
+    const single = body as { indexPrice: string | number; time: number };
+    return [{ underlying: underlying ?? '', indexPrice: Number(single.indexPrice), time: single.time }] as ReadonlyArray<{ underlying: string; indexPrice: number; time: number }>;
+  },
+  mark: async (symbol?: string) => {
+    const url = new URL(`${EAPI}/eapi/v1/mark`);
+    if (symbol) url.searchParams.set('symbol', symbol);
+    const res = await fetch(url, { signal: AbortSignal.timeout(15_000) });
+    if (!res.ok) throw new Error(`mark ${res.status}`);
+    return (await res.json()) as ReadonlyArray<{ symbol: string; markPrice: number } & Record<string, unknown>>;
+  },
+  depth: async (symbol: string, limit?: number) => {
+    const url = new URL(`${EAPI}/eapi/v1/depth`);
+    url.searchParams.set('symbol', symbol);
+    if (limit) url.searchParams.set('limit', String(limit));
+    const res = await fetch(url, { signal: AbortSignal.timeout(15_000) });
+    if (!res.ok) throw new Error(`depth ${res.status}`);
+    return (await res.json()) as { bids: ReadonlyArray<readonly [string, string]>; asks: ReadonlyArray<readonly [string, string]> };
+  },
+});
+
 export interface MarkSnapshot {
   mark: number;
   markIv: number | null;

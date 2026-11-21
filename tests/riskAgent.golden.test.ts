@@ -10,7 +10,10 @@ import type { Candle, RiskDecision, Signal } from '../src/types.js';
 // The recorded values below depend on these limits and on the risk engine (the only sizing path). Each value was checked
 // by hand: quantity = budget / (stop distance + fees), leverage from the confidence and stop width, and liquidation from
 // the isolated-margin formula at the 1% replay maintenance tier. Pinning the limits keeps the table independent of a local .env.
-Object.assign(config.risk, { minLeverage: 5, maxLeverage: 10, maxExposurePct: 80, riskPerTradePct: 1, maxDrawdownPct: 5, minLiqBufferAtr: 2, minStopAtr: 2 });
+Object.assign(config.risk, {
+  minLeverage: 5, maxLeverage: 10, maxExposurePct: 80, maxSymbolExposurePct: 80, maxCorrelatedExposurePct: 80,
+  riskPerTradePct: 1, maxDrawdownPct: 5, minLiqBufferAtr: 2, minStopAtr: 2,
+});
 const agent = (): RiskAgent => new RiskAgent({} as BinanceService, {});
 
 const flatCandles = (range: number): Candle[] =>

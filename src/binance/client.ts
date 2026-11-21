@@ -1,5 +1,6 @@
 import path from 'node:path';
 import { USDMClient, WebsocketClient, type FuturesPositionTrade, type OrderResult } from 'binance';
+import { BinanceClient } from '@nemesis-oss/binance-sdk';
 import { CoinDCXClient } from '@nemesis-oss/coindcx-sdk';
 import { CoinDcxExchangeApi, type CoinDcxOrderClient } from '../coindcx/coindcxClient.js';
 import { config } from '../config.js';
@@ -14,11 +15,12 @@ import { roundPrice, roundQty, rulesFromExchangeInfo, setSymbolRules } from './s
 import type { AgentId, Candle, Position, Side, TradeRecord, WsStatus } from '../types.js';
 import type { OhlcvInput } from '../market/rejection/types.js';
 import { MarketDataService, DEFAULT_MARKET_DATA_OPTIONS } from '../market/MarketDataService.js';
+import { SdkFuturesMarketClient } from '../market/SdkFuturesMarketClient.js';
 import type { MarketDataSnapshot } from '../market/MarketDataTypes.js';
 import { KlineStreamCache, DEFAULT_KLINE_MAX_SILENCE_MS } from '../market/KlineStreamCache.js';
 import { KlineStreamFeed } from '../market/KlineStreamFeed.js';
 import { KLINE_INTERVALS } from '../market/klineIntervals.js';
-import { guardUsdmClient } from '../core/adapters/binance/restGuard.js';
+import { guardUsdmClient, sharedRestGuard } from '../core/adapters/binance/restGuard.js';
 import { LiveBook, LiveStateStore, type LiveManagerMode, type LiveOrderPort } from './liveBook.js';
 import { LiveEntryTracker, LIVE_ENTRY_POLL_MS, liveEntryClientOrderId, orderSideOf, venueRejected, type LiveEntryPort } from './liveEntry.js';
 import { UserDataStream, type ListenKeyPort } from './userDataStream.js';
@@ -166,6 +168,7 @@ export class BinanceService {
   private ws: WebsocketClient | null = null;
   private wsStatus: WsStatus = 'down';
   private readonly marketDataV2: MarketDataService;
+  private readonly sdkMarket: SdkFuturesMarketClient;
   /** Closed candles kept current from the /market kline stream; the REST path serves whatever it does not cover. */
   private readonly klineCache: KlineStreamCache;
   private klineFeed: KlineStreamFeed | null = null;
@@ -199,8 +202,17 @@ export class BinanceService {
     private readonly stateDir = 'data',
   ) {
     this.futures = guardUsdmClient(futures ?? new USDMClient({ api_key: config.binance.apiKey, api_secret: config.binance.apiSecret }, undefined, config.binance.testnet));
+    this.sdkMarket = new SdkFuturesMarketClient(new BinanceClient({ testnet: config.binance.testnet }).futures);
     this.klineCache = new KlineStreamCache({ limit: DEFAULT_MARKET_DATA_OPTIONS.klineLimit, maxSilenceMs: DEFAULT_KLINE_MAX_SILENCE_MS });
-    this.marketDataV2 = new MarketDataService(this.futures, DEFAULT_MARKET_DATA_OPTIONS, this.klineCache);
+    this.marketDataV2 = new MarketDataService(this.sdkMarket, DEFAULT_MARKET_DATA_OPTIONS, this.klineCache);
+  }
+
+  setDepthSource(depthSource: import('../market/OrderBookDepthSource.js').DepthSource): void {
+    this.marketDataV2.setDepthSource(depthSource);
+  }
+
+  setPollSink(pollSink: import('../market/MarketDataService.js').PollSink | null): void {
+    this.marketDataV2.setPollSink(pollSink);
   }
 
   private get paper(): PaperEngine {
@@ -248,7 +260,7 @@ export class BinanceService {
       intervals: KLINE_INTERVALS,
       limit: DEFAULT_MARKET_DATA_OPTIONS.klineLimit,
       cache: this.klineCache,
-      backfill: (symbol, interval, limit) => this.futures.getKlines({ symbol, interval, limit }),
+      backfill: (symbol, interval, limit) => this.sdkMarket.getKlines({ symbol, interval, limit }),
       log,
     });
     this.klineFeed.start();
@@ -277,6 +289,7 @@ export class BinanceService {
 
   async loadSymbolRules(symbols: string[]): Promise<void> {
     const info = await this.futures.getExchangeInfo();
+    sharedRestGuard.seedFromRateLimits((info as { rateLimits?: Array<{ rateLimitType?: unknown; interval?: unknown; limit?: unknown }> }).rateLimits ?? []);
     for (const entry of info.symbols.filter((e) => symbols.includes(e.symbol))) {
       setSymbolRules(entry.symbol, rulesFromExchangeInfo(entry));
       this.symbolStatus.set(entry.symbol, String((entry as { status?: string }).status ?? 'TRADING'));

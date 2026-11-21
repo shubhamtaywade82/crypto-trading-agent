@@ -113,7 +113,7 @@ export const EnvSchema = z.object({
   MARKET_DATA_15M_TTL_MS: timeframeTtl(60_000),
   MARKET_DATA_1H_TTL_MS: timeframeTtl(300_000),
   MARKET_DATA_4H_TTL_MS: timeframeTtl(900_000),
-  MARKET_DATA_DERIVATIVES_TTL_MS: timeframeTtl(60_000),
+  MARKET_DATA_DERIVATIVES_TTL_MS: timeframeTtl(300_000),
   MARKET_DATA_KLINE_LIMIT: z.coerce.number().int().min(50).max(1000).default(300),
   MARKET_DATA_HISTORY_LIMIT: z.coerce.number().int().min(2).max(500).default(30),
   MARKET_DATA_ORDERBOOK_DEPTH: z.coerce.number().int().min(5).max(100).default(20),

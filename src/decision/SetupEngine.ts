@@ -36,8 +36,8 @@ function trendOf(state: MarketState): TrendDirection {
 }
 
 function isDirectionalLiquidity(pool: LiquidityPool, direction: SetupDirection): boolean {
-  const highSide = pool.type === 'EQUAL_HIGH' || pool.type === 'SWING_HIGH' || pool.type === 'RANGE_HIGH';
-  const lowSide = pool.type === 'EQUAL_LOW' || pool.type === 'SWING_LOW' || pool.type === 'RANGE_LOW';
+  const highSide = pool.type === 'EQUAL_HIGH' || pool.type === 'SWING_HIGH' || pool.type === 'RANGE_HIGH' || pool.type === 'SESSION_HIGH';
+  const lowSide = pool.type === 'EQUAL_LOW' || pool.type === 'SWING_LOW' || pool.type === 'RANGE_LOW' || pool.type === 'SESSION_LOW';
   return direction === 'LONG' ? highSide : lowSide;
 }
 

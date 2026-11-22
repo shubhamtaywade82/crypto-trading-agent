@@ -1,0 +1,109 @@
+{
+  "featureId": "FEATURE-001",
+  "tasks": [
+    {
+      "id": "TASK-001",
+      "description": "Implement mathematical BOS with ATR buffer confirmation and protected swing CHOCH",
+      "acceptanceCriteria": [
+        "BOS confirmed only when close > high + ATR * bufferPct",
+        "CHOCH requires breaking protected swing point"
+      ],
+      "verification": {
+        "command": ["npm", "test"],
+        "expectedStatus": "passed"
+      },
+      "dependencies": [],
+      "likelyFiles": [
+        "src/market/StructureEngine.ts",
+        "tests/smcStructure.test.ts"
+      ],
+      "estimatedScope": "m",
+      "risk": "medium"
+    },
+    {
+      "id": "TASK-002",
+      "description": "Implement Range Pricing and Premium / Discount equilibrium calculator",
+      "acceptanceCriteria": [
+        "Calculates 0.5 equilibrium price",
+        "Sets premium/discount flags and positionPct accurately"
+      ],
+      "verification": {
+        "command": ["npx", "tsx", "--test", "tests/smcStructure.test.ts"],
+        "expectedStatus": "passed"
+      },
+      "dependencies": ["TASK-001"],
+      "likelyFiles": [
+        "src/market/StructureEngine.ts",
+        "tests/smcStructure.test.ts"
+      ],
+      "estimatedScope": "s",
+      "risk": "low"
+    },
+    {
+      "id": "TASK-003",
+      "description": "Add session liquidity pools and sweep confirmation to LiquidityEngine",
+      "acceptanceCriteria": [
+        "Generates session high/low liquidity pools",
+        "Validates confirmed sweeps with close-back-inside checks"
+      ],
+      "verification": {
+        "command": ["npx", "tsx", "--test", "tests/smcStructure.test.ts"],
+        "expectedStatus": "passed"
+      },
+      "dependencies": ["TASK-001"],
+      "likelyFiles": [
+        "src/market/LiquidityEngine.ts",
+        "tests/smcStructure.test.ts"
+      ],
+      "estimatedScope": "m",
+      "risk": "medium"
+    },
+    {
+      "id": "TASK-004",
+      "description": "Implement unified evaluateStructureState aggregator and complete contract test suite",
+      "acceptanceCriteria": [
+        "Aggregates structure, zones, pricing, and liquidity into coherent SMC state",
+        "All regression and new tests pass cleanly"
+      ],
+      "verification": {
+        "command": ["npx", "tsx", "--test", "tests/smcStructure.test.ts"],
+        "expectedStatus": "passed"
+      },
+      "dependencies": ["TASK-002", "TASK-003"],
+      "likelyFiles": [
+        "src/market/StructureEngine.ts",
+        "tests/smcStructure.test.ts"
+      ],
+      "estimatedScope": "m",
+      "risk": "medium"
+    }
+  ],
+  "edges": [
+    {
+      "from": "TASK-001",
+      "to": "TASK-002",
+      "reason": "Range pricing requires validated swing points and structure"
+    },
+    {
+      "from": "TASK-001",
+      "to": "TASK-003",
+      "reason": "Liquidity pool detection depends on structure state"
+    },
+    {
+      "from": "TASK-002",
+      "to": "TASK-004",
+      "reason": "Aggregator combines range pricing"
+    },
+    {
+      "from": "TASK-003",
+      "to": "TASK-004",
+      "reason": "Aggregator combines liquidity sweeps"
+    }
+  ],
+  "verticalSlices": [
+    ["TASK-001"],
+    ["TASK-002"],
+    ["TASK-003"],
+    ["TASK-004"]
+  ]
+}

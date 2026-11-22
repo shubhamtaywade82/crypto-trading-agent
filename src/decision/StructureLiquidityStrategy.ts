@@ -46,10 +46,12 @@ function expectedSweep(side: Side): LiquiditySweep['direction'] {
 function isTargetPool(side: Side, pool: LiquidityPool, entry: number): boolean {
   const highSide = pool.type === 'EQUAL_HIGH'
     || pool.type === 'SWING_HIGH'
-    || pool.type === 'RANGE_HIGH';
+    || pool.type === 'RANGE_HIGH'
+    || pool.type === 'SESSION_HIGH';
   const lowSide = pool.type === 'EQUAL_LOW'
     || pool.type === 'SWING_LOW'
-    || pool.type === 'RANGE_LOW';
+    || pool.type === 'RANGE_LOW'
+    || pool.type === 'SESSION_LOW';
 
   return isLong(side) ? highSide && pool.price > entry : lowSide && pool.price < entry;
 }

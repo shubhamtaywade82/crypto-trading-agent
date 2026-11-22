@@ -113,6 +113,8 @@ export function detectLiquidity(
     );
   }
 
+  pools.push(...detectSessionPools(candles, timeframe, atrValue));
+
   const sweepCandles = candles.slice(-SWEEP_LOOKBACK_CANDLES);
   const recentSweeps: LiquiditySweep[] = [];
 
@@ -146,4 +148,45 @@ export function detectLiquidity(
     recentSweeps: orderedSweeps,
     sweepHistory: ledger.sweepHistory,
   };
+}
+
+interface SessionWindow {
+  name: 'ASIA' | 'LONDON' | 'NY';
+  startHour: number;
+  endHour: number;
+}
+
+const SESSIONS: SessionWindow[] = [
+  { name: 'ASIA', startHour: 0, endHour: 8 },
+  { name: 'LONDON', startHour: 8, endHour: 16 },
+  { name: 'NY', startHour: 13, endHour: 21 },
+];
+
+export function detectSessionPools(
+  candles: Candle[],
+  timeframe: Timeframe,
+  atrValue: number,
+): LiquidityPool[] {
+  if (candles.length < 4 || !(atrValue > 0)) return [];
+  const tolerance = Math.max(atrValue * 0.15, 1e-12);
+  const pools: LiquidityPool[] = [];
+
+  for (const session of SESSIONS) {
+    const sessionCandles = candles.filter((c) => {
+      const hour = new Date(c.openTime).getUTCHours();
+      return hour >= session.startHour && hour < session.endHour;
+    });
+    if (sessionCandles.length < 2) continue;
+
+    const high = Math.max(...sessionCandles.map((c) => c.high));
+    const low = Math.min(...sessionCandles.map((c) => c.low));
+    const highCandle = sessionCandles.find((c) => c.high === high)!;
+    const lowCandle = sessionCandles.find((c) => c.low === low)!;
+
+    pools.push(
+      { type: 'SESSION_HIGH', price: high, tolerance, strength: 0.8, timeframe, sourceTimes: [highCandle.openTime] },
+      { type: 'SESSION_LOW', price: low, tolerance, strength: 0.8, timeframe, sourceTimes: [lowCandle.openTime] },
+    );
+  }
+  return pools;
 }

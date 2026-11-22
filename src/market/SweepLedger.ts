@@ -173,7 +173,7 @@ export function buildSweepLedger(
 /** Marks pools from a per-snapshot pool list using the replayed ledger. */
 export function markPoolsFromLedger(pools: LiquidityPool[], ledger: SweepLedgerResult): void {
   for (const pool of pools) {
-    if (pool.type === 'RANGE_HIGH' || pool.type === 'RANGE_LOW') continue;
+    if (pool.type === 'RANGE_HIGH' || pool.type === 'RANGE_LOW' || pool.type === 'SESSION_HIGH' || pool.type === 'SESSION_LOW') continue;
     const hit = ledger.sweptPools.get(poolIdentity(pool.type, pool.sourceTimes));
     if (hit) {
       pool.taken = true;

@@ -82,7 +82,7 @@ export interface StructureState {
 }
 
 export interface LiquidityPool {
-  type: 'EQUAL_HIGH' | 'EQUAL_LOW' | 'SWING_HIGH' | 'SWING_LOW' | 'RANGE_HIGH' | 'RANGE_LOW';
+  type: 'EQUAL_HIGH' | 'EQUAL_LOW' | 'SWING_HIGH' | 'SWING_LOW' | 'RANGE_HIGH' | 'RANGE_LOW' | 'SESSION_HIGH' | 'SESSION_LOW';
   price: number;
   tolerance: number;
   strength: number;
@@ -176,6 +176,15 @@ export interface RangePricing {
   positionPct: number;
   premium: boolean;
   discount: boolean;
+}
+
+export interface SmcStructureContext {
+  timeframe: Timeframe;
+  structure: StructureState;
+  zones: PriceZone[];
+  zoneLedger: ZoneRecord[];
+  pricing: RangePricing;
+  liquidity: LiquidityState;
 }
 
 export interface MeanReversionState {

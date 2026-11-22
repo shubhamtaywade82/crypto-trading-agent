@@ -1,6 +1,19 @@
 import type { Candle } from '../types.js';
+import { detectLiquidity } from './LiquidityEngine.js';
 import { findStructureBreakEvents } from './StructureEventLog.js';
-import type { StructureBreak, StructureState, SwingPoint, Timeframe, TrendDirection } from './types.js';
+import { detectCauseZone } from './ZoneEngine.js';
+import { buildZoneLedger } from './ZoneLedger.js';
+import type {
+  PriceZone,
+  RangePricing,
+  SmcStructureContext,
+  StructureBreak,
+  StructureState,
+  SwingPoint,
+  Timeframe,
+  TrendDirection,
+  ZoneRecord,
+} from './types.js';
 
 function isSwingHigh(candles: Candle[], index: number, strength: number): boolean {
   const price = candles[index]?.high;
@@ -44,55 +57,63 @@ function inferStructureTrend(highs: SwingPoint[], lows: SwingPoint[]): TrendDire
   return 'NEUTRAL';
 }
 
-function findLatestBreak(
-  candles: Candle[],
-  trend: TrendDirection,
-  highs: SwingPoint[],
-  lows: SwingPoint[],
-  atrValue: number,
-): StructureBreak | null {
-  if (candles.length < 2 || atrValue <= 0) return null;
+export interface StructureOptions {
+  strength?: number;
+  bufferPct?: number;
+}
 
-  const current = candles.at(-1)!;
-  const previous = candles.at(-2)!;
+interface BreakContext {
+  trend: TrendDirection;
+  highs: SwingPoint[];
+  lows: SwingPoint[];
+  atrValue: number;
+  bufferPct?: number;
+}
 
-  const latestHigh = highs.filter((point) => point.index < candles.length - 1).at(-1);
-  const latestLow = lows.filter((point) => point.index < candles.length - 1).at(-1);
-
-  const bullishBreak = latestHigh && previous.close <= latestHigh.price && current.close > latestHigh.price;
-  const bearishBreak = latestLow && previous.close >= latestLow.price && current.close < latestLow.price;
-
-  if (!bullishBreak && !bearishBreak) return null;
-
-  if (bullishBreak) {
-    const type = trend === 'BEARISH' ? 'CHOCH' : 'BOS';
-    return {
-      type,
-      direction: 'BULLISH',
-      level: latestHigh!.price,
-      index: candles.length - 1,
-      time: current.openTime,
-      distanceAtr: Math.abs(current.close - latestHigh!.price) / atrValue,
-    };
-  }
-
-  const type = trend === 'BULLISH' ? 'CHOCH' : 'BOS';
+function makeBreak(
+  candle: Candle,
+  level: number,
+  direction: 'BULLISH' | 'BEARISH',
+  meta: { type: 'BOS' | 'CHOCH'; atrValue: number; index: number },
+): StructureBreak {
   return {
-    type,
-    direction: 'BEARISH',
-    level: latestLow!.price,
-    index: candles.length - 1,
-    time: current.openTime,
-    distanceAtr: Math.abs(current.close - latestLow!.price) / atrValue,
+    type: meta.type,
+    direction,
+    level,
+    index: meta.index,
+    time: candle.openTime,
+    distanceAtr: Math.abs(candle.close - level) / meta.atrValue,
   };
+}
+
+function findLatestBreak(candles: Candle[], ctx: BreakContext): StructureBreak | null {
+  if (candles.length < 2 || ctx.atrValue <= 0) return null;
+  const buffer = ctx.atrValue * (ctx.bufferPct ?? 0);
+  const current = candles.at(-1)!;
+  const prev = candles.at(-2)!;
+  const lastHigh = ctx.highs.filter((p) => p.index < candles.length - 1).at(-1);
+  const lastLow = ctx.lows.filter((p) => p.index < candles.length - 1).at(-1);
+  const idx = candles.length - 1;
+
+  if (lastHigh && prev.close <= lastHigh.price && current.close > lastHigh.price + buffer) {
+    const type = ctx.trend === 'BEARISH' ? 'CHOCH' : 'BOS';
+    return makeBreak(current, lastHigh.price, 'BULLISH', { type, atrValue: ctx.atrValue, index: idx });
+  }
+  if (lastLow && prev.close >= lastLow.price && current.close < lastLow.price - buffer) {
+    const type = ctx.trend === 'BULLISH' ? 'CHOCH' : 'BOS';
+    return makeBreak(current, lastLow.price, 'BEARISH', { type, atrValue: ctx.atrValue, index: idx });
+  }
+  return null;
 }
 
 export function analyzeStructure(
   timeframe: Timeframe,
   candles: Candle[],
   atrValue: number,
-  strength = 2,
+  options?: number | StructureOptions,
 ): StructureState {
+  const strength = typeof options === 'number' ? options : (options?.strength ?? 2);
+  const bufferPct = typeof options === 'object' ? (options?.bufferPct ?? 0) : 0;
   const { highs, lows } = findSwingPoints(candles, strength);
   const trend = inferStructureTrend(highs, lows);
 
@@ -101,18 +122,55 @@ export function analyzeStructure(
   const protectedLow =
     trend === 'BULLISH' ? lows.at(-1) ?? null : lows.slice(-2, -1)[0] ?? lows.at(-1) ?? null;
 
-  // Full causal BOS/CHOCH history with protection zones. `lastBreak` keeps its
-  // exact per-snapshot semantics (only a break on the very last candle).
-  const breaks = findStructureBreakEvents(candles, atrValue, strength);
+  const breaks = findStructureBreakEvents(candles, atrValue, strength, { bufferPct });
 
   return {
     timeframe,
     trend,
     swingHighs: highs.slice(-20),
     swingLows: lows.slice(-20),
-    lastBreak: findLatestBreak(candles, trend, highs, lows, atrValue),
+    lastBreak: findLatestBreak(candles, { trend, highs, lows, atrValue, bufferPct }),
     protectedHigh,
     protectedLow,
     breaks,
+  };
+}
+
+export function calculateRangePricing(candles: Candle[], window = 50): RangePricing {
+  const sample = candles.slice(-window);
+  const high = sample.length ? Math.max(...sample.map((c) => c.high)) : 0;
+  const low = sample.length ? Math.min(...sample.map((c) => c.low)) : 0;
+  const equilibrium = high > low ? (high + low) / 2 : high;
+  const last = sample.at(-1)?.close ?? 0;
+  const positionPct = high > low ? ((last - low) / (high - low)) * 100 : 50;
+  return {
+    high,
+    low,
+    equilibrium,
+    positionPct,
+    premium: positionPct > 50,
+    discount: positionPct < 50,
+  };
+}
+
+export function evaluateStructureState(
+  timeframe: Timeframe,
+  candles: Candle[],
+  atrValue: number,
+  options?: number | StructureOptions,
+): SmcStructureContext {
+  const structure = analyzeStructure(timeframe, candles, atrValue, options);
+  const liquidity = detectLiquidity(timeframe, candles, structure, atrValue);
+  const pricing = calculateRangePricing(candles);
+  const zones = detectCauseZone(timeframe, candles, structure.lastBreak, atrValue);
+  const zoneLedger = buildZoneLedger(timeframe, candles, atrValue, structure.breaks ?? []);
+
+  return {
+    timeframe,
+    structure,
+    zones,
+    zoneLedger,
+    pricing,
+    liquidity,
   };
 }

@@ -49,13 +49,22 @@ interface ConfirmedSwing {
  *   some prefix length they remain true in every longer prefix, and the recorded
  *   timestamps never move.
  */
+export interface BreakEventOptions {
+  maxEvents?: number;
+  bufferPct?: number;
+}
+
 export function findStructureBreakEvents(
   candles: Candle[],
   atrValue: number,
   strength = 2,
-  maxEvents = MAX_BREAK_EVENTS,
+  options?: number | BreakEventOptions,
 ): StructureBreak[] {
   if (candles.length < 2 || !(atrValue > 0)) return [];
+
+  const maxEvents = typeof options === 'number' ? options : (options?.maxEvents ?? MAX_BREAK_EVENTS);
+  const bufferPct = typeof options === 'object' ? (options?.bufferPct ?? 0) : 0;
+  const buffer = atrValue * bufferPct;
 
   const confirmedHighs: ConfirmedSwing[] = [];
   const confirmedLows: ConfirmedSwing[] = [];
@@ -93,8 +102,8 @@ export function findStructureBreakEvents(
     const candle = candles[i];
     const previousClose = candles[i - 1].close;
 
-    const bullish = lastHigh !== null && previousClose <= lastHigh.price && candle.close > lastHigh.price;
-    const bearish = lastLow !== null && previousClose >= lastLow.price && candle.close < lastLow.price;
+    const bullish = lastHigh !== null && previousClose <= lastHigh.price && candle.close > lastHigh.price + buffer;
+    const bearish = lastLow !== null && previousClose >= lastLow.price && candle.close < lastLow.price - buffer;
     if (!bullish && !bearish) continue;
 
     // Matches findLatestBreak: bullish wins the degenerate both-cross candle.

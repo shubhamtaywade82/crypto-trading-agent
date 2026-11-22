@@ -3,7 +3,7 @@ import { detectLiquidity } from './LiquidityEngine.js';
 import { classifyRegime, buildTimeframeState } from './RegimeEngine.js';
 import { RegimeTracker, type RegimeOptions } from './RegimeScoring.js';
 import { calculateCrowding } from './CrowdingEngine.js';
-import { analyzeStructure } from './StructureEngine.js';
+import { analyzeStructure, calculateRangePricing } from './StructureEngine.js';
 import { buildZoneLedger } from './ZoneLedger.js';
 import { closedCandles, resampleCandles } from './TimeframeEngine.js';
 import { detectCauseZone } from './ZoneEngine.js';
@@ -17,23 +17,6 @@ import type {
 import { bollinger, lastVwap, rsi, zscore } from '../binance/indicators.js';
 
 const TIMEFRAMES: Timeframe[] = ['15m', '1h', '4h'];
-
-function rangePricing(candles: Candle[]): RangePricing {
-  const sample = candles.slice(-50);
-  const high = sample.length ? Math.max(...sample.map((c) => c.high)) : 0;
-  const low = sample.length ? Math.min(...sample.map((c) => c.low)) : 0;
-  const equilibrium = high > low ? (high + low) / 2 : high;
-  const last = sample.at(-1)?.close ?? 0;
-  const positionPct = high > low ? ((last - low) / (high - low)) * 100 : 50;
-  return {
-    high,
-    low,
-    equilibrium,
-    positionPct,
-    premium: positionPct > 50,
-    discount: positionPct < 50,
-  };
-}
 
 function meanReversion(candles: Candle[]): MeanReversionState {
   const closes = candles.map((c) => c.close);
@@ -143,7 +126,7 @@ export class MarketStateBuilder {
       liquidity,
       zones,
       zoneLedger,
-      pricing: rangePricing(tf1h),
+      pricing: calculateRangePricing(tf1h),
       meanReversion: meanReversion(tf15),
       derivatives,
       crowding: calculateCrowding(derivatives, input.fundingRate),

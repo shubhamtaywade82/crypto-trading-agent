@@ -1,7 +1,7 @@
 import type { LiquidityPool, MarketState } from '../market/types.js';
 
-const HIGH_SIDE: ReadonlySet<LiquidityPool['type']> = new Set(['EQUAL_HIGH', 'SWING_HIGH', 'RANGE_HIGH']);
-const LOW_SIDE: ReadonlySet<LiquidityPool['type']> = new Set(['EQUAL_LOW', 'SWING_LOW', 'RANGE_LOW']);
+const HIGH_SIDE: ReadonlySet<LiquidityPool['type']> = new Set(['EQUAL_HIGH', 'SWING_HIGH', 'RANGE_HIGH', 'SESSION_HIGH']);
+const LOW_SIDE: ReadonlySet<LiquidityPool['type']> = new Set(['EQUAL_LOW', 'SWING_LOW', 'RANGE_LOW', 'SESSION_LOW']);
 
 export interface PoolTarget {
   pool: LiquidityPool;

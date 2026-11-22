@@ -1,6 +1,7 @@
 import type { Signal } from '../types.js';
 import type { MarketState } from '../market/types.js';
 import { buildCandidate } from './CandidateBuilder.js';
+import { resolveDirectionalConflict } from './ConflictResolver.js';
 import type { FusionResult, TradeCandidate } from './types.js';
 
 export interface SignalFusionOptions {
@@ -16,6 +17,44 @@ export const DEFAULT_SIGNAL_FUSION_OPTIONS: SignalFusionOptions = {
   conflictMargin: 8,
   maxSelected: 1,
 };
+
+function resolveCandidateConflict(
+  bestLong: TradeCandidate,
+  bestShort: TradeCandidate,
+  state: MarketState,
+  conflictMargin: number,
+): TradeCandidate | null {
+  if (conflictMargin >= 50) return null;
+
+  const res = resolveDirectionalConflict(
+    {
+      id: bestLong.candidateId,
+      side: 'LONG',
+      strategy: bestLong.strategy,
+      evidenceScore: bestLong.evidence.total,
+      entry: bestLong.entry,
+      stopLoss: bestLong.stopLoss,
+      takeProfit: bestLong.takeProfit,
+      rewardRisk: bestLong.rewardRisk,
+    },
+    {
+      id: bestShort.candidateId,
+      side: 'SHORT',
+      strategy: bestShort.strategy,
+      evidenceScore: bestShort.evidence.total,
+      entry: bestShort.entry,
+      stopLoss: bestShort.stopLoss,
+      takeProfit: bestShort.takeProfit,
+      rewardRisk: bestShort.rewardRisk,
+    },
+    state,
+    conflictMargin,
+  );
+
+  if (res.verdict === 'RESOLVED_LONG') return bestLong;
+  if (res.verdict === 'RESOLVED_SHORT') return bestShort;
+  return null;
+}
 
 export class SignalFusionEngine {
   constructor(private readonly options: SignalFusionOptions = DEFAULT_SIGNAL_FUSION_OPTIONS) {}
@@ -83,11 +122,19 @@ export class SignalFusionEngine {
         const gap = Math.abs(bestLong.evidence.total - bestShort.evidence.total);
 
         if (gap < this.options.conflictMargin) {
-          conflicts.push({
-            symbol,
-            candidates: symbolCandidates.map((candidate) => candidate.candidateId),
-            reason: `opposite-direction candidates are within ${this.options.conflictMargin} evidence points`,
-          });
+          const state = marketState[symbol];
+          const resolved = state
+            ? resolveCandidateConflict(bestLong, bestShort, state, this.options.conflictMargin)
+            : null;
+          if (!resolved) {
+            conflicts.push({
+              symbol,
+              candidates: symbolCandidates.map((candidate) => candidate.candidateId),
+              reason: `opposite-direction candidates are within ${this.options.conflictMargin} evidence points`,
+            });
+            continue;
+          }
+          selected.push(resolved);
           continue;
         }
 

@@ -108,6 +108,27 @@ export function scoreCandidate(
     }
   }
 
+  const c = state.crowding;
+  if (c) {
+    const squeezeAligned =
+      (side === 'LONG' && (c.squeezeRisk === 'SHORT_SQUEEZE_RISK' || c.smartMoneyDivergence === 'SMART_MONEY_LONG')) ||
+      (side === 'SHORT' && (c.squeezeRisk === 'LONG_SQUEEZE_RISK' || c.smartMoneyDivergence === 'SMART_MONEY_SHORT'));
+    if (squeezeAligned) {
+      derivatives = Math.min(10, derivatives + 4);
+      reasons.push('crowding squeeze risk aligns with trade direction');
+    }
+  }
+
+  if (state.meanReversion?.rangeFavorable) {
+    const mrAligned =
+      (side === 'LONG' && state.meanReversion.reversionCandidate === 'BUY_CANDIDATE') ||
+      (side === 'SHORT' && state.meanReversion.reversionCandidate === 'SELL_CANDIDATE');
+    if (mrAligned) {
+      regime = Math.min(20, regime + 5);
+      reasons.push('mean-reversion confirmed in favorable range');
+    }
+  }
+
   const execution = Math.max(0, Math.min(10, executionScore));
   const total = Math.max(
     0,

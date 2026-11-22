@@ -131,3 +131,24 @@ test('stands down on conflicting signals with comparable strength', () => {
 
   assert.equal(intents.length, 0);
 });
+
+test('TASK-002: boosts evidence score when signal aligns with confirmed mean reversion in range', () => {
+  const signal = mockSignal({ agent: 'MEAN-REVERT-θ', type: 'OPEN_LONG', confidence: 0.8 });
+  const rangeState = mockState('RANGE');
+  rangeState.meanReversion = {
+    mean: 100,
+    vwap: 100,
+    zscore: -2.3,
+    rsi14: 32,
+    bollingerMiddle: 100,
+    bollingerUpper: 105,
+    bollingerLower: 95,
+    deviationPct: -3.5,
+    rangeFavorable: true,
+    bollingerRsiConfirmation: 'BULLISH_REENTRY',
+    reversionCandidate: 'BUY_CANDIDATE',
+  };
+  const intents = fuseSignals([signal], { BTCUSDT: rangeState });
+  assert.equal(intents.length, 1);
+  assert.ok(intents[0].reasons.some((r) => r.includes('mean_reversion_confirmed')));
+});

@@ -1,0 +1,109 @@
+{
+  "featureId": "FEATURE-004",
+  "tasks": [
+    {
+      "id": "TASK-001",
+      "description": "Implement ConflictResolver module with explicit resolution matrix (HTF dominance, regime filtering, squeeze precedence, mean-reversion gating)",
+      "acceptanceCriteria": [
+        "Resolves opposing LONG vs SHORT candidates using deterministic multi-timeframe matrix",
+        "Enforces trend dominance over counter-trend in trending regimes",
+        "Enforces mean-reversion priority in range regimes and squeeze priority under extreme crowding",
+        "Stands down cleanly on ambiguous conflicts"
+      ],
+      "verification": {
+        "command": ["npx", "tsx", "--test", "tests/conflictResolver.test.ts"],
+        "expectedStatus": "passed"
+      },
+      "dependencies": [],
+      "likelyFiles": [
+        "src/decision/ConflictResolver.ts",
+        "src/decision/types.ts",
+        "tests/conflictResolver.test.ts"
+      ],
+      "estimatedScope": "m",
+      "risk": "medium"
+    },
+    {
+      "id": "TASK-002",
+      "description": "Enhance candidate evidence scoring with derivatives crowding and mean-reversion metrics in CandidateScorer and SignalFusion",
+      "acceptanceCriteria": [
+        "CandidateScorer incorporates smart money divergence, squeeze risk, and mean-reversion candidates",
+        "SignalFusion factor evaluation includes crowding and mean reversion confirmations"
+      ],
+      "verification": {
+        "command": ["npx", "tsx", "--test", "tests/signalFusion.test.ts"],
+        "expectedStatus": "passed"
+      },
+      "dependencies": ["TASK-001"],
+      "likelyFiles": [
+        "src/decision/CandidateScorer.ts",
+        "src/decision/SignalFusion.ts",
+        "tests/signalFusion.test.ts"
+      ],
+      "estimatedScope": "m",
+      "risk": "low"
+    },
+    {
+      "id": "TASK-003",
+      "description": "Integrate ConflictResolver into SignalFusionEngine and SignalFusion orchestration",
+      "acceptanceCriteria": [
+        "SignalFusion and SignalFusionEngine delegate directional conflicts to ConflictResolver",
+        "Maintains backward compatibility with existing tests"
+      ],
+      "verification": {
+        "command": ["npx", "tsx", "--test", "tests/conflictResolver.test.ts"],
+        "expectedStatus": "passed"
+      },
+      "dependencies": ["TASK-002"],
+      "likelyFiles": [
+        "src/decision/SignalFusionEngine.ts",
+        "src/decision/SignalFusion.ts",
+        "tests/conflictResolver.test.ts"
+      ],
+      "estimatedScope": "s",
+      "risk": "low"
+    },
+    {
+      "id": "TASK-004",
+      "description": "Comprehensive contract and regression testing for multi-timeframe fusion matrix",
+      "acceptanceCriteria": [
+        "All edge cases (reversals with sweep + CHOCH, equal score stand-downs, squeeze overrides) covered by tests",
+        "Full test suite passes cleanly via npm test"
+      ],
+      "verification": {
+        "command": ["npx", "tsx", "--test", "tests/conflictResolver.test.ts"],
+        "expectedStatus": "passed"
+      },
+      "dependencies": ["TASK-003"],
+      "likelyFiles": [
+        "tests/conflictResolver.test.ts",
+        "tests/signalFusion.test.ts"
+      ],
+      "estimatedScope": "s",
+      "risk": "low"
+    }
+  ],
+  "edges": [
+    {
+      "from": "TASK-001",
+      "to": "TASK-002",
+      "reason": "Scoring enhancements require conflict resolver matrix contracts"
+    },
+    {
+      "from": "TASK-002",
+      "to": "TASK-003",
+      "reason": "Engine integration connects updated scorer with resolver"
+    },
+    {
+      "from": "TASK-003",
+      "to": "TASK-004",
+      "reason": "Final contract verification requires completed integration"
+    }
+  ],
+  "verticalSlices": [
+    ["TASK-001"],
+    ["TASK-002"],
+    ["TASK-003"],
+    ["TASK-004"]
+  ]
+}

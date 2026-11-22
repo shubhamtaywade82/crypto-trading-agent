@@ -1,6 +1,7 @@
 import type { AgentId, Signal } from '../types.js';
 import type { MarketState } from '../market/types.js';
 import type { MicrostructureReading } from '../microstructure/MicrostructureEngine.js';
+import { resolveDirectionalConflict, type ConflictCandidate } from './ConflictResolver.js';
 
 export interface ScoredSignal {
   signal: Signal;
@@ -20,68 +21,136 @@ export interface TradeIntent {
   reasons: string[];
 }
 
-function evaluateFactors(side: 'LONG' | 'SHORT', signal: Signal, state?: MarketState, micro?: MicrostructureReading): { bonus: number; factors: string[] } {
+function evaluateStructureFactors(
+  side: 'LONG' | 'SHORT',
+  signal: Signal,
+  state: MarketState,
+): { bonus: number; factors: string[] } {
+  let bonus = 0;
+  const factors: string[] = [];
+
+  const isRegimeAligned =
+    (side === 'LONG' && state.regime.regime === 'TREND_UP') ||
+    (side === 'SHORT' && state.regime.regime === 'TREND_DOWN') ||
+    (signal.agent === 'MEAN-REVERT-θ' && state.regime.regime === 'RANGE');
+  if (isRegimeAligned) {
+    bonus += 20;
+    factors.push('regime_aligned:+20');
+  }
+
+  const isLocationGood = (side === 'LONG' && state.pricing.discount) || (side === 'SHORT' && state.pricing.premium);
+  if (isLocationGood) {
+    bonus += 20;
+    factors.push('pricing_location:+20');
+  }
+
+  const hasSweep = state.liquidity.ltf.latestSweeps.some((s) =>
+    side === 'LONG' ? s.direction === 'SELL_SIDE' : s.direction === 'BUY_SIDE'
+  );
+  if (hasSweep) {
+    bonus += 10;
+    factors.push('liquidity_sweep:+10');
+  }
+
+  return { bonus, factors };
+}
+
+function evaluateIntelligenceFactors(
+  side: 'LONG' | 'SHORT',
+  state: MarketState,
+): { bonus: number; factors: string[] } {
+  let bonus = 0;
+  const factors: string[] = [];
+
+  if (state.crowding) {
+    const isContrarian =
+      (side === 'LONG' && (state.crowding.positioningExtreme === 'SHORT_CROWDED' || state.crowding.squeezeRisk === 'SHORT_SQUEEZE_RISK' || state.crowding.smartMoneyDivergence === 'SMART_MONEY_LONG')) ||
+      (side === 'SHORT' && (state.crowding.positioningExtreme === 'LONG_CROWDED' || state.crowding.squeezeRisk === 'LONG_SQUEEZE_RISK' || state.crowding.smartMoneyDivergence === 'SMART_MONEY_SHORT'));
+    if (isContrarian) {
+      bonus += 10;
+      factors.push('crowding_squeeze:+10');
+    }
+  }
+
+  if (state.meanReversion?.rangeFavorable) {
+    const isMrAligned =
+      (side === 'LONG' && state.meanReversion.reversionCandidate === 'BUY_CANDIDATE') ||
+      (side === 'SHORT' && state.meanReversion.reversionCandidate === 'SELL_CANDIDATE');
+    if (isMrAligned) {
+      bonus += 15;
+      factors.push('mean_reversion_confirmed:+15');
+    }
+  }
+
+  return { bonus, factors };
+}
+
+function evaluateStateFactors(
+  side: 'LONG' | 'SHORT',
+  signal: Signal,
+  state: MarketState,
+): { bonus: number; factors: string[] } {
+  const struct = evaluateStructureFactors(side, signal, state);
+  const intel = evaluateIntelligenceFactors(side, state);
+  return {
+    bonus: struct.bonus + intel.bonus,
+    factors: [...struct.factors, ...intel.factors],
+  };
+}
+
+function evaluateMicroFactors(
+  side: 'LONG' | 'SHORT',
+  micro: MicrostructureReading,
+): { bonus: number; factors: string[] } {
+  let bonus = 0;
+  const factors: string[] = [];
+  if (micro.book.status !== 'LIVE') return { bonus, factors };
+
+  const imb = micro.depthImbalance?.bps10 ?? micro.depthImbalance?.bps25;
+  if (imb !== null && imb !== undefined && ((side === 'LONG' && imb >= 0.15) || (side === 'SHORT' && imb <= -0.15))) {
+    bonus += 10;
+    factors.push('orderbook_imbalance:+10');
+  }
+  if (micro.bias.bias !== 'NEUTRAL') {
+    if ((side === 'LONG' && micro.bias.bias === 'LONG') || (side === 'SHORT' && micro.bias.bias === 'SHORT')) {
+      bonus += 10;
+      factors.push('micro_bias_aligned:+10');
+    } else if (micro.bias.bias !== side) {
+      bonus -= 15;
+      factors.push('micro_bias_opposing:-15');
+    }
+  }
+  if (micro.events.some((e) => e.kind === 'ABSORPTION' && e.side === (side === 'LONG' ? 'bid' : 'ask'))) {
+    bonus += 10;
+    factors.push('wall_absorption:+10');
+  }
+  if ((side === 'LONG' && micro.liquidations?.exhaustion === 'LONG_EXHAUSTION') || (side === 'SHORT' && micro.liquidations?.exhaustion === 'SHORT_EXHAUSTION')) {
+    bonus += 10;
+    factors.push('liquidation_exhaustion:+10');
+  }
+
+  return { bonus, factors };
+}
+
+function evaluateFactors(
+  side: 'LONG' | 'SHORT',
+  signal: Signal,
+  state?: MarketState,
+  micro?: MicrostructureReading,
+): { bonus: number; factors: string[] } {
   let bonus = 0;
   const factors: string[] = [];
 
   if (state) {
-    const isRegimeAligned =
-      (side === 'LONG' && state.regime.regime === 'TREND_UP') ||
-      (side === 'SHORT' && state.regime.regime === 'TREND_DOWN') ||
-      (signal.agent === 'MEAN-REVERT-θ' && state.regime.regime === 'RANGE');
-    if (isRegimeAligned) {
-      bonus += 20;
-      factors.push('regime_aligned:+20');
-    }
-
-    const isLocationGood = (side === 'LONG' && state.pricing.discount) || (side === 'SHORT' && state.pricing.premium);
-    if (isLocationGood) {
-      bonus += 20;
-      factors.push('pricing_location:+20');
-    }
-
-    const hasSweep = state.liquidity.ltf.latestSweeps.some((s) =>
-      side === 'LONG' ? s.direction === 'SELL_SIDE' : s.direction === 'BUY_SIDE'
-    );
-    if (hasSweep) {
-      bonus += 10;
-      factors.push('liquidity_sweep:+10');
-    }
-
-    if (state.crowding) {
-      const isContrarian =
-        (side === 'LONG' && (state.crowding.positioningExtreme === 'SHORT_CROWDED' || state.crowding.squeezeRisk === 'SHORT_SQUEEZE_RISK')) ||
-        (side === 'SHORT' && (state.crowding.positioningExtreme === 'LONG_CROWDED' || state.crowding.squeezeRisk === 'LONG_SQUEEZE_RISK'));
-      if (isContrarian) {
-        bonus += 10;
-        factors.push('crowding_squeeze:+10');
-      }
-    }
+    const stateRes = evaluateStateFactors(side, signal, state);
+    bonus += stateRes.bonus;
+    factors.push(...stateRes.factors);
   }
 
-  if (micro && micro.book.status === 'LIVE') {
-    const imb = micro.depthImbalance?.bps10 ?? micro.depthImbalance?.bps25;
-    if (imb !== null && imb !== undefined && ((side === 'LONG' && imb >= 0.15) || (side === 'SHORT' && imb <= -0.15))) {
-      bonus += 10;
-      factors.push('orderbook_imbalance:+10');
-    }
-    if (micro.bias.bias !== 'NEUTRAL') {
-      if ((side === 'LONG' && micro.bias.bias === 'LONG') || (side === 'SHORT' && micro.bias.bias === 'SHORT')) {
-        bonus += 10;
-        factors.push('micro_bias_aligned:+10');
-      } else if (micro.bias.bias !== side) {
-        bonus -= 15;
-        factors.push('micro_bias_opposing:-15');
-      }
-    }
-    if (micro.events.some((e) => e.kind === 'ABSORPTION' && e.side === (side === 'LONG' ? 'bid' : 'ask'))) {
-      bonus += 10;
-      factors.push('wall_absorption:+10');
-    }
-    if ((side === 'LONG' && micro.liquidations?.exhaustion === 'LONG_EXHAUSTION') || (side === 'SHORT' && micro.liquidations?.exhaustion === 'SHORT_EXHAUSTION')) {
-      bonus += 10;
-      factors.push('liquidation_exhaustion:+10');
-    }
+  if (micro) {
+    const microRes = evaluateMicroFactors(side, micro);
+    bonus += microRes.bonus;
+    factors.push(...microRes.factors);
   }
 
   return { bonus, factors };
@@ -101,20 +170,44 @@ function scoreSignal(signal: Signal, state?: MarketState, micro?: Microstructure
   };
 }
 
-function pickWinner(bestLong?: ScoredSignal, bestShort?: ScoredSignal): ScoredSignal | null {
-  if (!bestLong || !bestShort) return bestLong ?? bestShort ?? null;
-  const diff = bestLong.evidenceScore - bestShort.evidenceScore;
-  // Conflict threshold: if long and short have similar strength (<15 diff), stand down to avoid whipsaw
-  if (Math.abs(diff) < 15) return null;
-  return diff > 0 ? bestLong : bestShort;
+function toConflictCandidate(scored: ScoredSignal): ConflictCandidate {
+  return {
+    id: scored.signal.id,
+    side: scored.side,
+    strategy: scored.signal.agent,
+    evidenceScore: scored.evidenceScore,
+    entry: scored.signal.entry,
+    stopLoss: scored.signal.stopLoss,
+    takeProfit: scored.signal.takeProfit,
+    factors: scored.factors,
+  };
 }
 
-function resolveSymbol(scoredList: ScoredSignal[]): TradeIntent | null {
+function pickWinner(bestLong?: ScoredSignal, bestShort?: ScoredSignal, state?: MarketState): ScoredSignal | null {
+  if (!bestLong || !bestShort) return bestLong ?? bestShort ?? null;
+  if (!state) {
+    const diff = bestLong.evidenceScore - bestShort.evidenceScore;
+    if (Math.abs(diff) < 15) return null;
+    return diff > 0 ? bestLong : bestShort;
+  }
+
+  const res = resolveDirectionalConflict(
+    toConflictCandidate(bestLong),
+    toConflictCandidate(bestShort),
+    state,
+    15,
+  );
+  if (res.verdict === 'RESOLVED_LONG') return bestLong;
+  if (res.verdict === 'RESOLVED_SHORT') return bestShort;
+  return null;
+}
+
+function resolveSymbol(scoredList: ScoredSignal[], state?: MarketState): TradeIntent | null {
   if (scoredList.length === 0) return null;
   const longs = scoredList.filter((s) => s.side === 'LONG').sort((a, b) => b.evidenceScore - a.evidenceScore);
   const shorts = scoredList.filter((s) => s.side === 'SHORT').sort((a, b) => b.evidenceScore - a.evidenceScore);
 
-  const winner = pickWinner(longs[0], shorts[0]);
+  const winner = pickWinner(longs[0], shorts[0], state);
   if (!winner || winner.evidenceScore < 50) return null;
 
   const sig = winner.signal;
@@ -148,8 +241,9 @@ export function fuseSignals(
 
   const intents: TradeIntent[] = [];
   for (const [symbol, sigs] of bySymbol.entries()) {
-    const scored = sigs.map((sig) => scoreSignal(sig, marketStates?.[symbol], microstructure?.[symbol]));
-    const intent = resolveSymbol(scored);
+    const state = marketStates?.[symbol];
+    const scored = sigs.map((sig) => scoreSignal(sig, state, microstructure?.[symbol]));
+    const intent = resolveSymbol(scored, state);
     if (intent) intents.push(intent);
   }
   return intents;

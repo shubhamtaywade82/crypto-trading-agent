@@ -196,6 +196,9 @@ export interface MeanReversionState {
   bollingerUpper: number | null;
   bollingerLower: number | null;
   deviationPct: number | null;
+  bollingerRsiConfirmation?: 'BULLISH_REENTRY' | 'BEARISH_REENTRY' | null;
+  rangeFavorable?: boolean;
+  reversionCandidate?: 'BUY_CANDIDATE' | 'SELL_CANDIDATE' | 'NONE';
 }
 
 export interface RegimeSnapshot {

@@ -3,6 +3,7 @@ import { detectLiquidity } from './LiquidityEngine.js';
 import { classifyRegime, buildTimeframeState } from './RegimeEngine.js';
 import { RegimeTracker, type RegimeOptions } from './RegimeScoring.js';
 import { calculateCrowding } from './CrowdingEngine.js';
+import { calculateMeanReversion } from './MeanReversionEngine.js';
 import { analyzeStructure, calculateRangePricing } from './StructureEngine.js';
 import { buildZoneLedger } from './ZoneLedger.js';
 import { closedCandles, resampleCandles } from './TimeframeEngine.js';
@@ -10,41 +11,11 @@ import { detectCauseZone } from './ZoneEngine.js';
 import type {
   MarketState,
   MarketStateInput,
-  MeanReversionState,
   RangePricing,
   Timeframe,
 } from './types.js';
-import { bollinger, lastVwap, rsi, zscore } from '../binance/indicators.js';
 
 const TIMEFRAMES: Timeframe[] = ['15m', '1h', '4h'];
-
-function meanReversion(candles: Candle[]): MeanReversionState {
-  const closes = candles.map((c) => c.close);
-  const period = Math.min(20, closes.length);
-  if (period < 2) {
-    return {
-      mean: null, vwap: null, zscore: null, rsi14: null,
-      bollingerMiddle: null, bollingerUpper: null, bollingerLower: null, deviationPct: null,
-    };
-  }
-
-  const bands = bollinger(closes, period, 2);
-  const meanValue = bands.middle.at(-1);
-  const recent = closes.slice(-period);
-  const mean = recent.reduce((sum, value) => sum + value, 0) / recent.length;
-  const latest = closes.at(-1)!;
-
-  return {
-    mean,
-    vwap: lastVwap(candles, Math.min(96, Math.max(2, candles.length))),
-    zscore: zscore(closes, period),
-    rsi14: rsi(closes, 14).at(-1) ?? null,
-    bollingerMiddle: meanValue ?? null,
-    bollingerUpper: bands.upper.at(-1) ?? null,
-    bollingerLower: bands.lower.at(-1) ?? null,
-    deviationPct: mean !== 0 ? ((latest - mean) / mean) * 100 : null,
-  };
-}
 
 function nativeOrResampled(
   native: Partial<Record<'1m' | '5m' | '15m' | '1h' | '4h', Candle[]>> | undefined,
@@ -111,15 +82,17 @@ export class MarketStateBuilder {
     ];
 
     const derivatives = input.derivatives ?? null;
+    const regime = this.regimeTracker
+      ? this.regimeTracker.update(input.symbol, latestClosedTime, timeframes['15m'], timeframes['1h'])
+      : classifyRegime(timeframes['15m'], timeframes['1h']);
+
     const state: MarketState = {
       version: 1,
       symbol: input.symbol,
       generatedAt: latestClosedTime,
       mark: input.mark,
       fundingRate: input.fundingRate,
-      regime: this.regimeTracker
-        ? this.regimeTracker.update(input.symbol, latestClosedTime, timeframes['15m'], timeframes['1h'])
-        : classifyRegime(timeframes['15m'], timeframes['1h']),
+      regime,
       timeframes,
       htfStructure,
       ltfStructure,
@@ -127,7 +100,10 @@ export class MarketStateBuilder {
       zones,
       zoneLedger,
       pricing: calculateRangePricing(tf1h),
-      meanReversion: meanReversion(tf15),
+      meanReversion: calculateMeanReversion(tf15, {
+        regime,
+        adx14: timeframes['15m'].adx14,
+      }),
       derivatives,
       crowding: calculateCrowding(derivatives, input.fundingRate),
     };

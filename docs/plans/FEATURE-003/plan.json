@@ -1,0 +1,105 @@
+{
+  "featureId": "FEATURE-003",
+  "tasks": [
+    {
+      "id": "TASK-001",
+      "description": "Implement multi-anchor mean deviation and rolling Z-score calculator in MeanReversionEngine",
+      "acceptanceCriteria": [
+        "Computes mean, vwap, zscore, bollinger bands, and deviationPct",
+        "Handles short/flat history gracefully"
+      ],
+      "verification": {
+        "command": ["npx", "tsx", "--test", "tests/meanReversionEngine.test.ts"],
+        "expectedStatus": "passed"
+      },
+      "dependencies": [],
+      "likelyFiles": [
+        "src/market/MeanReversionEngine.ts",
+        "tests/meanReversionEngine.test.ts"
+      ],
+      "estimatedScope": "s",
+      "risk": "low"
+    },
+    {
+      "id": "TASK-002",
+      "description": "Implement Bollinger Band extreme touch and RSI re-entry confirmation detector",
+      "acceptanceCriteria": [
+        "Detects oversold bounce when price touches lower BB and RSI crosses back above 30",
+        "Detects overbought rejection when price touches upper BB and RSI crosses back below 70"
+      ],
+      "verification": {
+        "command": ["npx", "tsx", "--test", "tests/meanReversionEngine.test.ts"],
+        "expectedStatus": "passed"
+      },
+      "dependencies": ["TASK-001"],
+      "likelyFiles": [
+        "src/market/MeanReversionEngine.ts",
+        "tests/meanReversionEngine.test.ts"
+      ],
+      "estimatedScope": "s",
+      "risk": "low"
+    },
+    {
+      "id": "TASK-003",
+      "description": "Implement regime-gated candidate qualification with trend veto",
+      "acceptanceCriteria": [
+        "Enables BUY_CANDIDATE and SELL_CANDIDATE only in favorable regimes (RANGE, LOW_VOL, ADX <= 20)",
+        "Vetoes candidates in TREND_UP or TREND_DOWN regimes"
+      ],
+      "verification": {
+        "command": ["npx", "tsx", "--test", "tests/meanReversionEngine.test.ts"],
+        "expectedStatus": "passed"
+      },
+      "dependencies": ["TASK-002"],
+      "likelyFiles": [
+        "src/market/MeanReversionEngine.ts",
+        "src/market/types.ts",
+        "tests/meanReversionEngine.test.ts"
+      ],
+      "estimatedScope": "m",
+      "risk": "medium"
+    },
+    {
+      "id": "TASK-004",
+      "description": "Integrate MeanReversionEngine into MarketStateBuilder and complete contract test suite",
+      "acceptanceCriteria": [
+        "MarketStateBuilder uses MeanReversionEngine cleanly",
+        "All unit, regression, and contract tests pass via npm test"
+      ],
+      "verification": {
+        "command": ["npx", "tsx", "--test", "tests/meanReversionEngine.test.ts"],
+        "expectedStatus": "passed"
+      },
+      "dependencies": ["TASK-003"],
+      "likelyFiles": [
+        "src/market/MarketStateBuilder.ts",
+        "tests/meanReversionEngine.test.ts"
+      ],
+      "estimatedScope": "s",
+      "risk": "low"
+    }
+  ],
+  "edges": [
+    {
+      "from": "TASK-001",
+      "to": "TASK-002",
+      "reason": "Re-entry confirmation requires base indicator series"
+    },
+    {
+      "from": "TASK-002",
+      "to": "TASK-003",
+      "reason": "Candidate qualification requires confirmation triggers"
+    },
+    {
+      "from": "TASK-003",
+      "to": "TASK-004",
+      "reason": "MarketStateBuilder integrates complete engine"
+    }
+  ],
+  "verticalSlices": [
+    ["TASK-001"],
+    ["TASK-002"],
+    ["TASK-003"],
+    ["TASK-004"]
+  ]
+}

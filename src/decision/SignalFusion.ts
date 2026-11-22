@@ -50,8 +50,8 @@ function evaluateFactors(side: 'LONG' | 'SHORT', signal: Signal, state?: MarketS
 
     if (state.crowding) {
       const isContrarian =
-        (side === 'LONG' && state.crowding.positioningExtreme === 'SHORT_CROWDED') ||
-        (side === 'SHORT' && state.crowding.positioningExtreme === 'LONG_CROWDED');
+        (side === 'LONG' && (state.crowding.positioningExtreme === 'SHORT_CROWDED' || state.crowding.squeezeRisk === 'SHORT_SQUEEZE_RISK')) ||
+        (side === 'SHORT' && (state.crowding.positioningExtreme === 'LONG_CROWDED' || state.crowding.squeezeRisk === 'LONG_SQUEEZE_RISK'));
       if (isContrarian) {
         bonus += 10;
         factors.push('crowding_squeeze:+10');

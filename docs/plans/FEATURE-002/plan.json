@@ -1,0 +1,106 @@
+{
+  "featureId": "FEATURE-002",
+  "tasks": [
+    {
+      "id": "TASK-001",
+      "description": "Implement positioning asymmetry and retail divergence metrics in CrowdingEngine",
+      "acceptanceCriteria": [
+        "Computes topTraderVsGlobalBias safely with zero-division handling",
+        "Evaluates taker buy/sell aggression and imbalance"
+      ],
+      "verification": {
+        "command": ["npx", "tsx", "--test", "tests/crowdingEngine.test.ts"],
+        "expectedStatus": "passed"
+      },
+      "dependencies": [],
+      "likelyFiles": [
+        "src/market/CrowdingEngine.ts",
+        "tests/crowdingEngine.test.ts"
+      ],
+      "estimatedScope": "s",
+      "risk": "low"
+    },
+    {
+      "id": "TASK-002",
+      "description": "Implement Open Interest expansion and funding rate percentile distribution tracking",
+      "acceptanceCriteria": [
+        "Tracks rolling OI expansion and leverage accumulation",
+        "Computes calibrated funding rate percentile relative to market baseline"
+      ],
+      "verification": {
+        "command": ["npx", "tsx", "--test", "tests/crowdingEngine.test.ts"],
+        "expectedStatus": "passed"
+      },
+      "dependencies": ["TASK-001"],
+      "likelyFiles": [
+        "src/market/CrowdingEngine.ts",
+        "tests/crowdingEngine.test.ts"
+      ],
+      "estimatedScope": "s",
+      "risk": "low"
+    },
+    {
+      "id": "TASK-003",
+      "description": "Implement composite Crowding Index and Squeeze Vulnerability classifier",
+      "acceptanceCriteria": [
+        "Produces normalized crowding score between -1.0 and +1.0",
+        "Accurately flags LONG_SQUEEZE_RISK and SHORT_SQUEEZE_RISK when leverage expands into crowded side"
+      ],
+      "verification": {
+        "command": ["npx", "tsx", "--test", "tests/crowdingEngine.test.ts"],
+        "expectedStatus": "passed"
+      },
+      "dependencies": ["TASK-002"],
+      "likelyFiles": [
+        "src/market/CrowdingEngine.ts",
+        "src/market/types.ts",
+        "tests/crowdingEngine.test.ts"
+      ],
+      "estimatedScope": "m",
+      "risk": "medium"
+    },
+    {
+      "id": "TASK-004",
+      "description": "Integrate enhanced crowding metrics into MarketState and add contrarian setup validation",
+      "acceptanceCriteria": [
+        "MarketStateBuilder and SetupEngine properly integrate squeeze flags and crowding index",
+        "All contract tests and complete test suite pass cleanly"
+      ],
+      "verification": {
+        "command": ["npx", "tsx", "--test", "tests/crowdingEngine.test.ts"],
+        "expectedStatus": "passed"
+      },
+      "dependencies": ["TASK-003"],
+      "likelyFiles": [
+        "src/market/MarketStateBuilder.ts",
+        "src/decision/SetupEngine.ts",
+        "tests/crowdingEngine.test.ts"
+      ],
+      "estimatedScope": "m",
+      "risk": "medium"
+    }
+  ],
+  "edges": [
+    {
+      "from": "TASK-001",
+      "to": "TASK-002",
+      "reason": "OI and funding metrics build on foundational positioning asymmetry"
+    },
+    {
+      "from": "TASK-002",
+      "to": "TASK-003",
+      "reason": "Squeeze index combines positioning with leverage expansion and funding"
+    },
+    {
+      "from": "TASK-003",
+      "to": "TASK-004",
+      "reason": "MarketStateBuilder and contrarian setups consume composite squeeze classification"
+    }
+  ],
+  "verticalSlices": [
+    ["TASK-001"],
+    ["TASK-002"],
+    ["TASK-003"],
+    ["TASK-004"]
+  ]
+}

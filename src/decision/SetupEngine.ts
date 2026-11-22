@@ -99,15 +99,23 @@ function riskReward(entry: number, stop: number, target: number): number {
   return risk > 0 ? Math.abs(target - entry) / risk : 0;
 }
 
-function flowHypothesis(
+export function flowHypothesis(
   state: MarketState,
   direction: SetupDirection,
   trigger: SetupKind,
 ): string {
   const crowd = state.crowding?.positioningExtreme;
+  const squeeze = state.crowding?.squeezeRisk;
   const oi = state.crowding?.openInterestExpansion;
   const ratio = state.crowding?.takerAggressionRatio;
+
   if (trigger === 'LIQUIDITY_SWEEP') {
+    if (direction === 'LONG' && squeeze === 'SHORT_SQUEEZE_RISK') {
+      return 'sell-side sweep with short squeeze vulnerability; short squeeze hypothesis';
+    }
+    if (direction === 'SHORT' && squeeze === 'LONG_SQUEEZE_RISK') {
+      return 'buy-side sweep with long squeeze vulnerability; long liquidation squeeze hypothesis';
+    }
     return direction === 'LONG'
       ? 'sell-side sweep; absorption/reversal hypothesis'
       : 'buy-side sweep; distribution/reversal hypothesis';

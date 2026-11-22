@@ -253,10 +253,16 @@ export interface MarketState {
 
 export interface CrowdingSnapshot {
   fundingPercentile: number | null;
+  fundingRegime?: 'EXTREME_POSITIVE' | 'POSITIVE' | 'NEUTRAL' | 'NEGATIVE' | 'EXTREME_NEGATIVE';
   topTraderVsGlobalBias: number | null;
   positioningExtreme: 'LONG_CROWDED' | 'SHORT_CROWDED' | 'BALANCED';
   takerAggressionRatio: number | null;
+  takerImbalance?: number | null;
+  smartMoneyDivergence?: 'SMART_MONEY_LONG' | 'SMART_MONEY_SHORT' | 'NEUTRAL';
+  crowdingScore?: number | null;
+  squeezeRisk?: 'LONG_SQUEEZE_RISK' | 'SHORT_SQUEEZE_RISK' | 'NEUTRAL';
   openInterestExpansion: boolean;
+  oiDeltaPct?: number | null;
 }
 
 export interface MarketStateInput {

@@ -12,8 +12,8 @@ built on Ink. Routes orders to either a local in-memory paper engine, a remote
 A dedicated, real-time autonomous trading system powered by Ollama Cloud free-tier models (**`beam`** by default, rotating across `OLLAMA_API_KEY_1`…`_5`) and Binance WebSocket feeds.
 
 * **Full Guide & Documentation**: [docs/LLM_TRADING_FLEET.md](docs/LLM_TRADING_FLEET.md)
-* **Macro Anchor**: `BTCUSDT` is used strictly as a market context anchor (trend, momentum, 24h delta) to guide trades on `ETHUSDT`, `SOLUSDT`, and `XRPUSDT`.
-* **Capital & Sizing**: $1,000 paper account per symbol at 10x isolated. Quantity is the smaller of the $980 margin notional and a risk cap: a stop-out loses at most `RISK_PER_TRADE_PCT` (default 1%) of the account.
+* **Macro Anchor**: `BTCUSDT` is used strictly as a market context anchor (trend, momentum, 24h delta) to guide trades on `ETHUSDT`; `SOLUSDT` and `XRPUSDT` are context-only alt breadth. The model is asked once per closed 15m candle.
+* **Capital & Sizing**: $1,000 paper account at 10x isolated. Quantity is the smaller of the $980 margin notional and a risk cap: a stop-out loses at most `RISK_PER_TRADE_PCT` (default 1%) of the account.
 * **Profit Target**: Mandatory minimum **$\ge 5\%$ return on capital** ($\ge 0.5\%$ price distance from entry). The LLM picks direction only; stop (1.5x ATR) and target (2R) are deterministic.
 * **Exits**: Evaluated and triggered **instantly on real-time sub-second WebSocket ticks**.
 * **Entries off by default** (paper_exchange only; `FLEET_ENTRIES=on` to arm). It does not go through RiskEngine; sizing is risk-capped in the worker. See the spec, section 2 (R1).

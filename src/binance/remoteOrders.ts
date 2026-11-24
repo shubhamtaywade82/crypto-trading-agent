@@ -46,7 +46,7 @@ export const errorText = (err: unknown): string => {
 
 /** A venue or ownership rule said no before any order changed the account: a decision to report, not a fault. */
 export const isRefusal = (err: unknown): boolean =>
-  err instanceof OwnershipError || err instanceof OrderInFlightError || err instanceof VenueUnavailableError;
+  err instanceof OwnershipError || err instanceof OrderInFlightError || err instanceof VenueUnavailableError || err instanceof LimitNotReachedError;
 
 /** `<symbol>-<owner>-<kind>-<epochMs>-<nonce>`; created once per logical order and reused on every retry so the broker can dedupe. */
 export function newClientOrderId(symbol: string, owner: AgentId, kind: string, nowMs: number): string {
@@ -78,15 +78,38 @@ export interface OpenParams {
 }
 
 /** Sends an entry order and requires it to be filled; the price sent is the fill price, the broker has no price of its own. */
-export async function submitEntry(api: ExchangeApi, params: OpenParams, nowMs: number): Promise<SubmitOrderResult> {
+/** An entry's limit was not reachable at the current mark; it was cancelled, so nothing changed on the account. */
+export class LimitNotReachedError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'LimitNotReachedError';
+  }
+}
+
+// A signal's price is from its closed bar; a few bps let it fill on a tick of drift without chasing a move away
+const ENTRY_LIMIT_TOLERANCE = 0.0005;
+
+/** The worst price an entry accepts: `price` plus the tolerance against the trade. */
+export function entryLimitPrice(side: 'buy' | 'sell', price: number): number {
+  return Number((side === 'buy' ? price * (1 + ENTRY_LIMIT_TOLERANCE) : price * (1 - ENTRY_LIMIT_TOLERANCE)).toPrecision(10));
+}
+
+/** Sends the entry as an IOC limit at the signal price, executed against `markPrice`; throws unless it filled. */
+export async function submitEntry(api: ExchangeApi, params: OpenParams, nowMs: number, markPrice: number): Promise<SubmitOrderResult> {
+  const side = params.side === 'BUY' ? 'buy' : 'sell';
+  const limitPrice = entryLimitPrice(side, params.entryPrice);
   const result = await sendOrder(api, {
     symbol: params.symbol,
-    side: params.side === 'BUY' ? 'buy' : 'sell',
+    side,
     quantity: params.qty,
     leverage: params.leverage,
-    executionPrice: params.entryPrice,
+    executionPrice: markPrice,
+    limitPrice,
     clientOrderId: newClientOrderId(params.symbol, params.strategy, 'OPEN', nowMs),
   });
+  if (result.status === 'cancelled') {
+    throw new LimitNotReachedError(`${params.side} ${params.symbol} limit ${limitPrice} not reached at mark ${markPrice}; cancelled`);
+  }
   if (result.status !== 'filled') throw new OrderNotFilledError(`${params.side} ${params.qty} ${params.symbol} came back ${result.status}`);
   return result;
 }

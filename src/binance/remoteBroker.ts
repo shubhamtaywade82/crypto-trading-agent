@@ -240,7 +240,7 @@ export class RemoteBroker {
   private async enter(params: OpenParams, isScaleIn: boolean): Promise<{ orderId: string; status: string }> {
     let result: SubmitOrderResult;
     try {
-      result = await submitEntry(this.deps.api, params, this.now());
+      result = await submitEntry(this.deps.api, params, this.now(), this.marks.get(params.symbol) ?? params.entryPrice);
     } catch (err) {
       // A lost or unfilled order may have changed the account; a 4xx rejection changed nothing, so it skips the refresh.
       const mayHaveFilled = err instanceof VenueUnavailableError || err instanceof OrderNotFilledError;

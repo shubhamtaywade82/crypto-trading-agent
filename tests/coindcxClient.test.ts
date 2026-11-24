@@ -81,7 +81,7 @@ function makeApi(client: CoinDcxOrderClient, overrides: Partial<CoinDcxExchangeA
 }
 
 const orderParams = (over: Partial<SubmitOrderParams> = {}): SubmitOrderParams => ({
-  symbol: 'BTCUSDT', side: 'buy', quantity: 0.127, leverage: 5, executionPrice: 50_000, clientOrderId: 'oid-1', ...over,
+  symbol: 'BTCUSDT', side: 'buy', quantity: 0.127, leverage: 5, executionPrice: 50_000, limitPrice: 50_000, clientOrderId: 'oid-1', ...over,
 });
 
 test('getAccount seeds and persists the baseline on first call; a second instance reads it back', async () => {
@@ -148,6 +148,20 @@ test('submitOrder floors the sent quantity to the lot size', async () => {
   const api = makeApi(client);
   await api.submitOrder(orderParams({ quantity: 0.127 }));
   assert.equal(sent?.target_quantity, 0.12);
+  assert.equal(sent?.order_type, 'limit_order', 'an entry is an IOC limit');
+  assert.equal(sent?.price, 50_000);
+});
+
+test('submitOrder: an exit goes out as market, an entry without a limit is refused before any call', async () => {
+  let sent: CreateOrderReq | undefined;
+  const { client, calls } = fakeClient({
+    createOrder: async (req) => { sent = req; return { id: 1, client_order_id: req.client_order_id, status: 'filled', filled_quantity: undefined, price: req.price }; },
+  });
+  const api = makeApi(client);
+  await api.submitOrder(orderParams({ reduceOnly: true, limitPrice: undefined }));
+  assert.equal(sent?.order_type, 'market_order');
+  await assert.rejects(() => api.submitOrder(orderParams({ limitPrice: undefined })), /entries must be limit orders/);
+  assert.equal(calls.createOrder, 1, 'the refused entry never reached the venue');
 });
 
 test('submitOrder for an INR-routed symbol converts the sent price by the FX rate', async () => {
@@ -159,7 +173,7 @@ test('submitOrder for an INR-routed symbol converts the sent price by the FX rat
     createOrder: async (req) => { sent = req; return { id: 1, client_order_id: req.client_order_id, status: 'filled', filled_quantity: undefined, price: req.price }; },
   });
   const api = makeApi(client);
-  await api.submitOrder(orderParams({ symbol: 'XYZUSDT', quantity: 1, executionPrice: 100 }));
+  await api.submitOrder(orderParams({ symbol: 'XYZUSDT', quantity: 1, executionPrice: 100, limitPrice: 100 }));
   assert.equal(sent?.price, 8700);
 });
 

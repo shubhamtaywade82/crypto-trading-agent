@@ -22,10 +22,11 @@ import {
 } from '../src/fleet/FleetModels.js';
 import { fleetTelegramEnabled, sendFleetEvent } from '../src/fleet/FleetTelegram.js';
 import { config } from '../src/config.js';
+import { FLEET_ANCHOR, FLEET_CONTEXT_SYMBOLS, FLEET_SYMBOLS } from '../src/fleet/FleetSupervisor.js';
 
-const SYMBOLS = ['ETHUSDT', 'SOLUSDT', 'XRPUSDT'];
-const ANCHOR = 'BTCUSDT';
-const ALL_SYMBOLS = [ANCHOR, ...SYMBOLS];
+const SYMBOLS: string[] = [...FLEET_SYMBOLS];
+const ANCHOR = FLEET_ANCHOR;
+const ALL_SYMBOLS = [ANCHOR, ...SYMBOLS, ...FLEET_CONTEXT_SYMBOLS];
 
 function argValue(flag: string): string | undefined {
   const i = process.argv.indexOf(flag);
@@ -108,7 +109,7 @@ async function main() {
   for (const symbol of SYMBOLS) {
     const symKey = symbol.replace('USDT', '').toLowerCase();
     const modelTag = assignment.bySymbol[symbol];
-    const llm = new FleetLlmService({ host: llmHost, model: modelTag, timeoutMs, apiKeys: config.ollama.apiKeys });
+    const llm = new FleetLlmService({ host: llmHost, model: modelTag, timeoutMs, apiKeys: config.ollama.apiKeys, fallback: config.ollama.fallback });
     const accountId = `crypto-fleet-${symKey}`;
     // Each worker trades its own account. Its lease is taken before the first write, because syncAccount can create the account.
     // A lease another process holds stops this fleet at startup: two writers on one account is the failure the lease prevents.
@@ -250,6 +251,7 @@ async function main() {
         btcTrend15m = diff15m > 0.2 ? 'BULLISH' : diff15m < -0.2 ? 'BEARISH' : 'SIDEWAYS';
       }
 
+      const peerCandles1h = Object.fromEntries(FLEET_CONTEXT_SYMBOLS.map((s) => [s, snapshots[s]?.candles['1h'] ?? []]));
       for (const symbol of SYMBOLS) {
         const snap = snapshots[symbol];
         if (!snap) continue;
@@ -278,6 +280,7 @@ async function main() {
               symbolCandles15m: sym15m,
               symbolCandles1h: sym1h,
               marketState,
+              peerCandles1h,
             });
           }
         }

@@ -3,6 +3,8 @@ import { jsonFormatFor } from '../ollama/jsonMode.js';
 import { DEFAULT_FLEET_MODEL_TAG, DEFAULT_LLM_HOST } from './FleetModels.js';
 import { buildTradingPrompt, type LlmTradeRecommendation, type PromptInput } from './FleetPrompt.js';
 
+const MAX_REPLY_TOKENS = 200;
+
 export interface OllamaClientOptions {
   host?: string;
   model?: string;
@@ -11,6 +13,8 @@ export interface OllamaClientOptions {
   apiKey?: string;
   /** Several cloud keys: calls rotate across them and fail over to the next key on error. Wins over apiKey. */
   apiKeys?: readonly string[];
+  /** Local daemon + model tried once when every key fails; null/absent means no fallback. */
+  fallback?: { host: string; model: string } | null;
 }
 
 /**
@@ -23,6 +27,7 @@ export class FleetLlmService {
   private readonly model: string;
   private readonly clients: OllamaClient[];
   private keyIndex = 0;
+  private readonly fallback: { client: OllamaClient; host: string; model: string } | null;
 
   constructor(options: OllamaClientOptions = {}) {
     this.host = options.host ?? DEFAULT_LLM_HOST;
@@ -31,6 +36,9 @@ export class FleetLlmService {
     const timeoutMs = options.timeoutMs ?? 30_000;
     const keys: (string | undefined)[] = options.apiKeys?.length ? [...options.apiKeys] : [options.apiKey];
     this.clients = keys.map((apiKey) => new OllamaClient({ baseUrl: this.host, timeoutMs, retries: 0, apiKey }));
+    this.fallback = options.fallback
+      ? { ...options.fallback, client: new OllamaClient({ baseUrl: options.fallback.host, timeoutMs, retries: 0 }) }
+      : null;
   }
 
   // Round-robin spreads free-tier rate limits across every key; a failing key hands the call to the next one.
@@ -43,7 +51,9 @@ export class FleetLlmService {
           model: this.model,
           prompt,
           ...jsonFormatFor(this.host),
-          options: { temperature: 0, top_p: 0.9 },
+          // The reply is three JSON fields: thinking tokens bill at the output rate and add nothing to a direction call
+          think: false,
+          options: { temperature: 0, top_p: 0.9, num_predict: MAX_REPLY_TOKENS },
         });
         this.keyIndex = (idx + 1) % this.clients.length;
         return text;
@@ -51,7 +61,10 @@ export class FleetLlmService {
         lastErr = err;
       }
     }
-    throw lastErr;
+    if (!this.fallback) throw lastErr;
+    const { client, host, model } = this.fallback;
+    console.warn(`[fleet-llm] every ${this.model} key failed (${(lastErr as Error)?.message}); using local ${model}`);
+    return client.generateText({ model, prompt, ...jsonFormatFor(host), think: false, options: { temperature: 0, top_p: 0.9, num_predict: MAX_REPLY_TOKENS } });
   }
 
   async analyze(input: PromptInput): Promise<LlmTradeRecommendation | null> {

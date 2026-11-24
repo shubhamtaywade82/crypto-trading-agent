@@ -103,8 +103,9 @@ const ollamaReply = (response: string): { status: number; body: unknown } => ({ 
 
 /** Points the shared config at one daemon and key pool for a single test, restoring it afterwards. */
 async function withOllama(host: string, apiKeys: string[], run: () => Promise<void>): Promise<void> {
-  const previous = { host: config.ollama.host, apiKeys: config.ollama.apiKeys };
-  Object.assign(config.ollama, { host, apiKeys });
+  const previous = { host: config.ollama.host, apiKeys: config.ollama.apiKeys, fallback: config.ollama.fallback };
+  // No local fallback: these tests prove the cloud path and must never reach a real daemon on this machine
+  Object.assign(config.ollama, { host, apiKeys, fallback: null });
   try {
     await run();
   } finally {
@@ -316,8 +317,10 @@ test('FleetLlm analyze sends the trading prompt in JSON mode with its sampling o
     assert.equal(generate?.body?.model, 'beam');
     assert.equal(generate?.body?.format, 'json');
     assert.equal(generate?.body?.stream, false);
-    assert.deepEqual(generate?.body?.options, { temperature: 0, top_p: 0.9 });
+    assert.deepEqual(generate?.body?.options, { temperature: 0, top_p: 0.9, num_predict: 200 });
+    assert.equal(generate?.body?.think, false, 'no billed thinking tokens on a direction call');
     assert.match(String(generate?.body?.prompt), /ETHUSDT/);
+    assert.match(String(generate?.body?.prompt), /^You are an elite/, 'static text first, so the prefix is cacheable');
   } finally {
     await daemon.close();
   }
@@ -331,6 +334,23 @@ test('FleetLlm analyze returns null on a daemon error and makes exactly one atte
     assert.equal(daemon.generates().length, 1);
   } finally {
     await daemon.close();
+  }
+});
+
+test('FleetLlm falls back to the local model once every cloud key fails', async (t: TestContext) => {
+  t.mock.method(console, 'warn', () => {});
+  const cloud = await startFakeOllama('127.0.0.1', () => ({ status: 402, body: { error: 'Add usage credits' } }));
+  const local = await startFakeOllama('127.0.0.1', () => ollamaReply(FLEET_LONG));
+  try {
+    const llm = new FleetLlmService({ host: cloud.url, model: 'nemotron-3-super', apiKeys: ['k1', 'k2'], fallback: { host: local.url, model: 'qwen2.5:0.5b' } });
+    assert.equal((await llm.analyze(fleetInput()))?.action, 'ENTER_LONG');
+    assert.equal(cloud.generates().length, 2, 'every key is tried first');
+    const [generate] = local.generates();
+    assert.equal(generate?.body?.model, 'qwen2.5:0.5b');
+    assert.equal(generate?.body?.think, false);
+  } finally {
+    await cloud.close();
+    await local.close();
   }
 });
 

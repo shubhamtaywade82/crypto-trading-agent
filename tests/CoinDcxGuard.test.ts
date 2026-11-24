@@ -52,6 +52,7 @@ const sampleOrder: SubmitOrderParams = {
   quantity: 0.01,
   leverage: 5,
   executionPrice: 60_000,
+  limitPrice: 60_000,
   clientOrderId: 'guard-oid-1',
 };
 

@@ -6,6 +6,7 @@ import { test } from 'node:test';
 import { OrderInFlightError, OwnershipError, RemoteBroker, type OpenParams } from '../src/binance/remoteBroker.js';
 import { OrderRejectedError, VenueUnavailableError, type SubmitOrderParams } from '../src/binance/paperExchangeClient.js';
 import { RemoteStore } from '../src/binance/remoteState.js';
+import { isRefusal } from '../src/binance/remoteOrders.js';
 import { FakeExchange } from './support/fakeExchange.js';
 
 const ACCOUNT_ID = 'acct';
@@ -64,6 +65,26 @@ test('should open a long: exchange position matches, meta written with initial r
   assert.equal(sent[0].executionPrice, 65_000);
   assert.equal(sent[0].reduceOnly, undefined);
   near(broker.getAccount().equity, fake.walletEquity());
+});
+
+test('should send the entry as a limit at the signal price, executed at the current mark', async () => {
+  const { fake, broker, sent } = await setup();
+  broker.markAll({ BTCUSDT: 65_020 });
+
+  await broker.open(BTC_LONG);
+
+  assert.deepEqual([sent[0]!.limitPrice, sent[0]!.executionPrice], [65_032.5, 65_020], 'limit = 65,000 + 5 bps; the fill runs at the mark');
+  assert.equal(fake.allRows().length, 1);
+});
+
+test('should refuse, not fill, when the mark is past the entry limit: nothing opened, no meta, nothing expected later', async () => {
+  const { fake, store, broker } = await setup();
+  broker.markAll({ BTCUSDT: 65_100 });
+
+  await assert.rejects(broker.open(BTC_LONG), (err: Error) => err.name === 'LimitNotReachedError' && isRefusal(err));
+
+  assert.equal(fake.allRows().length, 0);
+  assert.equal(store.getMeta('BTCUSDT'), undefined);
 });
 
 test('should store null levels and initial risk when the entry has no stop loss', async () => {

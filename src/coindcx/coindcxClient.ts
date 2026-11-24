@@ -10,7 +10,7 @@
 import { mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import {
-  OrderRejectedError, VenueUnavailableError, type ExchangeApi, type ExchangeRiskEvent,
+  assertEntryIsLimit, OrderRejectedError, VenueUnavailableError, type ExchangeApi, type ExchangeRiskEvent,
   type PaperExchangeAccountSnapshot, type PaperExchangePosition, type SubmitOrderParams, type SubmitOrderResult,
 } from '../binance/paperExchangeClient.js';
 import { ContractSpecCache, floorToLot } from './contractSpec.js';
@@ -30,7 +30,7 @@ export interface CoinDcxOrderClient {
   futures: {
     trading: {
       createOrder(req: {
-        side: 'buy' | 'sell'; order_type: 'market_order'; base_currency: string; quote_currency: string;
+        side: 'buy' | 'sell'; order_type: 'market_order' | 'limit_order'; base_currency: string; quote_currency: string;
         target_quantity: number; price: number | undefined; leverage: number | undefined;
         client_order_id: string | undefined; time_in_force: 'ioc'; margin_type: 'isolated' | 'cross' | undefined;
       }): Promise<CoinDcxOrderRaw | CoinDcxOrderRaw[]>;
@@ -202,6 +202,7 @@ export class CoinDcxExchangeApi implements ExchangeApi {
   }
 
   async submitOrder(params: SubmitOrderParams): Promise<SubmitOrderResult> {
+    assertEntryIsLimit(params);
     return this.guarded(async () => {
       if (!this.deps.client.paperMode && !this.deps.isLiveExecutionArmed) {
         throw new OrderRejectedError(
@@ -217,10 +218,12 @@ export class CoinDcxExchangeApi implements ExchangeApi {
       this.enforceMinimum(quantity, params, spec.minQty);
       this.enforceCaps(quantity, params.executionPrice);
       await this.setLeverage(resolved.pair, params.leverage, params.reduceOnly ?? false);
-      const price = round8(resolved.quote === 'INR' ? params.executionPrice * resolved.fxRate : params.executionPrice);
+      const reference = params.limitPrice ?? params.executionPrice;
+      const price = round8(resolved.quote === 'INR' ? reference * resolved.fxRate : reference);
       const raw = await this.deps.client.futures.trading.createOrder({
         side: params.side,
-        order_type: 'market_order',
+        // Entries are IOC limits at their price; only reduce-only exits go out as market
+        order_type: params.limitPrice === undefined ? 'market_order' : 'limit_order',
         base_currency: resolved.base,
         quote_currency: resolved.quote,
         target_quantity: quantity,

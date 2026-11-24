@@ -27,7 +27,7 @@ const FRAME = 900_000;
 const ACCT = 'acct';
 const COMMAND: PlaceOrderCommand = Object.freeze({
   commandId: 'cmd_1', venue: 'paper_exchange' as const, accountId: ACCT, idempotencyKey: 'pc-abc', decisionId: 'dec_1', strategyId: 's', strategyVersion: '1.0.0',
-  symbol: 'BTCUSDT', side: 'BUY', quantity: 0.5, orderType: 'MARKET', leverage: 3, referencePrice: 100, stopLoss: 98, takeProfit: 106, createdAt: T0,
+  symbol: 'BTCUSDT', side: 'BUY', quantity: 0.5, orderType: 'LIMIT', leverage: 3, referencePrice: 100, stopLoss: 98, takeProfit: 106, createdAt: T0,
 });
 
 function binanceSource(candles: Candle[], overrides: Partial<BinancePublicSource> = {}): BinancePublicSource & { klineCalls: unknown[] } {
@@ -108,13 +108,13 @@ async function ownedFor(execution: PaperExchangeExecutionAdapter, symbol = 'BTCU
   return { accountId: ACCT, symbol, slotId: slot.slotId!, episodeId: COMMAND.commandId };
 }
 
-test('paper_exchange: an order is a market order at the reference price with the idempotency key as client order id', async () => {
+test('paper_exchange: an entry is a limit ("bounded") order at the reference price with the idempotency key as client order id', async () => {
   const { server, execution } = paper();
   const ack = await execution.submitOrder(COMMAND);
   assert.deepEqual([ack.status, ack.filledQuantity, ack.protectionCarried], ['FILLED', 0.5, false]);
   const request = server.requests.find((r) => r.method === 'POST' && r.path === '/api/orders')!;
   assert.deepEqual(request.body, { order: {
-    symbol: 'BTCUSDT', side: 'buy', quantity: 0.5, order_type: 'market', instrument_type: 'CRYPTO_PERPETUAL', leverage: 3, margin_type: 'isolated',
+    symbol: 'BTCUSDT', side: 'buy', quantity: 0.5, order_type: 'bounded', price: 100, instrument_type: 'CRYPTO_PERPETUAL', leverage: 3, margin_type: 'isolated',
     execution_price: 100, client_order_id: 'pc-abc',
   } });
   assert.deepEqual([request.accountId, request.apiKey], ['acct', 'op-key']);

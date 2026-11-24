@@ -39,7 +39,7 @@ function clientFor(replies: Reply[], calls: Call[], opts: { retries?: number; ti
   return new PaperExchangeClient('http://localhost:3000', 'ACC-1', { fetchImpl: scriptedFetch(replies, calls), backoffMs: 1, ...opts });
 }
 
-const ORDER = { symbol: 'BTCUSDT', side: 'buy', quantity: 0.01, leverage: 10, executionPrice: 65000, clientOrderId: 'abc-123' } as const;
+const ORDER = { symbol: 'BTCUSDT', side: 'buy', quantity: 0.01, leverage: 10, executionPrice: 65000, limitPrice: 65010, clientOrderId: 'abc-123' } as const;
 
 test('getAccount maps the Rails snake_case payload to camelCase', async () => {
   const calls: Call[] = [];
@@ -161,7 +161,7 @@ test('submitOrder maps filled_quantity into filledQuantity when the broker repor
   assert.deepEqual(await client.submitOrder({ ...ORDER }), { orderId: 44, status: 'filled', filledQuantity: 0.0075 });
 });
 
-test('submitOrder posts a market order, isolated by default, without reduce_only', async () => {
+test('submitOrder posts an entry as a limit ("bounded") order, isolated by default, without reduce_only', async () => {
   const calls: Call[] = [];
   const client = clientFor([{ status: 201, json: { id: 42, status: 'filled' } }], calls);
 
@@ -172,7 +172,7 @@ test('submitOrder posts a market order, isolated by default, without reduce_only
   assert.equal(calls[0].url, 'http://localhost:3000/api/orders');
   assert.deepEqual(calls[0].body, {
     order: {
-      symbol: 'BTCUSDT', side: 'buy', quantity: 0.01, order_type: 'market', instrument_type: 'CRYPTO_PERPETUAL',
+      symbol: 'BTCUSDT', side: 'buy', quantity: 0.01, order_type: 'bounded', price: 65010, instrument_type: 'CRYPTO_PERPETUAL',
       leverage: 10, margin_type: 'isolated', execution_price: 65000, client_order_id: 'abc-123',
     },
   });
@@ -182,10 +182,34 @@ test('submitOrder sends reduce_only: true only when reduceOnly is set', async ()
   const calls: Call[] = [];
   const client = clientFor([{ status: 201, json: { id: 43, status: 'filled' } }], calls);
 
-  await client.submitOrder({ ...ORDER, side: 'sell', reduceOnly: true });
+  await client.submitOrder({ ...ORDER, side: 'sell', reduceOnly: true, limitPrice: undefined });
 
   assert.equal(calls[0].body.order.reduce_only, true);
-  assert.equal(calls[0].body.order.order_type, 'market');
+  assert.equal(calls[0].body.order.order_type, 'market', 'closing is the one place a market order is allowed');
+});
+
+test('submitOrder refuses an entry without a limit price before any request', async () => {
+  const calls: Call[] = [];
+  const client = clientFor([], calls);
+  await assert.rejects(client.submitOrder({ ...ORDER, limitPrice: undefined }), /entries must be limit orders/);
+  assert.equal(calls.length, 0);
+});
+
+test('submitOrder cancels an entry whose limit did not fill (IOC) and returns the cancelled order', async () => {
+  const calls: Call[] = [];
+  const client = clientFor([{ status: 201, json: { id: 45, status: 'open' } }, { status: 200, json: { id: 45, status: 'cancelled' } }], calls);
+  assert.deepEqual(await client.submitOrder({ ...ORDER }), { orderId: 45, status: 'cancelled' });
+  assert.equal(calls[1].method, 'DELETE');
+  assert.equal(calls[1].url, 'http://localhost:3000/api/orders/45');
+});
+
+test('submitOrder reports the fill when the IOC cancel loses the race (409)', async () => {
+  const client = clientFor([
+    { status: 201, json: { id: 46, status: 'open' } },
+    { status: 409, json: { error: 'already filled' } },
+    { status: 200, json: { data: [{ id: 46, status: 'filled', client_order_id: 'abc-123', filled_quantity: '0.01' }] } },
+  ], []);
+  assert.deepEqual(await client.submitOrder({ ...ORDER }), { orderId: 46, status: 'filled', filledQuantity: 0.01, clientOrderId: 'abc-123' });
 });
 
 test('the client no longer exposes server-side protection orders', () => {

@@ -6,6 +6,7 @@ import path from 'node:path';
 import { test } from 'node:test';
 import { fleetEntryQuantity, fleetLevels, SymbolTraderWorker } from '../src/fleet/SymbolTraderWorker.js';
 import type { FleetLlmService } from '../src/fleet/FleetLlmService.js';
+import type { PromptInput } from '../src/fleet/FleetPrompt.js';
 import type { EntryGate } from '../src/fleet/EntryGate.js';
 import type { FleetTradeEvent } from '../src/fleet/FleetTelegram.js';
 import type { Candle } from '../src/types.js';
@@ -23,6 +24,8 @@ interface CapturedOrder {
   side: string;
   quantity: number;
   executionPrice: number;
+  orderType: string;
+  limitPrice: number | null;
   reduceOnly: boolean;
   clientOrderId: string;
 }
@@ -63,6 +66,8 @@ function startFakeExchange(): Promise<FakeExchange> {
           executionPrice: Number(order.execution_price),
           reduceOnly: order.reduce_only === true,
           clientOrderId: String(order.client_order_id),
+          orderType: String(order.order_type),
+          limitPrice: order.price === undefined ? null : Number(order.price),
         });
         if (order.reduce_only === true) {
           const idx = positions.findIndex((p) => p.symbol === order.symbol);
@@ -75,7 +80,7 @@ function startFakeExchange(): Promise<FakeExchange> {
             margin_type: 'isolated', liquidation_price: null, unrealized_pnl: 0,
           });
         }
-        res.end(JSON.stringify({ id: nextId++, status: 'FILLED', filled_quantity: order.quantity }));
+        res.end(JSON.stringify({ id: nextId++, status: 'filled', filled_quantity: order.quantity }));
         return;
       }
       if (req.method === 'POST' && pathname === '/api/mark_prices') {
@@ -221,6 +226,7 @@ test('a worker emits ENTRY, BREAK_EVEN and EXIT trade events across a full posit
     assert.equal(exchange.orders.length, 1, 'exactly one entry order was submitted');
     assert.equal(exchange.orders[0]!.side, 'buy');
     assert.equal(exchange.orders[0]!.reduceOnly, false);
+    assert.deepEqual([exchange.orders[0]!.orderType, exchange.orders[0]!.limitPrice], ['bounded', 100.05], 'the entry is a limit 5 bps through the mark');
 
     // +1% move: the break-even lock fires (no order, a protection event)
     await worker.onLiveTick(101);
@@ -250,7 +256,38 @@ test('a worker emits ENTRY, BREAK_EVEN and EXIT trade events across a full posit
     assert.equal(exchange.orders.length, 2);
     assert.equal(exchange.orders[1]!.side, 'sell');
     assert.equal(exchange.orders[1]!.reduceOnly, true, 'exits are reduce-only');
+    assert.equal(exchange.orders[1]!.orderType, 'market', 'only a close may be a market order');
     assert.equal(worker.getStatus().state, 'IDLE', 'worker returned to idle after the exit');
+  } finally {
+    await exchange.close();
+    restoreState(snapshot);
+  }
+});
+
+test('the model is asked once per 15m candle, sees the alt breadth, and is asked again only on a new candle', async () => {
+  const snapshot = snapshotState();
+  clearState();
+  const exchange = await startFakeExchange();
+  const inputs: PromptInput[] = [];
+  const counting = { analyze: async (input: PromptInput) => (inputs.push(input), { ...RECOMMENDATION, action: 'HOLD' as const }) } as unknown as FleetLlmService;
+  try {
+    const worker = new SymbolTraderWorker(
+      {
+        symbol: 'TESTUSDT', accountId: 'crypto-fleet-test', paperExchangeUrl: exchange.url, apiKey: 'test-key',
+        marginPerPosition: 1000, leverage: 10, riskPerTradePct: 1, entriesEnabled: true, modelTag: 'qwen3.5:2b',
+      },
+      counting,
+      permitAll,
+    );
+    const withPeers = { ...EVALUATION, peerCandles1h: { SOLUSDT: mkCandles(15, 70) } };
+    await worker.evaluate(withPeers);
+    await worker.evaluate(withPeers);
+    assert.equal(inputs.length, 1, 'same forming candle: no second call');
+    assert.deepEqual(inputs[0]!.peers, [{ symbol: 'SOLUSDT', trend1h: 'SIDEWAYS', change24hPct: 0 }]);
+
+    const next = [...EVALUATION.symbolCandles15m.slice(1), { ...EVALUATION.symbolCandles15m.at(-1)!, openTime: 30 * 900_000 }];
+    await worker.evaluate({ ...withPeers, symbolCandles15m: next });
+    assert.equal(inputs.length, 2, 'a new candle is a new question');
   } finally {
     await exchange.close();
     restoreState(snapshot);

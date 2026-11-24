@@ -15,6 +15,9 @@ export const EnvSchema = z.object({
   // Ollama Cloud free tier (2026-11): beam, gemma4:31b, gpt-oss:120b/20b, nemotron-3-*. beam is free and preferred.
   OLLAMA_HOST: z.string().default('https://ollama.com'),
   OLLAMA_MODEL: z.string().default('beam'),
+  // Used when every cloud key fails (no credits, revoked key, outage). Empty OLLAMA_FALLBACK_MODEL disables the fallback.
+  OLLAMA_FALLBACK_HOST: z.string().default('http://127.0.0.1:11434'),
+  OLLAMA_FALLBACK_MODEL: z.string().default('qwen2.5:0.5b'),
   OLLAMA_TECHNICAL_MODEL: z.string().optional(),
   OLLAMA_LIQUIDITY_MODEL: z.string().optional(),
   OLLAMA_DERIVATIVES_MODEL: z.string().optional(),
@@ -263,6 +266,7 @@ export const config = {
   ollama: {
     host: env.OLLAMA_HOST,
     model: env.OLLAMA_MODEL,
+    fallback: env.OLLAMA_FALLBACK_MODEL.trim() ? { host: env.OLLAMA_FALLBACK_HOST, model: env.OLLAMA_FALLBACK_MODEL.trim() } : null,
     models: {
       technical: env.OLLAMA_TECHNICAL_MODEL?.trim() || env.OLLAMA_MODEL,
       liquidity: env.OLLAMA_LIQUIDITY_MODEL?.trim() || env.OLLAMA_MODEL,

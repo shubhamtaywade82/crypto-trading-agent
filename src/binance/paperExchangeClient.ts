@@ -47,6 +47,11 @@ export interface SubmitOrderParams {
   reduceOnly?: boolean;
   /** Reference price this fill executes near — the broker has no price of its own for crypto. */
   executionPrice: number;
+  /**
+   * Limit for an entry: it fills at this price or better right away, or is cancelled (IOC). Required unless reduceOnly —
+   * market orders are for closing only.
+   */
+  limitPrice?: number;
   /** Idempotency key: a retried submission with the same id replays the original order. */
   clientOrderId: string;
 }
@@ -211,6 +216,12 @@ function toOrderResult(raw: Raw): SubmitOrderResult {
   };
 }
 
+/** Thrown before any network call: an order that opens or adds to a position must carry a limit price. */
+export function assertEntryIsLimit(params: SubmitOrderParams): void {
+  if (params.reduceOnly || params.limitPrice !== undefined) return;
+  throw new OrderRejectedError(`market ${params.side} ${params.quantity} ${params.symbol} refused: entries must be limit orders, market is for closing only`, 400, '');
+}
+
 export class PaperExchangeClient implements ExchangeApi {
   private readonly fetchImpl: typeof fetch;
   private readonly timeoutMs: number;
@@ -252,12 +263,14 @@ export class PaperExchangeClient implements ExchangeApi {
   }
 
   async submitOrder(params: SubmitOrderParams): Promise<SubmitOrderResult> {
+    assertEntryIsLimit(params);
     const raw = await this.request<Raw>('POST', '/api/orders', {
       order: {
         symbol: params.symbol,
         side: params.side,
         quantity: params.quantity,
-        order_type: 'market',
+        // paper_exchange calls a limit order "bounded"
+        ...(params.limitPrice === undefined ? { order_type: 'market' } : { order_type: 'bounded', price: params.limitPrice }),
         instrument_type: 'CRYPTO_PERPETUAL',
         leverage: params.leverage,
         margin_type: params.marginType ?? 'isolated',
@@ -266,7 +279,19 @@ export class PaperExchangeClient implements ExchangeApi {
         ...(params.reduceOnly ? { reduce_only: true } : {}),
       },
     });
-    return toOrderResult(raw);
+    const result = toOrderResult(raw);
+    return result.status === 'open' ? this.cancelUnfilled(result, params.clientOrderId) : result;
+  }
+
+  // IOC: an entry that did not fill at its limit must not rest, or it could fill later with nobody tracking it
+  private async cancelUnfilled(result: SubmitOrderResult, clientOrderId: string): Promise<SubmitOrderResult> {
+    try {
+      return toOrderResult(await this.request<Raw>('DELETE', `/api/orders/${result.orderId}`));
+    } catch (err) {
+      // 409: it reached a terminal state (filled) between the submit and the cancel; report what it became
+      if (err instanceof OrderRejectedError && err.status === 409) return (await this.findOrder(clientOrderId)) ?? result;
+      throw err;
+    }
   }
 
   /** Recovers the outcome of a submission whose response was lost, searching the newest MAX_ORDER_PAGES pages. */

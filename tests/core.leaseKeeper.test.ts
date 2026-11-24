@@ -7,7 +7,7 @@ import { AccountLeaseHeldError, AccountLeaseLostError, type AccountLeaseHandle, 
 
 const ACCOUNT = 'ACC-LEASE';
 const TTL = 30;
-const ORDER: SubmitOrderParams = { symbol: 'BTCUSDT', side: 'buy', quantity: 0.01, leverage: 10, executionPrice: 65000, clientOrderId: 'abc-123' };
+const ORDER: SubmitOrderParams = { symbol: 'BTCUSDT', side: 'buy', quantity: 0.01, leverage: 10, executionPrice: 65000, limitPrice: 65000, clientOrderId: 'abc-123' };
 
 /** The venue's lease rules on a clock the test controls: one holder, a fence that rises on every grant, and expiry. */
 class VenueLeases implements AccountLeasePort {

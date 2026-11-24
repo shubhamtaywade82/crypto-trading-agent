@@ -29,6 +29,14 @@ export interface PromptInput {
   };
   /** Rich market intelligence from the deterministic engine. */
   marketState?: MarketState;
+  /** Context-only alts (not traded): breadth around the traded symbol. */
+  peers?: PeerContext[];
+}
+
+export interface PeerContext {
+  symbol: string;
+  trend1h: 'BULLISH' | 'BEARISH' | 'SIDEWAYS';
+  change24hPct: number;
 }
 
 const TRADE_CONSTRAINTS = `### YOUR DECISION:
@@ -65,21 +73,10 @@ Funding       : ${(state.fundingRate * 100).toFixed(4)}%
 Crowding      : ${crowd}`;
 }
 
-export function buildTradingPrompt(input: PromptInput): string {
-  const intel = input.marketState ? `\n${buildMarketIntelSection(input.marketState)}\n` : '';
-  const { symbol, symbolContext: s, btcContext: b } = input;
+// Everything constant comes first: an identical prompt prefix is billed at the provider's cached-input rate.
+const STATIC_PREFIX = `You are an elite quantitative crypto trader operating with 10x leverage on Binance USDT-Margined Futures.
+Decide on the traded asset below, using BTCUSDT and the other alts as market context.
 
-  return `You are an elite quantitative crypto trader operating with 10x leverage on Binance USDT-Margined Futures.
-Analyze market data for ${symbol} using BTCUSDT as macro context anchor.
-
-### MACRO CONTEXT (BTCUSDT Anchor):
-- BTC Price: $${b.price.toFixed(2)} | 1h: ${b.trend1h} | 15m: ${b.trend15m} | 24h: ${b.change24hPct.toFixed(2)}%
-
-### ASSET DATA (${symbol}):
-- Current Price: $${s.price} | 1h: ${s.trend1h} | 15m: ${s.trend15m} | 24h: ${s.change24hPct.toFixed(2)}%
-- ATR(14): ${s.atr14.toFixed(4)} | Support: ${s.support} | Resistance: ${s.resistance}
-- Swing High: ${s.recentHigh} | Swing Low: ${s.recentLow}
-${intel}
 ${TRADE_CONSTRAINTS}
 
 Return ONLY a valid JSON object with EXACTLY this structure (no markdown fences, no explanatory text):
@@ -88,4 +85,25 @@ Return ONLY a valid JSON object with EXACTLY this structure (no markdown fences,
   "confidence": 0.85,
   "reason": "Brief technical rationale"
 }`;
+
+function buildPeersSection(peers: PeerContext[]): string {
+  const lines = peers.map((p) => `- ${p.symbol}: 1h ${p.trend1h} | 24h ${p.change24hPct.toFixed(2)}%`);
+  return `\n### ALT BREADTH (context only, not traded):\n${lines.join('\n')}\n`;
+}
+
+export function buildTradingPrompt(input: PromptInput): string {
+  const intel = input.marketState ? `\n${buildMarketIntelSection(input.marketState)}\n` : '';
+  const peers = input.peers?.length ? buildPeersSection(input.peers) : '';
+  const { symbol, symbolContext: s, btcContext: b } = input;
+
+  return `${STATIC_PREFIX}
+
+### MACRO CONTEXT (BTCUSDT Anchor):
+- BTC Price: $${b.price.toFixed(2)} | 1h: ${b.trend1h} | 15m: ${b.trend15m} | 24h: ${b.change24hPct.toFixed(2)}%
+
+### ASSET DATA (${symbol}):
+- Current Price: $${s.price} | 1h: ${s.trend1h} | 15m: ${s.trend15m} | 24h: ${s.change24hPct.toFixed(2)}%
+- ATR(14): ${s.atr14.toFixed(4)} | Support: ${s.support} | Resistance: ${s.resistance}
+- Swing High: ${s.recentHigh} | Swing Low: ${s.recentLow}
+${peers}${intel}`;
 }

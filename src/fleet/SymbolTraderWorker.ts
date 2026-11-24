@@ -1,7 +1,8 @@
 import { PaperExchangeClient, type PaperExchangeLease, type PaperExchangePosition, type PaperExchangeAccountSnapshot } from '../binance/paperExchangeClient.js';
 import { wilderAtr } from '../binance/indicators.js';
+import { entryLimitPrice } from '../binance/remoteOrders.js';
 import { FleetLlmService } from './FleetLlmService.js';
-import type { LlmTradeRecommendation, PromptInput } from './FleetPrompt.js';
+import type { LlmTradeRecommendation, PeerContext, PromptInput } from './FleetPrompt.js';
 import type { Candle } from '../types.js';
 import type { MarketState } from '../market/types.js';
 import { loadFleetState, saveFleetPosition, removeFleetPosition } from './FleetStateStore.js';
@@ -54,6 +55,8 @@ export interface EvaluationParams {
   symbolCandles15m: Candle[];
   symbolCandles1h: Candle[];
   marketState?: MarketState;
+  /** 1h candles of the context-only alts, keyed by symbol. */
+  peerCandles1h?: Record<string, Candle[]>;
 }
 
 export class SymbolTraderWorker {
@@ -66,6 +69,8 @@ export class SymbolTraderWorker {
   private readonly gate: EntryGate;
   /** Epoch ms of the last live trade tick the runner delivered. Recorded before any early return, so a flat worker counts as fed. */
   private lastLiveTickAt = 0;
+  /** Open time of the 15m candle the model last answered for. */
+  private lastAskedCandleOpen: number | null = null;
 
   constructor(
     private readonly config: SymbolWorkerConfig,
@@ -173,11 +178,18 @@ export class SymbolTraderWorker {
       return;
     }
 
+    // Trends, ATR and structure in the prompt only change when a 15m candle closes. Asking again inside one candle
+    // re-samples a non-deterministic model on the same setup until it says ENTER, and pays for every sample.
+    const candleOpen = params.symbolCandles15m.at(-1)?.openTime ?? null;
+    if (candleOpen === null || candleOpen === this.lastAskedCandleOpen) return;
+
     const input = this.buildPromptInput(params);
     if (!input) return;
 
     this.status.state = 'ANALYZING';
     const rec = await this.llm.analyze(input);
+    // A failed call is retried on the next cycle; an answer stands until the next candle
+    if (rec) this.lastAskedCandleOpen = candleOpen;
     if (!rec || rec.action === 'HOLD') {
       this.status.state = 'IDLE';
       this.status.lastDecision = rec ? `HOLD: ${rec.reason}` : 'No setup approved';
@@ -265,58 +277,62 @@ export class SymbolTraderWorker {
         leverage: this.config.leverage,
         marginType: 'isolated',
         executionPrice: markPrice,
+        limitPrice: entryLimitPrice(side, markPrice),
         clientOrderId: `fleet-${this.config.symbol}-${Date.now()}`,
       });
 
-      if (order.status === 'FILLED' || Number(order.orderId) > 0) {
-        this.currentSl = rec.stopLoss;
-        this.currentTp = rec.takeProfit;
-        this.breakEvenMoved = false;
-        // Reflect the confirmed fill immediately. state, the position view and the guarding levels
-        // become consistent the moment the broker confirms, BEFORE the ENTRY event and before the
-        // account sync: a live tick that lands between the fill and syncAccount()'s round-trips must
-        // never see a position-less worker and silently skip break-even/SL/TP management.
-        // syncAccount() afterwards only replaces this optimistic view with the broker's truth.
-        this.status.activePosition = {
-          id: Number(order.orderId) || 0,
-          symbol: this.config.symbol,
-          side: side === 'buy' ? 'long' : 'short',
-          netQuantity: order.filledQuantity ?? quantity,
-          averagePrice: markPrice,
-          currentPrice: markPrice,
-          leverage: this.config.leverage,
-          marginType: 'isolated',
-          liquidationPrice: null,
-          unrealizedPnl: 0,
-        };
-        this.status.state = 'IN_POSITION';
-        this.updateStatusLevels(markPrice);
-        saveFleetPosition({
-          symbol: this.config.symbol,
-          entryPrice: markPrice,
-          stopLoss: rec.stopLoss,
-          takeProfit: rec.takeProfit,
-          breakEvenMoved: false,
-          openedAt: Date.now(),
-          reason: rec.reason,
-          openedByModel: this.config.modelTag,
-        });
-        this.emitTradeEvent({
-          kind: 'ENTRY',
-          symbol: this.config.symbol,
-          side,
-          model: this.config.modelTag,
-          price: markPrice,
-          quantity,
-          leverage: this.config.leverage,
-          action: rec.action,
-          note: rec.reason,
-          stopLoss: rec.stopLoss,
-          takeProfit: rec.takeProfit,
-          entryPrice: markPrice,
-        });
-        await this.syncAccount();
+      // Only a fill opens a position: an IOC limit that missed comes back cancelled with an order id
+      if (order.status !== 'filled') {
+        this.status.lastDecision = `${rec.action} limit not filled (${order.status})`;
+        return;
       }
+      this.currentSl = rec.stopLoss;
+      this.currentTp = rec.takeProfit;
+      this.breakEvenMoved = false;
+      // Reflect the confirmed fill immediately. state, the position view and the guarding levels
+      // become consistent the moment the broker confirms, BEFORE the ENTRY event and before the
+      // account sync: a live tick that lands between the fill and syncAccount()'s round-trips must
+      // never see a position-less worker and silently skip break-even/SL/TP management.
+      // syncAccount() afterwards only replaces this optimistic view with the broker's truth.
+      this.status.activePosition = {
+        id: Number(order.orderId) || 0,
+        symbol: this.config.symbol,
+        side: side === 'buy' ? 'long' : 'short',
+        netQuantity: order.filledQuantity ?? quantity,
+        averagePrice: markPrice,
+        currentPrice: markPrice,
+        leverage: this.config.leverage,
+        marginType: 'isolated',
+        liquidationPrice: null,
+        unrealizedPnl: 0,
+      };
+      this.status.state = 'IN_POSITION';
+      this.updateStatusLevels(markPrice);
+      saveFleetPosition({
+        symbol: this.config.symbol,
+        entryPrice: markPrice,
+        stopLoss: rec.stopLoss,
+        takeProfit: rec.takeProfit,
+        breakEvenMoved: false,
+        openedAt: Date.now(),
+        reason: rec.reason,
+        openedByModel: this.config.modelTag,
+      });
+      this.emitTradeEvent({
+        kind: 'ENTRY',
+        symbol: this.config.symbol,
+        side,
+        model: this.config.modelTag,
+        price: markPrice,
+        quantity,
+        leverage: this.config.leverage,
+        action: rec.action,
+        note: rec.reason,
+        stopLoss: rec.stopLoss,
+        takeProfit: rec.takeProfit,
+        entryPrice: markPrice,
+      });
+      await this.syncAccount();
     } catch (err) {
       console.error(`[Worker ${this.config.symbol}] order error:`, (err as Error).message);
     }
@@ -444,7 +460,7 @@ export class SymbolTraderWorker {
   }
 
   private buildPromptInput(params: EvaluationParams): PromptInput | null {
-    const { markPrice, btcCandles15m, btcCandles1h, symbolCandles15m, symbolCandles1h, marketState } = params;
+    const { markPrice, btcCandles15m, btcCandles1h, symbolCandles15m, symbolCandles1h, marketState, peerCandles1h } = params;
     if (btcCandles15m.length < 20 || btcCandles1h.length < 10 || symbolCandles15m.length < 20 || symbolCandles1h.length < 10) {
       return null;
     }
@@ -456,7 +472,18 @@ export class SymbolTraderWorker {
       btcContext: this.buildBtcContext(btcCandles15m, btcCandles1h),
       symbolContext: this.buildSymbolContext(markPrice, symbolCandles15m, symbolCandles1h, atr14),
       marketState,
+      peers: this.buildPeers(peerCandles1h ?? {}),
     };
+  }
+
+  private buildPeers(peerCandles1h: Record<string, Candle[]>): PeerContext[] {
+    return Object.entries(peerCandles1h)
+      .filter(([, candles]) => candles.length >= 10)
+      .map(([symbol, candles]) => {
+        const last = candles.at(-1)!.close;
+        const open24h = candles.length >= 24 ? candles.at(-24)!.open : candles[0]!.open;
+        return { symbol, trend1h: this.detectTrend(candles), change24hPct: ((last - open24h) / open24h) * 100 };
+      });
   }
 
   private buildBtcContext(btc15m: Candle[], btc1h: Candle[]) {

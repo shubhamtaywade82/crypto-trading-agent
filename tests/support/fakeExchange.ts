@@ -89,6 +89,14 @@ export class FakeExchange implements ExchangeApi {
     const replay = this.orders.get(params.clientOrderId);
     if (replay) return replay;
     if (params.quantity <= 0) throw new OrderRejectedError('quantity must be greater than 0', 422, 'quantity must be greater than 0');
+    // Like the real client: an entry limit the reference price does not reach is cancelled (IOC), nothing fills
+    const isOutOfReach = params.limitPrice !== undefined
+      && (params.side === 'buy' ? params.executionPrice > params.limitPrice : params.executionPrice < params.limitPrice);
+    if (isOutOfReach) {
+      const cancelled: SubmitOrderResult = { orderId: this.nextId++, status: 'cancelled' };
+      this.orders.set(params.clientOrderId, cancelled);
+      return cancelled;
+    }
     const result: SubmitOrderResult = { orderId: this.nextId++, status: this.ackBeforeFill ? 'initial' : 'filled' };
     this.fill(params);
     this.orders.set(params.clientOrderId, result);

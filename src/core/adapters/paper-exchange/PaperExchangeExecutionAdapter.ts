@@ -63,7 +63,7 @@ export class PaperExchangeExecutionAdapter implements PaperExecutionPort, MarkSi
     this.assertAccount(command.accountId, `command ${command.commandId}`);
     return translating(async () => toAck(command, await this.api.submitOrder({
       symbol: command.symbol, side: sideOf(command), quantity: command.quantity, leverage: command.leverage,
-      executionPrice: command.referencePrice, clientOrderId: command.idempotencyKey,
+      executionPrice: command.referencePrice, limitPrice: command.referencePrice, clientOrderId: command.idempotencyKey,
     })));
   }
 

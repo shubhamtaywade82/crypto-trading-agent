@@ -48,21 +48,18 @@ test('a bad model route parks the fleet with the refusal reason (boot fail-close
   supervisor.stop();
 });
 
-test('with the token the supervisor assigns the main OLLAMA_MODEL to every symbol', () => {
+test('with the token the supervisor assigns the main OLLAMA_MODEL to the traded symbol only', () => {
   const supervisor = new FleetSupervisor({ env: TOKEN_ENV });
   const state = supervisor.state;
   const expected = resolveModelTag(config.ollama.model);
   assert.equal(state.enabled, false, 'not started yet — but config is resolved');
-  assert.deepEqual(state.assignment, { ETHUSDT: expected, SOLUSDT: expected, XRPUSDT: expected });
+  assert.deepEqual(state.assignment, { ETHUSDT: expected }, 'SOL/XRP are context-only: no worker, no model');
   assert.equal(state.entriesEnabled, false, 'entries stay OFF without FLEET_ENTRIES=on');
 });
 
-test('a per-symbol route overrides only the named symbols in the resolved config', () => {
+test('a per-symbol route overrides the default model for the named symbol', () => {
   const supervisor = new FleetSupervisor({ env: TOKEN_ENV, model: 'gpt-oss-20b', route: 'ETH=gemma4-31b' });
-  const state = supervisor.state;
-  assert.equal(state.assignment['ETHUSDT'], 'gemma4:31b');
-  assert.equal(state.assignment['SOLUSDT'], 'gpt-oss:20b');
-  assert.equal(state.assignment['XRPUSDT'], 'gpt-oss:20b');
+  assert.deepEqual(supervisor.state.assignment, { ETHUSDT: 'gemma4:31b' });
 });
 
 test('FLEET_ENTRIES=on arms entries in the resolved config (same rule as the standalone fleet)', () => {

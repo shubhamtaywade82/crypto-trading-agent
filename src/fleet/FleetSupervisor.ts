@@ -44,9 +44,13 @@ import { config } from '../config.js';
  * explicitly exports FLEET_ENTRIES=on.
  */
 
-export const FLEET_SYMBOLS = ['ETHUSDT', 'SOLUSDT', 'XRPUSDT'] as const;
-const ANCHOR = 'BTCUSDT';
-const ALL_SYMBOLS = [ANCHOR, ...FLEET_SYMBOLS] as const;
+/** Traded by the fleet. One symbol: one LLM call per 15m candle instead of three. */
+export const FLEET_SYMBOLS = ['ETHUSDT'] as const;
+/** Fed to the prompt as market breadth, never traded. */
+export const FLEET_CONTEXT_SYMBOLS = ['SOLUSDT', 'XRPUSDT'] as const;
+export const FLEET_ANCHOR = 'BTCUSDT';
+const ANCHOR = FLEET_ANCHOR;
+const ALL_SYMBOLS = [ANCHOR, ...FLEET_SYMBOLS, ...FLEET_CONTEXT_SYMBOLS] as const;
 const EVAL_INTERVAL_MS = 10_000;
 const STATE_EMIT_INTERVAL_MS = 250;
 
@@ -224,7 +228,7 @@ export class FleetSupervisor extends EventEmitter {
     for (const symbol of FLEET_SYMBOLS) {
       const symKey = symbol.replace('USDT', '').toLowerCase();
       const modelTag = fleetConfig.assignment[symbol];
-      const llm = new FleetLlmService({ host: fleetConfig.llmHost, model: modelTag, timeoutMs: fleetConfig.timeoutMs, apiKeys: config.ollama.apiKeys });
+      const llm = new FleetLlmService({ host: fleetConfig.llmHost, model: modelTag, timeoutMs: fleetConfig.timeoutMs, apiKeys: config.ollama.apiKeys, fallback: config.ollama.fallback });
       const accountId = `crypto-fleet-${symKey}`;
       // The worker's account lease is taken in the background, and the worker writes only once it is held. A lease another
       // process holds (a standalone fleet on the same account) keeps this worker from trading: two writers on one account is
@@ -299,6 +303,7 @@ export class FleetSupervisor extends EventEmitter {
       const btcSnapshot = snapshots[ANCHOR];
       const btc15m = btcSnapshot?.candles['15m'] ?? [];
       const btc1h = btcSnapshot?.candles['1h'] ?? [];
+      const peerCandles1h = Object.fromEntries(FLEET_CONTEXT_SYMBOLS.map((s) => [s, snapshots[s]?.candles['1h'] ?? []]));
 
       for (const symbol of FLEET_SYMBOLS) {
         const snap = snapshots[symbol];
@@ -328,6 +333,7 @@ export class FleetSupervisor extends EventEmitter {
           symbolCandles15m: sym15m,
           symbolCandles1h: sym1h,
           marketState,
+          peerCandles1h,
         });
       }
       this.throttledEmit();

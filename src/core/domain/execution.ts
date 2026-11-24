@@ -23,7 +23,8 @@ export interface PlaceOrderCommand {
   readonly symbol: string;
   readonly side: 'BUY' | 'SELL';
   readonly quantity: number;
-  readonly orderType: 'MARKET';
+  /** Entries are IOC limits at `referencePrice`; market orders are for closing only. */
+  readonly orderType: 'LIMIT';
   readonly leverage: number;
   /** The mark the decision was sized on. A reference, not a promised fill. */
   readonly referencePrice: number;
@@ -132,7 +133,7 @@ export function buildPlaceOrderCommand(approved: ApprovedTrade, createdAt: numbe
     symbol: proposal.symbol,
     side: proposal.direction === 'LONG' ? 'BUY' : 'SELL',
     quantity: proposal.quantity,
-    orderType: 'MARKET',
+    orderType: 'LIMIT',
     leverage: proposal.leverage,
     referencePrice: proposal.entry,
     stopLoss: proposal.stopLoss,

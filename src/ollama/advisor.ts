@@ -75,6 +75,8 @@ export class OllamaAdvisor {
   private lastPingAt = 0;
   private clients: AdvisorClient[] = [];
   private keyIndex = 0;
+  /** Local daemon tried once when every key fails; never set with an injected client, so tests stay offline. */
+  private fallback: { client: AdvisorClient; host: string; model: string } | null = null;
   /** The constructor's probe. Research calls await it so a request is not refused while the first probe is still in flight. */
   private readonly initialPing: Promise<void>;
 
@@ -86,6 +88,8 @@ export class OllamaAdvisor {
     } else {
       this.clients = [clientFor()];
     }
+    const fb = clientOverride ? null : config.ollama.fallback;
+    if (fb) this.fallback = { ...fb, client: new OllamaClient({ baseUrl: fb.host, timeoutMs: VETO_TIMEOUT_MS, retries: 0 }) };
     this.initialPing = this.ping();
   }
 
@@ -133,7 +137,10 @@ export class OllamaAdvisor {
         lastErr = err;
       }
     }
-    throw lastErr ?? new Error('All Ollama clients failed');
+    if (!this.fallback) throw lastErr ?? new Error('All Ollama clients failed');
+    const { client, host, model } = this.fallback;
+    const { format, ...rest } = request;
+    return withTimeout(client.generateText({ ...rest, model, ...(format ? jsonFormatFor(host) : {}), timeoutMs }), timeoutMs);
   }
 
   private async ping(): Promise<void> {
@@ -147,7 +154,7 @@ export class OllamaAdvisor {
         // try next key if one is unreachable or rate limited
       }
     }
-    this.available = false;
+    this.available = this.fallback !== null && (await withTimeout(this.fallback.client.listModels(), VETO_TIMEOUT_MS).then(() => true, () => false));
   }
 
   async veto(snapshot: VetoSnapshot): Promise<VetoVerdict> {

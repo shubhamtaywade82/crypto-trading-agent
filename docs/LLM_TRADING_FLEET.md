@@ -19,12 +19,10 @@ A real-time, autonomous trading agent running on Binance USD-M Futures market da
                       │   (BTCUSDT used strictly as macro anchor)    │
                       └──────────────────────┬───────────────────────┘
                                              │
-                ┌────────────────────────────┼────────────────────────────┐
-                ▼                            ▼                            ▼
-       [ ETHUSDT Worker ]           [ SOLUSDT Worker ]           [ XRPUSDT Worker ]
-      Account: `...-eth`           Account: `...-sol`           Account: `...-xrp`
-                │                            │                            │
-                └────────────────────────────┼────────────────────────────┘
+                                             ▼
+                                    [ ETHUSDT Worker ]   ◄── SOLUSDT / XRPUSDT 1h trend + 24h
+                                    Account: `...-eth`       (alt breadth, context only)
+                                             │  one call per closed 15m candle
                                              ▼
                       ┌──────────────────────────────────────────────┐
                       │    Cloud LLM (default: beam control)         │
@@ -93,8 +91,10 @@ Each symbol runs in an independent, isolated ledger on `paper_exchange`:
 | Symbol | Paper Account ID | Starting Margin | Leverage | Margin Type |
 | :--- | :--- | :--- | :--- | :--- |
 | **ETHUSDT** | `crypto-fleet-eth` | $1,000.00 | 10x | Isolated |
-| **SOLUSDT** | `crypto-fleet-sol` | $1,000.00 | 10x | Isolated |
-| **XRPUSDT** | `crypto-fleet-xrp` | $1,000.00 | 10x | Isolated |
+
+Only ETHUSDT is traded (`FLEET_SYMBOLS` in `FleetSupervisor.ts`); SOLUSDT and XRPUSDT feed the prompt as alt breadth.
+The model is asked once per 15m candle (not every 10s evaluation cycle), with thinking off and the reply capped at 200
+tokens; the static instructions open the prompt so providers bill them at the cached-input rate.
 
 ---
 

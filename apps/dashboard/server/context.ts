@@ -90,7 +90,7 @@ export interface DashboardContext {
   execution: {
     paper: PaperEngine;
     remote: RemoteStore;
-    liveBook: LiveBook;
+    liveBook: LiveBook | null;
     positionManager: PositionManagerStore;
     pmConfig: ReturnType<typeof pmConfigFromEnv>;
   };

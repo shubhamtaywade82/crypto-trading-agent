@@ -64,6 +64,10 @@ export function registerAccountRoutes(app: Express, ctx: DashboardContext): void
   // /api/live-book — live position manager view (if enabled)
   app.get("/api/live-book", async (_req, res, next) => {
     try {
+      if (!ctx.execution.liveBook) {
+        res.json({ mode: "disabled", positions: [] });
+        return;
+      }
       const mode = ctx.execution.liveBook.mode ?? "shadow";
       const prices: Record<string, number> = {};
       const overview = await ctx.binance.getMarketOverview(ctx.symbols);

@@ -16,6 +16,7 @@ import MarketPanel from "./components/MarketPanel.js";
 import PositionsPanel from "./components/PositionsPanel.js";
 import RiskPanel from "./components/RiskPanel.js";
 import DecisionJournalPanel from "./components/DecisionJournalPanel.js";
+import QuantTerminalPanel from "./components/QuantTerminalPanel.js";
 
 const POLL_MS = 4000;
 
@@ -49,6 +50,7 @@ export default function App() {
           refreshPositions(),
           refreshResearch(),
           refreshLiveReadiness(),
+          refreshQuant(currentSymbols),
         ]);
         if (!cancelled) {
           useDashboardStore.getState().setLastUpdate(Date.now());
@@ -75,6 +77,7 @@ export default function App() {
         <MarketPanel className="panel-market" />
         <PositionsPanel className="panel-positions" />
         <RiskPanel className="panel-risk" />
+        <QuantTerminalPanel className="panel-quant" />
         <DecisionJournalPanel className="panel-decisions" />
       </div>
     </div>
@@ -206,6 +209,17 @@ async function refreshLiveReadiness() {
   try {
     const lr = await requestJson<any>("/api/live-readiness");
     useDashboardStore.getState().setLiveReadiness(lr);
+  } catch {
+    // non-fatal
+  }
+}
+
+async function refreshQuant(symbols: string[]) {
+  if (symbols.length === 0) return;
+  try {
+    const sym = symbols.join(",");
+    const res = await requestJson<any>(`/api/quant/terminal?symbols=${sym}`);
+    useDashboardStore.getState().setQuantTerminal(res);
   } catch {
     // non-fatal
   }

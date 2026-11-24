@@ -1,0 +1,159 @@
+{
+  "featureId": "FEATURE-005",
+  "tasks": [
+    {
+      "id": "TASK-001",
+      "description": "Implement pure canonical returns and risk-adjusted ratios (simple, log, cumulative, Sharpe, Sortino)",
+      "acceptanceCriteria": [
+        "ACC-001: Returns and volatility calculations match exact mathematical reference cases within 1e-9 tolerance",
+        "Handles single-element and constant price arrays safely without NaN"
+      ],
+      "verification": {
+        "command": ["npx", "tsx", "--test", "tests/quantReturns.test.ts"],
+        "expectedStatus": "passed"
+      },
+      "dependencies": [],
+      "likelyFiles": [
+        "src/quant/returns.ts",
+        "tests/quantReturns.test.ts"
+      ],
+      "estimatedScope": "m",
+      "risk": "low"
+    },
+    {
+      "id": "TASK-002",
+      "description": "Implement multi-estimator volatility engine (sample std dev, Parkinson, Garman-Klass, Yang-Zhang)",
+      "acceptanceCriteria": [
+        "ACC-002: Parkinson, Garman-Klass, and Yang-Zhang estimators produce expected values on known geometric price sequences",
+        "Rolling windows return valid annualized series"
+      ],
+      "verification": {
+        "command": ["npx", "tsx", "--test", "tests/quantVolatility.test.ts"],
+        "expectedStatus": "passed"
+      },
+      "dependencies": ["TASK-001"],
+      "likelyFiles": [
+        "src/quant/volatility.ts",
+        "tests/quantVolatility.test.ts"
+      ],
+      "estimatedScope": "m",
+      "risk": "low"
+    },
+    {
+      "id": "TASK-003",
+      "description": "Implement cross-asset Pearson, Spearman, and covariance correlation matrix engine",
+      "acceptanceCriteria": [
+        "ACC-003: Correlation matrix is symmetric with diagonal elements equal to 1.0 and off-diagonal bounded in [-1.0, 1.0]",
+        "Correctly ranks ties in Spearman rank correlation"
+      ],
+      "verification": {
+        "command": ["npx", "tsx", "--test", "tests/quantCorrelation.test.ts"],
+        "expectedStatus": "passed"
+      },
+      "dependencies": ["TASK-001"],
+      "likelyFiles": [
+        "src/quant/correlation.ts",
+        "tests/quantCorrelation.test.ts"
+      ],
+      "estimatedScope": "m",
+      "risk": "low"
+    },
+    {
+      "id": "TASK-004",
+      "description": "Implement Geometric Brownian Motion Monte Carlo price simulator with antithetic sampling and quantile bands",
+      "acceptanceCriteria": [
+        "ACC-004: Monte Carlo GBM terminal price distribution converges to theoretical log-normal mean within 2% standard error",
+        "Deterministic reproduction with PRNG seed"
+      ],
+      "verification": {
+        "command": ["npx", "tsx", "--test", "tests/quantMonteCarlo.test.ts"],
+        "expectedStatus": "passed"
+      },
+      "dependencies": ["TASK-002"],
+      "likelyFiles": [
+        "src/quant/monteCarlo.ts",
+        "tests/quantMonteCarlo.test.ts"
+      ],
+      "estimatedScope": "m",
+      "risk": "low"
+    },
+    {
+      "id": "TASK-005",
+      "description": "Implement QuantLab Market Terminal backend route and frontend workbench panel in apps/dashboard",
+      "acceptanceCriteria": [
+        "ACC-005: Terminal dashboard API returns valid JSON payload and UI renders without errors",
+        "Displays real-time rolling volatility, correlation heatmap, and Monte Carlo fan chart"
+      ],
+      "verification": {
+        "command": ["npm", "run", "typecheck"],
+        "expectedStatus": "passed"
+      },
+      "dependencies": ["TASK-003", "TASK-004"],
+      "likelyFiles": [
+        "apps/dashboard/server/routes/quant.ts",
+        "apps/dashboard/server/index.ts",
+        "apps/dashboard/web/src/components/QuantTerminalPanel.tsx",
+        "apps/dashboard/web/src/App.tsx"
+      ],
+      "estimatedScope": "l",
+      "risk": "medium"
+    },
+    {
+      "id": "TASK-006",
+      "description": "Execute whole-project verification and contract gate suite",
+      "acceptanceCriteria": [
+        "ACC-006: All automated unit tests, typechecks, and builds pass cleanly via kit verify"
+      ],
+      "verification": {
+        "command": ["npm", "test"],
+        "expectedStatus": "passed"
+      },
+      "dependencies": ["TASK-005"],
+      "likelyFiles": [
+        "src/quant/index.ts"
+      ],
+      "estimatedScope": "s",
+      "risk": "low"
+    }
+  ],
+  "edges": [
+    {
+      "from": "TASK-001",
+      "to": "TASK-002",
+      "reason": "Volatility calculations leverage returns series"
+    },
+    {
+      "from": "TASK-001",
+      "to": "TASK-003",
+      "reason": "Correlation matrices operate on multi-asset returns series"
+    },
+    {
+      "from": "TASK-002",
+      "to": "TASK-004",
+      "reason": "Monte Carlo simulation uses historical volatility estimates"
+    },
+    {
+      "from": "TASK-003",
+      "to": "TASK-005",
+      "reason": "Dashboard terminal visualizes correlation and returns"
+    },
+    {
+      "from": "TASK-004",
+      "to": "TASK-005",
+      "reason": "Dashboard terminal visualizes Monte Carlo projections"
+    },
+    {
+      "from": "TASK-005",
+      "to": "TASK-006",
+      "reason": "Final integration requires full test and build verification"
+    }
+  ],
+  "verticalSlices": [
+    ["TASK-001"],
+    ["TASK-002"],
+    ["TASK-003"],
+    ["TASK-004"],
+    ["TASK-005"],
+    ["TASK-006"]
+  ]
+}

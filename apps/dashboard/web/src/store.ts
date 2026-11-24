@@ -89,6 +89,50 @@ export interface LiveReadinessResult {
   approvable: unknown[];
 }
 
+export interface QuantTerminalData {
+  symbols: string[];
+  primarySymbol: string;
+  analytics: Record<
+    string,
+    {
+      symbol: string;
+      lastPrice: number;
+      returns: {
+        meanReturn: number;
+        volatilityClose: number;
+        volatilityParkinson: number;
+        volatilityGarmanKlass: number;
+        volatilityYangZhang: number;
+        sharpe: number;
+        sortino: number;
+        cumulativeReturn: number;
+      };
+      rollingVol: number[];
+    }
+  >;
+  correlation: {
+    symbols: string[];
+    matrix: number[][];
+  } | null;
+  simulation: {
+    paths: number[][];
+    timeGrid: number[];
+    quantiles: {
+      p05: number[];
+      p25: number[];
+      p50: number[];
+      p75: number[];
+      p95: number[];
+    };
+    terminalStats: {
+      mean: number;
+      stdDev: number;
+      probLoss: number;
+    };
+  } | null;
+  timestamp: number;
+}
+
 export interface RiskSnapshot {
   killSwitch: { halted: boolean; reason: string; at: number };
   limits: unknown;
@@ -156,6 +200,10 @@ interface DashboardStore {
   liveReadiness: LiveReadinessResult | null;
   setLiveReadiness: (l: LiveReadinessResult) => void;
 
+  // quant terminal
+  quantTerminal: QuantTerminalData | null;
+  setQuantTerminal: (q: QuantTerminalData | null) => void;
+
   // polling control
   lastUpdate: number;
   setLastUpdate: (t: number) => void;
@@ -206,6 +254,9 @@ export const useDashboardStore = create<DashboardStore>((set) => ({
 
   liveReadiness: null,
   setLiveReadiness: (liveReadiness) => set({ liveReadiness }),
+
+  quantTerminal: null,
+  setQuantTerminal: (quantTerminal) => set({ quantTerminal }),
 
   lastUpdate: 0,
   setLastUpdate: (lastUpdate) => set({ lastUpdate }),

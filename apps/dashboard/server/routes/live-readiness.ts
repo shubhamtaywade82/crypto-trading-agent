@@ -36,7 +36,6 @@ export function registerLiveReadinessRoutes(app: Express, ctx: DashboardContext)
       const checks = ctx.liveReadiness.evaluateConfig({
         mode: ctx.config.mode,
         riskEngine: ctx.config.riskEngine,
-        alerts: ctx.config.alerts,
         riskPerTradePct: ctx.config.risk?.riskPerTradePct ?? 0.5,
         maxLeverage: ctx.config.risk?.maxLeverage ?? 5,
         maxDailyLossPct: ctx.config.risk?.maxDailyLossPct ?? 4,
@@ -50,7 +49,6 @@ export function registerLiveReadinessRoutes(app: Express, ctx: DashboardContext)
       const blockers = liveStartBlockers({
         mode: ctx.config.mode,
         riskEngine: ctx.config.riskEngine,
-        alerts: ctx.config.alerts,
       });
 
       res.json({

@@ -26,6 +26,7 @@ import { registerDecisionRoutes } from "./routes/decisions.js";
 import { registerResearchRoutes } from "./routes/research.js";
 import { registerLiveReadinessRoutes } from "./routes/live-readiness.js";
 import { registerAccountRoutes } from "./routes/account.js";
+import { registerQuantRoutes } from "./routes/quant.js";
 import { createDashboardContext, type DashboardContext } from "./context.js";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -76,6 +77,7 @@ async function bootstrap(): Promise<void> {
   registerResearchRoutes(app, ctx);
   registerLiveReadinessRoutes(app, ctx);
   registerAccountRoutes(app, ctx);
+  registerQuantRoutes(app, ctx);
 
   // Static front-end (production build). In dev, Vite serves the front-end
   // itself on port 5173 with a proxy to /api here.

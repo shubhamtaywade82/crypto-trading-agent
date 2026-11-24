@@ -65,7 +65,9 @@ export interface SeriesSummary {
 export type JournalEntry =
   | { kind: 'draft'; atIso: string; runId: string; specId: string; specHash: string }
   | { kind: 'evaluation'; atIso: string; runId: string; specId: string; specHash: string; series: SeriesSummary[] }
-  | { kind: 'shortlist'; atIso: string; runId: string; specId: string; specHash: string; rationale: string };
+  | { kind: 'shortlist'; atIso: string; runId: string; specId: string; specHash: string; rationale: string }
+  // The order the model chose its tools in: two sessions on one campaign take different paths, so the path is evidence too
+  | { kind: 'toolCall'; atIso: string; runId: string; step: number; tool: string; args: unknown; ok: boolean; ms: number };
 
 export const journalFileOf = (dir: string, id: string): string => path.join(dir, `${id}.journal.jsonl`);
 

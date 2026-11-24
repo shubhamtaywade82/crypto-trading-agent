@@ -78,7 +78,11 @@ describe('campaign agent session', () => {
       assert.equal(spec.campaign, 'TEST-CAMPAIGN');
       assert.deepEqual(spec.window, { days: 400, endDaysAgo: 0, endIso: '2026-01-01T00:00:00.000Z', split: CAMPAIGN.window.split });
       assert.equal(spec.evidence.alpha, 0.05);
-      assert.deepEqual(readJournal(ctx.journalFile).map((e) => e.kind), ['draft', 'evaluation', 'shortlist']);
+      const journal = readJournal(ctx.journalFile);
+      assert.deepEqual(journal.filter((e) => e.kind !== 'toolCall').map((e) => e.kind), ['draft', 'evaluation', 'shortlist']);
+      const path_ = journal.flatMap((e) => (e.kind === 'toolCall' ? [e] : []));
+      assert.deepEqual(path_.map((e) => [e.step, e.tool]), [[0, 'list_specs'], [1, 'draft_spec'], [2, 'evaluate_draft'], [3, 'evaluate_draft'], [4, 'shortlist_spec']], 'the tool path is journaled in order');
+      assert.deepEqual(path_[2]!.args, { id: 'LLM-TEST-BREAKOUT-1' });
       const evaluation = report.turns.flatMap((t) => t.toolResults ?? []).find((r) => r.toolName === 'evaluate_draft');
       assert.ok(evaluation?.success);
       assert.doesNotMatch(evaluation.outputString, /"test"/);

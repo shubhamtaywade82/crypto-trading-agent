@@ -226,15 +226,22 @@ Process:
 
 function agentHooks(ctx: AgentContext, turns: AgentTurn[]): AgentHooks {
   const startedAt = new Map<string, number>();
+  const argsOf = new Map<string, unknown>();
+  let step = 0;
   return {
     onTurnStart: (iteration) => ctx.log(`turn ${iteration}`),
     onToolCallStart: (call) => {
       startedAt.set(call.id ?? call.function.name, Date.now());
+      argsOf.set(call.id ?? call.function.name, call.function.arguments);
       ctx.log(`-> ${call.function.name} ${oneLine(JSON.stringify(call.function.arguments))}`);
     },
     onToolCallEnd: (result) => {
-      const seconds = ((Date.now() - (startedAt.get(result.toolCallId ?? result.toolName) ?? Date.now())) / 1000).toFixed(1);
-      ctx.log(`<- ${result.toolName} ${result.success ? 'ok' : 'ERROR'} (${seconds}s) ${oneLine(result.outputString)}`);
+      const key = result.toolCallId ?? result.toolName;
+      const ms = Date.now() - (startedAt.get(key) ?? Date.now());
+      ctx.log(`<- ${result.toolName} ${result.success ? 'ok' : 'ERROR'} (${(ms / 1000).toFixed(1)}s) ${oneLine(result.outputString)}`);
+      appendJournal(ctx.journalFile, {
+        kind: 'toolCall', atIso: nowIso(), runId: ctx.runId, step: step++, tool: result.toolName, args: argsOf.get(key) ?? null, ok: result.success, ms,
+      });
     },
     onTurnEnd: (turn) => {
       turns.push(turn);

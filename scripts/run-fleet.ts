@@ -22,7 +22,7 @@ import {
 } from '../src/fleet/FleetModels.js';
 import { fleetTelegramEnabled, sendFleetEvent } from '../src/fleet/FleetTelegram.js';
 import { config } from '../src/config.js';
-import { FLEET_ANCHOR, FLEET_CONTEXT_SYMBOLS, FLEET_SYMBOLS } from '../src/fleet/FleetSupervisor.js';
+import { FLEET_ANCHOR, FLEET_CONTEXT_SYMBOLS, FLEET_SYMBOLS, parseDecisionTimeframe } from '../src/fleet/FleetSupervisor.js';
 import { installTokenUsageLog } from '../src/ollama/tokenUsage.js';
 
 installTokenUsageLog('fleet');
@@ -83,6 +83,9 @@ async function main() {
   }
 
   const entriesEnabled = process.env.FLEET_ENTRIES === 'on' || process.argv.includes('--enable-entries');
+  const decisionTimeframe = parseDecisionTimeframe(process.env.FLEET_DECISION_TF);
+  if (!decisionTimeframe) throw new Error(`FLEET_DECISION_TF=${process.env.FLEET_DECISION_TF}: expected 5m or 15m`);
+  console.log(`  Model asked every ${decisionTimeframe} candle close`);
   console.log(`  Entries: ${entriesEnabled ? 'ARMED (risk-gated)' : 'OFF (shadow analysis, R1)'}`);
   // [FLEET] Telegram cards per worker buy/sell/exit — same bot config as the main agent, tagged
   // and routed around its alert pipeline. FLEET_TELEGRAM=off is the opt-out.
@@ -284,6 +287,7 @@ async function main() {
               symbolCandles1h: sym1h,
               marketState,
               peerCandles1h,
+              decisionCandles: snap.candles[decisionTimeframe] ?? sym15m,
             });
           }
         }

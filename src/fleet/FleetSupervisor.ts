@@ -80,8 +80,19 @@ export interface FleetState {
   bySymbol: Record<string, WorkerStatus>;
 }
 
+/** Candle closes that trigger a model call: 5m suits a free local model, 15m keeps cloud spend at ~96 calls/day. */
+export const FLEET_DECISION_TIMEFRAMES = ['5m', '15m'] as const;
+export type FleetDecisionTimeframe = (typeof FLEET_DECISION_TIMEFRAMES)[number];
+
+/** FLEET_DECISION_TF, defaulting to 15m; null when set to anything else, so a typo refuses instead of silently defaulting. */
+export function parseDecisionTimeframe(raw: string | undefined): FleetDecisionTimeframe | null {
+  const value = (raw ?? '15m').trim();
+  return (FLEET_DECISION_TIMEFRAMES as readonly string[]).includes(value) ? (value as FleetDecisionTimeframe) : null;
+}
+
 interface FleetConfig {
   entriesEnabled: boolean;
+  decisionTimeframe: FleetDecisionTimeframe;
   llmHost: string;
   timeoutMs: number;
   assignment: Record<string, string>;
@@ -116,6 +127,7 @@ export class FleetSupervisor extends EventEmitter {
   private stopped = false;
   private lastEmit = 0;
   private latest: FleetState | null = null;
+  private decisionTimeframe: FleetDecisionTimeframe = '15m';
 
   constructor(private readonly options: FleetSupervisorOptions = {}) {
     super();
@@ -146,6 +158,9 @@ export class FleetSupervisor extends EventEmitter {
     const timeoutMs =
       Number.parseInt(argValue(argv, '--timeout-ms') ?? this.env.FLEET_LLM_TIMEOUT_MS ?? '', 10) || DEFAULT_LLM_TIMEOUT_MS;
 
+    const decisionTimeframe = parseDecisionTimeframe(this.env.FLEET_DECISION_TF);
+    if (!decisionTimeframe) return { disabledReason: `FLEET_DECISION_TF=${this.env.FLEET_DECISION_TF} — expected ${FLEET_DECISION_TIMEFRAMES.join(' or ')}` };
+
     try {
       const assignment = resolveFleetModelAssignment({
         symbols: FLEET_SYMBOLS,
@@ -155,6 +170,7 @@ export class FleetSupervisor extends EventEmitter {
       return {
         config: {
           entriesEnabled: this.env.FLEET_ENTRIES === 'on' || argv.includes('--enable-entries'),
+          decisionTimeframe,
           llmHost,
           timeoutMs,
           assignment: assignment.bySymbol,
@@ -201,6 +217,7 @@ export class FleetSupervisor extends EventEmitter {
       return;
     }
     const fleetConfig = resolved.config;
+    this.decisionTimeframe = fleetConfig.decisionTimeframe;
     this.running = true;
     this.startedAt = Date.now();
 
@@ -209,7 +226,7 @@ export class FleetSupervisor extends EventEmitter {
     const telegramNote = fleetTelegramEnabled(this.env)
       ? 'Telegram trade notifications ON ([FLEET] buy/sell/exit cards per worker)'
       : 'Telegram trade notifications OFF (FLEET_TELEGRAM=off)';
-    this.log(`embedded multi-model fleet online — models: ${notes}; entries ${fleetConfig.entriesEnabled ? 'ARMED (risk-gated)' : 'OFF (shadow, R1)'}; ${telegramNote}`);
+    this.log(`embedded multi-model fleet online — models: ${notes}; entries ${fleetConfig.entriesEnabled ? 'ARMED (risk-gated)' : 'OFF (shadow, R1)'}; model asked every ${fleetConfig.decisionTimeframe} close; ${telegramNote}`);
 
     const sdkMarket = new SdkFuturesMarketClient(new BinanceClient().futures);
     const klineCache = new KlineStreamCache({ limit: DEFAULT_MARKET_DATA_OPTIONS.klineLimit, maxSilenceMs: DEFAULT_KLINE_MAX_SILENCE_MS });
@@ -334,6 +351,7 @@ export class FleetSupervisor extends EventEmitter {
           symbolCandles1h: sym1h,
           marketState,
           peerCandles1h,
+          decisionCandles: snap.candles[this.decisionTimeframe] ?? sym15m,
         });
       }
       this.throttledEmit();

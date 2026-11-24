@@ -57,6 +57,8 @@ export interface EvaluationParams {
   marketState?: MarketState;
   /** 1h candles of the context-only alts, keyed by symbol. */
   peerCandles1h?: Record<string, Candle[]>;
+  /** The series whose candle close is a new question for the model; defaults to the 15m candles. */
+  decisionCandles?: Candle[];
 }
 
 export class SymbolTraderWorker {
@@ -180,7 +182,7 @@ export class SymbolTraderWorker {
 
     // Trends, ATR and structure in the prompt only change when a 15m candle closes. Asking again inside one candle
     // re-samples a non-deterministic model on the same setup until it says ENTER, and pays for every sample.
-    const candleOpen = params.symbolCandles15m.at(-1)?.openTime ?? null;
+    const candleOpen = (params.decisionCandles ?? params.symbolCandles15m).at(-1)?.openTime ?? null;
     if (candleOpen === null || candleOpen === this.lastAskedCandleOpen) return;
 
     const input = this.buildPromptInput(params);

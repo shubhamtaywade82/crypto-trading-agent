@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
 import path from 'node:path';
 import { test } from 'node:test';
-import { FleetSupervisor } from '../src/fleet/FleetSupervisor.js';
+import { FleetSupervisor, parseDecisionTimeframe } from '../src/fleet/FleetSupervisor.js';
 import { resolveModelTag } from '../src/fleet/FleetModels.js';
 import { config } from '../src/config.js';
 
@@ -25,6 +25,19 @@ test('without the paper-exchange token the embedded fleet parks itself and never
   const [state] = await states;
   assert.equal(state.enabled, false, 'no token => parked');
   assert.match(state.disabledReason ?? '', /PAPER_EXCHANGE_API_KEY is not set/);
+  supervisor.stop();
+});
+
+test('FLEET_DECISION_TF accepts 5m or 15m (default 15m), and a typo parks the fleet instead of silently defaulting', async () => {
+  assert.equal(parseDecisionTimeframe(undefined), '15m');
+  assert.equal(parseDecisionTimeframe('5m'), '5m');
+  assert.equal(parseDecisionTimeframe('5min'), null);
+  const supervisor = new FleetSupervisor({ env: { ...TOKEN_ENV, FLEET_DECISION_TF: '5min' } });
+  const states = expectStateEvents(supervisor, 1);
+  await supervisor.start();
+  const [state] = await states;
+  assert.equal(state.enabled, false);
+  assert.match(state.disabledReason ?? '', /FLEET_DECISION_TF=5min/);
   supervisor.stop();
 });
 

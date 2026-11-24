@@ -114,6 +114,10 @@ function coinDcxBrokerFromConfig(): RemoteBroker | null {
 let legacyPaperLease: PaperExchangeLeaseKeeper | null = null;
 /** Where the lease's own warnings go (a failed renewal, a lost lease). The orchestrator sets it when it starts. */
 let legacyPaperLeaseLog: (message: string) => void = () => undefined;
+/** Re-takes the lease after it is lost; set by startPaperExchangeLease. */
+let legacyPaperLeaseOnLost: () => void = () => undefined;
+let isLegacyPaperLeaseStopped = false;
+const LEASE_RETRY_MS = 15_000;
 
 function remoteBrokerFromConfig(): RemoteBroker | null {
   const remote = config.paperExchange;
@@ -128,6 +132,7 @@ function remoteBrokerFromConfig(): RemoteBroker | null {
     label: `agent pid ${process.pid}`,
     ttlSeconds: DEFAULT_LEASE_TTL_SECONDS,
     log: (message) => legacyPaperLeaseLog(message),
+    onLost: () => legacyPaperLeaseOnLost(),
   });
   legacyPaperLease = lease;
   return new RemoteBroker({
@@ -138,6 +143,27 @@ function remoteBrokerFromConfig(): RemoteBroker | null {
     initialMargin: REMOTE_INITIAL_MARGIN,
     venueName: 'paper_exchange',
   });
+}
+
+/** Takes the lease, retrying until it is held or the lease is stopped; another holder keeps this process from writing. */
+async function holdPaperLease(keeper: PaperExchangeLeaseKeeper, log: (message: string, level: 'info' | 'warn' | 'error') => void): Promise<void> {
+  let lastReason = '';
+  while (!isLegacyPaperLeaseStopped) {
+    try {
+      const handle = await keeper.start();
+      if (isLegacyPaperLeaseStopped) {
+        await keeper.stop();
+        return;
+      }
+      log(`paper_exchange lease held for ${handle.accountId} (fence ${handle.fence})`, 'info');
+      return;
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : String(error);
+      if (reason !== lastReason) log(`paper_exchange lease refused: ${reason}; no paper orders until it is held, retrying every ${LEASE_RETRY_MS / 1000}s`, 'error');
+      lastReason = reason;
+      await new Promise<void>((resolve) => setTimeout(resolve, LEASE_RETRY_MS));
+    }
+  }
 }
 
 function brokerFromConfig(): RemoteBroker | null {
@@ -153,14 +179,18 @@ export class BinanceService {
     legacyPaperLeaseLog = (message) => log(message, 'warn');
     const keeper = legacyPaperLease;
     if (!keeper) return;
-    keeper.start().then(
-      (handle) => log(`paper_exchange lease held for ${handle.accountId} (fence ${handle.fence})`, 'info'),
-      (error: unknown) => log(`paper_exchange lease refused: ${error instanceof Error ? error.message : String(error)}; this process places no paper orders`, 'error'),
-    );
+    isLegacyPaperLeaseStopped = false;
+    // A lease lost to a paper_exchange restart or a stalled loop used to stay lost until a manual restart, refusing every order
+    legacyPaperLeaseOnLost = () => {
+      log('paper_exchange lease lost; re-taking it', 'warn');
+      void holdPaperLease(keeper, log);
+    };
+    void holdPaperLease(keeper, log);
   }
 
   /** Stops renewing and gives the paper lease back. */
   stopPaperExchangeLease(): void {
+    isLegacyPaperLeaseStopped = true;
     void legacyPaperLease?.stop();
   }
 

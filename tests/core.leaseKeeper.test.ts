@@ -127,6 +127,24 @@ test('a deadline missed without a renewal refuses writes and reports the loss on
   }
 });
 
+test('a lost lease can be taken back under a new fence once the old grant has expired at the venue', async () => {
+  const clock = { now: 0 };
+  const keeper = keeperFor(new VenueLeases(clock), clock);
+  try {
+    await keeper.start();
+    clock.now = 29_000;
+    assert.throws(() => keeper.writeHeaders(), LeaseRequiredError);
+    // The venue still shows the stale grant (live to 30 s): the agent's retry loop waits and tries again
+    await assert.rejects(keeper.start(), AccountLeaseHeldError);
+    clock.now = 31_000;
+    await keeper.start();
+    assert.equal(keeper.status, 'held');
+    assert.deepEqual(keeper.writeHeaders(), { 'X-Lease-Holder': 'holder-2', 'X-Lease-Fence': '2' });
+  } finally {
+    await keeper.stop();
+  }
+});
+
 test('a renewal the venue refuses marks the lease lost, and no write follows', async () => {
   const clock = { now: 0 };
   const venue = new VenueLeases(clock);

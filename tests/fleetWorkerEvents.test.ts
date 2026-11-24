@@ -288,6 +288,13 @@ test('the model is asked once per 15m candle, sees the alt breadth, and is asked
     const next = [...EVALUATION.symbolCandles15m.slice(1), { ...EVALUATION.symbolCandles15m.at(-1)!, openTime: 30 * 900_000 }];
     await worker.evaluate({ ...withPeers, symbolCandles15m: next });
     assert.equal(inputs.length, 2, 'a new candle is a new question');
+
+    // A 5m decision series asks on each 5m close while the 15m candle is unchanged
+    const fiveMin = (opens: number[]) => opens.map((i) => ({ ...EVALUATION.symbolCandles15m[0]!, openTime: i * 300_000 }));
+    await worker.evaluate({ ...withPeers, symbolCandles15m: next, decisionCandles: fiveMin([100]) });
+    await worker.evaluate({ ...withPeers, symbolCandles15m: next, decisionCandles: fiveMin([100]) });
+    await worker.evaluate({ ...withPeers, symbolCandles15m: next, decisionCandles: fiveMin([100, 101]) });
+    assert.equal(inputs.length, 4, 'one call per new 5m candle, none in between');
   } finally {
     await exchange.close();
     restoreState(snapshot);

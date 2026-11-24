@@ -1,6 +1,9 @@
 #!/usr/bin/env node
 import { render } from '@nemesis-oss/termina-core';
 import App from './ui/App.js';
+import { installTokenUsageLog } from './ollama/tokenUsage.js';
+
+installTokenUsageLog('agent');
 
 const instance = render(<App />, {
   alternateScreen: true,

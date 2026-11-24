@@ -48,6 +48,9 @@ import { loadSpecs, type HypothesisSpec } from '../src/research/pipeline/hypothe
 import { proposeSpecs, writeProposals, type LlmClient } from '../src/research/pipeline/propose.js';
 import { jsonFormatFor } from '../src/ollama/jsonMode.js';
 import { selectSource, type SourcePreference } from '../src/research/pipeline/sourceSelect.js';
+import { installTokenUsageLog } from '../src/ollama/tokenUsage.js';
+
+installTokenUsageLog('research');
 
 function arg(name: string, fallback: string): string {
   const index = process.argv.indexOf(`--${name}`);

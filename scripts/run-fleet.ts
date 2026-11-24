@@ -23,6 +23,9 @@ import {
 import { fleetTelegramEnabled, sendFleetEvent } from '../src/fleet/FleetTelegram.js';
 import { config } from '../src/config.js';
 import { FLEET_ANCHOR, FLEET_CONTEXT_SYMBOLS, FLEET_SYMBOLS } from '../src/fleet/FleetSupervisor.js';
+import { installTokenUsageLog } from '../src/ollama/tokenUsage.js';
+
+installTokenUsageLog('fleet');
 
 const SYMBOLS: string[] = [...FLEET_SYMBOLS];
 const ANCHOR = FLEET_ANCHOR;

@@ -42,6 +42,9 @@ import { StrategyRegistry } from '../src/research/StrategyRegistry.js';
 import { JsonlEventSubscriber, ResearchEventBus, type ResearchEvent } from '../src/research/Events.js';
 import { MetricsCollector, formatMetrics, replayEvents, attachCollector, type ResearchMetrics } from '../src/research/MetricsCollector.js';
 import { ExperimentMemory } from '../src/research/ExperimentMemory.js';
+import { installTokenUsageLog } from '../src/ollama/tokenUsage.js';
+
+installTokenUsageLog('self-improve');
 
 function arg(name: string, fallback: string): string {
   const index = process.argv.indexOf(`--${name}`);

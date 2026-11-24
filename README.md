@@ -21,6 +21,11 @@ A dedicated, real-time autonomous trading system powered by Ollama Cloud free-ti
   ```bash
   npx tsx scripts/run-fleet.ts
   ```
+* **Token usage**: every Ollama generate/chat call (cloud or local, from the agent, fleet or research scripts) is
+  appended to `data/llm-usage.jsonl` with its source, model and token counts. `npm run llm:usage [-- --since YYYY-MM-DD]`
+  prints the breakdown and the monthly cost of that load at Ollama Cloud prices.
+* **Local fallback**: when every cloud key fails, calls go to `OLLAMA_FALLBACK_MODEL` on `OLLAMA_FALLBACK_HOST`
+  (default `qwen2.5:0.5b`; `qwen3.5:4b` recommended, it is the smallest local model whose calls matched the data).
 
 ---
 

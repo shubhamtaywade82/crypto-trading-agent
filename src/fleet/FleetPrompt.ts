@@ -1,11 +1,9 @@
 import type { MarketState } from '../market/types.js';
 
+/** The model picks direction only: stop and target come from deterministic ATR code (fleetLevels), never from the model. */
 export interface LlmTradeRecommendation {
   action: 'ENTER_LONG' | 'ENTER_SHORT' | 'HOLD';
   confidence: number;
-  entry: number;
-  stopLoss: number;
-  takeProfit: number;
   reason: string;
 }
 
@@ -33,15 +31,9 @@ export interface PromptInput {
   marketState?: MarketState;
 }
 
-const TRADE_CONSTRAINTS = `### TRADE OBJECTIVES & MANDATORY CONSTRAINTS:
-1. Minimum Profit Target: At 10x leverage, Take Profit (TP) requires at least 0.5% price distance.
-   - For LONG: takeProfit >= currentPrice * 1.005
-   - For SHORT: takeProfit <= currentPrice * 0.995
-2. Stop Loss (SL):
-   - For LONG: stopLoss below local support/swing low (currentPrice > stopLoss).
-   - For SHORT: stopLoss above local resistance/swing high (currentPrice < stopLoss).
-   - Minimum Risk/Reward Ratio: (Reward / Risk) must be >= 1.5.
-3. Decision: Output "ENTER_LONG", "ENTER_SHORT", or "HOLD" if setup is unclear or suboptimal.`;
+const TRADE_CONSTRAINTS = `### YOUR DECISION:
+Choose direction only. The system sets the stop at 1.5x ATR(14) and the target at 2R (at least 0.5% away) from the current price.
+Output "ENTER_LONG", "ENTER_SHORT", or "HOLD" if the setup is unclear or a 1.5x ATR stop would sit inside obvious noise.`;
 
 function fmtNum(n: number | null | undefined, digits = 4): string {
   return n != null && Number.isFinite(n) ? n.toFixed(digits) : 'n/a';
@@ -94,9 +86,6 @@ Return ONLY a valid JSON object with EXACTLY this structure (no markdown fences,
 {
   "action": "ENTER_LONG" | "ENTER_SHORT" | "HOLD",
   "confidence": 0.85,
-  "entry": ${s.price},
-  "stopLoss": 0.0,
-  "takeProfit": 0.0,
   "reason": "Brief technical rationale"
 }`;
 }

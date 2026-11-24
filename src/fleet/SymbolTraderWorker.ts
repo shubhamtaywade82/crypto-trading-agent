@@ -184,10 +184,16 @@ export class SymbolTraderWorker {
       return;
     }
 
-    this.handleRecommendation(rec, markPrice);
+    const levels = fleetLevels(rec.action, markPrice, input.symbolContext.atr14);
+    if (!levels) {
+      this.status.state = 'IDLE';
+      this.status.lastDecision = `RISK REFUSED: no valid ATR (${input.symbolContext.atr14})`;
+      return;
+    }
+    this.handleRecommendation({ ...rec, action: rec.action, ...levels }, markPrice);
   }
 
-  private handleRecommendation(rec: LlmTradeRecommendation, markPrice: number): void {
+  private handleRecommendation(rec: TradePlan, markPrice: number): void {
     this.currentSl = rec.stopLoss;
     this.currentTp = rec.takeProfit;
     this.updateStatusLevels(markPrice);
@@ -198,10 +204,10 @@ export class SymbolTraderWorker {
       return;
     }
 
-    const risk = this.validateRisk(rec, markPrice);
-    if (!risk.ok) {
+    const acct = this.status.account;
+    if (acct && acct.availableBalance < this.config.marginPerPosition) {
       this.status.state = 'IDLE';
-      this.status.lastDecision = `RISK REFUSED: ${risk.reason}`;
+      this.status.lastDecision = `RISK REFUSED: insufficient margin ($${acct.availableBalance.toFixed(2)} < $${this.config.marginPerPosition})`;
       return;
     }
 
@@ -218,32 +224,6 @@ export class SymbolTraderWorker {
     }
 
     void this.executeEntry(rec, markPrice, gate.riskMultiplier);
-  }
-
-  private validateRisk(rec: LlmTradeRecommendation, markPrice: number): { ok: boolean; reason?: string } {
-    const acct = this.status.account;
-    if (acct && acct.availableBalance < this.config.marginPerPosition) {
-      return { ok: false, reason: `insufficient margin ($${acct.availableBalance.toFixed(2)} < $${this.config.marginPerPosition})` };
-    }
-    const isLong = rec.action === 'ENTER_LONG';
-    if (isLong && rec.stopLoss >= markPrice) {
-      return { ok: false, reason: `inverted SL (${rec.stopLoss} >= entry ${markPrice})` };
-    }
-    if (!isLong && rec.stopLoss <= markPrice) {
-      return { ok: false, reason: `inverted SL (${rec.stopLoss} <= entry ${markPrice})` };
-    }
-    if (isLong && rec.takeProfit <= markPrice) {
-      return { ok: false, reason: `inverted TP (${rec.takeProfit} <= entry ${markPrice})` };
-    }
-    if (!isLong && rec.takeProfit >= markPrice) {
-      return { ok: false, reason: `inverted TP (${rec.takeProfit} >= entry ${markPrice})` };
-    }
-    const reward = Math.abs(rec.takeProfit - markPrice);
-    const risk = Math.abs(markPrice - rec.stopLoss);
-    if (risk <= 0 || reward / risk < 1.0) {
-      return { ok: false, reason: `poor reward:risk ${(reward / Math.max(1e-6, risk)).toFixed(2)} < 1.0` };
-    }
-    return { ok: true };
   }
 
   // Establishes default bounds when an exchange position exists without local stop levels
@@ -264,7 +244,7 @@ export class SymbolTraderWorker {
     });
   }
 
-  private async executeEntry(rec: LlmTradeRecommendation, markPrice: number, riskMultiplier = 1): Promise<void> {
+  private async executeEntry(rec: TradePlan, markPrice: number, riskMultiplier = 1): Promise<void> {
     // The only entry submission: refused while paused, even if evaluate() were ever changed to reach it
     if (!this.config.entriesEnabled) return;
     // The gate scales the risk budget down in CAUTION and REDUCED; the margin cap is unchanged
@@ -516,6 +496,24 @@ export class SymbolTraderWorker {
     if (diffPct < -0.3) return 'BEARISH';
     return 'SIDEWAYS';
   }
+}
+
+type TradePlan = LlmTradeRecommendation & { action: 'ENTER_LONG' | 'ENTER_SHORT'; stopLoss: number; takeProfit: number };
+
+const STOP_ATR_MULTIPLE = 1.5;
+const REWARD_RISK = 2;
+// 0.5% is 5% on margin at 10x: a closer target is mostly eaten by fees and slippage
+const MIN_TARGET_PCT = 0.005;
+
+/** Deterministic stop/target for a direction: stop 1.5x ATR away, target 2R but at least 0.5% away. Null if ATR is unusable. */
+export function fleetLevels(action: 'ENTER_LONG' | 'ENTER_SHORT', markPrice: number, atr14: number): { stopLoss: number; takeProfit: number } | null {
+  if (!(markPrice > 0) || !(atr14 > 0)) return null;
+  const risk = STOP_ATR_MULTIPLE * atr14;
+  const reward = Math.max(REWARD_RISK * risk, markPrice * MIN_TARGET_PCT);
+  const sign = action === 'ENTER_LONG' ? 1 : -1;
+  const stopLoss = Number((markPrice - sign * risk).toPrecision(10));
+  if (!(stopLoss > 0)) return null;
+  return { stopLoss, takeProfit: Number((markPrice + sign * reward).toPrecision(10)) };
 }
 
 /**

@@ -4,7 +4,7 @@ import type { AddressInfo } from 'node:net';
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { test } from 'node:test';
-import { fleetEntryQuantity, SymbolTraderWorker } from '../src/fleet/SymbolTraderWorker.js';
+import { fleetEntryQuantity, fleetLevels, SymbolTraderWorker } from '../src/fleet/SymbolTraderWorker.js';
 import type { FleetLlmService } from '../src/fleet/FleetLlmService.js';
 import type { EntryGate } from '../src/fleet/EntryGate.js';
 import type { FleetTradeEvent } from '../src/fleet/FleetTelegram.js';
@@ -120,12 +120,12 @@ function clearState(): void {
   if (existsSync(STATE_PATH)) rmSync(STATE_PATH);
 }
 
-const mkCandles = (count: number, base: number): Candle[] =>
+const mkCandles = (count: number, base: number, halfRange = base * 0.001): Candle[] =>
   Array.from({ length: count }, (_, i) => ({
     openTime: i * 900_000,
     open: base,
-    high: base * 1.001,
-    low: base * 0.999,
+    high: base + halfRange,
+    low: base - halfRange,
     close: base,
     volume: 10,
   }));
@@ -134,18 +134,24 @@ const EVALUATION = {
   markPrice: 100,
   btcCandles15m: mkCandles(30, 50_000),
   btcCandles1h: mkCandles(15, 50_000),
-  symbolCandles15m: mkCandles(30, 100),
+  // ATR 10/3: the deterministic levels land at SL 95 (1.5 ATR) and TP 110 (2R)
+  symbolCandles15m: mkCandles(30, 100, 5 / 3),
   symbolCandles1h: mkCandles(15, 100),
 };
 
 const RECOMMENDATION = {
   action: 'ENTER_LONG' as const,
   confidence: 0.9,
-  entry: 100,
-  stopLoss: 95,
-  takeProfit: 110,
   reason: 'reclaimed support',
 };
+
+test('fleetLevels puts the stop 1.5 ATR away and the target at 2R, floored at 0.5% of price', () => {
+  assert.deepEqual(fleetLevels('ENTER_LONG', 100, 2), { stopLoss: 97, takeProfit: 106 });
+  assert.deepEqual(fleetLevels('ENTER_SHORT', 100, 2), { stopLoss: 103, takeProfit: 94 });
+  assert.deepEqual(fleetLevels('ENTER_LONG', 100, 0.1), { stopLoss: 99.85, takeProfit: 100.5 }, 'tiny ATR: target floored at 0.5%');
+  assert.equal(fleetLevels('ENTER_LONG', 100, 0), null);
+  assert.equal(fleetLevels('ENTER_LONG', 100, 80), null, 'stop below zero');
+});
 
 const llmStub = { analyze: async () => RECOMMENDATION } as unknown as FleetLlmService;
 

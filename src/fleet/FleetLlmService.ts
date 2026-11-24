@@ -43,7 +43,7 @@ export class FleetLlmService {
           model: this.model,
           prompt,
           ...jsonFormatFor(this.host),
-          options: { temperature: 0.2, top_p: 0.9 },
+          options: { temperature: 0, top_p: 0.9 },
         });
         this.keyIndex = (idx + 1) % this.clients.length;
         return text;
@@ -58,14 +58,14 @@ export class FleetLlmService {
     const prompt = buildTradingPrompt(input);
     try {
       const rawText = await this.generate(prompt);
-      return this.parseAndValidate(rawText.trim(), input.symbolContext.price);
+      return this.parseAndValidate(rawText.trim());
     } catch (err) {
       console.error(`[fleet-llm] Error evaluating ${input.symbol}:`, (err as Error).message);
       return null;
     }
   }
 
-  private parseAndValidate(raw: string, currentPrice: number): LlmTradeRecommendation | null {
+  private parseAndValidate(raw: string): LlmTradeRecommendation | null {
     try {
       const cleanJson = raw.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
       const parsed = JSON.parse(cleanJson);
@@ -75,44 +75,10 @@ export class FleetLlmService {
         return null;
       }
 
-      if (action === 'HOLD') {
-        return {
-          action: 'HOLD',
-          confidence: Number(parsed.confidence) || 0.5,
-          entry: currentPrice,
-          stopLoss: currentPrice,
-          takeProfit: currentPrice,
-          reason: parsed.reason ?? 'Hold signal',
-        };
-      }
-
-      const entry = Number(parsed.entry) || currentPrice;
-      const stopLoss = Number(parsed.stopLoss);
-      const takeProfit = Number(parsed.takeProfit);
-      const confidence = Number(parsed.confidence) || 0.7;
-
-      if (!Number.isFinite(entry) || !Number.isFinite(stopLoss) || !Number.isFinite(takeProfit)) {
-        return null;
-      }
-
-      // Check min 0.5% profit requirement for 5% return at 10x
-      if (action === 'ENTER_LONG') {
-        if (stopLoss >= entry || takeProfit <= entry) return null;
-        const profitMovePct = ((takeProfit - entry) / entry) * 100;
-        if (profitMovePct < 0.49) return null; // allow small rounding
-      } else if (action === 'ENTER_SHORT') {
-        if (stopLoss <= entry || takeProfit >= entry) return null;
-        const profitMovePct = ((entry - takeProfit) / entry) * 100;
-        if (profitMovePct < 0.49) return null;
-      }
-
       return {
         action,
-        confidence,
-        entry,
-        stopLoss,
-        takeProfit,
-        reason: String(parsed.reason || 'AI setup verified'),
+        confidence: Number(parsed.confidence) || (action === 'HOLD' ? 0.5 : 0.7),
+        reason: String(parsed.reason || (action === 'HOLD' ? 'Hold signal' : 'AI setup verified')),
       };
     } catch {
       return null;

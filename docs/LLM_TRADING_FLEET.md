@@ -78,8 +78,9 @@ Reserving 2% ($20.00) allows the order to fill reliably without hitting margin e
    * For **LONG**: `takeProfit >= currentPrice * 1.005`
    * For **SHORT**: `takeProfit <= currentPrice * 0.995`
 3. **Strict Invalidation (SL)**:
-   * Stop Loss is anchored to local swing structure / support / resistance identified by the LLM.
-   * Enforces Risk/Reward Ratio $(R/R) \ge 1.5$.
+   * The LLM picks direction only (`ENTER_LONG` / `ENTER_SHORT` / `HOLD`, temperature 0). Stop and target are computed
+     deterministically by `fleetLevels()`: stop 1.5x ATR(14, 15m) from entry, target 2R (floored at 0.5%). A model-invented
+     stop at 10x leverage varies run to run and sets the liquidation risk, so the model never chooses it.
 4. **Real-Time Exit Execution**:
    * Stop Loss and Take Profit levels are evaluated **instantly on every sub-second Binance WebSocket price tick** rather than waiting for candle closes.
 

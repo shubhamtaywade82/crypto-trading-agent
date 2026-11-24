@@ -311,12 +311,12 @@ test('FleetLlm analyze sends the trading prompt in JSON mode with its sampling o
   const daemon = await startFakeOllama('127.0.0.1', () => ollamaReply(`<think>weighing support</think>${FLEET_LONG}`));
   try {
     const rec = await new FleetLlmService({ host: daemon.url, model: 'beam' }).analyze(fleetInput());
-    assert.deepEqual(rec, { action: 'ENTER_LONG', confidence: 0.8, entry: 100, stopLoss: 98, takeProfit: 103, reason: 'reclaimed support' });
+    assert.deepEqual(rec, { action: 'ENTER_LONG', confidence: 0.8, reason: 'reclaimed support' }, 'model stop/target are ignored');
     const [generate] = daemon.generates();
     assert.equal(generate?.body?.model, 'beam');
     assert.equal(generate?.body?.format, 'json');
     assert.equal(generate?.body?.stream, false);
-    assert.deepEqual(generate?.body?.options, { temperature: 0.2, top_p: 0.9 });
+    assert.deepEqual(generate?.body?.options, { temperature: 0, top_p: 0.9 });
     assert.match(String(generate?.body?.prompt), /ETHUSDT/);
   } finally {
     await daemon.close();

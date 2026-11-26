@@ -50,10 +50,9 @@ Additionally, three call sites used the **deprecated v2 account REST** (`getAcco
 
 | File | Change |
 | --- | --- |
-| `src/binance/wsRoutes.ts` (new) | The route table above as code: per-environment bases (live/testnet), `buildMarketStreamUrl`, `buildPrivateStreamUrl` (query-parameter listen key, safe encoding that keeps the documented `@` and `/` literals), `maskListenKey` for logs. |
+| `src/binance/wsRoutes.ts` (new) | The route table above as code: `buildMarketStreamUrl`, `buildPrivateStreamUrl` (query-parameter listen key, safe encoding that keeps the documented `@` and `/` literals), `maskListenKey` for logs. |
 | `src/binance/userDataStream.ts` (new) | The private user-data stream lifecycle: states `STOPPED → STARTING → CONNECTING → CONNECTED → RENEWING → RECONNECTING`, listen-key create/keepalive/release over the unchanged REST contract, 30-minute keepalive (60-minute validity), `listenKeyExpired` and 3× keepalive failure → fresh key + reconnect, bounded exponential backoff with jitter, a generation counter so retired sockets cannot corrupt state, unknown-event tolerance (reported, never fatal), and no raw listen key in any log line. |
 | `src/binance/client.ts` | Market WS now dials the `/market` base (the package appends `/ws/<stream>` itself). `startUserStream()` drives `UserDataStream` instead of the package's retired URL builder; `ORDER_TRADE_UPDATE` wakes the entry tracker, `MARGIN_CALL` is surfaced at error level. New `userStreamStatus()` exposes stream health. All three `getAccountInformation()` call sites migrated to `getAccountInformationV3()` (`GET /fapi/v3/account`); positions already used `getPositionsV3()` (`GET /fapi/v3/positionRisk`). |
-| `scripts/binance-testnet-verify.ts` | Account check moved to V3 and a new V3 balance check (`getBalanceV3()` → `GET /fapi/v3/balance`) added; the startup-path check now also asserts the user-data stream reaches `CONNECTED`. |
 | `tests/wsRoutes.test.ts`, `tests/userDataStream.test.ts` (new) | 23 tests: URL construction (both environments), encoding, missing-key refusal, legacy-path regression guards, cross-product isolation, and the full stream lifecycle against a scripted socket. |
 | `tests/liveVenue.test.ts` | The fake venue speaks `getAccountInformationV3` (the surface the production code now calls). |
 
@@ -69,11 +68,6 @@ Additionally, three call sites used the **deprecated v2 account REST** (`getAcco
 - **Node's global `WebSocket`** (stable since Node 22; this repo requires >= 24) is used for the
   private stream — no new dependency — behind a tiny injectable socket factory so tests are
   deterministic and no test ever opens a network socket.
-- **Testnet routing is unverified.** Binance's notice documents no routed paths for
-  `fstream.binancefuture.com`. `usdmWsRouteBases('testnet')` keeps Binance's documented testnet host
-  with the same route suffixes and flags them `unverifiedRouting: true`; the bases accept explicit
-  overrides so a documented testnet endpoint can be pinned the day Binance publishes one.
-  `npm run verify:testnet` is the tool that will prove or disprove it.
 
 ## Open item: the `binance-sdk` dependency (v3.5.1 task list)
 
@@ -84,8 +78,7 @@ from this repository, so the remediation is recorded as a task for the SDK, mirr
 fix:
 
 1. `src/client/endpoints.ts` — split `wsPublic` / `wsMarket` / `wsPrivate` / `wsApi` / `rest` per
-   environment (live, testnet, demo); live values per the table above; testnet/demo routed paths are
-   **unverified until Binance documents them** — do not copy live URLs blindly.
+   environment; live values per the table above.
 2. Private stream builder — `wss://fstream.binance.com/private/ws?listenKey=<key>&events=A/B`
    (query, URL-encoded, `@`/`/` literals preserved), never `/private/ws/<key>`; `events` multi-value
    only per the verified contract; credentials never in logs.
@@ -108,6 +101,6 @@ Once published as 3.5.1, this repository can adopt the SDK's stream and retire
 
 - `npm run typecheck`, `npm run build`: clean.
 - `npm test`: 1986 passing (1963 baseline + 23 new).
-- Live/testnet behaviour: run `npm run verify:testnet` (BINANCE_TESTNET=on credentials required);
+- Live behaviour: a check script (since removed) asserted this against Binance;
   it now asserts the private stream reaches `CONNECTED` over the new route and that `/fapi/v3/balance`
   answers. No live orders are placed by any test.

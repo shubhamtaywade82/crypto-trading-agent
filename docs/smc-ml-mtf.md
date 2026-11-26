@@ -111,7 +111,7 @@ The SMC CI workflow validates only the strategy slice because the root package a
       }, null, 2));
     });
 
-Start with autoExecute=false and paper/testnet execution. Enable live execution only after deterministic backtests and forward paper validation.
+Start with autoExecute=false and paper execution. Enable live execution only after deterministic backtests and forward paper validation.
 
 **Entries are paused** (`entriesEnabled: false`, the runtime default). OPEN and ADD decisions are refused before any venue call, because this path sizes and places bracket orders without the repo's RiskEngine or kill switch (`docs/superpowers/specs/2026-10-18-smc-playbook-phase1-audit.md`, finding A). EXIT still runs even with `autoExecute=true`, so open positions can be closed.
 

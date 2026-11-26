@@ -35,7 +35,7 @@ backtester, ledger, risk manager or agent runtime.
   `docs/CRYPTO_RESEARCH_FACTORY_DESIGN.md`, `docs/research-log.md`.
 - Data: `src/marketdata`, `src/microstructure`, `research-data/` archive (manifests + hashes). Known gap: 2026-10-28 missing day.
 - Strategy/decision: `src/strategies`, `src/decision`, `src/decision-intelligence` (TEV1 approval gate), `docs/smc-ml-mtf.md`.
-- Execution/risk: `src/execution`, `src/risk`, `src/position`, `src/trailing`, `src/binance`, `scripts/binance-testnet-verify.ts`.
+- Execution/risk: `src/execution`, `src/risk`, `src/position`, `src/trailing`, `src/binance`.
 - Agents/LLM: `src/agents`, `src/fleet` (FleetLlmService), `src/llm`.
 - Prior verdicts: SOL/ALMA closed after 7 rejections; XRP → NO_TRADE; context strategy has 0 OOS-validated entries.
   Do not re-open closed hypotheses without new evidence; record why if you do.
@@ -137,8 +137,7 @@ automatic disable condition, worst historical conditions, behaviour when BTC inv
 
 <paper_and_review>
 Paper (`paper`/`paper_exchange`/`shadow`): live prices, real spread, est. slippage, funding, rejects, filters,
-risk checks, stops/trails; log every signal, rejection, order, fill, exit; compare to backtest. Testnet proves
-contracts, not liquidity. Predefine minimum duration, trade count and acceptance criteria before proposing live.
+risk checks, stops/trails; log every signal, rejection, order, fill, exit; compare to backtest. Predefine minimum duration, trade count and acceptance criteria before proposing live.
 Nightly review (UTC day, IST report): trades, rejections, regime accuracy, expected vs realized costs,
 funding, slippage, entry/exit/stop/trail quality, risk events, exchange errors, degradation. Output evidence-backed
 proposals only. It NEVER edits strategies, risk config, models, or re-enables anything.

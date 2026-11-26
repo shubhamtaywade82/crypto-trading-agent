@@ -6,6 +6,7 @@ import { EventStore } from '../ops/eventStore.js';
 import { createOps, type OpsHooks } from '../ops/hooks.js';
 import type { KillSwitch } from '../ops/killSwitch.js';
 import { sendAlert, type TelegramDeps } from '../ops/telegram.js';
+import { TradePlanLedger } from '../ops/tradePlans.js';
 import { PerformanceEngine, type PerformanceSnapshot } from '../risk/performanceEngine.js';
 import { deriveCircuitState, riskLimitsFromConfig, type CircuitState, type RiskLimits } from '../risk/riskConfig.js';
 import type { PeakEquitySource } from '../risk/equityHwm.js';
@@ -119,7 +120,7 @@ export async function refreshPortfolio(ctx: MarketContext, source: PortfolioSour
   return { ...ctx, positions, equity };
 }
 
-export interface OpsConfig { audit: boolean; alerts: boolean; eventsPath: string; notificationsPath: string; hideNoTradeSetups?: boolean }
+export interface OpsConfig { audit: boolean; alerts: boolean; eventsPath: string; notificationsPath: string; hideNoTradeSetups?: boolean; tradePlansPath?: string }
 
 const opsConfigFromEnv = (): OpsConfig => ({
   audit: config.audit === 'on',
@@ -127,6 +128,7 @@ const opsConfigFromEnv = (): OpsConfig => ({
   eventsPath: config.eventsPath,
   notificationsPath: config.notificationsPath,
   hideNoTradeSetups: false, // Do not block setups from alerts
+  tradePlansPath: config.tradePlansPath,
 });
 
 // Alerts fire promptly without long suppressive cooldowns
@@ -217,6 +219,8 @@ export function buildOps(options: BuildOpsOptions): Ops {
     store: new EventStore(cfg.eventsPath),
     engine: new NotificationEngine(isAlerts ? loadSubscriptions(cfg.notificationsPath) : undefined, { cooldownMs: ALERT_COOLDOWN_MS, now }),
     send: (event, html) => sendAlert(event, html, telegram),
+    // Independent of AUDIT: outcomes are kept even when the event trail is switched off
+    plans: new TradePlanLedger(cfg.tradePlansPath ?? null),
   });
   let cancelDigest: (() => void) | undefined;
   return {

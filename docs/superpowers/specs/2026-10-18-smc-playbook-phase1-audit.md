@@ -17,7 +17,7 @@ Every claim below was checked against source or the installed SDK typings on thi
 | Plan claim | Result | Evidence |
 | --- | --- | --- |
 | `@nemesis-oss/binance-sdk` is an npm dependency | Confirmed, version 3.0.0 installed | `node_modules/@nemesis-oss/binance-sdk/package.json` |
-| `new BinanceClient({ testnet, safety })` | Confirmed | `BinanceClientOptions`, `testnet?`, `safety?: RiskGatewayOptions` (SDK `dist/index-C06A22Dz.d.ts:5940-5982`) |
+| `new BinanceClient({ safety })` | Confirmed | `BinanceClientOptions`, `safety?: RiskGatewayOptions` (SDK `dist/index-C06A22Dz.d.ts:5940-5982`) |
 | `safety`: `readOnly`, `allowedSymbols`, `maxNotionalPerOrder`, `maxLeverage` | Confirmed | `RiskGatewayOptions` (SDK typings lines 143-154, 322) |
 | `futures.market.klines(symbol, interval, options)` | Confirmed | SDK typings line 2796 |
 | `futures.data.openInterestHist(symbol, period, limit)` | Confirmed | SDK typings line 4365 |

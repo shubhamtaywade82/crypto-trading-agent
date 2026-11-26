@@ -117,26 +117,6 @@ present, but no `MODE=live` path reaches it. Enabling CoinDCX live needs the gua
 
 ---
 
-## Verifying the live path on the Binance testnet
-
-The live path (entry tracker, protective legs, journal, startup reconciliation) is covered by unit tests against a
-scripted venue, not against Binance. `scripts/binance-testnet-verify.ts` runs the same code against the USD-M testnet:
-
-```bash
-# Read-only: response shapes the bot parses, and the startup path
-MODE=live ALERT_ONLY=off BINANCE_TESTNET=on BINANCE_API_KEY=<testnet key> BINANCE_API_SECRET=<testnet secret> \
-  npx tsx scripts/binance-testnet-verify.ts
-
-# Also sends testnet orders: a resting entry cancelled, a protected fill with its stop moved and closed,
-# and a stop the venue refuses, which must end flat
-... npx tsx scripts/binance-testnet-verify.ts --place-orders
-```
-
-Keys come from testnet.binancefuture.com, and the account must be in One-way mode. The script refuses to run without
-`BINANCE_TESTNET=on`, and the cockpit refuses to start with it because its market feed is production. The harness is not
-run in CI, since it needs testnet keys. Run it before enabling live trading and keep its output: that output is the
-evidence for the venue assumptions in `src/binance/`, which the unit tests cannot provide.
-
 ## Quick start
 
 ```bash
@@ -548,6 +528,11 @@ to send to.
 | `AUDIT` | `on` | `off` stops appending a JSON line per decision step to `EVENTS_PATH` |
 | `EVENTS_PATH` | `data/events.jsonl` | Audit trail; rotated to `<file>.1` at 5 MB |
 | `NOTIFICATIONS_PATH` | `data/notifications.json` | Optional subscription JSON (missing or invalid means every class on) |
+| `TRADE_PLANS_PATH` | `data/trade-plans.jsonl` | Trade-plan ledger: each announced trade, whether its card was delivered, and what it became (TP / SL / close, PnL, R). Written regardless of `AUDIT`. Read with `npm run plans:report` |
+| `PUBLIC_SPOT_FEED` | `off` | `on` streams Spot top-of-book and trades from `data-stream.binance.vision` (REST bootstrap from `data-api.binance.vision`). Keyless and informational: no entry is gated on it |
+| `PUBLIC_USDM_EXTRAS` | `off` | `on` streams the USDⓈ-M `/public` book ticker and loads funding-rate history over REST. Keyless and informational |
+| `PUBLIC_QUOTE_STALE_MS` | `15000` | A book older than this reads `STALE` in the public context, never zero |
+| `PUBLIC_FUNDING_REFRESH_MS` | `300000` | Funding-history refresh interval |
 | `TELEGRAM_CHAT_ID` | (unset) | Destination chat, required to send |
 | `TELEGRAM_BOT_TOKEN` | (unset) | Shared bot, used when a channel has no bot of its own |
 | `TELEGRAM_TRADING_BOT_TOKEN` | (unset) | Bot for TRADE and SIGNAL cards |

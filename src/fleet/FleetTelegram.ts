@@ -1,4 +1,5 @@
 import { escapeHtml, sendTelegram, type TelegramDeps } from '../ops/telegram.js';
+import type { NotifySlot, NotifyStatus, PlanResult, TradePlanLedger } from '../ops/tradePlans.js';
 
 /**
  * FleetTelegram: per-worker trade notifications for the LLM fleet.
@@ -93,18 +94,67 @@ export function formatFleetEventHtml(event: FleetTradeEvent): string {
   return lines.join('\n');
 }
 
+export interface FleetSendDeps extends TelegramDeps {
+  /** Trade-plan ledger the fleet's entries and exits are written to. Absent: cards still go out, nothing is recorded. */
+  readonly plans?: TradePlanLedger;
+}
+
+/** A fleet worker holds at most one position per symbol, so the symbol plus the entry time names the plan. */
+export const fleetPlanId = (symbol: string, at: number): string => `FLEET:${symbol}:${at}`;
+
+const EXIT_RESULT: Readonly<Record<string, PlanResult>> = { STOP_LOSS: 'SL', TAKE_PROFIT: 'TP', BREAK_EVEN: 'BREAK_EVEN' };
+
+/**
+ * Writes an ENTRY or EXIT into the plan ledger, synchronously and before any I/O, so the record exists whether or not the
+ * card is sent. Returns the slot that the card's delivery status belongs to. BREAK_EVEN moves a stop and leaves the position open.
+ */
+function recordFleetPlan(plans: TradePlanLedger | undefined, event: FleetTradeEvent): { planId: string; slot: NotifySlot } | undefined {
+  if (!plans) return undefined;
+  if (event.kind === 'ENTRY') {
+    const planId = fleetPlanId(event.symbol, event.at);
+    // A position still open for this symbol ended while nothing observed it: the worker could not have opened a new one otherwise
+    for (const stale of plans.openFor('FLEET', event.symbol)) {
+      plans.close(stale.planId, { at: event.at, result: 'UNOBSERVED', exitPrice: null, pnl: null });
+    }
+    const announced = plans.announce({
+      planId, source: 'FLEET', symbol: event.symbol, side: event.side === 'sell' ? 'SHORT' : 'LONG', strategy: event.model, at: event.at,
+      planned: { entry: event.price, stopLoss: event.stopLoss ?? NaN, takeProfit: event.takeProfit ?? NaN },
+      meta: { action: event.action, ...(event.quantity === undefined ? {} : { quantity: event.quantity }) },
+    });
+    if (!announced.applied) return undefined;
+    plans.fill(planId, event.at);
+    return { planId, slot: 'announce' };
+  }
+  if (event.kind === 'EXIT') {
+    const open = plans.openFor('FLEET', event.symbol)[0];
+    if (!open) return undefined;
+    const closed = plans.close(open.planId, {
+      at: event.at, result: EXIT_RESULT[event.action] ?? 'CLOSE', exitPrice: event.price,
+      entryPrice: event.entryPrice ?? null, pnl: event.pnl ?? null,
+    });
+    return closed.applied ? { planId: open.planId, slot: 'close' } : undefined;
+  }
+  return undefined;
+}
+
 /**
  * Sends one fleet trade card. Buy/sell fills are TRADE-class events, so they use the trading
  * bot (falling back to the shared bot) exactly like the main agent's own fills; the break-even
  * lock is informational and arrives silently. Resolves `false` — never throws — when disabled,
  * unconfigured, timed out or unreachable.
  */
-export async function sendFleetEvent(event: FleetTradeEvent, deps: TelegramDeps = {}): Promise<boolean> {
+export async function sendFleetEvent(event: FleetTradeEvent, deps: FleetSendDeps = {}): Promise<boolean> {
   const env = deps.env ?? process.env;
-  if (!fleetTelegramEnabled(env)) return false;
-  return sendTelegram(
+  const recorded = recordFleetPlan(deps.plans, event);
+  const report = (status: NotifyStatus): void => {
+    if (recorded) deps.plans?.notify(recorded.planId, recorded.slot, status, event.at);
+  };
+  if (!fleetTelegramEnabled(env)) { report('NOT_ATTEMPTED'); return false; }
+  const sent = await sendTelegram(
     formatFleetEventHtml(event),
     { channel: 'trading', silent: event.kind === 'BREAK_EVEN' },
     deps,
   );
+  report(sent ? 'SENT' : 'FAILED');
+  return sent;
 }

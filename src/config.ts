@@ -10,8 +10,6 @@ export const EnvSchema = z.object({
   MODE: z.enum(['paper', 'live']).default('paper'),
   BINANCE_API_KEY: z.string().default(''),
   BINANCE_API_SECRET: z.string().default(''),
-  // Testnet REST and user-data stream. Only scripts/binance-testnet-verify.ts may run with it: the cockpit's market feed is production
-  BINANCE_TESTNET: z.enum(['off', 'on']).default('off'),
   // Ollama Cloud free tier (2026-11): beam, gemma4:31b, gpt-oss:120b/20b, nemotron-3-*. beam is free and preferred.
   OLLAMA_HOST: z.string().default('https://ollama.com'),
   OLLAMA_MODEL: z.string().default('beam'),
@@ -140,6 +138,15 @@ export const EnvSchema = z.object({
   REGIME_TREND_ENTER: z.coerce.number().min(0).max(1).default(0.55),
   REGIME_TREND_EXIT: z.coerce.number().min(0).max(1).default(0.4),
   SETUP_OUTCOMES_PATH: pathWithDefault('data/setup-outcomes.jsonl'),
+  /** One row per announced trade plan (signal, fleet, sniper) and its outcome: TP/SL/close, PnL, R, and whether the card was delivered. */
+  TRADE_PLANS_PATH: pathWithDefault('data/trade-plans.jsonl'),
+  /** Public Spot reference feed (data-api and data-stream.binance.vision, keyless). Informational: no entry is gated on it. */
+  PUBLIC_SPOT_FEED: z.enum(['off', 'on']).default('off'),
+  /** USDⓈ-M public extras: perp top-of-book from /public and funding-rate history over REST. Informational. */
+  PUBLIC_USDM_EXTRAS: z.enum(['off', 'on']).default('off'),
+  /** A book older than this reads STALE in the public context. */
+  PUBLIC_QUOTE_STALE_MS: z.coerce.number().int().positive().default(15_000),
+  PUBLIC_FUNDING_REFRESH_MS: z.coerce.number().int().positive().default(300_000),
   RESEARCH_LEDGER_PATH: pathWithDefault('data/research-events.jsonl'),
   /** Gross reward:risk a setup scenario must offer to be built at all (the quality gate then re-checks it after costs). */
   SETUP_MIN_REWARD_RISK: z.coerce.number().min(0).default(1.5),
@@ -262,7 +269,7 @@ export function deriveVenueProfile(mode: Mode, hasRemoteBroker: boolean, alertOn
 
 export const config = {
   mode: env.MODE as Mode,
-  binance: { apiKey: env.BINANCE_API_KEY, apiSecret: env.BINANCE_API_SECRET, testnet: env.BINANCE_TESTNET === 'on' },
+  binance: { apiKey: env.BINANCE_API_KEY, apiSecret: env.BINANCE_API_SECRET },
   ollama: {
     host: env.OLLAMA_HOST,
     model: env.OLLAMA_MODEL,
@@ -360,6 +367,13 @@ export const config = {
   rrProfilePath: env.RR_PROFILE_PATH,
   approvalsPath: env.APPROVALS_PATH,
   setupOutcomesPath: env.SETUP_OUTCOMES_PATH,
+  tradePlansPath: env.TRADE_PLANS_PATH,
+  publicData: {
+    spot: env.PUBLIC_SPOT_FEED === 'on',
+    usdmExtras: env.PUBLIC_USDM_EXTRAS === 'on',
+    staleMs: env.PUBLIC_QUOTE_STALE_MS,
+    fundingRefreshMs: env.PUBLIC_FUNDING_REFRESH_MS,
+  },
   researchLedgerPath: env.RESEARCH_LEDGER_PATH,
   regime: {
     scored: env.REGIME_MODEL === 'scored',

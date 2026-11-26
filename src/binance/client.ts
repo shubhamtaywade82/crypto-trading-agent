@@ -231,8 +231,8 @@ export class BinanceService {
     futures?: USDMClient,
     private readonly stateDir = 'data',
   ) {
-    this.futures = guardUsdmClient(futures ?? new USDMClient({ api_key: config.binance.apiKey, api_secret: config.binance.apiSecret }, undefined, config.binance.testnet));
-    this.sdkMarket = new SdkFuturesMarketClient(new BinanceClient({ testnet: config.binance.testnet }).futures);
+    this.futures = guardUsdmClient(futures ?? new USDMClient({ api_key: config.binance.apiKey, api_secret: config.binance.apiSecret }));
+    this.sdkMarket = new SdkFuturesMarketClient(new BinanceClient().futures);
     this.klineCache = new KlineStreamCache({ limit: DEFAULT_MARKET_DATA_OPTIONS.klineLimit, maxSilenceMs: DEFAULT_KLINE_MAX_SILENCE_MS });
     this.marketDataV2 = new MarketDataService(this.sdkMarket, DEFAULT_MARKET_DATA_OPTIONS, this.klineCache);
   }
@@ -267,7 +267,7 @@ export class BinanceService {
     // /market — but @trade still only streams on the legacy path (probed 2026-11-03): a /market/ws/…
     // subscription accepts the connection and then goes silent, which starves the entry safety gate
     // of ticks and blocks every entry. usdmTradeWsUrl tracks the probed truth; see its note.
-    this.ws = new WebsocketClient({ wsUrl: usdmTradeWsUrl(this.wsEnvironment()), beautify: false }, silent as any);
+    this.ws = new WebsocketClient({ wsUrl: usdmTradeWsUrl(), beautify: false }, silent as any);
     const setStatus = (s: WsStatus) => { this.wsStatus = s; };
     this.ws.on('open', () => setStatus('connected'));
     this.ws.on('reconnected', () => setStatus('connected'));
@@ -285,7 +285,7 @@ export class BinanceService {
     // Kline candles for the market-data layer, on the /market route the route probe measured for kline_* streams.
     this.klineFeed?.stop();
     this.klineFeed = new KlineStreamFeed({
-      marketBase: usdmWsRouteBases(this.wsEnvironment()).market,
+      marketBase: usdmWsRouteBases().market,
       symbols,
       intervals: KLINE_INTERVALS,
       limit: DEFAULT_MARKET_DATA_OPTIONS.klineLimit,
@@ -811,7 +811,6 @@ export class BinanceService {
       close: async () => { await this.futures.closeFuturesUserDataListenKey(); },
     };
     const stream = new UserDataStream({
-      environment: this.wsEnvironment(),
       keys,
       onEvent: (event) => {
         if (event.type === 'ORDER_TRADE_UPDATE') {
@@ -830,10 +829,6 @@ export class BinanceService {
   /** The private user-data stream's lifecycle state, for the cockpit and health surfaces. */
   userStreamStatus(): { state: string; connectedForMs: number | null; lastEventAt: number | null } {
     return this.userDataStream?.status ?? { state: 'STOPPED', connectedForMs: null, lastEventAt: null };
-  }
-
-  private wsEnvironment() {
-    return config.binance.testnet ? ('testnet' as const) : ('live' as const);
   }
 
   flushPaperEngine(): void {

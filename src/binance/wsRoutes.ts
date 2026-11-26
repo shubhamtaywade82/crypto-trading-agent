@@ -20,32 +20,22 @@
  * @markPrice does answer on /market and @bookTicker on /public — but @trade still ONLY streams on the
  * legacy /ws path, and /market subscriptions for @trade stay silent. usdmTradeWsUrl returns the legacy
  * root for the tick feed until Binance actually moves @trade; see its note.
- *
- * Testnet: Binance's notice does not document routed paths for the testnet host. The testnet bases
- * therefore keep Binance's documented testnet host with the same route suffixes and are explicitly
- * marked UNVERIFIED; override them with WS_*_BASE if/when Binance documents testnet routing.
  */
 
-export type UsdmWsEnvironment = 'live' | 'testnet';
-
 const LIVE_WS_ROOT = 'wss://fstream.binance.com';
-const TESTNET_WS_ROOT = 'wss://fstream.binancefuture.com';
 
-/** Route roots per environment. `unverifiedRouting` flags the testnet suffixes as not Binance-documented. */
+/** Route roots for the USDⓈ-M public, market and private streams. */
 export interface WsRouteBases {
   readonly market: string;
   readonly private: string;
   readonly public: string;
-  readonly unverifiedRouting: boolean;
 }
 
-export function usdmWsRouteBases(environment: UsdmWsEnvironment, overrides?: { market?: string; private?: string; public?: string }): WsRouteBases {
-  const root = environment === 'testnet' ? TESTNET_WS_ROOT : LIVE_WS_ROOT;
+export function usdmWsRouteBases(overrides?: { market?: string; private?: string; public?: string }): WsRouteBases {
   const bases: WsRouteBases = {
-    market: `${root}/market`,
-    private: `${root}/private`,
-    public: `${root}/public`,
-    unverifiedRouting: environment === 'testnet',
+    market: `${LIVE_WS_ROOT}/market`,
+    private: `${LIVE_WS_ROOT}/private`,
+    public: `${LIVE_WS_ROOT}/public`,
   };
   return {
     ...bases,
@@ -65,8 +55,8 @@ export function usdmWsRouteBases(environment: UsdmWsEnvironment, overrides?: { m
  * Until Binance moves @trade off the legacy path, the tick feed must dial the bare legacy root — a
  * silent /market subscription starves the entry safety gate (`websocket tick stale`) and blocks
  * every entry. Re-probe before flipping this. */
-export function usdmTradeWsUrl(environment: UsdmWsEnvironment): string {
-  return environment === 'testnet' ? TESTNET_WS_ROOT : LIVE_WS_ROOT;
+export function usdmTradeWsUrl(): string {
+  return LIVE_WS_ROOT;
 }
 
 /**
@@ -83,10 +73,10 @@ const encodePathSegment = (value: string): string => encodeURIComponent(value).r
  * A market-data stream URL in ws mode (path-based), the form the existing subscription code emits
  * one stream per symbol at: `<market base>/ws/<symbol>@<stream>`.
  */
-export function buildMarketStreamUrl(environment: UsdmWsEnvironment, streams: readonly string[]): string {
+export function buildMarketStreamUrl(streams: readonly string[]): string {
   if (streams.length === 0) throw new Error('a market stream URL needs at least one stream name');
   const encoded = streams.map((s) => encodePathSegment(s));
-  return `${usdmWsRouteBases(environment).market}/ws/${encoded.join('/')}`;
+  return `${usdmWsRouteBases().market}/ws/${encoded.join('/')}`;
 }
 
 /** User-data events this bot consumes from the private stream. All are documented USDⓈ-M user-data events. */
@@ -96,11 +86,11 @@ export const USER_DATA_EVENTS = ['ORDER_TRADE_UPDATE', 'ACCOUNT_UPDATE', 'MARGIN
  * The private user-data URL in ws mode. The listen key is a query parameter — the legacy path form
  * `/private/ws/<listenKey>` (or `/ws/<listenKey>`) is wrong and must not come back.
  */
-export function buildPrivateStreamUrl(environment: UsdmWsEnvironment, listenKey: string, events: readonly string[] = USER_DATA_EVENTS): string {
+export function buildPrivateStreamUrl(listenKey: string, events: readonly string[] = USER_DATA_EVENTS): string {
   if (typeof listenKey !== 'string' || listenKey.length === 0) throw new Error('a private stream URL needs a listen key');
   if (events.length === 0) throw new Error('a private stream URL needs at least one event name');
   const query = `listenKey=${encodeQueryValue(listenKey)}&events=${encodeQueryValue(events.join('/'))}`;
-  return `${usdmWsRouteBases(environment).private}/ws?${query}`;
+  return `${usdmWsRouteBases().private}/ws?${query}`;
 }
 
 /** Listen keys are credentials: logs may carry at most this masked form. */

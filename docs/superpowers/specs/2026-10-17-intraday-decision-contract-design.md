@@ -367,7 +367,7 @@ Decisions 2 to 4 of §11 are implemented on the live path. Paper, paper_exchange
 **Open before any live use**
 
 1. **Restart while an entry rests. Blocker.** The tracker's state is in memory. After a restart, a resting GTC order stays on the venue with nothing managing it. If it fills, nothing places its protection, and the existing live book protects only positions it recorded. Needs startup reconciliation: find entry orders (client ids starting `e`), cancel or adopt them, and protect any position without legs.
-2. **Not verified against Binance.** The `getOrder` and `cancelOrder` calls by `origClientOrderId`, the -2013 code for an unknown order, the status a LIMIT GTC with `newOrderRespType: RESULT` returns, and the `closePosition` leg rules are taken from the library typings and Binance's documented behaviour. Verify them on testnet or in shadow mode before enabling live entries.
+2. **Not verified against Binance.** The `getOrder` and `cancelOrder` calls by `origClientOrderId`, the -2013 code for an unknown order, the status a LIMIT GTC with `newOrderRespType: RESULT` returns, and the `closePosition` leg rules are taken from the library typings and Binance's documented behaviour. Verify them in shadow mode before enabling live entries.
 3. Each live entry reads all positions (`getPositionsV3`) once per second until it resolves, at most about 120 s. Watch the rate-limit weight.
 4. One-way position mode only, as before.
 5. Still missing from §5, §6 and §9: the EV gate, TIME_STOP, EV_DETERIORATION, and the replay limit-fill model (G8). Backtests still model market fills, so replay results do not represent the new live entry type.

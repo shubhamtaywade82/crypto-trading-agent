@@ -3,8 +3,9 @@ import { summarizePerformance } from '../binance/performance.js';
 import type { VenueStatus } from '../binance/remoteBroker.js';
 import { roundQty } from '../binance/symbolRules.js';
 import type { PerformanceSnapshot } from '../risk/performanceEngine.js';
-import type { LogEntry, RiskDecision, Side, Signal, TradeRecord, WsStatus } from '../types.js';
+import type { ExitReason, LogEntry, RiskDecision, Side, Signal, TradeRecord, WsStatus } from '../types.js';
 import { makeAlert, type AlertClass, type AlertEvent, type AlertSeverity, type NotificationEngine } from './alerts.js';
+import type { NotifySlot, NotifyStatus, PlanLevels, PlanResult, TradePlan, TradePlanLedger } from './tradePlans.js';
 import { digestCard, signalCard, systemCard, tradeCard, type SignalCardInput, type SystemCardInput } from './cards.js';
 import { buildSetupNotice } from './setupNotice.js';
 import type { SetupMap } from '../decision/SetupEngine.js';
@@ -24,6 +25,8 @@ export interface OpsDeps {
   /** Leave scenarios the quality gate rejected (NO_TRADE) out of setup cards. */
   hideNoTradeSetups?: boolean;
   refusalReannounceMs?: number;
+  /** Durable record of each trade plan announced and what became of it. Absent in unit tests. */
+  plans?: TradePlanLedger;
 }
 
 export interface DigestRequest {
@@ -36,9 +39,10 @@ export interface DigestRequest {
 export interface OpsHooks {
   onSignal(signal: Signal): void;
   onSetup(setup: SetupMap): void;
-  onGate(signal: Signal, decision: RiskDecision): void;
+  /** `decisionId` is the lineage key of this gate evaluation; it names the trade plan when present. */
+  onGate(signal: Signal, decision: RiskDecision, decisionId?: string): void;
   onVeto(signal: Signal, reason: string): void;
-  onOrder(signal: Signal, decision: RiskDecision, log: LogEntry, ctx: Pick<MarketContext, 'positions' | 'marks'>): void;
+  onOrder(signal: Signal, decision: RiskDecision, log: LogEntry, ctx: Pick<MarketContext, 'positions' | 'marks'>, decisionId?: string): void;
   onRefusal(signal: Signal, reason: string): void;
   onExit(trades: readonly TradeRecord[]): void;
   onVenueState(venue: VenueStatus | null, ws: WsStatus): void;
@@ -123,12 +127,36 @@ function systemNotice(input: SystemCardInput, severity: AlertSeverity, fingerpri
   return { cls: 'SYSTEM', severity, fingerprint, html: systemCard(input) };
 }
 
+/** The notification a card reports on, and which slot of the trade plan its delivery status belongs to. */
+interface Delivery { readonly planId: string; readonly slot: NotifySlot }
+
+/** A live position's identity: the signal that opened it (for the audit trail) and the plan that tracks its outcome. */
+interface Lineage { readonly signalId: string; readonly planId: string }
+
+// A plan exists only when the signal card does: a hedge carries no entry, stop or target, so it is audited but not planned
+const planLevelsOf = (signal: Signal): PlanLevels | undefined => {
+  const { entry, stopLoss, takeProfit } = signal;
+  return entry === undefined || stopLoss === undefined || takeProfit === undefined ? undefined : { entry, stopLoss, takeProfit };
+};
+
+const RESULT_OF_EXIT: Readonly<Record<ExitReason, PlanResult>> = {
+  'TAKE PROFIT': 'TP', 'STOP LOSS': 'SL', LIQUIDATED: 'LIQUIDATED', FLIP: 'FLIP', CLOSE: 'CLOSE', 'PARTIAL TP': 'CLOSE',
+};
+
+// A partial take-profit leaves the position open. It is journaled with the partial flag; the reason is checked too, so a lost flag cannot close a plan early
+const isPartialExit = (trade: TradeRecord): boolean => trade.partial === true || trade.reason === 'PARTIAL TP';
+
+// A live entry rests as a limit until the venue fills it; the executor says so with a SUBMITTED message
+const RESTING_ENTRY = /^SUBMITTED\b/;
+// Journal exits are matched to plans within this window, so a flip's close and its new fill can land in either order
+const RECONCILE_TOLERANCE_MS = 5_000;
+
 class Ops implements OpsHooks {
   private readonly now: () => number;
   private readonly seen: Set<string>;
   private readonly startTime: number;
-  private readonly openIds = new Map<string, string>();
-  private readonly flippedIds = new Map<string, string>();
+  private readonly openIds = new Map<string, Lineage>();
+  private readonly flippedIds = new Map<string, Lineage>();
   private refusals: Record<string, number> = {};
   private readonly announcedRefusals = new Map<string, number>();
   private unprotectedKey = '';
@@ -145,6 +173,7 @@ class Ops implements OpsHooks {
     this.refusalReannounceMs = deps.refusalReannounceMs ?? REFUSAL_REANNOUNCE_MS;
     this.seen = new Set((deps.seedTrades ?? []).map(tradeKey));
     this.startTime = this.now();
+    this.reconcile(deps.seedTrades ?? []);
   }
 
   onSignal = (signal: Signal): void => this.safely(() => this.audit('signal', { ...signal }, signal));
@@ -157,11 +186,14 @@ class Ops implements OpsHooks {
       this.notify(notice);
     });
   };
-  onGate = (signal: Signal, decision: RiskDecision): void => {
+  onGate = (signal: Signal, decision: RiskDecision, decisionId?: string): void => {
     this.safely(() => {
       const { approved, reason, positionSizeUsdt: sizeUsdt, leverage } = decision;
       this.audit('gate', { approved, reason, sizeUsdt, leverage }, signal);
-      if (approved) this.notify(signalNotice({ outcome: 'ACCEPTED', signal, note: reason, at: this.now(), notionalUsdt: sizeUsdt }));
+      if (!approved) return;
+      // The plan is announced whether or not the card reaches Telegram: the position is real either way
+      const delivery = this.announce(signal, decisionId ?? signal.id, { sizeUsdt, leverage, decisionId });
+      this.notify(signalNotice({ outcome: 'ACCEPTED', signal, note: reason, at: this.now(), notionalUsdt: sizeUsdt }), delivery);
     });
   };
   onVeto = (signal: Signal, reason: string): void => {
@@ -171,11 +203,15 @@ class Ops implements OpsHooks {
     });
   };
   onRefusal = (signal: Signal, reason: string): void => this.safely(() => this.refuse(signal, reason));
-  onOrder = (signal: Signal, decision: RiskDecision, log: LogEntry, ctx: Pick<MarketContext, 'positions' | 'marks'>): void => {
+  onOrder = (signal: Signal, decision: RiskDecision, log: LogEntry, ctx: Pick<MarketContext, 'positions' | 'marks'>, decisionId?: string): void => {
     this.safely(() => {
       this.audit('order', { level: log.level, message: log.msg, sizeUsdt: decision.positionSizeUsdt, leverage: decision.leverage }, signal);
-      if (log.level === 'warn') this.refuse(signal, log.msg);
-      if (log.level === 'success') this.filled(signal, decision, ctx);
+      const planId = decisionId ?? signal.id;
+      if (log.level === 'warn') {
+        this.refuse(signal, log.msg);
+        this.deps.plans?.notFilled(planId, this.now(), log.msg);
+      }
+      if (log.level === 'success') this.filled(signal, decision, ctx, planId, RESTING_ENTRY.test(log.msg));
     });
   };
   // Detects closes from the journal rather than from log text, so exits the loop never logged (reconcile, liquidation) are still reported
@@ -258,19 +294,41 @@ class Ops implements OpsHooks {
     }
   }
 
-  private notify(notice: Notice | undefined): void {
-    if (!this.deps.isAlerts || !notice) return;
+  private notify(notice: Notice | undefined, delivery?: Delivery): void {
+    if (!notice) return;
+    if (!this.deps.isAlerts) { this.reportDelivery(delivery, 'NOT_ATTEMPTED'); return; }
     try {
       const event = makeAlert({
         class: notice.cls, severity: notice.severity, symbol: notice.symbol, title: notice.fingerprint, body: notice.html,
         fingerprint: notice.fingerprint, stateTo: notice.stateTo, at: this.now(),
       });
-      if (this.deps.engine.submit(event).action !== 'emitted') return;
-      // Fire and forget: trading never waits on Telegram
-      void this.deps.send(event, notice.html).catch(() => {});
+      if (this.deps.engine.submit(event).action !== 'emitted') { this.reportDelivery(delivery, 'SUPPRESSED'); return; }
+      // Fire and forget: trading never waits on Telegram. The delivery result is recorded when it lands.
+      void this.deps.send(event, notice.html).then(
+        (ok) => this.reportDelivery(delivery, ok ? 'SENT' : 'FAILED'),
+        () => this.reportDelivery(delivery, 'FAILED'),
+      );
     } catch {
       // A broken alert path must not cost the caller its own work
+      this.reportDelivery(delivery, 'NOT_ATTEMPTED');
     }
+  }
+
+  private reportDelivery(delivery: Delivery | undefined, status: NotifyStatus): void {
+    if (delivery) this.deps.plans?.notify(delivery.planId, delivery.slot, status, this.now());
+  }
+
+  /** Opens the plan for an approved entry. Returns the announce slot only when the plan was actually written. */
+  private announce(signal: Signal, planId: string, sizing: { sizeUsdt: number; leverage: number; decisionId?: string }): Delivery | undefined {
+    const plans = this.deps.plans;
+    const planned = planLevelsOf(signal);
+    if (!plans || !planned) return undefined;
+    const meta: Record<string, string | number> = { signalId: signal.id, notionalUsdt: sizing.sizeUsdt, leverage: sizing.leverage };
+    if (sizing.decisionId !== undefined) meta.decisionId = sizing.decisionId;
+    const result = plans.announce({
+      planId, source: 'SIGNAL', symbol: signal.symbol, side: sideOf(signal), strategy: signal.agent, at: this.now(), planned, meta,
+    });
+    return result.applied ? { planId, slot: 'announce' } : undefined;
   }
 
   private refuse(signal: Signal, reason: string): void {
@@ -284,12 +342,14 @@ class Ops implements OpsHooks {
     this.notify(signalNotice({ outcome: 'REFUSED', signal, note: reason, at: this.now() }));
   }
 
-  private filled(signal: Signal, decision: RiskDecision, ctx: Pick<MarketContext, 'positions' | 'marks'>): void {
+  private filled(signal: Signal, decision: RiskDecision, ctx: Pick<MarketContext, 'positions' | 'marks'>, planId: string, resting: boolean): void {
     const kind = fillKind(signal, ctx.positions);
     const key = positionKey(signal.symbol, signal.agent);
     const previous = this.openIds.get(key);
     if (kind === 'FLIP' && previous !== undefined) this.flippedIds.set(key, previous);
-    this.openIds.set(key, signal.id);
+    this.openIds.set(key, { signalId: signal.id, planId });
+    // A resting limit is not a position yet; its plan stays ANNOUNCED until a realized close shows it filled
+    if (!resting) this.deps.plans?.fill(planId, this.now());
     const price = signal.entry ?? ctx.marks[signal.symbol];
     if (!price) return;
     const qty = roundQty(signal.symbol, decision.positionSizeUsdt / price);
@@ -301,13 +361,65 @@ class Ops implements OpsHooks {
 
   private recordExit(trade: TradeRecord): void {
     const key = positionKey(trade.symbol, trade.strategy);
-    // The flip's exit can be journaled before onOrder files the old id away, so fall back to the open one
-    const ids = trade.reason === 'FLIP' && this.flippedIds.has(key) ? this.flippedIds : this.openIds;
-    const ref = { id: ids.get(key), symbol: trade.symbol };
-    ids.delete(key);
+    // The flip's exit can be journaled before onOrder files the old lineage away, so fall back to the open one
+    const lineages = trade.reason === 'FLIP' && this.flippedIds.has(key) ? this.flippedIds : this.openIds;
+    const lineage = lineages.get(key);
+    const ref = { id: lineage?.signalId, symbol: trade.symbol };
+    // A partial take-profit leaves the position open, so its lineage must survive for the final close
+    if (!isPartialExit(trade)) lineages.delete(key);
     this.audit('exit', { reason: trade.reason, exit: trade.exit, pnl: trade.pnl }, ref);
     this.audit('journal', { ...trade }, ref);
-    this.notify(exitNotice(trade));
+    this.notify(exitNotice(trade), this.recordOutcome(trade, lineage?.planId));
+  }
+
+  /** Writes a close or partial into the plan. Returns the close slot only for a full exit, so a partial's card is not filed as the close. */
+  private recordOutcome(trade: TradeRecord, planId: string | undefined): Delivery | undefined {
+    const plans = this.deps.plans;
+    if (!plans || planId === undefined) return undefined;
+    if (isPartialExit(trade)) {
+      plans.partial(planId, { at: trade.closedAt, exitPrice: trade.exit, pnl: trade.pnl });
+      return undefined;
+    }
+    const result = RESULT_OF_EXIT[trade.reason] ?? 'CLOSE';
+    const applied = plans.close(planId, { at: trade.closedAt, result, exitPrice: trade.exit, entryPrice: trade.entry, pnl: trade.pnl });
+    return applied.applied ? { planId, slot: 'close' } : undefined;
+  }
+
+  /**
+   * Plans filled before this process started. The journal says whether each position closed while we were down.
+   * Plans for one position are ordered by fill: a newer fill proves the older position ended, so an older plan with no
+   * journaled close is UNOBSERVED. The newest plan with no close is still open, and its lineage is re-adopted.
+   */
+  private reconcile(trades: readonly TradeRecord[]): void {
+    const plans = this.deps.plans;
+    if (!plans) return;
+    const byPosition = new Map<string, TradePlan[]>();
+    for (const plan of plans.all()) {
+      if (plan.source !== 'SIGNAL' || plan.status !== 'FILLED' || plan.filledAt === null) continue;
+      const key = positionKey(plan.symbol, plan.strategy);
+      byPosition.set(key, [...(byPosition.get(key) ?? []), plan]);
+    }
+    for (const [key, list] of byPosition) {
+      list.sort((a, b) => (a.filledAt ?? 0) - (b.filledAt ?? 0));
+      list.forEach((plan, i) => {
+        const next = list[i + 1];
+        const since = plan.filledAt ?? 0;
+        const until = next && next.filledAt !== null ? next.filledAt + RECONCILE_TOLERANCE_MS : Infinity;
+        const mine = trades
+          .filter((t) => t.symbol === plan.symbol && t.strategy === plan.strategy && t.closedAt >= since && t.closedAt <= until)
+          .sort((a, b) => a.closedAt - b.closedAt);
+        for (const t of mine) if (isPartialExit(t)) this.recordOutcome(t, plan.planId);
+        const closing = mine.find((t) => !isPartialExit(t));
+        if (closing) {
+          this.recordOutcome(closing, plan.planId);
+        } else if (next) {
+          plans.close(plan.planId, { at: next.filledAt ?? since, result: 'UNOBSERVED', exitPrice: null, pnl: null });
+        } else {
+          const signalId = typeof plan.meta.signalId === 'string' ? plan.meta.signalId : plan.planId;
+          this.openIds.set(key, { signalId, planId: plan.planId });
+        }
+      });
+    }
   }
 
   private noteVenue(venue: VenueStatus | null): void {

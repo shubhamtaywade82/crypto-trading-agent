@@ -116,9 +116,11 @@ function recordFleetPlan(plans: TradePlanLedger | undefined, event: FleetTradeEv
     for (const stale of plans.openFor('FLEET', event.symbol)) {
       plans.close(stale.planId, { at: event.at, result: 'UNOBSERVED', exitPrice: null, pnl: null });
     }
+    // A plan needs both levels; an entry without them is not recorded rather than stored with placeholders
+    if (event.stopLoss === undefined || event.takeProfit === undefined) return undefined;
     const announced = plans.announce({
       planId, source: 'FLEET', symbol: event.symbol, side: event.side === 'sell' ? 'SHORT' : 'LONG', strategy: event.model, at: event.at,
-      planned: { entry: event.price, stopLoss: event.stopLoss ?? NaN, takeProfit: event.takeProfit ?? NaN },
+      planned: { entry: event.price, stopLoss: event.stopLoss, takeProfit: event.takeProfit },
       meta: { action: event.action, ...(event.quantity === undefined ? {} : { quantity: event.quantity }) },
     });
     if (!announced.applied) return undefined;

@@ -261,11 +261,6 @@ export class Orchestrator extends EventEmitter {
   }
   stop() { this.publicFeeds?.stop(); if (this.timer) clearInterval(this.timer); if (this.optionsTimer) clearInterval(this.optionsTimer); this.microFeed?.stop(); if (this.directionalTimer) clearInterval(this.directionalTimer); this.stopWs?.(); this.stopWs = null; this.hooks.stop(); this.binance.stopPaperExchangeLease(); void this.optionsDesk?.dispose(); }
 
-  /**
-   * Directional gate (live-gate.ts). Off unless DIRECTIONAL_GATE is set. Shadow records verdicts and blocks nothing.
-   * Enforce is a conflict veto: it blocks an entry only against a calibrated opposing verdict, and it refuses to start
-   * unless the experiment behind it is committed and holds an admitted, holdout-accepted cell.
-   */
   /** Public Spot and USDⓈ-M feeds for the decision context. Keyless and read-only; a failure logs and leaves the rest of the loop alone. */
   private startPublicFeeds(): void {
     if (!this.publicFeeds) return;
@@ -273,6 +268,11 @@ export class Orchestrator extends EventEmitter {
     void this.publicFeeds.start();
   }
 
+  /**
+   * Directional gate (live-gate.ts). Off unless DIRECTIONAL_GATE is set. Shadow records verdicts and blocks nothing.
+   * Enforce is a conflict veto: it blocks an entry only against a calibrated opposing verdict, and it refuses to start
+   * unless the experiment behind it is committed and holds an admitted, holdout-accepted cell.
+   */
   private startDirectional(): void {
     const state = directionalGateFromEnv(process.env);
     if (state.refusal) {

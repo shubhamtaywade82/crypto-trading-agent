@@ -20,6 +20,7 @@ import {
   resolveFleetModelAssignment,
 } from './FleetModels.js';
 import { fleetTelegramEnabled, sendFleetEvent } from './FleetTelegram.js';
+import { TradePlanLedger } from '../ops/tradePlans.js';
 import { config } from '../config.js';
 
 /**
@@ -65,6 +66,8 @@ export interface FleetSupervisorOptions {
   route?: string;
   /** Test override for the LLM host. */
   host?: string;
+  /** Where entries and exits are recorded as trade plans. Defaults to the configured TRADE_PLANS_PATH. */
+  plans?: TradePlanLedger;
 }
 
 export interface FleetState {
@@ -113,6 +116,7 @@ interface FleetWebSocket {
 
 export class FleetSupervisor extends EventEmitter {
   private readonly env: NodeJS.ProcessEnv;
+  private readonly plans: TradePlanLedger;
   private workers = new Map<string, SymbolTraderWorker>();
   /** One lease keeper per worker account; released on stop. */
   private readonly leases: PaperExchangeLeaseKeeper[] = [];
@@ -132,6 +136,7 @@ export class FleetSupervisor extends EventEmitter {
   constructor(private readonly options: FleetSupervisorOptions = {}) {
     super();
     this.env = options.env ?? process.env;
+    this.plans = options.plans ?? new TradePlanLedger(config.tradePlansPath);
   }
 
   private log(msg: string, level: 'info' | 'warn' | 'error' = 'info'): void {
@@ -276,7 +281,7 @@ export class FleetSupervisor extends EventEmitter {
           // [FLEET] Telegram cards on the shared bot config. Fire-and-forget by design: a
           // Telegram outage resolves false and the evaluation loop continues unaffected.
           onTradeEvent: (event) => {
-            void sendFleetEvent(event, { env: this.env }).catch(() => undefined);
+            void sendFleetEvent(event, { env: this.env, plans: this.plans }).catch(() => undefined);
           },
         },
         llm,

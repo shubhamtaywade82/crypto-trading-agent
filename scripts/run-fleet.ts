@@ -24,6 +24,10 @@ import { fleetTelegramEnabled, sendFleetEvent } from '../src/fleet/FleetTelegram
 import { config } from '../src/config.js';
 import { FLEET_ANCHOR, FLEET_CONTEXT_SYMBOLS, FLEET_SYMBOLS, parseDecisionTimeframe } from '../src/fleet/FleetSupervisor.js';
 import { installTokenUsageLog } from '../src/ollama/tokenUsage.js';
+import { TradePlanLedger } from '../src/ops/tradePlans.js';
+
+// Entries and exits are recorded here as trade plans, whether or not their Telegram cards go out
+const fleetPlans = new TradePlanLedger(config.tradePlansPath);
 
 installTokenUsageLog('fleet');
 
@@ -147,7 +151,7 @@ async function main() {
         modelTag,
         lease: keeper,
         onTradeEvent: (event) => {
-          void sendFleetEvent(event).catch(() => undefined);
+          void sendFleetEvent(event, { plans: fleetPlans }).catch(() => undefined);
         },
       },
       llm,

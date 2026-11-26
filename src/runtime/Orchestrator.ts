@@ -65,6 +65,7 @@ import { optionsConfigFromEnv, type OptionsConfig } from '../options/config.js';
 import { OptionsDesk } from '../options/OptionsDesk.js';
 import { BinanceClient } from '@nemesis-oss/binance-sdk';
 import { MicrostructureFeed, banExpiryMs, microConfigFromEnv, sdkMicroSource } from '../microstructure/MicrostructureFeed.js';
+import { PublicMarketFeeds } from '../market/public/PublicMarketFeeds.js';
 import { sharedStreamRegistry } from '../market/UsdmStreamRegistry.js';
 import { entrySide, frictionVerdict, type FrictionGateMode } from '../microstructure/FrictionGate.js';
 import {
@@ -155,6 +156,17 @@ export class Orchestrator extends EventEmitter {
   private optionsTimer: NodeJS.Timeout | null = null;
   /** Local order books and trade tape for the LIQUIDITY view (src/microstructure); display and recording only. */
   private microFeed: MicrostructureFeed | null = null;
+  // Public Spot and USDⓈ-M quotes for the context. Built only when a flag is on, so a default run is unchanged.
+  private readonly publicFeeds: PublicMarketFeeds | null = (config.publicData.spot || config.publicData.usdmExtras)
+    ? new PublicMarketFeeds({
+      symbols: config.symbols,
+      spot: config.publicData.spot,
+      usdmExtras: config.publicData.usdmExtras,
+      staleMs: config.publicData.staleMs,
+      fundingRefreshMs: config.publicData.fundingRefreshMs,
+      log: (message, level) => this.log('SYSTEM', `[public] ${message}`, level),
+    })
+    : null;
   /** Pre-trade execution-cost gate on entries. Starts 'on' so a refused or missing configuration fails closed. */
   private frictionGate: FrictionGateMode = 'on';
   /** Directional gate state. Off until DIRECTIONAL_GATE is set; see live-gate.ts. */
@@ -246,14 +258,22 @@ export class Orchestrator extends EventEmitter {
     this.startOptionsDesk();
     this.startMicrostructure();
     this.startDirectional();
+    this.startPublicFeeds();
   }
-  stop() { if (this.timer) clearInterval(this.timer); if (this.optionsTimer) clearInterval(this.optionsTimer); this.microFeed?.stop(); if (this.directionalTimer) clearInterval(this.directionalTimer); this.stopWs?.(); this.stopWs = null; this.hooks.stop(); this.binance.stopPaperExchangeLease(); void this.optionsDesk?.dispose(); }
+  stop() { this.publicFeeds?.stop(); if (this.timer) clearInterval(this.timer); if (this.optionsTimer) clearInterval(this.optionsTimer); this.microFeed?.stop(); if (this.directionalTimer) clearInterval(this.directionalTimer); this.stopWs?.(); this.stopWs = null; this.hooks.stop(); this.binance.stopPaperExchangeLease(); void this.optionsDesk?.dispose(); }
 
   /**
    * Directional gate (live-gate.ts). Off unless DIRECTIONAL_GATE is set. Shadow records verdicts and blocks nothing.
    * Enforce is a conflict veto: it blocks an entry only against a calibrated opposing verdict, and it refuses to start
    * unless the experiment behind it is committed and holds an admitted, holdout-accepted cell.
    */
+  /** Public Spot and USDⓈ-M feeds for the decision context. Keyless and read-only; a failure logs and leaves the rest of the loop alone. */
+  private startPublicFeeds(): void {
+    if (!this.publicFeeds) return;
+    this.log('SYSTEM', `public market data: spot ${config.publicData.spot ? 'on' : 'off'}, usdm extras ${config.publicData.usdmExtras ? 'on' : 'off'} (informational, no key)`, 'info');
+    void this.publicFeeds.start();
+  }
+
   private startDirectional(): void {
     const state = directionalGateFromEnv(process.env);
     if (state.refusal) {
@@ -580,7 +600,7 @@ export class Orchestrator extends EventEmitter {
       const decisionId = `${signal.id}-${Date.now()}`;
       const evidence = decisionEvidence(signal, ctx.marketState?.[signal.symbol], this.fusionIntents.get(`${signal.symbol}:${signal.agent}`), ctx.microstructure?.[signal.symbol]);
       const decision = this.risk.gate(signal, ctx, { evidenceScore: evidence.score });
-      this.hooks.onGate(signal, decision);
+      this.hooks.onGate(signal, decision, decisionId);
       // Decision lineage: what the market looked like, what was proposed, and what risk said — persisted before anything else happens
       const record = this.buildDecisionRecord(decisionId, signal, ctx, decision, evidence);
       if (decision.approved) this.refusalSuppressor.noteApproval(signal);
@@ -662,7 +682,7 @@ export class Orchestrator extends EventEmitter {
       };
       this.persistDecision(executed);
       this.log(log.agent, log.msg, log.level);
-      this.hooks.onOrder(signal, decision, log, ctx);
+      this.hooks.onOrder(signal, decision, log, ctx, decisionId);
       if (log.level === 'warn') this.counters.monitored += 1;
       if (startsCooldown(log.level, this.binance.getVenueStatus()?.state)) this.cooldownStartedAt.set(`${signal.symbol}:${signal.agent}`, Date.now());
       if (log.level === 'success') { this.counters.executed += 1; ctx = await refreshPortfolio(ctx, this.binance); }
@@ -833,7 +853,8 @@ export class Orchestrator extends EventEmitter {
             .filter((entry): entry is [string, import('../microstructure/MicrostructureEngine.js').MicrostructureReading] => entry[1] !== undefined),
         )
       : undefined;
-    return { ...market, spot: this.livePrices, equity: account.equity, positions, marketState, safety, maintenance: this.binance.maintenanceTiers(), performance, microstructure };
+    const publicData = this.publicFeeds?.snapshot(Date.now());
+    return { ...market, spot: this.livePrices, equity: account.equity, positions, marketState, safety, maintenance: this.binance.maintenanceTiers(), performance, microstructure, publicData };
   }
 
   /**

@@ -7,6 +7,7 @@ import type { PerformanceSnapshot } from '../risk/performanceEngine.js';
 import type { CircuitState } from '../risk/riskConfig.js';
 import type { MarketState } from '../market/types.js';
 import type { MarketDataSnapshot } from '../market/MarketDataTypes.js';
+import type { PublicDataContext } from '../market/public/types.js';
 import type { SafetyVerdict } from '../market/MarketSafety.js';
 import type { MaintenanceTier } from '../risk/liquidation.js';
 
@@ -25,6 +26,8 @@ export interface MarketContext {
   maintenance?: Record<string, readonly MaintenanceTier[]>;
   performance?: { circuit: CircuitState; snapshot: PerformanceSnapshot };
   microstructure?: Record<string, import('../microstructure/MicrostructureEngine.js').MicrostructureReading>;
+  /** Public Spot and USDⓈ-M quotes, basis and funding history. Informational; absent when the public feeds are off. */
+  publicData?: PublicDataContext;
 }
 
 export const DEFAULT_COOLDOWN_MS = 15 * 60_000;

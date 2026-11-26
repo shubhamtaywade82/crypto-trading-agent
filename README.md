@@ -548,6 +548,11 @@ to send to.
 | `AUDIT` | `on` | `off` stops appending a JSON line per decision step to `EVENTS_PATH` |
 | `EVENTS_PATH` | `data/events.jsonl` | Audit trail; rotated to `<file>.1` at 5 MB |
 | `NOTIFICATIONS_PATH` | `data/notifications.json` | Optional subscription JSON (missing or invalid means every class on) |
+| `TRADE_PLANS_PATH` | `data/trade-plans.jsonl` | Trade-plan ledger: each announced trade, whether its card was delivered, and what it became (TP / SL / close, PnL, R). Written regardless of `AUDIT`. Read with `npm run plans:report` |
+| `PUBLIC_SPOT_FEED` | `off` | `on` streams Spot top-of-book and trades from `data-stream.binance.vision` (REST bootstrap from `data-api.binance.vision`). Keyless and informational: no entry is gated on it |
+| `PUBLIC_USDM_EXTRAS` | `off` | `on` streams the USDⓈ-M `/public` book ticker and loads funding-rate history over REST. Keyless and informational |
+| `PUBLIC_QUOTE_STALE_MS` | `15000` | A book older than this reads `STALE` in the public context, never zero |
+| `PUBLIC_FUNDING_REFRESH_MS` | `300000` | Funding-history refresh interval |
 | `TELEGRAM_CHAT_ID` | (unset) | Destination chat, required to send |
 | `TELEGRAM_BOT_TOKEN` | (unset) | Shared bot, used when a channel has no bot of its own |
 | `TELEGRAM_TRADING_BOT_TOKEN` | (unset) | Bot for TRADE and SIGNAL cards |

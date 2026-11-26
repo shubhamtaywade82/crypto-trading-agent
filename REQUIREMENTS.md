@@ -661,7 +661,7 @@ Below is a complete, evidence-verified engineering plan and a runnable TypeScrip
 
 ## 0. Verified corrections before writing any code
 
-**0.1 — The USDⓈ-M WebSocket URLs in the earlier registry are decommissioned.** Binance split `fstream` into routed base paths and retired the legacy `/ws` and `/stream` roots on **2026-04-23**, which is past as of today (2026-11-21) . Unrouted connections now receive only `/public` data; `/market` and `/private` streams silently stop pushing on them .
+**0.1 — Correction (measured 2026-11-26, public, no key, 12 s windows).** The legacy root still streams `@trade`: `wss://fstream.binance.com/ws/btcusdt@trade` delivered 141 messages. `wss://fstream.binance.com/market/ws/btcusdt@trade` delivered none. `/market` `@aggTrade` (57) and `@markPrice@1s` (11) stream, and `/public/ws/btcusdt@bookTicker` streams (2008). The tick feed keeps the legacy root for `@trade` (`src/binance/client.ts`, `usdmTradeWsUrl`). Re-probe before changing it. The earlier text that said the legacy roots were dead is withdrawn for `@trade`.
 
 | Route      | Streams                                                                                                            | Base URL                                                                                    |
 |------------|--------------------------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------|

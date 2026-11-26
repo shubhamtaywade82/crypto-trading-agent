@@ -10,8 +10,6 @@ export const EnvSchema = z.object({
   MODE: z.enum(['paper', 'live']).default('paper'),
   BINANCE_API_KEY: z.string().default(''),
   BINANCE_API_SECRET: z.string().default(''),
-  // Testnet REST and user-data stream. Only scripts/binance-testnet-verify.ts may run with it: the cockpit's market feed is production
-  BINANCE_TESTNET: z.enum(['off', 'on']).default('off'),
   // Ollama Cloud free tier (2026-11): beam, gemma4:31b, gpt-oss:120b/20b, nemotron-3-*. beam is free and preferred.
   OLLAMA_HOST: z.string().default('https://ollama.com'),
   OLLAMA_MODEL: z.string().default('beam'),
@@ -271,7 +269,7 @@ export function deriveVenueProfile(mode: Mode, hasRemoteBroker: boolean, alertOn
 
 export const config = {
   mode: env.MODE as Mode,
-  binance: { apiKey: env.BINANCE_API_KEY, apiSecret: env.BINANCE_API_SECRET, testnet: env.BINANCE_TESTNET === 'on' },
+  binance: { apiKey: env.BINANCE_API_KEY, apiSecret: env.BINANCE_API_SECRET },
   ollama: {
     host: env.OLLAMA_HOST,
     model: env.OLLAMA_MODEL,

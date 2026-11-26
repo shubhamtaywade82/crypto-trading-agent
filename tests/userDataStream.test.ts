@@ -70,7 +70,6 @@ const harness = (): Harness => {
     return socket;
   };
   const make: Harness['make'] = (overrides) => new UserDataStream({
-    environment: 'live',
     keys: overrides?.keys ?? defaultKeys,
     onEvent: overrides?.onEvent ?? ((event) => events.push(event)),
     log: (message, level) => logs.push({ message, level }),

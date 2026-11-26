@@ -500,7 +500,7 @@ Binance WS (diff depth @100ms, aggTrade, bookTicker, kline)
         │
         ▼
 ┌──────────────┐   ┌──────────────┐   ┌──────────────────┐
-│ Signal layer │──▶│ Risk mgmt    │──▶│ Execution (REST) │  testnet first
+│ Signal layer │──▶│ Risk mgmt    │──▶│ Execution (REST) │
 └──────────────┘   └──────────────┘   └──────────────────┘
         ▲
         └── replay engine feeds the SAME code with recorded data → backtest == live
@@ -610,7 +610,7 @@ Emit features every diff event *and* on a fixed 100ms/1s clock — event-driven 
 
 ## Ops notes
 
-- Run spot (`stream.binance.com`) vs futures (`fstream.binance.com`) deliberately — futures adds funding, OI, and mark price streams, which matter for swing context. Use **testnet** (`testnet.binancefuture.com`) for execution dev.
+- Run spot (`stream.binance.com`) vs futures (`fstream.binance.com`) deliberately — futures adds funding, OI, and mark price streams, which matter for swing context. Use **paper** (`MODE=paper`) for execution development.
 - REST depth snapshots are weight-limited — cache them, and note the gap handler is your self-healing mechanism, not a failure path.
 - Monitor stream lag: `E` (event time) vs receipt wall-clock; sustained lag > a few hundred ms means you should shed symbols, not trade on stale books.
 - Pick 2–3 liquid symbols (e.g., BTCUSDT, ETHUSDT, SOLUSDT). Depth × 100ms × features is already a serious data rate; scaling to 50 symbols is an infra project, not a config change.
@@ -621,7 +621,7 @@ Emit features every diff event *and* on a fixed 100ms/1s clock — event-driven 
 2. Book builder + replay harness with the equality assertion
 3. Feature engine on recorded data → explore *before* writing strategies
 4. Backtest the candidate signals on replays (intrabar fills at next-tick price, include fees/slippage from the book itself — you literally have per-level depth to model slippage honestly)
-5. Paper on testnet, then live with tiny size
+5. Paper, then live with tiny size
 
 One integration note: your AlgoScalperApi project is Ruby on Rails 8.1.3 wired to Dhan via the DhanHQ 2.8.0 gem — that gem won't talk to Binance, so build this as a standalone Python service (asyncio is the natural fit) that publishes signals to your Rails app over Redis/HTTP, with Rails keeping its current role of orchestration, risk limits, and alerting (you already have Redis, Solid Queue, and telegram-bot-ruby in the stack for that).
 
@@ -689,7 +689,7 @@ Spot additionally supports `timeUnit=MICROSECOND` on the stream URL and a market
 - **USDⓈ-M:** buffer diffs → snapshot `GET /fapi/v1/depth?limit=1000` → drop events with `u < lastUpdateId` → first processed event must satisfy `U ≤ lastUpdateId AND u ≥ lastUpdateId` → thereafter every event's `pu` must equal the previous event's `u`, else restart from the snapshot step; quantities are absolute, `0` removes a level, and removing a non-existent level is normal .
 - **Spot:** note the first buffered `U`; snapshot `limit=5000`; if snapshot `lastUpdateId < U` of the first buffered event, re-fetch; drop events with `u ≤ lastUpdateId`; the first event's `[U, u]` must contain `lastUpdateId`; thereafter `U == previous u + 1`; if `U > localId + 1`, discard the book and restart from the beginning .
 
-**0.4 — Latency surfaces, honestly ranked.** The futures WebSocket API (`wss://ws-fapi.binance.com/ws-fapi/v1`, testnet `wss://testnet.binancefuture.com/ws-fapi/v1`) supports `order.place` over a persistent connection with Ed25519 `session.logon`; its `ORDERS` rate limit is shared with REST while `REQUEST_WEIGHT` is a separate per-IP pool . Spot offers SBE binary market data at `stream-sbe.binance.com` with **20 ms diff depth, 50 ms top-20 snapshots, and microsecond timestamps**, but it requires an Ed25519 API key in the handshake header (no signature) — it is not anonymous access . Futures testnet streams live at `wss://fstream.binancefuture.com` .
+**0.4 — Latency surfaces, honestly ranked.** The futures WebSocket API (`wss://ws-fapi.binance.com/ws-fapi/v1`) supports `order.place` over a persistent connection with Ed25519 `session.logon`; its `ORDERS` rate limit is shared with REST while `REQUEST_WEIGHT` is a separate per-IP pool . Spot offers SBE binary market data at `stream-sbe.binance.com` with **20 ms diff depth, 50 ms top-20 snapshots, and microsecond timestamps**, but it requires an Ed25519 API key in the handshake header (no signature) — it is not anonymous access .
 
 **HFT framing:** with no retail colocation, your floor is region RTT plus the 100 ms JSON depth cadence on futures. Deploy in AWS `ap-northeast-1` (Tokyo) and treat the "HFT" tier as **100 ms reactive scalping**, not microsecond market-making. Also note `aggTrade` gives no queue position, so maker-fill modeling must be conservative. The architecture below is honest about all three tiers: same engine, three rule packs.
 
@@ -1203,7 +1203,7 @@ export function riskCheck(i: Intent, v: Record<string, number>, p: Portfolio, l:
 
 Seed `maxOrders10s` from `exchangeInfo.rateLimits` at boot (the documented futures shape is `ORDERS 300/10s` and `1200/min`, shared between REST and the WebSocket API) rather than hardcoding . The portfolio itself is a fold over logged `ORDER_TRADE_UPDATE` fills from `/private`, so replay reproduces it exactly.
 
-### 3.8 Execution edge — `exec/client.ts` (Ed25519, testnet first)
+### 3.8 Execution edge — `exec/client.ts` (Ed25519)
 
 ```ts
 import { createPrivateKey, sign, createHash } from "node:crypto";
@@ -1214,7 +1214,7 @@ const pool = new Agent({ keepAliveTimeout: 30_000, pipelining: 1 }); // persiste
 
 export class Exec {
   private key = createPrivateKey(process.env.BINANCE_ED25519_PEM!);
-  private base = process.env.TESTNET === "1" ? "https://testnet.binancefuture.com" : "https://fapi.binance.com";
+  private base = "https://fapi.binance.com";
   constructor(private apiKey: string, private timeOffsetMs: number) {} // offset from GET /fapi/v1/time at boot
 
   async place(spec: SymbolSpec, o: { side: "BUY" | "SELL"; type: string; priceTicks?: number; lots: number;
@@ -1239,7 +1239,7 @@ export class Exec {
 }
 ```
 
-The deterministic `newClientOrderId` gives idempotency across restarts: on boot, query open orders, log the response, and reconcile before resuming. For the scalp tier, move order placement to the persistent WebSocket API (`session.logon` once, then `order.place` per intent) — same signature scheme, decimals as strings, timestamps as JSON integers . Testnet REST is `testnet.binancefuture.com`; testnet streams are `wss://fstream.binancefuture.com` .
+The deterministic `newClientOrderId` gives idempotency across restarts: on boot, query open orders, log the response, and reconcile before resuming. For the scalp tier, move order placement to the persistent WebSocket API (`session.logon` once, then `order.place` per intent) — same signature scheme, decimals as strings, timestamps as JSON integers .
 
 ### 3.9 The actor and the replay gate — `app/actor.ts`, `replay/replay.ts`
 
@@ -1322,7 +1322,7 @@ Ops checklist: chrony-synced clock; Node 24 LTS pinned; no synchronous logging i
 3. **Days 5–6:** features + the replay equality gate in CI.
 4. **Days 7–8:** rule packs + risk + decision log; explore features on recorded data before writing more rules.
 5. **Days 9–10:** backtest executor with depth-walk slippage and conservative maker fills.
-6. **Days 11–12:** testnet execution + `/private` fill fold + idempotent restart reconciliation.
+6. **Days 11–12:** `/private` fill fold + idempotent restart reconciliation.
 7. **Days 13–14:** soak in Tokyo region, then promote with minimal size.
 
 For `nemesis-crypto-agent`, keep the Ollama layer strictly advisory: a nightly job may propose threshold diffs as a versioned config change, but promotion requires the replay gate to pass under the new `configHash`. The LLM never sits in the decision path — that is what preserves determinism while still benefiting from the agentic layer.
@@ -1758,9 +1758,8 @@ Archives are silently corrected and re-uploaded — pin every `.CHECKSUM` into y
 
 ### 1.4 Free execution / telemetry (account features, not data subscriptions)
 
-- WebSocket API `order.place` at `wss://ws-fapi.binance.com/ws-fapi/v1` (Ed25519 `session.logon`); testnet `wss://testnet.binancefuture.com/ws-fapi/v1`.
+- WebSocket API `order.place` at `wss://ws-fapi.binance.com/ws-fapi/v1` (Ed25519 `session.logon`).
 - `/private` user-data stream (listenKey + `ORDER_TRADE_UPDATE`/`ACCOUNT_UPDATE`) — free, key-required; this is your fill/position ground truth.
-- Testnet REST `testnet.binancefuture.com`, streams `fstream.binancefuture.com` — free plumbing validation.
 
 ---
 
@@ -1826,7 +1825,7 @@ This is where honesty is non-negotiable. You cannot buy pre-epoch L2 history, so
 
 - Book-tier signals (imbalance dynamics, cancel ratio, absorption, refill, depth-walk slippage) backtest **only from your recording epoch**. There is no free historical L2 to extend it backward.
 - Pre-epoch research uses coarse free proxies — `bookDepth` bands + `metrics` + `aggTrades` — for liquidity-regime hypotheses. Label these **approximate**; they cannot reproduce queue evolution and must never be presented as deterministic book replay.
-- Plumbing and sync correctness are validated on **testnet streams + synthetic golden fixtures** (gap injection, `pu` breaks, snapshot-too-old) — free, and sufficient to prove the engine before live data accumulates.
+- Plumbing and sync correctness are validated on **synthetic golden fixtures** (gap injection, `pu` breaks, snapshot-too-old) — free, and sufficient to prove the engine before live data accumulates.
 - The assets you build yourself become a proprietary free dataset: >30-day fine OI poll log, USDⓈ-M `forceOrder` log (no archive exists), spot SBE µs log, derived/recorded bookTicker. These accumulate at $0 data cost.
 
 ---
@@ -1865,7 +1864,6 @@ Storage (zstd, per symbol/day): minimal live set ~85–507 MB (depth dominates, 
 3. SBE needs **no extra permission** beyond a valid key; `MARKET_DATA` REST needs only the header .
 4. IP whitelist optional but recommended (SBE respects it) .
 5. Time-sync only matters for signed order requests; SBE and `MARKET_DATA` reads need no timestamp/signature.
-6. Separate testnet keys for plumbing validation.
 
 ---
 
@@ -1939,7 +1937,7 @@ public client ──► your backend proxy ──► exchange
 1. **Use a self-generated Ed25519 key pair.** Binance recommends an Ed25519 private key protected with a passphrase as the most secure, best-performing option ; you upload only the public key, so the private key never leaves your server .
 2. **IP-whitelist every key** — not just withdrawal keys .
 3. **Least privilege:** create read-only first; enable trading only where required; **disable withdrawals** .
-4. **Separate keys per service and environment:** ingest (read-only) ≠ execution (trade) ≠ testnet. A leaked ingest key must not be able to trade.
+4. **Separate keys per service and environment:** ingest (read-only) ≠ execution (trade). A leaked ingest key must not be able to trade.
 5. **Sign locally; never transmit the private key.** Ed25519 signatures are per-request; keep `recvWindow` small and sync server time for signed endpoints.
 6. SBE and `MARKET_DATA` reads need only the key header (no signature) — but the key ID is still a credential: whitelist it, monitor it, revoke it on abuse .
 
@@ -2060,7 +2058,7 @@ Verified local defaults: in-memory `PaperEngine`, local `data/*.jsonl`, local Ol
 - **Ollama local:** `OLLAMA_HOST=http://127.0.0.1:11434`, local model (`gemma4:31b` default). The fleet's Nov-8 commit defaults to **Ollama Cloud** (`https://ollama.com`, `beam`, rotating `OLLAMA_API_KEY_n`) — for local-only, keep `FLEET_ENTRIES=off` or point the fleet at the local daemon. Local hosts are the SDK's happy path: JSON `format` mode is requested only against local hosts.
 - **Storage local:** keep `data/` JSONL; add local DuckDB→Parquet compaction (no S3/Glacier). `pg` is a dependency — use a local Postgres only if needed; JSONL suffices for now.
 - **Secrets local:** `.env` (zod-validated), `age`/SOPS or OS keychain, **Gitleaks pre-commit + TruffleHog CI** ; the SDK already runs ESLint pre-commit. Use an **Ed25519** key (SDK supports `privateKey` + `signatureAlgorithm`), IP-whitelist it, withdrawals denied by `RiskGateway` default .
-- **Execution:** `MODE=paper`; when ready, `npm run verify:testnet` (`BINANCE_TESTNET=on`) before any live; live trades nothing without an approvals file.
+- **Execution:** `MODE=paper`; live trades nothing without an approvals file.
 - **Backfill locally from Vision S3** (free, public) rather than `fapi` REST — see the caveat below.
 
 ### Two honest local-only caveats (verified in your own repo)
@@ -2087,7 +2085,7 @@ If you want an external cross-check of your fill models rather than a new bot, `
 4. Convert `MarketDataService` context depth to the `/public` diff stream; add a process-wide socket registry (decision #3); seed `RestGuard` from `exchangeInfo.rateLimits`.
 5. Add warm-up gates to the rule packs; decide derivatives TTL and protective-write bypass.
 6. Backfill Vision locally (checksum-pinned); run `micro:eval`, `research:golden`, `analyze-flow` on accumulating recordings.
-7. `verify:testnet`; live only through `live-readiness --write-approvals`. Keep the LLM advisory and the paper-core import boundary intact throughout.
+7. Live only through `live-readiness --write-approvals`. Keep the LLM advisory and the paper-core import boundary intact throughout.
 
 ---
 
@@ -2172,7 +2170,6 @@ PAPER_CORE_ADVISOR=off
 # --- no live venue, no credentials needed for public market data ---
 BINANCE_API_KEY=
 BINANCE_API_SECRET=
-BINANCE_TESTNET=off
 # --- topology (a): leave these unset; topology (b): set them to the local broker ---
 # PAPER_EXCHANGE_URL=http://127.0.0.1:3100
 # PAPER_EXCHANGE_ACCOUNT_ID=crypto-agent
@@ -2199,7 +2196,7 @@ Run a local daemon first: `ollama serve` and `ollama pull gemma4:31b`. JSON `for
 ### Storage, secrets, verification
 
 - **Storage:** everything is local `data/*.jsonl` (events, decisions, microstructure, paper-core journal/state/kill file). Add local DuckDB→Parquet compaction later; no S3.
-- **Secrets:** `.env` is gitignored; use `age`/SOPS or the OS keychain; Gitleaks pre-commit. For any later testnet/live key use Ed25519, IP-whitelist it, and rely on `RiskGateway` denying withdrawals by default.
+- **Secrets:** `.env` is gitignored; use `age`/SOPS or the OS keychain; Gitleaks pre-commit. For any later live key use Ed25519, IP-whitelist it, and rely on `RiskGateway` denying withdrawals by default.
 - **Verify before trusting it:**
   ```bash
   npm run check                 # typecheck + build + full test (incl. architecture boundary)

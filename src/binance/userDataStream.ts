@@ -1,4 +1,4 @@
-import { buildPrivateStreamUrl, maskListenKey, type UsdmWsEnvironment, USER_DATA_EVENTS } from './wsRoutes.js';
+import { buildPrivateStreamUrl, maskListenKey, USER_DATA_EVENTS } from './wsRoutes.js';
 
 /**
  * The private USDⓈ-M user-data stream, connected per Binance's post-migration routing
@@ -44,7 +44,6 @@ export interface StreamSocket {
 export type SocketFactory = (url: string) => StreamSocket;
 
 export interface UserDataStreamOptions {
-  environment: UsdmWsEnvironment;
   keys: ListenKeyPort;
   /** Called for every parsed user-data event (ORDER_TRADE_UPDATE, ACCOUNT_UPDATE, …). Must not throw. */
   onEvent: (event: { type: string; payload: unknown }) => void;
@@ -188,7 +187,7 @@ export class UserDataStream {
         if (this.stopping || generation !== this.generation) return settle(false);
 
         let opened = false;
-        const url = buildPrivateStreamUrl(this.options.environment, this.listenKey!, USER_DATA_EVENTS);
+        const url = buildPrivateStreamUrl(this.listenKey!, USER_DATA_EVENTS);
         const socket = this.socketFactory(url);
         this.socket = socket;
         socket.onOpen(() => {

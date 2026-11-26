@@ -59,7 +59,6 @@ Fleet effect (4 symbols, default TTLs): about 57 REST calls per minute before, 3
   this container, so seeding was not exercised live. The seeded-and-served path is covered by unit tests only.
 - The guard's 2400 weight limit is the documented USDⓈ-M default, not read from the account's `rateLimits`. A live
   429 was not reproduced.
-- Testnet routing for the kline feed is unverified, as for the trade feed.
 
 ## Decisions resolved
 

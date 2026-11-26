@@ -6,7 +6,7 @@ import { EXECUTION_MODE, PaperOnlyViolationError, validatePaperOnlyConfig } from
 const BASE = { PAPER_EXCHANGE_URL: 'http://127.0.0.1:3100/', PAPER_EXCHANGE_ACCOUNT_ID: 'acct-1' };
 
 test('MODE=live is refused at startup, in any spelling', () => {
-  for (const MODE of ['live', 'LIVE', ' Live ', 'shadow', 'testnet']) {
+  for (const MODE of ['live', 'LIVE', ' Live ', 'shadow']) {
     assert.throws(() => validatePaperOnlyConfig({ ...BASE, MODE }), PaperOnlyViolationError, MODE);
   }
 });

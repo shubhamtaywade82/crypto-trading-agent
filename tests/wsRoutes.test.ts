@@ -12,23 +12,14 @@ import {
  */
 
 test('live USD-M route bases separate market, private and public traffic', () => {
-  const bases = usdmWsRouteBases('live');
+  const bases = usdmWsRouteBases();
   assert.equal(bases.market, 'wss://fstream.binance.com/market');
   assert.equal(bases.private, 'wss://fstream.binance.com/private');
   assert.equal(bases.public, 'wss://fstream.binance.com/public');
-  assert.equal(bases.unverifiedRouting, false);
-});
-
-test('testnet keeps Binance\'s documented testnet host and flags its routed paths as unverified', () => {
-  const bases = usdmWsRouteBases('testnet');
-  assert.equal(bases.market, 'wss://fstream.binancefuture.com/market');
-  assert.equal(bases.private, 'wss://fstream.binancefuture.com/private');
-  // Binance's migration notice documents no testnet routing: the suffixes are our best effort and marked as such
-  assert.equal(bases.unverifiedRouting, true);
 });
 
 test('explicit base overrides win, so an operator can pin a documented endpoint', () => {
-  const bases = usdmWsRouteBases('live', { private: 'wss://example.invalid/private' });
+  const bases = usdmWsRouteBases({ private: 'wss://example.invalid/private' });
   assert.equal(bases.private, 'wss://example.invalid/private');
   assert.equal(bases.market, 'wss://fstream.binance.com/market');
 });
@@ -36,51 +27,50 @@ test('explicit base overrides win, so an operator can pin a documented endpoint'
 test('the trade feed base lands on the legacy /ws/<stream> path the @trade channel still answers on', () => {
   // the `binance` package appends /ws/<stream> itself, so the base must be the bare legacy root
   // (probed 2026-11-03: the /market route goes silent for @trade; see usdmTradeWsUrl's note)
-  assert.equal(usdmTradeWsUrl('live'), 'wss://fstream.binance.com');
-  assert.equal(usdmTradeWsUrl('testnet'), 'wss://fstream.binancefuture.com');
+  assert.equal(usdmTradeWsUrl(), 'wss://fstream.binance.com');
 });
 
 test('market stream URLs are path-based and carry every stream', () => {
-  assert.equal(buildMarketStreamUrl('live', ['btcusdt@trade']), 'wss://fstream.binance.com/market/ws/btcusdt@trade');
+  assert.equal(buildMarketStreamUrl(['btcusdt@trade']), 'wss://fstream.binance.com/market/ws/btcusdt@trade');
   assert.equal(
-    buildMarketStreamUrl('live', ['btcusdt@aggTrade', 'ethusdt@markPrice']),
+    buildMarketStreamUrl(['btcusdt@aggTrade', 'ethusdt@markPrice']),
     'wss://fstream.binance.com/market/ws/btcusdt@aggTrade/ethusdt@markPrice',
   );
-  assert.throws(() => buildMarketStreamUrl('live', []), /at least one stream/);
+  assert.throws(() => buildMarketStreamUrl([]), /at least one stream/);
 });
 
 test('market stream names stay in the documented form, but structure characters are encoded', () => {
   assert.equal(
-    buildMarketStreamUrl('live', ['btcusdt@trade?listenKey=stolen']),
+    buildMarketStreamUrl(['btcusdt@trade?listenKey=stolen']),
     'wss://fstream.binance.com/market/ws/btcusdt@trade%3FlistenKey%3Dstolen',
   );
   assert.equal(
-    buildMarketStreamUrl('live', ['btcusdt@trade#fragment']),
+    buildMarketStreamUrl(['btcusdt@trade#fragment']),
     'wss://fstream.binance.com/market/ws/btcusdt@trade%23fragment',
   );
 });
 
 test('private URLs put the listen key and events in the query, exactly as the migration notice documents', () => {
   assert.equal(
-    buildPrivateStreamUrl('live', 'KEY123', ['ORDER_TRADE_UPDATE', 'ACCOUNT_UPDATE']),
+    buildPrivateStreamUrl('KEY123', ['ORDER_TRADE_UPDATE', 'ACCOUNT_UPDATE']),
     'wss://fstream.binance.com/private/ws?listenKey=KEY123&events=ORDER_TRADE_UPDATE/ACCOUNT_UPDATE',
   );
 });
 
 test('private URLs default to the user-data events this bot consumes', () => {
-  const url = buildPrivateStreamUrl('live', 'KEY123');
+  const url = buildPrivateStreamUrl('KEY123');
   assert.ok(url.endsWith('events=ORDER_TRADE_UPDATE/ACCOUNT_UPDATE/MARGIN_CALL'));
   assert.deepEqual([...USER_DATA_EVENTS], ['ORDER_TRADE_UPDATE', 'ACCOUNT_UPDATE', 'MARGIN_CALL']);
 });
 
 test('private URLs refuse an empty or missing listen key instead of dialing a keyless endpoint', () => {
-  assert.throws(() => buildPrivateStreamUrl('live', ''), /listen key/);
-  assert.throws(() => buildPrivateStreamUrl('live', undefined as unknown as string), /listen key/);
-  assert.throws(() => buildPrivateStreamUrl('live', 'KEY', []), /at least one event/);
+  assert.throws(() => buildPrivateStreamUrl(''), /listen key/);
+  assert.throws(() => buildPrivateStreamUrl(undefined as unknown as string), /listen key/);
+  assert.throws(() => buildPrivateStreamUrl('KEY', []), /at least one event/);
 });
 
 test('a listen key with reserved characters cannot break the query structure, and decodes back exactly', () => {
-  const url = buildPrivateStreamUrl('live', 'KEY/with?reserved&chars=extra');
+  const url = buildPrivateStreamUrl('KEY/with?reserved&chars=extra');
   const value = url.slice(url.indexOf('listenKey=') + 'listenKey='.length, url.indexOf('&events='));
   assert.ok(!/[&=?#]/.test(value), `a structural character stayed raw: ${value}`);
   const parsed = new URL(url).searchParams;
@@ -89,14 +79,14 @@ test('a listen key with reserved characters cannot break the query structure, an
 });
 
 test('regression: no URL this module builds ever uses the legacy /ws/<listenKey> or /public/ws route for user data', () => {
-  const url = buildPrivateStreamUrl('live', 'abc123def456', ['ORDER_TRADE_UPDATE']);
+  const url = buildPrivateStreamUrl('abc123def456', ['ORDER_TRADE_UPDATE']);
   assert.ok(!url.includes('/public/'), 'user data must not ride the public route');
   assert.ok(!/\/ws\/[A-Za-z0-9]/.test(url), 'the listen key must be a query parameter, not a path segment');
   assert.ok(url.startsWith('wss://fstream.binance.com/private/ws?'));
 });
 
 test('route bases never cross products: nothing here touches COIN-M, spot or options hosts', () => {
-  const all = [usdmWsRouteBases('live'), usdmWsRouteBases('testnet')].flatMap((b) => [b.market, b.private, b.public]);
+  const all = [usdmWsRouteBases()].flatMap((b) => [b.market, b.private, b.public]);
   for (const url of all) {
     assert.ok(!url.includes('dapi'), 'COIN-M (dapi) must not be touched');
     assert.ok(!url.includes('stream.binance.com:'), 'spot must not be touched');

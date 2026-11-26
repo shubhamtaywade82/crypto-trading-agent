@@ -237,7 +237,7 @@ export class FleetSupervisor extends EventEmitter {
     const klineCache = new KlineStreamCache({ limit: DEFAULT_MARKET_DATA_OPTIONS.klineLimit, maxSilenceMs: DEFAULT_KLINE_MAX_SILENCE_MS });
     this.marketData = new MarketDataService(sdkMarket, DEFAULT_MARKET_DATA_OPTIONS, klineCache);
     this.klineFeed = new KlineStreamFeed({
-      marketBase: usdmWsRouteBases('live').market,
+      marketBase: usdmWsRouteBases().market,
       symbols: [...ALL_SYMBOLS],
       intervals: KLINE_INTERVALS,
       limit: DEFAULT_MARKET_DATA_OPTIONS.klineLimit,

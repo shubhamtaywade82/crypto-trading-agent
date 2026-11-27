@@ -1,5 +1,6 @@
+import Decimal from 'decimal.js';
 import type { PlanResult, TradePlan, TradePlanLedger } from '../ops/tradePlans.js';
-import type { SniperPosition } from './SmartMoneySniper.js';
+import { evaluatePositionTick, type SniperPosition } from './SmartMoneySniper.js';
 
 /**
  * Sniper positions as trade plans. The sniper places no venue order: its entry is the alert price and its exit is
@@ -86,4 +87,25 @@ export function restoreSniperState(plans: TradePlanLedger): RestoredSniperState 
     else unrecoverable += 1;
   }
   return { processedSignalIds, openPositions, unrecoverable };
+}
+
+/**
+ * What one poll does to an open sniper position. A price from the feed settles it exactly as before. Without one, the
+ * position can only end by its time stop, which closes at the last price seen, or with an unknown exit when none was
+ * ever seen. A stale price is never used for TP or SL: that would close a trade on a number nobody has seen lately.
+ */
+export function settleSniperPosition(
+  pos: SniperPosition,
+  feedPrice: number | undefined,
+  lastPrice: number | undefined,
+  nowMs: number,
+): SniperPosition {
+  if (pos.status !== 'OPEN') return pos;
+  if (feedPrice !== undefined && Number.isFinite(feedPrice)) return evaluatePositionTick(pos, feedPrice, nowMs);
+  if (nowMs < pos.expiryTimeMs) return pos;
+  if (lastPrice === undefined || !Number.isFinite(lastPrice)) {
+    return { ...pos, status: 'EXPIRED', exitPrice: undefined, realizedPnlUsd: undefined };
+  }
+  const returnPct = new Decimal(lastPrice).minus(pos.entryPrice).div(pos.entryPrice);
+  return { ...pos, status: 'EXPIRED', exitPrice: lastPrice, realizedPnlUsd: new Decimal(pos.positionSizeUsd).times(returnPct).toNumber() };
 }

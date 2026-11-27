@@ -9,7 +9,7 @@ import {
   type SmartMoneySignal,
   type SniperPosition,
 } from '../src/execution/SmartMoneySniper.js';
-import { announceSniperPlan, recordSniperExit, restoreSniperState, sniperPlanId } from '../src/execution/sniperPlans.js';
+import { announceSniperPlan, recordSniperExit, restoreSniperState, settleSniperPosition, sniperPlanId } from '../src/execution/sniperPlans.js';
 import { TradePlanLedger } from '../src/ops/tradePlans.js';
 
 const T0 = Date.UTC(2026, 8, 22, 12, 0, 0);
@@ -124,4 +124,43 @@ test('restart: a recorded position missing the fields needed to rebuild it is re
   assert.equal(restored.openPositions.size, 0);
   assert.equal(restored.unrecoverable, 1);
   assert.ok(restored.processedSignalIds.has(41), 'it was still announced, so it must not alert again');
+});
+
+// ---- a position whose signal left the feed ----
+
+test('with a feed price, a position settles exactly as before (take-profit)', () => {
+  const pos = positionOf(51);
+  const settled = settleSniperPosition(pos, 1.25, undefined, pos.expiryTimeMs - 1);
+  assert.equal(settled.status, 'TP_HIT');
+});
+
+test('without a feed price, nothing happens before the time stop', () => {
+  const pos = positionOf(52);
+  assert.equal(settleSniperPosition(pos, undefined, 0.5, pos.expiryTimeMs - 1).status, 'OPEN', 'a stale low price must not stop the trade out');
+});
+
+test('without a feed price, the time stop closes at the last price the feed showed', () => {
+  const pos = positionOf(53);
+  const settled = settleSniperPosition(pos, undefined, 1.05, pos.expiryTimeMs + 1);
+  assert.equal(settled.status, 'EXPIRED');
+  assert.equal(settled.exitPrice, 1.05);
+  assert.ok(Math.abs((settled.realizedPnlUsd ?? NaN) - 10) < 1e-9, '200 USD at +5% is 10 USD');
+});
+
+test('without a feed price and with no price ever observed, the time stop records an unknown exit, not zero', () => {
+  const plans = new TradePlanLedger(null);
+  const pos = positionOf(54);
+  announceSniperPlan(plans, pos);
+  const settled = settleSniperPosition(pos, undefined, undefined, pos.expiryTimeMs + 1);
+  assert.equal(settled.status, 'EXPIRED');
+  assert.equal(settled.realizedPnlUsd, undefined);
+  recordSniperExit(plans, settled, pos.expiryTimeMs + 1);
+  assert.equal(plans.get('SNIPER:54')?.result, 'TIME_STOP');
+  assert.equal(plans.get('SNIPER:54')?.pnl, null, 'an unknown PnL is stored as null');
+});
+
+test('a settled position is not settled again', () => {
+  const pos = positionOf(55);
+  const done = evaluatePositionTick(pos, 1.25, pos.entryTimeMs + 1);
+  assert.equal(settleSniperPosition(done, 0.5, 0.5, pos.expiryTimeMs + 1), done);
 });

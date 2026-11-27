@@ -35,12 +35,12 @@ These fields are observable market proxies. They are not direct measurements of 
 
 Default TTLs:
 
-- 1m: 15 seconds
-- 5m: 60 seconds
-- 15m: 60 seconds
-- 1h: 5 minutes
-- 4h: 15 minutes
-- derivatives: 60 seconds
+- 1m: 15 seconds (`MARKET_DATA_1M_TTL_MS`)
+- 5m: 60 seconds (`MARKET_DATA_5M_TTL_MS`)
+- 15m: 60 seconds (`MARKET_DATA_15M_TTL_MS`)
+- 1h: 5 minutes (`MARKET_DATA_1H_TTL_MS`)
+- 4h: 15 minutes (`MARKET_DATA_4H_TTL_MS`)
+- derivatives: 5 minutes (`MARKET_DATA_DERIVATIVES_TTL_MS`)
 
 Refresh work is concurrency-limited to avoid a large burst of public requests.
 
@@ -48,15 +48,15 @@ Failed kline refreshes receive a bounded retry backoff. Derivatives use all-sett
 
 ## Safety contract
 
-MARKET_DATA_V2 is disabled by default.
+Market Data V2 is on: `src/config.ts` sets `marketDataV2.enabled` to `true` and has no environment switch for it. It can be disabled only in code.
 
-Even when enabled, it only supplies read-only context. Existing strategy generation, RiskAgent approval, stop management, and order execution remain unchanged.
+It only supplies read-only context. Existing strategy generation, RiskAgent approval, stop management, and order execution remain unchanged.
 
 MarketStateBuilder prefers native 15m/1h/4h data when present and falls back to the existing 15m resampling path.
 
 ## Basis
 
-The Binance Node SDK exposes getBasis, but its current source comments mark that method as possibly deprecated. Basis is therefore disabled by default and must be enabled explicitly only after validating the endpoint in the target environment.
+The Binance Node SDK exposes getBasis, but its current source comments mark that method as possibly deprecated. Basis is on: `src/config.ts` sets `marketDataV2.basisEnabled` to `true`, with no environment switch. Its endpoint has not been re-validated since that default changed, so treat basis values as unverified until it is.
 
 ## Validation
 

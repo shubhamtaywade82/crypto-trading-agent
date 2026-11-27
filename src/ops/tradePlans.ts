@@ -1,4 +1,4 @@
-import { appendFileSync, existsSync, mkdirSync, readFileSync } from 'node:fs';
+import { appendFileSync, existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 
 /**
@@ -115,14 +115,21 @@ const isPlan = (value: unknown): value is TradePlan => {
     && p.planned !== undefined && p.planned !== null && Array.isArray(p.partials);
 };
 
+// Compaction only when the file holds far more snapshots than plans: each transition appends one, so growth is linear in
+// transitions. It runs at startup, so a rewrite never competes with this process's own appends.
+const COMPACT_RATIO = 4;
+const COMPACT_SLACK = 5_000;
+
 export class TradePlanLedger {
   lastError?: string;
   private readonly plans = new Map<string, TradePlan>();
   private needsLeadingNewline = false;
+  private rowsOnDisk = 0;
 
   /** `null` keeps the ledger in memory only (tests, dry runs). */
   constructor(private readonly filePath: string | null = null) {
     this.load();
+    this.compactIfBloated();
   }
 
   get(planId: string): TradePlan | undefined { return this.plans.get(planId); }
@@ -209,6 +216,7 @@ export class TradePlanLedger {
       // A torn last line from a crash must not fuse with the first new row
       const prefix = this.needsLeadingNewline ? '\n' : '';
       appendFileSync(this.filePath, `${prefix}${JSON.stringify(plan)}\n`);
+      this.rowsOnDisk += 1;
       this.needsLeadingNewline = false;
       this.lastError = undefined;
     } catch (err) {
@@ -228,12 +236,28 @@ export class TradePlanLedger {
     this.needsLeadingNewline = text.length > 0 && !text.endsWith('\n');
     for (const line of text.split('\n')) {
       if (!line.trim()) continue;
+      this.rowsOnDisk += 1;
       try {
         const parsed: unknown = JSON.parse(line);
         if (isPlan(parsed)) this.plans.set(parsed.planId, parsed);
       } catch {
         // A torn line from a crash is skipped; the rest of the ledger is still usable
       }
+    }
+  }
+
+  /** Rewrites the file with one snapshot per plan, atomically (temp file, then rename). Never throws. */
+  private compactIfBloated(): void {
+    if (!this.filePath || this.rowsOnDisk <= this.plans.size * COMPACT_RATIO + COMPACT_SLACK) return;
+    try {
+      const tmp = `${this.filePath}.tmp`;
+      const body = [...this.plans.values()].map((plan) => JSON.stringify(plan)).join('\n');
+      writeFileSync(tmp, body.length > 0 ? `${body}\n` : '');
+      renameSync(tmp, this.filePath);
+      this.rowsOnDisk = this.plans.size;
+      this.needsLeadingNewline = false;
+    } catch (err) {
+      this.lastError = err instanceof Error ? err.message : String(err);
     }
   }
 }

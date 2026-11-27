@@ -219,3 +219,29 @@ test('the summary of nothing has no win rate and no mean R, rather than zero', (
   assert.equal(s.meanR, null);
   assert.equal(s.total, 0);
 });
+
+test('a bloated ledger is compacted at startup to one snapshot per plan, and its state survives', () => {
+  const file = tempPath();
+  const first = new TradePlanLedger(file);
+  first.announce(LONG);
+  first.fill('p1', T0);
+  for (let i = 0; i < 6_000; i += 1) first.notify('p1', 'announce', i % 2 === 0 ? 'SENT' : 'FAILED', T0 + i);
+  first.notify('p1', 'announce', 'SENT', T0 + 6_001);
+  assert.ok(readFileSync(file, 'utf-8').trim().split('\n').length > 6_000, 'the file grew with every transition');
+
+  const reloaded = new TradePlanLedger(file);
+  assert.equal(readFileSync(file, 'utf-8').trim().split('\n').length, 1, 'compacted to one snapshot per plan');
+  assert.equal(reloaded.get('p1')?.status, 'FILLED');
+  assert.equal(reloaded.get('p1')?.announceNotify, 'SENT');
+  assert.equal(reloaded.lastError, undefined);
+});
+
+test('a small ledger is never rewritten at startup', () => {
+  const file = tempPath();
+  const ledger = new TradePlanLedger(file);
+  for (let i = 0; i < 10; i += 1) ledger.notify('p1', 'announce', 'SENT', T0 + i);
+  ledger.announce(LONG);
+  const before = readFileSync(file, 'utf-8');
+  new TradePlanLedger(file);
+  assert.equal(readFileSync(file, 'utf-8'), before);
+});

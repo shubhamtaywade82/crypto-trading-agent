@@ -20,13 +20,15 @@ import {
   type SmartMoneySignal,
   type SniperPosition,
 } from '../src/execution/SmartMoneySniper.js';
-import { announceSniperPlan, recordSniperExit, restoreSniperState, sniperPlanId } from '../src/execution/sniperPlans.js';
+import { announceSniperPlan, recordSniperExit, restoreSniperState, settleSniperPosition, sniperPlanId } from '../src/execution/sniperPlans.js';
 import { sendTelegram } from '../src/ops/telegram.js';
 import { TradePlanLedger, type NotifyStatus } from '../src/ops/tradePlans.js';
 
 interface RuntimeState {
   readonly processedSignalIds: Set<number>;
   readonly openPositions: Map<number, SniperPosition>;
+  /** The last price the feed showed per signal. Used only for a time stop after the signal left the feed. */
+  readonly lastPrice: Map<number, number>;
   readonly plans: TradePlanLedger;
 }
 
@@ -50,8 +52,9 @@ async function broadcastSniperAlert(signal: SmartMoneySignal, pos: SniperPositio
 // Broadcasts trade resolution card to Telegram trading channel
 async function broadcastExitAlert(pos: SniperPosition, plans: TradePlanLedger): Promise<void> {
   const emoji = pos.status === 'TP_HIT' ? '🎉' : pos.status === 'SL_HIT' ? '🛑' : '⏱️';
-  const pnlSign = (pos.realizedPnlUsd ?? 0) >= 0 ? '+' : '';
-  const pnlText = `${pnlSign}$${(pos.realizedPnlUsd ?? 0).toFixed(2)} USD`;
+  const pnlText = pos.realizedPnlUsd === undefined
+    ? 'unknown (no price observed)'
+    : `${pos.realizedPnlUsd >= 0 ? '+' : ''}$${pos.realizedPnlUsd.toFixed(2)} USD`;
 
   const lines = [
     `${emoji} <b>SNIPER POSITION CLOSED: ${pos.ticker}</b>`,
@@ -68,18 +71,19 @@ async function broadcastExitAlert(pos: SniperPosition, plans: TradePlanLedger): 
 }
 
 // Updates open positions against current price ticks
+// Settles every open position: a feed price decides as before, and a position whose signal left the feed can still time out
 async function reconcilePositions(state: RuntimeState, signals: readonly SmartMoneySignal[]): Promise<void> {
-  for (const signal of signals) {
-    const pos = state.openPositions.get(signal.signalId);
-    if (!pos || pos.status !== 'OPEN') continue;
-
-    const currentPrice = parseFloat(signal.currentPrice);
-    const updated = evaluatePositionTick(pos, currentPrice);
-    if (updated.status !== 'OPEN') {
-      state.openPositions.delete(signal.signalId);
-      recordSniperExit(state.plans, updated, Date.now());
-      await broadcastExitAlert(updated, state.plans);
-    }
+  const now = Date.now();
+  const feed = new Map(signals.map((signal) => [signal.signalId, parseFloat(signal.currentPrice)] as const));
+  for (const [signalId, price] of feed) {
+    if (Number.isFinite(price)) state.lastPrice.set(signalId, price);
+  }
+  for (const [signalId, pos] of [...state.openPositions]) {
+    const updated = settleSniperPosition(pos, feed.get(signalId), state.lastPrice.get(signalId), now);
+    if (updated.status === 'OPEN') continue;
+    state.openPositions.delete(signalId);
+    recordSniperExit(state.plans, updated, now);
+    await broadcastExitAlert(updated, state.plans);
   }
 }
 
@@ -123,6 +127,7 @@ async function main(): Promise<void> {
   const state: RuntimeState = {
     processedSignalIds: restored.processedSignalIds,
     openPositions: restored.openPositions,
+    lastPrice: new Map(),
     plans,
   };
 

@@ -3,7 +3,7 @@ import { summarizePerformance } from '../binance/performance.js';
 import type { VenueStatus } from '../binance/remoteBroker.js';
 import { roundQty } from '../binance/symbolRules.js';
 import type { PerformanceSnapshot } from '../risk/performanceEngine.js';
-import type { ExitReason, LogEntry, RiskDecision, Side, Signal, TradeRecord, WsStatus } from '../types.js';
+import type { ExitReason, LogEntry, Position, RiskDecision, Side, Signal, TradeRecord, WsStatus } from '../types.js';
 import { makeAlert, type AlertClass, type AlertEvent, type AlertSeverity, type NotificationEngine } from './alerts.js';
 import type { NotifySlot, NotifyStatus, PlanLevels, PlanResult, TradePlan, TradePlanLedger } from './tradePlans.js';
 import { digestCard, signalCard, systemCard, tradeCard, type SignalCardInput, type SystemCardInput } from './cards.js';
@@ -53,6 +53,8 @@ export interface OpsHooks {
   onKillSwitch(state: KillSwitchState): void;
   onUnprotected(positions: readonly UnprotectedPosition[], equity: number): void;
   digest(request: DigestRequest): void;
+  /** Each cycle, with the venue's open positions: a fill the plan never saw is attributed to its plan. */
+  onPositions(positions: readonly Position[]): void;
 }
 
 interface Notice {
@@ -74,7 +76,7 @@ const UNPROTECTED_REMIND_MS = 6 * 60 * 60_000;
 const noop = (): void => {};
 const NOOP_HOOKS: OpsHooks = {
   onSignal: noop, onSetup: noop, onGate: noop, onVeto: noop, onOrder: noop, onRefusal: noop, onExit: noop, onVenueState: noop,
-  onCircuit: noop, onLoopCrash: noop, onKillSwitch: noop, onUnprotected: noop, digest: noop,
+  onCircuit: noop, onLoopCrash: noop, onKillSwitch: noop, onUnprotected: noop, digest: noop, onPositions: noop,
 };
 
 const positionKey = (symbol: string, strategy: string): string => `${symbol}:${strategy}`;
@@ -284,6 +286,36 @@ class Ops implements OpsHooks {
       this.notify({ cls: 'RESEARCH', severity: 'WATCH', fingerprint: `RESEARCH:digest:${period}`, html });
     });
   };
+  /**
+   * A plan can be left ANNOUNCED while its position is open: a live limit fills without a fill event reaching us, or the
+   * bot restarted while it rested. A venue position with no filled plan takes the newest announced plan for its symbol,
+   * strategy and side. Recorded as a fill, so its exit is linked.
+   */
+  onPositions = (positions: readonly Position[]): void => {
+    this.safely(() => {
+      const plans = this.deps.plans;
+      if (!plans) return;
+      for (const position of positions) {
+        const key = positionKey(position.symbol, position.strategy);
+        const lineage = this.openIds.get(key);
+        const linked = lineage ? plans.get(lineage.planId) : undefined;
+        if (linked) {
+          if (linked.status === 'ANNOUNCED') plans.fill(linked.planId, this.now());
+          continue;
+        }
+        const candidate = plans.all()
+          .filter((p) => p.source === 'SIGNAL' && p.status === 'ANNOUNCED'
+            && p.symbol === position.symbol && p.strategy === position.strategy && p.side === position.side)
+          .sort((a, b) => b.announcedAt - a.announcedAt)[0];
+        if (!candidate) continue;
+        if (plans.fill(candidate.planId, this.now()).applied) {
+          const signalId = typeof candidate.meta.signalId === 'string' ? candidate.meta.signalId : candidate.planId;
+          this.openIds.set(key, { signalId, planId: candidate.planId });
+        }
+      }
+    });
+  };
+
   private safely(run: () => void): void {
     try { run(); } catch { /* an ops failure must never reach the trading loop */ }
   }

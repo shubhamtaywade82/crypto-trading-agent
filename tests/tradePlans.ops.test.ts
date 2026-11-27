@@ -5,7 +5,7 @@ import type { AuditInput } from '../src/ops/eventStore.js';
 import { createOps, type OpsDeps, type OpsHooks } from '../src/ops/hooks.js';
 import { TradePlanLedger, type TradePlan } from '../src/ops/tradePlans.js';
 import { setSymbolRules } from '../src/binance/symbolRules.js';
-import type { LogEntry, RiskDecision, Signal, TradeRecord } from '../src/types.js';
+import type { LogEntry, Position, RiskDecision, Signal, TradeRecord } from '../src/types.js';
 
 setSymbolRules('BTCUSDT', { pricePrecision: 2, quantityPrecision: 3, tickSize: 0.01, stepSize: 0.001, minQty: 0.001, minNotional: 5 });
 
@@ -200,4 +200,53 @@ test('a card that only went to the dry-run log is recorded as DRY_RUN, not SENT'
   h.ops.onGate(signal(), approved, 'sig1-dry');
   await h.flush();
   assert.equal(h.plans.get('sig1-dry')?.announceNotify, 'DRY_RUN');
+});
+
+// ---- attribution of fills the plan never saw ----
+
+const heldPos = (over: Record<string, unknown> = {}): Position =>
+  ({ symbol: 'BTCUSDT', strategy: STRATEGY, side: 'LONG', qty: 50, mark: 100, serverSl: '98', serverTp: '106', ...over } as unknown as Position);
+
+const plannedLevels = { entry: 100, stopLoss: 98, takeProfit: 106 };
+
+test('a resting live limit is marked FILLED once the venue shows its position', () => {
+  const h = harness();
+  h.ops.onGate(signal(), approved, 'sig1-111');
+  h.ops.onOrder(signal(), approved, filledLog('SUBMITTED BUY BTCUSDT qty=50.000 orderId=1'), flat, 'sig1-111');
+  assert.equal(h.plans.get('sig1-111')?.status, 'ANNOUNCED');
+  h.ops.onPositions([heldPos()]);
+  assert.equal(h.plans.get('sig1-111')?.status, 'FILLED');
+});
+
+test('after a restart, a venue position takes the newest announced plan for its symbol, strategy and side', () => {
+  const plans = new TradePlanLedger(null);
+  plans.announce({ planId: 'old', source: 'SIGNAL', symbol: 'BTCUSDT', side: 'LONG', strategy: STRATEGY, at: T0 - 3 * HOUR, planned: plannedLevels, meta: { signalId: 'sigOld' } });
+  plans.announce({ planId: 'new', source: 'SIGNAL', symbol: 'BTCUSDT', side: 'LONG', strategy: STRATEGY, at: T0 - HOUR, planned: plannedLevels, meta: { signalId: 'sigNew' } });
+  const h = harness({ plans });
+  h.ops.onPositions([heldPos()]);
+  assert.equal(h.plans.get('new')?.status, 'FILLED');
+  assert.equal(h.plans.get('old')?.status, 'ANNOUNCED', 'only the newest is adopted');
+  h.ops.onExit([trade({ reason: 'TAKE PROFIT', exit: 106, closedAt: T0 + 60_000 })]);
+  assert.equal(h.plans.get('new')?.result, 'TP', 'the adopted plan is the one the exit closes');
+});
+
+test('a refused plan is never adopted, and a position on the other side is not adopted', () => {
+  const plans = new TradePlanLedger(null);
+  plans.announce({ planId: 'refused', source: 'SIGNAL', symbol: 'BTCUSDT', side: 'LONG', strategy: STRATEGY, at: T0 - HOUR, planned: plannedLevels });
+  plans.notFilled('refused', T0 - HOUR, 'capacity');
+  plans.announce({ planId: 'long', source: 'SIGNAL', symbol: 'BTCUSDT', side: 'LONG', strategy: STRATEGY, at: T0 - 2 * HOUR, planned: plannedLevels });
+  const h = harness({ plans });
+  h.ops.onPositions([heldPos({ side: 'SHORT' })]);
+  assert.equal(h.plans.get('long')?.status, 'ANNOUNCED', 'a short position is not the long plan');
+  h.ops.onPositions([heldPos()]);
+  assert.equal(h.plans.get('refused')?.status, 'NOT_FILLED', 'a refused plan stays refused');
+  assert.equal(h.plans.get('long')?.status, 'FILLED');
+});
+
+test('no position means nothing changes', () => {
+  const plans = new TradePlanLedger(null);
+  plans.announce({ planId: 'p', source: 'SIGNAL', symbol: 'BTCUSDT', side: 'LONG', strategy: STRATEGY, at: T0 - HOUR, planned: plannedLevels });
+  const h = harness({ plans });
+  h.ops.onPositions([]);
+  assert.equal(h.plans.get('p')?.status, 'ANNOUNCED');
 });

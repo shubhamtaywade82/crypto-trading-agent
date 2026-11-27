@@ -851,6 +851,7 @@ export class Orchestrator extends EventEmitter {
     Object.assign(this.livePrices, market.marks);
     this.logExits();
     const [positions, account] = await Promise.all([this.binance.getPositions(), this.binance.getAccount()]);
+    this.hooks.onPositions(positions);
     if (config.unprotectedAlertPct > 0) {
       const exposed = findUnprotected(positions, account.equity, config.unprotectedAlertPct);
       this.hooks.onUnprotected(exposed, account.equity);

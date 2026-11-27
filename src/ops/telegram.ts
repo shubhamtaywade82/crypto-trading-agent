@@ -63,7 +63,8 @@ const TOKEN_KEYS: Readonly<Record<TelegramChannel, readonly string[]>> = {
 export const telegramConfigured = (env: Readonly<Record<string, string | undefined>> = process.env): boolean =>
   Boolean(firstValue(env, ['TELEGRAM_CHAT_ID']) && (firstValue(env, TOKEN_KEYS.alert) || firstValue(env, TOKEN_KEYS.trading)));
 
-const isDryRun = (env: Readonly<Record<string, string | undefined>>): boolean =>
+/** True when TELEGRAM_DRY_RUN is on: cards are logged and never sent. Exported so callers can record a DRY_RUN status. */
+export const isTelegramDryRun = (env: Readonly<Record<string, string | undefined>>): boolean =>
   ['1', 'true'].includes(env.TELEGRAM_DRY_RUN?.trim().toLowerCase() ?? '');
 
 const safeLog = (log: (line: string) => void, line: string): void => {
@@ -93,7 +94,7 @@ export async function sendTelegram(text: TelegramContent, opts: TelegramOptions 
   const env = deps.env ?? process.env;
   const isFormatted = typeof text === 'object' && text !== null && 'entities' in text;
   const renderedText = isFormatted ? text.toHTML() : text;
-  if (deps.dryRun ?? isDryRun(env)) {
+  if (deps.dryRun ?? isTelegramDryRun(env)) {
     safeLog(deps.log ?? console.log, `${DRY_RUN_PREFIX} ${renderedText}`);
     return true;
   }

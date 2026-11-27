@@ -27,6 +27,8 @@ export interface OpsDeps {
   refusalReannounceMs?: number;
   /** Durable record of each trade plan announced and what became of it. Absent in unit tests. */
   plans?: TradePlanLedger;
+  /** TELEGRAM_DRY_RUN is on: a card that "succeeds" was only logged, so it is recorded as DRY_RUN. */
+  dryRun?: boolean;
 }
 
 export interface DigestRequest {
@@ -307,7 +309,7 @@ class Ops implements OpsHooks {
       // A failed delivery gives the dedupe slot back, so the next identical event still goes out
       const failed = (): void => { this.deps.engine.release(event); this.reportDelivery(delivery, 'FAILED'); };
       void this.deps.send(event, notice.html).then(
-        (ok) => { if (ok) this.reportDelivery(delivery, 'SENT'); else failed(); },
+        (ok) => { if (ok) this.reportDelivery(delivery, this.deps.dryRun ? 'DRY_RUN' : 'SENT'); else failed(); },
         failed,
       );
     } catch {

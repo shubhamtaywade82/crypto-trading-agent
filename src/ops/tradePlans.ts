@@ -26,9 +26,9 @@ export type PlanStatus = 'ANNOUNCED' | 'FILLED' | 'NOT_FILLED' | 'CLOSED';
 export type PlanResult = 'TP' | 'SL' | 'BREAK_EVEN' | 'TIME_STOP' | 'CLOSE' | 'FLIP' | 'LIQUIDATED' | 'UNOBSERVED';
 /**
  * Whether the card reached the chat. SUPPRESSED: our own subscription or dedupe dropped it. NOT_ATTEMPTED: alerts off,
- * or no card was built. A dry-run send counts as SENT, since the sender reports success.
+ * or no card was built. DRY_RUN: TELEGRAM_DRY_RUN was on, so the card was only logged and never sent.
  */
-export type NotifyStatus = 'NOT_ATTEMPTED' | 'SENT' | 'FAILED' | 'SUPPRESSED';
+export type NotifyStatus = 'NOT_ATTEMPTED' | 'SENT' | 'FAILED' | 'SUPPRESSED' | 'DRY_RUN';
 /** `announce`: the card that opened the plan. `close`: the card that reported its exit. */
 export type NotifySlot = 'announce' | 'close';
 
@@ -115,8 +115,7 @@ const isPlan = (value: unknown): value is TradePlan => {
     && p.planned !== undefined && p.planned !== null && Array.isArray(p.partials);
 };
 
-// Compaction only when the file holds far more snapshots than plans: each transition appends one, so growth is linear in
-// transitions. It runs at startup, so a rewrite never competes with this process's own appends.
+// Each transition appends one snapshot, so the file grows with transitions. Compaction is worth it only well past this point.
 const COMPACT_RATIO = 4;
 const COMPACT_SLACK = 5_000;
 
@@ -126,10 +125,12 @@ export class TradePlanLedger {
   private needsLeadingNewline = false;
   private rowsOnDisk = 0;
 
-  /** `null` keeps the ledger in memory only (tests, dry runs). */
+  /**
+   * `null` keeps the ledger in memory only (tests, dry runs). The ledger never rewrites its own file while it is open:
+   * compaction is a separate step, run with no other process writing the ledger (see scripts/trade-plans-compact.ts).
+   */
   constructor(private readonly filePath: string | null = null) {
     this.load();
-    this.compactIfBloated();
   }
 
   get(planId: string): TradePlan | undefined { return this.plans.get(planId); }
@@ -246,9 +247,18 @@ export class TradePlanLedger {
     }
   }
 
-  /** Rewrites the file with one snapshot per plan, atomically (temp file, then rename). Never throws. */
-  private compactIfBloated(): void {
-    if (!this.filePath || this.rowsOnDisk <= this.plans.size * COMPACT_RATIO + COMPACT_SLACK) return;
+  /** True when the file holds far more snapshots than plans. */
+  needsCompaction(): boolean {
+    return this.rowsOnDisk > this.plans.size * COMPACT_RATIO + COMPACT_SLACK;
+  }
+
+  /**
+   * Rewrites the file with one snapshot per plan, atomically (temp file, then rename). Returns the row counts, or null
+   * when there is no file or the rewrite failed (then `lastError` says why). Only safe with no other writer running.
+   */
+  compact(): { before: number; after: number } | null {
+    if (!this.filePath) return null;
+    const before = this.rowsOnDisk;
     try {
       const tmp = `${this.filePath}.tmp`;
       const body = [...this.plans.values()].map((plan) => JSON.stringify(plan)).join('\n');
@@ -256,8 +266,10 @@ export class TradePlanLedger {
       renameSync(tmp, this.filePath);
       this.rowsOnDisk = this.plans.size;
       this.needsLeadingNewline = false;
+      return { before, after: this.plans.size };
     } catch (err) {
       this.lastError = err instanceof Error ? err.message : String(err);
+      return null;
     }
   }
 }

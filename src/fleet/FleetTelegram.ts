@@ -1,4 +1,4 @@
-import { escapeHtml, sendTelegram, type TelegramDeps } from '../ops/telegram.js';
+import { escapeHtml, isTelegramDryRun, sendTelegram, type TelegramDeps } from '../ops/telegram.js';
 import type { NotifySlot, NotifyStatus, PlanResult, TradePlanLedger } from '../ops/tradePlans.js';
 
 /**
@@ -155,6 +155,6 @@ export async function sendFleetEvent(event: FleetTradeEvent, deps: FleetSendDeps
     { channel: 'trading', silent: event.kind === 'BREAK_EVEN' },
     deps,
   );
-  report(sent ? 'SENT' : 'FAILED');
+  report(sent ? (deps.dryRun ?? isTelegramDryRun(env) ? 'DRY_RUN' : 'SENT') : 'FAILED');
   return sent;
 }

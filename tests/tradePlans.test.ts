@@ -220,7 +220,7 @@ test('the summary of nothing has no win rate and no mean R, rather than zero', (
   assert.equal(s.total, 0);
 });
 
-test('a bloated ledger is compacted at startup to one snapshot per plan, and its state survives', () => {
+test('a bloated ledger is flagged for compaction, and compact() leaves one snapshot per plan with its state intact', () => {
   const file = tempPath();
   const first = new TradePlanLedger(file);
   first.announce(LONG);
@@ -230,18 +230,26 @@ test('a bloated ledger is compacted at startup to one snapshot per plan, and its
   assert.ok(readFileSync(file, 'utf-8').trim().split('\n').length > 6_000, 'the file grew with every transition');
 
   const reloaded = new TradePlanLedger(file);
-  assert.equal(readFileSync(file, 'utf-8').trim().split('\n').length, 1, 'compacted to one snapshot per plan');
-  assert.equal(reloaded.get('p1')?.status, 'FILLED');
-  assert.equal(reloaded.get('p1')?.announceNotify, 'SENT');
-  assert.equal(reloaded.lastError, undefined);
+  assert.equal(reloaded.needsCompaction(), true);
+  assert.equal(readFileSync(file, 'utf-8').trim().split('\n').length > 6_000, true, 'opening the ledger never rewrites it');
+  assert.deepEqual(reloaded.compact(), { before: 6_003, after: 1 });
+  assert.equal(readFileSync(file, 'utf-8').trim().split('\n').length, 1);
+
+  const again = new TradePlanLedger(file);
+  assert.equal(again.get('p1')?.status, 'FILLED');
+  assert.equal(again.get('p1')?.announceNotify, 'SENT');
+  assert.equal(again.lastError, undefined);
 });
 
-test('a small ledger is never rewritten at startup', () => {
+test('a small ledger is not flagged, and compact() on it still keeps the state', () => {
   const file = tempPath();
   const ledger = new TradePlanLedger(file);
   for (let i = 0; i < 10; i += 1) ledger.notify('p1', 'announce', 'SENT', T0 + i);
   ledger.announce(LONG);
-  const before = readFileSync(file, 'utf-8');
-  new TradePlanLedger(file);
-  assert.equal(readFileSync(file, 'utf-8'), before);
+  assert.equal(ledger.needsCompaction(), false);
+  assert.equal(new TradePlanLedger(file).get('p1')?.planId, 'p1');
+});
+
+test('compact() without a file is a no-op', () => {
+  assert.equal(new TradePlanLedger(null).compact(), null);
 });

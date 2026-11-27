@@ -194,3 +194,10 @@ test('replaying the journal on restart does not duplicate partials already on th
   harness({ plans, seedTrades: [trade({ reason: 'PARTIAL TP', partial: true, exit: 104, pnl: 6, closedAt: T0 - 1000 })] });
   assert.equal(plans.get('p')?.partials.length, 1);
 });
+
+test('a card that only went to the dry-run log is recorded as DRY_RUN, not SENT', async () => {
+  const h = harness({ dryRun: true });
+  h.ops.onGate(signal(), approved, 'sig1-dry');
+  await h.flush();
+  assert.equal(h.plans.get('sig1-dry')?.announceNotify, 'DRY_RUN');
+});

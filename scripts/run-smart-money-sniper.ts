@@ -21,7 +21,7 @@ import {
   type SniperPosition,
 } from '../src/execution/SmartMoneySniper.js';
 import { announceSniperPlan, recordSniperExit, restoreSniperState, settleSniperPosition, sniperPlanId } from '../src/execution/sniperPlans.js';
-import { sendTelegram } from '../src/ops/telegram.js';
+import { isTelegramDryRun, sendTelegram } from '../src/ops/telegram.js';
 import { TradePlanLedger, type NotifyStatus } from '../src/ops/tradePlans.js';
 
 interface RuntimeState {
@@ -37,7 +37,7 @@ function parseCliArg(name: string, fallback: string): string {
   return index > 0 && process.argv[index + 1] ? process.argv[index + 1] : fallback;
 }
 
-const deliveryOf = (ok: boolean): NotifyStatus => (ok ? 'SENT' : 'FAILED');
+const deliveryOf = (ok: boolean): NotifyStatus => (ok ? (isTelegramDryRun(process.env) ? 'DRY_RUN' : 'SENT') : 'FAILED');
 
 // Dispatches formatted alert card to Telegram trading channel
 async function broadcastSniperAlert(signal: SmartMoneySignal, pos: SniperPosition, plans: TradePlanLedger): Promise<void> {

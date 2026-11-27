@@ -55,6 +55,7 @@ import { assessSafety, type SafetyVerdict } from '../market/MarketSafety.js';
 import { drawdownResponse } from '../risk/drawdownResponse.js';
 import { ShockDetector } from '../market/ShockDetector.js';
 import { PositionDriver } from '../position/PositionDriver.js';
+import { addLevelsOk, capAddSize, type AddRoom } from '../position/addOn.js';
 import type { LiveBook } from '../binance/liveBook.js';
 import { featuresFromState } from '../position/features.js';
 import { PositionManagerStore } from '../position/PositionManagerStore.js';
@@ -583,7 +584,7 @@ export class Orchestrator extends EventEmitter {
   }
 
   private async processSignals(signals: Signal[], ctx: MarketContext): Promise<void> {
-    for (const signal of signals) {
+    for (let signal of signals) {
       // Dropped before the gate, journal and alerts: an unapproved strategy in live mode is expected silence, not a refusal stream
       if (this.requireApproval && signal.type.startsWith('OPEN_') && !this.approved.has(signal.agent)) {
         const last = this.unapprovedLoggedAt.get(signal.agent) ?? 0;
@@ -594,11 +595,16 @@ export class Orchestrator extends EventEmitter {
       const portfolio = { equity: ctx.equity, positions: ctx.positions ?? [], circuit: ctx.performance?.circuit };
       // A capacity/circuit block cannot clear while the book is unchanged: skip the gate instead of re-refusing
       if (this.refusalSuppressor.shouldSkip(signal, portfolio)) { this.counters.monitored += 1; continue; }
+      // An add to an open position: refused unless the add-on rules allow it, and then it keeps the position's stop and target
+      const add = this.planAdd(signal, ctx);
+      if (add && !('maxQty' in add)) { this.noteAddRefusal(signal, add.reason); this.counters.monitored += 1; continue; }
+      if (add) signal = add.signal;
       this.counters.decisions += 1;
       this.hooks.onSignal(signal);
       const decisionId = `${signal.id}-${Date.now()}`;
       const evidence = decisionEvidence(signal, ctx.marketState?.[signal.symbol], this.fusionIntents.get(`${signal.symbol}:${signal.agent}`), ctx.microstructure?.[signal.symbol]);
-      const decision = this.risk.gate(signal, ctx, { evidenceScore: evidence.score });
+      let decision = this.risk.gate(signal, ctx, { evidenceScore: evidence.score });
+      if (add && 'maxQty' in add) decision = capAddSize(decision, add.maxQty, add.price);
       this.hooks.onGate(signal, decision, decisionId);
       // Decision lineage: what the market looked like, what was proposed, and what risk said — persisted before anything else happens
       const record = this.buildDecisionRecord(decisionId, signal, ctx, decision, evidence);
@@ -725,6 +731,36 @@ export class Orchestrator extends EventEmitter {
         notional: rec.notionalUsdt ?? undefined,
       },
     });
+  }
+
+  private addRefusedLoggedAt = new Map<string, number>();
+
+  /** The add-on decision for an entry into a position already held in the same direction; undefined for anything else. */
+  private planAdd(signal: Signal, ctx: MarketContext): { signal: Signal; maxQty: number; price: number } | { reason: string } | undefined {
+    if (signal.type !== 'OPEN_LONG' && signal.type !== 'OPEN_SHORT') return undefined;
+    const side = signal.type === 'OPEN_LONG' ? 'LONG' : 'SHORT';
+    const held = (ctx.positions ?? []).find((p) => p.symbol === signal.symbol && p.strategy === signal.agent);
+    if (!held || held.side !== side) return undefined; // no position yet, or a flip: not an add
+    const room: AddRoom = this.positionDriver?.addRoom(signal.symbol, signal.agent, held.qty) ?? { ok: false, reason: 'position manager is off' };
+    if (!room.ok) return { reason: room.reason };
+    // The position's own stop and target are kept: the add is sized against the stop that protects the whole position
+    const stop = Number(held.serverSl);
+    const target = Number(held.serverTp);
+    const price = signal.entry ?? ctx.marks[signal.symbol] ?? held.mark;
+    if (!addLevelsOk(side, stop, price)) return { reason: 'the open stop is not usable for an add' };
+    return {
+      signal: { ...signal, stopLoss: stop, takeProfit: target > 0 ? target : signal.takeProfit },
+      maxQty: room.maxQty,
+      price,
+    };
+  }
+
+  private noteAddRefusal(signal: Signal, reason: string): void {
+    const key = `${signal.symbol}:${signal.agent}:${reason}`;
+    const last = this.addRefusedLoggedAt.get(key) ?? 0;
+    if (Date.now() - last < 15 * 60_000) return;
+    this.addRefusedLoggedAt.set(key, Date.now());
+    this.log(signal.agent, `ADD REFUSED ${signal.symbol}: ${reason}`, 'info');
   }
 
   private isCoolingDown(signal: Signal): boolean {

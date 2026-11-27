@@ -50,6 +50,8 @@ export interface PmState {
   entry: number;
   oneR: number;
   initialQty: number;
+  /** The entry quantity, before any scale-in: the base of the add-on cap. Absent on states written before add-ons existed. */
+  entryQty?: number;
   /** Quantity already taken by partials; with `entry` it detects an outside change (scale-in) that invalidates the state. */
   reducedQty: number;
   phase: PmPhase;
@@ -111,7 +113,7 @@ export function initState(pos: Position, now: number, cfg: PmConfig = DEFAULT_PM
   const mode: PmMode = target !== null && (targetOnly || Math.abs(target - pos.entry) / oneR <= cfg.tp2R) ? 'TARGET' : 'RUNNER';
   return {
     key: pmKey(pos.symbol, pos.strategy), symbol: pos.symbol, strategy: pos.strategy, side: pos.side,
-    entry: pos.entry, oneR, initialQty: pos.qty, reducedQty: 0, phase: lockedIn ? 'PROTECTED' : 'INITIAL', mode, stop, target,
+    entry: pos.entry, oneR, initialQty: pos.qty, entryQty: pos.qty, reducedQty: 0, phase: lockedIn ? 'PROTECTED' : 'INITIAL', mode, stop, target,
     signalTarget: target, tp1Done: lockedIn, tp2Done: false,
     extreme: isNum(pos.mark) ? pos.mark : pos.entry, openedAt: now, updatedAt: now,
   };
@@ -144,6 +146,7 @@ export function carryAfterScaleIn(prev: PmState, rebuilt: PmState): PmState {
   return {
     ...rebuilt,
     initialQty: acquired.toNumber(),
+    entryQty: prev.entryQty ?? prev.initialQty,
     reducedQty: reducedQty.toNumber(),
     oneR: prev.oneR,
     tp1Done: prev.tp1Done || rebuilt.tp1Done,

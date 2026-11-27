@@ -7,6 +7,7 @@ import {
   type LotRules, type PmAction, type PmConfig, type PmInput, type PmState, type VolClass,
 } from './PositionManager.js';
 import type { PositionManagerStore } from './PositionManagerStore.js';
+import { addRoomOf, type AddRoom } from './addOn.js';
 
 /** Per-symbol facts refreshed once per orchestrator cycle; prices come from the live tick on every manage pass. */
 export interface SymbolFeatures {
@@ -71,6 +72,11 @@ export class PositionDriver {
       }
     }
     store.tick();
+  }
+
+  /** The add-on room of a managed position (see addRoomOf). A position the manager does not track has no room. */
+  addRoom(symbol: string, strategy: Position['strategy'], heldQty: number): AddRoom {
+    return addRoomOf(this.deps.store.get(pmKey(symbol, strategy)), heldQty);
   }
 
   private async step(pos: Position, key: string, now: number): Promise<void> {

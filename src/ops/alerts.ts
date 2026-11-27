@@ -174,6 +174,8 @@ interface EngineOptions {
 interface EmissionMemory {
   readonly stateTo?: string;
   readonly at: number;
+  /** The emission this one replaced, so a failed delivery can restore it. One level is enough: a slot is only rewritten when it is emitted. */
+  readonly previous?: { readonly stateTo?: string; readonly at: number };
 }
 
 /** Gates alerts by subscription, then drops repeats of the same fingerprint+state inside the class cooldown. */
@@ -212,9 +214,21 @@ export class NotificationEngine {
     return cooldown > 0 && this.timeOf(event) - previous.at < cooldown ? 'DEDUPE' : undefined;
   }
 
+  /** Undoes the memory of an emission that never reached the chat, so the next identical event is not suppressed as a duplicate. */
+  release(event: AlertEvent): void {
+    const current = this.lastEmitted.get(event.fingerprint);
+    if (!current || current.at !== this.timeOf(event)) return; // a newer emission owns the slot now
+    if (current.previous) this.lastEmitted.set(event.fingerprint, { stateTo: current.previous.stateTo, at: current.previous.at });
+    else this.lastEmitted.delete(event.fingerprint);
+  }
+
   private remember(event: AlertEvent): void {
+    const previous = this.lastEmitted.get(event.fingerprint);
     this.lastEmitted.delete(event.fingerprint);
-    this.lastEmitted.set(event.fingerprint, { stateTo: event.stateTo, at: this.timeOf(event) });
+    this.lastEmitted.set(event.fingerprint, {
+      stateTo: event.stateTo, at: this.timeOf(event),
+      previous: previous && { stateTo: previous.stateTo, at: previous.at },
+    });
     if (this.lastEmitted.size <= MEMORY_CAP) return;
     const oldest = [...this.lastEmitted.keys()].slice(0, MEMORY_EVICT_COUNT);
     for (const key of oldest) this.lastEmitted.delete(key);

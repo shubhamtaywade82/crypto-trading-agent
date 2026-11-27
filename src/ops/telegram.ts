@@ -1,3 +1,5 @@
+import { appendFileSync, mkdirSync } from 'node:fs';
+import { dirname } from 'node:path';
 import { escapeHtml, toTelegramPayload, type FormattedMessage } from '@nemesis-oss/tg-format';
 import { SEVERITY_RANK, type AlertEvent } from './alerts.js';
 
@@ -10,17 +12,38 @@ export interface TelegramOptions {
   readonly silent?: boolean;
 }
 
+/** One row per message that reached the network: what was sent, where, and whether Telegram accepted it. */
+export interface OutboxRow {
+  readonly at: number;
+  readonly channel: TelegramChannel;
+  readonly silent: boolean;
+  readonly sent: boolean;
+  readonly httpStatus: number | null;
+  readonly chars: number;
+  readonly html: string;
+}
+
+export interface Outbox {
+  append(row: OutboxRow): void;
+}
+
 export interface TelegramDeps {
   readonly fetchImpl?: typeof fetch;
   readonly env?: Readonly<Record<string, string | undefined>>;
   readonly dryRun?: boolean;
   readonly log?: (line: string) => void;
   readonly silent?: boolean;
+  /**
+   * Where sent messages are recorded. Unset: the default JSONL outbox, unless a fetch was injected (tests) or the
+   * message is a dry run. `null`: record nothing.
+   */
+  readonly outbox?: Outbox | null;
 }
 
 const SEND_TIMEOUT_MS = 10_000;
 const DRY_RUN_PREFIX = '[telegram dry-run]';
 const TRADING_CHANNEL_CLASSES: ReadonlySet<string> = new Set(['TRADE', 'SIGNAL', 'SETUP']);
+export const DEFAULT_OUTBOX_PATH = 'data/telegram-outbox.jsonl';
 
 // Truthiness rather than `??`: a blank variable in .env must fall through to the shared bot, not disable sending
 const firstValue = (env: Readonly<Record<string, string | undefined>>, keys: readonly string[]): string | undefined => {
@@ -51,6 +74,20 @@ const safeLog = (log: (line: string) => void, line: string): void => {
   }
 };
 
+/** A JSONL outbox. A failure to write is swallowed: recording a message must never block or fail sending it. */
+export function jsonlOutbox(path: string): Outbox {
+  return {
+    append(row: OutboxRow): void {
+      try {
+        mkdirSync(dirname(path), { recursive: true });
+        appendFileSync(path, `${JSON.stringify(row)}\n`);
+      } catch {
+        // the outbox is a record, not a dependency of the send
+      }
+    },
+  };
+}
+
 /** Sends an HTML card or FormattedMessage; resolves false (never throws) when unconfigured, rejected, timed out or unreachable. */
 export async function sendTelegram(text: TelegramContent, opts: TelegramOptions = {}, deps: TelegramDeps = {}): Promise<boolean> {
   const env = deps.env ?? process.env;
@@ -63,6 +100,14 @@ export async function sendTelegram(text: TelegramContent, opts: TelegramOptions 
   const token = firstValue(env, TOKEN_KEYS[opts.channel ?? 'alert']);
   const chatId = firstValue(env, ['TELEGRAM_CHAT_ID']);
   if (!token || !chatId) return false;
+  const channel: TelegramChannel = opts.channel ?? 'alert';
+  const silent = opts.silent ?? false;
+  const outbox = deps.outbox !== undefined
+    ? deps.outbox
+    : deps.fetchImpl ? null : jsonlOutbox(firstValue(env, ['TELEGRAM_OUTBOX_PATH']) ?? DEFAULT_OUTBOX_PATH);
+  const record = (sent: boolean, httpStatus: number | null): void => {
+    outbox?.append({ at: Date.now(), channel, silent, sent, httpStatus, chars: renderedText.length, html: renderedText });
+  };
   try {
     const payload = isFormatted ? toTelegramPayload(text) : { text, parse_mode: 'HTML' };
     const response = await (deps.fetchImpl ?? fetch)(`https://api.telegram.org/bot${token}/sendMessage`, {
@@ -73,9 +118,11 @@ export async function sendTelegram(text: TelegramContent, opts: TelegramOptions 
       }),
       signal: AbortSignal.timeout(SEND_TIMEOUT_MS),
     });
+    record(response.ok, response.status);
     return response.ok;
   } catch {
     // Not logged: fetch errors can echo the request URL, which contains the bot token
+    record(false, null);
     return false;
   }
 }

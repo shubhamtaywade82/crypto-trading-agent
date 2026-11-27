@@ -46,7 +46,7 @@ const working: OpsDeps = {
 
 const BROKEN: Array<[string, Partial<OpsDeps>]> = [
   ['event store', { store: { append: boom } }],
-  ['alert engine', { engine: { submit: boom } }],
+  ['alert engine', { engine: { submit: boom, release: () => undefined } }],
   ['sender that throws', { send: boom }],
   ['sender that rejects', { send: () => Promise.reject(new Error('telegram down')) }],
 ];
@@ -75,7 +75,7 @@ test('should still write the audit line when only the sender fails', () => {
 test('should touch nothing when both flags are off', async () => {
   const touched: string[] = [];
   const spy = (name: string) => () => { touched.push(name); throw new Error(name); };
-  const ops = createOps({ isAudit: false, isAlerts: false, store: { append: spy('store') }, engine: { submit: spy('engine') }, send: spy('send') });
+  const ops = createOps({ isAudit: false, isAlerts: false, store: { append: spy('store') }, engine: { submit: spy('engine'), release: () => undefined }, send: spy('send') });
   fireAll(ops);
   await flush();
   assert.deepEqual(touched, []);

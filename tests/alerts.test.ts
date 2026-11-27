@@ -242,3 +242,36 @@ test('parseSubscriptions returns defaults for garbage and never throws', () => {
     assert.deepEqual(parseSubscriptions(input), defaultSubscriptions(), String(typeof input));
   }
 });
+
+test('a failed delivery releases the dedupe slot, so the next identical event goes out', () => {
+  const engine = new NotificationEngine();
+  const first = alert();
+  assert.equal(engine.submit(first).action, 'emitted');
+  assert.equal(engine.submit(alert({ id: 'a2', at: T0 + 1_000 })).action, 'suppressed', 'duplicate inside the cooldown');
+  engine.release(first);
+  assert.equal(engine.submit(alert({ id: 'a3', at: T0 + 2_000 })).action, 'emitted');
+});
+
+test('releasing a failed emission restores the state it replaced, so a demotion is still suppressed', () => {
+  const engine = new NotificationEngine();
+  const triggered = alert({ class: 'SETUP', fingerprint: 'SETUP:SOLUSDT:x', stateTo: 'TRIGGERED', at: T0 });
+  assert.equal(engine.submit(triggered).action, 'emitted');
+  const demotion = alert({ class: 'SETUP', fingerprint: 'SETUP:SOLUSDT:x', stateTo: 'ARMED', at: T0 + 1_000 });
+  assert.equal(engine.submit(demotion).action, 'suppressed', 'a demotion from TRIGGERED is not actionable');
+  // Outside the setup cooldown, a fresh TRIGGERED is emitted and then fails to reach the chat
+  const failed = alert({ class: 'SETUP', fingerprint: 'SETUP:SOLUSDT:x', stateTo: 'TRIGGERED', at: T0 + 400_000 });
+  assert.equal(engine.submit(failed).action, 'emitted');
+  engine.release(failed);
+  assert.equal(engine.submit(alert({ class: 'SETUP', fingerprint: 'SETUP:SOLUSDT:x', stateTo: 'ARMED', at: T0 + 401_000 })).action, 'suppressed',
+    'the TRIGGERED memory from before the failed emission is back in force');
+});
+
+test('a release for an event that is not the current emission changes nothing', () => {
+  const engine = new NotificationEngine();
+  const old = alert({ at: T0 });
+  engine.submit(old);
+  // a different stateTo is a real change, so this one is emitted and owns the slot
+  assert.equal(engine.submit(alert({ id: 'a2', at: T0 + 60_000, stateTo: 'RANGE' })).action, 'emitted');
+  engine.release(old);
+  assert.equal(engine.submit(alert({ id: 'a3', at: T0 + 61_000, stateTo: 'RANGE' })).action, 'suppressed', 'the newer emission still owns the slot');
+});

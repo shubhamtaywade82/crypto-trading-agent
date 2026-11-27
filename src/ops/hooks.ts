@@ -17,7 +17,7 @@ export interface OpsDeps {
   isAudit: boolean;
   isAlerts: boolean;
   store: { append(input: AuditInput): void };
-  engine: Pick<NotificationEngine, 'submit'>;
+  engine: Pick<NotificationEngine, 'submit' | 'release'>;
   send: (event: AlertEvent, html: string) => Promise<boolean>;
   /** The journal as it stood at start: those trades were already reported by an earlier run. */
   seedTrades?: readonly TradeRecord[];
@@ -304,9 +304,11 @@ class Ops implements OpsHooks {
       });
       if (this.deps.engine.submit(event).action !== 'emitted') { this.reportDelivery(delivery, 'SUPPRESSED'); return; }
       // Fire and forget: trading never waits on Telegram. The delivery result is recorded when it lands.
+      // A failed delivery gives the dedupe slot back, so the next identical event still goes out
+      const failed = (): void => { this.deps.engine.release(event); this.reportDelivery(delivery, 'FAILED'); };
       void this.deps.send(event, notice.html).then(
-        (ok) => this.reportDelivery(delivery, ok ? 'SENT' : 'FAILED'),
-        () => this.reportDelivery(delivery, 'FAILED'),
+        (ok) => { if (ok) this.reportDelivery(delivery, 'SENT'); else failed(); },
+        failed,
       );
     } catch {
       // A broken alert path must not cost the caller its own work

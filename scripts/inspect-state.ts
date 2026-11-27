@@ -12,7 +12,7 @@ const builder = new MarketStateBuilder();
 
 async function main() {
   await binance.initVenue();
-  const market = await binance.getMarketOverview(config.symbols);
+  const market = await binance.market.getMarketOverview(config.symbols);
 
   const states = builder.buildAll(config.symbols.map((symbol) => ({
     symbol,

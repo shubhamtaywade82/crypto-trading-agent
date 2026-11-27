@@ -39,7 +39,7 @@ async function main() {
 
   // 2. Fetch market data
   console.log('--- [2] Market data fetch ---');
-  const market = await binance.getMarketOverview(config.symbols);
+  const market = await binance.market.getMarketOverview(config.symbols);
   for (const sym of config.symbols) {
     const candles = market.candles[sym] ?? [];
     const v2 = market.marketDataV2?.[sym];

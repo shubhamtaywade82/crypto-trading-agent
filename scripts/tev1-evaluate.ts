@@ -65,7 +65,7 @@ async function liveState(symbol: string): Promise<{ state: MarketState; mark: nu
   const { MarketStateBuilder } = await import('../src/market/MarketStateBuilder.js');
   const binance = new BinanceService();
   await binance.initVenue();
-  const market = await binance.getMarketOverview([symbol]);
+  const market = await binance.market.getMarketOverview([symbol]);
   const builder = new MarketStateBuilder();
   const states = builder.buildAll([{
     symbol,

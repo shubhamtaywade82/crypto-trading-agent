@@ -6,6 +6,8 @@ import { test } from 'node:test';
 import type { LoadedExperiment } from '../src/market/directional/live-gate.js';
 import { buildTargetTable, DEFAULT_ADMISSION_POLICY, type AdmissionPolicy } from '../src/market/directional/probability.js';
 import { synthLabels } from './directionalFixtures.js';
+import type { RiskAgent } from '../src/agents/RiskAgent.js';
+import type { ExecutorAgent } from '../src/agents/ExecutorAgent.js';
 import type { Signal } from '../src/types.js';
 
 // The Orchestrator writes its stores under data/ relative to cwd and reads config from env at import: isolate both.
@@ -35,21 +37,21 @@ const EXPERIMENT: LoadedExperiment = {
 };
 
 function harness(state: Record<string, unknown> | null) {
-  const orch = new Orchestrator() as any;
   const logs: string[] = [];
   const executed: string[] = [];
-  orch.on('log', (e: { msg: string }) => logs.push(e.msg));
-  orch.frictionGate = 'off';
-  orch.microFeed = null;
-  if (state) orch.directional = { experiment: null, maxStopPct: 3, maxBarAgeMs: 900_000, refusal: null, ...state };
-  orch.risk = { gate: () => ({ approved: true, positionSizeUsdt: 5_000, leverage: 5, marginType: 'ISOLATED', liqBufferAtr: 2, reason: 'ok' }) };
-  orch.isVetoed = async () => false;
-  orch.executor = {
+  const risk = { gate: () => ({ approved: true, positionSizeUsdt: 5_000, leverage: 5, marginType: 'ISOLATED', liqBufferAtr: 2, reason: 'ok' }) };
+  const executor = {
     execute: async (s: Signal) => {
       executed.push(`${s.type} ${s.symbol}`);
       return { ts: Date.now(), agent: s.agent, msg: `OPENED ${s.symbol}`, level: 'success' };
     },
   };
+  const orch = new Orchestrator({ risk: risk as unknown as RiskAgent, executor: executor as unknown as ExecutorAgent }) as any;
+  orch.on('log', (e: { msg: string }) => logs.push(e.msg));
+  orch.frictionGate = 'off';
+  orch.microFeed = null;
+  if (state) orch.directional = { experiment: null, maxStopPct: 3, maxBarAgeMs: 900_000, refusal: null, ...state };
+  orch.isVetoed = async () => false;
   return { orch, logs, executed };
 }
 

@@ -103,7 +103,7 @@ test('executor: threads the decisionId into the venue order', async () => {
   const captured: Record<string, unknown>[] = [];
   const service = {
     openFuturesPosition: async (params: Record<string, unknown>) => { captured.push(params); return { orderId: 1, status: 'FILLED' }; },
-    getPremiumIndex: async () => ({ markPrice: 250, fundingRate: 0 }),
+    market: { getPremiumIndex: async () => ({ markPrice: 250, fundingRate: 0 }) },
   } as unknown as BinanceService;
   const executor = new ExecutorAgent(service);
   const signal: Signal = { id: 's', agent: 'MOMENTUM-γ', symbol: 'BTCUSDT', type: 'OPEN_LONG', confidence: 0.75, entry: 100, stopLoss: 95, takeProfit: 110, reason: '', ts: 0 };

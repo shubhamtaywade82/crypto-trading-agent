@@ -106,7 +106,7 @@ test('the embedded fleet never touches the main agent alert pipeline (only the l
 test('the fleet screen renders a parked explanation and never throws on partial state', async () => {
   const { renderFleetScreen } = await import('../src/ui/fleetPanels.js');
   const parked = renderFleetScreen({
-    state: { enabled: false, disabledReason: 'parked: PAPER_EXCHANGE_API_KEY is not set.', entriesEnabled: false, llmHost: 'http://127.0.0.1:11434', startedAt: 0, assignment: {}, bySymbol: {} },
+    state: { enabled: false, disabledReason: 'parked: PAPER_EXCHANGE_API_KEY is not set.', entriesEnabled: false, llmHost: 'http://127.0.0.1:11434', startedAt: 0, assignment: {}, bySymbol: {}, anchor: { price: 0, trend1h: 'SIDEWAYS', trend15m: 'SIDEWAYS', change24h: 0 } },
     time: '12:00:00',
     totalWidth: 110,
     totalHeight: 40,
@@ -122,6 +122,7 @@ test('the fleet screen renders a parked explanation and never throws on partial 
       llmHost: 'http://127.0.0.1:11434',
       startedAt: Date.now() - 65_000,
       assignment: { ETHUSDT: 'qwen3.5:2b' },
+      anchor: { price: 0, trend1h: 'SIDEWAYS', trend15m: 'SIDEWAYS', change24h: 0 },
       bySymbol: {
         ETHUSDT: {
           symbol: 'ETHUSDT', accountId: 'crypto-fleet-eth', state: 'IN_POSITION',
@@ -141,4 +142,17 @@ test('the fleet screen renders a parked explanation and never throws on partial 
   assert.ok(running.some((l) => l.includes('ETH')));
   assert.ok(running.some((l) => l.includes('Telegram trade notifications')), 'the view must state the fleet trade-notification contract');
   assert.ok(running.some((l) => l.includes('FLEET_TELEGRAM=off')), 'the view must show the opt-out switch');
+});
+
+test('anchorSummary reads price, 24h change and short trends off the anchor candles', async () => {
+  const { anchorSummary } = await import('../src/fleet/FleetSupervisor.js');
+  const candle = (open: number, close: number) => ({ openTime: 0, open, high: close, low: open, close, volume: 0 });
+  assert.equal(anchorSummary([], []), null, 'no 15m candle yet => no summary');
+  const rising15m = [100, 100, 100, 100, 101].map((c) => candle(c, c));
+  const flat1h = Array.from({ length: 24 }, () => candle(100, 100));
+  const summary = anchorSummary(rising15m, flat1h)!;
+  assert.equal(summary.price, 101);
+  assert.equal(summary.change24h, 1);
+  assert.equal(summary.trend15m, 'BULLISH', '+1% over 4 bars clears the 0.2% 15m threshold');
+  assert.equal(summary.trend1h, 'BULLISH', '+1% against the 1h close clears the 0.3% threshold');
 });

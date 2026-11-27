@@ -81,45 +81,26 @@ type CycleContext = MarketContext & { tickers: Record<string, MarketPriceInfo>; 
 // Debounce tick flushes to 4 Hz to keep live prices responsive without triggering terminal flicker
 const TICK_FLUSH_INTERVAL_MS = 250;
 
+export interface OrchestratorDeps {
+  binance?: BinanceService;
+  risk?: RiskAgent;
+  executor?: ExecutorAgent;
+}
+
 export class Orchestrator extends EventEmitter {
-  private binance = new BinanceService();
+  private binance: BinanceService;
   private marketStateBuilder = new MarketStateBuilder(config.regime.scored ? config.regime.options : undefined);
-  private adaptive = new AdaptiveSuperTrendAgent(this.binance);
-  private structureTrend = new StructureTrendAgent(this.binance);
-  private structLiq = new StructureLiquidityAgent(
-    this.binance,
-    tunedStructureLiquidityOptions({
-      maxSweepAgeCandles: config.structLiq.maxSweepAgeCandles,
-      minimumRewardRisk: config.structLiq.minimumRewardRisk,
-    }),
-  );
-  private meanRevert = new MeanReversionAgent(this.binance);
-  private crowding = new CrowdingAgent(this.binance);
-  private almaChampion = new AlmaMtfChampionAgent(this.binance);
-  private trendEnsemble = new TrendEnsembleAgent(this.binance);
-  private emaCrossSwing = new EmaCrossSwingAgent(this.binance);
-  private squeezeBreakout = new SqueezeBreakoutAgent(this.binance);
-  private donchianBreakout = new DonchianBreakoutAgent(this.binance, {
-    timeframe: '4h',
-    period: 30,
-    volMultiplier: 1.4,
-    stopAtrMult: 1.0,
-    targetPct: 5.0,
-    symbols: ['BTCUSDT', 'ETHUSDT', 'SOLUSDT', 'XRPUSDT'],
-  });
-  private agents: BaseAgent[] = [
-    this.almaChampion,
-    this.emaCrossSwing,
-    this.squeezeBreakout,
-    this.donchianBreakout,
-    // Research port awaiting forward evidence: paper only, like the adaptive SuperTrend
-    ...(config.mode === 'paper' ? [this.trendEnsemble] : []),
-    new FundingArbAgent(this.binance),
-    new MomentumAgent(this.binance),
-    ...(config.mode === 'paper' ? [this.adaptive] : []),
-    this.structureTrend, this.meanRevert, this.crowding,
-    ...(config.structLiq.enabled ? [this.structLiq] : []),
-  ];
+  private adaptive: AdaptiveSuperTrendAgent;
+  private structureTrend: StructureTrendAgent;
+  private structLiq: StructureLiquidityAgent;
+  private meanRevert: MeanReversionAgent;
+  private crowding: CrowdingAgent;
+  private almaChampion: AlmaMtfChampionAgent;
+  private trendEnsemble: TrendEnsembleAgent;
+  private emaCrossSwing: EmaCrossSwingAgent;
+  private squeezeBreakout: SqueezeBreakoutAgent;
+  private donchianBreakout: DonchianBreakoutAgent;
+  private agents: BaseAgent[];
   private killSwitch = new KillSwitch();
   // Single authoritative equity high-water mark, shared by the risk agent and the
   // performance engine so both measure drawdown against the same persisted peak.
@@ -128,10 +109,10 @@ export class Orchestrator extends EventEmitter {
   private readonly approved = loadApprovals(config.approvalsPath);
   private readonly requireApproval = config.mode === 'live';
   private readonly unapprovedLoggedAt = new Map<string, number>();
-  private risk = new RiskAgent(this.binance, { killSwitch: this.killSwitch, hwm: this.hwm.forMode(config.mode), rrProfile: loadRrProfile(config.rrProfilePath), requireApproval: this.requireApproval, approvedStrategies: this.approved, contextOnlySymbols: config.contextOnlySymbols });
-  private hooks = buildOps({ log: (line) => this.log('SYSTEM', line, 'info'), seedTrades: this.binance.getTrades() });
-  private ops = new RiskOps((message) => this.log('SYSTEM', message, 'warn'), { killSwitch: this.killSwitch, onCircuit: (from, to, snapshot) => this.hooks.onCircuit(from, to, snapshot), hwm: this.hwm.forMode(config.mode) });
-  private executor = new ExecutorAgent(this.binance);
+  private risk: RiskAgent;
+  private hooks: ReturnType<typeof buildOps>;
+  private ops: RiskOps;
+  private executor: ExecutorAgent;
   private advisor = new OllamaAdvisor();
   /**
    * Tev1 decision-intelligence gate (TEV1_GATE): classifies each risk-approved entry over the /v1/systemone
@@ -200,24 +181,74 @@ export class Orchestrator extends EventEmitter {
   private shock = new ShockDetector(config.safety.shock);
   private safetyLevels = new Map<string, string>();
   /** Live position manager book (LIVE_POSITION_MANAGER=shadow|on); null otherwise, and then live keeps exchange-side stops only. */
-  private liveBook: LiveBook | null = config.positionManager.enabled && config.mode === 'live' && config.positionManager.live !== 'off'
-    ? this.binance.createLiveBook(config.positionManager.live, (message, level) => this.log('SYSTEM', message, level))
-    : null;
+  private liveBook: LiveBook | null;
   /** Tick-driven position manager (partials, breakeven, chandelier/structure trail): paper, remote paper, and live when LIVE_POSITION_MANAGER is shadow or on. */
   /** Trailing policy engine in shadow: logs the stop moves it would make, sends nothing (TRAILING_ENGINE). */
-  private trailingShadow: TrailingShadow | null = config.trailingEngine === 'shadow'
-    ? new TrailingShadow({ getKlines: (symbol, interval, limit) => this.binance.getKlines(symbol, interval, limit), log: (message) => this.log('SYSTEM', message, 'info') })
-    : null;
-  private positionDriver: PositionDriver | null = config.positionManager.enabled && (config.mode === 'paper' || this.liveBook !== null)
-    ? new PositionDriver({
-      venue: this.liveBook ? this.liveBook.venue() : this.binance,
-      // Shadow decisions never touch real orders, so they must not leave state that a later real run would trust
-      store: new PositionManagerStore(config.mode, this.liveBook?.mode === 'shadow' ? 'data/position-manager-shadow.json' : undefined),
-      cfg: pmConfigFromEnv(),
-      lotOf: (symbol) => { const r = getSymbolRules(symbol); return { step: r.stepSize, minQty: r.minQty, minNotional: r.minNotional }; },
-      log: (agent, message, level) => this.log(agent, message, level),
-    })
-    : null;
+  private trailingShadow: TrailingShadow | null;
+  private positionDriver: PositionDriver | null;
+
+
+  /** Collaborators default to the configured ones; tests hand in their own venue, risk gate or executor. */
+  constructor(deps: OrchestratorDeps = {}) {
+    super();
+    this.binance = deps.binance ?? new BinanceService();
+    this.adaptive = new AdaptiveSuperTrendAgent(this.binance);
+    this.structureTrend = new StructureTrendAgent(this.binance);
+    this.structLiq = new StructureLiquidityAgent(
+      this.binance,
+      tunedStructureLiquidityOptions({
+        maxSweepAgeCandles: config.structLiq.maxSweepAgeCandles,
+        minimumRewardRisk: config.structLiq.minimumRewardRisk,
+      }),
+    );
+    this.meanRevert = new MeanReversionAgent(this.binance);
+    this.crowding = new CrowdingAgent(this.binance);
+    this.almaChampion = new AlmaMtfChampionAgent(this.binance);
+    this.trendEnsemble = new TrendEnsembleAgent(this.binance);
+    this.emaCrossSwing = new EmaCrossSwingAgent(this.binance);
+    this.squeezeBreakout = new SqueezeBreakoutAgent(this.binance);
+    this.donchianBreakout = new DonchianBreakoutAgent(this.binance, {
+      timeframe: '4h',
+      period: 30,
+      volMultiplier: 1.4,
+      stopAtrMult: 1.0,
+      targetPct: 5.0,
+      symbols: ['BTCUSDT', 'ETHUSDT', 'SOLUSDT', 'XRPUSDT'],
+    });
+    this.agents = [
+      this.almaChampion,
+      this.emaCrossSwing,
+      this.squeezeBreakout,
+      this.donchianBreakout,
+      // Research port awaiting forward evidence: paper only, like the adaptive SuperTrend
+      ...(config.mode === 'paper' ? [this.trendEnsemble] : []),
+      new FundingArbAgent(this.binance),
+      new MomentumAgent(this.binance),
+      ...(config.mode === 'paper' ? [this.adaptive] : []),
+      this.structureTrend, this.meanRevert, this.crowding,
+      ...(config.structLiq.enabled ? [this.structLiq] : []),
+    ];
+    this.risk = deps.risk ?? new RiskAgent(this.binance, { killSwitch: this.killSwitch, hwm: this.hwm.forMode(config.mode), rrProfile: loadRrProfile(config.rrProfilePath), requireApproval: this.requireApproval, approvedStrategies: this.approved, contextOnlySymbols: config.contextOnlySymbols });
+    this.hooks = buildOps({ log: (line) => this.log('SYSTEM', line, 'info'), seedTrades: this.binance.getTrades() });
+    this.ops = new RiskOps((message) => this.log('SYSTEM', message, 'warn'), { killSwitch: this.killSwitch, onCircuit: (from, to, snapshot) => this.hooks.onCircuit(from, to, snapshot), hwm: this.hwm.forMode(config.mode) });
+    this.executor = deps.executor ?? new ExecutorAgent(this.binance);
+    this.liveBook = config.positionManager.enabled && config.mode === 'live' && config.positionManager.live !== 'off'
+      ? this.binance.createLiveBook(config.positionManager.live, (message, level) => this.log('SYSTEM', message, level))
+      : null;
+    this.trailingShadow = config.trailingEngine === 'shadow'
+      ? new TrailingShadow({ getKlines: (symbol, interval, limit) => this.binance.market.getKlines(symbol, interval, limit), log: (message) => this.log('SYSTEM', message, 'info') })
+      : null;
+    this.positionDriver = config.positionManager.enabled && (config.mode === 'paper' || this.liveBook !== null)
+      ? new PositionDriver({
+        venue: this.liveBook ? this.liveBook.venue() : this.binance,
+        // Shadow decisions never touch real orders, so they must not leave state that a later real run would trust
+        store: new PositionManagerStore(config.mode, this.liveBook?.mode === 'shadow' ? 'data/position-manager-shadow.json' : undefined),
+        cfg: pmConfigFromEnv(),
+        lotOf: (symbol) => { const r = getSymbolRules(symbol); return { step: r.stepSize, minQty: r.minQty, minNotional: r.minNotional }; },
+        log: (agent, message, level) => this.log(agent, message, level),
+      })
+      : null;
+  }
 
   start() {
     const blockers = liveStartBlockers({ mode: config.mode, riskEngine: config.riskEngine });
@@ -244,11 +275,11 @@ export class Orchestrator extends EventEmitter {
     // Trading writes present the paper_exchange lease. Until it is held they are refused locally, so a lease another process holds places no orders.
     this.binance.startPaperExchangeLease((message, level) => this.log('SYSTEM', message, level));
     const runLoop = singleFlight(() => this.loop().catch((err: Error) => this.log('SYSTEM', `Loop crashed: ${err.message}`, 'error')));
-    this.binance.loadSymbolRules(config.symbols)
+    this.binance.market.loadSymbolRules(config.symbols)
       .catch((err: Error) => this.log('SYSTEM', `Symbol precision load failed (${err.message}); using 2dp defaults`, 'warn'))
       .then(() => this.initVenue()).finally(runLoop);
     this.timer = setInterval(runLoop, LOOP_INTERVAL_MS);
-    this.stopWs = this.binance.startRealtimeStream(
+    this.stopWs = this.binance.market.startRealtimeStream(
       config.symbols,
       (sym, price) => this.handleRealtimeTick(sym, price),
       (message, level) => this.log('SYSTEM', `[kline feed] ${message}`, level),
@@ -294,7 +325,7 @@ export class Orchestrator extends EventEmitter {
     if (!this.directional.experiment) return;
     for (const symbol of config.symbols) {
       try {
-        const raw = await this.binance.getFlowKlines(symbol, '5m', DIRECTIONAL_KLINE_LIMIT);
+        const raw = await this.binance.market.getFlowKlines(symbol, '5m', DIRECTIONAL_KLINE_LIMIT);
         this.directionalBars.set(symbol, closedFlowBars(raw, Date.now()).bars);
       } catch (err) {
         this.log('SYSTEM', `DIRECTIONAL ${symbol}: bars not refreshed: ${errorText(err)}`, 'warn');
@@ -353,8 +384,8 @@ export class Orchestrator extends EventEmitter {
         }
       },
     });
-    this.binance.setDepthSource(this.microFeed.depthSource);
-    if (this.microFeed.sink) this.binance.setPollSink(this.microFeed.sink);
+    this.binance.market.setDepthSource(this.microFeed.depthSource);
+    if (this.microFeed.sink) this.binance.market.setPollSink(this.microFeed.sink);
     void this.microFeed.start().catch((err: unknown) => this.log('SYSTEM', `MICRO start failed: ${errorText(err)}`, 'error'));
   }
 
@@ -412,7 +443,7 @@ export class Orchestrator extends EventEmitter {
     const positions = await this.binance.getPositions(false);
     await this.positionDriver?.manage(this.liveBook ? this.liveBook.positions(this.livePrices) : positions);
     const account = await this.binance.getAccount();
-    this.emit('state', { ...accountFields(account, positions, this.binance.getTrades()), spotPrices: { ...this.liveTickers }, wsStatus: this.binance.getWsStatus() });
+    this.emit('state', { ...accountFields(account, positions, this.binance.getTrades()), spotPrices: { ...this.liveTickers }, wsStatus: this.binance.market.getWsStatus() });
   }
   async closePosition(pos: Position) {
     this.log('SYSTEM', `Manual close ${pos.symbol} ${pos.side}`, 'warn');
@@ -549,8 +580,8 @@ export class Orchestrator extends EventEmitter {
   }
   private noteVenue(): void {
     const venue = this.binance.getVenueStatus();
-    this.emit('state', { venue: venueInfo(venue, config.mode), wsStatus: this.binance.getWsStatus() } satisfies Partial<AppState>);
-    this.hooks.onVenueState(venue, this.binance.getWsStatus());
+    this.emit('state', { venue: venueInfo(venue, config.mode), wsStatus: this.binance.market.getWsStatus() } satisfies Partial<AppState>);
+    this.hooks.onVenueState(venue, this.binance.market.getWsStatus());
     if (venue === null || venue.state === this.lastVenueState) return;
     this.lastVenueState = venue.state;
     this.log('SYSTEM', `${venue.name} ${venue.state}${venue.lastError ? `: ${venue.lastError}` : ''}`, venue.state === 'connected' ? 'info' : 'warn');
@@ -811,7 +842,7 @@ export class Orchestrator extends EventEmitter {
   }
 
   private async gatherContext(): Promise<CycleContext> {
-    const market = await this.binance.getMarketOverview(config.symbols);
+    const market = await this.binance.market.getMarketOverview(config.symbols);
     Object.assign(this.livePrices, market.marks);
     this.logExits();
     const [positions, account] = await Promise.all([this.binance.getPositions(), this.binance.getAccount()]);
@@ -860,7 +891,7 @@ export class Orchestrator extends EventEmitter {
    * The risk gate's per-symbol entry verdicts: market safety when enabled, then the venue's entry blocks, which hold whether or
    * not market safety is on. A venue block never downgrades a HALT.
    */
-  private safetyVerdicts(market: Awaited<ReturnType<BinanceService['getMarketOverview']>>): Record<string, SafetyVerdict> {
+  private safetyVerdicts(market: Awaited<ReturnType<BinanceService['market']['getMarketOverview']>>): Record<string, SafetyVerdict> {
     const verdicts: Record<string, SafetyVerdict> = config.safety.enabled ? this.assessSafety(market) : {};
     for (const symbol of config.symbols) {
       const blocked = this.binance.entryBlockReason(symbol);
@@ -872,7 +903,7 @@ export class Orchestrator extends EventEmitter {
   }
 
   /** Priority-0 market safety per symbol; transitions are logged once. Entries only: open positions keep their stops and manager. */
-  private assessSafety(market: Awaited<ReturnType<BinanceService['getMarketOverview']>>): Record<string, SafetyVerdict> {
+  private assessSafety(market: Awaited<ReturnType<BinanceService['market']['getMarketOverview']>>): Record<string, SafetyVerdict> {
     const now = Date.now();
     const out: Record<string, SafetyVerdict> = {};
     for (const symbol of config.symbols) {
@@ -880,7 +911,7 @@ export class Orchestrator extends EventEmitter {
       // Snapshot candles are closed-only (parseCandles drops the forming bar)
       const closed1m = v2?.candles['1m'] ?? [];
       const shock = this.shock.evaluate(symbol, closed1m, v2?.derivatives?.spreadBps ?? undefined);
-      const health = this.binance.getFeedHealth(symbol);
+      const health = this.binance.market.getFeedHealth(symbol);
       const candles15m = market.candles[symbol] ?? [];
       const verdict = assessSafety({
         now, mark: market.marks[symbol], lastTickAt: health.lastTickAt, markAt: health.markAt, exchangeStatus: health.exchangeStatus,
@@ -954,7 +985,7 @@ export class Orchestrator extends EventEmitter {
       account, positions, adaptive, trades: this.binance.getTrades(),
       candles: ctx.candles, funding: ctx.funding, nextFundingTime: ctx.nextFundingTime,
       agents: fleetRuntimes(running, { adaptive: this.agents.includes(this.adaptive), structLiq: config.structLiq.enabled }), counters: this.counters,
-      apiWeight: this.binance.getApiWeight(), wsStatus: this.binance.getWsStatus(), now: Date.now(),
+      apiWeight: this.binance.market.getApiWeight(), wsStatus: this.binance.market.getWsStatus(), now: Date.now(),
       attributable: config.mode !== 'live', marketStates: ctx.marketState,
     });
   }

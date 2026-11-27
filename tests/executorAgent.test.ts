@@ -20,7 +20,7 @@ function stubService() {
   const captured: Record<string, unknown>[] = [];
   const service = {
     openFuturesPosition: async (params: Record<string, unknown>) => { captured.push(params); return { orderId: 1, status: 'FILLED' }; },
-    getPremiumIndex: async () => ({ markPrice: 250, fundingRate: 0 }),
+    market: { getPremiumIndex: async () => ({ markPrice: 250, fundingRate: 0 }) },
   } as unknown as BinanceService;
   return { captured, executor: new ExecutorAgent(service) };
 }

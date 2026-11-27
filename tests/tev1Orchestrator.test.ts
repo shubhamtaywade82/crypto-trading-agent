@@ -3,6 +3,8 @@ import { existsSync, mkdtempSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { test } from 'node:test';
+import type { RiskAgent } from '../src/agents/RiskAgent.js';
+import type { ExecutorAgent } from '../src/agents/ExecutorAgent.js';
 import type { Signal } from '../src/types.js';
 import type { TradeGateVerdict } from '../src/decision-intelligence/types.js';
 
@@ -28,15 +30,15 @@ function verdict(over: Partial<TradeGateVerdict>): TradeGateVerdict {
 }
 
 function harness(tev1: Tev1Stub | null) {
-  const orch = new Orchestrator() as any;
   const logs: string[] = [];
   const executed: string[] = [];
+  const risk = { gate: () => ({ approved: true, positionSizeUsdt: 5_000, leverage: 5, marginType: 'ISOLATED', liqBufferAtr: 2, reason: 'ok' }) };
+  const executor = { execute: async (s: Signal) => { executed.push(`${s.type} ${s.symbol}`); return { ts: Date.now(), agent: s.agent, msg: `OPENED ${s.symbol}`, level: 'success' }; } };
+  const orch = new Orchestrator({ risk: risk as unknown as RiskAgent, executor: executor as unknown as ExecutorAgent }) as any;
   orch.on('log', (e: { agent: string; msg: string }) => logs.push(`${e.agent} ${e.msg}`));
   // This test targets the Tev1 gate only: the friction gate would fail closed with no live book.
   orch.frictionGate = 'off';
-  orch.risk = { gate: () => ({ approved: true, positionSizeUsdt: 5_000, leverage: 5, marginType: 'ISOLATED', liqBufferAtr: 2, reason: 'ok' }) };
   orch.isVetoed = async () => false;
-  orch.executor = { execute: async (s: Signal) => { executed.push(`${s.type} ${s.symbol}`); return { ts: Date.now(), agent: s.agent, msg: `OPENED ${s.symbol}`, level: 'success' }; } };
   if (tev1 !== null) {
     orch.tev1 = {
       evaluateCandidate: async (input: { decisionId: string; signal: Signal }) => {

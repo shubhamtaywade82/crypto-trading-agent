@@ -22,13 +22,12 @@ import {
 import { fleetTelegramEnabled, sendFleetEvent } from './FleetTelegram.js';
 import { TradePlanLedger } from '../ops/tradePlans.js';
 import { config } from '../config.js';
+import type { Candle } from '../types.js';
 
 /**
- * FleetSupervisor: the multi-model LLM trader fleet embedded in the main `npm run dev` runtime.
- *
- * The standalone runner (`npm run fleet`) and this supervisor share the SAME worker code path
- * (SymbolTraderWorker + FleetLlmService + FleetModels), so embedded and standalone behavior are
- * identical by construction. The supervisor:
+ * FleetSupervisor: the multi-model LLM trader fleet, embedded in the main `npm run dev` runtime and
+ * wrapped by the standalone runner (`npm run fleet`, scripts/run-fleet.ts), so both run this one
+ * code path. The supervisor:
  *
  *   - runs its own Binance market-data snapshot loop and trade WebSocket (self-contained: hosting
  *     the fleet must not add a single code path to the main agent's decision loop);
@@ -68,6 +67,8 @@ export interface FleetSupervisorOptions {
   host?: string;
   /** Where entries and exits are recorded as trade plans. Defaults to the configured TRADE_PLANS_PATH. */
   plans?: TradePlanLedger;
+  /** Names this process in lease labels and logs ('embedded' in dev, 'standalone' under npm run fleet). */
+  label?: string;
 }
 
 export interface FleetState {
@@ -81,6 +82,36 @@ export interface FleetState {
   /** 'ETHUSDT' -> resolved Ollama tag driving that worker's decisions. */
   assignment: Record<string, string>;
   bySymbol: Record<string, WorkerStatus>;
+  /** BTC anchor context for the standalone dashboard header. Price 0 until the first candle or tick. */
+  anchor: AnchorSummary;
+}
+
+export interface AnchorSummary {
+  price: number;
+  trend1h: string;
+  trend15m: string;
+  change24h: number;
+}
+
+const EMPTY_ANCHOR: AnchorSummary = { price: 0, trend1h: 'SIDEWAYS', trend15m: 'SIDEWAYS', change24h: 0 };
+
+const trendOf = (candles: readonly Candle[], last: number, thresholdPct: number): string => {
+  if (candles.length < 5) return 'SIDEWAYS';
+  const diffPct = ((last - candles.at(-5)!.close) / candles.at(-5)!.close) * 100;
+  return diffPct > thresholdPct ? 'BULLISH' : diffPct < -thresholdPct ? 'BEARISH' : 'SIDEWAYS';
+};
+
+/** The anchor's price, 24h change and short trends from its 15m and 1h candles; null when there is no 15m candle yet. */
+export function anchorSummary(btc15m: readonly Candle[], btc1h: readonly Candle[]): AnchorSummary | null {
+  const last = btc15m.at(-1);
+  if (!last) return null;
+  const open24h = btc1h.length >= 24 ? btc1h.at(-24)!.open : btc1h[0]?.open ?? last.close;
+  return {
+    price: last.close,
+    change24h: ((last.close - open24h) / open24h) * 100,
+    trend1h: trendOf(btc1h, last.close, 0.3),
+    trend15m: trendOf(btc15m, last.close, 0.2),
+  };
 }
 
 /** Candle closes that trigger a model call: 5m suits a free local model, 15m keeps cloud spend at ~96 calls/day. */
@@ -132,11 +163,14 @@ export class FleetSupervisor extends EventEmitter {
   private lastEmit = 0;
   private latest: FleetState | null = null;
   private decisionTimeframe: FleetDecisionTimeframe = '15m';
+  private anchor: AnchorSummary = EMPTY_ANCHOR;
+  private readonly label: string;
 
   constructor(private readonly options: FleetSupervisorOptions = {}) {
     super();
     this.env = options.env ?? process.env;
     this.plans = options.plans ?? new TradePlanLedger(config.tradePlansPath);
+    this.label = options.label ?? 'embedded';
   }
 
   private log(msg: string, level: 'info' | 'warn' | 'error' = 'info'): void {
@@ -201,6 +235,7 @@ export class FleetSupervisor extends EventEmitter {
       startedAt: this.startedAt || Date.now(),
       assignment: fleetConfig?.assignment ?? {},
       bySymbol,
+      anchor: this.anchor,
     };
     this.latest = state;
     this.emit('state', state);
@@ -231,7 +266,7 @@ export class FleetSupervisor extends EventEmitter {
     const telegramNote = fleetTelegramEnabled(this.env)
       ? 'Telegram trade notifications ON ([FLEET] buy/sell/exit cards per worker)'
       : 'Telegram trade notifications OFF (FLEET_TELEGRAM=off)';
-    this.log(`embedded multi-model fleet online — models: ${notes}; entries ${fleetConfig.entriesEnabled ? 'ARMED (risk-gated)' : 'OFF (shadow, R1)'}; model asked every ${fleetConfig.decisionTimeframe} close; ${telegramNote}`);
+    this.log(`${this.label} multi-model fleet online — models: ${notes}; entries ${fleetConfig.entriesEnabled ? 'ARMED (risk-gated)' : 'OFF (shadow, R1)'}; model asked every ${fleetConfig.decisionTimeframe} close; ${telegramNote}`);
 
     const sdkMarket = new SdkFuturesMarketClient(new BinanceClient().futures);
     const klineCache = new KlineStreamCache({ limit: DEFAULT_MARKET_DATA_OPTIONS.klineLimit, maxSilenceMs: DEFAULT_KLINE_MAX_SILENCE_MS });
@@ -258,7 +293,7 @@ export class FleetSupervisor extends EventEmitter {
       const keeper = new PaperExchangeLeaseKeeper({
         lease: new PaperExchangeLeaseAdapter({ baseUrl: fleetConfig.paperExchange.url, apiKey: fleetConfig.paperExchange.apiKey, ttlSeconds: DEFAULT_LEASE_TTL_SECONDS }),
         accountId,
-        label: `embedded fleet pid ${process.pid} ${symKey}`,
+        label: `${this.label} fleet pid ${process.pid} ${symKey}`,
         ttlSeconds: DEFAULT_LEASE_TTL_SECONDS,
         log: (message) => this.log(message, 'warn'),
         // A lapse (venue stalled past the TTL) is recoverable here: take the lease again rather than parking the worker until restart
@@ -303,6 +338,7 @@ export class FleetSupervisor extends EventEmitter {
     ws.on('message', (raw) => {
       const data = raw as { e?: string; s?: string; p?: string };
       if (data?.e === 'trade' && data.s && Number(data.p) > 0) {
+        if (data.s === ANCHOR) this.anchor = { ...this.anchor, price: Number(data.p) };
         const worker = this.workers.get(data.s);
         if (worker) {
           void worker.onLiveTick(Number(data.p)).then(() => this.throttledEmit());
@@ -325,6 +361,7 @@ export class FleetSupervisor extends EventEmitter {
       const btcSnapshot = snapshots[ANCHOR];
       const btc15m = btcSnapshot?.candles['15m'] ?? [];
       const btc1h = btcSnapshot?.candles['1h'] ?? [];
+      this.anchor = anchorSummary(btc15m, btc1h) ?? this.anchor;
       const peerCandles1h = Object.fromEntries(FLEET_CONTEXT_SYMBOLS.map((s) => [s, snapshots[s]?.candles['1h'] ?? []]));
 
       for (const symbol of FLEET_SYMBOLS) {
@@ -404,7 +441,7 @@ export class FleetSupervisor extends EventEmitter {
     } catch {
       // a WS that is already dead must not break dev shutdown
     }
-    this.log('embedded fleet stopped');
+    this.log(`${this.label} fleet stopped`);
   }
 
   /** Latest emitted state (or a freshly derived disabled snapshot before start). */
@@ -419,6 +456,7 @@ export class FleetSupervisor extends EventEmitter {
       startedAt: 0,
       assignment: resolved.config?.assignment ?? {},
       bySymbol: {},
+      anchor: this.anchor,
     };
   }
 }

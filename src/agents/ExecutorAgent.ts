@@ -61,7 +61,7 @@ export class ExecutorAgent extends BaseAgent {
       throw new Error(`${symbol} is not a tradable symbol (expected one of ${config.symbols.join(',')})`);
     }
     // OPEN_HEDGE carries only a USDT notional, so size it off the live mark
-    const entryPrice = signal.entry ?? (await this.binance.getPremiumIndex(symbol)).markPrice;
+    const entryPrice = signal.entry ?? (await this.binance.market.getPremiumIndex(symbol)).markPrice;
     const qty = roundQty(symbol, risk.positionSizeUsdt / entryPrice);
     if (qty <= 0) {
       throw new Error(`${risk.positionSizeUsdt.toFixed(2)} USDT is below one lot of ${symbol} at ${entryPrice}`);

@@ -4,6 +4,8 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { test } from 'node:test';
 import { MicrostructureEngine } from '../src/microstructure/MicrostructureEngine.js';
+import type { RiskAgent } from '../src/agents/RiskAgent.js';
+import type { ExecutorAgent } from '../src/agents/ExecutorAgent.js';
 import type { Signal } from '../src/types.js';
 
 // The Orchestrator writes its stores under data/ relative to cwd and reads config from env at import: isolate both.
@@ -27,15 +29,15 @@ function book() {
 }
 
 function harness(gate: 'on' | 'shadow' | 'off', engine: MicrostructureEngine | null) {
-  const orch = new Orchestrator() as any;
   const logs: string[] = [];
   const executed: string[] = [];
+  const risk = { gate: () => ({ approved: true, positionSizeUsdt: 5_000, leverage: 5, marginType: 'ISOLATED', liqBufferAtr: 2, reason: 'ok' }) };
+  const executor = { execute: async (s: Signal) => { executed.push(`${s.type} ${s.symbol}`); return { ts: Date.now(), agent: s.agent, msg: `OPENED ${s.symbol}`, level: 'success' }; } };
+  const orch = new Orchestrator({ risk: risk as unknown as RiskAgent, executor: executor as unknown as ExecutorAgent }) as any;
   orch.on('log', (e: { msg: string }) => logs.push(e.msg));
   orch.frictionGate = gate;
   orch.microFeed = engine ? { engine: (s: string) => (s === 'SOLUSDT' ? engine : undefined) } : null;
-  orch.risk = { gate: () => ({ approved: true, positionSizeUsdt: 5_000, leverage: 5, marginType: 'ISOLATED', liqBufferAtr: 2, reason: 'ok' }) };
   orch.isVetoed = async () => false;
-  orch.executor = { execute: async (s: Signal) => { executed.push(`${s.type} ${s.symbol}`); return { ts: Date.now(), agent: s.agent, msg: `OPENED ${s.symbol}`, level: 'success' }; } };
   return { orch, logs, executed };
 }
 

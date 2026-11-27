@@ -1,6 +1,5 @@
 import path from 'node:path';
-import { USDMClient, WebsocketClient, type FuturesPositionTrade, type OrderResult } from 'binance';
-import { BinanceClient } from '@nemesis-oss/binance-sdk';
+import { USDMClient, type FuturesPositionTrade, type OrderResult } from 'binance';
 import { CoinDCXClient } from '@nemesis-oss/coindcx-sdk';
 import { CoinDcxExchangeApi, type CoinDcxOrderClient } from '../coindcx/coindcxClient.js';
 import { config } from '../config.js';
@@ -11,20 +10,13 @@ import { DEFAULT_LEASE_TTL_SECONDS, PaperExchangeLeaseKeeper } from '../core/ada
 import { RemoteBroker, type VenueStatus } from './remoteBroker.js';
 import type { FundingLine, FundingObservation } from './remoteFunding.js';
 import { RemoteStore } from './remoteState.js';
-import { roundPrice, roundQty, rulesFromExchangeInfo, setSymbolRules } from './symbolRules.js';
+import { roundPrice, roundQty } from './symbolRules.js';
+import { BinanceMarketData } from './marketData.js';
 import type { AgentId, Candle, Position, Side, TradeRecord, WsStatus } from '../types.js';
-import type { OhlcvInput } from '../market/rejection/types.js';
-import { MarketDataService, DEFAULT_MARKET_DATA_OPTIONS } from '../market/MarketDataService.js';
-import { SdkFuturesMarketClient } from '../market/SdkFuturesMarketClient.js';
-import type { MarketDataSnapshot } from '../market/MarketDataTypes.js';
-import { KlineStreamCache, DEFAULT_KLINE_MAX_SILENCE_MS } from '../market/KlineStreamCache.js';
-import { KlineStreamFeed } from '../market/KlineStreamFeed.js';
-import { KLINE_INTERVALS } from '../market/klineIntervals.js';
-import { guardUsdmClient, sharedRestGuard } from '../core/adapters/binance/restGuard.js';
+import { guardUsdmClient } from '../core/adapters/binance/restGuard.js';
 import { LiveBook, LiveStateStore, type LiveManagerMode, type LiveOrderPort } from './liveBook.js';
 import { LiveEntryTracker, LIVE_ENTRY_POLL_MS, liveEntryClientOrderId, orderSideOf, venueRejected, type LiveEntryPort } from './liveEntry.js';
 import { UserDataStream, type ListenKeyPort } from './userDataStream.js';
-import { usdmTradeWsUrl, usdmWsRouteBases } from './wsRoutes.js';
 import {
   ENTRY_ORDER_PREFIX, isAlreadyIsolated, isEntryOrder, isVenueRejection, parseOrderTradeUpdate, planStartupReconciliation,
   protectionClientOrderId, protectionOf, type OpenOrderView, type PositionProtection, type VenuePositionView,
@@ -33,8 +25,6 @@ import { LiveJournal, LiveOwners, type FillView, type FundingView } from './live
 import { roundStopPrice } from './symbolRules.js';
 import { REPLAY_MAINTENANCE_TIERS, type MaintenanceTier } from '../risk/liquidation.js';
 
-const KLINE_INTERVAL = '15m';
-const KLINE_LIMIT = 300;
 /** A journal sync older than this stops counting: the daily-loss and streak governors then refuse entries. */
 const JOURNAL_MAX_AGE_MS = 3 * 60_000;
 const JOURNAL_SYNC_MS = 60_000;
@@ -195,18 +185,10 @@ export class BinanceService {
   }
 
   private futures: USDMClient;
-  private ws: WebsocketClient | null = null;
-  private wsStatus: WsStatus = 'down';
-  private readonly marketDataV2: MarketDataService;
-  private readonly sdkMarket: SdkFuturesMarketClient;
-  /** Closed candles kept current from the /market kline stream; the REST path serves whatever it does not cover. */
-  private readonly klineCache: KlineStreamCache;
-  private klineFeed: KlineStreamFeed | null = null;
+  /** Public market data and the realtime feeds. It shares this service's REST client, so one weight budget covers both. */
+  readonly market: BinanceMarketData;
   private paperEngine?: PaperEngine;
   private liveStartEquity: number | null = null;
-  private readonly lastTickAt = new Map<string, number>();
-  private readonly symbolStatus = new Map<string, string>();
-  private markAt = 0;
   private liveBook: LiveBook | null = null;
   private entries: LiveEntryTracker | null = null;
   private entryLog: (message: string, level: 'info' | 'warn' | 'error') => void = () => undefined;
@@ -232,17 +214,7 @@ export class BinanceService {
     private readonly stateDir = 'data',
   ) {
     this.futures = guardUsdmClient(futures ?? new USDMClient({ api_key: config.binance.apiKey, api_secret: config.binance.apiSecret }));
-    this.sdkMarket = new SdkFuturesMarketClient(new BinanceClient().futures);
-    this.klineCache = new KlineStreamCache({ limit: DEFAULT_MARKET_DATA_OPTIONS.klineLimit, maxSilenceMs: DEFAULT_KLINE_MAX_SILENCE_MS });
-    this.marketDataV2 = new MarketDataService(this.sdkMarket, DEFAULT_MARKET_DATA_OPTIONS, this.klineCache);
-  }
-
-  setDepthSource(depthSource: import('../market/OrderBookDepthSource.js').DepthSource): void {
-    this.marketDataV2.setDepthSource(depthSource);
-  }
-
-  setPollSink(pollSink: import('../market/MarketDataService.js').PollSink | null): void {
-    this.marketDataV2.setPollSink(pollSink);
+    this.market = new BinanceMarketData(this.futures);
   }
 
   private get paper(): PaperEngine {
@@ -255,167 +227,6 @@ export class BinanceService {
 
   private get owners(): LiveOwners {
     return (this.ownerStore ??= new LiveOwners(path.join(this.stateDir, 'live-owners.json')));
-  }
-
-  startRealtimeStream(
-    symbols: string[],
-    onTick: (symbol: string, price: number) => void,
-    log: (message: string, level: 'info' | 'warn') => void = () => undefined,
-  ): () => void {
-    const silent = { silly: () => {}, verbose: () => {}, info: () => {}, warning: () => {}, error: () => {} };
-    // Binance's 2026-04-23 base-URL split is per channel. bookTicker answers on /public, markPrice on
-    // /market — but @trade still only streams on the legacy path (probed 2026-11-03): a /market/ws/…
-    // subscription accepts the connection and then goes silent, which starves the entry safety gate
-    // of ticks and blocks every entry. usdmTradeWsUrl tracks the probed truth; see its note.
-    this.ws = new WebsocketClient({ wsUrl: usdmTradeWsUrl(), beautify: false }, silent as any);
-    const setStatus = (s: WsStatus) => { this.wsStatus = s; };
-    this.ws.on('open', () => setStatus('connected'));
-    this.ws.on('reconnected', () => setStatus('connected'));
-    this.ws.on('reconnecting', () => setStatus('reconnecting'));
-    this.ws.on('close', () => setStatus('down'));
-    this.ws.on('error', () => setStatus('down'));
-    this.ws.on('message', (d: any) => {
-      if (d?.e === 'trade' && d.s && Number(d.p) > 0) {
-        this.lastTickAt.set(d.s, Date.now());
-        onTick(d.s, Number(d.p));
-      }
-    });
-    for (const sym of symbols) this.ws.subscribeTrades(sym, 'usdm');
-
-    // Kline candles for the market-data layer, on the /market route the route probe measured for kline_* streams.
-    this.klineFeed?.stop();
-    this.klineFeed = new KlineStreamFeed({
-      marketBase: usdmWsRouteBases().market,
-      symbols,
-      intervals: KLINE_INTERVALS,
-      limit: DEFAULT_MARKET_DATA_OPTIONS.klineLimit,
-      cache: this.klineCache,
-      backfill: (symbol, interval, limit) => this.sdkMarket.getKlines({ symbol, interval, limit }),
-      log,
-    });
-    this.klineFeed.start();
-
-    return () => {
-      this.klineFeed?.stop();
-      this.klineFeed = null;
-      this.ws?.closeAll();
-      this.ws = null;
-      this.wsStatus = 'down';
-    };
-  }
-
-  /** Freshness of the feeds the safety gate reads; undefined timestamps mean never seen. */
-  getFeedHealth(symbol: string): { lastTickAt: number | undefined; markAt: number | undefined; exchangeStatus: string | undefined } {
-    return { lastTickAt: this.lastTickAt.get(symbol), markAt: this.markAt || undefined, exchangeStatus: this.symbolStatus.get(symbol) };
-  }
-
-  getWsStatus(): WsStatus {
-    return this.wsStatus;
-  }
-
-  getApiWeight(): number {
-    return this.futures.getRateLimitStates()['x-mbx-used-weight-1m'] ?? 0;
-  }
-
-  async loadSymbolRules(symbols: string[]): Promise<void> {
-    const info = await this.futures.getExchangeInfo();
-    sharedRestGuard.seedFromRateLimits((info as { rateLimits?: Array<{ rateLimitType?: unknown; interval?: unknown; limit?: unknown }> }).rateLimits ?? []);
-    for (const entry of info.symbols.filter((e) => symbols.includes(e.symbol))) {
-      setSymbolRules(entry.symbol, rulesFromExchangeInfo(entry));
-      this.symbolStatus.set(entry.symbol, String((entry as { status?: string }).status ?? 'TRADING'));
-    }
-  }
-
-  /**
-   * Read-only klines with the fields the flow features need. getKlines keeps six columns and is unchanged. Each row is
-   * [openTime, open, high, low, close, volume, closeTime, quoteVolume, trades, takerBuyBaseVolume, takerBuyQuoteVolume, ignore].
-   */
-  async getFlowKlines(symbol: string, interval: string, limit: number): Promise<OhlcvInput[]> {
-    const rawKlines = await this.futures.getKlines({ symbol, interval: interval as any, limit });
-    return (rawKlines as any[]).map((k: any[]) => {
-      const [openTime, open, high, low, close, volume, , quoteVolume, trades, takerBuy] = k.map(Number);
-      return {
-        symbol,
-        openTime: openTime as number,
-        open: open as number,
-        high: high as number,
-        low: low as number,
-        close: close as number,
-        baseVolume: volume as number,
-        quoteVolume: quoteVolume as number,
-        trades: trades as number,
-        takerBuyBaseVolume: takerBuy as number,
-      };
-    });
-  }
-
-  async getKlines(symbol: string, interval = '15m', limit = 200): Promise<Candle[]> {
-    const rawKlines = await this.futures.getKlines({ symbol, interval: interval as any, limit });
-    return (rawKlines as any[]).map((k: any[]) => {
-      const [openTime, open, high, low, close, volume] = k.map(Number);
-      return { openTime, open, high, low, close, volume };
-    });
-  }
-
-  /**
-   * Feature-gated native market data. It is read-only and internally TTL-cached;
-   * failures in individual public endpoints leave successful cached components intact.
-   */
-  async getMarketDataV2(symbols: string[]): Promise<Record<string, MarketDataSnapshot>> {
-    if (!config.marketDataV2.enabled) return {};
-    return this.marketDataV2.snapshot(symbols);
-  }
-
-  async getPremiumIndex(symbol: string): Promise<{ markPrice: number; fundingRate: number }> {
-    const res = await this.futures.getMarkPrice({ symbol });
-    const single = Array.isArray(res) ? res[0] : res;
-    return { markPrice: Number(single.markPrice), fundingRate: Number(single.lastFundingRate) };
-  }
-
-  async getMarketOverview(symbols: string[]) {
-    const symSet = new Set(symbols);
-    const v2Promise = config.marketDataV2.enabled
-      ? this.marketDataV2.snapshot(symbols)
-      : Promise.resolve({} as Record<string, MarketDataSnapshot>);
-
-    const [rawTickers, rawMarks, v2] = await Promise.all([
-      this.futures.get24hrChangeStatistics(),
-      this.futures.getMarkPrice(),
-      v2Promise,
-    ]);
-    this.markAt = Date.now();
-
-    const candles: Record<string, Candle[]> = {};
-    for (const symbol of symbols) {
-      const native15m = v2[symbol]?.candles['15m'];
-      candles[symbol] = native15m && native15m.length > 0
-        ? native15m
-        : await this.getKlines(symbol, KLINE_INTERVAL, KLINE_LIMIT);
-    }
-
-    return {
-      tickers: this.pickTickers(rawTickers as any[], symSet),
-      ...this.pickMarks(rawMarks as any[], symSet),
-      candles,
-      marketDataV2: v2,
-    };
-  }
-
-  private pickTickers(rawTickers: any[], symSet: Set<string>) {
-    return Object.fromEntries(rawTickers.filter((t) => symSet.has(t.symbol)).map((t) => [
-      t.symbol, { price: Number(t.lastPrice), changePct: Number(t.priceChangePercent), high24h: Number(t.highPrice), low24h: Number(t.lowPrice), volumeQuote: Number(t.quoteVolume) },
-    ]));
-  }
-
-  private pickMarks(rawMarks: any[], symSet: Set<string>) {
-    const marks: Record<string, number> = {}, funding: Record<string, number> = {};
-    let nextFundingTime = 0;
-    for (const m of rawMarks.filter((raw) => symSet.has(raw.symbol))) {
-      marks[m.symbol] = Number(m.markPrice);
-      funding[m.symbol] = Number(m.lastFundingRate);
-      if (m.nextFundingTime) nextFundingTime = Number(m.nextFundingTime);
-    }
-    return { marks, funding, nextFundingTime };
   }
 
   /**
@@ -510,7 +321,7 @@ export class BinanceService {
     }
     const broker = this.usableBroker();
     if (broker) {
-      const entryPrice = params.entryPrice ?? (await this.getPremiumIndex(params.symbol)).markPrice;
+      const entryPrice = params.entryPrice ?? (await this.market.getPremiumIndex(params.symbol)).markPrice;
       return broker.open({ ...params, entryPrice });
     }
     if (config.mode === 'paper') return this.paper.openPosition(params);
@@ -542,7 +353,7 @@ export class BinanceService {
     try {
       await this.futures.setLeverage({ symbol: params.symbol, leverage: params.leverage });
       await this.ensureIsolated(params.symbol);
-      const limitPrice = roundPrice(params.symbol, params.entryPrice ?? (await this.getPremiumIndex(params.symbol)).markPrice);
+      const limitPrice = roundPrice(params.symbol, params.entryPrice ?? (await this.market.getPremiumIndex(params.symbol)).markPrice);
       const quantity = roundQty(params.symbol, params.qty);
       const clientOrderId = liveEntryClientOrderId(Date.now());
       const job = {

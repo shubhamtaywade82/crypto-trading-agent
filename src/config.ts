@@ -138,6 +138,8 @@ export const EnvSchema = z.object({
   REGIME_TREND_ENTER: z.coerce.number().min(0).max(1).default(0.55),
   REGIME_TREND_EXIT: z.coerce.number().min(0).max(1).default(0.4),
   SETUP_OUTCOMES_PATH: pathWithDefault('data/setup-outcomes.jsonl'),
+  /** One row per brief call (hypothetical, no position): filled, resolved at its stop or target, or expired. */
+  BRIEF_CALLS_PATH: pathWithDefault('data/brief-calls.jsonl'),
   /** One row per announced trade plan (signal, fleet, sniper) and its outcome: TP/SL/close, PnL, R, and whether the card was delivered. */
   TRADE_PLANS_PATH: pathWithDefault('data/trade-plans.jsonl'),
   /** Public Spot reference feed (data-api and data-stream.binance.vision, keyless). Informational: no entry is gated on it. */
@@ -367,6 +369,7 @@ export const config = {
   rrProfilePath: env.RR_PROFILE_PATH,
   approvalsPath: env.APPROVALS_PATH,
   setupOutcomesPath: env.SETUP_OUTCOMES_PATH,
+  briefCallsPath: env.BRIEF_CALLS_PATH,
   tradePlansPath: env.TRADE_PLANS_PATH,
   publicData: {
     spot: env.PUBLIC_SPOT_FEED === 'on',

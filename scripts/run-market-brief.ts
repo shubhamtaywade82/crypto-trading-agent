@@ -7,7 +7,9 @@
 import 'dotenv/config';
 import { MarketBriefService } from '../src/marketBrief/MarketBriefService.js';
 import { MarketBriefScheduler } from '../src/marketBrief/MarketBriefScheduler.js';
+import { BriefCallLedger } from '../src/marketBrief/BriefCalls.js';
 import type { MarketBrief } from '../src/marketBrief/types.js';
+import { config } from '../src/config.js';
 
 function parseArg(name: string, fallback: string): string {
   const index = process.argv.indexOf(`--${name}`);
@@ -26,6 +28,8 @@ async function main(): Promise<void> {
     symbols: [symbol],
     intervalMs,
     alertOnChange: true,
+    // This process is the only writer of the brief-call file; the bot never writes it
+    calls: new BriefCallLedger(config.briefCallsPath),
     onBriefEmitted: (brief: MarketBrief, card: string) => {
       console.log(`\n--- [MARKET BRIEF: ${brief.symbol} ${brief.decision.action}] ---`);
       console.log(card);

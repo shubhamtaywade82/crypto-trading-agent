@@ -529,6 +529,7 @@ to send to.
 | `EVENTS_PATH` | `data/events.jsonl` | Audit trail; rotated to `<file>.1` at 5 MB |
 | `NOTIFICATIONS_PATH` | `data/notifications.json` | Optional subscription JSON (missing or invalid means every class on) |
 | `TRADE_PLANS_PATH` | `data/trade-plans.jsonl` | Trade-plan ledger: each announced trade, whether its card was delivered, and what it became (TP / SL / close, PnL, R). Written regardless of `AUDIT`. Read with `npm run plans:report` |
+| `BRIEF_CALLS_PATH` | `data/brief-calls.jsonl` | Brief-call ledger: each actionable brief (BUY_LONG / SELL_SHORT) tracked as a hypothetical trade at its band levels, with a 4-hour horizon. Filled, then TP / SL, or EXPIRED / NOT_FILLED. Written only by `npm run brief:run` (or `brief:once`). Read with `npm run calls:report`. Nothing is traded. |
 | `PUBLIC_SPOT_FEED` | `off` | `on` streams Spot top-of-book and trades from `data-stream.binance.vision` (REST bootstrap from `data-api.binance.vision`). Keyless and informational: no entry is gated on it |
 | `PUBLIC_USDM_EXTRAS` | `off` | `on` streams the USDⓈ-M `/public` book ticker and loads funding-rate history over REST. Keyless and informational |
 | `PUBLIC_QUOTE_STALE_MS` | `15000` | A book older than this reads `STALE` in the public context, never zero |

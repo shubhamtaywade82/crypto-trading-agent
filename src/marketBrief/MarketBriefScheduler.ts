@@ -3,6 +3,7 @@ import { diffMarketBriefs } from './MarketBriefDiff.js';
 import { formatMarketBriefCard } from './MarketBriefFormatter.js';
 import { appendBriefToJournal, readLatestBriefFromJournal } from './MarketBriefJournal.js';
 import { sendTelegram } from '../ops/telegram.js';
+import type { BriefCallLedger } from './BriefCalls.js';
 import type { MarketBrief } from './types.js';
 
 export interface SchedulerOptions {
@@ -11,6 +12,8 @@ export interface SchedulerOptions {
   readonly alertOnChange: boolean;
   readonly journalDir?: string;
   readonly onBriefEmitted?: (brief: MarketBrief, card: string) => void;
+  /** Tracks actionable briefs as hypothetical calls (see BriefCalls.ts). Absent: no call outcomes are recorded. */
+  readonly calls?: BriefCallLedger;
 }
 
 export const DEFAULT_SCHEDULER_OPTIONS: SchedulerOptions = {
@@ -52,6 +55,7 @@ export class MarketBriefScheduler {
       const diff = diffMarketBriefs(brief, prev);
 
       appendBriefToJournal(brief, this.options.journalDir);
+      this.options.calls?.observe(brief);
 
       const card = formatMarketBriefCard(brief);
       if (this.options.onBriefEmitted) {

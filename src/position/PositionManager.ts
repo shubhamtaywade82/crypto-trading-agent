@@ -125,6 +125,23 @@ export function isStale(state: PmState, pos: Position): boolean {
   return pos.qty > expected * (1 + 1e-6);
 }
 
+/**
+ * A same-side size change (a scale-in, ours or outside) is the same position, so the progress it already made is kept:
+ * TP1 and TP2 that were taken stay taken, and the phase does not fall back. The 1R is the one set at entry (the average
+ * entry moves on a scale-in, the 1R does not). A side change is a different position and keeps nothing.
+ */
+export function carryAfterScaleIn(prev: PmState, rebuilt: PmState): PmState {
+  if (prev.side !== rebuilt.side) return rebuilt;
+  const tookTarget = prev.tp1Done || prev.tp2Done;
+  return {
+    ...rebuilt,
+    oneR: prev.oneR,
+    tp1Done: prev.tp1Done || rebuilt.tp1Done,
+    tp2Done: prev.tp2Done || rebuilt.tp2Done,
+    phase: tookTarget ? (prev.phase === 'TRAILING' ? 'TRAILING' : 'PROTECTED') : rebuilt.phase,
+  };
+}
+
 /** Undoes the optimistic flag of a partial whose order failed, so the next tick retries it. */
 export function revertReduce(state: PmState, reason: 'TP1' | 'TP2', qty: number): PmState {
   return {

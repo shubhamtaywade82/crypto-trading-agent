@@ -3,7 +3,7 @@ import { isRefusal, errorText } from '../binance/remoteOrders.js';
 import { formatPrice, roundPrice } from '../binance/symbolRules.js';
 import { dec } from '../risk/primitives.js';
 import {
-  advance, initState, isStale, pmKey, revertReduce,
+  advance, carryAfterScaleIn, initState, isStale, pmKey, revertReduce,
   type LotRules, type PmAction, type PmConfig, type PmInput, type PmState, type VolClass,
 } from './PositionManager.js';
 import type { PositionManagerStore } from './PositionManagerStore.js';
@@ -76,12 +76,16 @@ export class PositionDriver {
   private async step(pos: Position, key: string, now: number): Promise<void> {
     const { store, cfg } = this.deps;
     let state = store.get(key);
+    let previous: typeof state;
     if (state && isStale(state, pos)) {
       this.deps.log(pos.strategy, `PM ${pos.symbol} position changed outside the manager; state rebuilt`, 'info');
+      previous = state;
       state = undefined;
     }
     if (!state) {
-      const fresh = initState(pos, now, cfg);
+      const rebuilt = initState(pos, now, cfg);
+      // A scale-in keeps the TP1/TP2 progress already made on this position; a flip starts a new one
+      const fresh = rebuilt && previous ? carryAfterScaleIn(previous, rebuilt) : rebuilt;
       if (!fresh) { store.delete(key); return; } // no numeric stop: not managed (hedge, adopted, live server-side)
       store.set(fresh);
       state = fresh;

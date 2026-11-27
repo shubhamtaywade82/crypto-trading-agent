@@ -1,0 +1,54 @@
+{
+  "featureId": "BUG-001",
+  "tasks": [
+    {
+      "id": "TASK-001",
+      "description": "Fix TickLogWriter self-lockout when lock is held by current process and make open() idempotent",
+      "acceptanceCriteria": [
+        "ACC-001: Calling open() twice sequentially on the same TickLogWriter instance succeeds without throwing",
+        "ACC-002: Re-acquiring a lock file already containing the current process PID does not throw is already open"
+      ],
+      "verification": {
+        "command": ["npx", "tsx", "--test", "tests/tickLog.test.ts"],
+        "expectedStatus": "passed"
+      },
+      "dependencies": [],
+      "likelyFiles": [
+        "src/marketdata/ticks/TickLogWriter.ts",
+        "tests/tickLog.test.ts"
+      ],
+      "estimatedScope": "s",
+      "risk": "low"
+    },
+    {
+      "id": "TASK-002",
+      "description": "Fix FileTickSink repeated meta calls and handle open rejections via onError",
+      "acceptanceCriteria": [
+        "ACC-003: Calling FileTickSink.meta() repeatedly for the same symbol appends events to the writer without re-opening or throwing",
+        "ACC-004: All regression tests in tests/tickLog.test.ts pass cleanly"
+      ],
+      "verification": {
+        "command": ["npx", "tsx", "--test", "tests/tickLog.test.ts"],
+        "expectedStatus": "passed"
+      },
+      "dependencies": ["TASK-001"],
+      "likelyFiles": [
+        "src/marketdata/ticks/FileTickSink.ts",
+        "tests/tickLog.test.ts"
+      ],
+      "estimatedScope": "s",
+      "risk": "low"
+    }
+  ],
+  "edges": [
+    {
+      "from": "TASK-001",
+      "to": "TASK-002",
+      "reason": "FileTickSink delegates per-symbol writing to TickLogWriter"
+    }
+  ],
+  "verticalSlices": [
+    ["TASK-001"],
+    ["TASK-002"]
+  ]
+}

@@ -70,6 +70,10 @@ export class TickLogWriter {
   }
 
   async open(meta: TickMeta): Promise<void> {
+    if (this.active) {
+      this.append('meta', meta);
+      return;
+    }
     mkdirSync(this.options.dir, { recursive: true });
     this.lockPath = path.join(this.options.dir, '.locks', `${this.options.symbol}.lock`);
     this.acquireLock();
@@ -213,7 +217,9 @@ export class TickLogWriter {
     } catch (err) {
       if ((err as NodeJS.ErrnoException).code !== 'EEXIST') throw err;
       const pid = Number(readFileSync(this.lockPath, 'utf8').trim());
-      if (pid > 0 && alive(pid)) throw new Error(`tick log ${this.options.symbol} is already open by pid ${pid}`);
+      if (pid > 0 && pid !== process.pid && alive(pid)) {
+        throw new Error(`tick log ${this.options.symbol} is already open by pid ${pid}`);
+      }
       writeFileSync(this.lockPath, String(process.pid));
     }
   }

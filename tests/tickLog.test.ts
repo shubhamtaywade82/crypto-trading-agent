@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { test } from 'node:test';
 import { TickLogWriter } from '../src/marketdata/ticks/TickLogWriter.js';
+import { FileTickSink } from '../src/marketdata/ticks/FileTickSink.js';
 import { TickLogReader } from '../src/marketdata/ticks/TickLogReader.js';
 import { TickReplay } from '../src/marketdata/ticks/TickReplay.js';
 import { computeParityHash } from '../src/marketdata/ticks/parity.js';
@@ -127,3 +128,48 @@ test('TickReplay reproduces order book state and validates parityHash', async ()
     rmSync(dir, { recursive: true, force: true });
   }
 });
+
+test('TickLogWriter allows re-opening within the same process without self-lockout', async () => {
+  const dir = mkdtempSync(path.join(tmpdir(), 'tick-lock-test-'));
+  try {
+    const writer = new TickLogWriter({ dir, symbol: 'SOLUSDT', now: () => T0 });
+    await writer.open({ format: 1, symbol: 'SOLUSDT', startedAt: T0, streams: [] });
+
+    let threw = false;
+    try {
+      await writer.open({ format: 1, symbol: 'SOLUSDT', startedAt: T0 + 1000, streams: [] });
+    } catch {
+      threw = true;
+    }
+    assert.equal(threw, false, 'Expected re-opening within same process not to self-lockout');
+    await writer.close();
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('FileTickSink forwards repeated meta calls to writer append without re-opening', async () => {
+  const dir = mkdtempSync(path.join(tmpdir(), 'sink-meta-test-'));
+  try {
+    const sink = new FileTickSink({ dir });
+    sink.meta('SOLUSDT', { format: 1, symbol: 'SOLUSDT', startedAt: T0, streams: ['s1'] });
+    await new Promise((r) => setTimeout(r, 20));
+
+    let openedTwice = false;
+    const writer = (sink as unknown as { writers: Map<string, TickLogWriter> }).writers.get('SOLUSDT')!;
+    const originalOpen = writer.open.bind(writer);
+    writer.open = async () => {
+      openedTwice = true;
+      return originalOpen({ format: 1, symbol: 'SOLUSDT', startedAt: T0, streams: [] });
+    };
+
+    sink.meta('SOLUSDT', { format: 1, symbol: 'SOLUSDT', startedAt: T0 + 1000, streams: ['s2'] });
+    assert.equal(openedTwice, false, 'Expected second meta call NOT to invoke writer.open()');
+
+    await sink.close();
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+

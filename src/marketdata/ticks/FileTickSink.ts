@@ -18,9 +18,15 @@ export class FileTickSink implements TickSink {
   constructor(private readonly options: FileTickSinkOptions) {}
 
   meta(symbol: string, data: TickMeta): void {
+    if (this.opened.has(symbol)) {
+      this.writers.get(symbol)?.append('meta', data);
+      return;
+    }
     const writer = this.writerFor(symbol);
     this.opened.add(symbol);
-    void writer.open(data);
+    void writer.open(data).catch((err: unknown) => {
+      this.options.onError?.(err instanceof Error ? err : new Error(String(err)));
+    });
   }
 
   ws(symbol: string, stream: string, data: unknown, recvNs?: string): void {
@@ -68,6 +74,8 @@ export class FileTickSink implements TickSink {
     if (this.opened.has(symbol)) return;
     this.opened.add(symbol);
     const now = this.options.now ? this.options.now() : Date.now();
-    void this.writerFor(symbol).open({ format: 1, symbol, startedAt: now, streams: [] });
+    void this.writerFor(symbol).open({ format: 1, symbol, startedAt: now, streams: [] }).catch((err: unknown) => {
+      this.options.onError?.(err instanceof Error ? err : new Error(String(err)));
+    });
   }
 }

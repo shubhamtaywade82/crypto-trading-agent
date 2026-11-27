@@ -71,8 +71,33 @@ test('a side change is a different position and keeps nothing', () => {
   assert.equal(carried.side, 'SHORT');
 });
 
-test('a fresh position with nothing taken carries nothing and rebuilds as before', () => {
+test('with nothing taken yet, a scale-in carries no TP flags but still counts the acquired size', () => {
   const prev = initState(longPos(100, 100, 98), NOW, cfg)!;
-  const rebuilt = initState(longPos(101, 80, 98), NOW, cfg)!;
-  assert.deepEqual(carryAfterScaleIn(prev, rebuilt), { ...rebuilt, oneR: prev.oneR });
+  // 50 added at 102: the average moves to 101, the venue holds 150
+  const rebuilt = initState(longPos(101, 150, 98), NOW, cfg)!;
+  const carried = carryAfterScaleIn(prev, rebuilt);
+  assert.deepEqual(
+    [carried.tp1Done, carried.tp2Done, carried.phase, carried.initialQty, carried.reducedQty, carried.oneR],
+    [false, false, 'INITIAL', 150, 0, 2],
+  );
+});
+
+test('partial fractions stay on the total acquired: a scale-in after TP1 makes TP2 30% of entry plus adds', () => {
+  const { previous, venue, averaged } = afterTp1AndAdd(103);
+  const carried = carryAfterScaleIn(previous, initState(venue, NOW, cfg)!);
+  assert.equal(carried.initialQty, 165, '100 bought at entry + 65 added');
+  assert.equal(carried.reducedQty, 35, '35 sold at TP1');
+  assert.equal(isStale(carried, venue), false, 'the carried state agrees with what the venue holds');
+  const tp2 = advance(carried, { mark: averaged + 4, qty: venue.qty, atr: 1, vol: 'MEDIUM', lot }, cfg, NOW);
+  const reduce = tp2.actions.find((a) => a.type === 'REDUCE');
+  assert.ok(reduce && reduce.type === 'REDUCE' && reduce.reason === 'TP2');
+  assert.equal(reduce.qty, 49.5, '30% of 165');
+});
+
+test('a size drop made outside the manager is recorded as sold, so the state still matches the venue', () => {
+  const prev: PmState = { ...initState(longPos(100, 100, 98), NOW, cfg)!, reducedQty: 0 };
+  const venue = longPos(100, 90, BREAKEVEN);
+  const carried = carryAfterScaleIn(prev, initState(venue, NOW, cfg)!);
+  assert.deepEqual([carried.initialQty, carried.reducedQty], [100, 10]);
+  assert.equal(isStale(carried, venue), false);
 });

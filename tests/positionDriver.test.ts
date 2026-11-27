@@ -80,7 +80,9 @@ test('should rebuild its state when the position was scaled into outside the man
   await driver.manage([pos({ mark: 105 })]);
   await driver.manage([pos({ mark: 105, qty: 2, serverSl: '100.1' })]);
   assert.match(logs.join('\n'), /position changed outside the manager/);
-  assert.equal(store.get(pmKey('BTCUSDT', 'STRUCTURE-TREND-η'))?.initialQty, 2);
+  // The base is the total acquired: the 1 bought, plus the 1.35 added to the 0.65 still held after TP1 (0.35 sold)
+  const state = store.get(pmKey('BTCUSDT', 'STRUCTURE-TREND-η'));
+  assert.deepEqual([state?.initialQty, state?.reducedQty], [2.35, 0.35]);
 });
 
 test('should persist state atomically and reload it', async () => {

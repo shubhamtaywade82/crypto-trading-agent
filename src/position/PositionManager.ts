@@ -126,15 +126,25 @@ export function isStale(state: PmState, pos: Position): boolean {
 }
 
 /**
- * A same-side size change (a scale-in, ours or outside) is the same position, so the progress it already made is kept:
- * TP1 and TP2 that were taken stay taken, and the phase does not fall back. The 1R is the one set at entry (the average
- * entry moves on a scale-in, the 1R does not). A side change is a different position and keeps nothing.
+ * A same-side size change (a scale-in, ours or outside) is the same position, so its history is kept:
+ *  - TP1 and TP2 already taken stay taken, and the phase does not fall back;
+ *  - the 1R is the one set at entry (the average entry moves on a scale-in, the 1R does not);
+ *  - `initialQty` becomes the total the position has acquired (entry plus adds), and `reducedQty` the total sold, so the
+ *    partial fractions (35% at TP1, 30% at TP2) keep their meaning as the position grows. A size drop from outside the
+ *    manager is recorded as sold, so `initialQty − reducedQty` always equals what the venue holds.
+ * A side change is a different position and keeps nothing.
  */
 export function carryAfterScaleIn(prev: PmState, rebuilt: PmState): PmState {
   if (prev.side !== rebuilt.side) return rebuilt;
+  const held = dec(prev.initialQty).minus(prev.reducedQty);
+  const delta = dec(rebuilt.initialQty).minus(held); // rebuilt.initialQty is what the venue holds now
+  const acquired = delta.gte(0) ? dec(prev.initialQty).plus(delta) : dec(prev.initialQty);
+  const reducedQty = delta.gte(0) ? dec(prev.reducedQty) : dec(prev.initialQty).minus(rebuilt.initialQty);
   const tookTarget = prev.tp1Done || prev.tp2Done;
   return {
     ...rebuilt,
+    initialQty: acquired.toNumber(),
+    reducedQty: reducedQty.toNumber(),
     oneR: prev.oneR,
     tp1Done: prev.tp1Done || rebuilt.tp1Done,
     tp2Done: prev.tp2Done || rebuilt.tp2Done,
